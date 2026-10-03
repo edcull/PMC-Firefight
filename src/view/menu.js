@@ -42,6 +42,8 @@
     var m = el('menu');
     if (!m) return;
     ['setup', 'camp', 'lobby', 'account'].forEach(function (id) { var o = el(id); if (o) o.hidden = true; });
+    // a demo is not kept to come back to: back at the menu, it is over
+    if (root.PMC_DROP_DEMO) root.PMC_DROP_DEMO();
     m.hidden = false;
     show(pane || 'main');
     paint();

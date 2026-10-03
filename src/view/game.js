@@ -801,6 +801,14 @@
       !(state.cfg && state.cfg.campaign));
   }
   window.PMC_BATTLE_DISCARDABLE = discardable;
+  /* A demo is only watched: going back to the main menu ends it, rather than
+     keeping it to be resumed (menu.js asks as the menu opens). */
+  window.PMC_DROP_DEMO = function () {
+    if (!state || !state.cfg || state.cfg.mode !== 'demo' || !net || !window.PMCNet || !(net instanceof window.PMCNet.Local)) return false;
+    try { net.forget(); net.disconnect(); } catch (e) { }
+    clearBoard();
+    return true;
+  };
   window.PMC_DISCARD_BATTLE = function () {
     if (!discardable()) return false;
     try { net.forget(); net.disconnect(); } catch (e) { }

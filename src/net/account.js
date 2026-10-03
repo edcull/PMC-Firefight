@@ -58,11 +58,12 @@
   var USER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>';
   function label() {
     Array.prototype.forEach.call(document.querySelectorAll('.user-chip'), function (c) {
-      // no server: shown, but greyed out and not to be pressed, as the Multiplayer card is
-      c.hidden = false;
+      // no server: the main menu's is shown greyed out (as the Multiplayer card is); the top bars' are not shown at all
+      var onMenu = c.classList.contains('menu-chip');
+      c.hidden = !onMenu && !online();
       c.disabled = !online();
       c.innerHTML = USER_ICON + '<span>' + esc(who ? who.name : 'Sign in') + '</span>';
-      c.title = !online() ? 'Needs the game server \u2014 run node server.js and open the page from it'
+      c.title = !online() ? 'Online accounts unavailable'
         : who ? 'Your account' : 'Sign in, or make an account';
     });
   }
@@ -390,7 +391,8 @@
       var pop = el('user-pop');
       if (pop && !pop.hidden && !(ev.target.closest && ev.target.closest('#user-pop')) && chip !== popFor) closePop();
       if (!chip) return;
-      // signed in: a little menu under it (as the lobby's); signed out: straight to signing in
+      // the main menu's goes straight to the account; the top bars': signed in, a little menu under it (as the lobby's)
+      if (chip.classList.contains('menu-chip')) { openScreen(); return; }
       if (who) { if (pop && !pop.hidden && popFor === chip) closePop(); else openPop(chip); }
       else openScreen();
     });

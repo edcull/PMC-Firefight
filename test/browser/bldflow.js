@@ -125,10 +125,11 @@ async function newGame(p, cfg) {
      (engine/ai.js). So that is arranged rather than hoped for: every squad of
      one side is put in the open just outside a building of its own, and the
      dice come up low until one has gone in. */
-  /* A watched battle walks itself on, a step at a time, but not while the
-     menu is up: it is held there while the table is arranged, so no squad of
-     theirs acts on the old positions in the meantime. */
-  await p.evaluate(() => window.PMCMenu.open());
+  /* A watched battle walks itself on, a step at a time, but not while it is
+     paused (its own Pause): it is held there while the table is arranged, so no
+     squad of theirs acts on the old positions in the meantime. (Going back to
+     the menu would end it: a demo is not kept.) */
+  await p.evaluate(() => document.getElementById('demo-pause').click());
   await drain(p);
   const placed = await p.evaluate(() => {
     const s = window.PMC_STATE(), R = window.PMC;
@@ -165,7 +166,7 @@ async function newGame(p, cfg) {
     s.units.forEach(u => { if (u.side === 'B') u.activated = false; });
     return { buildings: blds.length, placed: n };
   });
-  await p.evaluate(() => window.PMCMenu.close());
+  await p.evaluate(() => document.getElementById('demo-pause').click());
   ok('squads of one side stand in the open beside the buildings', placed.placed > 0, placed.placed + ' placed beside ' + placed.buildings + ' buildings');
   let entered = 0, turn = 0;
   /* What is being shown is a few turns on a built-up table with a squad gone
