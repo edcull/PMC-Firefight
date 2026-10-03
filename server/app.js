@@ -229,7 +229,11 @@ function create(opts) {
     const answer = (r) => r.ok ? send(200, r) : send(r.code || 400, { error: r.why });
     if (!m[1]) {
       if (req.method === 'GET') return send(200, { campaigns: online.list(me) }), true;
-      if (req.method === 'POST') return answer(online.make(me)), true;
+      // a new one, listed in the lobby for anyone to join or not ({ listed })
+      if (req.method === 'POST') {
+        readBody(req, (body) => { let b = {}; try { b = JSON.parse(body || '{}'); } catch (e) { b = {}; } answer(online.make(me, { listed: !!b.listed })); });
+        return true;
+      }
       return send(405, { error: 'method not allowed' }), true;
     }
     if (m[1] === 'join') {

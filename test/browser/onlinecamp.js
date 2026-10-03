@@ -76,10 +76,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('founded on the server; the hub shows the code for the open seat', code === s1.invite, code);
   ok('nothing of it is saved as this browser’s own campaign', await p1.evaluate(() => !window.PMC_CAMPAIGN.get()));
 
-  // the second player types the code into Multiplayer's Join box, as a battle's
+  // a public one is listed with the games on Multiplayer; the second player joins it from there
   await p2.evaluate(() => window.PMCLobby.open());
   await p2.waitForTimeout(800);
-  await p2.evaluate((c) => { document.getElementById('join-code').value = c.toLowerCase(); document.querySelector('#lobby [data-lob="join"]').click(); }, code);
+  const row = await p2.evaluate((c) => { const b = document.querySelector('#lobby .lob-list [data-lob="join"][data-id="' + c + '"]'); return b ? b.closest('.lob-game').innerText : ''; }, code);
+  ok('the public campaign is listed with the games, its seat free', /Ash Online.s campaign/.test(row) && /seat free/.test(row) && /Join the campaign/i.test(row), row || await p2.evaluate(() => document.getElementById('lobby').innerText.slice(0, 600)));
+  ok('there is no separate Campaigns section', await p2.evaluate(() => !document.querySelector('#lobby [data-lob="campaigns"]')));
+  await p2.evaluate((c) => document.querySelector('#lobby .lob-list [data-lob="join"][data-id="' + c + '"]').click(), code);
   let s2 = await till(p2, 'Player 2 founding', (s) => s.view === 'found' && s.side === 'B');
   ok('the second player joins with the code, as Player 2, and founds their own', s2.side === 'B' && /Iron Wolves has signed/.test(await text(p2)));
   await found(p2, 'Red Dawn', ['rciv', 'rciv', 'rciv', 'rdesconscript', 'rridergang', 'rmilitia', 'rlmg', 'rtechnical'], 'H1', 'rebel');

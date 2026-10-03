@@ -105,7 +105,10 @@ const MIGRATIONS = [
    CREATE INDEX mail_tokens_user ON mail_tokens(user_id, kind);`,
   /* 6: whether the player wants an email when an online campaign is waiting on them
      (off unless they turn it on, on their account screen). */
-  `ALTER TABLE users ADD COLUMN notify INTEGER NOT NULL DEFAULT 0;`
+  `ALTER TABLE users ADD COLUMN notify INTEGER NOT NULL DEFAULT 0;`,
+  /* 7: an online campaign listed in the lobby for anyone to join (its second seat
+     taken by whoever comes first), or found by its code only. */
+  `ALTER TABLE campaigns ADD COLUMN listed INTEGER NOT NULL DEFAULT 0;`
 ];
 
 function open(file) {
@@ -185,6 +188,8 @@ function wrap(db) {
     dropCampaign: db.prepare('DELETE FROM campaigns WHERE id = ? AND owner = ?'),
     setInvite: db.prepare('UPDATE campaigns SET invite = ? WHERE id = ?'),
     byInvite: db.prepare('SELECT * FROM campaigns WHERE invite = ?'),
+    setListed: db.prepare('UPDATE campaigns SET listed = ? WHERE id = ?'),
+    listedOpen: db.prepare("SELECT c.id, c.invite, c.name, c.updated, u.name AS owner FROM campaigns c JOIN users u ON u.id = c.owner WHERE c.kind = 'online' AND c.listed = 1 AND c.invite IS NOT NULL AND (SELECT COUNT(*) FROM campaign_members m WHERE m.campaign_id = c.id) < 2 ORDER BY c.updated DESC LIMIT ?"),
     addMember: db.prepare('INSERT INTO campaign_members (campaign_id, user_id, side, joined) VALUES (?, ?, ?, ?)'),
     members: db.prepare('SELECT m.side, m.user_id, u.name, u.pub FROM campaign_members m JOIN users u ON u.id = m.user_id WHERE m.campaign_id = ? ORDER BY m.side'),
     onlineOf: db.prepare("SELECT c.id, c.name, c.turn, c.version, c.updated, c.state, m.side, (SELECT COUNT(*) FROM campaign_members x WHERE x.campaign_id = c.id) AS players FROM campaign_members m JOIN campaigns c ON c.id = m.campaign_id WHERE m.user_id = ? AND c.kind = 'online' ORDER BY c.updated DESC"),
@@ -270,6 +275,8 @@ function wrap(db) {
     dropCampaign: (id, owner) => q.dropCampaign.run(id, owner).changes > 0,
     // ---- online campaigns (phase 3b) ----
     setInvite: (id, code) => q.setInvite.run(code, id),
+    setListed: (id, on) => q.setListed.run(on ? 1 : 0, id).changes > 0,
+    listedOpen: (n) => q.listedOpen.all(n || 20),
     byInvite: (code) => { const c = q.byInvite.get(code); return c && Object.assign({}, c, { state: JSON.parse(c.state) }); },
     addMember: (id, userId, side, at) => q.addMember.run(id, userId, side, at),
     members: (id) => q.members.all(id),

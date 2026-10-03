@@ -141,6 +141,8 @@ function waitingOn(camp, side, players) {
 
 function create(opts) {
   const db = opts.db, notify = opts.notify || function () { }, mailer = opts.mailer || null;
+  // the lobby's list of listed campaigns changed (one listed, or its seat taken)
+  const opened = opts.listedChanged || function () { };
   /* "Your move" by email (an account's choice, off unless turned on): sent when a
      campaign comes to be waiting on a player who did not make the change, at most
      once in ten minutes for each player and campaign. */
@@ -256,8 +258,9 @@ function create(opts) {
   return {
     /* A new online campaign: the player who makes it is Player 1, and is given the
        code that brings Player 2 in. Neither force is founded yet. */
-    make(me) {
+    make(me, how) {
       if (!me || me.guest) return no('sign in to play a campaign online', 401);
+      const listed = !!(how && how.listed);
       const camp = C.newCampaign({ mode: 'hotseat', nameA: me.name + '’s force', nameB: 'Player 2’s force' });
       camp.companies.A.roster = []; camp.companies.B.roster = [];
       camp.online = { waiting: true };
@@ -270,8 +273,10 @@ function create(opts) {
           code = inviteCode();
           try { db.setInvite(id, code); break; } catch (e) { code = null; }
         }
+        if (listed) db.setListed(id, true);
       });
-      return { ok: true, id: id, invite: code, side: 'A' };
+      if (listed) opened();
+      return { ok: true, id: id, invite: code, side: 'A', listed: listed };
     },
 
     // the second player, coming in with the code they were given
@@ -290,7 +295,13 @@ function create(opts) {
       });
       const a = members[0];
       if (a) notify(a.user_id, { t: 'camp.changed', id: row.id });
+      if (row.listed) opened();
       return { ok: true, id: row.id, side: 'B' };
+    },
+
+    // the campaigns listed in the lobby with their second seat still open
+    listed() {
+      return db.listedOpen(20).map((r) => ({ invite: r.invite, owner: r.owner, at: r.updated }));
     },
 
     // the player's online campaigns, the latest first
