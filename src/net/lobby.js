@@ -289,14 +289,22 @@
       '</div>';
   }
 
+  // the colour a seat's force is shown in: the one picked for it, or the side's own
+  function seatColour(seat) {
+    var p = room && room.seats && room.seats[seat], f = (p && p.force) || {};
+    var col = root.PMCIso && root.PMCIso.COLOURS && root.PMCIso.COLOURS[f.colour];
+    return col ? col.light : 'var(--side-' + (seat === 'B' ? 'B' : 'A') + ')';
+  }
   function chatHTML(where) {
     var lines = chat[where] || [];
     var id = where === 'lobby' ? 'lobby-say' : 'room-say';
     return '<div class="lob-chat">' + (where === 'lobby' ? '<h4>Lobby</h4>' : '') +
       '<div class="lob-lines" id="' + id + '-lines">' +
       (lines.length ? lines.map(function (l) {
+        // at a table, each player's name in the colour of the force they have picked
+        var c = where === 'room' && l.seat ? seatColour(l.seat) : '';
         return l.from
-          ? '<p class="said"><b>' + esc(l.from) + '</b> ' + esc(l.text) + '</p>'
+          ? '<p class="said"><b' + (c ? ' style="color:' + c + '"' : '') + '>' + esc(l.from) + '</b> ' + esc(l.text) + '</p>'
           : '<p class="note">' + esc(l.text) + '</p>';
       }).join('') : '<p class="note">Nothing said yet.</p>') +
       '</div>' +

@@ -89,6 +89,15 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   ok('...the terms scroll and the talk keeps the foot, three lines tall', rm.scrolls && rm.foot < 40 && rm.lines < 90, JSON.stringify(rm));
   ok('...no helper text, and Public is a box only the host can tick', !rm.talk && rm.pub, JSON.stringify(rm));
   await p2.setViewportSize({ width: 1340, height: 900 });
+  // table talk: each name in the colour of the force that player has picked
+  await p1.evaluate(() => window.PMCLobby.net().send('game.chat', { text: 'hello from the host' }));
+  await p2.waitForTimeout(400);
+  const talk = await p2.evaluate(() => {
+    const b = [...document.querySelectorAll('#room-say-lines .said b')].pop(), seat = document.querySelector('.lob-forces .hot-side b');
+    return { line: b ? b.textContent : '', col: b ? getComputedStyle(b).color : '', force: seat ? getComputedStyle(seat).color : '' };
+  });
+  ok('table talk names the player in their force\u2019s colour', !!talk.line && talk.col === talk.force, JSON.stringify(talk));
+  await p2.setViewportSize({ width: 1340, height: 900 });
   for (const p of [p1, p2]) await p.evaluate(() => window.PMCLobby.net().send('game.ready', { ready: true }));
   await p1.waitForTimeout(400);
   const acts2 = await p1.evaluate(() => [...document.querySelectorAll('#lobby .lob-acts button')].map(x => x.className + ':' + x.textContent + (x.disabled ? ':off' : '')));
