@@ -231,7 +231,7 @@
         '<div class="field"><label for="join-code">Games</label>' +
         '<div class="lob-row">' +
         '<button class="lnk lob-go" data-lob="create">Start a game</button>' +
-        '<input id="join-code" type="text" placeholder="Join with a code\u2026" maxlength="8" autocomplete="off">' +
+        '<input id="join-code" type="text" placeholder="Join a game or campaign with its code\u2026" maxlength="8" autocomplete="off">' +
         '<button class="lnk" data-lob="join">Join</button>' +
         '</div></div>' +
         mineHTML() +
@@ -559,7 +559,20 @@
   function join(code) {
     code = String(code || '').trim().toUpperCase();
     if (!code) { fault = 'Type the code the host read out.'; draw(); return; }
+    // a battle's code is five letters; an online campaign's invite, eight: the second seat in it
+    if (code.length === 8) { joinCampaign(code); return; }
     net.send('game.join', { id: code });
+  }
+  function joinCampaign(code) {
+    if (!account || account.guest) { fault = 'That is a campaign\u2019s code: sign in with an account to join it.'; draw(); return; }
+    root.fetch('api/online/join', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: code }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (got) {
+        if (!got.ok) { var why = got.j.error || got.j.why || 'that code did not work'; fault = why.charAt(0).toUpperCase() + why.slice(1) + '.'; draw(); return; }
+        close();
+        if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.openOnline) root.PMC_CAMPAIGN.openOnline(got.j.id);
+      })
+      .catch(function () { fault = 'The server could not be reached.'; draw(); });
   }
 
   function say(where, box) {
