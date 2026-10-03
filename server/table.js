@@ -12,6 +12,7 @@
    from being right. */
 'use strict';
 const P = require('../src/engine/protocol.js');
+const Hidden = require('./hidden.js');
 const { R, SC, C, Engine } = require('./rules.js');
 
 /* How many events one intent may produce before we stop collecting. A quiet
@@ -290,21 +291,24 @@ class Table {
     this.n++;
   }
 
-  /* Events first, in order, then the table they left behind. */
+  /* Events first, in order, then the table they left behind — the table as each
+     seat may see it (hidden.js: the other side's secrets left out), and as a
+     watcher may (both sides' left out). One message made for each. */
   flush() {
     this.seq++;
-    const payload = JSON.stringify({
-      t: 'turn', seq: this.seq,
-      events: this.events,
-      state: this.engine.snapshot()
-    });
+    const snap = this.engine.snapshot(), events = this.events, seq = this.seq, made = {};
     this.events = [];
-    this.room.everyone().forEach((p) => { if (p.sock && p.sock.open) p.sock.send(payload); });
+    const forSeat = (seat) => {
+      const k = seat || '-';
+      if (!made[k]) made[k] = JSON.stringify({ t: 'turn', seq: seq, events: events, state: Hidden.battleFor(snap, seat) });
+      return made[k];
+    };
+    this.room.everyone().forEach((p) => { if (p.sock && p.sock.open) p.sock.send(forSeat(p.seat || null)); });
   }
 
   /* One player, brought fully up to date: no events, just where things stand. */
   resync(player) {
-    player.send('turn', { seq: this.seq, events: [], state: this.engine.snapshot() });
+    player.send('turn', { seq: this.seq, events: [], state: Hidden.battleFor(this.engine.snapshot(), player.seat || null) });
   }
 
   finish(report) {

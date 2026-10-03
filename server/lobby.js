@@ -7,6 +7,7 @@
 'use strict';
 const crypto = require('crypto');
 const P = require('../src/engine/protocol.js');
+const Hidden = require('./hidden.js');
 // how long a seat is kept in setup for someone who dropped out (a refresh, a phone gone to sleep)
 const HOLD_SETUP_MS = 3 * 60 * 1000;
 /* Rooms nobody is connected to are put away (MP-7): a battle both players have
@@ -145,7 +146,11 @@ class Room {
     const msg = JSON.stringify(body ? Object.assign({ t: t }, body) : { t: t });
     this.everyone().forEach((p) => { if (p.sock && p.sock.open) p.sock.send(msg); });
   }
-  push() { this.everyone().forEach((p) => p.send('game', { room: this.view() })); }
+  // each person in it is sent the room as they may see it: the other player's list kept from them (hidden.js)
+  push() {
+    const v = this.view();
+    this.everyone().forEach((p) => p.send('game', { room: Hidden.roomFor(v, p.seat || null) }));
+  }
 }
 
 class Lobby {

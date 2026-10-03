@@ -434,12 +434,13 @@
     }
     var f = p.force || {};
     var col = root.PMCIso && root.PMCIso.COLOURS && root.PMCIso.COLOURS[f.colour];
-    var units = f.keys ? f.keys.length : 0;
+    // the other player's list is kept from this screen until the battle (server/hidden.js): only how many
+    var units = f.keys ? f.keys.length : (f.units || 0);
     var who = esc(p.name) + (p.host ? ' · host' : '') + (p.away ? ' · away' : '');
     var body = '<b style="color:' + (col ? col.light : 'inherit') + '">' + esc(f.name || (units ? 'An unnamed force' : 'No force yet')) + '</b>' +
       (which === mine ? '<em>' + (units ? 'change' : 'muster') + '</em>' : '') +
       '<small>' + who + ' · ' + esc(factionName(f.faction)) + ' · ' +
-      (units ? units + ' units' : (which === mine ? 'tap to muster it' : 'still mustering')) +
+      (units ? units + ' units' + (f.hidden ? ', the list kept from you until the battle' : '') : (which === mine ? 'tap to muster it' : 'still mustering')) +
       (f.tactic ? ' · ' + esc(f.tactic) : '') + '</small>' +
       '<small class="' + (p.ready ? 'lob-ok' : 'lob-wait') + '">' + (p.ready ? 'Ready' : 'Not ready yet') + '</small>';
     return which === mine
