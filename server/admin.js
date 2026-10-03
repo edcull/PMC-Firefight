@@ -3,7 +3,8 @@
    runs on. There is no email, so a forgotten password is reset here.
 
      node server/admin.js users
-     node server/admin.js create <name> <password> [admin]
+     node server/admin.js create <name> <password> [admin] [email]
+     node server/admin.js activate <name>         an account whose emailed link never arrived
      node server/admin.js reset-password <name> <new password>
      node server/admin.js admin <name> on|off
      node server/admin.js delete <name> [--yes]   says what goes with it; --yes removes it
@@ -21,18 +22,20 @@ const FILE = path.join(DATA, 'pmc.db');
 
 async function main(argv) {
   const db = DB.open(FILE), auth = Auth.create({ db: db });
-  const [cmd, a, b, c] = argv;
+  const [cmd, a, b] = argv;
   const say = (t) => console.log(t);
   try {
     if (cmd === 'users') {
       const all = db.users();
       if (!all.length) say('No accounts yet.');
-      all.forEach((u) => say(u.name + (u.admin ? '  (admin)' : '') + '  made ' + new Date(u.created).toISOString().slice(0, 10) +
+      all.forEach((u) => say(u.name + (u.admin ? '  (admin)' : '') + (u.active ? '' : '  (not activated)') +
+        '  ' + (u.email ? u.email + (u.email_ok ? '' : ' (unconfirmed)') : 'no email') + '  made ' + new Date(u.created).toISOString().slice(0, 10) +
         ', last seen ' + new Date(u.seen).toISOString().slice(0, 10)));
       return 0;
     }
     if (cmd === 'create') {
-      const r = await auth.createUser(a, b, c === 'admin');
+      const em = argv.slice(3).filter((x) => x.indexOf('@') > 0)[0];
+      const r = await auth.createUser(a, b, argv.slice(3).indexOf('admin') >= 0, em);
       say(r.ok ? 'Made ' + a + '.' : r.why);
       return r.ok ? 0 : 1;
     }
@@ -40,6 +43,13 @@ async function main(argv) {
       const r = await auth.resetPassword(a, b);
       say(r.ok ? a + '’s password is changed, and every device of theirs signed out.' : r.why);
       return r.ok ? 0 : 1;
+    }
+    if (cmd === 'activate') {
+      const u = db.userByName(a);
+      if (!u) { say('No account called ' + a + '.'); return 1; }
+      db.activate(u.id);
+      say(u.name + ' is active.');
+      return 0;
     }
     if (cmd === 'admin') {
       const u = db.userByName(a);
@@ -65,7 +75,7 @@ async function main(argv) {
       say('Backed up to ' + to);
       return 0;
     }
-    say('Usage: node server/admin.js users | create <name> <password> [admin] | reset-password <name> <password> | admin <name> on|off | delete <name> [--yes] | backup [file]');
+    say('Usage: node server/admin.js users | create <name> <password> [admin] [email] | activate <name> | reset-password <name> <password> | admin <name> on|off | delete <name> [--yes] | backup [file]');
     return cmd ? 1 : 0;
   } finally { db.close(); }
 }

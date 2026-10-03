@@ -19,6 +19,7 @@
      undefined while it is being asked, null when nobody is, else { id, name, guest }. */
   var account;
   var signMode = 'signin';      // the sign-in screen's tab: 'signin' | 'register' | 'guest'
+  var signNote = '';            // what the sign-in screen has to say (an account made, its link sent)
   var busy = false;             // a sign-in on its way to the server
   var games = [];
   var mine = [];                // this player's own games (phase 2): under way, to go back to, and how the rest went
@@ -136,6 +137,8 @@
       '.lobby-sheet .lob-chat{flex:none;margin-top:10px}',
       '@media (max-width:1000px){.lobby-sheet .lob-lines{height:calc(3 * 1.45em + 26px);min-height:0}}',
       '.lob-bad{color:var(--warn);font-size:13px;margin:0}',
+      '.lob-forgot{align-self:flex-start}',
+      '.lob-good{color:var(--good);font-size:13px;margin:0;line-height:1.45}',
       '.lob-bad:empty{display:none}',
       '.lob-ok{color:var(--good)}',
       '.lob-status{font-size:12px;color:var(--ink-faint)}',
@@ -197,15 +200,18 @@
     var reg = signMode === 'register', guest = signMode === 'guest';
     return '<div class="lob-scroll"><div class="lob-sign">' +
       '<p class="lede">' + (guest ? 'Play a one-off battle without an account. Campaigns need one.'
-        : reg ? 'Pick a name and a password. That is all: no email.' : 'Sign in to play other people over the network.') + '</p>' +
+        : reg ? 'A name, your email address and a password.' : 'Sign in to play other people over the network.') + '</p>' +
       '<div class="lob-tabs">' + tab('signin', 'Sign in') + tab('register', 'New account') + tab('guest', 'Play as a guest') + '</div>' +
       '<p class="lob-bad">' + esc(fault) + '</p>' +
+      (signNote ? '<p class="lob-good">' + esc(signNote) + '</p>' : '') +
       '<div class="field"><label for="sign-name">' + (guest ? 'Your name for this battle' : 'Name') + '</label>' +
       '<input id="sign-name" type="text" maxlength="24" autocomplete="username" value="' + esc(me.name || '') + '"></div>' +
+      (reg ? '<div class="field"><label for="sign-email">Email address</label><input id="sign-email" type="email" maxlength="254" autocomplete="email"></div>' : '') +
       (guest ? '' : '<div class="field"><label for="sign-pass">Password' + (reg ? ' (at least 8 characters)' : '') + '</label>' +
         '<input id="sign-pass" type="password" maxlength="200" autocomplete="' + (reg ? 'new-password' : 'current-password') + '"></div>') +
       '<div class="lob-foot"><button class="start" data-lob="signgo"' + (busy ? ' disabled' : '') + '>' +
         (busy ? 'One moment\u2026' : guest ? 'Play as a guest' : reg ? 'Make the account' : 'Sign in') + '</button></div>' +
+      (!reg && !guest ? '<button class="lnk lob-forgot" data-lob="forgot">Forgot password?</button>' : '') +
       '</div></div>';
   }
   // ask the server who this browser is, then on to the lobby (or the sign-in)
@@ -219,9 +225,10 @@
   }
   function signIn() {
     var name = ((el('sign-name') || {}).value || '').trim(), pass = (el('sign-pass') || {}).value || '';
+    var email = ((el('sign-email') || {}).value || '').trim();
     var path = signMode === 'register' ? 'api/register' : signMode === 'guest' ? 'api/guest' : 'api/login';
-    busy = true; fault = ''; draw();
-    root.fetch(path, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: name, password: pass }) })
+    busy = true; fault = ''; signNote = ''; draw();
+    root.fetch(path, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: name, password: pass, email: email }) })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (got) {
         busy = false;
@@ -229,6 +236,12 @@
           var why = (got.j && got.j.error) || 'that did not work';
           fault = why.charAt(0).toUpperCase() + why.slice(1) + '.';
           me.name = name; draw(); return;
+        }
+        // a new account waiting for the link mailed to it: nobody is signed in yet
+        if (got.j.pending) {
+          me.name = name; signMode = 'signin';
+          signNote = 'Your account is made. A link to activate it has been sent to ' + got.j.email + ' \u2014 follow it, then sign in.';
+          draw(); return;
         }
         account = got.j.who; me.name = account.name;
         if (root.PMCAccount) root.PMCAccount.refresh();
@@ -456,7 +469,9 @@
   function act(what, b) {
     fault = '';
     switch (what) {
-      case 'signmode': signMode = b.getAttribute('data-mode'); draw(); return;
+      case 'signmode': signMode = b.getAttribute('data-mode'); signNote = ''; draw(); return;
+      // a forgotten password: the main menu's account pane sends the link
+      case 'forgot': close(); if (root.PMCAccount && root.PMCAccount.open) root.PMCAccount.open('forgot'); return;
       case 'signgo': if (!busy) signIn(); return;
       case 'campaigns': close(); if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.enter) root.PMC_CAMPAIGN.enter('online'); return;
       case 'usermenu': userMenu(el('lobby-usermenu').hidden); return;

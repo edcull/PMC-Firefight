@@ -21,7 +21,8 @@ One dependency, `better-sqlite3`, for the database (`npm ci --omit=dev`). One po
 |---|---|
 | `GET /` | the game — `index.html` and the scripts beside it |
 | `GET/PUT/DELETE /campaign[/name]`, `GET /campaigns` | campaigns, kept on the server |
-| `POST /api/register`, `/api/login`, `/api/guest`, `/api/logout`, `/api/password`; `GET /api/me` | accounts, and a guest's name for a battle |
+| `POST /api/register`, `/api/login`, `/api/guest`, `/api/logout`, `/api/password`; `GET /api/me`, `/api/games` | accounts, and a guest's name for a battle |
+| `POST /api/activate`, `/api/resend`, `/api/forgot`, `/api/reset`, `/api/rename`, `/api/email`, `/api/confirm-email` | the emailed links (activation, a password reset, a new address), and a new name |
 | `GET/POST /api/campaigns`, `GET/PUT/DELETE /api/campaigns/<id>`, `POST /api/campaigns/import` | a signed-in player's own campaigns, each save over the version it was read at |
 | `ws:// /ws` | the lobby, and every battle in progress (signed in, or as a guest) |
 
@@ -32,8 +33,13 @@ The server's own source, the saved campaigns and anything hidden are not served.
 - **A bad request does not take it down.** A malformed URL is refused; anything
   thrown and not caught is logged and the server carries on; SIGTERM and SIGINT
   close it cleanly.
-- **Who a player is comes from their session.** Accounts are a name and a
-  password (scrypt, salted); a session is a random token in an `HttpOnly`,
+- **Who a player is comes from their session.** Accounts are a name, an email
+  address (one account each) and a password (scrypt, salted). Where mail is set
+  up (`PUBLIC_URL` and `SMTP_*`, or `MAIL_OUTBOX` to write it to a folder), a new
+  account waits for the link mailed to it; the links (activation, password reset,
+  a new address) are kept only as hashes, work once and run out, always point at
+  `PUBLIC_URL`, and Forgot password says the same whether or not an address has an
+  account. Mail asked for is limited per address and per account; a session is a random token in an `HttpOnly`,
   `SameSite=Lax` cookie (`Secure` behind TLS), kept only as a hash, 30 days and
   renewed as it is used. The socket is opened only with a session (an account's,
   or a guest's for a one-off battle): its identity is the session's, never what

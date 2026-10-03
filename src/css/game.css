@@ -711,6 +711,16 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .acct-row em { font-style: normal; font-size: 12px; color: var(--ink-dim); white-space: nowrap; }
 .acct-none { margin: 0; font-size: 12px; color: var(--ink-faint); }
 .acct-out { align-self: center; margin-top: 4px; }
+.acct-good { margin: 0; font-size: 13px; line-height: 1.45; color: var(--good); }
+.acct-forgot, .acct-resend { align-self: flex-start; }
+.acct-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--ink-dim); }
+.acct-line > span:first-child { width: 44px; flex: none; font-family: var(--display); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.acct-line b { color: var(--ink); word-break: break-all; }
+.acct-line em { font-style: normal; color: var(--ink-faint); }
+.acct-line .lnk { margin-left: auto; }
+.acct-edit { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; }
+.acct-editrow { display: flex; gap: 8px; align-items: center; }
+.acct-editrow .start { flex: 1; }
 .menu-foot { display: flex; justify-content: center; gap: 6px; margin: 16px 0 0; }
 .menu-foot a.lnk { text-decoration: none; }
 /* the unit viewer is a link to another page, set as the buttons around it are */

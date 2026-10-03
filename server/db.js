@@ -85,7 +85,24 @@ const MIGRATIONS = [
    );
    CREATE UNIQUE INDEX members_user ON campaign_members(campaign_id, user_id);
    ALTER TABLE campaigns ADD COLUMN invite TEXT;
-   CREATE UNIQUE INDEX campaigns_invite ON campaigns(invite);`
+   CREATE UNIQUE INDEX campaigns_invite ON campaigns(invite);`,
+  /* 5: an email address for each account (one account an address), whether it has
+     been shown to be theirs, and whether the account is active yet; and the links
+     sent by email — to activate an account, reset a password, or confirm a new
+     address — each kept only as a hash, used once, and lasting a while. The
+     accounts made before this keep working: active, with no address. */
+  `ALTER TABLE users ADD COLUMN email TEXT;
+   ALTER TABLE users ADD COLUMN email_ok INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1;
+   CREATE UNIQUE INDEX users_email ON users(email COLLATE NOCASE);
+   CREATE TABLE mail_tokens (
+     token   TEXT PRIMARY KEY,
+     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     kind    TEXT NOT NULL,
+     email   TEXT,
+     expires INTEGER NOT NULL
+   );
+   CREATE INDEX mail_tokens_user ON mail_tokens(user_id, kind);`
 ];
 
 function open(file) {
@@ -113,14 +130,22 @@ function wrap(db) {
   const q = {
     userByName: db.prepare('SELECT * FROM users WHERE name = ?'),
     userById: db.prepare('SELECT * FROM users WHERE id = ?'),
-    addUser: db.prepare('INSERT INTO users (name, pass, pub, admin, created, seen) VALUES (?, ?, ?, ?, ?, ?)'),
+    addUser: db.prepare('INSERT INTO users (name, pass, pub, admin, created, seen, email, email_ok, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+    userByEmail: db.prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE'),
+    setName: db.prepare('UPDATE users SET name = ? WHERE id = ?'),
+    setEmail: db.prepare('UPDATE users SET email = ?, email_ok = ? WHERE id = ?'),
+    setActive: db.prepare('UPDATE users SET active = 1, email_ok = 1 WHERE id = ?'),
+    addMailToken: db.prepare('INSERT INTO mail_tokens (token, user_id, kind, email, expires) VALUES (?, ?, ?, ?, ?)'),
+    mailToken: db.prepare('SELECT * FROM mail_tokens WHERE token = ?'),
+    dropMailTokens: db.prepare('DELETE FROM mail_tokens WHERE user_id = ? AND kind = ?'),
+    dropExpiredMail: db.prepare('DELETE FROM mail_tokens WHERE expires < ?'),
     setPass: db.prepare('UPDATE users SET pass = ? WHERE id = ?'),
     setAdmin: db.prepare('UPDATE users SET admin = ? WHERE id = ?'),
     dropUser: db.prepare('DELETE FROM users WHERE id = ?'),
     ownedCount: db.prepare('SELECT COUNT(*) AS n FROM campaigns WHERE owner = ?'),
     memberOfCount: db.prepare('SELECT COUNT(*) AS n FROM campaign_members m JOIN campaigns c ON c.id = m.campaign_id WHERE m.user_id = ? AND c.owner != ?'),
     seen: db.prepare('UPDATE users SET seen = ? WHERE id = ?'),
-    users: db.prepare('SELECT id, name, admin, created, seen FROM users ORDER BY name'),
+    users: db.prepare('SELECT id, name, admin, created, seen, email, email_ok, active FROM users ORDER BY name'),
     countUsers: db.prepare('SELECT COUNT(*) n FROM users'),
     addSession: db.prepare('INSERT INTO sessions (token, user_id, guest, pub, created, expires, used) VALUES (?, ?, ?, ?, ?, ?, ?)'),
     session: db.prepare('SELECT * FROM sessions WHERE token = ?'),
@@ -163,7 +188,16 @@ function wrap(db) {
     raw: db,
     userByName: (name) => q.userByName.get(name),
     userById: (id) => q.userById.get(id),
-    addUser: (u) => q.addUser.run(u.name, u.pass, u.pub, u.admin ? 1 : 0, u.created, u.created).lastInsertRowid,
+    addUser: (u) => q.addUser.run(u.name, u.pass, u.pub, u.admin ? 1 : 0, u.created, u.created, u.email || null, u.emailOk ? 1 : 0, u.active === false ? 0 : 1).lastInsertRowid,
+    userByEmail: (email) => q.userByEmail.get(String(email || '')),
+    setName: (id, name) => q.setName.run(name, id).changes > 0,
+    setEmail: (id, email, ok) => q.setEmail.run(email || null, ok ? 1 : 0, id).changes > 0,
+    activate: (id) => q.setActive.run(id).changes > 0,
+    // a link sent by email: its hash, whose it is, what for, and until when
+    addMailToken: (t) => q.addMailToken.run(t.token, t.userId, t.kind, t.email || null, t.expires),
+    mailToken: (token) => q.mailToken.get(token),
+    dropMailTokens: (userId, kind) => q.dropMailTokens.run(userId, kind),
+    dropExpiredMail: (at) => q.dropExpiredMail.run(at).changes,
     setPass: (id, pass) => q.setPass.run(pass, id),
     setAdmin: (id, on) => q.setAdmin.run(on ? 1 : 0, id),
     /* An account removed: its sessions, the campaigns it keeps (an online one it made

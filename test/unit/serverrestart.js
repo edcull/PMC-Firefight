@@ -154,7 +154,7 @@ async function main() {
 
   console.log('kept battles — a restart part-way through');
   let s1 = await boot();
-  const tokA = (await s1.auth.register('Ash', 'password one', '1')).token, tokB = (await s1.auth.register('Brann', 'password two', '1')).token;
+  const tokA = (await s1.auth.register('Ash', 'password one', '1', 'ash@example.com')).token, tokB = (await s1.auth.register('Brann', 'password two', '1', 'brann@example.com')).token;
   const cookie = (t) => Auth.COOKIE + '=' + t;
   let a = await new Client('Ash', cookie(tokA)).open(s1.url), b = await new Client('Brann', cookie(tokB)).open(s1.url);
   a.send('hello'); b.send('hello');
@@ -223,7 +223,7 @@ async function main() {
   a.send('game.join', { id: code2 });
   await a.till('the table again', (x) => !!x.state);
   ok('going back to it brings it back: the seat, and the table as it was', a.seat === 'A' && print(a.state) === second);
-  const stranger = await new Client('Cole', cookie((await s2.auth.register('Cole', 'password three', '1')).token)).open(s2.url);
+  const stranger = await new Client('Cole', cookie((await s2.auth.register('Cole', 'password three', '1', 'cole@example.com')).token)).open(s2.url);
   stranger.send('hello'); await stranger.till('welcome', (x) => !!x.me);
 
   console.log('kept battles — a forfeit');

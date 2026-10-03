@@ -29,7 +29,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errs.push(name + ': ' + e.message));
     await p.goto(URL); await p.waitForTimeout(400);
-    await p.evaluate((a) => fetch('api/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(a) }), { name: name, password: pass });
+    await p.evaluate((a) => fetch('api/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(a) }), { name: name, password: pass, email: name.replace(/\W/g, '').toLowerCase() + '@example.com' });
     await p.reload(); await p.waitForTimeout(800);
     return p;
   }

@@ -47,7 +47,7 @@ function create(opts) {
      CORS — and a write from a page elsewhere is refused by its Origin as well as
      its cookie's SameSite. Bodies are small JSON. */
   function api(req, res, url) {
-    const m = /^\/api\/(me|games|register|login|guest|logout|password)$/.exec(url);
+    const m = /^\/api\/(me|games|register|login|guest|logout|password|activate|resend|forgot|reset|rename|email|confirm-email)$/.exec(url);
     if (!m) return false;
     const send = (code, body, cookie) => {
       const h = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
@@ -62,7 +62,9 @@ function create(opts) {
     if (m[1] === 'me') {
       if (req.method !== 'GET') return send(405, { error: 'method not allowed' }), true;
       const me = auth.session(t);
-      return send(me ? 200 : 401, { who: shown(me) }), true;
+      // a signed-in player's own address too (to them only), and whether this server sends mail
+      const mine = me ? Object.assign(shown(me), auth.details(me) || {}) : null;
+      return send(me ? 200 : 401, { who: mine, mail: !!auth.mailLive }), true;
     }
     // the player's own battles, the latest first (the account screen's list; the lobby has it over the socket)
     if (m[1] === 'games') {
@@ -79,13 +81,34 @@ function create(opts) {
       const ip = ipOf(req);
       try {
         let r;
-        if (m[1] === 'register') r = await auth.register(b.name, b.password, ip);
-        else if (m[1] === 'login') r = await auth.login(b.name, b.password, ip);
+        if (m[1] === 'register') {
+          r = await auth.register(b.name, b.password, ip, b.email);
+          // waiting for its link: nobody is signed in yet
+          if (r.ok && r.pending) return send(200, { ok: true, pending: true, email: r.email });
+        }
+        else if (m[1] === 'login') {
+          r = await auth.login(b.name, b.password, ip);
+          if (!r.ok && r.inactive) return send(403, { error: r.why, inactive: true });
+        }
+        else if (m[1] === 'activate') r = auth.activate(b.token);
+        else if (m[1] === 'resend') r = await auth.resend(b.name, ip);
+        else if (m[1] === 'forgot') r = await auth.forgot(b.email, ip);
+        else if (m[1] === 'reset') r = await auth.resetWith(b.token, b.password);
+        else if (m[1] === 'rename') r = auth.rename(t, b.name);
+        else if (m[1] === 'email') {
+          r = await auth.changeEmail(t, b.email, b.password, ip);
+          if (r.ok) return send(200, { ok: true, email: r.email, pending: r.pending });
+        }
+        else if (m[1] === 'confirm-email') {
+          r = auth.confirmEmail(b.token);
+          if (r.ok) return send(200, { ok: true, email: r.email });
+        }
         else if (m[1] === 'guest') r = auth.guest(b.name, ip);
         else if (m[1] === 'logout') { auth.logout(t); return send(200, { ok: true }, Auth.cookie('', req, true)); }
         else r = await auth.changePassword(t, b.old, b.password);
         if (!r.ok) return send(r.code || 400, { error: r.why });
-        send(200, { ok: true, who: shown(r.who || auth.session(t)) }, r.token ? Auth.cookie(r.token, req) : null);
+        const now = r.who || auth.session(r.token || t);
+        send(200, { ok: true, who: now ? Object.assign(shown(now), auth.details(now) || {}) : null }, r.token ? Auth.cookie(r.token, req) : null);
       } catch (e) { send(500, { error: 'the server could not do that' }); }
     });
     return true;

@@ -21,9 +21,9 @@ function ok(name, cond, note) {
   const auth = Auth.create({ db: db, limits: { loginName: many, loginIp: many, register: many, guest: many } });
   const told = [];
   const online = Online.create({ db: db, notify: (uid, msg) => told.push([uid, msg.t, msg.id]) });
-  const ash = (await auth.register('Ash', 'password one', '1')).who;
-  const brann = (await auth.register('Brann', 'password two', '1')).who;
-  const cole = (await auth.register('Cole', 'password three', '1')).who;
+  const ash = (await auth.register('Ash', 'password one', '1', 'ash@example.com')).who;
+  const brann = (await auth.register('Brann', 'password two', '1', 'brann@example.com')).who;
+  const cole = (await auth.register('Cole', 'password three', '1', 'cole@example.com')).who;
   const guest = auth.guest('Passer', '1').who;
 
   console.log('\nMade, and joined with its code');
