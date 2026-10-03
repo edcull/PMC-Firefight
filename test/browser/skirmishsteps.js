@@ -31,7 +31,7 @@ const { ROOT, SHOTS, seedDice } = require('../where.js');
 
   console.log('\nThe menu');
   const multi = await p.evaluate(() => { const m = document.getElementById('btn-multi'); return { hidden: m.hidden, disabled: m.disabled, sub: m.innerText }; });
-  check('Multiplayer is shown but disabled with no server', !multi.hidden && multi.disabled && /server/i.test(multi.sub), multi.sub.replace(/\s+/g, ' '));
+  check('Multiplayer is shown but disabled with no server', !multi.hidden && multi.disabled && /unavailable/i.test(multi.sub), multi.sub.replace(/\s+/g, ' '));
 
   console.log('\nHotseat');
   // as against the AI: it opens on the battlefield, a card for each player's force

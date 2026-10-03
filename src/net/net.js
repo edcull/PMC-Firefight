@@ -167,8 +167,12 @@
      answering begin() or an intent. So a battle is kept as what it began with,
      a seed for its dice, and every intent in order: played through again with
      the same dice it comes out the same. A fingerprint of the table says
-     whether it did — if not, it is not offered back. */
-  var SAVE_KEY = 'pmc-live-battle', SAVE_V = 1;
+     whether it did — if not, it is not offered back.
+
+     Any number are kept, each under an id of its own, with an index of them (the
+     main menu's Continue list): starting another battle leaves the last one kept. */
+  var SAVE_KEY = 'pmc-live-battle', SAVE_V = 1;     // where the one battle was kept, before there could be several
+  var IDX = 'pmc-battles', ONE = 'pmc-battle:';
   function dice(seed) {
     var a = seed >>> 0;
     return function () {                              // mulberry32
@@ -190,13 +194,57 @@
     for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
     return (h >>> 0).toString(36) + '.' + s.length;
   }
-  function savedBattle() {
+  // a demo is only ever watched: never kept, and never offered back after a refresh
+  function isDemo(cfg) { return !!cfg && (cfg.mode === 'demo' || (cfg.aiSides && cfg.aiSides.length === 2)); }
+  function ls(k, v) {
     try {
-      var got = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-      return got && got.v === SAVE_V && got.cfg && got.intents ? got : null;
-    } catch (e) { return null; }
+      if (v === undefined) return localStorage.getItem(k);
+      if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v);
+    } catch (e) { if (v !== undefined && v !== null) throw e; }
+    return null;
   }
-  function forgetBattle() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { } }
+  function readJSON(k) { try { return JSON.parse(ls(k) || 'null'); } catch (e) { return null; } }
+  function newId() { return Date.now().toString(36) + Math.floor(Math.random() * 1679616).toString(36); }
+  // the one battle an older build kept: given an id, and put in the index (a demo thrown away)
+  function migrate() {
+    var old = readJSON(SAVE_KEY);
+    if (ls(SAVE_KEY) !== null) ls(SAVE_KEY, null);
+    if (!old || !old.cfg || isDemo(old.cfg)) return;
+    old.id = old.id || newId();
+    try { ls(ONE + old.id, JSON.stringify(old)); indexPut(old); } catch (e) { }
+  }
+  function index() { migrate(); var got = readJSON(IDX); return Array.isArray(got) ? got : []; }
+  // what the Continue list says of a battle, without reading the battle itself
+  function summary(book) {
+    var c = book.cfg || {};
+    return { id: book.id, at: book.at || Date.now(), mode: c.mode || 'ai', campaign: !!c.campaign, campLid: c.campLid || null,
+      nameA: c.nameA || '', nameB: c.nameB || '', scenario: c.scenario || '', tier: c.tier || 0, planet: c.planet || '',
+      turn: book.turn || 0, began: book.began || book.at || 0 };
+  }
+  function indexPut(book) {
+    var list = (readJSON(IDX) || []).filter(function (e) { return e.id !== book.id; });
+    list.unshift(summary(book));
+    ls(IDX, JSON.stringify(list));
+  }
+  function indexDrop(id) { ls(IDX, JSON.stringify((readJSON(IDX) || []).filter(function (e) { return e.id !== id; }))); }
+  // every battle kept in this browser, the latest first
+  function savedBattles() {
+    return index().filter(function (e) { return e && e.id; }).sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+  }
+  // one of them (the latest, with no id): null if there is none, or it is not one this build can play back
+  function savedBattle(id) {
+    if (!id) { var all = savedBattles(); if (!all.length) return null; id = all[0].id; }
+    var got = readJSON(ONE + id);
+    if (got && isDemo(got.cfg)) { forgetBattle(id); return null; }
+    if (!got) { indexDrop(id); return null; }
+    got.id = got.id || id;
+    return got.v === SAVE_V && got.cfg && got.intents ? got : null;
+  }
+  function forgetBattle(id) {
+    if (id === undefined) { savedBattles().forEach(function (e) { forgetBattle(e.id); }); return; }
+    if (!id) return;
+    ls(ONE + id, null); indexDrop(id);
+  }
   function clone(o) { return o === undefined ? null : JSON.parse(JSON.stringify(o)); }
 
   // the engine's work, done with this battle's own dice
@@ -206,19 +254,22 @@
     try { return fn.call(this); } finally { Math.random = real; }
   };
   Local.prototype.keep = function () {
-    if (!this.book || !this.engine) return;
-    if (this.engine.over()) { this.book = null; forgetBattle(); return; }
-    this.book.fp = fingerprint(this.engine.state());
+    if (!this.book || !this.engine || isDemo(this.book.cfg)) return;
+    if (this.engine.over()) { forgetBattle(this.book.id); this.book = null; return; }
+    var st = this.engine.state();
+    this.book.fp = fingerprint(st);
+    this.book.turn = st.turn || 0;
+    this.book.at = Date.now();
     /* A save that fails (storage full, or blocked in a private window) is said once
        (hotseat review HB-12): a refresh would lose the battle, and the players should know. */
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.book)); this.unsaved = false; }
+    try { ls(ONE + this.book.id, JSON.stringify(this.book)); indexPut(this.book); this.unsaved = false; }
     catch (e) {
       if (!this.unsaved) this.emit('unsaved', { text: 'This battle could not be saved on this device (its storage is full or blocked): a refresh now would lose it.' });
       this.unsaved = true;
     }
   };
   // thrown away from the menu, or given up: not offered again
-  Local.prototype.forget = function () { this.book = null; forgetBattle(); };
+  Local.prototype.forget = function () { if (this.book) forgetBattle(this.book.id); this.book = null; };
 
   Local.prototype.connect = function (name) {
     if (name) { this.me.name = name; remember(name); }
@@ -240,8 +291,7 @@
     var seed = (Math.random() * 4294967296) >>> 0;
     this.rng = dice(seed);
     // a demo is only watched: there is nothing to come back to
-    this.book = cfg.mode === 'demo' ? null : { v: SAVE_V, cfg: clone(cfg), seats: this.seats.slice(), seed: seed, intents: [], at: Date.now() };
-    if (!this.book) forgetBattle();
+    this.book = isDemo(cfg) ? null : { v: SAVE_V, id: newId(), cfg: clone(cfg), seats: this.seats.slice(), seed: seed, intents: [], at: Date.now(), began: Date.now() };
     this.engine = root.PMCEngine.create(recorder(this));
     /* The board is handed the engine before the battle is laid out, because
        laying it out is itself a stream of events — the terrain rolled, the
@@ -276,7 +326,7 @@
     this.replaying = null;
     this.events = [];
     if (engine.over() || fingerprint(engine.state()) !== book.fp) {
-      this.engine = null; forgetBattle();
+      this.engine = null; forgetBattle(book.id);
       return false;
     }
     this.book = book;
@@ -442,6 +492,7 @@
     defaultURL: defaultURL,
     // a battle this browser was playing when the page went away
     savedBattle: savedBattle,
+    savedBattles: savedBattles,
     forgetBattle: forgetBattle,
     /* Is there a server to talk to at all? A page served over http has one; a
        file:// page or the published single file does not. */

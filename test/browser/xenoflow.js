@@ -311,7 +311,7 @@ async function pastFronts(p) {
   console.log('\nReloading the page');
   await p.reload();
   await p.waitForTimeout(900);
-  await click(p, '#btn-campaign');
+  await p.evaluate(() => window.PMC_CAMPAIGN.enter()); await p.waitForTimeout(300);
   const back = await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get();
     return c ? { turn: c.turn, faction: c.companies.A.faction, name: c.companies.A.name,

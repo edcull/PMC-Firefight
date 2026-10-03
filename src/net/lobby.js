@@ -19,6 +19,7 @@
      undefined while it is being asked, null when nobody is, else { id, name, guest }. */
   var account;
   var signMode = 'signin';      // the sign-in screen's tab: 'signin' | 'register' | 'guest'
+  var mailOn = false;           // whether this server sends mail: an address is asked for only then
   var signNote = '';            // what the sign-in screen has to say (an account made, its link sent)
   var busy = false;             // a sign-in on its way to the server
   var games = [];
@@ -202,18 +203,18 @@
     var reg = signMode === 'register', guest = signMode === 'guest';
     return '<div class="lob-scroll"><div class="lob-sign">' +
       '<p class="lede">' + (guest ? 'Play a one-off battle without an account. Campaigns need one.'
-        : reg ? 'A name, your email address and a password.' : 'Sign in to play other people over the network.') + '</p>' +
+        : reg ? (mailOn ? 'A name, your email address and a password.' : 'A name and a password.') : 'Sign in to play other people over the network.') + '</p>' +
       '<div class="lob-tabs">' + tab('signin', 'Sign in') + tab('register', 'New account') + tab('guest', 'Play as a guest') + '</div>' +
       '<p class="lob-bad">' + esc(fault) + '</p>' +
       (signNote ? '<p class="lob-good">' + esc(signNote) + '</p>' : '') +
       '<div class="field"><label for="sign-name">' + (guest ? 'Your name for this battle' : 'Name') + '</label>' +
       '<input id="sign-name" type="text" maxlength="24" autocomplete="username" value="' + esc(me.name || '') + '"></div>' +
-      (reg ? '<div class="field"><label for="sign-email">Email address</label><input id="sign-email" type="email" maxlength="254" autocomplete="email"></div>' : '') +
+      (reg && mailOn ? '<div class="field"><label for="sign-email">Email address</label><input id="sign-email" type="email" maxlength="254" autocomplete="email"></div>' : '') +
       (guest ? '' : '<div class="field"><label for="sign-pass">Password' + (reg ? ' (at least 8 characters)' : '') + '</label>' +
         '<input id="sign-pass" type="password" maxlength="200" autocomplete="' + (reg ? 'new-password' : 'current-password') + '"></div>') +
       '<div class="lob-foot"><button class="start" data-lob="signgo"' + (busy ? ' disabled' : '') + '>' +
         (busy ? 'One moment\u2026' : guest ? 'Play as a guest' : reg ? 'Make the account' : 'Sign in') + '</button></div>' +
-      (!reg && !guest ? '<button class="lnk lob-forgot" data-lob="forgot">Forgot password?</button>' : '') +
+      (!reg && !guest && mailOn ? '<button class="lnk lob-forgot" data-lob="forgot">Forgot password?</button>' : '') +
       '</div></div>';
   }
   // ask the server who this browser is, then on to the lobby (or the sign-in)
@@ -221,7 +222,13 @@
     if (!root.fetch) { account = null; then(); return; }
     // only the server's answer settles it: a server that cannot be reached (restarting) leaves it as it was
     root.fetch('api/me', { credentials: 'same-origin', cache: 'no-store' })
-      .then(function (r) { return r.status === 401 ? { who: null } : r.ok ? r.json() : { who: account }; })
+      .then(function (r) {
+        if (!(r.status === 401 || r.ok)) return { who: account };
+        // what it says of this server (whether it sends mail), and who this is
+        var took = function (j) { if (j && j.mail !== undefined) mailOn = !!j.mail; return r.ok ? j : { who: null }; };
+        var jr = r.json();
+        return jr && typeof jr.then === 'function' ? jr.then(took, function () { return { who: r.ok ? account : null }; }) : took(jr);
+      })
       .then(function (j) { account = j.who || null; then(); })
       .catch(function () { if (account === undefined) fault = 'The server could not be reached.'; then(); });
   }
@@ -755,6 +762,18 @@
       account = undefined; view = 'lobby';
     },
     // the code of a game this browser was seated at and may go back to
-    resumable: function () { return lastRoom(); }
+    resumable: function () { return lastRoom(); },
+    /* Back to a battle of the player's still being fought online, by its code (the
+       main menu's Continue list): their seat is held for them, so joining it seats them. */
+    rejoin: function (code) {
+      ensure();
+      campBattle = null; campOver = false;
+      var go = function () { keepRoom(code); connect(); net.send('game.join', { id: code }); };
+      if (account) { go(); return; }
+      whoAmI(function () {
+        if (account) { me.name = account.name; go(); }
+        else open('signin');
+      });
+    }
   };
 })(typeof window !== 'undefined' ? window : global);

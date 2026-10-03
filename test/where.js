@@ -65,7 +65,8 @@ async function signInLobby(page, name, mode, password) {
   if (await page.evaluate(() => !!document.getElementById('sign-name'))) {
     await page.evaluate((m) => document.querySelector('#lobby [data-lob="signmode"][data-mode="' + m + '"]').click(), mode);
     await page.fill('#sign-name', name);
-    if (mode === 'register') await page.fill('#sign-email', name.replace(/\W/g, '').toLowerCase() + '@example.com');
+    // an address is asked for only where the server sends mail
+    if (mode === 'register' && await page.evaluate(() => !!document.getElementById('sign-email'))) await page.fill('#sign-email', name.replace(/\W/g, '').toLowerCase() + '@example.com');
     if (mode !== 'guest') await page.fill('#sign-pass', password || 'password for ' + name);
     await page.evaluate(() => document.querySelector('#lobby [data-lob="signgo"]').click());
   }

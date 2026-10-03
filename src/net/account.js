@@ -12,8 +12,9 @@
    ?confirm-email= and the link's token: read here as the page loads, and acted
    on in this pane.
 
-   Only offered when the page came from a game server (net.js online()): a page
-   opened from a file has no accounts to sign in to. */
+   Only live once the game server answers (its /health, as the Multiplayer card
+   waits for): a page opened from a file, or the static copy on GitHub Pages, has
+   no accounts to sign in to, so the chip is shown greyed out and saying why. */
 (function (root) {
   'use strict';
   var who;                       // undefined until asked; null signed out; { name, guest, admin, email, emailOk } signed in
@@ -27,7 +28,9 @@
   var data = null;               // what the server keeps for the player, once fetched
   function el(id) { return document.getElementById(id); }
   function esc(t) { return root.PMC.esc(t); }
-  function online() { return !!(root.PMCNet && root.PMCNet.online && root.PMCNet.online()); }
+  // a page served over http, and a game server behind it that has answered
+  var serverUp = false;
+  function online() { return serverUp && !!(root.PMCNet && root.PMCNet.online && root.PMCNet.online()); }
   function val(id) { return ((el(id) || {}).value || '').trim(); }
   function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1) + (/[.!?]$/.test(s) ? '' : '.'); }
   function get(path) {
@@ -55,9 +58,13 @@
   var USER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>';
   function label() {
     Array.prototype.forEach.call(document.querySelectorAll('.user-chip'), function (c) {
-      c.hidden = !online();
+      // no server: the main menu's is shown greyed out (as the Multiplayer card is); the top bars' are not shown at all
+      var onMenu = c.classList.contains('menu-chip');
+      c.hidden = !onMenu && !online();
+      c.disabled = !online();
       c.innerHTML = USER_ICON + '<span>' + esc(who ? who.name : 'Sign in') + '</span>';
-      c.title = who ? 'Your account' : 'Sign in, or make an account';
+      c.title = !online() ? 'Online accounts unavailable'
+        : who ? 'Your account' : 'Sign in, or make an account';
     });
   }
   // what the server keeps for the player: their campaigns, their online campaigns, their battles
@@ -117,15 +124,16 @@
     }
     var reg = mode === 'register';
     var h = '<h2 class="acct-head">' + (reg ? 'New account' : 'Sign in') + '</h2>' +
-      '<p class="acct-lede">' + (reg ? 'A name, your email address and a password.' + (mailOn ? ' A link to activate the account is sent to the address.' : '')
+      '<p class="acct-lede">' + (reg ? (mailOn ? 'A name, your email address and a password. A link to activate the account is sent to the address.' : 'A name and a password.')
         : 'Sign in to keep your campaigns on the server, follow them to another device, and play other people.') + '</p>' +
       tabs + msgs() +
       (inactive && !reg ? '<button type="button" class="lnk acct-resend" data-acct="resend">Send the activation link again</button>' : '') +
       field('acct-name', 'Name', 'text', 'username', 24, lastName) +
-      (reg ? field('acct-email', 'Email address', 'email', 'email', 254) : '') +
+      // the address only where this server sends mail (the link to activate it, a reset)
+      (reg && mailOn ? field('acct-email', 'Email address', 'email', 'email', 254) : '') +
       field('acct-pass', 'Password' + (reg ? ' (at least 8 characters)' : ''), 'password', reg ? 'new-password' : 'current-password', 200) +
       goButton('go', reg ? 'Make the account' : 'Sign in');
-    if (!reg) h += '<button type="button" class="lnk acct-forgot" data-acct="mode" data-mode="forgot">Forgot password?</button>';
+    if (!reg && mailOn) h += '<button type="button" class="lnk acct-forgot" data-acct="mode" data-mode="forgot">Forgot password?</button>';
     return h + back;
   }
   function signedInHTML() {
@@ -151,7 +159,7 @@
     } else {
       h += '<div class="acct-line"><span>Email</span>' + (who.email ? '<b>' + esc(who.email) + '</b>' + editBtn('email', 'Change your email address') +
         (who.emailOk ? '' : '<span class="acct-tag">unconfirmed</span>')
-        : '<em>none — add one, so a forgotten password can be reset</em>' + editBtn('email', 'Add an email address')) + '</div>';
+        : '<em>none' + (mailOn ? ' — add one, so a forgotten password can be reset' : '') + '</em>' + editBtn('email', 'Add an email address')) + '</div>';
     }
     // what is kept, in a box of its own that scrolls when there is more than fits
     h += '<div class="acct-data">';
@@ -176,12 +184,12 @@
       }), 'None yet.');
     }
     // what this browser keeps of its own, whoever is signed in
-    var local = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.get && root.PMC_CAMPAIGN.get();
-    if (local && local.companies && local.companies.A) {
-      var B = local.mode === 'hotseat' && local.companies.B;
-      h += '<div class="acct-sec"><h3>In this browser</h3>' +
-        '<div class="acct-row"><span><b>' + esc(local.companies.A.name + (B && B.name ? ' v ' + B.name : '')) + '</b><small>' +
-        (local.mode === 'hotseat' ? 'Hotseat' : 'Single player') + ' campaign · turn ' + local.turn + '</small></span></div></div>';
+    var locals = (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.list && root.PMC_CAMPAIGN.list()) || [];
+    if (locals.length) {
+      h += '<div class="acct-sec"><h3>In this browser</h3>' + locals.map(function (c) {
+        return '<div class="acct-row"><span><b>' + esc(c.name) + '</b><small>' +
+          (c.mode === 'hotseat' ? 'Hotseat' : 'Single player') + ' campaign · turn ' + (c.turn || 0) + '</small></span></div>';
+      }).join('') + '</div>';
     }
     return h + '</div>';
   }
@@ -197,8 +205,7 @@
       '<div class="camp-top"><button type="button" class="camp-back" data-acct="back">\u2190 Back</button><h1>User Account</h1></div>' +
       '<div class="sheet acct-sheet"><div id="acct-body"></div></div>';
     document.body.appendChild(host);
-    // home, as the other screens' way back to the main menu is drawn
-    if (root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(host.querySelector('.camp-back'), true);
+    // its way back is to wherever it was opened from: Back, not home
     wireHost();
     return host;
   }
@@ -255,7 +262,7 @@
     if (!name) { fault = 'Give your name.'; draw(); return; }
     if (reg) {
       var email = val('acct-email');
-      if (!email) { fault = 'Give your email address.'; draw(); return; }
+      if (!email && mailOn) { fault = 'Give your email address.'; draw(); return; }
       send('api/register', { name: name, email: email, password: pass }, function (j) {
         if (!j) return;
         if (j.pending) { mode = 'sent'; notice = 'Your account is made. A link to activate it has been sent to ' + j.email + ' — follow it, and you are signed in.'; return; }
@@ -269,6 +276,40 @@
       // not activated yet: the link may be sent again
       inactive = !!(r && r.j && r.j.inactive);
     });
+  }
+  /* The user chip's menu: Your account and Sign out, under the chip it was opened
+     from, as the lobby's is. One for the page, placed where it is wanted. */
+  var popFor = null;
+  function openPop(chip) {
+    var pop = el('user-pop');
+    if (!pop) {
+      pop = document.createElement('div');
+      pop.id = 'user-pop';
+      pop.className = 'user-pop';
+      pop.innerHTML = '<button type="button" class="lnk" data-pop="account">Your account</button><button type="button" class="lnk" data-pop="out">Sign out</button>';
+      document.body.appendChild(pop);
+      pop.addEventListener('click', function (ev) {
+        var b = ev.target.closest && ev.target.closest('[data-pop]');
+        if (!b) return;
+        var a = b.getAttribute('data-pop');
+        closePop();
+        if (a === 'account') openScreen(); else signOut();
+      });
+    }
+    var r = chip.getBoundingClientRect();
+    pop.hidden = false;
+    pop.style.top = Math.round(r.bottom + 4) + 'px';
+    pop.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
+    // a chip low on the page (the main menu's foot): the menu opens above it instead
+    if (r.bottom + pop.offsetHeight + 8 > window.innerHeight) pop.style.top = Math.max(8, Math.round(r.top - pop.offsetHeight - 4)) + 'px';
+    chip.setAttribute('aria-expanded', 'true');
+    popFor = chip;
+  }
+  function closePop() {
+    var pop = el('user-pop');
+    if (pop) pop.hidden = true;
+    if (popFor) popFor.setAttribute('aria-expanded', 'false');
+    popFor = null;
   }
   function signOut() {
     root.fetch('api/logout', { method: 'POST', credentials: 'same-origin' }).catch(function () { })
@@ -346,10 +387,29 @@
   function wire() {
     // the user chip, on the main menu's card and the other screens' top bars, opens it
     document.addEventListener('click', function (ev) {
-      if (ev.target.closest && ev.target.closest('.user-chip')) openScreen();
+      var chip = ev.target.closest && ev.target.closest('.user-chip');
+      var pop = el('user-pop');
+      if (pop && !pop.hidden && !(ev.target.closest && ev.target.closest('#user-pop')) && chip !== popFor) closePop();
+      if (!chip) return;
+      // the main menu's goes straight to the account; the top bars': signed in, a little menu under it (as the lobby's)
+      if (chip.classList.contains('menu-chip')) { openScreen(); return; }
+      if (who) { if (pop && !pop.hidden && popFor === chip) closePop(); else openPop(chip); }
+      else openScreen();
     });
-    refresh();
-    fromLink();
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closePop(); });
+    label();
+    // the server's own /health, relative to the page (it may sit on a sub-path): answered, accounts are live
+    if (root.fetch && root.PMCNet && root.PMCNet.online && root.PMCNet.online()) {
+      root.fetch('health', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (h) {
+          if (!(h && h.ok === true && h.rooms != null)) return;
+          serverUp = true;
+          refresh();
+          fromLink();
+        })
+        .catch(function () { });
+    }
   }
 
   root.PMCAccount = {

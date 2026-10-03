@@ -55,14 +55,14 @@ const { ROOT } = require('../where.js');
   const t1 = await terms();
   check('back to the hub and in again: the same contract, the picks kept', JSON.stringify(t1) === JSON.stringify(t0), JSON.stringify(t1));
   await p.reload(); await p.waitForTimeout(900);
-  await click('#btn-campaign');
+  await p.evaluate(() => window.PMC_CAMPAIGN.enter()); await p.waitForTimeout(300);
   await click('#camp-body [data-go="contract"]');
   const t2 = await terms();
   check('after a reload, the same contract and Player 1\'s picks', !!t2 && t2.tier === t0.tier && t2.scen === t0.scen && t2.picks === t0.picks && t2.roles === t0.roles, JSON.stringify(t2));
   // handed over, then reloaded: Player 2's turn, with Player 1's list kept
   await click('#camp-body button.start[data-go="fight"]');
   await p.reload(); await p.waitForTimeout(900);
-  await click('#btn-campaign');
+  await p.evaluate(() => window.PMC_CAMPAIGN.enter()); await p.waitForTimeout(300);
   await click('#camp-body [data-go="contract"]');
   const t3 = await terms();
   check('handed over and reloaded: Player 2 picks, Player 1\'s list kept', !!t3 && t3.side === 'B' && t3.first === t0.picks, JSON.stringify(t3));

@@ -111,13 +111,16 @@ async function pastFronts(p) {
   check('...whose panel the hub lists', await p.evaluate((n) => [...document.querySelectorAll('#camp-body .cpan-B .cphead b')].some(b => b.textContent === n), rival.name), rival.name);
   await shot(p, 'camp-hub.png');
 
-  // with a campaign under way (and no battle on), the menu's first card goes back into it
+  // with a campaign under way (and no battle on), the menu's first card is Continue, and it is in the list behind it
   await p.reload(); await p.waitForTimeout(1200);
   await p.evaluate(() => window.PMCMenu.open()); await p.waitForTimeout(300);
-  const resume = await p.evaluate(() => ({ shown: !document.getElementById('btn-camp-resume').hidden,
-    first: document.querySelector('#menu-main .mcard:not([hidden])').id, sub: document.getElementById('menu-camp-resume-sub').textContent }));
-  check('the menu opens on Continue the campaign', resume.shown && resume.first === 'btn-camp-resume' && /Task Force|campaign turn/.test(resume.sub), JSON.stringify(resume));
-  await p.evaluate(() => document.getElementById('btn-camp-resume').click()); await p.waitForTimeout(800);
+  const resume = await p.evaluate(() => ({ shown: !document.getElementById('btn-continue').hidden,
+    first: document.querySelector('#menu-main .mcard:not([hidden])').id, sub: document.getElementById('menu-continue-sub').textContent }));
+  check('the menu opens on Continue', resume.shown && resume.first === 'btn-continue' && /Task Force/.test(resume.sub), JSON.stringify(resume));
+  await p.evaluate(() => document.getElementById('btn-continue').click()); await p.waitForTimeout(300);
+  const crow = await p.evaluate(() => { const b = document.querySelector('#cont-list [data-cont^="c:"]'); return b ? b.textContent : ''; });
+  check('...a list with the campaign in it', /Campaign/.test(crow) && /Task Force/.test(crow) && /campaign turn/.test(crow), crow);
+  await p.evaluate(() => document.querySelector('#cont-list [data-cont^="c:"]').click()); await p.waitForTimeout(800);
   check('...which goes back to its hub', await p.evaluate(() => !document.getElementById('camp').hidden && !!document.querySelector('#camp-body .cpan-A')));
 
   /* the road to the next Company Tier, laid out step by step (pp. 83-84) —
@@ -217,7 +220,7 @@ async function pastFronts(p) {
   await clickText(p, 'Back');
   await p.waitForTimeout(200);
 
-  const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('pmc-campaign')));
+  const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('pmc-campaign:' + localStorage.getItem('pmc-campaign-current'))));
   check('the campaign was written to storage', !!saved && saved.companies.A.roster.length >= 9,
   (saved ? saved.companies.A.roster.length + ' units, Tier ' + saved.companies.A.tier : 'nothing saved'));
 
@@ -747,7 +750,7 @@ async function pastFronts(p) {
   console.log('\nReloading the page');
   await p.reload();
   await p.waitForTimeout(900);
-  await click(p, '#btn-campaign');
+  await p.evaluate(() => window.PMC_CAMPAIGN.enter()); await p.waitForTimeout(300);
   txt = await body(p);
   check('the campaign came back after a reload', /Task Force Ironhold/.test(txt));
   check('...at the same campaign turn', await p.evaluate(() => window.PMC_CAMPAIGN.get().turn === 1));

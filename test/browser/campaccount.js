@@ -51,7 +51,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const d2 = await device({ how: 'login' });
   ok('signed in on a second device', d2.got === 200);
-  await d2.p.evaluate(() => document.getElementById('btn-campaign').click());
+  // the account's campaign, not kept in this browser, is in the Continue list
+  await d2.p.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('continue'); });
+  await d2.p.waitForTimeout(800);
+  const offered = await d2.p.evaluate(() => { const b = document.querySelector('#cont-list [data-cont^="a:"]'); return b ? b.textContent : ''; });
+  ok('a second device lists the account\u2019s campaign under Continue', /your account/.test(offered) && /Iron Wolves/.test(offered), offered);
+  await d2.p.evaluate(() => document.querySelector('#cont-list [data-cont^="a:"]').click());
   await d2.p.waitForTimeout(800);
   const found = await d2.p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return c && c.companies.A.name; });
   ok('...where the same campaign is found, from the account', found === 'Iron Wolves', String(found));
@@ -61,7 +66,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await d2.p.waitForTimeout(600);
   await d1.p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); c.companies.A.kUC = 5; window.PMC_CAMPAIGN.set(c); });
   await d1.p.waitForTimeout(800);
-  await d1.p.evaluate(() => { if (document.getElementById('camp').hidden) document.getElementById('btn-campaign').click(); window.PMC_CAMPAIGN.open('hub'); });
+  await d1.p.evaluate(() => { if (document.getElementById('camp').hidden) window.PMC_CAMPAIGN.enter(); window.PMC_CAMPAIGN.open('hub'); });
   await d1.p.waitForTimeout(400);
   const note = await d1.p.evaluate(() => { const n = document.querySelector('#camp-body .hubnote'); return n ? n.textContent : ''; });
   ok('a save from the older copy is refused, and the hub says so', /saved on another device/.test(note) && /Use that copy/.test(note), note);

@@ -145,12 +145,15 @@ function create(opts) {
        address (and nobody is signed in yet); where it does not, it is active at once. */
     async register(name, pass, ip, email) {
       if (!allow('register', ip)) return no('too many accounts made from here lately — try again later', 429);
-      const n = checkName(name), p = checkPass(pass), e = checkEmail(email);
+      // the address is wanted only where mail goes out (the link to activate, a reset); otherwise it may be left out
+      const given = String(email || '').trim(), e = given ? checkEmail(given) : null;
+      const n = checkName(name), p = checkPass(pass);
       if (!n) return no('a name is 3 to 24 letters, numbers, spaces, dots, dashes or underscores');
-      if (!e) return no('give an email address — it is where your activation link goes, and a password reset if you ever need one');
+      if (mailer.live && !e) return no('give an email address — it is where your activation link goes, and a password reset if you ever need one');
+      if (given && !e) return no('that does not look like an email address');
       if (!p) return no('a password is at least ' + PASS_MIN + ' characters');
       if (db.userByName(n)) return no('that name is taken');
-      if (db.userByEmail(e)) return no('that email address already has an account \u2014 sign in, or use Forgot password');
+      if (e && db.userByEmail(e)) return no('that email address already has an account \u2014 sign in, or use Forgot password');
       const hash = await hashPassword(p);
       let id;
       try { id = db.addUser({ name: n, pass: hash, pub: pub(), admin: false, created: now(), email: e, emailOk: false, active: !mailer.live }); }

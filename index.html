@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=3a3a0881c6">
-<link rel="stylesheet" href="src/css/game.css?v=8ba0da0b84">
+<link rel="stylesheet" href="src/css/game.css?v=05ac09c569">
 
 <div class="wrap">
   <header>
@@ -118,14 +118,19 @@
         <!-- a skirmish can be thrown away: the x on the card, asked twice -->
         <button class="resume-x" id="btn-discard" hidden aria-label="Discard this battle" title="Discard this battle">✕</button>
       </div>
-      <!-- a campaign under way (and no battle on): the way back into it, first -->
-      <button class="mcard" id="btn-camp-resume" hidden>Continue the campaign<small id="menu-camp-resume-sub"></small></button>
+      <!-- games under way, kept here or on the server: the list of them, to pick one up -->
+      <button class="mcard" id="btn-continue" data-menu="continue" hidden>Continue<small id="menu-continue-sub"></small></button>
       <button class="mcard" data-menu="single">Single player<small>Skirmish, solitaire or a campaign, against the AI</small></button>
       <button class="mcard" data-menu="hotseat">Hotseat<small>Two players, one screen</small></button>
       <!-- only offered when the page came from a game server: a game opened
            from a file has nobody to play against -->
-      <button class="mcard" id="btn-multi" disabled>Multiplayer<small id="menu-multi-sub">Needs the game server — run node server.js and open the page from it</small></button>
+      <button class="mcard" id="btn-multi" disabled>Multiplayer<small id="menu-multi-sub">Online multiplayer unavailable</small></button>
       <a class="mcard" href="viewer.html" id="lnk-viewer">Unit viewer<small>Every profile in all four armies, walking and firing</small></a>
+    </div>
+    <div class="menu-pane" id="menu-continue" hidden>
+      <h2 class="menu-head">Continue</h2>
+      <div class="cont-list" id="cont-list"></div>
+      <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
     <div class="menu-pane" id="menu-single" hidden>
       <h2 class="menu-head">Single player</h2>
@@ -150,7 +155,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2610030112</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2610030821</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -558,9 +563,9 @@
 <script src="src/engine/swaps.js?v=12cda83aa9"></script>
 <script src="src/engine/engine.js?v=78f6126065"></script>
 <script src="src/engine/offtable.js?v=ef8edae603"></script>
-<script src="src/net/net.js?v=b704f7022b"></script>
-<script src="src/net/account.js?v=8a43641dd7"></script>
-<script src="src/net/lobby.js?v=ac99e00fec"></script>
+<script src="src/net/net.js?v=c3fd6af800"></script>
+<script src="src/net/account.js?v=e952d85909"></script>
+<script src="src/net/lobby.js?v=fb06da350c"></script>
 <script src="src/view/replay.js?v=9bc59170a7"></script>
 <script src="src/view/hooks.js?v=7ad383bd12"></script>
 <script src="src/view/testhooks.js?v=a48181cc11"></script>
@@ -573,12 +578,12 @@
 <script src="src/view/view.js?v=73abea196b"></script>
 <script src="src/view/panels.js?v=786d572c2b"></script>
 <script src="src/view/muster.js?v=416d9b2fa6"></script>
-<script src="src/view/game.js?v=56eb6f0065"></script>
+<script src="src/view/game.js?v=d999c541d0"></script>
 <script src="src/view/dossier-hub.js?v=771e52ffb5"></script>
 <script src="src/view/dossier-found.js?v=382b00dba1"></script>
 <script src="src/view/dossier-roster.js?v=252a0f7a67"></script>
-<script src="src/view/dossier-contract.js?v=1a8ad32434"></script>
+<script src="src/view/dossier-contract.js?v=c06c458b1e"></script>
 <script src="src/view/dossier-after.js?v=37e2b922a3"></script>
-<script src="src/view/dossier-online.js?v=ba67254153"></script>
-<script src="src/view/dossier.js?v=7b5778ff40"></script>
-<script src="src/view/menu.js?v=c6f4ede35e"></script>
+<script src="src/view/dossier-online.js?v=c9dcb09c56"></script>
+<script src="src/view/dossier.js?v=242ba27edf"></script>
+<script src="src/view/menu.js?v=af1c503a00"></script>

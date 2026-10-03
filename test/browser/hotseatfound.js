@@ -55,13 +55,12 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   const world = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return c.rivals.map(r => ({ plan: (r.docPlan || []).length, docs: r.doctrines.length })); });
   check('...three rivals, each with a random plan of doctrines',
     world.length === 3 && world.every(w => w.docs >= 1 && w.plan >= 1), JSON.stringify(world));
-  await p.evaluate(() => { try { localStorage.removeItem('pmc-campaign'); } catch (e) { } });
   await p.reload();
   await p.waitForTimeout(900);
 
   console.log('\nPlayer 1');
-  // the Hotseat menu's campaign card: no choice of how to play, it is hotseat
-  await p.evaluate(() => window.PMC_CAMPAIGN.enter('hotseat'));
+  // the Hotseat menu's campaign card: a new campaign (the solo one kept), no choice of how to play, it is hotseat
+  await p.evaluate(() => window.PMC_CAMPAIGN.fresh('hotseat'));
   await p.waitForTimeout(300);
   check('...it asks what player 2 is running instead', await p.evaluate(() => !document.getElementById('camp-bwrap').hidden &&
     [...document.getElementById('camp-bfaction').options].map(o => o.value).join() === 'pmc,rebel,bugs,xeno'));
@@ -88,7 +87,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   // a reload between the two brings player 2 back
   await p.reload();
   await p.waitForTimeout(900);
-  await click(p, '#btn-campaign');
+  await p.evaluate(() => window.PMC_CAMPAIGN.enter()); await p.waitForTimeout(300);
   check('a reload comes back to player 2\'s founding', /Player 2 — /.test(await body(p)));
 
   // player 2 runs a swarm
@@ -98,7 +97,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
     await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.B.faction === 'bugs'));
   // the choice is kept across a reload before they finish (HC-13)
   await p.reload(); await p.waitForTimeout(900);
-  await click(p, '#btn-campaign');
+  await p.evaluate(() => window.PMC_CAMPAIGN.enter()); await p.waitForTimeout(300);
   check('a reload keeps player 2\'s choice of force', /Player 2 — Awaken a swarm/.test(await body(p)));
   check('...and is offered that force\'s own units', await p.evaluate(() => !!document.querySelector('#camp-body button[data-add="btiny"]') &&
     !document.querySelector('#camp-body button[data-add="recruits"]')));
@@ -139,7 +138,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
 
   await p.reload();
   await p.waitForTimeout(900);
-  await click(p, '#btn-campaign');
+  await p.evaluate(() => window.PMC_CAMPAIGN.enter()); await p.waitForTimeout(300);
   check('both survive a reload', /Task Force Ironhold/.test(await body(p)) && /The Hive/.test(await p2()));
   check('no page errors', errs.length === 0, errs.join('; '));
 

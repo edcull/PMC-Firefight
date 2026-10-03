@@ -1,8 +1,9 @@
 /* A battle in this browser outlives a refresh. A skirmish against the AI is
    played a few activations in, the page is reloaded, and the menu offers it
-   back — the same table, units where they were, and it plays on. Then a
-   campaign's battle: reloaded mid-fight, the Campaign card goes back to it
-   rather than to the hub. */
+   back — the same table, units where they were, and it plays on. A second
+   begun beside it leaves it kept: both in the Continue list, either picked up.
+   Then a campaign's battle: reloaded mid-fight, the campaign goes back to it
+   rather than to the hub, and a skirmish begun meanwhile does not lose it. */
 const { chromium } = require('playwright');
 const path = require('path');
 const { ROOT, startSkirmish } = require('../where.js');
@@ -85,16 +86,35 @@ async function play(p, n) {
   const logLater = await p.evaluate(() => document.querySelectorAll('#log > *').length);
   ok('...and it plays on', logLater > logAfter, logAfter + ' → ' + logLater);
 
-  console.log('\n  A new skirmish while this one is on (HB-12)');
-  await p.evaluate(() => window.PMCMenu.open());
-  const fresh = () => p.evaluate(() => { document.querySelector('[data-skirmish="ai"]').click();
+  console.log('\n  A second skirmish while this one is on');
+  const tFirst = await table(p);
+  const firstId = await p.evaluate(() => window.PMC_BATTLE_ID());
+  const f1 = await p.evaluate(() => { window.PMCMenu.open(); document.querySelector('[data-skirmish="ai"]').click();
     const n = document.getElementById('menu-note');
-    return { menu: !document.getElementById('menu').hidden, note: n.hidden ? '' : n.textContent, live: window.PMC_BATTLE_LIVE() }; });
-  const f1 = await fresh();
-  ok('the first tap only warns that this battle would be lost', f1.menu && f1.live && /Tap again/.test(f1.note), JSON.stringify(f1));
-  const f2 = await fresh();
-  ok('...a second goes on to the new one', !f2.menu && !f2.note, JSON.stringify(f2));
+    return { menu: !document.getElementById('menu').hidden, setup: !document.getElementById('setup').hidden, note: n.hidden ? '' : n.textContent }; });
+  ok('a new skirmish goes straight to its muster sheet: nothing to be lost', !f1.menu && f1.setup && !f1.note, JSON.stringify(f1));
   await p.evaluate(() => { document.getElementById('setup').hidden = true; });
+  await startSkirmish(p, { tier: 3, mode: 'ai', scenario: 'meeting', planet: 'arctic', terrain: 'auto',
+    keys: ['cmd2', 'regular', 'regular', 'regular', 'rookie', 'rookie'] });
+  await p.waitForTimeout(1200);
+  await drain(p);
+  const two = await p.evaluate(() => window.PMCNet.savedBattles().map((x) => x.id));
+  ok('...and once it is begun, both are kept', two.length === 2 && two.indexOf(firstId) >= 0, two.join());
+  await p.evaluate(() => { window.PMCMenu.open(); document.getElementById('btn-continue').click(); });
+  await p.waitForTimeout(200);
+  const rows = await p.evaluate(() => [...document.querySelectorAll('#cont-list [data-cont]')].map((x) => x.getAttribute('data-cont') + ' ' + x.textContent));
+  ok('Continue lists the two, the one on the table first', rows.length === 2 && /On the table now/.test(rows[0]) && rows[1].indexOf('b:' + firstId) === 0, JSON.stringify(rows));
+  await p.evaluate((id) => document.querySelector('#cont-list [data-cont="b:' + id + '"]').click(), firstId);
+  await p.waitForTimeout(900);
+  ok('picking the first goes back to it, every unit where it was', (await table(p)) === tFirst && await p.evaluate(() => document.getElementById('menu').hidden));
+  // the second, put away from the list (asked twice)
+  const secondId = two.find((x) => x !== firstId);
+  await p.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('continue'); });
+  await p.evaluate((id) => document.querySelector('#cont-list [data-contdel="b:' + id + '"]').click(), secondId);
+  const asked = await p.evaluate((id) => document.querySelector('#cont-list [data-contdel="b:' + id + '"]').textContent, secondId);
+  await p.evaluate((id) => document.querySelector('#cont-list [data-contdel="b:' + id + '"]').click(), secondId);
+  ok('one put away from the list is asked first, then gone', asked === 'Delete?' && await p.evaluate(() => window.PMCNet.savedBattles().length === 1), asked);
+  await p.evaluate(() => window.PMCMenu.show('main'));
 
   console.log('\n  Thrown away');
   await p.evaluate(() => window.PMCMenu.open());
@@ -136,7 +156,7 @@ async function play(p, n) {
   const campBefore = await table(p);
   await p.reload();
   await p.waitForTimeout(1200);
-  await click('#btn-campaign');
+  await p.evaluate(() => window.PMC_CAMPAIGN.enter()); await p.waitForTimeout(300);
   await p.waitForTimeout(400);
   const back = await p.evaluate(() => ({ menu: !document.getElementById('menu').hidden, camp: !document.getElementById('camp').hidden,
     live: window.PMC_BATTLE_LIVE(), campaign: !!(window.PMC_STATE() && window.PMC_STATE().cfg.campaign),
@@ -144,10 +164,20 @@ async function play(p, n) {
   ok('after a refresh, Campaign goes back to the battle', !back.menu && !back.camp && back.live && back.campaign, JSON.stringify(back));
   ok('...the same battle', campBefore === await table(p));
   ok('...and the campaign is still waiting on its result', back.pending);
-  const camp2 = await p.evaluate(() => { window.PMCMenu.open(); document.querySelector('[data-skirmish="ai"]').click(); document.querySelector('[data-skirmish="ai"]').click();
-    const n = document.getElementById('menu-note');
-    return { menu: !document.getElementById('menu').hidden, note: n.hidden ? '' : n.textContent, campaign: !!window.PMC_STATE().cfg.campaign }; });
-  ok('a new skirmish cannot take the place of the campaign\'s battle', camp2.menu && camp2.campaign && /for the campaign/.test(camp2.note), JSON.stringify(camp2));
+  const camp2 = await p.evaluate(() => { window.PMCMenu.open(); document.querySelector('[data-skirmish="ai"]').click();
+    return { setup: !document.getElementById('setup').hidden, kept: window.PMCNet.savedBattles().some((x) => x.campaign && x.campLid === window.PMC_CAMPAIGN.lid()) }; });
+  ok('a new skirmish can be begun: the campaign\'s battle is kept for it', camp2.setup && camp2.kept, JSON.stringify(camp2));
+  await p.evaluate(() => { document.getElementById('setup').hidden = true; });
+  await startSkirmish(p, { tier: 3, mode: 'ai', scenario: 'meeting', planet: 'arctic', terrain: 'auto',
+    keys: ['cmd2', 'regular', 'regular', 'regular', 'rookie', 'rookie'] });
+  await p.waitForTimeout(1200);
+  await drain(p);
+  await p.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('continue'); });
+  const crow = await p.evaluate(() => { const r = document.querySelector('#cont-list [data-cont^="c:"]'); return r ? r.textContent : ''; });
+  ok('the campaign is in the Continue list, its battle under way', /Refresh Company/.test(crow) && /a battle under way/.test(crow), crow);
+  await p.evaluate(() => document.querySelector('#cont-list [data-cont^="c:"]').click());
+  await p.waitForTimeout(1200);
+  ok('...and picking it goes back to its battle, as it was', (await p.evaluate(() => !!window.PMC_STATE().cfg.campaign && window.PMC_BATTLE_LIVE())) && (await table(p)) === campBefore);
 
   ok('no page errors', errs.length === 0, errs.join(' | '));
   console.log('\n  ' + pass + ' checks passed, ' + fail + ' failed.');

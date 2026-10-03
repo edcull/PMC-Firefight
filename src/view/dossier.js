@@ -29,8 +29,15 @@
                from the files locally. The browser and the account cover the rest.
 
      On load every backend is read and the copy that has seen the most battles wins,
-     so moving between them never quietly loses progress. */
-  var KEY = 'pmc-campaign';
+     so moving between them never quietly loses progress.
+
+     This browser keeps any number of campaigns, each under an id of its own (its
+     `lid`), with an index of them for the main menu's Continue list and the id of
+     the one open. The database and the server keep one: the one last saved, read
+     back only while it is the campaign open. The account keeps each campaign
+     under its own id there, remembered per campaign. */
+  var KEY = 'pmc-campaign';                 // where the one campaign was kept, before there could be several
+  var IDX = 'pmc-campaigns', CUR = 'pmc-campaign-current', ONE = 'pmc-campaign:';
   var SRV = 'pmc-campaign-server';
   var db = null, dbReady = false, storeNote = '';   // not `note`: that is the in-page message helper below
   /* Signed in on the server this page came from (multiplayer plan, decision 7): the
@@ -38,12 +45,44 @@
      the version it was last read or saved at, and a newer copy found on saving. */
   var acct = null, acctVersion = 0, acctChain = Promise.resolve(), acctConflict = null;
 
-  function raw(get, value) {
+  function ls(k, v) {
     try {
-      if (get) { var got = localStorage.getItem(KEY); return got ? JSON.parse(got) : null; }
-      if (value === null) localStorage.removeItem(KEY);
-      else localStorage.setItem(KEY, JSON.stringify(value));
+      if (v === undefined) return localStorage.getItem(k);
+      if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v);
     } catch (e) { }
+    return null;
+  }
+  function readJSON(k) { try { var got = ls(k); return got ? JSON.parse(got) : null; } catch (e) { return null; } }
+  function newLid() { return Date.now().toString(36) + Math.floor(Math.random() * 1679616).toString(36); }
+  /* The one campaign an older build kept is moved under an id of its own, as the
+     one open; the account's id for it (kept per account then) follows it there. */
+  function migrate() {
+    var old = ls(KEY);
+    if (!old) return;
+    var lid = newLid();
+    ls(ONE + lid, old); ls(KEY, null);
+    ls('pmc-campaign-legacy', lid);
+    try { indexPut(lid, JSON.parse(old)); } catch (e) { }
+    if (!ls(CUR)) ls(CUR, lid);
+  }
+  function index() { migrate(); var got = readJSON(IDX); return Array.isArray(got) ? got : []; }
+  function indexPut(lid, c) {
+    var list = (readJSON(IDX) || []).filter(function (e) { return e.lid !== lid; });
+    var A = c && c.companies && c.companies.A, B = c && c.mode === 'hotseat' && (c.companies.B || (c.rivals || [])[c.facing || 0]);
+    list.unshift({ lid: lid, name: A ? (A.name || 'A new force') + (B && B.name ? ' v ' + B.name : '') : 'A new campaign',
+      mode: c && c.mode === 'hotseat' ? 'hotseat' : 'solo', turn: (c && c.turn) || 0, at: Date.now(), over: !!(c && c.over) });
+    ls(IDX, JSON.stringify(list));
+  }
+  function indexDrop(lid) { ls(IDX, JSON.stringify((readJSON(IDX) || []).filter(function (e) { return e.lid !== lid; }))); }
+  // the campaign open: its id (one is given it the first time it is saved)
+  function curLid(v) { if (v === undefined) { migrate(); return ls(CUR) || null; } ls(CUR, v || null); return v || null; }
+  function raw(get, value) {
+    var lid = curLid();
+    if (get) return lid ? readJSON(ONE + lid) : null;
+    if (value === null) { if (lid) { ls(ONE + lid, null); indexDrop(lid); } return null; }   // Store.clear lets the id go
+    if (!lid) lid = curLid(newLid());
+    ls(ONE + lid, JSON.stringify(value));
+    indexPut(lid, value);
     return null;
   }
   function serverBase() {
@@ -99,15 +138,28 @@
       }
     }
   };
-  // the account's copy of the campaign: which one, kept per account in this browser
-  function acctSid(v) {
+  // the account's copy of the campaign: which one, kept per account and campaign in this browser
+  function acctSid(v, lid) {
     if (!acct) return null;
-    var k = 'pmc-campaign-sid:' + acct.id;
-    try {
-      if (v === undefined) return localStorage.getItem(k) || null;
-      if (v) localStorage.setItem(k, String(v)); else localStorage.removeItem(k);
-    } catch (e) { }
+    lid = lid || curLid();
+    if (!lid) return null;
+    var k = 'pmc-campaign-sid:' + acct.id + ':' + lid;
+    if (v === undefined) {
+      var got = ls(k);
+      // kept by an older build, per account only: it was for the campaign since moved under an id
+      var old = 'pmc-campaign-sid:' + acct.id;
+      if (!got && ls(old) && ls('pmc-campaign-legacy') === lid) { got = ls(old); ls(k, got); ls(old, null); }
+      return got || null;
+    }
+    ls(k, v ? String(v) : null);
     return null;
+  }
+  // every account id this browser has a campaign under, for this account
+  function acctSids() {
+    if (!acct) return {};
+    var out = {};
+    index().forEach(function (e) { var s = acctSid(undefined, e.lid); if (s) out[s] = e.lid; });
+    return out;
   }
   function acctFetch(path, opts) {
     opts = opts || {};
@@ -127,12 +179,8 @@
         });
       };
       var sid = acctSid();
-      if (sid) return get(sid);
-      // none chosen in this browser yet: the account's latest
-      return acctFetch('api/campaigns').then(function (r) {
-        var last = r.ok && (r.j.campaigns || []).filter(function (c) { return c.kind !== 'online'; })[0];
-        return last ? get(last.id) : null;
-      });
+      // the account's others are offered in the main menu's Continue list (Store.accountList)
+      return sid ? get(sid) : Promise.resolve(null);
     },
     /* One save at a time, each over the version the last one left, so a burst of
        them never trips over itself. One made from an older copy than the server's
@@ -222,8 +270,12 @@
     },
     async load() {
       await Store.init();
+      var lid = curLid(), legacy = ls('pmc-campaign-legacy');
+      if (!lid) { storeNote = ''; return null; }
+      // the database's and the server's one campaign, only while it is this one
       var found = (await each(function (b) { return b.load(); }))
-        .filter(function (r) { return r && r.value && r.value.companies; });
+        .filter(function (r) { return r && r.value && r.value.companies; })
+        .filter(function (r) { return r.id === 'local' || r.id === 'account' || r.value.lid === lid || (!r.value.lid && lid === legacy); });
       if (!found.length) { storeNote = ''; return null; }
       found.sort(function (x, y) { return (y.value.turn || 0) - (x.value.turn || 0); });
       var win = found[0];
@@ -236,10 +288,40 @@
       if (!camp) return;
       // each rival is written once; companies.B is an alias into `rivals`
       var flat = C.forSave(camp);
+      if (!curLid()) curLid(newLid());
+      flat.lid = curLid();
       await each(function (b) { return b.save(flat); });
     },
+    // the campaigns this browser keeps, the latest first, and which is open
+    list: function () { return index().slice().sort(function (a, b) { return (b.at || 0) - (a.at || 0); }); },
+    lid: function () { return curLid(); },
+    // open another (or none: a new campaign is being begun)
+    use: function (lid) { curLid(lid || null); acctVersion = 0; acctConflict = null; storeNote = ''; },
+    // this browser's copy of one, read at once (a battle finished for a campaign not open)
+    peek: function (lid) { var got = readJSON(ONE + lid); return got && got.companies ? C.rehydrate(got) : null; },
+    // one put away from the Continue list: gone from this browser and the account
+    drop: function (lid) {
+      var sid = acctSid(undefined, lid);
+      ls(ONE + lid, null); indexDrop(lid); acctSid(null, lid);
+      if (curLid() === lid) curLid(null);
+      if (sid && acct) acctFetch('api/campaigns/' + sid, { method: 'DELETE' });
+    },
+    // the account's campaigns not in this browser: [{ sid, name, turn, updated }]
+    accountList: async function () {
+      await Store.init();
+      if (!acct) return [];
+      var have = acctSids();
+      try {
+        var r = await acctFetch('api/campaigns', { cache: 'no-store' });
+        return r.ok ? (r.j.campaigns || []).filter(function (c) { return c.kind !== 'online' && !have[c.id]; })
+          .map(function (c) { return { sid: c.id, name: c.name, turn: c.turn, mode: c.kind, updated: c.updated }; }) : [];
+      } catch (e) { return []; }
+    },
+    // one of the account's taken up in this browser: given an id here, and opened
+    adopt: function (sid) { var lid = newLid(); curLid(lid); acctSid(String(sid), lid); acctVersion = 0; acctConflict = null; return lid; },
     async clear() {
       await each(function (b) { return b.clear(); });
+      curLid(null);
     },
     server: function (url) {
       try {
@@ -634,7 +716,14 @@
     }));
   }
   // the battle fought: its contract is done with (a kept one included)
-  function onFinish(report) { contract = null; if (camp) camp.savedContract = null; return (KIT_AFTER || kitAfter()).onFinish(report); }
+  function onFinish(report, cfg) {
+    /* A battle fought for a campaign not the one open (another was opened while it
+       was on): that campaign is opened to take the result. */
+    if (cfg && cfg.campLid && cfg.campLid !== Store.lid()) {
+      if (online && KIT_ONLINE) KIT_ONLINE.leave();
+      Store.use(cfg.campLid); camp = Store.peek(cfg.campLid); view = 'hub'; after = null; draft = null; hubSide = 'A';
+    }
+    contract = null; if (camp) camp.savedContract = null; return (KIT_AFTER || kitAfter()).onFinish(report); }
   /* A hotseat contract is kept with the campaign while it is being drawn up (hotseat
      review HC-6): a reload finds it as it was — the terms, the roles, both players'
      picks — and going back to the hub and in again does not roll it afresh. The
@@ -1433,26 +1522,76 @@
         if (root.PMCMenu) root.PMCMenu.close();
         return;
       }
+      if (camp && camp.pending && resumeItsBattle()) return;
       if (camp && camp.pending) { camp.pending = null; save(); }   // a battle abandoned mid-flight
       open(view === 'aftermath' ? 'aftermath' : 'hub');
+    }
+    /* The campaign's battle, kept in this browser while something else was played:
+       gone back to (game.js plays it back up). */
+    function resumeItsBattle() {
+      var b = keptBattle();
+      return !!(b && root.PMC_RESUME_BATTLE && root.PMC_RESUME_BATTLE(b.id));
+    }
+    /* The menu's Campaign cards begin a new campaign: the one open is put aside
+       (kept, and in the Continue list) and the new-campaign form comes up. */
+    function fresh(mode) {
+      if (online) kitOnline().leave();
+      var setup = el('setup');
+      if (setup) setup.hidden = true;
+      wantMode = mode === 'hotseat' ? 'hotseat' : 'solo';
+      Store.use(null);
+      camp = null; reset();
+      open('hub');
+    }
+    // another campaign of this browser's, from the Continue list (or one of the account's, taken up here)
+    function resume(lid, sid) {
+      if (online) kitOnline().leave();
+      var setup = el('setup');
+      if (setup) setup.hidden = true;
+      if (sid) Store.adopt(sid); else Store.use(lid);
+      camp = null; reset();
+      return Store.load().then(function (got) {
+        took(got);
+        // its battle on the table now: back to it
+        var st = root.PMC_STATE && root.PMC_STATE();
+        if (camp && camp.pending && st && st.cfg && st.cfg.campaign && st.cfg.campLid === Store.lid() && root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE()) {
+          if (root.PMCMenu) root.PMCMenu.close();
+          return;
+        }
+        enter();
+      });
+    }
+    // what one campaign had open is not carried into another
+    function reset() {
+      contract = null; after = null; draft = null; secondFaction = null; openModal = null;
+      view = 'hub'; hubSide = 'A'; drawState = null; upState = null;
     }
     // the main menu's cards say which way of playing they are for (menu.js calls in)
     enterCampaign = enter;
     // the muster sheet covers the header on a fresh load, so it needs its own way in
     var setupBtn = el('btn-setup-campaign');
     if (setupBtn) setupBtn.addEventListener('click', enter);
-    Store.load().then(function (got) {
+    function took(got) {
       camp = got;
       // a battle abandoned mid-flight — unless it was kept, and is waiting to be gone back to
-      var kept = root.PMCNet && root.PMCNet.savedBattle && root.PMCNet.savedBattle();
-      if (camp && camp.pending && !(kept && kept.cfg && kept.cfg.campaign)) camp.pending = null;
+      if (camp && camp.pending && !keptBattle()) camp.pending = null;
       if (camp && camp.companies && C.evenWorld(camp)) save();   // a campaign from before the forces paired off
       if (camp && camp.mode === 'hotseat' && camp.savedContract && !camp.pending) contract = contractIn(camp.savedContract);
       ensureColours();
       if (needsSecond()) beginSecond();                // the second player had not founded yet
       render();
-    });
+    }
+    Store.load().then(took);
+    enterFresh = fresh; enterResume = resume;
   }
+  /* The battle kept in this browser for the campaign open, if there is one (one
+     kept by an older build says only that it was a campaign's). */
+  function keptBattle() {
+    var lid = Store.lid(), all = (root.PMCNet && root.PMCNet.savedBattles && root.PMCNet.savedBattles()) || [];
+    for (var i = 0; i < all.length; i++) if (all[i].campaign && (all[i].campLid === lid || !all[i].campLid)) return all[i];
+    return null;
+  }
+  var enterFresh = null, enterResume = null;
 
   // the tests' hooks into the dossier (testhooks.js, not in the published builds)
   if (root.PMCTestHooks) root.PMCTestHooks.dossier({
@@ -1461,6 +1600,18 @@
   root.PMC_CAMPAIGN = {
     open: open, close: close, onFinish: onFinish,
     enter: function (mode) { if (enterCampaign) enterCampaign(mode); },
+    // a new campaign begun from the menu's cards, and one gone back to from its Continue list
+    fresh: function (mode) { if (enterFresh) enterFresh(mode); },
+    resume: function (lid) { return enterResume ? enterResume(lid) : null; },
+    adopt: function (sid) { return enterResume ? enterResume(null, sid) : null; },
+    openOnline: function (id) { var su = el('setup'); if (su) su.hidden = true; return kitOnline().openOne(id); },
+    lid: function () { return Store.lid(); },
+    list: function () { return Store.list(); },
+    accountList: function () { return Store.accountList(); },
+    drop: function (lid) {
+      if (lid === Store.lid() && !online) { camp = null; contract = null; }
+      Store.drop(lid);
+    },
     get: function () { return online && KIT_ONLINE ? KIT_ONLINE.local() : camp; },
     /* Signed in (or out) from the menu: the account's copy is read as at a load,
        the further along of it and this browser's taken, and saved to both. */
