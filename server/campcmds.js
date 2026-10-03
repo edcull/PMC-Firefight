@@ -11,6 +11,7 @@ const { R, C, SC } = require('./rules.js');
 const text = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, n);
 function entry(co, rid) { return C.byRid(co, rid) || null; }
 const no = (why) => ({ ok: false, why: why });
+const battles = (camp) => { const n = (camp.log || []).length; return n + (n === 1 ? ' battle' : ' battles'); };
 
 const COMMANDS = {
   /* Founding a player's own force: its kind, name, colours, the units and the
@@ -97,6 +98,26 @@ const COMMANDS = {
     const co = camp.companies[side];
     if (!C.canAspire(co)) return no('this force cannot aspire to the next Tier yet');
     co.aspiring = true;
+    return { ok: true };
+  },
+  /* Giving the campaign up: it is over for both, the other player the winner.
+     Not while a battle is being fought (walk away from that: a forfeit). */
+  concede(camp, side) {
+    if (camp.online && camp.online.battle) return no('a battle is being fought \u2014 finish it, or walk away from it, first');
+    const co = camp.companies[side], them = camp.companies[side === 'A' ? 'B' : 'A'];
+    camp.over = { loser: side, winner: side === 'A' ? 'B' : 'A', turn: camp.turn, conceded: true,
+      text: co.name + ' gave the campaign up' + (them && them.name ? ': ' + them.name + ' has the world' : '') + ', after ' + battles(camp) + '.' };
+    if (camp.online) camp.online.contract = null;
+    return { ok: true };
+  },
+  /* A force that can no longer field an army, and cannot recruit back to one, ends
+     the campaign (HC-14), on either player's word. */
+  campEnd(camp, side, a) {
+    const ls = a.side === 'B' ? 'B' : 'A', lco = camp.companies[ls], wco = camp.companies[ls === 'A' ? 'B' : 'A'];
+    if (!C.cannotFight(lco)) return no(lco.name + ' can still field an army');
+    camp.over = { loser: ls, winner: ls === 'A' ? 'B' : 'A', turn: camp.turn,
+      text: lco.name + ' could no longer field an army: ' + wco.name + ' outlasted them, after ' + battles(camp) + '.' };
+    if (camp.online) camp.online.contract = null;
     return { ok: true };
   },
   colour(camp, side, a) {
@@ -278,6 +299,7 @@ function run(camp, side, cmd, args) {
   if (!fn) return no('no such command');
   if (!camp.companies[side]) return no('no such force');
   if (camp.pending) return no('a battle is being fought — this waits until it is over');
+  if (camp.over) return no('the campaign is over');
   if (cmd !== 'found' && !(camp.companies[side].roster || []).length) return no('found the force first');
   let r;
   try { r = fn(camp, side, args || {}) || { ok: true }; }

@@ -149,8 +149,15 @@ function create(opts) {
       const rec = camp.online.after && camp.online.after.sides[side];
       const offer = rec && rec.rebornOffer && rec.rebornOffer[+a.i];
       if (!offer) return no('no such unit to bring back');
+      if (offer.done) return no('that unit has been brought back already');
       const rr = C.rebirth(camp.companies[side], offer);
-      if (rr.ok) offer.done = rr;
+      if (rr.ok) {
+        offer.done = rr;
+        // the log's copy of the aftermath, which the page reads, says so too
+        const last = camp.log[camp.log.length - 1];
+        const lo = last && last.after && last.after.sides && last.after.sides[side] && last.after.sides[side].rebornOffer;
+        if (lo && lo[+a.i]) lo[+a.i].done = rr;
+      }
       return rr;
     }
     const post = camp.post, st = post && post.steps[0];

@@ -119,6 +119,15 @@ function ok(name, cond, note) {
   ok('the battle\'s aftermath is kept on the campaign\'s log, to be read again', !!(s.log.length && s.log[s.log.length - 1].after && s.log[s.log.length - 1].after.winner === 'A'));
   ok('a new contract may be drawn up', online.command(ash, id, 'contractBegin', {}).ok);
 
+  console.log('\nThe end of it');
+  ok('a force that can still fight cannot be said to be finished', /can still field an army/.test(online.command(ash, id, 'campEnd', { side: 'B' }).why));
+  const n3 = told.length;
+  const gave = online.command(brann, id, 'concede', {});
+  const over = camp(ash).over;
+  ok('a player gives the campaign up: it is over for both, the other the winner', gave.ok && over && over.loser === 'B' && over.winner === 'A' && /gave the campaign up/.test(over.text) && !camp(ash).online.contract, JSON.stringify(over));
+  ok('...the other player told', told.slice(n3).some((t) => t[0] === ash.userId && t[1] === 'camp.changed'));
+  ok('...and nothing more is done in it', /campaign is over/.test(online.command(ash, id, 'recruit', { key: 'recruits' }).why) && !online.command(ash, id, 'contractBegin', {}).ok);
+
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
