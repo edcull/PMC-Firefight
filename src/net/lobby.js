@@ -14,14 +14,10 @@
   var P = root.PMCProto, NET = root.PMCNet;
   var net = null;
   var host = null;              // the overlay
-  var view = 'lobby';           // 'lobby' | 'room' | 'signin'
+  var view = 'lobby';           // 'lobby' | 'room'
   /* Who this browser is signed in as on the server (multiplayer plan, phase 1):
      undefined while it is being asked, null when nobody is, else { id, name, guest }. */
   var account;
-  var signMode = 'signin';      // the sign-in screen's tab: 'signin' | 'register' | 'guest'
-  var mailOn = false;           // whether this server sends mail: an address is asked for only then
-  var signNote = '';            // what the sign-in screen has to say (an account made, its link sent)
-  var busy = false;             // a sign-in on its way to the server
   var games = [];
   var mine = [];                // this player's own games (phase 2): under way, to go back to, and how the rest went
   var room = null;
@@ -69,7 +65,6 @@
       if (box.id === 'lobby-say') { say('lobby', box); e.preventDefault(); }
       if (box.id === 'room-say') { say('room', box); e.preventDefault(); }
       if (box.id === 'join-code') { join(box.value); e.preventDefault(); }
-      if (box.id === 'sign-name' || box.id === 'sign-pass') { act('signgo'); e.preventDefault(); }
     });
     return host;
   }
@@ -97,14 +92,9 @@
       '@media (min-width:1001px){' +
         '#lobby.overlay{padding:28px 20px;align-items:center;justify-content:center}' +
         '#lobby-table{display:block;position:absolute;inset:0;width:100%;height:100%;opacity:.55;pointer-events:none}' +
-        '#lobby.lob-narrow > .camp-top,#lobby.lob-narrow > .sheet{width:min(460px,100%)}' +
         '#lobby > .camp-top{position:relative;width:min(760px,100%);border:1px solid var(--line);border-radius:8px 8px 0 0;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
         '#lobby.overlay > .sheet{position:relative;flex:0 1 auto;width:min(760px,100%);padding:18px 22px 22px;border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;background:color-mix(in srgb,var(--panel) 95%,transparent)}' +
       '}',
-      '.lob-sign{display:flex;flex-direction:column;gap:10px}',
-      '.lob-tabs{display:flex;gap:6px;flex-wrap:wrap}',
-      '.lob-tabs .lnk.on{border-color:var(--alpha);color:var(--alpha)}',
-      '.lob-sign input{width:100%}',
       '.lob-me{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--ink-dim);margin:0 0 10px}',
       '.lob-me b{color:var(--ink)}',
       '#lobby input[type=text],#lobby input[type=password]{flex:1;min-width:0;min-height:34px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:6px 9px;font-family:var(--body);font-size:13px}',
@@ -140,7 +130,6 @@
       '.lobby-sheet .lob-chat{flex:none;margin-top:10px}',
       '@media (max-width:1000px){.lobby-sheet .lob-lines{height:calc(3 * 1.45em + 26px);min-height:0}}',
       '.lob-bad{color:var(--warn);font-size:13px;margin:0}',
-      '.lob-forgot{align-self:flex-start}',
       '.lob-good{color:var(--good);font-size:13px;margin:0;line-height:1.45}',
       '.lob-bad:empty{display:none}',
       '.lob-ok{color:var(--good)}',
@@ -176,19 +165,17 @@
   function draw() {
     if (!host || host.hidden) return;
     var inRoom = !!(view === 'room' && room);
-    var signing = view === 'signin';
-    el('lobby-body').innerHTML = signing ? signHTML() : inRoom ? roomHTML() : lobbyHTML();
-    if (el('lobby-title')) el('lobby-title').textContent = signing ? 'Sign in' : inRoom ? room.name : 'Multiplayer';
+    el('lobby-body').innerHTML = inRoom ? roomHTML() : lobbyHTML();
+    if (el('lobby-title')) el('lobby-title').textContent = inRoom ? room.name : 'Multiplayer';
     var us = el('lobby-user');
     if (us) {
-      us.hidden = !account || signing;
+      us.hidden = !account;
       el('lobby-user-name').textContent = account ? account.name + (account.guest ? ' (guest)' : '') : '';
       us.title = account ? (account.guest ? 'Playing as a guest' : 'Signed in as ' + account.name) : '';
       if (us.hidden) userMenu(false);
     }
     var cd = el('lobby-code');
     if (cd) { cd.hidden = !inRoom; cd.textContent = inRoom ? room.id : ''; cd.title = 'Read this out to whoever you are playing'; }
-    host.classList.toggle('lob-narrow', signing);      // signing in is a short form: a narrow card
     var sh = host.querySelector('.lobby-sheet');
     if (sh) sh.classList.toggle('lob-sheet-room', !!(view === 'room' && room));
     var box = el('lobby-say') || el('room-say');
@@ -196,27 +183,6 @@
   }
 
 
-  /* Signing in: an account (a name and a password), a new one, or a guest's name
-     for a one-off battle (a campaign will want an account). */
-  function signHTML() {
-    var tab = function (m, t) { return '<button class="lnk' + (signMode === m ? ' on' : '') + '" data-lob="signmode" data-mode="' + m + '">' + t + '</button>'; };
-    var reg = signMode === 'register', guest = signMode === 'guest';
-    return '<div class="lob-scroll"><div class="lob-sign">' +
-      '<p class="lede">' + (guest ? 'Play a one-off battle without an account. Campaigns need one.'
-        : reg ? (mailOn ? 'A name, your email address and a password.' : 'A name and a password.') : 'Sign in to play other people over the network.') + '</p>' +
-      '<div class="lob-tabs">' + tab('signin', 'Sign in') + tab('register', 'New account') + tab('guest', 'Play as a guest') + '</div>' +
-      '<p class="lob-bad">' + esc(fault) + '</p>' +
-      (signNote ? '<p class="lob-good">' + esc(signNote) + '</p>' : '') +
-      '<div class="field"><label for="sign-name">' + (guest ? 'Your name for this battle' : 'Name') + '</label>' +
-      '<input id="sign-name" type="text" maxlength="24" autocomplete="username" value="' + esc(me.name || '') + '"></div>' +
-      (reg && mailOn ? '<div class="field"><label for="sign-email">Email address</label><input id="sign-email" type="email" maxlength="254" autocomplete="email"></div>' : '') +
-      (guest ? '' : '<div class="field"><label for="sign-pass">Password' + (reg ? ' (at least 8 characters)' : '') + '</label>' +
-        '<input id="sign-pass" type="password" maxlength="200" autocomplete="' + (reg ? 'new-password' : 'current-password') + '"></div>') +
-      '<div class="lob-foot"><button class="start" data-lob="signgo"' + (busy ? ' disabled' : '') + '>' +
-        (busy ? 'One moment\u2026' : guest ? 'Play as a guest' : reg ? 'Make the account' : 'Sign in') + '</button></div>' +
-      (!reg && !guest && mailOn ? '<button class="lnk lob-forgot" data-lob="forgot">Forgot password?</button>' : '') +
-      '</div></div>';
-  }
   // ask the server who this browser is, then on to the lobby (or the sign-in)
   function whoAmI(then) {
     if (!root.fetch) { account = null; then(); return; }
@@ -224,50 +190,31 @@
     root.fetch('api/me', { credentials: 'same-origin', cache: 'no-store' })
       .then(function (r) {
         if (!(r.status === 401 || r.ok)) return { who: account };
-        // what it says of this server (whether it sends mail), and who this is
-        var took = function (j) { if (j && j.mail !== undefined) mailOn = !!j.mail; return r.ok ? j : { who: null }; };
+        var took = function (j) { return r.ok ? j : { who: null }; };
         var jr = r.json();
         return jr && typeof jr.then === 'function' ? jr.then(took, function () { return { who: r.ok ? account : null }; }) : took(jr);
       })
       .then(function (j) { account = j.who || null; then(); })
       .catch(function () { if (account === undefined) fault = 'The server could not be reached.'; then(); });
   }
-  function signIn() {
-    var name = ((el('sign-name') || {}).value || '').trim(), pass = (el('sign-pass') || {}).value || '';
-    var email = ((el('sign-email') || {}).value || '').trim();
-    var path = signMode === 'register' ? 'api/register' : signMode === 'guest' ? 'api/guest' : 'api/login';
-    busy = true; fault = ''; signNote = ''; draw();
-    root.fetch(path, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: name, password: pass, email: email }) })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (got) {
-        busy = false;
-        if (!got.ok) {
-          var why = (got.j && got.j.error) || 'that did not work';
-          fault = why.charAt(0).toUpperCase() + why.slice(1) + '.';
-          me.name = name; draw(); return;
-        }
-        // a new account waiting for the link mailed to it: nobody is signed in yet
-        if (got.j.pending) {
-          me.name = name; signMode = 'signin';
-          signNote = 'Your account is made. A link to activate it has been sent to ' + got.j.email + ' \u2014 follow it, then sign in.';
-          draw(); return;
-        }
-        account = got.j.who; me.name = account.name;
-        if (root.PMCAccount) root.PMCAccount.refresh();
-        if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.accountChanged) root.PMC_CAMPAIGN.accountChanged();
-        view = 'lobby';
-        connect();
-        draw();
-      })
-      .catch(function () { busy = false; fault = 'The server could not be reached.'; draw(); });
+  /* Not signed in: the main menu's account screen asks (a guest's name will do for
+     a battle), and the lobby opens once it is answered. Back goes to the main menu. */
+  function askSignIn(then, why) {
+    if (host) host.hidden = true;
+    view = 'lobby';
+    if (root.PMCAccount && root.PMCAccount.signIn) {
+      root.PMCAccount.signIn({ guest: true, fault: why || '', lede: 'Sign in to play other people over the network.',
+        then: then || function () { root.PMCLobby.open(); } });
+    } else if (root.PMCMenu) root.PMCMenu.open();
   }
   function signOut() {
     keepRoom('');
     if (net) { net.disconnect(); net = null; }
     room = null; games = []; chat = { lobby: [], room: [] };
     root.fetch('api/logout', { method: 'POST', credentials: 'same-origin' }).catch(function () { });
-    account = null; view = 'signin'; signMode = 'signin';
-    draw();
+    account = null; view = 'lobby';
+    if (host) host.hidden = true;
+    if (root.PMCMenu) root.PMCMenu.open();
     if (root.PMCAccount) root.PMCAccount.refresh();
     if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.accountChanged) root.PMC_CAMPAIGN.accountChanged();
   }
@@ -479,10 +426,6 @@
   function act(what, b) {
     fault = '';
     switch (what) {
-      case 'signmode': signMode = b.getAttribute('data-mode'); signNote = ''; draw(); return;
-      // a forgotten password: the main menu's account pane sends the link
-      case 'forgot': close(); if (root.PMCAccount && root.PMCAccount.open) root.PMCAccount.open('forgot'); return;
-      case 'signgo': if (!busy) signIn(); return;
       case 'campaigns': close(); if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.enter) root.PMC_CAMPAIGN.enter('online'); return;
       case 'usermenu': userMenu(el('lobby-usermenu').hidden); return;
       case 'signout': userMenu(false); signOut(); return;
@@ -608,9 +551,7 @@
       whoAmI(function () {
         if (account !== null || !net) return;
         net.disconnect(); net = null;
-        fault = 'Signed out \u2014 sign in again to carry on.';
-        view = 'signin';
-        draw();
+        askSignIn(null, 'Signed out \u2014 sign in again to carry on.');
       });
     });
     net.on('welcome', function (m) {
@@ -734,7 +675,7 @@
       if (account) { go(); return; }
       whoAmI(function () {
         if (account) { me.name = account.name; go(); }
-        else { campBattle = null; open('signin'); }
+        else { var h = campBattle; campBattle = null; askSignIn(function () { root.PMCLobby.joinBattle(code, h); }); }
       });
     },
     /* Is there a server to play against at all? A page opened from a file, or
@@ -745,11 +686,10 @@
       ensure();
       // signed in: on to the lobby; not: the sign-in first (the socket wants a session)
       if (account) { connect(); open(room ? 'room' : 'lobby'); return; }
-      open(view === 'room' ? 'lobby' : view);
+      // who this is first: signed in, the lobby; not, the account screen asks
       whoAmI(function () {
-        if (account) { me.name = account.name; connect(); view = room ? 'room' : 'lobby'; }
-        else view = 'signin';
-        draw();
+        if (account) { me.name = account.name; connect(); open(room ? 'room' : 'lobby'); }
+        else askSignIn();
       });
     },
     close: close,
@@ -772,7 +712,7 @@
       if (account) { go(); return; }
       whoAmI(function () {
         if (account) { me.name = account.name; go(); }
-        else open('signin');
+        else askSignIn(function () { root.PMCLobby.rejoin(code); });
       });
     }
   };

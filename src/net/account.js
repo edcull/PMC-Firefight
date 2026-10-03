@@ -105,7 +105,14 @@
 
   function signedOutHTML() {
     var tab = function (m, t) { return '<button type="button" class="lnk' + (mode === m ? ' on' : '') + '" data-acct="mode" data-mode="' + m + '">' + t + '</button>'; };
-    var tabs = '<div class="acct-tabs">' + tab('signin', 'Sign in') + tab('register', 'New account') + '</div>';
+    // opened on the way into multiplayer: a guest may play a one-off battle without an account
+    var tabs = '<div class="acct-tabs">' + tab('signin', 'Sign in') + tab('register', 'New account') +
+      (purpose && purpose.guest ? tab('guest', 'Play as a guest') : '') + '</div>';
+    if (mode === 'guest' && purpose && purpose.guest) {
+      return '<h2 class="acct-head">Play as a guest</h2><p class="acct-lede">A one-off battle without an account. Campaigns need one.</p>' +
+        tabs + msgs() + field('acct-name', 'Your name for this battle', 'text', 'username', 24, lastName) +
+        goButton('guest', 'Play as a guest') + back;
+    }
     if (mode === 'sent') {
       return '<h2 class="acct-head">Check your email</h2>' + msgs() +
         '<button type="button" class="lnk" data-acct="mode" data-mode="signin">Back to signing in</button>' + back;
@@ -125,7 +132,7 @@
     var reg = mode === 'register';
     var h = '<h2 class="acct-head">' + (reg ? 'New account' : 'Sign in') + '</h2>' +
       '<p class="acct-lede">' + (reg ? (mailOn ? 'A name, your email address and a password. A link to activate the account is sent to the address.' : 'A name and a password.')
-        : 'Sign in to keep your campaigns on the server, follow them to another device, and play other people.') + '</p>' +
+        : purpose && purpose.lede ? purpose.lede : 'Sign in to keep your campaigns on the server, follow them to another device, and play other people.') + '</p>' +
       tabs + msgs() +
       (inactive && !reg ? '<button type="button" class="lnk acct-resend" data-acct="resend">Send the activation link again</button>' : '') +
       field('acct-name', 'Name', 'text', 'username', 24, lastName) +
@@ -210,6 +217,9 @@
     return host;
   }
   var returnTo = null;           // the screen it was opened over, gone back to after
+  /* Opened to sign in on the way somewhere (Multiplayer): where to go once signed
+     in, and whether a guest may go there. Cleared on the way out. */
+  var purpose = null;
   function openScreen() {
     ensure();
     if (host.hidden) returnTo = ['setup', 'camp', 'lobby'].filter(function (id) { var o = el(id); return o && !o.hidden; })[0] || null;
@@ -223,6 +233,8 @@
   }
   function closeScreen() {
     if (host) host.hidden = true;
+    purpose = null;
+    if (mode === 'guest') mode = 'signin';
     var back = returnTo; returnTo = null;
     // back where it was opened from (the set-up, the campaign, the lobby), or the main menu
     if (back === 'lobby' && root.PMCLobby) root.PMCLobby.open();
@@ -254,7 +266,11 @@
   }
   function signedIn(j) {
     who = j.who; mode = 'signin'; edit = null;
-    changed(); load();
+    changed();
+    // signed in on the way somewhere: on to it
+    var then = purpose && purpose.then;
+    if (then) { purpose = null; returnTo = null; host.hidden = true; notice = ''; then(); return; }
+    load();
   }
   function go() {
     var reg = mode === 'register', name = val('acct-name'), pass = (el('acct-pass') || {}).value || '';
@@ -344,6 +360,12 @@
       if (a === 'back') { closeScreen(); return; }
       if (a === 'mode') { mode = b.getAttribute('data-mode'); fault = ''; notice = ''; inactive = false; draw(); }
       else if (a === 'go') go();
+      else if (a === 'guest') {
+        var gn = val('acct-name');
+        lastName = gn;
+        if (!gn) { fault = 'Give your name.'; draw(); return; }
+        send('api/guest', { name: gn }, function (j) { if (j) signedIn(j); });
+      }
       else if (a === 'out') signOut();
       else if (a === 'resend') send('api/resend', { name: lastName }, function (j) { if (j) { inactive = false; notice = 'The activation link has been sent again \u2014 check your email.'; } });
       else if (a === 'forgot') {
@@ -422,6 +444,15 @@
       openScreen();
     },
     close: closeScreen,
+    /* Sign in on the way somewhere (the lobby): the screen opened on signing in,
+       `then` called once signed in; Back goes to the main menu.
+       opts: { then, guest (a guest's name will do), lede } */
+    signIn: function (opts) {
+      purpose = opts || {};
+      mode = 'signin'; fault = purpose.fault || ''; notice = '';
+      openScreen();
+      returnTo = null;
+    },
     who: function () { return who; },
     label: label
   };

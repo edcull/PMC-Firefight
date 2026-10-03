@@ -175,8 +175,8 @@
       }).join('') + '</optgroup>';
     }).join('');
   }
-  /* Fire! rolls a real shot at the target, the battle's own (R.shoot): what it
-     is hit with, what that does to it. The shots are drawn landing as many as
+  /* Fire! makes a real shot at the target, the battle's own (R.shoot), with an
+     average attack roll: what it is hit with, what that does to it. The shots are drawn landing as many as
      hit, and the target shows what is left of it once they have. */
   function rollShot() {
     // every shot is at a fresh target: no Suppression, no losses, no Damage from the last one
@@ -199,12 +199,17 @@
         return { hits: 0, t: t, missed: true };
       }
     }
-    var res;
+    /* The attack is not rolled: its D10 reads its average (4.5, taken as 5), so
+       the same unit at the same target always shows the same result. What the hits
+       then do (the casualty rolls) is rolled as in a battle. */
+    var res, real = Math.random, first = true;
+    Math.random = function () { if (first) { first = false; return 0.5; } return real(); };
     try {
       res = R.shoot(st, a, t, 'fire', {});
       // penal troops broken by it: the collars go off (Expendable, p. 57)
       R.collars(st);
     } catch (e) { return null; }
+    finally { Math.random = real; }
     var hits = res.hits || 0;
     t.x = TO.x;                                    // back on its spot on the stage
     view.lastShot = (hits ? hits + (hits === 1 ? ' hit' : ' hits') : 'No hits') + at;

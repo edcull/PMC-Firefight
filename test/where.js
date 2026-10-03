@@ -61,16 +61,17 @@ async function seedDice(page, seed) {
 async function signInLobby(page, name, mode, password) {
   mode = mode || 'register';
   await page.evaluate(() => window.PMCLobby.open());
-  await page.waitForFunction(() => !!document.getElementById('sign-name') || !!(window.PMCLobby.net() && window.PMCLobby.net().live), null, { timeout: 8000 });
-  if (await page.evaluate(() => !!document.getElementById('sign-name'))) {
-    await page.evaluate((m) => document.querySelector('#lobby [data-lob="signmode"][data-mode="' + m + '"]').click(), mode);
-    await page.fill('#sign-name', name);
+  // not signed in: the account screen asks, on the way into the lobby
+  await page.waitForFunction(() => { const a = document.getElementById('account'); return (a && !a.hidden && !!document.getElementById('acct-name')) || !!(window.PMCLobby.net() && window.PMCLobby.net().live); }, null, { timeout: 8000 });
+  if (await page.evaluate(() => { const a = document.getElementById('account'); return !!(a && !a.hidden && document.getElementById('acct-name')); })) {
+    await page.evaluate((m) => document.querySelector('#account [data-acct="mode"][data-mode="' + m + '"]').click(), mode);
+    await page.fill('#acct-name', name);
     // an address is asked for only where the server sends mail
-    if (mode === 'register' && await page.evaluate(() => !!document.getElementById('sign-email'))) await page.fill('#sign-email', name.replace(/\W/g, '').toLowerCase() + '@example.com');
-    if (mode !== 'guest') await page.fill('#sign-pass', password || 'password for ' + name);
-    await page.evaluate(() => document.querySelector('#lobby [data-lob="signgo"]').click());
+    if (mode === 'register' && await page.evaluate(() => !!document.getElementById('acct-email'))) await page.fill('#acct-email', name.replace(/\W/g, '').toLowerCase() + '@example.com');
+    if (mode !== 'guest') await page.fill('#acct-pass', password || 'password for ' + name);
+    await page.evaluate(() => document.querySelector('#account .start[data-acct]').click());
   }
-  await page.waitForFunction(() => !!(window.PMCLobby.net() && window.PMCLobby.net().live) && !document.getElementById('sign-name'), null, { timeout: 8000 });
+  await page.waitForFunction(() => !!(window.PMCLobby.net() && window.PMCLobby.net().live) && document.getElementById('account').hidden && !document.getElementById('lobby').hidden, null, { timeout: 8000 });
 }
 // a data directory of its own for a test's server: a fresh database every run
 function tmpData() { return fs.mkdtempSync(path.join(require('os').tmpdir(), 'pmc-data-')); }
