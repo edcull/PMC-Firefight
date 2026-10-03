@@ -288,7 +288,7 @@
         var chip = '<span class="olob-chip"' + (c ? ' style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"' : '') + '></span>';
         var row = '<div class="olob-slot' + (mine ? ' mine' : '') + '">' +
           (canColour ? '<button type="button" class="olob-colour" data-olob-pick="' + i + '" aria-expanded="' + (colourFor === i) + '" title="' + esc(c ? c.name : 'Colour') + '">' + chip + '</button>' : '<span class="olob-colour still">' + chip + '</span>') +
-          '<span class="olob-who"><b>' + who + '</b>' + (s.kind === 'human' ? '<small>' + (s.ready || s.host ? 'Ready' : 'Not ready') + '</small>' : '') + '</span>';
+          '<span class="olob-who"><b>' + who + '</b>' + (s.kind === 'human' ? '<small>' + (s.ready ? 'Ready' : 'Not ready') + '</small>' : '') + '</span>';
         // the host: an AI force in this slot, or open for a player
         if (canSlot) row += '<label class="olob-ai"><input type="checkbox" data-olob-ai="' + i + '"' + (s.kind === 'ai' ? ' checked' : '') + '> AI</label>';
         if (s.kind !== 'open') {
@@ -323,8 +323,11 @@
       }).join('') + '</select></label>' : '<span class="olob-n">' + n + ' forces</span>';
       h += host ? '<label class="olob-pub"><input type="checkbox" id="olob-pub"' + (L.listed ? ' checked' : '') + '> Public</label>'
         : '<span class="olob-pub">' + (L.listed ? 'Public' : 'Private') + '</span>';
-      if (host) h += '<button class="start" data-go="olobstart">Start the campaign</button>';
-      else h += '<button class="start' + (mineSlot.ready ? ' on' : '') + '" data-go="olobready">' + (mineSlot.ready ? 'Ready \u2014 waiting for the host' : 'I am ready') + '</button>';
+      // everyone says they are ready, the host too; then the host has Start
+      var allReady = (L.slots || []).every(function (x) { return x.kind !== 'human' || x.ready; });
+      if (host && allReady) h += '<button class="start" data-go="olobstart">Start the campaign</button>';
+      else h += '<button class="start' + (mineSlot.ready ? ' on' : '') + '" data-go="olobready">' +
+        (!mineSlot.ready ? 'I am ready' : host ? 'Ready \u2014 waiting for the players' : 'Ready \u2014 waiting for the host') + '</button>';
       h += '</div>';
       h += chatHTML();
       h += '<p class="camp-foot"><button class="lnk" data-go="olobleave">' + (host ? 'Close the campaign' : 'Leave the campaign') + '</button> ' +

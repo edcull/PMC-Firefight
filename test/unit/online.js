@@ -86,6 +86,8 @@ function ok(name, cond, note) {
   ok('a change to the slots asks the players to say they are ready again', cmd(ash, 'lobbySlots', { n: 6 }).ok && !view(ash).slots[1].ready);
   cmd(brann, 'lobbyReady', {}); cmd(cole, 'lobbyReady', {});
   ok('only the host starts it', !cmd(brann, 'lobbyStart').ok);
+  ok('...and not before saying they are ready too', /Ash is not ready/.test(cmd(ash, 'lobbyStart').why));
+  cmd(ash, 'lobbyReady', {});
   const st = cmd(ash, 'lobbyStart');
   v = view(ash);
   ok('everyone ready: the host starts it', st.ok && v.phase === 'run', JSON.stringify(st).slice(0, 120));

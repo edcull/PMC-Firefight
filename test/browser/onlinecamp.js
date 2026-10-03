@@ -97,8 +97,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const code = await p1.evaluate(() => { const c = document.querySelector('#camp-title .olob-code'); return c ? c.textContent : ''; });
     ok('Start a game → Campaign opens the campaign’s lobby, its code in the title bar', /^[A-Z2-9]{8}$/.test(code) && !/Give the others this code/.test(t1), code);
     const lay = await p1.evaluate(() => { const bar = document.querySelector('#camp-body .olob-bar'); const b = document.getElementById('camp-body').getBoundingClientRect(), c = document.querySelector('#camp-body .olob-chat').getBoundingClientRect(), l = document.querySelector('#camp-body .olob-lines');
-      return { bar: !!(bar && bar.querySelector('#olob-n') && bar.querySelector('#olob-pub') && bar.querySelector('[data-go="olobstart"]')), chatLow: b.bottom - c.bottom < 80, lines: l.getBoundingClientRect().height }; });
-    ok('...forces, public and Start on one row; the chat at the foot, three lines at the least', lay.bar && lay.chatLow && lay.lines >= 50, JSON.stringify(lay));
+      return { bar: !!(bar && bar.querySelector('#olob-n') && bar.querySelector('#olob-pub') && bar.querySelector('[data-go="olobready"]')), chatLow: b.bottom - c.bottom < 80, lines: l.getBoundingClientRect().height }; });
+    ok('...forces, public and the host\u2019s Ready on one row; the chat at the foot, three lines at the least', lay.bar && lay.chatLow && lay.lines >= 50, JSON.stringify(lay));
     ok('...four slots: the host, one open, two AI forces', (await slotCount(p1)) === 4 && /Open — waiting for a player/.test(t1) && (t1.match(/AI force/g) || []).length >= 2);
     await choose(p1, '#olob-n', '6');
     for (let i = 0; i < 30 && (await slotCount(p1)) !== 6; i++) await wait(150);
@@ -156,6 +156,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     let chatSeen = false;
     for (let i = 0; i < 40 && !chatSeen; i++) { await wait(250); const tx = await text(p1); chatSeen = /ready when you are/.test(tx) && /Brann Online[\s\S]*?Ready/.test(tx); }
     ok('the host sees Brann, their message and that they are ready', chatSeen);
+    // the host says they are ready too; with everyone ready, the host's button becomes Start
+    ok('the host has Ready, not Start, until they are ready', !(await p1.evaluate(() => !!document.querySelector('#camp-body [data-go="olobstart"]'))));
+    await press(p1, '[data-go="olobready"]');
+    let startable = false;
+    for (let i = 0; i < 30 && !startable; i++) { await wait(200); startable = await p1.evaluate(() => !!document.querySelector('#camp-body [data-go="olobstart"]')); }
+    ok('...and Start once everyone is', startable);
     await press(p1, '[data-go="olobstart"]');
     s1 = await till(p1, 'the founding screen', (s) => s.phase === 'run' && s.view === 'found');
     s2 = await till(p2, 'Brann’s founding screen', (s) => s.phase === 'run' && s.view === 'found');

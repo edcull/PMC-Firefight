@@ -442,7 +442,7 @@ function create(opts) {
       if (i !== 0) return no('the host starts the campaign');
       if (W.slots.some((s) => s.kind === 'open')) return no('every slot needs a player or an AI force — or fewer slots');
       if (W.slots.length < MIN_SLOTS) return no('a campaign needs at least two forces');
-      const waiting = W.slots.filter((s, j) => j !== 0 && s.kind === 'human' && !s.ready);
+      const waiting = W.slots.filter((s) => s.kind === 'human' && !s.ready);
       if (waiting.length) return no(waiting.map((s) => s.name).join(', ') + (waiting.length === 1 ? ' is' : ' are') + ' not ready yet');
       begin(W);
       return { ok: true, started: true };
