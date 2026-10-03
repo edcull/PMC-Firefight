@@ -60,9 +60,9 @@ function ok(name, cond, note) {
   console.log('\nCampaigns');
   r = await run('campaigns');
   const id = (/^\s*(\d+)\s/m.exec(r.text) || [])[1];
-  ok('campaigns lists them, an online one with its players and open code', !!id && /online/.test(r.text) && /Ash \(A\)/.test(r.text) && /code \w+ open/.test(r.text), r.text);
+  ok('campaigns lists them, an online one with its players and open code', !!id && /online/.test(r.text) && /Ash \(slot 1\)/.test(r.text) && /code \w+ open/.test(r.text), r.text);
   r = await run('delete-campaign', id);
-  ok('delete-campaign asks first', r.code === 1 && /both its players/.test(r.text));
+  ok('delete-campaign asks first', r.code === 1 && /all its players/.test(r.text));
   r = await run('delete-campaign', id, '--yes');
   ok('...and with --yes removes it', r.code === 0 && /No campaigns kept/.test((await run('campaigns')).text), r.text);
 

@@ -152,7 +152,7 @@
     });
     remote.online.forEach(function (c) {
       out.push({ key: 'o:' + c.id, where: 'server', kind: 'Online campaign', name: c.name, mine: c.waiting === 'you',
-        sub: [c.waiting === 'you' ? 'Your move' : c.waiting === 'them' ? 'their move' : '', 'Player ' + (c.side === 'B' ? 2 : 1), 'campaign turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
+        sub: [c.waiting === 'you' ? 'Your move' : c.waiting === 'them' ? 'their move' : c.phase === 'lobby' ? 'in its lobby' : '', (c.forces || 2) + ' forces', c.phase === 'lobby' ? '' : 'turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
     });
     remote.battles.forEach(function (g) {
       if (g.code === liveCode) return;          // the one on the table: first, above

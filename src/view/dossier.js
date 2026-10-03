@@ -708,7 +708,7 @@
       set hubSide(v) { hubSide = v === 'B' ? 'B' : 'A'; }, get drawState() { return drawState; }, get upState() { return upState; },
       get swapOut() { return swapOut; },
       render: function () { render(); }, open: open, toMenu: toMenu, keepFoundName: keepFoundName, beginOwn: beginOwn,
-      postView: function () { return postView(); }, showPast: function (i) { (KIT_AFTER || kitAfter()).showPast(i); },
+      postView: function () { return postView(); }, offersView: function () { return offersView(); }, stripe: stripe, statRow: statRow, showPast: function (i) { (KIT_AFTER || kitAfter()).showPast(i); },
       hide: function () { el('camp').hidden = true; }, isOpen: function () { return !!el('camp') && !el('camp').hidden; },
       asking: function () { return !!asking; },
       closeModal: function () { openModal = null; promoRid = null; },
@@ -785,6 +785,8 @@
     if (view !== 'aftermath' && KIT_AFTER) KIT_AFTER.showPast(null);   // a past battle's report is only open while it is shown
     if (camp && camp.fronts && !camp.post) (KIT_AFTER || kitAfter()).nextFront();   // the other forces' battles, still being fought
     if (view === 'olist') h = kitOnline().listView();
+    else if (view === 'olobby' && online) h = kitOnline().lobbyView();
+    else if (view === 'offers' && online) h = kitOnline().offersView();
     else if (view === 'ocontract' && online) h = kitOnline().contractView();
     else if (view === 'post' && online) h = kitOnline().postView();
     else if (view === 'found') h = foundView();

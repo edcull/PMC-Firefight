@@ -278,8 +278,8 @@
     if (g.online) {
       var own = account && g.host === account.name;
       return '<div class="lob-game"><div><b>' + esc(g.name) + '</b> <span class="lob-code">' + esc(g.id) + '</span><br>' +
-        '<span class="f small">Campaign \u2014 the two of you, each on your own device</span></div>' +
-        '<div class="seats">' + esc(g.host) + ' \u2014 a seat free</div>' +
+        '<span class="f small">Campaign \u2014 ' + (g.slots || 2) + ' forces, players and AI, each player on their own device</span></div>' +
+        '<div class="seats">' + esc(g.host) + ' \u2014 ' + (g.open || 1) + ' slot' + ((g.open || 1) === 1 ? '' : 's') + ' open</div>' +
         '<button class="lnk" data-lob="join" data-id="' + esc(g.id) + '">' + (own ? 'Open it' : 'Join the campaign') + '</button></div>';
     }
     var seated = g.players.filter(function (p) { return p.name; });

@@ -75,7 +75,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('a wrong password is refused, nothing removed', /Brann/.test(t));
     await p.fill('#acct-admpass', 'boss password');
     await click('[data-acct="adm-confirm"]');
-    t = await till((x) => /account removed/i.test(x), 'removed');
+    t = await till((x) => /account removed/i.test(x) && !/brann@example/.test(x) && /2 accounts/.test(x), 'removed, and the list reloaded');
     ok('the right one removes it', !/brann@example/.test(t) && /2 accounts/.test(t), t.slice(0, 300));
     await click('[data-acct="admin-close"]');
     ok('Done goes back to the account', await has('[data-acct="admin-open"]'));
