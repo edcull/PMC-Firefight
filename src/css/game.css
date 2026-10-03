@@ -1411,18 +1411,32 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .ojoin { display: flex; gap: 8px; }
 .ojoin .tin { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: .12em; }
 .onote { margin-bottom: 10px; }
-/* an online campaign's lobby: a row a slot — its colour, who, what it is, its army and colour */
-.olob-slots { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
-.olob-slot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+/* an online campaign's lobby: its code up in the title bar; a row a slot (its colour chip, who, what it is,
+   its army), scrolling when they do not all fit; one row of forces, public and Start or Ready; and the chat
+   at the foot, three lines at the least, taking whatever room is left */
+.olob-code { font: 600 13px/1 var(--mono); letter-spacing: .18em; padding: 4px 8px; margin-left: 10px; border: 1px solid var(--alpha);
+  border-radius: 5px; color: var(--alpha); vertical-align: middle; user-select: all; }
+.olob-slots { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+#camp-body.fit > .olob-slots { flex: 0 1 auto; min-height: 58px; }
+.olob-slot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); flex: none; }
 .olob-slot.mine { border-color: var(--alpha); }
-.olob-sw { width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--line); flex: none; background: var(--panel); }
+.olob-colour { flex: none; width: 26px; height: 26px; padding: 2px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); cursor: pointer; }
+.olob-colour.still { cursor: default; display: inline-block; }
+.olob-colour[aria-expanded="true"] { border-color: var(--alpha); }
+.olob-chip { display: block; width: 100%; height: 100%; border-radius: 3px; }
+.olob-pop { flex: none; margin: -2px 0 2px; }
+.olob-pop .csw button:disabled { opacity: .25; cursor: not-allowed; }
 .olob-who { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; }
 .olob-who small { color: var(--ink-faint); font-size: 11px; }
 .olob-slot select { flex: 0 1 auto; min-width: 0; max-width: 100%; }
 .olob-army { color: var(--ink-faint); font-size: 12px; }
-.olob-go { margin: 10px 0; }
-.olob-go .start { width: 100%; }
-.olob-lines { max-height: 160px; overflow-y: auto; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); padding: 6px 8px; margin-bottom: 6px; font-size: 13px; }
+.olob-bar { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex-wrap: wrap; }
+.olob-bar .start { flex: 1 1 200px; margin: 0; }
+.olob-n, .olob-pub { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.olob-chat { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+#camp-body.fit > .olob-chat { flex: 1 1 auto; min-height: calc(3 * 1.5em + 64px); }
+.olob-lines { flex: 1 1 auto; min-height: calc(3 * 1.5em + 14px); overflow-y: auto; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); padding: 6px 8px; font-size: 13px; line-height: 1.5; }
+.olob-chat .ojoin { flex: none; }
 .olob-chat .ojoin .tin { text-transform: none; letter-spacing: 0; }
 /* the new campaign's opposing forces: one choice of army each */
 .rivlist { max-height: min(232px, 34vh); overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }

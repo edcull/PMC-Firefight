@@ -69,8 +69,11 @@ function busy(W, i) {
 }
 // an AI force already in a player's contract or battle
 function aiBusy(W, slot) {
-  return Object.keys(W.players).some((k) => { const p = W.players[k]; return (p.contract && p.contract.vs === slot) || (p.pending && p.pending.vs === slot); });
+  return Object.keys(W.players).some((k) => { const p = W.players[k]; return (p.contract && p.contract.vs === slot) || (p.pending && p.pending.vs === slot); }) ||
+    inFront(W, slot);
 }
+// an AI force with a battle elsewhere still to be fought out (fronts below)
+function inFront(W, slot) { return (W.fronts || []).some((f) => f.pairs.some((pr) => pr[0] === slot || pr[1] === slot)); }
 
 /* The world as one player is to see it and as the rules want it: the single-player
    shape — their force as A, the AI forces as the rivals (the offers point into
@@ -91,8 +94,9 @@ function viewOf(W, i, faced) {
    not in another player's contract or battle just now. */
 function afterView(W, i, vs) {
   const v = viewOf(W, i, vs);
-  const free = aiSlots(W).filter((s) => s !== vs && !Object.keys(W.players).some((k) => +k !== i && (((W.players[k].contract || {}).vs === s) || ((W.players[k].pending || {}).vs === s))));
+  const free = aiSlots(W).filter((s) => s !== vs && !inFront(W, s) && !Object.keys(W.players).some((k) => +k !== i && (((W.players[k].contract || {}).vs === s) || ((W.players[k].pending || {}).vs === s))));
   v.rivals = [W.forces[vs]].concat(free.map((s) => W.forces[s]));
+  v.rivalSlots = [vs].concat(free);
   v.facing = 0; v.companies.B = W.forces[vs];
   return v;
 }
@@ -249,6 +253,7 @@ function create(opts) {
   const db = opts.db, notify = opts.notify || function () { }, mailer = opts.mailer || null;
   const opened = opts.listedChanged || function () { };   // the lobby's list of public campaigns changed
   const startBattle = opts.startBattle || null;          // makes a battle (lobby.campaignBattle): its room's code
+  const offTable = opts.offTable === undefined ? (global.PMCOffTable || null) : opts.offTable;
   const now = opts.now || Date.now;
   const mailedAt = {};
 
@@ -412,6 +417,14 @@ function create(opts) {
       return { ok: true };
     },
     lobbyReady(W, i, a) { W.slots[i].ready = a.ready !== false; return { ok: true }; },
+    // the host: listed in Multiplayer for anyone to join, or found by its code only
+    lobbyListed(W, i, a, ctx) {
+      if (i !== 0) return no('the host decides whether it is listed');
+      if (!ctx || !ctx.row) return no('not now');
+      db.setListed(ctx.row.id, !!a.on);
+      ctx.row.listed = a.on ? 1 : 0;
+      return { ok: true, relist: true };
+    },
     lobbyChat(W, i, a) {
       const t = text(a.text, 300);
       if (!t) return no('say something');
@@ -647,17 +660,23 @@ function create(opts) {
   function finishAi(W, i, v) {
     const p = W.players[i], post = p.post;
     v.post = post;
-    const after = C.aftermath(v, post.report, preOpts(post));     // the other AI forces fight it out elsewhere, on paper
+    // the other AI forces' battles are handed back, to be fought out on a table nobody sees (fronts, below)
+    const after = C.aftermath(v, post.report, Object.assign(preOpts(post), { defer: true }));
     after.rival = C.developRival(v.companies.B);
     after.loss = lossOf(post.report);
+    const pairs = (after.pairs || []).map((pr) => [v.rivalSlots[pr[0]], pr[1] == null ? null : v.rivalSlots[pr[1]]]);
     const keep = { turn: after.turn, winner: after.winner, payment: after.payment, loss: after.loss, sides: { A: after.sides.A, B: after.sides.B || null },
-      rival: after.rival || null, fronts: null, elsewhere: after.elsewhere || [] };
+      rival: after.rival || null, fronts: null, elsewhere: [], frontsLeft: pairs.length };
     const last = v.log[v.log.length - 1];
     if (last && last.turn === after.turn) { last.after = JSON.parse(JSON.stringify(keep)); last.balance = v.companies.A.kUC; }
     v.offers = null; v.offersTurn = null;
     keepView(W, i, v);
     p.after = Object.assign(JSON.parse(JSON.stringify(keep)), { n: (p.afterN = (p.afterN || 0) + 1) });
     p.post = null; p.pending = null; p.contract = null; p.battle = null;
+    if (pairs.length) {
+      W.fronts = (W.fronts || []).concat([{ slot: i, n: p.after.n, turn: after.turn, pairs: pairs, planet: post.report.planet || null }]);
+      W.frontsDue = true;
+    }
     ensureOffers(W, i);
   }
   function finishDuel(W, d) {
@@ -768,7 +787,7 @@ function create(opts) {
   function runCmd(W, i, cmd, a, ctx) {
     if (W.phase === 'lobby') {
       if (!Object.prototype.hasOwnProperty.call(LOBBY, cmd)) return no('the campaign has not started yet');
-      return LOBBY[cmd](W, i, a || {});
+      return LOBBY[cmd](W, i, a || {}, ctx);
     }
     if (W.phase === 'over') return no('the campaign is over');
     if (cmd === 'lobbyChat') return LOBBY.lobbyChat(W, i, a || {});
@@ -785,7 +804,80 @@ function create(opts) {
     return no('no such command');
   }
 
+  /* ================= elsewhere on the world =================
+     While the players count the cost of a battle with an AI force, the other AI
+     forces fight each other two by two — each battle played out in full by the AI
+     on both sides on a table nobody sees (engine/offtable.js), a slice at a time
+     so the server keeps answering everyone else meanwhile — and each is settled
+     like any battle as it ends, its report added to that player's aftermath. The
+     forces in one are not offered to anyone until it is over. Kept on the world
+     (W.fronts), so a restart picks up where it was. */
+  const running = new Set();
+  let idleWaiters = [];
+  function runFronts(id) {
+    if (running.has(id)) return;
+    running.add(id);
+    const done = () => { running.delete(id); if (!running.size) idleWaiters.splice(0).forEach((r) => r()); };
+    const next = () => {
+      let row;
+      try { row = db.campaign(id); } catch (e) { row = null; }
+      if (!isWorld(row)) return done();
+      const W = load(row), f = (W.fronts || [])[0];
+      if (!f) return done();
+      const pr = f.pairs[0];
+      const x = W.forces[pr[0]] ? JSON.parse(JSON.stringify(W.forces[pr[0]])) : null;
+      const y = pr[1] != null && W.forces[pr[1]] ? JSON.parse(JSON.stringify(W.forces[pr[1]])) : null;
+      const settle = (rep) => {
+        try { settleFront(id, f, pr, x, y, rep); } catch (e) { /* a front that cannot be settled is let go below */ }
+        setTimeout(next, 0);
+      };
+      // the odd one out fights the locals, and that is rolled
+      if (!x || !y || !offTable) return settle(null);
+      try { offTable.play(x, y, { planet: f.planet || 'random' }, settle); } catch (e) { settle(null); }
+    };
+    setTimeout(next, 0);
+  }
+  function settleFront(id, f0, pr, x, y, rep) {
+    let ok = false, W = null;
+    db.transaction(() => {
+      const row = db.campaign(id);
+      if (!isWorld(row)) return;
+      W = load(row);
+      const f = (W.fronts || []).filter((q) => q.n === f0.n && q.slot === f0.slot)[0];
+      if (!f || !f.pairs.length || f.pairs[0][0] !== pr[0]) return;
+      let out = [];
+      if (x) {
+        try { out = C.battleElsewhere({ turn: f.turn }, x, y, rep || null); } catch (e) { out = []; }
+        W.forces[pr[0]] = x;
+        if (y) W.forces[pr[1]] = y;
+      }
+      f.pairs.shift();
+      if (!f.pairs.length) W.fronts = W.fronts.filter((q) => q !== f);
+      // the battle's report goes on the aftermath of the player whose battle it followed
+      const p = W.players[f.slot];
+      if (p) {
+        if (p.after && p.after.n === f.n) { p.after.elsewhere = (p.after.elsewhere || []).concat(out); p.after.frontsLeft = f.pairs.length; }
+        const e = (p.log || []).filter((l) => l.after && l.turn === f.turn)[0];
+        if (e) { e.after.elsewhere = (e.after.elsewhere || []).concat(out); e.after.frontsLeft = f.pairs.length; }
+      }
+      ok = save(row, W);
+    });
+    if (ok) tellAll(id, W, null);
+  }
+
   return {
+    // the battles elsewhere left half-fought by a restart: picked up again
+    resumeFronts() {
+      let n = 0;
+      (db.allCampaigns(1000) || []).forEach((c) => {
+        if (c.kind !== 'online') return;
+        try { const row = db.campaign(c.id); if (isWorld(row) && (row.state.fronts || []).length) { runFronts(c.id); n++; } } catch (e) { }
+      });
+      return n;
+    },
+    // (the tests) resolves once no battle elsewhere is being fought
+    idle() { return running.size ? new Promise((r) => idleWaiters.push(r)) : Promise.resolve(); },
+
     /* A new campaign, in its lobby: the player who makes it is the host, in the
        first slot, and is given the code that brings the others in. */
     make(me, how) {
@@ -907,7 +999,7 @@ function create(opts) {
         W.id = row.id;
         const i = slotOf(W, me.userId);
         if (i < 0) { out = no('no such campaign of yours', 404); return; }
-        const r = runCmd(W, i, String(cmd || ''), args || {}, { id: row.id });
+        const r = runCmd(W, i, String(cmd || ''), args || {}, { id: row.id, row: row });
         if (!r.ok) { out = Object.assign({ code: 400 }, r); return; }
         delete W.id;
         if (!save(row, W)) { out = no('the campaign changed meanwhile — try again', 409); return; }
@@ -923,7 +1015,8 @@ function create(opts) {
           const row = db.campaign(id);
           if (row && row.listed) { db.setListed(id, false); opened(); }
         }
-        if (cmd === 'lobbySlot' || cmd === 'lobbySlots') opened();
+        if (cmd === 'lobbySlot' || cmd === 'lobbySlots' || out.relist) opened();
+        if ((W.fronts || []).length) runFronts(id);
         tellWhoseMove(id, before, me.userId);
       }
       return out;
@@ -967,7 +1060,7 @@ function create(opts) {
         if (gameId != null) W.applied = W.applied.concat([gameId]).slice(-100);
         done = save(row, W);
       });
-      if (done) { tellAll(id, W, null); tellWhoseMove(id, before, null); }
+      if (done) { tellAll(id, W, null); tellWhoseMove(id, before, null); if ((W.fronts || []).length) runFronts(id); }
       return done;
     }
   };
