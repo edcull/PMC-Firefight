@@ -86,11 +86,13 @@ tests.sort((a, b) => weight(b) - weight(a));
 
 fs.mkdirSync(LOGS, { recursive: true });
 const results = [];
-let running = 0, runningBrowser = 0, next = 0;
+let running = 0, runningBrowser = 0, runningSlow = 0, next = 0;
+// the slow ones play whole battles, some two at a time themselves: at most half the cores of them at once
+const maxSlow = jobs || Math.max(1, Math.floor(cpus / 2));
 const t0 = Date.now();
 
 function start(t) {
-  running++; if (t.browser) runningBrowser++;
+  running++; if (t.browser) runningBrowser++; if (t.slow) runningSlow++;
   const began = Date.now();
   const out = [];
   // unit tests roll seeded dice (test/seed.js); browser tests seed their pages themselves (where.js seedDice)
@@ -106,7 +108,7 @@ function start(t) {
     fs.writeFileSync(path.join(LOGS, t.name + '.log'), text);
     results.push({ t: t, ok: code === 0, secs: secs, text: text });
     console.log((code === 0 ? '  ✓ ' : '  ✗ ') + t.file.padEnd(34) + secs.toFixed(1).padStart(7) + 's');
-    running--; if (t.browser) runningBrowser--;
+    running--; if (t.browser) runningBrowser--; if (t.slow) runningSlow--;
     pump();
   });
 }
@@ -115,7 +117,7 @@ function pump() {
   // browser slot does not hold back the plain scripts behind it
   while (running < maxUnit && next < tests.length) {
     let k = next;
-    while (k < tests.length && tests[k].browser && runningBrowser >= maxBrowser) k++;
+    while (k < tests.length && ((tests[k].browser && runningBrowser >= maxBrowser) || (tests[k].slow && runningSlow >= maxSlow))) k++;
     if (k >= tests.length) break;
     const t = tests.splice(k, 1)[0];
     tests.splice(next, 0, t);
