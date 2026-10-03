@@ -17,10 +17,6 @@
     function hubView() {
       var h = '<h2>' + (E.camp ? 'Campaign — turn ' + E.camp.turn : E.wantMode === 'hotseat' ? 'Hotseat campaign' : 'Campaign') + '</h2>';
       if (!E.camp) {
-        h += '<p class="lede">A never-ending series of battles between two forces that grow, ' +
-          'scar over and occasionally fall apart. ' +
-          'Units earn experience, take promotions and Battle Honours, collect trauma, and are ' +
-          'sometimes struck off the dossier for good.</p>';
         function opt(v, t, want) { return '<option value="' + v + '"' + (want === v ? ' selected' : '') + '>' + t + '</option>'; }
         // beside each choice, its army's pill: tapped, the army's rules
         var pa = { faction: E.wantFaction, doctrines: [] }, pb = { faction: E.wantB, doctrines: [] };
@@ -55,7 +51,8 @@
             var c = CO[k];
             return c ? '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' : '<span class="rivrand">?</span>';
           };
-          h += '<div class="field rivarmies"><label>Their armies and colours</label>';
+          // the rows scroll in their own box when there are more than fit (7 forces on a phone)
+          h += '<div class="field rivarmies"><label>Their armies and colours</label><div class="rivlist">';
           for (var ri = 0; ri < nr; ri++) {
             h += '<div class="rivrow"><select class="rivarmy" data-i="' + ri + '" aria-label="Opposing force ' + (ri + 1) + '">' +
               opt('', 'Force ' + (ri + 1) + ' \u2014 rolled at random', ra[ri] || '') +
@@ -64,7 +61,7 @@
               esc(rc[ri] && CO[rc[ri]] ? CO[rc[ri]].name : 'Colours rolled at random \u2014 tap to pick') + '" aria-label="Force ' + (ri + 1) + ' colours">' +
               swatch(rc[ri]) + '</button></div>';
           }
-          h += '</div>';
+          h += '</div></div>';
           // the colour picker for the force whose swatch was tapped
           var ci = E.rivColourFor;
           if (ci !== null && ci < nr) {

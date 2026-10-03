@@ -49,6 +49,10 @@ The server's own source, the saved campaigns and anything hidden are not served.
   answered with a key (`{ ok, key }`); every later `PUT` or `DELETE` must send it
   in an `x-campaign-key` header, or is refused (403). The key is kept hashed
   beside the campaign. Another site's page cannot read it, so it cannot write.
+- **Each side's secrets stay theirs.** Every battle update is sent to each
+  seat with the other side's secrets left out, and to watchers with both sides'
+  left out (`server/hidden.js`): swaps noted but not yet made, the mined piece,
+  a campaign force's bench; in a room, the other player's list.
 - **The socket is for this server's own pages.** An upgrade whose `Origin` is not
   the host it was asked for (or the one a proxy names in `X-Forwarded-Host`, or
   one listed in `ALLOWED_ORIGINS`) is refused.

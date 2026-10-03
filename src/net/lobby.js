@@ -56,6 +56,8 @@
       '<button type="button" class="lnk" data-lob="signout">Sign out</button></span></span></div></div>' +
       '<div class="sheet lobby-sheet"><div id="lobby-body"></div></div>';
     document.body.appendChild(host);
+    // its way back is to the main menu: the home icon, as on the other screens
+    if (root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(host.querySelector('.camp-back'), true);
     style();
     host.addEventListener('click', onClick);
     // terms are sent as they are changed; the selects are redrawn often, so the overlay listens
@@ -434,12 +436,13 @@
     }
     var f = p.force || {};
     var col = root.PMCIso && root.PMCIso.COLOURS && root.PMCIso.COLOURS[f.colour];
-    var units = f.keys ? f.keys.length : 0;
+    // the other player's list is kept from this screen until the battle (server/hidden.js): only how many
+    var units = f.keys ? f.keys.length : (f.units || 0);
     var who = esc(p.name) + (p.host ? ' · host' : '') + (p.away ? ' · away' : '');
     var body = '<b style="color:' + (col ? col.light : 'inherit') + '">' + esc(f.name || (units ? 'An unnamed force' : 'No force yet')) + '</b>' +
       (which === mine ? '<em>' + (units ? 'change' : 'muster') + '</em>' : '') +
       '<small>' + who + ' · ' + esc(factionName(f.faction)) + ' · ' +
-      (units ? units + ' units' : (which === mine ? 'tap to muster it' : 'still mustering')) +
+      (units ? units + ' units' + (f.hidden ? ', the list kept from you until the battle' : '') : (which === mine ? 'tap to muster it' : 'still mustering')) +
       (f.tactic ? ' · ' + esc(f.tactic) : '') + '</small>' +
       '<small class="' + (p.ready ? 'lob-ok' : 'lob-wait') + '">' + (p.ready ? 'Ready' : 'Not ready yet') + '</small>';
     return which === mine
@@ -477,7 +480,7 @@
       case 'usermenu': userMenu(el('lobby-usermenu').hidden); return;
       case 'signout': userMenu(false); signOut(); return;
       // the main menu's account pane: what the server keeps for the player
-      case 'account': userMenu(false); close(); if (root.PMCMenu) { root.PMCMenu.open(); root.PMCMenu.show('account'); } return;
+      case 'account': userMenu(false); close(); if (root.PMCAccount) root.PMCAccount.show(); return;
       case 'create': {
         // the first press opens the form; Create the game starts it
         if (!b.getAttribute('data-go')) { creating = true; draw(); return; }

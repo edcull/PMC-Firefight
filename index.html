@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=3a3a0881c6">
-<link rel="stylesheet" href="src/css/game.css?v=40d4ab4019">
+<link rel="stylesheet" href="src/css/game.css?v=8ba0da0b84">
 
 <div class="wrap">
   <header>
@@ -141,17 +141,16 @@
       <button class="mcard" id="btn-camp-hotseat" data-camp="hotseat">Campaign<small id="menu-camphot-sub">Two dossiers, two players, one screen</small><span class="mcard-warn">Not fully tested</span></button>
       <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
-    <!-- the player's account (net/account.js): signing in, or what is kept for them -->
-    <div class="menu-pane" id="menu-account" hidden></div>
-    <!-- the small things: the sound, the account, and the demo on the main menu only -->
+    <!-- the small things: the sound, the demo on the main menu only, and the account -->
     <p class="menu-foot">
       <button class="lnk" id="btn-menu-sound">Sound on</button>
-      <button class="lnk" id="btn-menu-account" data-menu="account" hidden>Sign in</button>
       <button class="lnk" data-skirmish="demo" id="btn-menu-demo" title="Watch two AI forces fight it out" hidden>Demo</button>
+      <!-- who is signed in, or the way to sign in (net/account.js), at the row's right end -->
+      <button type="button" class="user-chip menu-chip" hidden></button>
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2610022346</p>
+    <p class="menu-ver" id="menu-ver">v0.1.0.2610030101</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -160,6 +159,8 @@
   <div class="camp-top">
     <button type="button" class="camp-back" id="btn-setup-back">← Back</button>
     <h1 id="setup-title">Muster your force</h1>
+    <!-- who is signed in, or the way to sign in (net/account.js) -->
+    <button type="button" class="user-chip" hidden></button>
   </div>
   <div class="sheet">
     <div class="solo-box" id="solo-box" hidden>
@@ -354,6 +355,8 @@
   <div class="camp-top">
     <button type="button" class="camp-back" id="camp-back" data-go="menu">← Back</button>
     <h1 id="camp-title">Campaign</h1>
+    <!-- who is signed in, or the way to sign in (net/account.js) -->
+    <button type="button" class="user-chip" hidden></button>
   </div>
   <div class="sheet camp-sheet" id="camp-body"></div>
   <div class="askwrap" id="camp-ask" hidden><div class="askbox" id="camp-askbox"></div></div>
@@ -556,8 +559,8 @@
 <script src="src/engine/engine.js?v=78f6126065"></script>
 <script src="src/engine/offtable.js?v=ef8edae603"></script>
 <script src="src/net/net.js?v=b704f7022b"></script>
-<script src="src/net/account.js?v=980035b1a5"></script>
-<script src="src/net/lobby.js?v=8d40c7c997"></script>
+<script src="src/net/account.js?v=8a43641dd7"></script>
+<script src="src/net/lobby.js?v=ac99e00fec"></script>
 <script src="src/view/replay.js?v=9bc59170a7"></script>
 <script src="src/view/hooks.js?v=7ad383bd12"></script>
 <script src="src/view/testhooks.js?v=a48181cc11"></script>
@@ -570,12 +573,12 @@
 <script src="src/view/view.js?v=73abea196b"></script>
 <script src="src/view/panels.js?v=786d572c2b"></script>
 <script src="src/view/muster.js?v=416d9b2fa6"></script>
-<script src="src/view/game.js?v=ae5a1cfd52"></script>
-<script src="src/view/dossier-hub.js?v=6a21702241"></script>
+<script src="src/view/game.js?v=56eb6f0065"></script>
+<script src="src/view/dossier-hub.js?v=f6028c9825"></script>
 <script src="src/view/dossier-found.js?v=382b00dba1"></script>
 <script src="src/view/dossier-roster.js?v=252a0f7a67"></script>
 <script src="src/view/dossier-contract.js?v=1a8ad32434"></script>
 <script src="src/view/dossier-after.js?v=f8c2468b2a"></script>
-<script src="src/view/dossier-online.js?v=7dd3b786d1"></script>
+<script src="src/view/dossier-online.js?v=70ad4c1e3f"></script>
 <script src="src/view/dossier.js?v=7b5778ff40"></script>
-<script src="src/view/menu.js?v=51dda4f8e6"></script>
+<script src="src/view/menu.js?v=c6f4ede35e"></script>

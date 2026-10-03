@@ -423,7 +423,7 @@
         });
         return true;
       }
-      if (go === 'osignin') { E.hide(); if (root.PMCMenu) { root.PMCMenu.open(); root.PMCMenu.show('account'); } return true; }
+      if (go === 'osignin') { E.hide(); if (root.PMCAccount) root.PMCAccount.show(); return true; }
       if (go === 'olist') { enterList(); return true; }
       if (go === 'menu') { leaveCampaign(); E.toMenu(); return true; }
       if (!E.online || !camp) return false;

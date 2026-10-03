@@ -236,8 +236,8 @@ async function main() {
   /* ---- forces, and being ready ---- */
   a.send('game.force', { force: force('pmc', 4, 1, 'ochre', 'Ash Company') });
   b.send('game.force', { force: force('rebel', 4, 1, 'crimson', 'The Brannite Front') });
-  await a.till('both forces', (c) => c.room.seats.A.force.keys.length && c.room.seats.B.force.keys.length);
-  ok('a force reaches the other side', b.room.seats.A.force.name === 'Ash Company');
+  await a.till('both forces', (c) => c.room.seats.A.force.keys.length && c.room.seats.B.force.units);
+  ok('a force reaches the other side by its name and size, not its list (phase 4)', b.room.seats.A.force.name === 'Ash Company' && b.room.seats.A.force.units > 0 && !b.room.seats.A.force.keys && a.room.seats.A.force.keys.length > 0);
 
   a.send('game.ready', { ready: true });
   await b.till('Ash to be ready', (c) => c.room.seats.A.ready === true);
