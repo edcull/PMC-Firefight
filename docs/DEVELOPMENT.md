@@ -127,6 +127,9 @@ file it came from. `viewer.html` works the same way.
 - `npm run build` stamps each script tag with a fingerprint of the file, then
   inlines everything into `build/firefight.html` and `build/viewer.html`, draws
   `build/units.html`, and builds the site in `build/site/`.
+- The version is `package.json`'s (`0.2.0`). The main menu shows it with the
+  moment of the build, as `v0.2.0.YYMMDDHHmm`; `npm run build` restamps it when
+  a script changes or the version does.
 - The published site (GitHub Pages, `.github/workflows/pages.yml`, on every push
   to main) is `index.html` with every script folded, in order, into one minified
   `dist/game.js` (`scripts/bundle.js`, with `terser`). The test hooks are left out.
@@ -307,7 +310,7 @@ demoentry.js       an AI-against-AI turn 1: units appear as their walk-ons play
 tribesight.js      the eye button: out of sight darkened (a tribe's 12", a unit's 36")
 turnshow.js        whose go it is, at a glance
 discard.js         throwing a skirmish away from the main menu
-resume.js          a battle outlives a refresh; a second begun beside it, both kept and picked from Continue
+resume.js          a refresh opens on the menu; a battle picked back up from Continue; a second kept beside it
 continuelist.js    several campaigns at once, the main menu's Continue list, a result sent to its own campaign
 netplay.js         two browsers at a real game server: both press Begin, whose turn, the camera following the opponent, a drop, abandoning
 subpath.js         the server behind a reverse proxy on a sub-path (/pmc/), as nginx serves it

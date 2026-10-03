@@ -681,15 +681,12 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cont-row .mcard { flex: 1; padding-right: 52px; min-width: 0; }
 .cont-row .mcard b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cont-row .cont-kind { display: block; font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--alpha); margin-bottom: 2px; }
-.cont-row .mcard.live { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
 .cont-row .resume-x.confirm { min-width: 76px; }
+.cont-row .cont-where { display: inline-flex; vertical-align: -2px; margin-right: 5px; color: var(--ink-dim); }
+.cont-row .cont-where svg { width: 13px; height: 13px; }
 .cont-none { color: var(--ink-dim); font-size: 13px; margin: 4px 2px 8px; }
-#btn-resume, #btn-continue { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
-/* throwing the battle away: a small x in the corner of Back to the battle,
-   which turns into a red Discard? once, and asks the card to say so */
-.resume-wrap { position: relative; display: flex; flex-direction: column; }
-.resume-wrap:has(#btn-resume[hidden]) { display: none; }
-.resume-wrap #btn-resume { padding-right: 52px; }
+#btn-continue { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
+/* the x on a row of the Continue list: a red Delete? (or Abandon?) once, asked twice */
 .resume-x {
   position: absolute; top: 8px; right: 8px; min-width: 32px; height: 32px; padding: 0 9px; border-radius: 16px;
   border: 1px solid var(--line); background: color-mix(in srgb, var(--ground) 80%, transparent); color: var(--ink-dim);
@@ -700,8 +697,7 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   color: #fff; background: var(--bad); border-color: var(--bad);
   font: 700 12px/1 var(--display); letter-spacing: .08em; text-transform: uppercase;
 }
-#btn-resume.discarding { border-color: color-mix(in srgb, var(--bad) 70%, transparent); padding-right: 120px; }
-#btn-resume.discarding small { color: var(--bad); }
+.cont-row .mcard.live { border-color: color-mix(in srgb, var(--good) 50%, transparent); }
 .mcard.menu-back { text-align: center; }
 /* the account pane (net/account.js) */
 /* who is signed in, at the right of a screen's top bar (net/account.js) */
@@ -1675,6 +1671,17 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
    land, the selected unit and the two orders of battle. Nothing scrolls the
    page: the panel scrolls inside itself. */
 .mtabs { display: none; }
+/* an online battle's table talk, under the actions: three lines, the newest at the foot */
+.bchat { padding: 0 10px 10px; }
+.bchat[hidden] { display: none !important; }
+.bchat-lines { height: calc(3 * 1.45em + 12px); overflow-y: auto; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2);
+  padding: 5px 8px; font-size: 12px; line-height: 1.45; }
+.bchat-lines p { margin: 0; }
+.bchat-lines .note { color: var(--ink-dim); font-style: italic; }
+.bchat-lines b { color: var(--ink); }
+.bchat-row { display: flex; gap: 6px; margin-top: 6px; }
+.bchat-row input { flex: 1; min-width: 0; min-height: 30px; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 5px;
+  padding: 4px 8px; font-family: var(--body); font-size: 12px; }
 .mpane { display: block; }
 
 @media (max-width: 1000px) {
@@ -1776,6 +1783,12 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
   .console[data-mtab="unit"]  > .mpane-unit,
   .console[data-mtab="force"] > .mpane-force { display: block; }
   .console[data-mtab="res"]   > .mpane-res { display: flex; flex-direction: column-reverse; gap: 7px; }
+  /* an online battle: a fifth tab, the table talk, filling the pane */
+  body[data-online] .mtabs { grid-template-columns: repeat(5, 1fr); }
+  body[data-online] .mtab-chat { display: block; }
+  .console > .mpane-chat { display: none !important; }
+  body[data-online] .console[data-mtab="chat"] > .mpane-chat { display: flex !important; flex-direction: column; padding: 0 6px 8px; }
+  .console[data-mtab="chat"] .bchat-lines { flex: 1; height: auto; min-height: 0; }
   .console > #resfeed-m, .console > #panel-m { padding: 0 8px; }
   .mpane-unit { padding: 0 2px 8px; }
 

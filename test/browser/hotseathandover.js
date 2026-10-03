@@ -122,7 +122,7 @@ const { ROOT } = require('../where.js');
   console.log('\nA reload');
   await p.reload();
   await p.waitForTimeout(1500);
-  await p.evaluate(() => { const r = document.querySelector('[data-act="resume"], #btn-resume'); if (r) r.click(); });
+  await p.evaluate(() => { const b = window.PMCNet.savedBattles()[0]; if (b) window.PMC_RESUME_BATTLE(b.id); });
   await p.waitForTimeout(1500);
   const live = await p.evaluate(() => !!window.PMC_STATE() && window.PMC_STATE().phase === 'battle');
   if (live) check('after a reload, the battle goes on with no card', !(await card()));

@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=3a3a0881c6">
-<link rel="stylesheet" href="src/css/game.css?v=05ac09c569">
+<link rel="stylesheet" href="src/css/game.css?v=0a6f0e88b3">
 
 <div class="wrap">
   <header>
@@ -56,12 +56,18 @@
 
       <div class="console">
         <div class="bar" id="bar"></div>
+        <!-- an online battle: the table talk, under the actions (a tab of its own on a phone) -->
+        <div class="mpane mpane-chat bchat" id="battle-chat" hidden>
+          <div class="bchat-lines" id="bchat-lines"></div>
+          <div class="bchat-row"><input id="bchat-say" type="text" maxlength="200" placeholder="Say something…" autocomplete="off"><button class="lnk" id="bchat-send">Send</button></div>
+        </div>
         <!-- phone only: the three things worth a thumb, under the action row -->
         <div class="mtabs" id="mtabs">
           <button class="mtab on" data-mtab="act">Actions</button>
           <button class="mtab" data-mtab="res">Results <span class="mtab-n" id="mtab-n"></span></button>
           <button class="mtab" data-mtab="unit">Unit</button>
           <button class="mtab" data-mtab="force">Forces</button>
+          <button class="mtab mtab-chat" data-mtab="chat" hidden>Chat <span class="mtab-n" id="mtab-chat-n"></span></button>
         </div>
         <div class="hintbar idle" id="hintbar">Select one of your units on the table.</div>
         <div class="mpane mpane-act" id="context"></div>
@@ -113,12 +119,8 @@
   <div class="menu-box">
     <h1 class="menu-title">PMC <span>2670</span><small>Firefight</small></h1>
     <div class="menu-pane" id="menu-main">
-      <div class="resume-wrap" id="resume-wrap">
-        <button class="mcard" id="btn-resume" hidden>Back to the battle<small id="menu-resume-sub">The battle is still on</small></button>
-        <!-- a skirmish can be thrown away: the x on the card, asked twice -->
-        <button class="resume-x" id="btn-discard" hidden aria-label="Discard this battle" title="Discard this battle">✕</button>
-      </div>
-      <!-- games under way, kept here or on the server: the list of them, to pick one up -->
+      <!-- games under way — the one on the table first, and every one kept here or on the
+           server: the list of them, to pick one up -->
       <button class="mcard" id="btn-continue" data-menu="continue" hidden>Continue<small id="menu-continue-sub"></small></button>
       <button class="mcard" data-menu="single">Single player<small>Skirmish, solitaire or a campaign, against the AI</small></button>
       <button class="mcard" data-menu="hotseat">Hotseat<small>Two players, one screen</small></button>
@@ -155,7 +157,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.1.0.2610030938</p>
+    <p class="menu-ver" id="menu-ver">v0.2.0.2610031154</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -524,7 +526,7 @@
 <script src="src/rules/scenarios.js?v=5648420803"></script>
 <script src="src/rules/solitaire.js?v=ce918fc710"></script>
 <script src="src/view/sfx.js?v=f850c7718d"></script>
-<script src="src/rules/gen.js?v=df45c57de6"></script>
+<script src="src/rules/gen.js?v=f653855fa7"></script>
 <script src="src/view/iso-ground.js?v=bbcea46ce3"></script>
 <script src="src/view/iso-props.js?v=ead1fedd0b"></script>
 <script src="src/view/iso-troops.js?v=cbbaf456e8"></script>
@@ -534,13 +536,13 @@
 <script src="src/view/iso-craft.js?v=4dea2fce24"></script>
 <script src="src/view/iso-mechs.js?v=f854f52505"></script>
 <script src="src/view/iso-hulls.js?v=b460682fe7"></script>
-<script src="src/view/iso-gear.js?v=7e60cb8c46"></script>
+<script src="src/view/iso-gear.js?v=589734968d"></script>
 <script src="src/view/iso-rotors.js?v=fe08795141"></script>
 <script src="src/view/iso-plainhull.js?v=528b5f10d7"></script>
 <script src="src/view/iso-parts.js?v=99ba9841c7"></script>
 <script src="src/view/iso-xenofig.js?v=0442de3629"></script>
 <script src="src/view/iso-bugs.js?v=de43d16ad2"></script>
-<script src="src/view/iso-propkinds.js?v=c66f62c001"></script>
+<script src="src/view/iso-propkinds.js?v=f380d02810"></script>
 <script src="src/view/iso-xenomachines.js?v=46a06a96cc"></script>
 <script src="src/view/iso.js?v=19027e9c5a"></script>
 <script src="src/view/fx.js?v=180accc1fb"></script>
@@ -559,31 +561,31 @@
 <script src="src/engine/solo.js?v=f82cbdc2b5"></script>
 <script src="src/engine/arrivals.js?v=a071a31489"></script>
 <script src="src/engine/deploy.js?v=77924c766a"></script>
-<script src="src/engine/terrainsetup.js?v=103158bafb"></script>
+<script src="src/engine/terrainsetup.js?v=aa9f0d6867"></script>
 <script src="src/engine/swaps.js?v=12cda83aa9"></script>
-<script src="src/engine/engine.js?v=78f6126065"></script>
+<script src="src/engine/engine.js?v=bf5e56a5dc"></script>
 <script src="src/engine/offtable.js?v=ef8edae603"></script>
 <script src="src/net/net.js?v=c3fd6af800"></script>
-<script src="src/net/account.js?v=4d179c4207"></script>
-<script src="src/net/lobby.js?v=38c8d2f878"></script>
+<script src="src/net/account.js?v=f27fb40b1d"></script>
+<script src="src/net/lobby.js?v=665cee8f74"></script>
 <script src="src/view/replay.js?v=9bc59170a7"></script>
 <script src="src/view/hooks.js?v=7ad383bd12"></script>
-<script src="src/view/testhooks.js?v=a48181cc11"></script>
+<script src="src/view/testhooks.js?v=9968efc1fe"></script>
 <script src="src/view/play.js?v=827eec20b9"></script>
 <script src="src/view/terrainset.js?v=bb0ea483d0"></script>
 <script src="src/view/input.js?v=f4b6b3d602"></script>
 <script src="src/view/arrive.js?v=106f5b70d8"></script>
 <script src="src/view/actions.js?v=f15f74fcee"></script>
-<script src="src/view/draw.js?v=bf3d2fb76e"></script>
+<script src="src/view/draw.js?v=01522e157c"></script>
 <script src="src/view/view.js?v=73abea196b"></script>
 <script src="src/view/panels.js?v=786d572c2b"></script>
 <script src="src/view/muster.js?v=416d9b2fa6"></script>
-<script src="src/view/game.js?v=d999c541d0"></script>
+<script src="src/view/game.js?v=2e99f056fa"></script>
 <script src="src/view/dossier-hub.js?v=771e52ffb5"></script>
 <script src="src/view/dossier-found.js?v=382b00dba1"></script>
 <script src="src/view/dossier-roster.js?v=252a0f7a67"></script>
 <script src="src/view/dossier-contract.js?v=c06c458b1e"></script>
 <script src="src/view/dossier-after.js?v=37e2b922a3"></script>
 <script src="src/view/dossier-online.js?v=39651523bf"></script>
-<script src="src/view/dossier.js?v=242ba27edf"></script>
-<script src="src/view/menu.js?v=af1c503a00"></script>
+<script src="src/view/dossier.js?v=cf5501f1b2"></script>
+<script src="src/view/menu.js?v=72c86bac08"></script>

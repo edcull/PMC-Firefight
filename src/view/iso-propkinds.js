@@ -594,9 +594,9 @@
           });
           break;
         }
-        /* A possible objective location (p. 52): a prised-open hatch and a stake with
-           a marker tag. Unchecked it flies a bright tag; searched and empty, the stake
-           lies over and the tag is a dull rag. */
+        /* A possible objective location (p. 52): a prised-open hatch. Searched and
+           ruled out, it is struck through; the one found becomes an objective marker
+           of its own. */
         case 'searchsite': {
           var sr = rng(pr.seed || 7);
           shadowBlob(g, { x: p.x, y: p.y }, a(7), a(3.5));
@@ -609,32 +609,22 @@
           for (var sn = 0; sn < 5; sn++) {
             dot(g, p.x - a(3) + sr() * a(6), p.y - a(1.4) + sr() * a(2.8), '#6e6e64');
           }
-          if (pr.checked) {
-            // the stake down, the tag a rag on the ground beside it
-            edgeLine(g, [p.x + a(2), p.y - a(1.6)], [p.x + a(8.5), p.y + a(0.6)], '#6a5a42', 2);
-            edgeLine(g, [p.x + a(2), p.y - a(2.2)], [p.x + a(8.5), p.y], '#8a7754', 1);
-            rect(g, p.x + a(7.5), p.y + a(0.4), a(3), a(1.6), pr.found ? '#d8a83f' : '#55534a');
-            // a location ruled out is struck through
-            if (pr.cold) {
-              edgeLine(g, [p.x - a(4), p.y - a(2)], [p.x + a(4), p.y + a(2)], '#8c3c2e', 2);
-              edgeLine(g, [p.x - a(4), p.y + a(2)], [p.x + a(4), p.y - a(2)], '#8c3c2e', 2);
-            }
-          } else {
-            rect(g, p.x + a(4), p.y - a(9), a(1), a(9), '#5a4c38');
-            rect(g, p.x + a(4), p.y - a(9), a(0.5), a(9), '#786748');
-            // its tag stirs in the wind: drawn over the table every frame (drawLive)
+          // a location ruled out is struck through
+          if (pr.checked && pr.cold) {
+            edgeLine(g, [p.x - a(4), p.y - a(2)], [p.x + a(4), p.y + a(2)], '#8c3c2e', 2);
+            edgeLine(g, [p.x - a(4), p.y + a(2)], [p.x + a(4), p.y - a(2)], '#8c3c2e', 2);
           }
           break;
         }
         case 'beacon': {
           if (pr.lz) {
             /* An Invasion landing zone (p. 53): a smoke canister set down in the
-               middle of it, its green smoke drawn rising every frame (drawLive). */
+               middle of it, its smoke (the attacker's colour) drawn rising every frame (drawLive). */
             shadowBlob(g, { x: p.x + a(0.6), y: p.y + a(0.3) }, a(2.2), a(1.1));
-            ellipse(g, p.x, p.y, a(2.4), a(1.2), 'rgba(70,120,50,.35)');      // the ground stained green
+            ellipse(g, p.x, p.y, a(2.4), a(1.2), 'rgba(30,30,28,.32)');       // the ground scorched round it
             rect(g, p.x - a(0.8), p.y - a(2.2), a(1.6), a(2.2), '#3c4a38');
             rect(g, p.x - a(0.8), p.y - a(2.2), a(0.6), a(2.2), '#5a6a52');
-            rect(g, p.x - a(0.8), p.y - a(1.4), a(1.6), a(0.5), '#8acb5a');    // its green band
+            rect(g, p.x - a(0.8), p.y - a(1.4), a(1.6), a(0.5), '#c9cdd2');    // its band
             ellipse(g, p.x, p.y - a(2.2), a(0.8), a(0.4), '#2a3326');
             break;
           }
@@ -660,29 +650,32 @@
           });
           edgeLine(g, D1[3], D1[0], '#7b8592', 1);
           edgeLine(g, D1[3], D1[2], '#6a7380', 1);
-          // the post: square steel, lit down its left face, with two painted bands
+          // the post: square steel, lit down its left face
           var px0 = p.x - a(0.7), pw = a(1.4), top = p.y - lift3 - a(14), bot = p.y - lift3;
           rect(g, px0, top, pw, bot - top, '#2c343e');
           rect(g, px0, top, pw * 0.5, bot - top, '#4a5664');
           rect(g, px0, top, 1, bot - top, '#7e8b9a');
           rect(g, px0 + pw - 1, top, 1, bot - top, '#1a1f25');
-          [0.18, 0.52].forEach(function (f) {
-            var by2 = bot - (bot - top) * f;
-            rect(g, px0, by2 - a(0.9), pw, a(0.9), '#d9a441');
-            rect(g, px0, by2 - a(0.9), pw * 0.5, a(0.9), '#f0c060');
-          });
           rect(g, px0 - 1, top - a(0.5), pw + 2, a(0.6), '#1a1f25');          // the cap
-          /* the pennant and the lamp's light move, so they are drawn over the
-             table every frame (drawLive); the lamp's housing is baked, unlit */
+          /* the pennant (flown only by a side holding the point) and the lamp's light
+             move, so they are drawn over the table every frame (drawLive); the lamp's
+             housing is baked, unlit */
           rect(g, px0 + pw / 2 - a(0.45), top - a(1.6), a(0.9), a(1.1), '#7a6438');
           break;
         }
       }
     }
 
+    // '#rrggbb' as 'r,g,b', for a colour mixed with a changing alpha
+    function rgbOf(hex) {
+      var h = String(hex || '#70c858').replace('#', '');
+      if (h.length === 3) h = h.replace(/(.)/g, '$1$1');
+      return parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16);
+    }
     /* The moving parts of a piece, drawn over the table every frame at the
-       time t (ms): an objective beacon's pennant fluttering and its lamp
-       flashing slowly, and the tag on a search site not yet searched. */
+       time t (ms): an objective beacon's pennant fluttering (in the colours of
+       the side holding it: `pr.holder`, a palette, set by the board; none while it
+       is nobody's or contested) and its lamp flashing slowly. */
     function drawLive(g, lift, p, pr, t) {
       if (pr.kind === 'objective') {
         // the uplink's warning lamps: a slow beat, on for about a second in three
@@ -699,10 +692,12 @@
         return;
       }
       if (pr.kind === 'beacon' && pr.lz) {
-        /* Green smoke off the canister: puffs born at its mouth, rising, swelling
+        /* Smoke off the canister: puffs born at its mouth, rising, swelling
            and leaning off downwind as they thin out. Each puff is set by the time
            alone, so the plume needs nothing kept between frames. */
         var N = 22, LIFE = 4600, cx = p.x, cy = p.y - a(2.4), off = (pr.index || 0) * 0.29;
+        // in the attacker's colours (`pr.holder`, set by the board), green until it is known
+        var pal = pr.holder, rgbA = pal ? rgbOf(pal.ink) : '112,200,88', rgbB = pal ? rgbOf(pal.mid) : '86,166,70', rgbC = pal ? rgbOf(pal.light) : '190,245,150';
         g.save();
         for (var i = N - 1; i >= 0; i--) {
           var age = ((t / LIFE) + i / N + off) % 1;
@@ -714,7 +709,7 @@
           var al = (age < 0.08 ? age / 0.08 : 1) * (1 - age * 0.85) * 0.62;
           // soft-edged: a puff is dense in the middle and fades out to nothing
           var rg = g.createRadialGradient(sx2, sy2, 0, sx2, sy2, r);
-          var c = i % 3 ? '112,200,88' : '86,166,70';
+          var c = i % 3 ? rgbA : rgbB;
           rg.addColorStop(0, 'rgba(' + c + ',' + al.toFixed(3) + ')');
           rg.addColorStop(0.6, 'rgba(' + c + ',' + (al * 0.55).toFixed(3) + ')');
           rg.addColorStop(1, 'rgba(' + c + ',0)');
@@ -723,16 +718,17 @@
         }
         // the hot core at the canister's mouth
         var core = g.createRadialGradient(cx, cy - a(0.6), 0, cx, cy - a(0.6), a(1.6));
-        core.addColorStop(0, 'rgba(190,245,150,.55)');
-        core.addColorStop(1, 'rgba(190,245,150,0)');
+        core.addColorStop(0, 'rgba(' + rgbC + ',.55)');
+        core.addColorStop(1, 'rgba(' + rgbC + ',0)');
         g.fillStyle = core;
         g.beginPath(); g.arc(cx, cy - a(0.6), a(1.6), 0, Math.PI * 2); g.fill();
         g.restore();
         return;
       }
       if (pr.kind === 'beacon') {
-        var bq = rng(7 + (pr.index || 0) * 31), wob = bq() * 6;
+        var bq = rng(7 + (pr.index || 0) * 31), wob = bq() * 6, pal = pr.holder;
         var px0 = p.x - a(0.7), pw = a(1.4), top = p.y - a(1.1) - a(14);
+        if (pal) {
         // the pennant: a ripple running out to the fly, the fly moving most
         var fx = px0 + pw, fy = top + a(0.4), FL = a(6.2), FH = a(3.2);
         var ph = t / 850 * Math.PI * 2 + wob, upper = [], lower = [];
@@ -742,16 +738,17 @@
           upper.push([fx + FL * f * (1 - 0.04 * Math.abs(Math.sin(ph * 0.5)) * f), fy + wave]);
           lower.push([upper[k][0], fy + hh + wave]);
         }
-        poly(g, upper.concat(lower.slice().reverse()), '#c9962c');
-        poly(g, upper.concat(lower.map(function (q, i) { return [q[0], q[1] - (q[1] - upper[i][1]) * 0.5]; }).reverse()), '#e8c15a');
+        poly(g, upper.concat(lower.slice().reverse()), pal.mid);
+        poly(g, upper.concat(lower.map(function (q, i) { return [q[0], q[1] - (q[1] - upper[i][1]) * 0.5]; }).reverse()), pal.ink || pal.light);
         for (var k2 = 1; k2 < 8; k2++) {
           // a fold turning away from the light is shaded, one turning to it lit
           var turn = Math.cos(k2 / 8 * Math.PI * 1.8 - ph);
           if (Math.abs(turn) < 0.45) continue;
-          edgeLine(g, [upper[k2][0], upper[k2][1] + 1], [lower[k2][0], lower[k2][1] - 1], turn < 0 ? 'rgba(120,84,20,.5)' : 'rgba(255,240,190,.35)', 1);
+          edgeLine(g, [upper[k2][0], upper[k2][1] + 1], [lower[k2][0], lower[k2][1] - 1], turn < 0 ? 'rgba(0,0,0,.28)' : 'rgba(255,255,255,.22)', 1);
         }
-        for (var k3 = 0; k3 < 8; k3++) edgeLine(g, upper[k3], upper[k3 + 1], '#f6dd8a', 1);
-        edgeLine(g, [fx, fy], [fx, fy + FH], '#8a6a22', 1);
+        for (var k3 = 0; k3 < 8; k3++) edgeLine(g, upper[k3], upper[k3 + 1], pal.light || pal.ink, 1);
+        edgeLine(g, [fx, fy], [fx, fy + FH], pal.dark, 1);
+        }
         // the lamp: a slow beat, swelling and fading every two and a half seconds
         var lit = 0.5 + 0.5 * Math.sin((t / 2500 + (pr.index || 0) * 0.37) * Math.PI * 2);
         var lx = px0 + pw / 2;
@@ -763,20 +760,9 @@
         g.restore();
         return;
       }
-      if (pr.kind === 'searchsite' && !pr.checked) {
-        // the tag on the stake, a small cloth flicking in the wind
-        var sx = p.x + a(5), sy = p.y - a(9), sw = a(3.4), sh = a(2.2), cw = PIXEL;
-        var sp = t / 700 * Math.PI * 2 + (pr.seed || 0);
-        for (var x = 0; x < sw; x += cw) {
-          var ff = (x + cw / 2) / sw, o = Math.round(Math.sin(ff * Math.PI * 1.6 - sp) * a(0.45) * ff);
-          var w2 = Math.min(cw, sw - x);
-          rect(g, sx + x, sy + o, w2, sh, Math.cos(ff * Math.PI * 1.6 - sp) * ff < -0.3 ? '#b88a2e' : '#d8a83f');
-          rect(g, sx + x, sy + o, w2, a(0.8), '#f0cc6a');
-        }
-      }
     }
     // the pieces with moving parts
-    function lives(pr) { return pr.kind === 'beacon' || pr.kind === 'objective' || (pr.kind === 'searchsite' && !pr.checked); }
+    function lives(pr) { return pr.kind === 'beacon' || pr.kind === 'objective'; }
 
     return { drawKind: drawKind, drawLive: drawLive, lives: lives };
   };

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* Looking after the accounts from the command line, on the machine the server
-   runs on. There is no email, so a forgotten password is reset here.
+   runs on: a forgotten password reset, an account whose email never came activated.
 
      node server/admin.js users
      node server/admin.js create <name> <password> [admin] [email]

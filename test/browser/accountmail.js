@@ -66,7 +66,8 @@ async function latest(to, kind) {
   const act = await latest('morgan@example.com', 'activate');
   ok('...and the mail is there, its link to this game', act.indexOf(URL + '?activate=') === 0, act.slice(0, 60));
   await click('[data-acct="mode"][data-mode="signin"]');
-  await fill('acct-name', 'Morgan'); await fill('acct-pass', 'first password');
+  ok('with mail going out, signing in asks for the email address', await p.evaluate(() => document.querySelector('label[for="acct-name"]').textContent === 'Email address'));
+  await fill('acct-name', 'morgan@example.com'); await fill('acct-pass', 'first password');
   await click('[data-acct="go"]');
   t = await till((x) => /not activated/i.test(x), 'refused');
   ok('signing in first is refused, and says why', /not activated/i.test(t));
@@ -92,6 +93,18 @@ async function latest(to, kind) {
   await click('[data-acct="rename"]');
   t = await till((x) => /now Morgan Vale/.test(x), 'renamed');
   ok('one nobody has is taken, and the menu says so', (await p.textContent('.menu-chip')) === 'Morgan Vale');
+
+  console.log('\nA new password');
+  await click('[data-acct="edit"][data-what="pass"]');
+  await fill('acct-oldpass', 'not it'); await fill('acct-newpass', 'changed password');
+  await click('[data-acct="pass"]');
+  t = await till((x) => /not your current password/i.test(x), 'refused');
+  ok('changing it wants the current password', /not your current password/i.test(t));
+  await fill('acct-oldpass', 'first password'); await fill('acct-newpass', 'changed password');
+  await click('[data-acct="pass"]');
+  t = await till((x) => /password is changed/i.test(x), 'changed');
+  ok('...and with it, the password is changed', /password is changed/i.test(t));
+  ok('the account screen no longer lists the saved games', await p.evaluate(() => !document.querySelector('#acct-body .acct-data')));
 
   console.log('\nA forgotten password');
   await click('[data-acct="out"]');

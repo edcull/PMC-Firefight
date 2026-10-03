@@ -259,10 +259,12 @@ function create(opts) {
       const n = String(name || '').trim();
       // only wrong tries count against a name or an address: signing in is never held up by having done it before
       if (blocked('loginIp', ip) || blocked('loginName', n)) return no('too many tries — wait a few minutes and try again', 429);
-      const user = n && db.userByName(n);
+      // by the account's name, or (a name never has an @ in it) by its email address
+      const byMail = n.indexOf('@') >= 0;
+      const user = n && (byMail ? db.userByEmail(n) : db.userByName(n));
       // a missing name costs as long as a wrong password, so the time says nothing
       const good = await checkPassword(String(pass || ''), user ? user.pass : 'scrypt$16384$8$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAA');
-      if (!user || !good) { note('loginIp', ip); note('loginName', n); return no('that name and password do not match', 401); }
+      if (!user || !good) { note('loginIp', ip); note('loginName', n); return no(byMail ? 'that email address and password do not match' : 'that name and password do not match', 401); }
       if (!user.active) return Object.assign(no('this account is not activated yet \u2014 follow the link in the email sent to ' + (user.email || 'it'), 403), { inactive: true });
       db.seen(user.id, now());
       return { ok: true, token: startSession(user.id, null, user.pub), who: who(user) };

@@ -1,6 +1,6 @@
 {
   "name": "pmc-2670-firefight",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "description": "A browser-based digital skirmish of the PMC 2670 tabletop wargame by Marcin Gerkowicz (Assault Publishing).",
   "private": true,
   "scripts": {

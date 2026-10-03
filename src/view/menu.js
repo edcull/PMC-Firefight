@@ -63,18 +63,10 @@
   function paint() {
     if (root.PMCAccount) root.PMCAccount.label();
     var live = root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE();
-    el('btn-resume').hidden = !live;
-    // games under way: the Continue card, and the list behind it if it is open
+    // games under way, the one on the table first: the Continue card, and the list behind it if it is open
     contCard();
     if (at === 'continue') drawList();
     fetchRemote(false);
-    /* a skirmish in this browser can be thrown away, and a battle over the
-       network abandoned; asked twice, since neither can be had back */
-    var dis = el('btn-discard');
-    if (dis) {
-      dis.hidden = !live || !(discardable() || abandonable());
-      unconfirm();
-    }
     var ms = el('menu-multi-sub');
     if (ms && !live && root.PMCLobby && root.PMCLobby.resumable && !root.PMCLobby.resumable() && /^Resume/.test(ms.textContent)) {
       ms.textContent = 'Play somebody else over the network';
@@ -86,7 +78,7 @@
      browser, and — signed in on a server — the account's campaigns not kept
      here, its online campaigns and its battles online still being fought. One
      tapped is picked up; one of this browser's can be put away (asked twice). */
-  var remote = { battles: [], online: [], account: [] }, remoteAt = 0, remoteBusy = false;
+  var REMOTE = { battles: [], online: [], account: [] }, remoteAt = 0, remoteBusy = false;
   function fetchRemote(now) {
     if (remoteBusy || !root.fetch || !root.PMCLobby || !root.PMCLobby.available || !root.PMCLobby.available()) return;
     if (!now && Date.now() - remoteAt < 15000) return;
@@ -98,7 +90,7 @@
     var acct = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.accountList ? Promise.resolve(root.PMC_CAMPAIGN.accountList()).catch(function () { return []; }) : Promise.resolve([]);
     Promise.all([get('api/games'), get('api/online'), acct]).then(function (rs) {
       remoteBusy = false;
-      remote = {
+      REMOTE = {
         // an online campaign's battle is gone back to through the campaign
         battles: (rs[0].games || []).filter(function (g) { return g.status === 'battle' && !g.campaign; }),
         online: rs[1].campaigns || [],
@@ -120,34 +112,60 @@
   function scenName(id) { var C = root.PMCCamp; return (C && C.SCENARIO_NAMES && C.SCENARIO_NAMES[id]) || ''; }
   function games() {
     var out = [], liveId = root.PMC_BATTLE_ID && root.PMC_BATTLE_ID();
+    /* The battle on the table now, first: gone back to at once. A skirmish of this
+       browser's can be thrown away from it, and one online abandoned; a campaign's
+       is its campaign's row. */
+    var st = root.PMC_STATE && root.PMC_STATE(), live = root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE();
+    var liveCamp = live && st && st.cfg && st.cfg.campaign && !abandonable() ? st.cfg.campLid || '?' : null;
+    var liveCode = live && abandonable() && root.PMCLobby && root.PMCLobby.resumable ? root.PMCLobby.resumable() : null;
+    if (live && !liveCamp) {
+      var c = (st && st.cfg) || {};
+      out.push({ key: 'live', live: true, where: abandonable() ? 'server' : 'local', kind: abandonable() ? 'Online battle' : (KINDS[c.mode] || 'Battle'),
+        name: (c.nameA || 'Your force') + (c.nameB ? ' v ' + c.nameB : ''),
+        sub: ['On the table now', scenName(c.scenario), st.turn ? 'turn ' + st.turn : ''].filter(Boolean).join(' \u00b7 '),
+        at: Infinity, del: discardable() || abandonable(), abandon: abandonable() });
+    }
     var battles = (root.PMCNet && root.PMCNet.savedBattles && root.PMCNet.savedBattles()) || [];
-    // a campaign's own battle is gone back to through its campaign
-    battles.filter(function (b) { return !b.campaign; }).forEach(function (b) {
-      out.push({ key: 'b:' + b.id, kind: KINDS[b.mode] || 'Skirmish', live: b.id === liveId,
+    /* a campaign's own battle is gone back to through its campaign, and the one on
+       the table now through Back to the battle */
+    battles.filter(function (b) { return !b.campaign && b.id !== liveId; }).forEach(function (b) {
+      out.push({ key: 'b:' + b.id, where: 'local', kind: KINDS[b.mode] || 'Skirmish',
         name: (b.nameA || 'Your force') + (b.nameB ? ' v ' + b.nameB : ''),
-        sub: [b.id === liveId ? 'On the table now' : '', scenName(b.scenario), b.turn ? 'turn ' + b.turn : 'setting up', ago(b.at)].filter(Boolean).join(' \u00b7 '),
+        sub: [scenName(b.scenario), b.turn ? 'turn ' + b.turn : 'setting up', ago(b.at)].filter(Boolean).join(' \u00b7 '),
         at: b.at || 0, del: true });
     });
     var camps = (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.list && root.PMC_CAMPAIGN.list()) || [];
     camps.forEach(function (c) {
       var fought = battles.some(function (b) { return b.campaign && b.campLid === c.lid; });
-      out.push({ key: 'c:' + c.lid, kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : 'Campaign'), name: c.name,
-        sub: [c.over ? 'over' : 'campaign turn ' + (c.turn || 0), fought ? 'a battle under way' : '', ago(c.at)].filter(Boolean).join(' \u00b7 '),
-        at: c.at || 0, del: true });
+      var onTable = !!liveCamp && (liveCamp === c.lid || liveCamp === '?' && c.lid === (root.PMC_CAMPAIGN.lid && root.PMC_CAMPAIGN.lid()));
+      var kept = root.PMC_CAMPAIGN.synced && root.PMC_CAMPAIGN.synced(c.lid);
+      out.push({ key: 'c:' + c.lid, where: kept ? 'both' : 'local', kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : 'Campaign'), name: c.name, live: onTable,
+        sub: [onTable ? 'Its battle on the table now' : '', c.over ? 'over' : 'campaign turn ' + (c.turn || 0), fought && !onTable ? 'a battle under way' : '', ago(c.at)].filter(Boolean).join(' \u00b7 '),
+        at: onTable ? Infinity : c.at || 0, del: !onTable });
     });
+    // the server's games only for an account signed in (not a guest, and not one just signed out)
+    var who = root.PMCAccount && root.PMCAccount.who && root.PMCAccount.who();
+    var remote = who && !who.guest ? REMOTE : { battles: [], online: [], account: [] };
     remote.account.forEach(function (c) {
-      out.push({ key: 'a:' + c.sid, kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : 'Campaign') + ' \u00b7 your account', name: c.name,
+      out.push({ key: 'a:' + c.sid, where: 'server', kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : 'Campaign'), name: c.name,
         sub: ['campaign turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
     });
     remote.online.forEach(function (c) {
-      out.push({ key: 'o:' + c.id, kind: 'Online campaign', name: c.name,
+      out.push({ key: 'o:' + c.id, where: 'server', kind: 'Online campaign', name: c.name,
         sub: ['Player ' + (c.side === 'B' ? 2 : 1), 'campaign turn ' + (c.turn || 0), ago(c.updated)].join(' \u00b7 '), at: c.updated || 0 });
     });
     remote.battles.forEach(function (g) {
-      out.push({ key: 'g:' + g.code, kind: 'Online skirmish', name: g.name,
+      if (g.code === liveCode) return;          // the one on the table: first, above
+      out.push({ key: 'g:' + g.code, where: 'server', kind: 'Online skirmish', name: g.name,
         sub: [g.against ? 'against ' + g.against : '', ago(g.at)].filter(Boolean).join(' \u00b7 '), at: g.at || 0 });
     });
-    return out.sort(function (a, b) { return (b.live ? 1 : 0) - (a.live ? 1 : 0) || b.at - a.at; });
+    // a campaign's battle on the table whose campaign is not in the list (none open): still first
+    if (liveCamp && !out.some(function (g) { return g.live; })) {
+      var cc = st.cfg;
+      out.push({ key: 'live', live: true, where: 'local', kind: 'Campaign battle', name: (cc.nameA || 'Your force') + (cc.nameB ? ' v ' + cc.nameB : ''),
+        sub: ['On the table now', scenName(cc.scenario), st.turn ? 'turn ' + st.turn : ''].filter(Boolean).join(' \u00b7 '), at: Infinity });
+    }
+    return out.sort(function (a, b) { return (b.at === a.at ? 0 : b.at > a.at ? 1 : -1); });
   }
   function contCard() {
     var c = el('btn-continue');
@@ -155,8 +173,18 @@
     var all = games();
     c.hidden = !all.length;
     var sub = el('menu-continue-sub');
-    if (sub) sub.textContent = all.length === 1 ? all[0].kind + ': ' + all[0].name : all.length + ' games under way';
+    if (sub) sub.textContent = all.length === 1 ? all[0].kind + ': ' + all[0].name
+      : (all[0] && all[0].live ? 'On the table: ' + all[0].name + ' \u00b7 ' : '') + all.length + ' games under way';
   }
+  /* Where a game is kept: this browser only (a screen), the server only (a cloud),
+     or both (a cloud with a tick: this browser's, saved to the account as well). */
+  var SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+  var CLOUD = '<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18z"/>';
+  var WHERE = {
+    local: '<span class="cont-where" title="Kept in this browser only">' + SVG + '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg></span>',
+    server: '<span class="cont-where" title="Kept on the server">' + SVG + CLOUD + '</svg></span>',
+    both: '<span class="cont-where" title="Kept in this browser and on the server">' + SVG + CLOUD + '<path d="M9.5 13l2 2 3.5-3.5"/></svg></span>'
+  };
   var delAsked = null;
   function drawList() {
     var box = el('cont-list');
@@ -164,15 +192,18 @@
     var all = games(), esc = function (t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); };
     box.innerHTML = all.length ? all.map(function (g) {
       var asked = delAsked === g.key;
+      var word = g.abandon ? 'Abandon?' : 'Delete?';
       return '<div class="cont-row"><button class="mcard' + (g.live ? ' live' : '') + '" data-cont="' + esc(g.key) + '">' +
-        '<span class="cont-kind">' + esc(g.kind) + '</span><b>' + esc(g.name) + '</b><small>' + esc(asked ? 'Tap Delete? to put it away — it cannot be had back' : g.sub) + '</small></button>' +
-        (g.del ? '<button class="resume-x' + (asked ? ' confirm' : '') + '" data-contdel="' + esc(g.key) + '" aria-label="Put this away" title="Put this away">' + (asked ? 'Delete?' : '\u2715') + '</button>' : '') +
+        '<span class="cont-kind">' + WHERE[g.where || 'local'] + esc(g.kind) + '</span><b>' + esc(g.name) + '</b><small>' +
+        esc(!asked ? g.sub : g.abandon ? 'Tap Abandon? to walk away — the battle ends for your opponent too' : 'Tap Delete? to put it away — it cannot be had back') + '</small></button>' +
+        (g.del ? '<button class="resume-x' + (asked ? ' confirm' : '') + '" data-contdel="' + esc(g.key) + '" aria-label="' + (g.abandon ? 'Abandon this battle' : 'Put this away') + '" title="' + (g.abandon ? 'Abandon this battle' : 'Put this away') + '">' + (asked ? word : '\u2715') + '</button>' : '') +
         '</div>';
     }).join('') : '<p class="cont-none">Nothing under way.</p>';
   }
   function pick(key) {
     var kind = key.slice(0, 1), id = key.slice(2), n = el('menu-note');
     if (n) n.hidden = true;
+    if (key === 'live') { close(); return; }
     if (kind === 'b') {
       if (root.PMC_RESUME_BATTLE && root.PMC_RESUME_BATTLE(id)) return;
       if (n) {
@@ -194,8 +225,10 @@
   }
   function drop(key) {
     var kind = key.slice(0, 1), id = key.slice(2);
-    if (kind === 'b') {
-      if (root.PMC_BATTLE_ID && root.PMC_BATTLE_ID() === id && root.PMC_DISCARD_BATTLE) root.PMC_DISCARD_BATTLE();
+    if (key === 'live') {
+      if (abandonable()) { if (root.PMCLobby && root.PMCLobby.abandon) root.PMCLobby.abandon(); }
+      else if (root.PMC_DISCARD_BATTLE) root.PMC_DISCARD_BATTLE();
+    } else if (kind === 'b') {
       if (root.PMCNet && root.PMCNet.forgetBattle) root.PMCNet.forgetBattle(id);
     } else if (kind === 'c') {
       // its battle goes with it
@@ -216,21 +249,11 @@
   function freshOk() {
     var live = root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE(), n = el('menu-note');
     if (!live || !abandonable()) return true;
-    if (n) { n.textContent = 'A battle is still being fought online. Go back to it from the first card and see it through, or abandon it there, before starting another.'; n.hidden = false; }
+    if (n) { n.textContent = 'A battle is still being fought online. Go back to it from Continue and see it through, or abandon it there, before starting another.'; n.hidden = false; }
     return false;
   }
   function discardable() { return !!(root.PMC_BATTLE_DISCARDABLE && root.PMC_BATTLE_DISCARDABLE()); }
   function abandonable() { return !!(root.PMC_BATTLE_ABANDONABLE && root.PMC_BATTLE_ABANDONABLE()); }
-  // the x back to an x, and the card back to saying the battle is on
-  function unconfirm() {
-    var dis = el('btn-discard'), res = el('btn-resume'), sub = el('menu-resume-sub');
-    if (!dis) return;
-    dis.classList.remove('confirm'); dis.textContent = '\u2715';
-    var what = abandonable() ? 'Abandon this battle' : 'Discard this battle';
-    dis.setAttribute('aria-label', what); dis.title = what;
-    if (res) res.classList.remove('discarding');
-    if (sub) sub.textContent = 'The battle is still on';
-  }
   function wire() {
     var m = el('menu');
     if (!m) return;
@@ -255,7 +278,6 @@
          the ones under way are in the Continue list */
       var cm = b.getAttribute('data-camp');
       if (cm) { if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.fresh) root.PMC_CAMPAIGN.fresh(cm); else close(); return; }
-      if (b.id !== 'btn-discard') unconfirm();
       switch (b.id) {
         // a game over the network: the lobby, which asks what kind when one is started (lobby.js)
         case 'btn-multi':
@@ -263,22 +285,6 @@
           if (el('setup')) el('setup').hidden = true;
           close();
           root.PMCLobby.open();
-          return;
-        case 'btn-resume': close(); return;
-        case 'btn-discard':
-          var net = abandonable();
-          if (!b.classList.contains('confirm')) {
-            b.classList.add('confirm'); b.textContent = net ? 'Abandon?' : 'Discard?';
-            b.setAttribute('aria-label', (net ? 'Abandon' : 'Discard') + ' this battle: tap again to confirm');
-            el('btn-resume').classList.add('discarding');
-            el('menu-resume-sub').textContent = net
-              ? 'Tap Abandon? to walk away — the battle ends for your opponent too'
-              : 'Tap Discard? to end it — it cannot be undone';
-            return;
-          }
-          if (net) { if (root.PMCLobby && root.PMCLobby.abandon) root.PMCLobby.abandon(); }
-          else if (root.PMC_DISCARD_BATTLE) root.PMC_DISCARD_BATTLE();
-          paint();
           return;
       }
     });

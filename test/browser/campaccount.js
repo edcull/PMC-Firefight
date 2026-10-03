@@ -54,8 +54,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // the account's campaign, not kept in this browser, is in the Continue list
   await d2.p.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('continue'); });
   await d2.p.waitForTimeout(800);
-  const offered = await d2.p.evaluate(() => { const b = document.querySelector('#cont-list [data-cont^="a:"]'); return b ? b.textContent : ''; });
-  ok('a second device lists the account\u2019s campaign under Continue', /your account/.test(offered) && /Iron Wolves/.test(offered), offered);
+  const offered = await d2.p.evaluate(() => { const b = document.querySelector('#cont-list [data-cont^="a:"]'); return b ? b.textContent + ' | ' + (b.querySelector('.cont-where') || {}).title : ''; });
+  ok('a second device lists the account\u2019s campaign under Continue, marked as on the server', /Kept on the server/.test(offered) && /Iron Wolves/.test(offered), offered);
   await d2.p.evaluate(() => document.querySelector('#cont-list [data-cont^="a:"]').click());
   await d2.p.waitForTimeout(800);
   const found = await d2.p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return c && c.companies.A.name; });

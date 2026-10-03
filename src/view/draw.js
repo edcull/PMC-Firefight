@@ -357,7 +357,7 @@
             var left = u.alive ? (u.models || 0) : u.fled ? seen.models : 0;
             for (var n = seen.models; n > left; n--) {
               var cs = ISO.casualtySpot(u, n, rem.length * 7 + n);
-              rem.push({ kind: 'body', x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, side: u.side, paint: u.paint || null,
+              rem.push({ kind: 'body', of: u.id, x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, side: u.side, paint: u.paint || null,
                 art: u.art, mi: cs.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
               // the last of a gun crew to fall leaves the gun behind, knocked out where it stood
               if (n === 1 && left === 0 && ISO.hasPiece && ISO.hasPiece(u.art)) {
@@ -367,7 +367,18 @@
             }
           }
         }
-        u0._seen = { here: here, x: u.x, y: u.y, models: u.models || 0 };
+        /* Killed aboard — with the aircraft shot down, or in the wreck that blew up
+           round them — the squad's dead lie where the machine came down. */
+        if (seen && !seen.here && seen.aboard && !u.alive && !u.fled && seen.models > 0 && !R.isMachine(u)) {
+          var car = B.state.units.filter(function (m) { return m.id === seen.aboard; })[0];
+          var cs0 = car && car.x >= 0 ? { x: dispX(car), y: dispY(car) } : null;
+          for (var nn = seen.models; cs0 && nn > 0; nn--) {
+            var cq = ISO.casualtySpot(u, nn, rem.length * 7 + nn);
+            rem.push({ kind: 'body', of: u.id, x: cs0.x, y: cs0.y, dx: cq.dx * 1.4, dy: cq.dy * 1.4, side: u.side, paint: u.paint || null,
+              art: u.art, mi: cq.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
+          }
+        }
+        u0._seen = { here: here, x: u.x, y: u.y, models: u.models || 0, aboard: u.alive && u.aboard ? u.aboard : null };
         // a unit the engine has sent back to the OpFor pool is off the table now
         if (u.wave === 'pool' && u.x < 0) u0._seen = { here: false, x: -1, y: -1, models: u.models };
       });
@@ -462,7 +473,8 @@
           var an = i / 14 * Math.PI * 2, rr = q.rad * (0.8 + 0.2 * Math.sin(an * 3 + q.x));
           foot.push([q.x + Math.cos(an) * rr, q.y + Math.sin(an) * rr * 0.8]);
         }
-        return { foot: foot, rise: K * 1.2, amp: 1.3, k: 0.75 };
+        // swaying up to 2 plate pixels each way at its strongest (amp × k)
+        return { foot: foot, rise: K * 1.2, amp: 2.67, k: 0.75 };
       });
       B.vc.sandHaze = { key: key, list: list };
       return list;
@@ -630,6 +642,13 @@
         box(1 + x, y0 + fh - 2, cw, 2, pal.dark);
       }
     }
+    // the palette of the side holding an objective (its first unit's colours), or null
+    function holderPalette(o) {
+      if (!o || !o.owner) return null;
+      var paint = o.owner;
+      for (var i = 0; i < B.state.units.length; i++) { var u = B.state.units[i]; if (u.side === o.owner && u.paint) { paint = u.paint; break; } }
+      return ISO.PALETTE[paint] || ISO.PALETTE[o.owner] || null;
+    }
     // the sides holding each wing of a building on view: { wing, sides }
     function heldWings(blockers) {
       var out = [];
@@ -650,7 +669,7 @@
        outline in its side's colour, with a faint wash of the same inside,
        drawn only where the building covers it — what can be seen of it is left
        as it is. */
-    var xrUnit = null, xrMask = null;
+    var xrUnit = null, xrMask = null, xrBar = null;
     function seeThrough(order, blockers) {
       var g = B.pctx;
       var tr = blockers.length && g.getTransform && g.getTransform();
@@ -670,8 +689,8 @@
         var bx = p.x - K * 11, by = p.y - lift - K * 15, bw = K * 22, bh = K * 18;
         var W2 = Math.ceil(bw * sc), H2 = Math.ceil(bh * sc);
         if (W2 < 2 || H2 < 2) return;
-        if (!xrUnit) { xrUnit = document.createElement('canvas'); xrMask = document.createElement('canvas'); }
-        [xrUnit, xrMask].forEach(function (c) { if (c.width < W2 || c.height < H2) { c.width = Math.max(c.width, W2); c.height = Math.max(c.height, H2); } });
+        if (!xrUnit) { xrUnit = document.createElement('canvas'); xrMask = document.createElement('canvas'); xrBar = document.createElement('canvas'); }
+        [xrUnit, xrMask, xrBar].forEach(function (c) { if (c.width < W2 || c.height < H2) { c.width = Math.max(c.width, W2); c.height = Math.max(c.height, H2); } });
         var ug = xrUnit.getContext('2d'), mg = xrMask.getContext('2d');
         ug.setTransform(1, 0, 0, 1, 0, 0); ug.clearRect(0, 0, xrUnit.width, xrUnit.height);
         mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, xrMask.width, xrMask.height);
@@ -682,6 +701,30 @@
         ug.setTransform(sc, 0, 0, sc, -bx * sc, -by * sc);
         ug.imageSmoothingEnabled = g.imageSmoothingEnabled;
         ISO.drawUnit(ug, u, o);
+        /* Its markers (the Suppression bar, the flee mark) are shown whole over the
+           building, not as an outline: what the unit drew, less what it draws
+           without them. */
+        var bg = xrBar.getContext('2d'), marks = !!(o.morale && u.sp > 0) || !!u.marked;
+        if (marks) {
+          bg.setTransform(1, 0, 0, 1, 0, 0); bg.clearRect(0, 0, xrBar.width, xrBar.height);
+          bg.globalCompositeOperation = 'source-over';
+          bg.drawImage(xrUnit, 0, 0);
+          var bare = {}; for (var kk in o) bare[kk] = o[kk];
+          bare.morale = null; bare.noMarks = true;
+          mg.setTransform(sc, 0, 0, sc, -bx * sc, -by * sc);
+          mg.imageSmoothingEnabled = g.imageSmoothingEnabled;
+          ISO.drawUnit(mg, Object.assign({}, u, { marked: false }), bare);
+          mg.setTransform(1, 0, 0, 1, 0, 0);
+          bg.globalCompositeOperation = 'destination-out';
+          bg.drawImage(xrMask, 0, 0);
+          bg.globalCompositeOperation = 'source-over';
+          mg.clearRect(0, 0, xrMask.width, xrMask.height);
+          // and the outline is of the figures alone
+          ug.save(); ug.setTransform(1, 0, 0, 1, 0, 0);
+          ug.globalCompositeOperation = 'destination-out';
+          ug.drawImage(xrBar, 0, 0);
+          ug.restore();
+        }
         // the outline: the figures spread a pixel each way, less the figures themselves
         var d = Math.max(1, Math.round(sc * 0.75));
         mg.drawImage(xrUnit, -d, 0); mg.drawImage(xrUnit, d, 0); mg.drawImage(xrUnit, 0, -d); mg.drawImage(xrUnit, 0, d);
@@ -708,6 +751,8 @@
         g.save();
         g.globalAlpha = 0.85;
         g.drawImage(xrMask, 0, 0, W2, H2, bx, by, W2 / sc, H2 / sc);
+        g.globalAlpha = 1;
+        if (marks) g.drawImage(xrBar, 0, 0, W2, H2, bx, by, W2 / sc, H2 / sc);
         g.restore();
       });
     }
@@ -961,7 +1006,14 @@
             if (it.flag) roofFlag(B.pctx, it.pr, ISO.PALETTE[it.flag] || ISO.PALETTE.A, tNow, (it.pr.x * 7 + it.pr.y * 3) % 1);
             return;
           }
-          if (it.draw === 'live') { ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), now0); return; }
+          if (it.draw === 'live') {
+            // an objective's pennant flies in the colours of the side holding it, and none while nobody does
+            if (it.pr.kind === 'beacon' && !it.pr.lz) it.pr.holder = holderPalette(B.state.objectives[it.pr.index]);
+            // an Invasion's smoke is the attacker's colour: they are the ones coming down on it
+            if (it.pr.kind === 'beacon' && it.pr.lz) it.pr.holder = holderPalette({ owner: B.state.sc && B.state.sc.attacker });
+            ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), now0);
+            return;
+          }
           if (it.draw === 'body') {
             var bp = ISO.toScreen(it.r.x, it.r.y);
             ISO.drawBody(B.pctx, bp.x + it.r.dx, bp.y + it.r.dy - liftOf(it.r.x, it.r.y), it.r);

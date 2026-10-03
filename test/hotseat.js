@@ -124,7 +124,7 @@ async function playToEnd(page, opts) {
       reloaded = true;
       await page.reload();
       await page.waitForTimeout(1200);
-      await page.evaluate(() => { const r = document.getElementById('btn-resume'); if (r && !r.hidden) r.click(); });
+      await page.evaluate(() => { const b = window.PMCNet.savedBattles()[0]; if (b) window.PMC_RESUME_BATTLE(b.id); });
       await page.waitForTimeout(600);
       log.push('reloaded');
       continue;

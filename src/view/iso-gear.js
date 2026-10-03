@@ -539,13 +539,7 @@
             '#1d2028', '#2b2f38', '#33383f');
           return;
         }
-        // lift fans humming behind, and a lighter lip along the near flank
-        [-1, 1].forEach(function (s) {
-          if (!want(phase, s)) return;
-          var lp = scr(-spec.len * 0.3, s * spec.wid * 0.36);
-          dot(g, lp.x, lp.y - deck + 3, STEEL, 4);
-          if (!dead) dot(g, lp.x, lp.y - deck + 3, '#6fb6cf', 2);
-        });
+        // a lighter lip along the near flank
         var sk2 = box(0, 0, spec.len * 1.04, spec.wid * 1.24);
         bandOnSides(g, sk2, lift + 2, ride, 2, '#3f454e');
       }

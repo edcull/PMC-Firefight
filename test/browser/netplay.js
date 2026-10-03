@@ -89,6 +89,15 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   ok('...the terms scroll and the talk keeps the foot, three lines tall', rm.scrolls && rm.foot < 40 && rm.lines < 90, JSON.stringify(rm));
   ok('...no helper text, and Public is a box only the host can tick', !rm.talk && rm.pub, JSON.stringify(rm));
   await p2.setViewportSize({ width: 1340, height: 900 });
+  // table talk: each name in the colour of the force that player has picked
+  await p1.evaluate(() => window.PMCLobby.net().send('game.chat', { text: 'hello from the host' }));
+  await p2.waitForTimeout(400);
+  const talk = await p2.evaluate(() => {
+    const b = [...document.querySelectorAll('#room-say-lines .said b')].pop(), seat = document.querySelector('.lob-forces .hot-side b');
+    return { line: b ? b.textContent : '', col: b ? getComputedStyle(b).color : '', force: seat ? getComputedStyle(seat).color : '' };
+  });
+  ok('table talk names the player in their force\u2019s colour', !!talk.line && talk.col === talk.force, JSON.stringify(talk));
+  await p2.setViewportSize({ width: 1340, height: 900 });
   for (const p of [p1, p2]) await p.evaluate(() => window.PMCLobby.net().send('game.ready', { ready: true }));
   await p1.waitForTimeout(400);
   const acts2 = await p1.evaluate(() => [...document.querySelectorAll('#lobby .lob-acts button')].map(x => x.className + ':' + x.textContent + (x.disabled ? ':off' : '')));
@@ -148,6 +157,24 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   }));
   const s1 = await look(p1), s2 = await look(p2);
   ok('the battle is on for both', s1.active && s2.active, JSON.stringify([s1.active, s2.active]));
+  // the table talk, under the actions on a desktop
+  await p1.evaluate(() => { document.getElementById('bchat-say').value = 'good luck'; document.getElementById('bchat-send').click(); });
+  await p2.waitForTimeout(500);
+  const bc = await p2.evaluate(() => ({ shown: !document.getElementById('battle-chat').hidden, said: document.getElementById('bchat-lines').textContent,
+    under: document.getElementById('bar').getBoundingClientRect().bottom <= document.getElementById('battle-chat').getBoundingClientRect().top + 1 }));
+  ok('an online battle has the table talk under the actions, and what is said there arrives', bc.shown && bc.under && /good luck/.test(bc.said), JSON.stringify(bc));
+  // on a phone, a Chat tab of its own, counting what was said while it was shut
+  await p2.setViewportSize({ width: 400, height: 820 });
+  await p2.evaluate(() => window.PMC_SET_MTAB('act'));
+  await p1.evaluate(() => { document.getElementById('bchat-say').value = 'your move'; document.getElementById('bchat-send').click(); });
+  await p2.waitForTimeout(500);
+  const tab = await p2.evaluate(() => { const t = document.querySelector('#mtabs .mtab-chat'); return { shown: !!t && getComputedStyle(t).display !== 'none', n: document.getElementById('mtab-chat-n').textContent }; });
+  ok('...on a phone, a Chat tab with a count of what was said while it was shut', tab.shown && tab.n === '1', JSON.stringify(tab));
+  await p2.click('#mtabs .mtab-chat'); await p2.waitForTimeout(200);
+  const opened = await p2.evaluate(() => ({ n: document.getElementById('mtab-chat-n').textContent, vis: getComputedStyle(document.getElementById('battle-chat')).display !== 'none' }));
+  ok('...opened, the talk shows and the count goes', opened.vis && !opened.n, JSON.stringify(opened));
+  await p2.evaluate(() => window.PMC_SET_MTAB('act'));
+  await p2.setViewportSize({ width: 1340, height: 900 });
   const mine = s1.active === s1.seat ? s1 : s2, theirs = mine === s1 ? s2 : s1;
   ok('the screen whose go it is says so', mine.pill === 'Your turn', mine.pill);
   ok('...and the other says whose it is, by name', /Player [12] Force’s turn/.test(theirs.pill), theirs.pill);
@@ -248,14 +275,15 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   // the first player abandons it from the menu, asked twice
   await p1.evaluate(() => window.PMCMenu.open());
   await p1.waitForTimeout(300);
-  const x = await p1.evaluate(() => { const d = document.getElementById('btn-discard'); return { shown: !d.hidden, label: d.getAttribute('aria-label') }; });
+  await p1.evaluate(() => window.PMCMenu.show('continue'));
+  const x = await p1.evaluate(() => { const d = document.querySelector('#cont-list [data-contdel="live"]'); return { shown: !!d, label: d ? d.getAttribute('aria-label') : '' }; });
   ok('the menu offers to abandon the battle', x.shown && /Abandon/.test(x.label), JSON.stringify(x));
-  await p1.click('#btn-discard');
-  const asked = await p1.evaluate(() => document.getElementById('btn-discard').textContent + ' / ' + document.getElementById('menu-resume-sub').textContent);
+  await p1.click('#cont-list [data-contdel="live"]');
+  const asked = await p1.evaluate(() => document.querySelector('#cont-list [data-contdel="live"]').textContent + ' / ' + document.querySelector('#cont-list [data-cont="live"] small').textContent);
   ok('...asking once more first', /Abandon\?/.test(asked) && /opponent/.test(asked), asked);
-  await p1.click('#btn-discard');
+  await p1.click('#cont-list [data-contdel="live"]');
   await wait(1200);
-  const gone1 = await p1.evaluate(() => ({ live: window.PMC_BATTLE_LIVE(), resume: !document.getElementById('btn-resume').hidden }));
+  const gone1 = await p1.evaluate(() => ({ live: window.PMC_BATTLE_LIVE(), resume: !!document.querySelector('#cont-list [data-cont="live"]') }));
   ok('abandoned, the battle is gone from this screen', !gone1.live && !gone1.resume, JSON.stringify(gone1));
   const left = await toasts(p2);
   const gone2 = await p2.evaluate(() => window.PMC_BATTLE_LIVE());

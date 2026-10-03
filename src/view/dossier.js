@@ -317,6 +317,8 @@
           .map(function (c) { return { sid: c.id, name: c.name, turn: c.turn, mode: c.kind, updated: c.updated }; }) : [];
       } catch (e) { return []; }
     },
+    // whether one is kept by the account too (signed in, and saved there)
+    synced: function (lid) { return !!acctSid(undefined, lid); },
     // one of the account's taken up in this browser: given an id here, and opened
     adopt: function (sid) { var lid = newLid(); curLid(lid); acctSid(String(sid), lid); acctVersion = 0; acctConflict = null; return lid; },
     async clear() {
@@ -1608,6 +1610,7 @@
     lid: function () { return Store.lid(); },
     list: function () { return Store.list(); },
     accountList: function () { return Store.accountList(); },
+    synced: function (lid) { return Store.synced(lid); },
     drop: function (lid) {
       if (lid === Store.lid() && !online) { camp = null; contract = null; }
       Store.drop(lid);

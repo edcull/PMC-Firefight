@@ -194,7 +194,7 @@
             return h.kind === 'hill' && !h.top && h.w >= 6 && h.h >= 5 &&
               h.x + h.w / 2 >= area.x && h.x + h.w / 2 < area.x + area.w && h.y + h.h / 2 >= area.y && h.y + h.h / 2 < area.y + area.h;
           });
-          for (var hi = 0; hi < hills.length && !piece; hi++) piece = placeOnHill(spec, hills[hi], all, rand);
+          for (var hi = 0; hi < hills.length && !piece; hi++) piece = placeOnHill(spec, hills[hi], all, rand, objectives);
         }
         if (!piece) piece = place(spec, area, all, objectives, rand, W, H, inset);
         if (piece) placed.push(piece);
@@ -283,10 +283,19 @@
     });
   }
 
+  /* Ground a scenario keeps clear of the table's terrain (Hostile takeover's 12"
+     round the objective, which the defender fortifies): `objectives.clear`, a
+     list of { x, y, r }. True if any of the piece is inside one. */
+  function inClear(piece, objectives) {
+    return (objectives && objectives.clear || []).some(function (c) {
+      var dx = Math.max(piece.x - c.x, 0, c.x - (piece.x + piece.w)), dy = Math.max(piece.y - c.y, 0, c.y - (piece.y + piece.h));
+      return Math.hypot(dx, dy) < c.r;
+    });
+  }
   // a piece may go here: on the table, off everyone else's ground, clear of the objectives
   function fits(piece, others, objectives, W, H) {
     if (piece.x < 0.5 || piece.y < 0.5 || piece.x + piece.w > W - 0.5 || piece.y + piece.h > H - 0.5) return false;
-    if (clashes(piece, others)) return false;
+    if (clashes(piece, others) || inClear(piece, objectives)) return false;
     for (var o = 0; o < objectives.length; o++) {
       var ob = objectives[o];
       if (ob.x >= piece.x - 3 && ob.x <= piece.x + piece.w + 3 && ob.y >= piece.y - 3 && ob.y <= piece.y + piece.h + 3) return false;
@@ -475,7 +484,7 @@
     });
   }
   var ONHILL = { woods: 1, ruins: 1, building: 1, bunker: 1, crater: 1, rocks: 1 };
-  function placeOnHill(spec, hill, existing, rand) {
+  function placeOnHill(spec, hill, existing, rand, objectives) {
     var inner = { x: hill.x + hill.w * 0.22, y: hill.y + hill.h * 0.22, w: hill.w * 0.56, h: hill.h * 0.56 };
     /* A wood grows over most of the hill and may run on down its sides; a
        building, a ruin or rocks stand on top, inside the crest. */
@@ -498,7 +507,7 @@
       if (piece.x < 0.5 || piece.y < 0.5 || piece.x + piece.w > (root.PMC ? root.PMC.BOARD.w : 48) - 0.5 || piece.y + piece.h > (root.PMC ? root.PMC.BOARD.h : 48) - 0.5) continue;
       if (spec.big) piece.big = true;
       var others = existing.filter(function (e) { return e !== hill; });
-      if (!clashes(piece, others)) return piece;
+      if (!clashes(piece, others) && !inClear(piece, objectives)) return piece;
     }
     return null;
   }
@@ -535,7 +544,7 @@
       y = Math.max(0.5, Math.min(H - h - 0.5, y));
       var piece = { kind: spec.kind, x: x, y: y, w: w, h: h };
 
-      var clash = !!clashes(piece, existing);
+      var clash = !!clashes(piece, existing) || inClear(piece, objectives);
       // objectives must stay reachable and in the open
       for (var o = 0; o < objectives.length && !clash; o++) {
         var pad = { x: piece.x - 3, y: piece.y - 3, w: piece.w + 6, h: piece.h + 6 };
@@ -605,7 +614,7 @@
 
   root.PMCGen = {
     GENERATORS: GENERATORS, SIZES: SIZES, generate: generate, areasOf: areasOf, rollArea: rollArea,
-    fillArea: fillArea, sizeFor: sizeFor, clashes: clashes, place: place, ONHILL: ONHILL, levelUnder: levelUnder,
+    fillArea: fillArea, sizeFor: sizeFor, inClear: inClear, clashes: clashes, place: place, ONHILL: ONHILL, levelUnder: levelUnder,
     tableFor: tableFor, resolvePlanet: resolvePlanet, VARIANTS: VARIANTS, BASE: BASE
   };
 })(window);

@@ -130,7 +130,8 @@ Players sign up for themselves (the main menu's Sign in, or the Multiplayer
 screen) with a name, an email address and a password, or play a one-off battle
 as a guest. Where the server can send email, a new account waits until the link
 mailed to it is followed; a forgotten password is reset by a link sent to the
-account's address; a name or an address is changed from the account screen.
+account's address; a name or an address is changed from the account screen. With email on, an account signs in with its
+email address (its name works too).
 
 ### Email
 
