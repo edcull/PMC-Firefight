@@ -1009,6 +1009,8 @@
           if (it.draw === 'live') {
             // an objective's pennant flies in the colours of the side holding it, and none while nobody does
             if (it.pr.kind === 'beacon' && !it.pr.lz) it.pr.holder = holderPalette(B.state.objectives[it.pr.index]);
+            // an Invasion's smoke is the attacker's colour: they are the ones coming down on it
+            if (it.pr.kind === 'beacon' && it.pr.lz) it.pr.holder = holderPalette({ owner: B.state.sc && B.state.sc.attacker });
             ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), now0);
             return;
           }

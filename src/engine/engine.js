@@ -27,6 +27,14 @@
   // the one list of colours, shared with the server (protocol.js)
   var COLOURS = root.PMCProto.COLOURS;
   var OBJECTIVES = [{ x: 12, y: 36 }, { x: 24, y: 24 }, { x: 36, y: 12 }];
+  /* The objectives the generator keeps its clearings round, and the ground a
+     scenario wants left bare: Hostile takeover's 12" round the centre, which is
+     the defender's to fortify (p. 55). */
+  function genObjectives(scenId) {
+    var list = OBJECTIVES.slice();
+    if (scenId === 'takeover') list.clear = [{ x: R.BOARD.w / 2, y: R.BOARD.h / 2, r: 12 }];
+    return list;
+  }
   var STANDARD = [
     { id: 'move', label: 'Move' },
     { id: 'fire', label: 'Fire!' },
@@ -314,7 +322,7 @@
       ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
       : GEN.generate({
         width: W, height: H, planet: cfg.planet,
-        objectives: OBJECTIVES              // keeps the generator's clearings roughly central
+        objectives: genObjectives(scenId)   // keeps the generator's clearings roughly central (and a scenario's ground bare)
       });
     state = {
       cfg: cfg,
@@ -1493,6 +1501,7 @@
       GEN: GEN,
       H: H,
       OBJECTIVES: OBJECTIVES,
+      genObjectives: function () { return genObjectives(state && state.cfg && state.cfg.scenario); },
       PIECE_NOUN: PIECE_NOUN,
       R: R,
       SC: SC,

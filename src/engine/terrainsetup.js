@@ -100,7 +100,7 @@
     }
 
     function autoArea(a) {
-      var got = GEN.fillArea(remainingAlt(a), a, E.state.terrain, OBJECTIVES, Math.random, W, H);
+      var got = GEN.fillArea(remainingAlt(a), a, E.state.terrain, E.genObjectives ? E.genObjectives() : OBJECTIVES, Math.random, W, H);
       got.forEach(function (p) { E.state.terrain.push(p); a.placed.push(p); });
       completeArea(a);
     }
@@ -169,6 +169,8 @@
 
     /* The nearest place to (cx, cy) the next piece fits: wholly in its area, on
        the table, and half an inch clear of everything already down. */
+    // ground the scenario keeps bare (Hostile takeover's 12" round the objective)
+    function bare(q) { return !!(GEN.inClear && E.genObjectives && GEN.inClear(q, E.genObjectives())); }
     function fitGhost(a, cx, cy) {
       var g = E.state.tset.ghost;
       if (!g) return null;
@@ -185,7 +187,7 @@
           var hx = Math.max(hill.x + 0.5, Math.min(hill.x + hill.w - 0.5 - g.w, cx - g.w / 2));
           var hy = Math.max(hill.y + 0.5, Math.min(hill.y + hill.h - 0.5 - g.h, cy - g.h / 2));
           var others = E.state.terrain.filter(function (o) { return o !== hill; });
-          if (!GEN.clashes({ x: hx, y: hy, w: g.w, h: g.h }, others)) return { x: hx, y: hy, onHill: true };
+          if (!GEN.clashes({ x: hx, y: hy, w: g.w, h: g.h }, others) && !bare({ x: hx, y: hy, w: g.w, h: g.h })) return { x: hx, y: hy, onHill: true };
         }
       }
       var best = null, bd = Infinity;
@@ -195,7 +197,7 @@
           var ang = k / steps * Math.PI * 2;
           var x = Math.max(x0, Math.min(x1, cx + Math.cos(ang) * r - g.w / 2));
           var y = Math.max(y0, Math.min(y1, cy + Math.sin(ang) * r - g.h / 2));
-          if (GEN.clashes({ x: x, y: y, w: g.w, h: g.h }, E.state.terrain)) continue;
+          if (GEN.clashes({ x: x, y: y, w: g.w, h: g.h }, E.state.terrain) || bare({ x: x, y: y, w: g.w, h: g.h })) continue;
           var d = Math.hypot(x + g.w / 2 - cx, y + g.h / 2 - cy);
           if (d < bd) { bd = d; best = { x: x, y: y }; }
         }

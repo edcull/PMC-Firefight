@@ -619,12 +619,12 @@
         case 'beacon': {
           if (pr.lz) {
             /* An Invasion landing zone (p. 53): a smoke canister set down in the
-               middle of it, its green smoke drawn rising every frame (drawLive). */
+               middle of it, its smoke (the attacker's colour) drawn rising every frame (drawLive). */
             shadowBlob(g, { x: p.x + a(0.6), y: p.y + a(0.3) }, a(2.2), a(1.1));
-            ellipse(g, p.x, p.y, a(2.4), a(1.2), 'rgba(70,120,50,.35)');      // the ground stained green
+            ellipse(g, p.x, p.y, a(2.4), a(1.2), 'rgba(30,30,28,.32)');       // the ground scorched round it
             rect(g, p.x - a(0.8), p.y - a(2.2), a(1.6), a(2.2), '#3c4a38');
             rect(g, p.x - a(0.8), p.y - a(2.2), a(0.6), a(2.2), '#5a6a52');
-            rect(g, p.x - a(0.8), p.y - a(1.4), a(1.6), a(0.5), '#8acb5a');    // its green band
+            rect(g, p.x - a(0.8), p.y - a(1.4), a(1.6), a(0.5), '#c9cdd2');    // its band
             ellipse(g, p.x, p.y - a(2.2), a(0.8), a(0.4), '#2a3326');
             break;
           }
@@ -666,6 +666,12 @@
       }
     }
 
+    // '#rrggbb' as 'r,g,b', for a colour mixed with a changing alpha
+    function rgbOf(hex) {
+      var h = String(hex || '#70c858').replace('#', '');
+      if (h.length === 3) h = h.replace(/(.)/g, '$1$1');
+      return parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16);
+    }
     /* The moving parts of a piece, drawn over the table every frame at the
        time t (ms): an objective beacon's pennant fluttering (in the colours of
        the side holding it: `pr.holder`, a palette, set by the board; none while it
@@ -686,10 +692,12 @@
         return;
       }
       if (pr.kind === 'beacon' && pr.lz) {
-        /* Green smoke off the canister: puffs born at its mouth, rising, swelling
+        /* Smoke off the canister: puffs born at its mouth, rising, swelling
            and leaning off downwind as they thin out. Each puff is set by the time
            alone, so the plume needs nothing kept between frames. */
         var N = 22, LIFE = 4600, cx = p.x, cy = p.y - a(2.4), off = (pr.index || 0) * 0.29;
+        // in the attacker's colours (`pr.holder`, set by the board), green until it is known
+        var pal = pr.holder, rgbA = pal ? rgbOf(pal.ink) : '112,200,88', rgbB = pal ? rgbOf(pal.mid) : '86,166,70', rgbC = pal ? rgbOf(pal.light) : '190,245,150';
         g.save();
         for (var i = N - 1; i >= 0; i--) {
           var age = ((t / LIFE) + i / N + off) % 1;
@@ -701,7 +709,7 @@
           var al = (age < 0.08 ? age / 0.08 : 1) * (1 - age * 0.85) * 0.62;
           // soft-edged: a puff is dense in the middle and fades out to nothing
           var rg = g.createRadialGradient(sx2, sy2, 0, sx2, sy2, r);
-          var c = i % 3 ? '112,200,88' : '86,166,70';
+          var c = i % 3 ? rgbA : rgbB;
           rg.addColorStop(0, 'rgba(' + c + ',' + al.toFixed(3) + ')');
           rg.addColorStop(0.6, 'rgba(' + c + ',' + (al * 0.55).toFixed(3) + ')');
           rg.addColorStop(1, 'rgba(' + c + ',0)');
@@ -710,8 +718,8 @@
         }
         // the hot core at the canister's mouth
         var core = g.createRadialGradient(cx, cy - a(0.6), 0, cx, cy - a(0.6), a(1.6));
-        core.addColorStop(0, 'rgba(190,245,150,.55)');
-        core.addColorStop(1, 'rgba(190,245,150,0)');
+        core.addColorStop(0, 'rgba(' + rgbC + ',.55)');
+        core.addColorStop(1, 'rgba(' + rgbC + ',0)');
         g.fillStyle = core;
         g.beginPath(); g.arc(cx, cy - a(0.6), a(1.6), 0, Math.PI * 2); g.fill();
         g.restore();
