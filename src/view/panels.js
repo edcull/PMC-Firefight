@@ -645,10 +645,10 @@
       else if (ui.mode === 'disembark' && ui.selected && !isAI(ui.selected.side) && offBoard(ui.selected).length > 1) html = dropPanel(ui.selected);
       else if (ui.mode === 'digface' && ui.selected && !isAI(ui.selected.side)) html = digFaceCard(ui.selected);
       else if (ui.preview) html = movePreviewCard();
-      else if (ui.targets.length && ui.selected && ['fire', 'aux', 'advance-fire', 'assault', 'designate'].indexOf(ui.mode) >= 0) {
+      else if (ui.targets.length && ui.selected && atThisScreen(ui.selected.side) && ['fire', 'aux', 'advance-fire', 'assault', 'designate'].indexOf(ui.mode) >= 0) {
         html = targetPanel(ui.selected);
       }
-      else if (ui.selected && !isAI(ui.selected.side)) html = idleCard(ui.selected);
+      else if (ui.selected && !isAI(ui.selected.side) && atThisScreen(ui.selected.side)) html = idleCard(ui.selected);
       // a modal open over the card keeps its place when the card is drawn again
       var ms = ctxBox.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0;
       ctxBox.innerHTML = html;

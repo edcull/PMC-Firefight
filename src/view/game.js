@@ -393,6 +393,14 @@
     }
     // what the action asks (a target, a piece to charge) is on the Actions tab
     if (window.innerWidth <= 1000) setMTab('act');
+    /* A unit of this screen's picked only to look at (out of turn, kept here) is
+       picked for real first: otherwise the engine takes the action and this screen
+       goes on showing the look, the targets shown only on the other screen. */
+    if (ui.inspect && ui.watch && myTurn()) {
+      var w = byId(ui.watch);
+      ui.inspect = false; ui.watch = null;
+      if (w && seats.indexOf(w.side) >= 0) send({ k: 'select', id: w.id });
+    }
     send({ k: 'action', id: id });
   }
   // the watcher's own pick in a demo: shown, kept, and never sent to the engine
