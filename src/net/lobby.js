@@ -236,10 +236,7 @@
         '<button class="lnk" data-lob="join">Join</button>' +
         '</div></div>' +
         mineHTML() +
-        '<div class="lob-list">' + list + '</div>' +
-        // a campaign against another player, each on their own device (dossier-online.js); an account's, not a guest's
-        (account && !account.guest ? '<div class="field"><label>Campaigns</label><button class="lnk lob-go" data-lob="campaigns">Online campaigns</button>' +
-          '<span class="lob-hint"> \u2014 a campaign against another player, each of you on your own device</span></div>' : '')) +
+        '<div class="lob-list">' + list + '</div>') +
       '</div>' +
       chatHTML('lobby');
   }
@@ -279,6 +276,14 @@
   }
 
   function gameRow(g) {
+    // an online campaign open to anyone: its second seat taken by joining it
+    if (g.online) {
+      var own = account && g.host === account.name;
+      return '<div class="lob-game"><div><b>' + esc(g.name) + '</b> <span class="lob-code">' + esc(g.id) + '</span><br>' +
+        '<span class="f small">Campaign \u2014 the two of you, each on your own device</span></div>' +
+        '<div class="seats">' + esc(g.host) + ' \u2014 a seat free</div>' +
+        '<button class="lnk" data-lob="join" data-id="' + esc(g.id) + '">' + (own ? 'Open it' : 'Join the campaign') + '</button></div>';
+    }
     var seated = g.players.filter(function (p) { return p.name; });
     return '<div class="lob-game">' +
       '<div><b>' + esc(g.name) + '</b> <span class="lob-code">' + esc(g.id) + '</span><br>' +
@@ -521,7 +526,6 @@
   function act(what, b) {
     fault = '';
     switch (what) {
-      case 'campaigns': close(); if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.enter) root.PMC_CAMPAIGN.enter('online'); return;
       case 'usermenu': userMenu(el('lobby-usermenu').hidden); return;
       case 'signout': userMenu(false); signOut(); return;
       // the main menu's account pane: what the server keeps for the player
@@ -533,7 +537,7 @@
         // an online campaign: made on the server, and founded in the campaign screens (dossier-online.js)
         if (newKind === 'ocamp') {
           creating = false; close();
-          if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.newOnline) root.PMC_CAMPAIGN.newOnline();
+          if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.newOnline) root.PMC_CAMPAIGN.newOnline({ listed: !newPrivate });
           return;
         }
         if (newKind.indexOf('camp:') === 0) {

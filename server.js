@@ -67,13 +67,16 @@ const lobby = new Lobby({
   games: games,
   makeTable: tables.make({ campaign: campaigns, log: log, store: games }),
   // an online campaign's battle over: its aftermath applied by the campaign (once, by the battle's id)
-  onCampaignBattle: function (id, report, gameId) { online.battleOver(id, report, gameId); }
+  onCampaignBattle: function (id, report, gameId) { online.battleOver(id, report, gameId); },
+  // the online campaigns listed for anyone to join, shown with the games
+  listedCampaigns: function () { return online.listed(); }
 });
 /* online campaigns: run by the server, the other player told of each change over
    their socket, and each battle made from a contract fought at a table here */
 const online = Online.create({
   db: db,
   notify: function (userId, msg) { lobby.notifyUser(userId, msg); },
+  listedChanged: function () { lobby.pushLobby(); },
   // and, if they asked for it, an email when a campaign comes to be waiting on them
   mailer: mailer,
   startBattle: function (o) { return lobby.campaignBattle(o); }

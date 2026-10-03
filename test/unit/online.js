@@ -42,6 +42,15 @@ function ok(name, cond, note) {
   ok('the code is no longer shown once both are in', online.view(ash, made.id).invite === null);
   ok('both see it in their list', online.list(ash).some((c) => c.id === made.id && c.side === 'A') && online.list(brann).some((c) => c.id === made.id && c.side === 'B'));
 
+  console.log('\nListed in the lobby');
+  let changed = 0;
+  const lob = Online.create({ db: db, listedChanged: () => changed++ });
+  ok('one found by its code only is not listed', !lob.listed().length && changed === 0);
+  const pub = lob.make(cole, { listed: true });
+  ok('a public one is listed with its maker and code, and the lobby told', pub.listed && lob.listed().length === 1 && lob.listed()[0].owner === 'Cole' && lob.listed()[0].invite === pub.invite && changed === 1);
+  lob.join(ash, pub.invite);
+  ok('...and taken off the list once its second seat is taken', !lob.listed().length && changed === 2);
+
   console.log('\nEach founds their own force');
   const pmc = ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'];
   const reb = ['rciv', 'rciv', 'rciv', 'rdesconscript', 'rridergang', 'rmilitia', 'rlmg', 'rtechnical'];

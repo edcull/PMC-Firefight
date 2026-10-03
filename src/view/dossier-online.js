@@ -81,8 +81,9 @@
       });
     }
     // a new one started on the server, and opened on founding Player 1's force
-    function startNew() {
-      return api('api/online', { method: 'POST' }).then(function (r) {
+    function startNew(how) {
+      var body = JSON.stringify({ listed: !!(how && how.listed) });
+      return api('api/online', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body }).then(function (r) {
         if (!r.ok) { E.note('Not started', cap(r.j.error || r.j.why || 'the server said no') + '.'); return; }
         openCampaign(r.j.id);
       });
@@ -246,7 +247,7 @@
     function hubNote() {
       var camp = E.camp, h = '', o = E.online;
       if (o.invite) {
-        h += '<div class="cpan onote"><div class="cpstat"><b>The second seat is open.</b> Give the other player this code; they join from Multiplayer → Online campaigns:</div>' +
+        h += '<div class="cpan onote"><div class="cpstat"><b>The second seat is open.</b> Give the other player this code; they type it into Join on the Multiplayer screen (a public campaign is also listed there for anyone to join):</div>' +
           '<div class="ocode">' + esc(o.invite) + '</div></div>';
       } else if (!founded(theirCo())) {
         h += '<div class="cpan onote"><div class="cpstat">Waiting for ' + esc(theirName()) + ' to found their force.</div></div>';
@@ -607,7 +608,7 @@
       // one opened straight from the main menu's Continue list
       openOne: function (id) { leaveCampaign(); return openCampaign(id); },
       // one started from the lobby's Start a game
-      startNew: function () { leaveCampaign(); return startNew(); }
+      startNew: function (how) { leaveCampaign(); return startNew(how); }
     };
   };
 })(window);

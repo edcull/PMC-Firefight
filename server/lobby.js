@@ -163,7 +163,8 @@ class Lobby {
     this.known = new Map();                     // private id -> { secret, pub }, every browser seen
     this.limits = opts.limits || LIMITS;        // what a connection may send (a test may raise them)
     this.games = opts.games || null;            // the battles kept in the database (games.js), when there is one
-    this.onCampaignBattle = opts.onCampaignBattle || null;   // an online campaign's battle over: (campaign id, report, game id)
+    this.onCampaignBattle = opts.onCampaignBattle || null;
+    this.listedCampaigns = opts.listedCampaigns || null;   // the online campaigns open to anyone: () => [{ invite, owner, at }]   // an online campaign's battle over: (campaign id, report, game id)
     this.log = opts.log || function () { };
     // rooms nobody is connected to are looked for every minute
     if (opts.sweep !== false) {
@@ -411,6 +412,10 @@ class Lobby {
     const out = [];
     // a private game is not listed: only those given its code can find it
     this.rooms.forEach((r) => { if (!r.settings.private) out.push(P.summarise(r)); });
+    // and the online campaigns listed for anyone to join, their second seat open
+    if (this.listedCampaigns) {
+      try { this.listedCampaigns().forEach((c) => out.push({ online: true, id: c.invite, name: c.owner + '’s campaign', host: c.owner, at: c.at })); } catch (e) { }
+    }
     out.sort((a, b) => b.at - a.at);
     return out;
   }
