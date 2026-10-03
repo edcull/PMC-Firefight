@@ -133,7 +133,7 @@
         esc(C.words(cur).memorialSub) + '</small></span></button>' +
         '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
         (E.online ? '<button type="button" class="archline" data-go="olist">' + ICON_FORCES + '<span>Online campaigns<small>Your others, a new one, or one to join</small></span></button>' +
-          (E.camp.over ? '' : '<button type="button" class="archline danger" data-go="oconcede">' + ICON_ABANDON + '<span>Give the campaign up<small>It ends for both of you \u2014 it asks first</small></span></button>')
+          (E.camp.over ? '' : '<button type="button" class="archline danger" data-go="oconcede">' + ICON_ABANDON + '<span>Give the campaign up<small>You leave the world; the others play on \u2014 it asks first</small></span></button>')
           : '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
         '<button type="button" class="archline danger" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>') +
         '</div>');

@@ -1,10 +1,11 @@
-/* An online campaign played by two browsers (multiplayer plan, phase 3c): one
-   player starts it and is given a code, the other joins with it; each founds
-   their own force on their own screen; a contract is drawn up, each picks their
-   force (the other's kept from them until both are ready), and both walk into
-   the battle made from it. One walks away; the other is told, the campaign comes
-   back up with the question the battle left them (Tough Negotiators), and once it
-   is answered both read the aftermath and the campaign moves on a turn. */
+/* An online campaign, a world of forces, played by two browsers: one player starts
+   it from Multiplayer and lands in its lobby (slots, an AI force's army, colours,
+   the chat); the other joins it from the Multiplayer list, picks their army and
+   says they are ready; the host starts it. Each founds their own force. One takes
+   a contract against an AI force from the offers, fights it on the server (the AI
+   side played there) and walks away; the aftermath comes up. Then one challenges
+   the other, the contract is drawn up once accepted, both walk into the battle,
+   one walks away, and each reads the aftermath as their own. */
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 const { ROOT, tmpData } = require('../where.js');
@@ -33,16 +34,24 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.reload(); await p.waitForTimeout(800);
     return p;
   }
-  const state = (p) => p.evaluate(() => { const o = window.PMC_CAMPAIGN.online(); return o ? { view: o.view, side: o.info.side, invite: o.info.invite, turn: o.camp.turn, A: o.camp.companies.A && o.camp.companies.A.name, B: o.camp.companies.B && o.camp.companies.B.name, k: o.camp.online && o.camp.online.contract, battle: o.camp.online && o.camp.online.battle, post: o.camp.post, after: o.camp.online && o.camp.online.after } : null; });
+  const state = (p) => p.evaluate(() => {
+    const o = window.PMC_CAMPAIGN.online();
+    if (!o) return null;
+    const c = o.camp || {}, on = c.online || {};
+    return { view: o.view, phase: o.info.phase, slot: o.info.slot, turn: c.turn, A: c.companies && c.companies.A && c.companies.A.name,
+      B: c.companies && c.companies.B && c.companies.B.name, k: on.contract, duel: on.duel, battle: on.battle, post: c.post, after: on.after,
+      challenges: on.challenges || [], offers: (c.offers || []).length, rivals: (c.rivals || []).map((r) => r.name) };
+  });
   const press = (p, sel) => p.evaluate((s) => { const e = document.querySelector('#camp-body ' + s); if (!e) return false; e.click(); return true; }, sel);
+  const choose = (p, sel, v) => p.evaluate((a) => { const e = document.querySelector('#camp-body ' + a.s); if (!e) return false; e.value = a.v; e.dispatchEvent(new Event('change', { bubbles: true })); return true; }, { s: sel, v: v });
   const text = (p) => p.evaluate(() => document.getElementById('camp-body').innerText);
   async function till(p, what, pred, ms) {
-    const stop = Date.now() + (ms || 15000);
+    const stop = Date.now() + (ms || 20000);
     for (;;) {
       const s = await state(p);
       if (s && pred(s)) return s;
       if (Date.now() > stop) throw new Error('waited for ' + what + ': ' + JSON.stringify(s).slice(0, 300));
-      await wait(150);
+      await wait(200);
     }
   }
   async function found(p, name, units, doctrine, faction) {
@@ -52,126 +61,134 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await press(p, '[data-doc="' + doctrine + '"]');
     await press(p, '[data-go="dofound"]');
   }
+  // the contract screen: Foresighted Command's dice set aside if they are out, a force picked for me, and ready
+  async function fightWithPicked(p) {
+    for (let i = 0; i < 4; i++) { if (!(await press(p, '[data-ocforego]'))) break; await p.waitForTimeout(400); }
+    await press(p, '[data-go="ocauto"]');
+    await p.waitForTimeout(150);
+    await press(p, '[data-go="ocready"]');
+  }
+  // the questions after a battle answered as they come (here, keep the dice), until the aftermath is up
+  async function throughPost(p, what) {
+    const stop = Date.now() + 30000;
+    for (;;) {
+      const st = await state(p);
+      if (st && st.view === 'aftermath' && !st.post) return st;
+      if (st && st.view === 'post') await press(p, '[data-go="postnext"]');
+      if (Date.now() > stop) throw new Error('waited for ' + what + ': ' + JSON.stringify(st).slice(0, 300));
+      await wait(400);
+    }
+  }
+  const onBoard = (p) => p.evaluate(() => { const st = window.PMC_STATE && window.PMC_STATE(); return !!(st && st.cfg && document.getElementById('camp').hidden); });
+  const slotCount = (p) => p.evaluate(() => document.querySelectorAll('#camp-body .olob-slot').length);
 
   const p1 = await player('Ash Online', 'password one');
   const p2 = await player('Brann Online', 'password two');
 
-  console.log('\nStarted, and joined with its code');
-  await p1.evaluate(() => window.PMC_CAMPAIGN.enter('online'));
-  for (let i = 0; i < 30 && !/Start an online campaign/i.test(await text(p1)); i++) await wait(100);
-  ok('the online campaigns screen opens for a signed-in player', /Start an online campaign/i.test(await text(p1)));
-  // started from Multiplayer's Start a game, the campaign picked from its list
-  await p1.evaluate(() => { window.PMCLobby.open(); });
-  await p1.waitForTimeout(800);
-  await p1.evaluate(() => document.querySelector('#lobby [data-lob="create"]').click());
-  await p1.waitForTimeout(200);
-  const offered = await p1.evaluate(() => { const o = document.querySelector('#lob-kind option[value="ocamp"]'); return o && !o.disabled ? o.textContent : ''; });
-  ok('Start a game offers a new online campaign', /Campaign/.test(offered), offered);
-  await p1.evaluate(() => { const s = document.getElementById('lob-kind'); s.value = 'ocamp'; s.dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#lobby [data-lob="create"][data-go]').click(); });
-  let s1 = await till(p1, 'the founding screen', (s) => s.view === 'found');
-  ok('a new one opens on founding Player 1’s force, with a code for Player 2', s1.side === 'A' && /^[A-Z2-9]{8}$/.test(s1.invite || ''), JSON.stringify(s1).slice(0, 120));
-  await found(p1, 'Iron Wolves', ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
-  s1 = await till(p1, 'the hub', (s) => s.view === 'hub' && s.A === 'Iron Wolves');
-  const code = await p1.evaluate(() => { const c = document.querySelector('#camp-body .ocode'); return c ? c.textContent : ''; });
-  ok('founded on the server; the hub shows the code for the open seat', code === s1.invite, code);
-  ok('nothing of it is saved as this browser’s own campaign', await p1.evaluate(() => !window.PMC_CAMPAIGN.get()));
+  try {
+    console.log('\nThe lobby');
+    await p1.evaluate(() => { window.PMCLobby.open(); });
+    await p1.waitForTimeout(800);
+    await p1.evaluate(() => document.querySelector('#lobby [data-lob="create"]').click());
+    await p1.waitForTimeout(200);
+    await p1.evaluate(() => { const s = document.getElementById('lob-kind'); s.value = 'ocamp'; s.dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#lobby [data-lob="create"][data-go]').click(); });
+    let s1 = await till(p1, 'the lobby', (s) => s.view === 'olobby');
+    let t1 = await text(p1);
+    ok('Start a game → Campaign opens the campaign’s lobby, with its code', /lobby/i.test(t1) && /Give the others this code/.test(t1), t1.slice(0, 160));
+    ok('...four slots: the host, one open, two AI forces', (await slotCount(p1)) === 4 && /Open — waiting for a player/.test(t1) && (t1.match(/AI force/g) || []).length >= 2);
+    await choose(p1, '#olob-n', '3');
+    for (let i = 0; i < 30 && (await slotCount(p1)) !== 3; i++) await wait(150);
+    ok('the host makes it three forces', (await slotCount(p1)) === 3);
+    await choose(p1, '[data-olob-army="2"]', 'bugs');
+    await p1.waitForTimeout(600);
+    ok('...and picks the AI force’s army', await p1.evaluate(() => document.querySelector('#camp-body [data-olob-army="2"]').value === 'bugs'));
 
-  // a public one is listed with the games on Multiplayer; the second player joins it from there
-  await p2.evaluate(() => window.PMCLobby.open());
-  await p2.waitForTimeout(800);
-  const row = await p2.evaluate((c) => { const b = document.querySelector('#lobby .lob-list [data-lob="join"][data-id="' + c + '"]'); return b ? b.closest('.lob-game').innerText : ''; }, code);
-  ok('the public campaign is listed with the games, its seat free', /Ash Online.s campaign/.test(row) && /seat free/.test(row) && /Join the campaign/i.test(row), row || await p2.evaluate(() => document.getElementById('lobby').innerText.slice(0, 600)));
-  ok('there is no separate Campaigns section', await p2.evaluate(() => !document.querySelector('#lobby [data-lob="campaigns"]')));
-  await p2.evaluate((c) => document.querySelector('#lobby .lob-list [data-lob="join"][data-id="' + c + '"]').click(), code);
-  let s2 = await till(p2, 'Player 2 founding', (s) => s.view === 'found' && s.side === 'B');
-  ok('the second player joins with the code, as Player 2, and founds their own', s2.side === 'B' && /Iron Wolves has signed/.test(await text(p2)));
-  await found(p2, 'Red Dawn', ['rciv', 'rciv', 'rciv', 'rdesconscript', 'rridergang', 'rmilitia', 'rlmg', 'rtechnical'], 'H1', 'rebel');
-  s2 = await till(p2, 'Player 2 hub', (s) => s.view === 'hub' && s.B === 'Red Dawn');
-  const gap = (pg) => pg.evaluate(() => { const b = document.getElementById('camp-body'), c = b.querySelector('.cpan-own'); return c ? b.getBoundingClientRect().bottom - c.getBoundingClientRect().bottom : null; });
-  const g1 = await gap(p1), g2 = await gap(p2);
-  ok('Player 2’s own force fills the screen, as Player 1’s does', g1 != null && g2 != null && Math.abs(g1 - g2) < 4 && g2 < 60, g1 + ' / ' + g2);
-  ok('...a revolt, of their own choosing', await p2.evaluate(() => window.PMC_CAMPAIGN.online().camp.companies.B.faction === 'rebel'));
-  s1 = await till(p1, 'Player 1 to hear of it', (s) => s.B === 'Red Dawn' && !s.invite);
-  ok('Player 1’s screen hears of it by itself; the code is gone', !!s1);
+    // the other player finds it in the Multiplayer list
+    await p2.evaluate(() => window.PMCLobby.open());
+    let row = '';
+    for (let i = 0; i < 30 && !row; i++) { await wait(200); row = await p2.evaluate(() => { const b = document.querySelector('#lobby .lob-list [data-lob="join"]'); return b ? b.closest('.lob-game').innerText : ''; }); }
+    ok('the public campaign is listed in Multiplayer, its open slots said', /Ash Online.s campaign/.test(row) && /3 forces/.test(row) && /1 slot open/.test(row), row);
+    await p2.evaluate(() => document.querySelector('#lobby .lob-list [data-lob="join"]').click());
+    let s2 = await till(p2, 'Brann in the lobby', (s) => s.view === 'olobby' && s.slot === 1);
+    ok('joined from the list: Brann takes the open slot', s2.slot === 1 && /Brann Online/.test(await text(p2)));
+    await choose(p2, '[data-olob-army="1"]', 'rebel');
+    await p2.waitForTimeout(500);
+    await p2.evaluate(() => { document.getElementById('olob-say').value = 'ready when you are'; });
+    await press(p2, '[data-go="olobsay"]');
+    await p2.waitForTimeout(500);
+    await press(p2, '[data-go="olobready"]');
+    let chatSeen = false;
+    for (let i = 0; i < 40 && !chatSeen; i++) { await wait(250); const tx = await text(p1); chatSeen = /ready when you are/.test(tx) && /Brann Online[\s\S]*?Ready/.test(tx); }
+    ok('the host sees Brann, their message and that they are ready', chatSeen);
+    await press(p1, '[data-go="olobstart"]');
+    s1 = await till(p1, 'the founding screen', (s) => s.phase === 'run' && s.view === 'found');
+    s2 = await till(p2, 'Brann’s founding screen', (s) => s.phase === 'run' && s.view === 'found');
+    ok('the host starts it: each player founds their own force', s1.view === 'found' && s2.view === 'found');
 
-  console.log('\nThe contract');
-  await press(p1, '[data-go="contract"]');
-  await p1.waitForTimeout(200);
-  await press(p1, '[data-go="ocbegin"]');
-  s1 = await till(p1, 'a contract', (s) => !!s.k);
-  ok('Player 1 draws up a contract: the terms rolled on the server', s1.k.tier >= 1 && !!s1.k.scenario, s1.k.scenario && s1.k.scenario.name);
-  if (s1.k.fore && !s1.k.fore.done) {
-    // both hold Foresighted Command (not these two): set the dice aside in turn
-    for (let i = 0; i < 2; i++) { await press(p1, '[data-ocforego="0"]'); await press(p2, '[data-ocforego="1"]'); await wait(800); }
+    console.log('\nThe world');
+    await found(p1, 'Iron Wolves', ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
+    await found(p2, 'Red Dawn', ['rciv', 'rciv', 'rciv', 'rdesconscript', 'rridergang', 'rmilitia', 'rlmg', 'rtechnical'], 'H1', 'rebel');
+    s1 = await till(p1, 'Ash’s hub, with Brann’s force founded', (s) => s.view === 'hub' && s.A === 'Iron Wolves' && s.rivals.indexOf('Red Dawn') >= 0);
+    s2 = await till(p2, 'Brann’s hub', (s) => s.view === 'hub' && s.A === 'Red Dawn');
+    ok('founded: each on their own hub, their own force', s1.A === 'Iron Wolves' && s2.A === 'Red Dawn');
+    const rivals = await p1.evaluate(() => window.PMC_CAMPAIGN.online().camp.rivals.map((r) => (r.human ? 'H:' : 'AI:') + r.name));
+    ok('the other forces on the world: the AI force, and Brann’s', rivals.length === 2 && rivals.some((r) => /^AI:/.test(r)) && rivals.indexOf('H:Red Dawn') >= 0, rivals.join(', '));
+
+    console.log('\nAgainst an AI force');
+    await press(p1, '[data-go="offers"]');
+    await p1.waitForTimeout(300);
+    t1 = await text(p1);
+    ok('Contract shows the offers against the AI force, and the other players to challenge', /Take this contract/i.test(t1) && /The other players/i.test(t1) && /Challenge them/i.test(t1), t1.slice(0, 200));
+    await press(p1, '[data-take-offer="0"]');
+    s1 = await till(p1, 'the contract', (s) => s.view === 'ocontract' && !!s.k);
+    ok('taking one opens its contract, its terms as offered', !!s1.k.scenario && s1.k.tier >= 1);
+    await fightWithPicked(p1);
+    let board = false;
+    for (let i = 0; i < 80 && !board; i++) { await wait(250); board = await onBoard(p1); }
+    ok('ready: Ash is taken into the battle, made on the server', board);
+    const cfg = await p1.evaluate(() => { const c = window.PMC_STATE().cfg; return { ai: c.aiSides, A: c.nameA, B: c.nameB }; });
+    ok('...against the AI force, which the server plays', cfg.A === 'Iron Wolves' && (cfg.ai || []).indexOf('B') >= 0, JSON.stringify(cfg));
+    await p1.evaluate(() => window.PMCLobby.abandon());
+    s1 = await throughPost(p1, 'the aftermath');
+    ok('walked away from: the aftermath comes up, a loss, the turn moved on', s1.after && s1.after.winner === 'B' && s1.turn === 1, JSON.stringify(s1.after && s1.after.winner) + ' turn ' + s1.turn);
+    ok('...and the board is put away', await p1.evaluate(() => !(window.PMC_BATTLE_LIVE && window.PMC_BATTLE_LIVE())));
+    await press(p1, '[data-go="pastback"]');
+    await p1.waitForTimeout(300);
+
+    console.log('\nA duel');
+    await press(p1, '[data-go="offers"]');
+    await p1.waitForTimeout(300);
+    await press(p1, '[data-ochallenge="1"]');
+    s1 = await till(p1, 'the challenge made', (s) => s.challenges.length === 1);
+    s2 = await till(p2, 'the challenge seen', (s) => s.challenges.length === 1 && s.view === 'hub');
+    ok('Ash challenges Brann: Brann’s hub says so', /challenges you to a contract/.test(await text(p2)));
+    await press(p2, '[data-ochaccept]');
+    s2 = await till(p2, 'the duel contract', (s) => s.view === 'ocontract' && s.duel && s.duel.contract);
+    ok('Brann accepts: the contract is drawn up between them', s2.duel.side === 'B' && s2.duel.foeName === 'Iron Wolves');
+    s1 = await till(p1, 'Ash told of it', (s) => !!s.duel);
+    await press(p1, '[data-go="ocontract"]');
+    await p1.waitForTimeout(300);
+    await fightWithPicked(p1);
+    await till(p1, 'Ash ready', (s) => s.duel && s.duel.contract && s.duel.contract.ready.A);
+    await fightWithPicked(p2);
+    let both = false;
+    for (let i = 0; i < 100 && !both; i++) { await wait(250); both = (await onBoard(p1)) && (await onBoard(p2)); }
+    ok('both ready: both are taken into the battle', both);
+    await p2.evaluate(() => window.PMCLobby.abandon());
+    s1 = await throughPost(p1, 'Ash’s aftermath');
+    s2 = await till(p2, 'Brann’s aftermath', (s) => s.view === 'aftermath', 30000);
+    ok('Brann walks away: Ash reads a win, Brann a loss, each as their own', s1.after.winner === 'A' && s2.after.winner === 'B' && s1.turn === 2 && s2.turn === 1, JSON.stringify([s1.after.winner, s2.after.winner, s1.turn, s2.turn]));
+
+    console.log('\nThe Continue list');
+    await press(p1, '[data-go="pastback"]');
+    await p1.waitForTimeout(200);
+    await p1.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('continue'); });
+    let orow = '';
+    for (let i = 0; i < 30 && !orow; i++) { await wait(150); orow = await p1.evaluate(() => { const r = document.querySelector('#cont-list [data-cont^="o:"]'); return r ? r.textContent : ''; }); }
+    ok('the main menu’s Continue lists the online campaign', /Online campaign/.test(orow) && /3 forces/.test(orow), orow);
+  } catch (e) {
+    fail++; console.log('  ✗ ' + e.message);
   }
-  await press(p1, '[data-go="ocauto"]');
-  await press(p1, '[data-go="ocready"]');
-  s1 = await till(p1, 'Player 1 ready', (s) => s.k && s.k.ready.A);
-  ok('Player 1 picks a force and is ready', /You are ready/.test(await text(p1)));
-  s2 = await till(p2, 'Player 2 to see the contract', (s) => s.k && s.k.ready.A);
-  ok('Player 2 sees that Player 1 is ready, but not their force', s2.k.picks.A && s2.k.picks.A.hidden === true && !s2.k.picks.A.rids, JSON.stringify(s2.k.picks.A));
-  const waits = async (p) => p.evaluate(() => fetch('api/online').then((r) => r.json()).then((j) => j.campaigns[0].waiting));
-  ok('...and the campaign is waiting on Player 2 (their move), not on Player 1', (await waits(p2)) === 'you' && (await waits(p1)) === 'them');
-  await p2.evaluate(() => { window.PMCMenu.refresh(); });
-  let cont = '';
-  for (let i = 0; i < 20 && !/Your move/.test(cont); i++) { await wait(150); cont = await p2.evaluate(() => window.PMCMenu.games().filter((g) => g.key.indexOf('o:') === 0).map((g) => g.sub).join()); }
-  ok('...Player 2\u2019s Continue list says so', /Your move/.test(cont), cont);
-  await press(p2, '[data-go="contract"]');
-  await p2.waitForTimeout(200);
-  await press(p2, '[data-go="ocauto"]');
-  await press(p2, '[data-go="ocready"]');
-
-  console.log('\nThe battle');
-  const onBoard = (p) => p.evaluate(() => { const st = window.PMC_STATE && window.PMC_STATE(); return !!(st && st.cfg && document.getElementById('camp').hidden); });
-  let both = false;
-  for (let i = 0; i < 80 && !both; i++) { await wait(250); both = (await onBoard(p1)) && (await onBoard(p2)); }
-  ok('both ready: both players are taken into the battle made from the contract', both);
-  const names = await p1.evaluate(() => { const st = window.PMC_STATE(); return [st.cfg.nameA, st.cfg.nameB]; });
-  ok('...the two forces of the campaign', names[0] === 'Iron Wolves' && names[1] === 'Red Dawn', names.join(' v '));
-
-  // Player 2 walks away: a forfeit, and in a campaign the aftermath is applied (decision 5)
-  await p2.evaluate(() => window.PMCLobby.abandon());
-  // the result card, read, gives way to the campaign
-  for (let i = 0; i < 40; i++) {
-    await wait(250);
-    const r = await p1.evaluate(() => { const b = document.getElementById('res-continue'); if (b && !document.getElementById('resolution').hidden) { b.click(); return true; } return false; });
-    if (r) break;
-  }
-  s1 = await till(p1, 'Player 1’s question after the battle', (s) => s.view === 'post' && s.post && s.post.steps[0] && s.post.steps[0].side === 'A', 20000);
-  const t1 = await text(p1);
-  ok('the other walks away: the campaign comes back up with Tough Negotiators for Player 1', /Tough Negotiators/i.test(t1), t1.slice(0, 200));
-  ok('...and the battle is put away, not left to go back to from Continue', await p1.evaluate(() => !(window.PMC_BATTLE_LIVE && window.PMC_BATTLE_LIVE()) && !(window.PMC_STATE && window.PMC_STATE())));
-  s2 = await till(p2, 'Player 2 waiting', (s) => s.view === 'post', 20000);
-  ok('...and Player 2 waits on it', /question to answer first/.test(await text(p2)));
-  await press(p1, '[data-negdie="0"]');
-  await press(p1, '[data-go="negotiate"]');
-  await till(p1, 'the re-roll', (s) => s.post && s.post.pre.neg && s.post.pre.neg.A);
-  ok('Player 1 re-rolls a die (on the server)', /Re-rolled/.test(await text(p1)));
-  await press(p1, '[data-go="postnext"]');
-
-  console.log('\nAfter it');
-  s1 = await till(p1, 'Player 1’s aftermath', (s) => s.view === 'aftermath' && !s.post);
-  ok('every question answered: Player 1 reads the aftermath, a win', s1.after && s1.after.winner === 'A' && s1.turn === 1, JSON.stringify(s1.after && s1.after.winner) + ' turn ' + s1.turn);
-  s2 = await till(p2, 'Player 2’s aftermath', (s) => s.view === 'aftermath', 20000);
-  ok('...and Player 2 reads theirs: their own force\u2019s page', s2.turn === 1 && /Red Dawn/.test(await p2.evaluate(() => document.getElementById('camp-title').textContent)), await p2.evaluate(() => document.getElementById('camp-title').textContent));
-  await press(p2, '[data-go="pastback"]');
-  await p2.waitForTimeout(300);
-  ok('back on the hub, the next turn', (await state(p2)).view === 'hub');
-  await press(p1, '[data-go="pastback"]');
-  await p1.waitForTimeout(200);
-  await press(p1, '.camp-foot [data-go="menu"]');
-  await p1.waitForTimeout(300);
-  ok('leaving it, the browser’s own campaign (none) is back', await p1.evaluate(() => !window.PMC_CAMPAIGN.online()));
-
-  console.log('\nThe Continue list');
-  await p1.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('continue'); });
-  let orow = '';
-  for (let i = 0; i < 30 && !orow; i++) { await wait(150); orow = await p1.evaluate(() => { const r = document.querySelector('#cont-list [data-cont^="o:"]'); return r ? r.textContent : ''; }); }
-  ok('the main menu’s Continue lists the online campaign', /Online campaign/.test(orow) && /Player 1/.test(orow), orow);
-  await p1.evaluate(() => document.querySelector('#cont-list [data-cont^="o:"]').click());
-  const back1 = await till(p1, 'the campaign opened from the list', (s) => s.view === 'hub' || s.view === 'aftermath');
-  ok('...and picking it opens it', back1.side === 'A' && back1.turn === 1, JSON.stringify(back1).slice(0, 120));
-
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   await b.close();
   srv.kill();

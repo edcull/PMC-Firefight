@@ -1,16 +1,19 @@
-/* PMC 2670 — Firefight : online campaigns in the dossier (multiplayer plan, phase 3c)
+/* PMC 2670 — Firefight : online campaigns in the dossier — a world of two to eight
+   forces, players and AI (server/online.js keeps it and runs its rules)
 
-   Two players, each on their own device, each running their own force; the
-   server keeps the campaign and runs its rules (server/online.js). This is the
-   dossier's side of it: the list of the player's online campaigns, making one
-   and joining one by its code, and — once one is open — every change to the
-   player's own force sent to the server as a command rather than made here,
-   the contract drawn up between them, the walk into the battle, and the
-   questions and the aftermath after it.
+   This is the dossier's side of it:
+     - the list of the player's online campaigns;
+     - the campaign's lobby: the slots (open, a player, or an AI force of a chosen
+       army), a colour each, the chat, ready, and the host's Start;
+     - once it is under way, the world as a single-player campaign shows it — the
+       player's own force, every other force a rival with a dossier — with every
+       change to their own force sent to the server as a command rather than made
+       here; the contracts on offer against the AI forces (rolled by the server)
+       and challenges to the other players; the contract, with an AI force or with
+       a player; the walk into the battle; and the questions and the aftermath.
 
    The dossier's own screens do the showing (the hub, the founding sheet, the
-   roster, the honours, the aftermath): an online campaign is the hotseat shape
-   with one side the player's. What is only online is here.
+   roster, the honours, the offers, the aftermath): what is only online is here.
 
    Made once by dossier.js, the first time it is wanted. E is what it needs of
    dossier.js; what changes is read through it as it is now. */
@@ -20,11 +23,12 @@
     var C = E.C, R = E.R, ROMAN = E.ROMAN, esc = E.esc;
     var list = null, listFault = '', signedIn;     // the list screen: the player's campaigns, and who they are
     var busy = false;                               // a command on its way: the next waits
-    var poll = null;                                // the campaign asked for again now and then, for the other player's changes
-    var pick = null;                                // the player's force for the contract, as picked so far here
-    var pickFor = null;                             // ...and the contract it was picked for (its turn and tier)
+    var poll = null;                                // the campaign asked for again now and then, for the others' changes
+    var pick = null, pickFor = null;                // the player's force for a contract, as picked so far here, and for which
     var fighting = null;                            // the battle walked into: its code
+    var lobby = null;                               // the campaign while it is in its lobby, as the server sent it
     var localCamp, stashed = false;                 // the browser's own campaign, put aside while an online one is open
+    var FACTION_NAMES = { pmc: 'Private military company', rebel: 'Revolt', bugs: 'Bug swarm', xeno: 'Xenotripod tribe', random: 'Rolled at random' };
 
     function api(path, opts) {
       opts = opts || {};
@@ -35,21 +39,16 @@
         return r.json().then(function (j) { return { ok: r.ok, code: r.status, j: j }; }, function () { return { ok: r.ok, code: r.status, j: {} }; });
       });
     }
-    function mine() { return E.online ? E.online.side : 'A'; }
-    function theirs() { return mine() === 'A' ? 'B' : 'A'; }
-    function myCo() { return E.camp.companies[mine()]; }
-    function theirCo() { return E.camp.companies[theirs()]; }
-    function founded(co) { return !!(co && co.roster && co.roster.length); }
-    function theirName() {
-      var p = E.online && (E.online.players || []).filter(function (x) { return x.side === theirs(); })[0];
-      return founded(theirCo()) ? theirCo().name : p ? p.name : 'the other player';
-    }
-    // whose move an online campaign is waiting on, as its list says it (server/online.js waitingOn)
-    var WAIT = { you: 'waiting on you', them: 'waiting on the other player', either: 'ready for the next contract', over: 'over' };
     function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+    function founded(co) { return !!(co && co.roster && co.roster.length); }
+    function myCo() { return E.camp.companies.A; }
+    function onl() { return (E.camp && E.camp.online) || {}; }
+    // the other players' forces, as the hub shows them among the rivals
+    function players() { return (E.camp.rivals || []).filter(function (r) { return r.human; }); }
+    function forceOfSlot(i) { return (E.camp.rivals || []).filter(function (r) { return r.human && r.slot === i; })[0] || null; }
+    var WAIT = { you: 'waiting on you', them: 'waiting on another player', either: 'free to take a contract', lobby: 'in its lobby', over: 'over' };
 
     /* ================= in and out ================= */
-    // the list of the player's online campaigns
     function enterList() {
       leaveCampaign();
       E.view = 'olist';
@@ -73,17 +72,17 @@
       return api('api/online/' + id).then(function (r) {
         if (!r.ok) { E.note('That campaign will not open', cap(r.j.error || 'the server said no') + '.'); return; }
         if (!stashed) { localCamp = E.camp; stashed = true; }
-        E.online = { id: r.j.id, side: r.j.side, version: 0, players: r.j.players, invite: r.j.invite };
-        E.hubSide = r.j.side;
+        E.online = { id: r.j.id, slot: r.j.slot, version: 0, side: 'A' };
+        E.hubSide = 'A';
         take(r.j, true);
         startPoll();
         E.open(E.view);
       });
     }
-    // a new one started on the server, and opened on founding Player 1's force
+    // a new one made on the server, opened on its lobby
     function startNew(how) {
       var body = JSON.stringify({ listed: !!(how && how.listed) });
-      return api('api/online', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body }).then(function (r) {
+      return api('api/online', { method: 'POST', body: body }).then(function (r) {
         if (!r.ok) { E.note('Not started', cap(r.j.error || r.j.why || 'the server said no') + '.'); return; }
         openCampaign(r.j.id);
       });
@@ -91,81 +90,106 @@
     function leaveCampaign() {
       stopPoll();
       if (stashed) { E.camp = localCamp; stashed = false; localCamp = null; }
-      E.online = null; pick = null; pickFor = null;
+      E.online = null; pick = null; pickFor = null; lobby = null;
       E.draft = null;
     }
 
-    /* The campaign as the server has it now, taken up: the screen it should be on
-       follows (the player's force still to be founded, a question after a battle
-       owed, an aftermath not yet read). `fresh`: just opened. */
+    /* The campaign as the server has it now, taken up: in its lobby, the lobby;
+       under way, the world, and the screen it should be on follows (the player's
+       force still to be founded, a question owed, an aftermath not yet read). */
     function take(j, fresh) {
       var o = E.online;
-      if (!o || !j || !j.state) return;
-      var wasFound = E.view === 'found' && E.draft && E.draft.side === o.side;
-      var keep = wasFound ? E.camp.companies[o.side] : null;
+      if (!o || !j) return;
       o.version = j.version || o.version;
-      if (j.players) o.players = j.players;
-      if (j.invite !== undefined) o.invite = j.invite;
+      o.slot = j.slot; o.host = !!j.host; o.phase = j.phase; o.name = j.name; o.waiting = j.waiting;
+      if (j.phase === 'lobby') {
+        lobby = j;
+        if (!E.camp || !E.camp.online || !E.camp.lobbyShell) E.camp = { lobbyShell: true, mode: 'solo', companies: { A: C.newCompany('', {}) }, rivals: [], log: [], online: {} };
+        E.view = 'olobby';
+        return;
+      }
+      lobby = j;                       // the slots and the chat, kept for the hub's window
+      if (!j.state) return;
+      var wasFound = E.view === 'found' && E.draft;
+      var keep = wasFound && E.camp && E.camp.companies ? E.camp.companies.A : null;
       var camp = C.rehydrate(j.state);
-      if (!camp.companies.B) camp.companies.B = (camp.rivals || [])[camp.facing || 0] || C.newCompany('', {});
-      // the player's force being founded here is kept as it is being made
-      if (keep && !founded(camp.companies[o.side])) camp.companies[o.side] = keep;
+      if (keep && !founded(camp.companies.A)) camp.companies.A = keep;
       E.camp = camp;
       steer(fresh);
     }
     function steer(fresh) {
-      var camp = E.camp, side = mine();
-      if (!founded(camp.companies[side])) {
-        if (E.view !== 'found' || !E.draft || E.draft.side !== side) E.beginOwn(side, camp.companies[side].faction || 'pmc');
+      var camp = E.camp;
+      if (!camp || camp.lobbyShell) { E.view = 'olobby'; return; }
+      if (E.view === 'olobby') E.view = 'hub';
+      if (!founded(camp.companies.A)) {
+        if (E.view !== 'found' || !E.draft) {
+          // the army and colour picked in the lobby are where the founding starts
+          var slotColour = camp.companies.A.colour;
+          E.beginOwn('A', camp.companies.A.faction || 'pmc');
+          if (slotColour) E.draft.colour = slotColour;
+        }
         return;
       }
       if (E.view === 'found') { E.draft = null; E.view = 'hub'; }
       if (camp.post) { E.view = 'post'; return; }
       if (E.view === 'post') E.view = 'hub';
-      // a battle's aftermath not yet read: shown once, from the campaign's log
-      var af = camp.online && camp.online.after;
-      if (af && af.turn > seen()) {
+      // a battle's aftermath not yet read: shown once, from the player's log
+      var af = onl().after;
+      if (af && af.n > seen()) {
         var at = -1;
         (camp.log || []).forEach(function (l, i) { if (l.turn === af.turn && l.after) at = i; });
-        if (at >= 0) { seen(af.turn); E.showPast(at); E.view = 'aftermath'; return; }
+        seen(af.n);
+        if (at >= 0) { E.showPast(at); E.view = 'aftermath'; return; }
       }
-      if (fresh && E.view !== 'ocontract' && E.view !== 'aftermath') E.view = 'hub';
+      if (fresh && ['ocontract', 'aftermath', 'offers'].indexOf(E.view) < 0) E.view = 'hub';
+      // a contract that has gone (called off, fought) takes its screen with it
+      if (E.view === 'ocontract' && !activeContract()) E.view = 'hub';
     }
     // the last aftermath this browser has shown, per campaign
-    function seen(turn) {
-      var k = 'pmc-online-seen:' + (E.online ? E.online.id : '');
+    function seen(n) {
+      var k = 'pmc-online-seen2:' + (E.online ? E.online.id : '');
       try {
-        if (turn === undefined) return +(localStorage.getItem(k) || -1);
-        localStorage.setItem(k, String(turn));
+        if (n === undefined) return +(localStorage.getItem(k) || 0);
+        localStorage.setItem(k, String(n));
       } catch (e) { }
-      return -1;
+      return 0;
     }
 
-    /* The other player's changes, picked up every few seconds while the campaign is
-       open — the pace is theirs (decision 6), so nothing is waited on. */
+    /* The others' changes, picked up every few seconds while the campaign is open. */
     function startPoll() {
       stopPoll();
       poll = setInterval(function () {
         var o = E.online;
-        if (!o || busy || E.asking()) return;
-        if (document.hidden) return;
+        if (!o || busy || E.asking() || document.hidden) return;
         api('api/online/' + o.id).then(function (r) {
-          if (!r.ok || !E.online || E.online.id !== o.id || r.j.version === o.version || busy) return;
-          var before = E.camp.online && E.camp.online.battle;
+          if (!E.online || E.online.id !== o.id || busy) return;
+          if (!r.ok) {
+            // closed by its host while it was in its lobby
+            if (r.code === 404 && o.phase === 'lobby') { leaveCampaign(); E.note('The campaign is closed', 'Its host closed it before it started.'); enterList(); }
+            return;
+          }
+          if (r.j.version === o.version) return;
+          var before = battleCode(), waitingOnIt = E.view === 'ocontract';
+          // a line being typed into the lobby's chat survives the redraw
+          var say = document.getElementById('olob-say'), typed = say ? say.value : '', typing = say && document.activeElement === say;
           take(r.j);
           var shown = E.isOpen();
-          // both ready: a player waiting on the contract goes into the battle as soon as it is made
-          var b = E.camp.online && E.camp.online.battle;
-          if (b && !before && shown && E.view === 'ocontract') { goBattle(b.code); return; }
+          if (shown && E.view === 'olobby') {
+            E.render();
+            var say2 = document.getElementById('olob-say');
+            if (say2) { say2.value = typed; if (typing) say2.focus(); }
+            return;
+          }
+          // a contract with a player: when both are ready the battle is made, and a player waiting on it goes in
+          var b = battleCode();
+          if (b && b !== before && shown && waitingOnIt) { goBattle(b); return; }
           if (shown) E.render();
         });
-      }, 4000);
+      }, 3000);
     }
     function stopPoll() { if (poll) { clearInterval(poll); poll = null; } }
 
     /* ================= commands ================= */
-    /* One change, sent to the server and run there with the campaign's rules; the
-       campaign comes back as it is now, or the reason it was refused. */
     function cmd(name, args, then) {
       var o = E.online;
       if (!o || busy) return;
@@ -194,8 +218,10 @@
     }
 
     /* ================= the battle ================= */
-    /* Into the battle made from the contract: the lobby's connection, and the seat
-       held for this player (lobby.js). When it is over the campaign comes back. */
+    function battleCode() {
+      var on = onl();
+      return (on.battle && on.battle.code) || (on.duel && on.duel.battle && on.duel.battle.code) || null;
+    }
     function goBattle(code) {
       if (!root.PMCLobby || !root.PMCLobby.joinBattle) { E.note('No battle here', 'This page cannot reach the game server.'); return; }
       fighting = code;
@@ -209,7 +235,6 @@
     function afterBattle(read) {
       if (!fighting) return false;
       fighting = null;
-      // the board put away as the campaign comes back: it is not a battle to go back to from Continue
       var back = function () { if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE(); refresh(function () { E.open(E.view); }); };
       if (!read || !root.PMC_AFTER_RESULT) { setTimeout(back, read ? 900 : 2500); return true; }
       root.PMC_AFTER_RESULT(back);
@@ -219,8 +244,8 @@
     /* ================= the list ================= */
     function listView() {
       var h = '<h2>Online campaigns</h2>';
-      h += '<p class="lede">A campaign against another player, each of you on your own device, whenever you each have the time. ' +
-        'Each runs their own force; the server keeps the campaign and rolls every die.</p>';
+      h += '<p class="lede">A world of two to eight forces — players, each on their own device, and AI forces the server runs. ' +
+        'Each player runs their own force whenever they have the time; the server keeps the campaign and rolls every die.</p>';
       if (list === null) return h + '<p class="dnote">Looking…</p>' + foot();
       if (!signedIn) {
         return h + '<div class="cpan"><div class="cpstat">An online campaign is kept by your account. Sign in (or make an account) first.</div>' +
@@ -230,12 +255,12 @@
       if (list.length) {
         h += '<div class="field"><label>Yours</label><div class="clog">' + list.map(function (c) {
           return '<button type="button" class="crow crow-go" data-ocamp="' + c.id + '"><b>' + c.turn + '</b><span>' + esc(c.name) +
-            '<small>You are Player ' + (c.side === 'B' ? 2 : 1) + ' \u00b7 ' + WAIT[c.waiting || 'over'] + '</small></span>' +
+            '<small>' + c.forces + ' forces, ' + c.players + ' player' + (c.players === 1 ? '' : 's') + ' · ' + WAIT[c.waiting || 'over'] + '</small></span>' +
             (c.waiting === 'you' ? '<em class="yourmove">Your move</em>' : '<em>Open</em>') + '</button>';
         }).join('') + '</div></div>';
       }
       h += '<div class="field"><label>A new one</label><button class="start" data-go="onew">Start an online campaign</button>' +
-        '<p class="dnote">You get a code to give the other player.</p></div>';
+        '<p class="dnote">It opens on its lobby: set the slots, then give the others its code.</p></div>';
       h += '<div class="field"><label for="ojoin-code">Join one</label><div class="ojoin">' +
         '<input class="tin" id="ojoin-code" maxlength="8" placeholder="The code you were given" autocomplete="off">' +
         '<button class="lnk" data-go="ojoin">Join</button></div></div>';
@@ -243,36 +268,148 @@
     }
     function foot() { return '<p class="camp-foot"><button class="lnk" data-go="menu">← Main menu</button></p>'; }
 
-    /* ================= the hub, online ================= */
-    // what the hub says of the campaign between the two players: who is waiting on whom
-    function hubNote() {
-      var camp = E.camp, h = '', o = E.online;
-      if (o.invite) {
-        h += '<div class="cpan onote"><div class="cpstat"><b>The second seat is open.</b> Give the other player this code; they type it into Join on the Multiplayer screen (a public campaign is also listed there for anyone to join):</div>' +
-          '<div class="ocode">' + esc(o.invite) + '</div></div>';
-      } else if (!founded(theirCo())) {
-        h += '<div class="cpan onote"><div class="cpstat">Waiting for ' + esc(theirName()) + ' to found their force.</div></div>';
+    /* ================= the lobby ================= */
+    function swatch(c) {
+      var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, k = CO[c];
+      return '<span class="olob-sw"' + (k ? ' style="background:' + k.dark + ';border-color:' + k.light + '"' : '') + '></span>';
+    }
+    function lobbyView() {
+      var L = lobby || {}, host = !!L.host, me = L.slot;
+      var COLS = (root.PMCNet && root.PMCNet.COLOURS) || (root.PMCProtocol && root.PMCProtocol.COLOURS) ||
+        ['ochre', 'steel', 'olive', 'crimson', 'slate', 'plum', 'sand', 'rust', 'jade', 'midnight', 'charcoal', 'hazard', 'rose', 'forest', 'maroon', 'khaki', 'mud', 'lime', 'teal', 'cobalt', 'sky', 'violet', 'magenta', 'arctic'];
+      var h = '<h2>' + esc(L.name || 'Campaign') + '</h2>';
+      h += '<p class="lede">The campaign’s lobby. Each slot is a force on the world: a player (open until somebody joins), or an AI force the server runs. ' +
+        (host ? 'Set the slots, then start it once everyone is ready.' : 'The host sets the slots and starts it once everyone is ready.') + '</p>';
+      if (L.invite) h += '<div class="cpan onote"><div class="cpstat">Give the others this code — they type it into Join on the Multiplayer screen' + (L.listed ? ' (it is also listed there for anyone to join)' : '') + ':</div><div class="ocode">' + esc(L.invite) + '</div></div>';
+      if (host) {
+        h += '<div class="field"><label for="olob-n">Forces on the world</label><select id="olob-n">' +
+          [2, 3, 4, 5, 6, 7, 8].map(function (n) { return '<option value="' + n + '"' + (n === (L.slots || []).length ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div>';
       }
-      var b = camp.online && camp.online.battle, k = camp.online && camp.online.contract;
-      if (b) {
-        h += '<div class="cpan onote"><div class="cpstat"><b>The battle is ready.</b></div><button class="start" data-go="obattle">Go to the battle</button></div>';
-      } else if (k) {
-        h += '<div class="cpan onote"><div class="cpstat">A contract is being drawn up — ' + readyLine(k) + '</div>' +
-          '<button class="lnk" data-go="contract">Open the contract</button></div>';
-      }
+      h += '<div class="olob-slots">' + (L.slots || []).map(function (s, i) {
+        var mine = i === me, canSlot = host && s.kind !== 'human', canColour = mine || (host && s.kind !== 'human'), canArmy = mine || (host && s.kind === 'ai');
+        var who = s.kind === 'human' ? esc(s.name) + (s.host ? ' <i class="acct-tag">host</i>' : '') + (mine ? ' <i class="acct-tag">you</i>' : '')
+          : s.kind === 'ai' ? 'AI force' : '<em>Open — waiting for a player</em>';
+        var row = '<div class="olob-slot' + (mine ? ' mine' : '') + '">' + swatch(s.colour) + '<span class="olob-who"><b>' + who + '</b>' +
+          (s.kind === 'human' ? '<small>' + (s.ready || s.host ? 'Ready' : 'Not ready') + '</small>' : '') + '</span>';
+        if (canSlot) {
+          row += '<select data-olob-kind="' + i + '"><option value="open"' + (s.kind === 'open' ? ' selected' : '') + '>Open for a player</option>' +
+            '<option value="ai"' + (s.kind === 'ai' ? ' selected' : '') + '>AI force</option></select>';
+        }
+        if (s.kind !== 'open') {
+          var facs = s.kind === 'ai' ? ['random', 'pmc', 'rebel', 'bugs', 'xeno'] : ['pmc', 'rebel', 'bugs', 'xeno'];
+          row += canArmy ? '<select data-olob-army="' + i + '">' + facs.map(function (f) {
+            return '<option value="' + f + '"' + (f === s.faction ? ' selected' : '') + '>' + esc(FACTION_NAMES[f]) + '</option>';
+          }).join('') + '</select>' : '<span class="olob-army">' + esc(FACTION_NAMES[s.faction] || '') + '</span>';
+        }
+        row += canColour ? '<select data-olob-colour="' + i + '">' + COLS.map(function (c) {
+          var taken = (L.slots || []).some(function (x, j) { return j !== i && x.colour === c; });
+          return '<option value="' + c + '"' + (c === s.colour ? ' selected' : '') + (taken ? ' disabled' : '') + '>' + cap(c) + '</option>';
+        }).join('') + '</select>' : '';
+        return row + '</div>';
+      }).join('') + '</div>';
+      var mineSlot = (L.slots || [])[me] || {};
+      h += '<div class="olob-go">';
+      if (host) h += '<button class="start" data-go="olobstart">Start the campaign</button>';
+      else h += '<button class="start' + (mineSlot.ready ? ' on' : '') + '" data-go="olobready">' + (mineSlot.ready ? 'Ready — waiting for the host' : 'I am ready') + '</button>';
+      h += '</div>';
+      h += chatHTML();
+      h += '<p class="camp-foot"><button class="lnk" data-go="olobleave">' + (host ? 'Close the campaign' : 'Leave the campaign') + '</button> ' +
+        '<button class="lnk" data-go="olist">← Online campaigns</button></p>';
       return h;
     }
-    function readyLine(k) {
-      var me = mine(), them = theirs();
-      var mineSay = k.ready[me] ? 'you are ready' : k.picks[me] ? 'you have picked' : 'you have not picked your force yet';
-      var theirSay = k.ready[them] ? 'ready' : k.picks[them] ? 'picking' : 'not picked yet';
-      return mineSay + '; ' + esc(theirName()) + ' is ' + theirSay + '.';
+    function chatHTML() {
+      var lines = ((lobby && lobby.chat) || []).slice(-30);
+      return '<div class="field olob-chat"><label for="olob-say">Chat</label><div class="olob-lines">' +
+        (lines.length ? lines.map(function (c) { return '<div><b>' + esc(c.from || '') + '</b> ' + esc(c.text) + '</div>'; }).join('') : '<em>Nothing said yet.</em>') +
+        '</div><div class="ojoin"><input class="tin" id="olob-say" maxlength="300" placeholder="Say something…" autocomplete="off"><button class="lnk" data-go="olobsay">Send</button></div></div>';
     }
 
-    /* ================= the contract, online ================= */
-    function pickNow(k) {
+    /* ================= the hub, online ================= */
+    // what the hub says of the campaign: a contract or a duel under way, a battle ready, challenges
+    function hubNote() {
+      var on = onl(), h = '';
+      var b = battleCode();
+      if (b) {
+        h += '<div class="cpan onote"><div class="cpstat"><b>The battle is ready.</b></div><button class="start" data-go="obattle">Go to the battle</button></div>';
+      } else if (on.contract) {
+        h += '<div class="cpan onote"><div class="cpstat">A contract with <b>' + esc(E.camp.companies.B.name) + '</b> is waiting on you.</div>' +
+          '<button class="lnk" data-go="ocontract">Open the contract</button></div>';
+      } else if (on.duel) {
+        var d = on.duel;
+        h += '<div class="cpan onote"><div class="cpstat">A contract with <b>' + esc(d.foeName) + '</b> (' + esc(d.player) + ') — ' + duelLine(d) + '</div>' +
+          '<button class="lnk" data-go="ocontract">Open the contract</button></div>';
+      }
+      (on.challenges || []).forEach(function (c) {
+        var other = forceOfSlot(c.mine ? c.to : c.from);
+        if (!other) return;
+        h += c.mine
+          ? '<div class="cpan onote"><div class="cpstat">You have challenged <b>' + esc(other.name) + '</b> (' + esc(other.player) + '). Waiting for them to answer.</div>' +
+            '<button class="lnk" data-ochcancel="' + c.id + '">Withdraw the challenge</button></div>'
+          : '<div class="cpan onote"><div class="cpstat"><b>' + esc(other.name) + '</b> (' + esc(other.player) + ') challenges you to a contract.</div>' +
+            '<button class="start" data-ochaccept="' + c.id + '">Accept</button> <button class="lnk" data-ochcancel="' + c.id + '">Turn it down</button></div>';
+      });
+      return h;
+    }
+    function duelLine(d) {
+      var k = d.contract, me = d.side, them = me === 'A' ? 'B' : 'A';
+      if (!k) return 'being drawn up.';
+      var mineSay = k.ready[me] ? 'you are ready' : k.picks[me] ? 'you have picked' : 'you have not picked your force yet';
+      var theirSay = k.ready[them] ? 'ready' : k.picks[them] ? 'picking' : 'not picked yet';
+      return mineSay + '; they are ' + theirSay + '.';
+    }
+
+    /* ================= the contracts on offer, online ================= */
+    /* The dossier's own offers against the AI forces (rolled by the server, so the
+       same each time), an AI force already in someone else's battle marked so; then
+       the other players, to challenge. */
+    function offersView() {
+      var on = onl(), busyAi = on.busyAi || [];
+      var h = E.offersView();
+      (E.camp.offers || []).forEach(function (o, i) {
+        if (busyAi.indexOf(o.rival) < 0) return;
+        h = h.replace('<button class="start" data-take-offer="' + i + '">Take this contract</button>',
+          '<button class="start" disabled title="Fighting someone else just now">Fighting someone else just now</button>');
+      });
+      var foot = '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+      var others = players().filter(function (p) { return !p.out; });
+      var ch = '<h3>The other players</h3>';
+      if (!others.length) ch += '<p class="dnote">Nobody else is playing on this world.</p>';
+      others.forEach(function (p) {
+        var asked = (on.challenges || []).filter(function (c) { return (c.mine && c.to === p.slot) || (!c.mine && c.from === p.slot); })[0];
+        ch += '<div class="cpan cpan-B cpan-offer"' + E.stripe(p) + '><div class="cphead"><b>' + esc(founded(p) ? p.name : p.player + '’s force') + '</b>' +
+          '<span class="ctier">' + esc(p.player) + ' · ' + C.words(p).tier + ' Tier ' + ROMAN[p.tier || 1] + '</span></div>' +
+          (founded(p) ? E.statRow(p, true) : '<div class="cpstat">Not founded yet.</div>') +
+          (asked ? '<div class="cpstat">' + (asked.mine ? 'You have challenged them.' : 'They have challenged you — answer it on the campaign’s page.') + '</div>'
+            : founded(p) && founded(myCo()) ? '<button class="start" data-ochallenge="' + p.slot + '">Challenge them</button>' : '') +
+          '</div>';
+      });
+      return h.replace(foot, '') + ch + foot;
+    }
+
+    /* ================= the contract, online =================
+       With an AI force (terms as offered; only the player picks and says ready) or
+       with another player (as two players at one screen: each picks unseen, both
+       say ready). One screen for both; `ctx` says which. */
+    function activeContract() {
+      var on = onl();
+      if (on.contract) {
+        return { ai: true, k: on.contract, me: 'A', them: 'B', names: { A: myCo().name, B: E.camp.companies.B.name }, foe: E.camp.companies.B, foeName: E.camp.companies.B.name };
+      }
+      if (on.duel && on.duel.contract && on.duel.phase === 'contract') {
+        var d = on.duel;
+        return { ai: false, k: d.contract, me: d.side, them: d.side === 'A' ? 'B' : 'A', names: d.names, foe: forceOfSlot(d.foe), foeName: d.foeName, player: d.player };
+      }
+      return null;
+    }
+    function send(ctx, step, args, then) {
+      var map = { contractTerms: 'aiTerms', contractForego: 'aiForego', contractForesee: 'aiForesee', contractBestDefence: 'aiBestDefence',
+        contractLevel: 'aiLevel', contractPick: 'aiPick', contractReady: 'aiReady' };
+      if (ctx.ai) cmd(map[step], args, then);
+      else cmd('duel', { cmd: step, args: args || {} }, then);
+    }
+    function pickNow(k, me) {
       var key = k.turn + ':' + k.tier + ':' + k.pl + ':' + (k.scenario && k.scenario.id);
-      var srv = k.picks[mine()];
+      var srv = k.picks[me];
       if (pickFor !== key || !pick) {
         pickFor = key;
         pick = srv && !srv.hidden ? { rids: (srv.rids || []).slice(), field: (srv.field || []).slice(), tactic: srv.tactic || null, drugs: (srv.drugs || []).slice() }
@@ -290,20 +427,11 @@
       return (faults || []).filter(function (f) { return !/Needs at least/.test(f) && !/No units chosen/.test(f); });
     }
     function contractView() {
-      var camp = E.camp, k = camp.online && camp.online.contract, me = mine(), co = myCo(), them = theirCo();
+      var ctx = activeContract(), co = myCo();
       var h = '<h2>Contract</h2>';
-      if (!founded(them)) {
-        return h + '<p class="lede">A contract needs both forces. Waiting for ' + esc(theirName()) + ' to found theirs.</p>' + backFoot();
-      }
-      if (!k) {
-        return h + '<p class="lede">' + esc(co.name) + ' against ' + esc(them.name) + '. Either of you may call for a contract: the Battle Tier, ' +
-          'the scenario and who attacks are rolled by the server, then each of you picks your force, unseen by the other.</p>' +
-          '<button class="start" data-go="ocbegin">Draw up a contract</button>' + backFoot();
-      }
-      var b = camp.online.battle;
-      h += '<p class="lede">' + esc(co.name) + ' (Player ' + (me === 'A' ? 1 : 2) + ') against ' + esc(them.name) + '.</p>';
-      if (b) return h + '<div class="cpan"><div class="cpstat"><b>Both are ready: the battle is made.</b></div><button class="start" data-go="obattle">Go to the battle</button></div>' + backFoot();
-      // Foresighted Command with both holding it: each sets a die aside in turn, before anything else
+      if (!ctx) return h + '<p class="lede">There is no contract just now.</p>' + backFoot();
+      var k = ctx.k, me = ctx.me, them = ctx.them;
+      h += '<p class="lede">' + esc(co.name) + ' against ' + esc(ctx.foeName) + (ctx.ai ? ' (an AI force)' : ' (' + esc(ctx.player) + ')') + '.</p>';
       var fore = k.fore;
       if (fore && !fore.done) {
         var who = fore.order[fore.ignored.length];
@@ -313,20 +441,21 @@
             return fore.ignored.indexOf(i) >= 0 ? '<span class="mk">' + d.roll + ' ' + esc(d.name) + ' — set aside</span> '
               : '<button class="lnk" data-ocforego="' + i + '">Set aside ' + d.roll + ' — ' + esc(d.name) + '</button> ';
           }).join('');
-        } else h += '<div class="cpstat">Waiting for ' + esc(theirName()) + ' to set one aside.</div>';
+        } else h += '<div class="cpstat">Waiting for ' + esc(ctx.foeName) + ' to set one aside.</div>';
         return h + '</div>' + backFoot();
       }
-      // the terms: the scenario, who attacks, the Tier and the level
       var SCv = root.PMCScen && root.PMCScen.SCENARIOS[k.scenario.id];
       h += '<div class="cpan"><div class="cpstat"><b>' + esc(k.scenario.name) + '</b> — Battle Tier ' + ROMAN[k.tier] + ', Priority Level ' + k.pl +
         (k.planet && k.planet !== 'random' ? ', on a ' + esc(k.planet) + ' world' : '') + '.</div>';
+      if (k.foreNote) h += '<div class="cpstat dnote">' + esc(k.foreNote) + '</div>';
       if (k.roles) {
         var ro = k.roles;
-        h += '<div class="cpstat"><b>' + esc(camp.companies[ro.attacker].name) + '</b> attacks; <b>' + esc(camp.companies[ro.defender].name) + '</b> defends' +
+        h += '<div class="cpstat"><b>' + esc(ctx.names[ro.attacker]) + '</b> attacks; <b>' + esc(ctx.names[ro.defender]) + '</b> defends' +
           (ro.bestDefence && ro.bestDefence.swapped ? ' (The Best Defence is Good Offence turned it round: D6 ' + ro.bestDefence.roll + ')' : '') + '.' +
           (SCv && SCv.roles ? ' <span class="dnote">' + esc(SCv.roles[ro.attacker === me ? 'attacker' : 'defender'] || '') + '</span>' : '') + '</div>';
       }
-      h += '<div class="cpstat">' + cap(readyLine(k)) + '</div></div>';
+      if (!ctx.ai) h += '<div class="cpstat">' + cap(duelLine(onl().duel)) + '</div>';
+      h += '</div>';
       var bd = k.roles && k.roles.bestDefence;
       if (bd && bd.pending && bd.side === me) h += '<div class="cpdoc"><button class="lnk" data-go="ocbestdef">The Best Defence is Good Offence — roll to attack (2+)</button></div>';
       if (k.alt && (k.altBy || 'A') === me && !k.altUsed && k.alt.id !== k.scenario.id) {
@@ -334,26 +463,26 @@
           '<button class="lnk" data-go="ocforesee">Fight ' + esc(k.alt.name) + ' instead</button></div>';
       }
       if (C.hasDoctrine(co, 'S4') && k.terms[me] === undefined) {
-        var both = C.hasDoctrine(them, 'S4');
+        var both = !ctx.ai && ctx.foe && C.hasDoctrine(ctx.foe, 'S4');
         h += '<div class="cpdoc"><b>On Our Terms…</b> ' + (both ? 'Both forces hold it: the Tier moves only if you both choose the same way. ' : 'Shift the Battle Tier by one. ') +
           '<button class="lnk" data-octerms="-1"' + (k.tier <= 1 ? ' disabled' : '') + '>Down to ' + ROMAN[Math.max(1, k.tier - 1)] + '</button> ' +
           '<button class="lnk" data-octerms="0">Keep ' + ROMAN[k.tier] + '</button> ' +
           '<button class="lnk" data-octerms="1"' + (k.tier >= k.tierRoll.cap ? ' disabled' : '') + '>Up to ' + ROMAN[Math.min(5, k.tier + 1)] + '</button></div>';
       }
-      var lv = k.levels || [1];
+      var lv = k.levels || [1], setsPl = ctx.ai || me === 'A';
       h += '<div class="field"><div><label for="oc-pl">Priority Level</label>' +
-        '<select id="oc-pl"' + (me === 'A' && lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2].map(function (n) {
+        '<select id="oc-pl"' + (setsPl && lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2].map(function (n) {
           var can = lv.indexOf(n) >= 0;
           return '<option value="' + n + '"' + (k.pl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + (n === 1 ? ' — skirmish' : ' — full battle') + '</option>';
-        }).join('') + '</select>' + (me === 'A' ? '' : '<p class="dnote">Player 1 sets the Priority Level.</p>') + '</div></div>';
+        }).join('') + '</select>' + (setsPl ? '' : '<p class="dnote">The challenger sets the Priority Level.</p>') + '</div></div>';
 
-      var pk = pickNow(k), units = entriesOf(co, pk), keys = units.map(function (e) { return R.entryPick(e); });
+      var pk = pickNow(k, me), units = entriesOf(co, pk), keys = units.map(function (e) { return R.entryPick(e); });
       var chk = R.checkArmy(keys, k.tier, k.pl, co.doctrines, pk.tactic || null, co.faction);
-      if (k.ready[me]) {
+      if (k.ready[me] && !ctx.ai) {
         h += '<div class="cpan"><div class="cpstat"><b>You are ready</b> with ' + units.length + ' units: ' + units.map(function (e) { return esc(e.name); }).join(', ') + '.</div>' +
-          '<div class="cpstat">Waiting for ' + esc(theirName()) + '. The battle starts as soon as they are ready.</div>' +
+          '<div class="cpstat">Waiting for ' + esc(ctx.foeName) + '. The battle starts as soon as they are ready.</div>' +
           '<button class="lnk" data-go="ocunready">Change my force</button></div>';
-        return h + backFoot();
+        return h + backFoot(ctx);
       }
       h += '<div class="muster"><div class="muster-head"><b>Take the field</b>' +
         '<span class="pts' + (chk.spent > chk.budget ? ' over' : '') + '">' + chk.spent + ' / ' + chk.budget + '</span>' +
@@ -393,17 +522,21 @@
           }).join('') : '<em>No infantry picked yet.</em>') + '</span></div></div>';
       }
       var why = chk.ok ? '' : esc((chk.faults || [])[0] || 'Not a legal force yet.');
-      h += '<button class="start" data-go="ocready"' + (chk.ok ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') + '>Ready — fight with this force</button>';
-      return h + backFoot();
+      h += '<button class="start" data-go="ocready"' + (chk.ok ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') + '>' +
+        (ctx.ai ? 'Fight with this force' : 'Ready — fight with this force') + '</button>';
+      return h + backFoot(ctx);
     }
-    function backFoot() { return '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>'; }
+    function backFoot(ctx) {
+      return '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button>' +
+        (ctx ? ' <button class="lnk" data-go="ocdrop">' + (ctx.ai ? 'Turn the contract down' : 'Call the contract off') + '</button>' : '') + '</p>';
+    }
 
     /* ================= after the battle ================= */
-    // a question for the other player: wait for them; one for this player: the dossier's own screen
     function postView() {
       var post = E.camp.post, st = post && post.steps[0];
-      if (st && st.side !== mine()) {
-        return '<h2>After the battle</h2><p class="lede">' + esc(theirName()) + ' has a question to answer first (' +
+      if (st && st.side !== 'A') {
+        var d = onl().duel;
+        return '<h2>After the battle</h2><p class="lede">' + esc(d ? d.foeName : 'The other player') + ' has a question to answer first (' +
           (st.kind === 'plunder' ? 'Plunderer' : st.kind === 'negotiate' ? 'Tough Negotiators' : 'No Place for the Weak!') + '). ' +
           'The aftermath follows once every question is answered.</p>' +
           '<p class="camp-foot"><button class="lnk" data-go="olist">← Online campaigns</button></p>';
@@ -415,14 +548,14 @@
        Everything that would change the campaign is sent to the server instead;
        what only changes the screen is left to the dossier. True if handled. */
     function click(t, go) {
-      var camp = E.camp, side = mine();
+      var camp = E.camp;
       var attr = function (a) { return t.getAttribute(a); };
       // the list
       if (attr('data-ocamp')) { openCampaign(+attr('data-ocamp')); return true; }
       if (go === 'onew') { startNew(); return true; }
       if (go === 'ojoin') {
         var code = ((document.getElementById('ojoin-code') || {}).value || '').trim();
-        if (!code) { E.note('Which campaign?', 'Type the code the other player gave you.'); return true; }
+        if (!code) { E.note('Which campaign?', 'Type the code you were given.'); return true; }
         api('api/online/join', { method: 'POST', body: JSON.stringify({ code: code }) }).then(function (r) {
           if (!r.ok) { E.note('Not joined', cap(r.j.error || r.j.why || 'the server said no') + '.'); return; }
           openCampaign(r.j.id);
@@ -434,13 +567,37 @@
       if (go === 'menu') { leaveCampaign(); E.toMenu(); return true; }
       if (!E.online || !camp) return false;
 
+      // the lobby
+      if (go === 'olobready') { var ms = (lobby.slots || [])[lobby.slot] || {}; cmd('lobbyReady', { ready: !ms.ready }); return true; }
+      if (go === 'olobstart') { cmd('lobbyStart', {}); return true; }
+      if (go === 'olobsay') {
+        var box = document.getElementById('olob-say'), said = box ? box.value.trim() : '';
+        if (said) cmd('lobbyChat', { text: said });
+        return true;
+      }
+      if (go === 'olobleave') {
+        var host = !!(lobby && lobby.host);
+        E.ask({ kind: 'confirm', title: host ? 'Close the campaign?' : 'Leave the campaign?', danger: host,
+          text: host ? 'It is gone, for everyone in its lobby.' : 'Your slot opens again for somebody else.',
+          okLabel: host ? 'Close it' : 'Leave',
+          onOk: function () {
+            var o = E.online;
+            api('api/online/' + o.id + '/leave', { method: 'POST' }).then(function (r) {
+              if (!r.ok) { E.note('Not done', cap(r.j.error || 'the server said no') + '.'); return; }
+              enterList();
+            });
+          } });
+        return true;
+      }
+
       // founding the player's own force
       if (attr('data-bfaction') && E.view === 'found') {
         E.keepFoundName();
-        var d = E.draft, nm = d.name, col = d.colour, chosen = d.colourChosen;
-        E.beginOwn(side, attr('data-bfaction'));
+        var d0 = E.draft, nm = d0.name, col = d0.colour, chosen = d0.colourChosen;
+        E.beginOwn('A', attr('data-bfaction'));
         E.draft.name = nm;
-        if (chosen) { E.draft.colour = col; E.draft.colourChosen = true; }
+        E.draft.colour = col;
+        if (chosen) E.draft.colourChosen = true;
         E.render(); return true;
       }
       if (go === 'dofound') {
@@ -448,14 +605,14 @@
         E.keepFoundName();
         var dr = E.draft, name = (dr.name || '').trim();
         if (!name) { E.note('It needs a name', 'Give the force something to be known by.'); return true; }
-        cmd('found', { faction: camp.companies[side].faction || 'pmc', name: name, keys: dr.keys, doctrine: dr.doctrine, colour: dr.colour },
+        cmd('found', { faction: camp.companies.A.faction || 'pmc', name: name, keys: dr.keys, doctrine: dr.doctrine, colour: dr.colour || null },
           function () { E.draft = null; E.view = 'hub'; });
         return true;
       }
       if (go === 'foundback') { enterList(); return true; }
 
       // the force's own changes
-      var co = camp.companies[side];
+      var co = camp.companies.A;
       if (attr('data-recruit')) {
         var rk = attr('data-recruit'), drone = t.hasAttribute('data-asdrone'), riders = t.hasAttribute('data-asriders');
         var rp = E.profile(rk), cost = C.recruitCost(co, rk), word = C.money(co);
@@ -489,15 +646,8 @@
         return true;
       }
       if (attr('data-emount')) { cmd('mount', { rid: attr('data-emount'), mount: attr('data-m') }); return true; }
-      if (attr('data-promote')) {
-        cmd('promote', { rid: attr('data-promote'), to: attr('data-to') }, function () { E.closeModal(); });
-        return true;
-      }
-      if (attr('data-fit')) {
-        var up = E.upState;
-        cmd('upgrade', { rid: up && up.rid, n: +attr('data-fit') }, function () { E.toDossier(); });
-        return true;
-      }
+      if (attr('data-promote')) { cmd('promote', { rid: attr('data-promote'), to: attr('data-to') }, function () { E.closeModal(); }); return true; }
+      if (attr('data-fit')) { var up = E.upState; cmd('upgrade', { rid: up && up.rid, n: +attr('data-fit') }, function () { E.toDossier(); }); return true; }
       if (attr('data-take')) { cmd('takeDoctrine', { id: attr('data-take') }, function () { E.view = 'hub'; }); return true; }
       if (attr('data-swapin')) { cmd('swapDoctrine', { out: E.swapOut, in: attr('data-swapin') }, function () { E.clearSwap(); E.view = 'hub'; }); return true; }
       if (go === 'promoteco') { cmd('promoteCompany', {}, function () { E.view = 'doctrine'; }); return true; }
@@ -513,47 +663,63 @@
         return true;
       }
       if (attr('data-campcolour') && E.view === 'hub') {
-        var want = attr('data-campcolour'), oth = theirCo();
-        if (oth && oth.colour === want) { E.note('That colour is taken', oth.name + ' already wears it. Pick another, so the two sides can be told apart.'); return true; }
+        var want = attr('data-campcolour');
+        var taken = (camp.rivals || []).filter(function (r) { return r.colour === want; })[0];
+        if (taken) { E.note('That colour is taken', taken.name + ' already wears it. Pick another, so the forces can be told apart.'); return true; }
         cmd('colour', { colour: want }, function () { E.closeColours(); });
         return true;
       }
-      // the hub's way to the contract, and into the battle
-      if (go === 'contract' || go === 'offers') { E.view = 'ocontract'; E.render(); return true; }
-      if (go === 'obattle') { var bb = camp.online && camp.online.battle; if (bb) goBattle(bb.code); return true; }
+      // the hub's way to the contracts, and into the battle
+      if (go === 'offers' || go === 'contract') {
+        E.view = activeContract() ? 'ocontract' : 'offers';
+        E.render(); return true;
+      }
+      if (go === 'ocontract') { E.view = 'ocontract'; E.render(); return true; }
+      if (go === 'obattle') { var bc = battleCode(); if (bc) goBattle(bc); return true; }
+      if (attr('data-take-offer') !== null && attr('data-take-offer') !== undefined && t.hasAttribute('data-take-offer')) {
+        cmd('aiTake', { i: +attr('data-take-offer') }, function () { E.view = 'ocontract'; });
+        return true;
+      }
+      if (attr('data-ochallenge')) { cmd('duelAsk', { to: +attr('data-ochallenge') }, function () { E.view = 'hub'; }); return true; }
+      if (attr('data-ochaccept')) { cmd('duelAccept', { id: +attr('data-ochaccept') }, function () { E.view = 'ocontract'; }); return true; }
+      if (attr('data-ochcancel')) { cmd('duelCancel', { id: +attr('data-ochcancel') }); return true; }
       // nothing of the campaign's file is this browser's to change
-      if (/^(wipe|import|storeuse|storekeep|standard|hubside)$/.test(go || '')) return true;
-      // a force that can no longer fight ends the campaign; or a player gives it up
-      if (go === 'campend') { cmd('campEnd', { side: attr('data-side') }); return true; }
+      if (/^(wipe|import|storeuse|storekeep|standard|hubside|export)$/.test(go || '')) return true;
+      // a force that can no longer fight takes its player out; or a player gives it up
+      if (go === 'campend') { cmd('campEnd', {}); return true; }
       if (go === 'oconcede') {
         E.closeModal();
         E.ask({ kind: 'confirm', title: 'Give the campaign up?', danger: true,
-          text: 'It ends here, for both of you: ' + theirName() + ' has the world. There is no undoing it.',
+          text: 'You leave the world: your force fights no more, and the others play on without you. There is no undoing it.',
           okLabel: 'Give it up', onOk: function () { cmd('concede', {}); } });
         return true;
       }
-      // Enhanced Genetic Memory: a lost unit recruited again, its D6 rolled on the server
       if (go === 'reborn') {
         cmd('postReborn', { i: +attr('data-i') }, function (j) {
-          if (j && j.roll) E.note('Enhanced Genetic Memory', 'D6 ' + j.roll + ' \u2014 ' + (j.remembered ? 'it remembers everything it had.' : 'the memory did not carry.'));
+          if (j && j.roll) E.note('Enhanced Genetic Memory', 'D6 ' + j.roll + ' — ' + (j.remembered ? 'it remembers everything it had.' : 'the memory did not carry.'));
         });
         return true;
       }
 
       // the contract
-      var k = camp.online && camp.online.contract;
-      if (go === 'ocbegin') { cmd('contractBegin', {}); return true; }
-      if (k) {
-        var pk = pickNow(k);
-        if (attr('data-ocforego') !== null) { cmd('contractForego', { i: +attr('data-ocforego') }); return true; }
-        if (go === 'ocforesee') { cmd('contractForesee', {}); return true; }
+      var ctx = activeContract();
+      if (ctx) {
+        var k = ctx.k, pk = pickNow(k, ctx.me);
+        if (go === 'ocdrop') {
+          E.ask({ kind: 'confirm', title: ctx.ai ? 'Turn the contract down?' : 'Call the contract off?',
+            text: ctx.ai ? 'The other contracts on offer stay as they are.' : 'It is off for both of you; either may challenge the other again.',
+            okLabel: ctx.ai ? 'Turn it down' : 'Call it off', onOk: function () { cmd(ctx.ai ? 'aiDrop' : 'duelOff', {}, function () { E.view = 'hub'; }); } });
+          return true;
+        }
+        if (attr('data-ocforego') !== null) { send(ctx, 'contractForego', { i: +attr('data-ocforego') }); return true; }
+        if (go === 'ocforesee') { send(ctx, 'contractForesee', {}); return true; }
         if (go === 'ocbestdef') {
-          cmd('contractBestDefence', {}, function (j) {
+          send(ctx, 'contractBestDefence', {}, function (j) {
             if (j.swapped) E.note('The Best Defence is Good Offence', 'D6 ' + j.roll + ' — you are the attacker now. Check the list still suits the job.');
           });
           return true;
         }
-        if (attr('data-octerms') !== null) { cmd('contractTerms', { dir: +attr('data-octerms') }); return true; }
+        if (attr('data-octerms') !== null) { send(ctx, 'contractTerms', { dir: +attr('data-octerms') }); return true; }
         if (attr('data-ocpick')) { pk.rids.push(attr('data-ocpick')); E.render(); return true; }
         if (attr('data-ocfield')) { pk.field.push(attr('data-ocfield')); E.render(); return true; }
         if (attr('data-ocunpick') !== null) {
@@ -577,16 +743,16 @@
         }
         if (go === 'ocready') {
           if (attr('aria-disabled') === 'true') { if (root.PMCTips) root.PMCTips.show(t); return true; }
-          var send = { rids: pk.rids.slice(), field: pk.field.slice(), tactic: pk.tactic, drugs: pk.drugs.slice() };
-          cmd('contractPick', send, function () { setTimeout(function () { cmd('contractReady', { ready: true }); }, 0); });
+          var pickNowArgs = { rids: pk.rids.slice(), field: pk.field.slice(), tactic: pk.tactic, drugs: pk.drugs.slice() };
+          send(ctx, 'contractPick', pickNowArgs, function () { setTimeout(function () { send(ctx, 'contractReady', { ready: true }); }, 0); });
           return true;
         }
-        if (go === 'ocunready') { cmd('contractReady', { ready: false }); return true; }
+        if (go === 'ocunready') { send(ctx, 'contractReady', { ready: false }); return true; }
       }
 
       // the questions after a battle
       var post = camp.post, st = post && post.steps[0];
-      if (st && st.side === side) {
+      if (st && st.side === 'A') {
         if (go === 'plunder') { cmd('postPlunder', {}); return true; }
         if (go === 'negotiate') { cmd('postNegotiate', { sel: (st.sel || []).slice() }); return true; }
         if (attr('data-weak') !== null) { cmd('postWeak', { choice: attr('data-weak') || '' }); return true; }
@@ -594,18 +760,23 @@
       }
       return false;
     }
-    // a choice from a list (the contract's Priority Level)
+    // a choice from a list: the contract's Priority Level, and the lobby's
     function change(target) {
-      if (!E.online || target.id !== 'oc-pl') return false;
-      cmd('contractLevel', { pl: +target.value });
-      return true;
+      if (!E.online) return false;
+      if (target.id === 'oc-pl') { var ctx = activeContract(); if (ctx) send(ctx, 'contractLevel', { pl: +target.value }); return true; }
+      if (target.id === 'olob-n') { cmd('lobbySlots', { n: +target.value }); return true; }
+      if (target.hasAttribute('data-olob-kind')) { cmd('lobbySlot', { i: +target.getAttribute('data-olob-kind'), kind: target.value }); return true; }
+      if (target.hasAttribute('data-olob-army')) { cmd('lobbyFaction', { i: +target.getAttribute('data-olob-army'), faction: target.value }); return true; }
+      if (target.hasAttribute('data-olob-colour')) { cmd('lobbyColour', { i: +target.getAttribute('data-olob-colour'), colour: target.value }); return true; }
+      return false;
     }
 
     return {
-      enterList: enterList, listView: listView, contractView: contractView, postView: postView, hubNote: hubNote,
+      enterList: enterList, listView: listView, lobbyView: lobbyView, offersView: offersView, contractView: contractView, postView: postView, hubNote: hubNote,
       click: click, change: change, steer: function () { if (E.online && E.camp) steer(false); },
       afterBattle: afterBattle, fighting: function () { return fighting; },
       leave: leaveCampaign, local: function () { return stashed ? localCamp : E.camp; },
+      inLobby: function () { return !!(E.online && E.online.phase === 'lobby'); },
       // one opened straight from the main menu's Continue list
       openOne: function (id) { leaveCampaign(); return openCampaign(id); },
       // one started from the lobby's Start a game

@@ -231,6 +231,20 @@ function flip(o) {
   return out;
 }
 
+// a duel's questions after the battle, as its Player 2 is to see them: their own force as A
+const flipSide = (x) => (x === 'A' ? 'B' : x === 'B' ? 'A' : x);
+const swapAB = (o) => (o && typeof o === 'object' ? Object.assign({}, o, { A: o.B, B: o.A }) : o);
+function flipPost(post) {
+  if (!post) return post;
+  const r = post.report || {}, pre = post.pre || {}, outPre = {};
+  Object.keys(pre).forEach((k) => { outPre[k] = swapAB(pre[k]); });
+  return {
+    report: Object.assign({}, r, { winner: flipSide(r.winner), units: (r.units || []).map((u) => Object.assign({}, u, { side: flipSide(u.side) })),
+      casualties: (r.casualties || []).map((c) => Object.assign({}, c, { side: flipSide(c.side) })) }),
+    pre: outPre, steps: (post.steps || []).map((s) => Object.assign({}, s, { side: flipSide(s.side) }))
+  };
+}
+
 function create(opts) {
   const db = opts.db, notify = opts.notify || function () { }, mailer = opts.mailer || null;
   const opened = opts.listedChanged || function () { };   // the lobby's list of public campaigns changed
@@ -323,7 +337,7 @@ function create(opts) {
       listed: !!(row && row.listed), chat: (W.chat || []).slice(-60), waiting: waitingOn(W, i), over: W.over || null };
     if (W.phase === 'lobby') return out;
     const p = W.players[i] || {};
-    const v = viewOf(W, i, p.contract ? p.contract.vs : p.pending ? p.pending.vs : null);
+    const v = viewOf(W, i, p.contract ? p.contract.vs : p.pending ? p.pending.vs : p.post ? p.post.vs : null);
     // the other players' forces after the AI ones, marked, for the hub to show as it shows a rival
     const others = humanSlots(W).filter((j) => j !== i).map((j) => Object.assign({}, W.forces[j], { human: true, slot: j, player: W.slots[j].name, out: !!W.slots[j].out }));
     const camp = Object.assign({}, v, { rivals: v.rivals.concat(others), post: p.post || null, pending: p.pending || null });
@@ -342,7 +356,9 @@ function create(opts) {
       camp.online.duel = { id: d.id, side: me, foe: foe, foeName: W.forces[foe].name, player: W.slots[foe].name,
         names: { A: W.forces[d.a].name, B: W.forces[d.b].name },
         contract: Cmds.contractFor(d.contract, me), battle: d.battle || null, post: d.post || null, phase: d.phase };
-      if (d.post) camp.post = d.post;
+      // the other player stands as B while the duel is on (the hub, the questions after it)
+      camp.facing = camp.rivals.findIndex((r) => r.human && r.slot === foe);
+      if (d.post) { camp.post = me === 'A' ? d.post : flipPost(d.post); camp.online.duel.post = camp.post; }
     }
     out.state = camp;
     return out;

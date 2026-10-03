@@ -245,10 +245,9 @@ seatnow.js         in a hotseat game, the side being asked is the one that answe
 battlesave.js      the battle kept in the browser: a run of picks kept as one, a failed save said once
 auth.js            accounts and sessions on a database in memory: hashing, renewal, guests, limits
 serverrestart.js   a battle kept through a server restart, put away and brought back, a forfeit
-online.js          online campaigns: made, joined, founded, each player's commands on their own force
-onlinebattle.js    an online campaign's contract, hidden picks, its battle, a forfeit, the aftermath applied once
+online.js          online campaigns as a world: the lobby (slots, AI armies, colours, chat, ready, start), founding, an AI contract fought
+                   on the server and its aftermath, a duel challenged, accepted, fought and settled for both, whose move, retiring
 coopnet.js         a cooperative game over the network: one side of both players' commandos, each seat its own units and its own go
-yourmove.js        whose move an online campaign waits on, and the email (if asked for) when it comes to be yours
 expectedshot.js    the average shot worked out (the unit viewer's Fire!): hits off the D10, each hit off the hit table, Damage on machines
 admingames.js      the console's battles and campaigns: listed, shown, removed (asked first), old ones cleared
 adminapi.js        an admin's tools in the game: admins only, a player helped, a battle closed, old ones cleared,
@@ -380,7 +379,7 @@ campaccount.js     a campaign kept by a signed-in player's account, across two b
 netrestart.js      an online battle across a server restart: both back at the same table, and it goes on
 accountmail.js     an account by email: activation link, sent again, a new name, a forgotten password reset, a new address
 adminpane.js       an admin's Server tools on the account pane: only for an admin, the lists, a backup, a removal asking the password
-onlinecamp.js      an online campaign between two browsers: started, joined by code, founded, a contract, the battle, a forfeit, the questions and the aftermath
+onlinecamp.js      an online campaign between two browsers: its lobby, joined from the list, started, founded, a battle against an AI force, a duel, the aftermaths
 coopplay.js        a cooperative game between two browsers: started from Start a game, both commandos on one side, each screen its own go
 ridersrecruit.js   the Riders upgrade chosen on the recruiting list, and final
 soldiers.js        the soldiers on a campaign dossier, renamed and remembered

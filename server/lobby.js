@@ -508,6 +508,9 @@ class Lobby {
     if (w >= 0) room.watchers.splice(w, 1);
     p.room = null; p.seat = null; p.ready = false;
 
+    /* The only player at a battle against the AI (an online campaign's) walking
+       away: a forfeit all the same, so the campaign has its result to apply. */
+    if (!room.everyone().length && room.phase === P.PHASE.BATTLE && seat && room.table && !room.table.stopped) room.table.forfeit(seat);
     if (!room.everyone().length) {
       if (room.table) room.table.stop();
       this.rooms.delete(room.id);
