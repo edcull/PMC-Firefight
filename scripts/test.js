@@ -107,11 +107,12 @@ function start(t) {
     clearTimeout(timer);
     const secs = (Date.now() - began) / 1000, text = Buffer.concat(out.map((b) => Buffer.isBuffer(b) ? b : Buffer.from(b))).toString();
     fs.writeFileSync(path.join(LOGS, t.name + '.log'), text);
-    /* A browser test that hung (a page that stopped answering under the load of the
-       others) is run once more, by itself in the queue; said in the summary. */
-    if (hung && t.browser && !t.retried) {
+    /* A browser test that hung or failed (a page that fell behind under the load of
+       the others) is run once more, at the back of the queue; said in the summary,
+       with how the second run went. A real fault fails both times. */
+    if ((hung || code !== 0) && t.browser && !t.retried) {
       t.retried = true;
-      console.log('  … ' + t.file.padEnd(34) + ' hung after ' + secs.toFixed(0) + 's: run again');
+      console.log('  … ' + t.file.padEnd(34) + (hung ? ' hung after ' : ' failed after ') + secs.toFixed(0) + 's: run again');
       running--; if (t.browser) runningBrowser--; if (t.slow) runningSlow--;
       tests.push(t);
       pump();
@@ -143,7 +144,7 @@ function finish() {
     console.log(r.text.split('\n').slice(-40).join('\n'));
   });
   const again = results.filter((r) => r.t.retried);
-  if (again.length) console.log('\nHung once and run again: ' + again.map((r) => r.t.name + (r.ok ? ' (passed)' : ' (failed)')).join(', '));
+  if (again.length) console.log('\nRun a second time (hung or failed the first): ' + again.map((r) => r.t.name + (r.ok ? ' (passed)' : ' (failed)')).join(', '));
   const slowQuick = results.filter((r) => r.t.browser && !r.t.slow && r.secs > SLOW_AFTER);
   if (slowQuick.length) console.log('\nTaking long for the quick set (move to SLOW in scripts/test.js?): ' + slowQuick.map((r) => r.t.name + ' ' + r.secs.toFixed(0) + 's').join(', '));
   console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed, in ' +

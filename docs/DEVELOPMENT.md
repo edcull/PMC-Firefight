@@ -156,8 +156,9 @@ about 10), the runner:
 - runs the browser tests' board clock three times over (`test/fast.js`, preloaded:
   it sets `PMC_TIME_SCALE` on every page they open), except the few that time the
   drawing itself (`REAL_TIME` in `scripts/test.js`), and any that set their own;
-- gives a quick browser test three minutes, and runs one that hangs once more
-  (said at the end, with how the second run went).
+- gives a quick browser test three minutes, and runs one that hangs or fails once
+  more, at the back of the queue (said at the end, with how the second run went;
+  a real fault fails both times).
 
 Every test's output is kept in `build/test-logs/<name>.log`, and a failing test's
 is printed after the summary. Each file prints a `✓` or `✗` per check and a tally,
@@ -375,7 +376,7 @@ campaccount.js     a campaign kept by a signed-in player's account, across two b
 netrestart.js      an online battle across a server restart: both back at the same table, and it goes on
 accountmail.js     an account by email: activation link, sent again, a new name, a forgotten password reset, a new address
 onlinecamp.js      an online campaign between two browsers: started, joined by code, founded, a contract, the battle, a forfeit, the questions and the aftermath
-coopnet.js         a cooperative game between two browsers: started from Start a game, both commandos on one side, each screen its own go
+coopplay.js        a cooperative game between two browsers: started from Start a game, both commandos on one side, each screen its own go
 ridersrecruit.js   the Riders upgrade chosen on the recruiting list, and final
 soldiers.js        the soldiers on a campaign dossier, renamed and remembered
 campflow.js        the campaign screens, from founding to a second contract

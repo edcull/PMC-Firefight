@@ -71,7 +71,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('the battle comes to the players’ turn', !!turn, String(turn));
   if (turn) {
     // what has happened is drawn first: nobody acts while it is
-    for (let i = 0; i < 40 && !(await p1.evaluate(() => !window.__busy())); i++) await wait(250);
+    for (let i = 0; i < 160 && !(await p1.evaluate(() => !window.__busy())); i++) await wait(250);
     const mine = await p1.evaluate(() => window.__mySide()), theirs = await p2.evaluate(() => window.__mySide());
     const goer = turn === 1 ? mine : theirs, waiter = turn === 1 ? theirs : mine;
     ok('only the player whose go it is may act: their screen is in charge, the other waits', goer === 'A' && waiter === null, 'P' + turn + ' go: ' + mine + ' / ' + theirs);

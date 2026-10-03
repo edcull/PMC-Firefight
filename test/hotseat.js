@@ -123,8 +123,13 @@ async function playToEnd(page, opts) {
     if (opts.reloadAt && !reloaded && acts >= opts.reloadAt) {
       reloaded = true;
       await page.reload();
-      await page.waitForTimeout(1200);
-      await page.evaluate(() => { const b = window.PMCNet.savedBattles()[0]; if (b) window.PMC_RESUME_BATTLE(b.id); });
+      // the page up (however busy the machine), then the battle picked up from where it was kept
+      await page.waitForFunction(() => !!(window.PMCNet && window.PMC_RESUME_BATTLE && window.PMCMenu), null, { timeout: 30000 }).catch(() => {});
+      for (let i = 0; i < 20; i++) {
+        const back = await page.evaluate(() => { if (window.PMC_STATE && window.PMC_STATE()) return true; const b = window.PMCNet.savedBattles()[0]; if (b) window.PMC_RESUME_BATTLE(b.id); return !!(window.PMC_STATE && window.PMC_STATE()); });
+        if (back) break;
+        await page.waitForTimeout(300);
+      }
       await page.waitForTimeout(600);
       log.push('reloaded');
       continue;
