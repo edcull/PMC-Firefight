@@ -289,10 +289,8 @@
         var row = '<div class="olob-slot' + (mine ? ' mine' : '') + '">' +
           (canColour ? '<button type="button" class="olob-colour" data-olob-pick="' + i + '" aria-expanded="' + (colourFor === i) + '" title="' + esc(c ? c.name : 'Colour') + '">' + chip + '</button>' : '<span class="olob-colour still">' + chip + '</span>') +
           '<span class="olob-who"><b>' + who + '</b>' + (s.kind === 'human' ? '<small>' + (s.ready || s.host ? 'Ready' : 'Not ready') + '</small>' : '') + '</span>';
-        if (canSlot) {
-          row += '<select data-olob-kind="' + i + '"><option value="open"' + (s.kind === 'open' ? ' selected' : '') + '>Open for a player</option>' +
-            '<option value="ai"' + (s.kind === 'ai' ? ' selected' : '') + '>AI force</option></select>';
-        }
+        // the host: an AI force in this slot, or open for a player
+        if (canSlot) row += '<label class="olob-ai"><input type="checkbox" data-olob-ai="' + i + '"' + (s.kind === 'ai' ? ' checked' : '') + '> AI</label>';
         if (s.kind !== 'open') {
           var facs = s.kind === 'ai' ? ['random', 'pmc', 'rebel', 'bugs', 'xeno'] : ['pmc', 'rebel', 'bugs', 'xeno'];
           row += canArmy ? '<select data-olob-army="' + i + '">' + facs.map(function (f) {
@@ -808,7 +806,7 @@
       if (target.id === 'oc-pl') { var ctx = activeContract(); if (ctx) send(ctx, 'contractLevel', { pl: +target.value }); return true; }
       if (target.id === 'olob-n') { cmd('lobbySlots', { n: +target.value }); return true; }
       if (target.id === 'olob-pub') { cmd('lobbyListed', { on: !!target.checked }); return true; }
-      if (target.hasAttribute('data-olob-kind')) { cmd('lobbySlot', { i: +target.getAttribute('data-olob-kind'), kind: target.value }); return true; }
+      if (target.hasAttribute('data-olob-ai')) { cmd('lobbySlot', { i: +target.getAttribute('data-olob-ai'), kind: target.checked ? 'ai' : 'open' }); return true; }
       if (target.hasAttribute('data-olob-army')) { cmd('lobbyFaction', { i: +target.getAttribute('data-olob-army'), faction: target.value }); return true; }
       if (target.hasAttribute('data-olob-colour')) { cmd('lobbyColour', { i: +target.getAttribute('data-olob-colour'), colour: target.value }); return true; }
       return false;
