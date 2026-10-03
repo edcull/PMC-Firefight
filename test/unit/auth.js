@@ -148,6 +148,8 @@ function ok(name, cond, note) {
   const nm = Auth.create({ db: DB.open(':memory:'), now: now });
   const quick = await nm.register('Fen', 'password fen', '1', 'fen@example.com');
   ok('where no mail goes out, a new account is active and signed in at once', quick.ok && !!quick.token && (await nm.login('Fen', 'password fen', '1')).ok);
+  const noAddr = await nm.register('Gale', 'password gale', '1');
+  ok('...and needs no email address (one given is still checked)', noAddr.ok && !!noAddr.token && !(await nm.register('Hale', 'password hale', '1', 'not an address')).ok);
 
   console.log('\nThe cookie');
   const req = { headers: { 'x-forwarded-proto': 'https' }, socket: {} };

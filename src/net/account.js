@@ -123,15 +123,16 @@
     }
     var reg = mode === 'register';
     var h = '<h2 class="acct-head">' + (reg ? 'New account' : 'Sign in') + '</h2>' +
-      '<p class="acct-lede">' + (reg ? 'A name, your email address and a password.' + (mailOn ? ' A link to activate the account is sent to the address.' : '')
+      '<p class="acct-lede">' + (reg ? (mailOn ? 'A name, your email address and a password. A link to activate the account is sent to the address.' : 'A name and a password.')
         : 'Sign in to keep your campaigns on the server, follow them to another device, and play other people.') + '</p>' +
       tabs + msgs() +
       (inactive && !reg ? '<button type="button" class="lnk acct-resend" data-acct="resend">Send the activation link again</button>' : '') +
       field('acct-name', 'Name', 'text', 'username', 24, lastName) +
-      (reg ? field('acct-email', 'Email address', 'email', 'email', 254) : '') +
+      // the address only where this server sends mail (the link to activate it, a reset)
+      (reg && mailOn ? field('acct-email', 'Email address', 'email', 'email', 254) : '') +
       field('acct-pass', 'Password' + (reg ? ' (at least 8 characters)' : ''), 'password', reg ? 'new-password' : 'current-password', 200) +
       goButton('go', reg ? 'Make the account' : 'Sign in');
-    if (!reg) h += '<button type="button" class="lnk acct-forgot" data-acct="mode" data-mode="forgot">Forgot password?</button>';
+    if (!reg && mailOn) h += '<button type="button" class="lnk acct-forgot" data-acct="mode" data-mode="forgot">Forgot password?</button>';
     return h + back;
   }
   function signedInHTML() {
@@ -157,7 +158,7 @@
     } else {
       h += '<div class="acct-line"><span>Email</span>' + (who.email ? '<b>' + esc(who.email) + '</b>' + editBtn('email', 'Change your email address') +
         (who.emailOk ? '' : '<span class="acct-tag">unconfirmed</span>')
-        : '<em>none — add one, so a forgotten password can be reset</em>' + editBtn('email', 'Add an email address')) + '</div>';
+        : '<em>none' + (mailOn ? ' — add one, so a forgotten password can be reset' : '') + '</em>' + editBtn('email', 'Add an email address')) + '</div>';
     }
     // what is kept, in a box of its own that scrolls when there is more than fits
     h += '<div class="acct-data">';
@@ -260,7 +261,7 @@
     if (!name) { fault = 'Give your name.'; draw(); return; }
     if (reg) {
       var email = val('acct-email');
-      if (!email) { fault = 'Give your email address.'; draw(); return; }
+      if (!email && mailOn) { fault = 'Give your email address.'; draw(); return; }
       send('api/register', { name: name, email: email, password: pass }, function (j) {
         if (!j) return;
         if (j.pending) { mode = 'sent'; notice = 'Your account is made. A link to activate it has been sent to ' + j.email + ' — follow it, and you are signed in.'; return; }
