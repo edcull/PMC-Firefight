@@ -1424,7 +1424,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .olob-colour.still { cursor: default; display: inline-block; }
 .olob-colour[aria-expanded="true"] { border-color: var(--alpha); }
 .olob-chip { display: block; width: 100%; height: 100%; border-radius: 3px; }
-.olob-pop { flex: none; margin: -2px 0 2px; }
+.found-pop.olob-pop { position: fixed; right: auto; z-index: 80; }
 .olob-pop .csw button:disabled { opacity: .25; cursor: not-allowed; }
 .olob-who { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; }
 .olob-who small { color: var(--ink-faint); font-size: 11px; }
