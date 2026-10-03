@@ -1,6 +1,7 @@
 /* The PMC 2670 server: hands the game out, and runs the games.
 
-   Three things live behind one port, and none of them needs a dependency:
+   Three things live behind one port. Two packages beyond Node itself: the
+   database (better-sqlite3) and the mail (nodemailer).
 
      the app      GET /            index.html and the scripts beside it
      campaigns    GET/PUT/DELETE /campaign[/name]      and GET /campaigns
@@ -13,7 +14,9 @@
      node server.js                 then open http://localhost:8787
      PORT=9000 node server.js       somewhere else
      HOST=0.0.0.0 node server.js    so the rest of the house can join in
-     DATA_DIR=/var/lib/pmc          the database (accounts, and later the games) kept outside the code
+     DATA_DIR=/var/lib/pmc          the database (accounts, battles, campaigns) kept outside the code
+     BACKUP_DIR, BACKUP_KEEP=7      the database's daily copies (backups/ beside it); BACKUPS=off for none
+     PUBLIC_URL, SMTP_*             the email that activates accounts and resets passwords (server/mail.js)
      CAMPAIGNS_DIR=/var/lib/pmc     the campaigns kept outside the code, so a deploy leaves them be
      ALLOWED_ORIGINS=https://a.b    pages elsewhere allowed to open the game's socket
 */
@@ -32,6 +35,7 @@ const Auth = require('./server/auth.js');
 const Mail = require('./server/mail.js');
 const Games = require('./server/games.js');
 const Online = require('./server/online.js');
+const Backups = require('./server/backups.js');
 
 const PORT = process.env.PORT || 8787;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -50,7 +54,6 @@ const DATA_DIR = process.env.DATA_DIR || (process.env.CAMPAIGNS_DIR ? path.dirna
 const db = DB.open(path.join(DATA_DIR, 'pmc.db'));
 // the email that activates accounts and resets passwords (SMTP_* and PUBLIC_URL; none set, it is only logged)
 const mailer = Mail.create({ log: log });
-if (!mailer.live) log('no mail set up (SMTP_HOST and PUBLIC_URL): new accounts are active at once, and emailed links are written to this log');
 const auth = Auth.create({ db: db, log: log, mailer: mailer });
 // sessions long expired are cleared out now and again
 setInterval(function () { auth.sweep(); }, 6 * 60 * 60 * 1000).unref();
@@ -73,9 +76,22 @@ const online = Online.create({
   startBattle: function (o) { return lobby.campaignBattle(o); }
 });
 lobby.restore();
+// a copy of the database once a day, the last week of them kept (phase 5)
+const backups = process.env.BACKUPS === 'off' ? null : Backups.create({
+  db: db, log: log, dir: process.env.BACKUP_DIR || path.join(DATA_DIR, 'backups'), keep: +process.env.BACKUP_KEEP || 7
+});
+if (backups) backups.start();
+const started = Date.now();
 
 /* ---- the server ---- */
-const handle = app.create({ campaigns: campaigns, lobby: lobby, serve: serve, auth: auth, allowOrigin: allowOrigin, online: online, games: games });
+const handle = app.create({
+  campaigns: campaigns, lobby: lobby, serve: serve, auth: auth, allowOrigin: allowOrigin, online: online, games: games,
+  // what /health says beyond the rooms and players: how long it has been up, and the last backup
+  health: function () {
+    const last = backups && backups.list()[0];
+    return { up: Math.round((Date.now() - started) / 1000), backup: last ? new Date(last.at).toISOString() : null, mail: mailer.live };
+  }
+});
 const server = http.createServer(function (req, res) {
   // one request going wrong is answered and logged; it does not take the server down (MP-1)
   try { handle(req, res); }
@@ -121,7 +137,10 @@ server.listen(PORT, HOST, function () {
   log('  the game      http://' + shown + ':' + PORT + '/');
   log('  multiplayer   ws://' + shown + ':' + PORT + '/ws');
   log('  campaigns     ' + (process.env.CAMPAIGNS_DIR || path.join(ROOT, 'campaigns')));
-  log('  database      ' + path.join(DATA_DIR, 'pmc.db') + ' (' + db.users().length + ' accounts)');
+  log('  database      ' + path.join(DATA_DIR, 'pmc.db') + ' (' + db.countUsers() + ' accounts)');
+  const last = backups && backups.list()[0];
+  log('  backups       ' + (backups ? backups.dir + ', daily, ' + backups.keep + ' kept' + (last ? ' (last ' + new Date(last.at).toISOString().slice(0, 16).replace('T', ' ') + ')' : ' (none yet)') : 'off'));
+  log('  email         ' + (mailer.live ? 'sent, links to ' + process.env.PUBLIC_URL : 'not set up: accounts active at once, links written to this log'));
 });
 
 /* Anything thrown that nothing caught is logged, and the server carries on: one

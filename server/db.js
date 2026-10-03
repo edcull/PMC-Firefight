@@ -147,6 +147,10 @@ function wrap(db) {
     seen: db.prepare('UPDATE users SET seen = ? WHERE id = ?'),
     users: db.prepare('SELECT id, name, admin, created, seen, email, email_ok, active FROM users ORDER BY name'),
     countUsers: db.prepare('SELECT COUNT(*) n FROM users'),
+    statUsers: db.prepare('SELECT COUNT(*) n, SUM(active = 0) inactive, SUM(email IS NOT NULL) emails FROM users'),
+    statGames: db.prepare("SELECT status, COUNT(*) n FROM games GROUP BY status"),
+    statCamps: db.prepare('SELECT kind, COUNT(*) n FROM campaigns GROUP BY kind'),
+    statSessions: db.prepare('SELECT COUNT(*) n FROM sessions WHERE expires > ?'),
     addSession: db.prepare('INSERT INTO sessions (token, user_id, guest, pub, created, expires, used) VALUES (?, ?, ?, ?, ?, ?, ?)'),
     session: db.prepare('SELECT * FROM sessions WHERE token = ?'),
     renew: db.prepare('UPDATE sessions SET expires = ?, used = ? WHERE token = ?'),
@@ -209,6 +213,15 @@ function wrap(db) {
     seen: (id, at) => q.seen.run(at, id),
     users: () => q.users.all(),
     countUsers: () => q.countUsers.get().n,
+    // what the server holds, for the admin tool's stats
+    stats: (at) => {
+      const u = q.statUsers.get(), by = (rows, k) => rows.reduce((o, r) => { o[r[k]] = r.n; return o; }, {});
+      return {
+        users: u.n, inactive: u.inactive || 0, emails: u.emails || 0,
+        games: by(q.statGames.all(), 'status'), campaigns: by(q.statCamps.all(), 'kind'),
+        sessions: q.statSessions.get(at || Date.now()).n
+      };
+    },
     addSession: (s) => q.addSession.run(s.token, s.userId || null, s.guest || null, s.pub, s.created, s.expires, s.created),
     session: (token) => q.session.get(token),
     renew: (token, expires, used) => q.renew.run(expires, used, token),

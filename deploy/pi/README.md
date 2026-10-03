@@ -179,7 +179,19 @@ sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js users
 sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js reset-password "Their Name" "a new password"
 sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js activate "Their Name"   # their link never arrived
 sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js backup     # a copy beside it, safe while the server runs
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js stats      # accounts, battles, campaigns, backups
 ```
+
+### Backups
+
+The server copies the database once a day by itself, into
+`/var/lib/pmc-firefight/backups/` (`pmc-<date>T<time>.db`), and keeps the last
+seven. Each copy is a whole working database: to go back to one, stop the
+service, copy it over `/var/lib/pmc-firefight/pmc.db` (moving the `-wal` and
+`-shm` files beside it out of the way), and start the service again.
+`curl -s localhost:8787/health` says when the last one was made. Copy the
+folder off the Pi now and then (a USB stick, another machine) for the day the SD
+card fails.
 
 `create <name> <password> [admin] [email]`, `admin <name> on|off` and `delete <name> [--yes]` (says what goes with the account; `--yes` removes it) are there too.
 

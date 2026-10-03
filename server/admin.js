@@ -9,6 +9,7 @@
      node server/admin.js admin <name> on|off
      node server/admin.js delete <name> [--yes]   says what goes with it; --yes removes it
      node server/admin.js backup [file]      a consistent copy, safe while the server runs
+     node server/admin.js stats              what the server holds: accounts, battles, campaigns, backups
 
    DATA_DIR says where the database is, as for the server (default: data/ beside server.js). */
 'use strict';
@@ -69,13 +70,27 @@ async function main(argv) {
       say('Removed ' + what);
       return 0;
     }
+    if (cmd === 'stats') {
+      const st = db.stats(), fs = require('fs');
+      const size = (f) => { try { return (fs.statSync(f).size / 1048576).toFixed(1) + ' MB'; } catch (e) { return '?'; } };
+      const list = (o) => Object.keys(o).length ? Object.keys(o).map((k) => o[k] + ' ' + k).join(', ') : 'none';
+      say('Database   ' + FILE + ' (' + size(FILE) + ')');
+      say('Accounts   ' + st.users + (st.inactive ? ' (' + st.inactive + ' not activated)' : '') + ', ' + st.emails + ' with an email address; ' + st.sessions + ' signed-in sessions');
+      say('Battles    ' + list(st.games));
+      say('Campaigns  ' + list(st.campaigns));
+      const bdir = process.env.BACKUP_DIR || path.join(DATA, 'backups');
+      let bs = [];
+      try { bs = fs.readdirSync(bdir).filter((n) => /^pmc-.*\.db$/.test(n)).sort(); } catch (e) { }
+      say('Backups    ' + (bs.length ? bs.length + ' in ' + bdir + ', the last ' + bs[bs.length - 1] : 'none in ' + bdir));
+      return 0;
+    }
     if (cmd === 'backup') {
       const to = a || path.join(DATA, 'backup-' + new Date().toISOString().slice(0, 10) + '.db');
       await db.backup(to);
       say('Backed up to ' + to);
       return 0;
     }
-    say('Usage: node server/admin.js users | create <name> <password> [admin] [email] | activate <name> | reset-password <name> <password> | admin <name> on|off | delete <name> [--yes] | backup [file]');
+    say('Usage: node server/admin.js users | create <name> <password> [admin] [email] | activate <name> | reset-password <name> <password> | admin <name> on|off | delete <name> [--yes] | backup [file] | stats');
     return cmd ? 1 : 0;
   } finally { db.close(); }
 }
