@@ -331,6 +331,16 @@
      holding the table this screen is looking at. The names are the ones the
      drawing code has always used. */
   function isAI(side) { return Q.isAI(side); }
+  /* The swaps open at this screen: the hotseat's secret round, or a list this
+     screen's own player has opened (each player at their own screen has theirs). */
+  function swapAskHere() {
+    var s = state;
+    if (!s) return null;
+    if (s.swapAsk && (s.swapStage || seats.indexOf(s.swapAsk.side) >= 0)) return s.swapAsk;
+    var o = s.swapOpen || {};
+    var sd = ['A', 'B'].filter(function (x) { return o[x] && s.swapAvail && s.swapAvail[x] && !isAI(x) && seats.indexOf(x) >= 0; })[0];
+    return sd ? s.swapAvail[sd] : null;
+  }
   function actionState(u, id) { return Q.actionState(u, id); }
   function specialsFor(u) { return Q.specialsFor(u); }
   function eligible(side) { return Q.eligible(side); }
@@ -999,7 +1009,7 @@
   var TERRAINSET = window.PMCTerrainSet({
     get seats() { return seats; }, get state() { return state; }, get vc() { return vc(); }, get buildScene() { return buildScene; },
     get clampCam() { return clampCam; }, get drawBoard() { return drawBoard; }, get esc() { return esc; },
-    get render() { return render; }, curArea: curArea, isAI: isAI, pieceNoun: pieceNoun,
+    get render() { return render; }, curArea: curArea, isAI: isAI, swapAskHere: swapAskHere, pieceNoun: pieceNoun,
     placedSummary: placedSummary, placingSide: placingSide, sideName: sideName, specRange: specRange,
     zoneCentre: zoneCentre, H: H, ISO: ISO, K: K, R: R, W: W, cam: cam, ui: ui
   });
@@ -1025,7 +1035,7 @@
     doDisembark: doDisembark, doTeleportSpot: doTeleportSpot, doEmbark: doEmbark, doEnter: doEnter, doExitBld: doExitBld, doLeave: doLeave, doCheckSite: doCheckSite, doHack: doHack,
     doMarkMove: doMarkMove, doMove: doMove, doShoot: doShoot, doSteady: doSteady, doStrafe: doStrafe,
     doSupport: doSupport, doTeleport: doTeleport, doWave: doWave, finishTeleport: finishTeleport,
-    garrisonAt: garrisonAt, garrisonable: garrisonable, isAI: isAI, liftOf: liftOf,
+    garrisonAt: garrisonAt, garrisonable: garrisonable, isAI: isAI, swapAskHere: swapAskHere, liftOf: liftOf,
     lookAtDeployment: lookAtDeployment, moveBonus: moveBonus, nearestDeploySpot: nearestDeploySpot,
     onTable: onTable, pickToDeploy: pickToDeploy, placeInsertion: placeInsertion, placingSide: placingSide, relocTap: relocTap,
     select: select, send: send, terrainAct: terrainAct, terrainTap: terrainTap, watchUnit: watchUnit,
@@ -1045,7 +1055,7 @@
     get watching() { return watching; }, get esc() { return esc; }, get escHtml() { return escHtml; },
     get focusUnit() { return focusUnit; }, get render() { return render; }, addFx: addFx,
     animateMove: animateMove, arrivalWhere: arrivalWhere, byId: byId, nowMs: nowMs, sfName: sfName,
-    sideName: sideName, soloOwnerName: soloOwnerName, H: H, ISO: ISO, R: R, SFX: SFX, W: W, cam: cam, ui: ui
+    sideName: sideName, swapAskHere: swapAskHere, soloOwnerName: soloOwnerName, H: H, ISO: ISO, R: R, SFX: SFX, W: W, cam: cam, ui: ui
   });
   var anyArriving = ARRIVE.anyArriving, arriving = ARRIVE.arriving;
   var boardAnim = ARRIVE.boardAnim, cmdOfferCard = ARRIVE.cmdOfferCard, insertionCard = ARRIVE.insertionCard;
@@ -1059,7 +1069,7 @@
      and the functions and fixed values it uses. */
   var ACTIONS = window.PMCActions({
     get state() { return state; }, get vc() { return vc(); }, get render() { return render; },
-    get scheduleReturn() { return scheduleReturn; }, isAI: isAI, SFX: SFX, el: el, resQueue: resQueue,
+    get scheduleReturn() { return scheduleReturn; }, isAI: isAI, swapAskHere: swapAskHere, SFX: SFX, el: el, resQueue: resQueue,
     show: show, ui: ui
   });
   var ICONS = ACTIONS.ICONS, SPECIAL_SLOTS = ACTIONS.SPECIAL_SLOTS, STANDARD = ACTIONS.STANDARD;
@@ -1086,7 +1096,7 @@
     get sightOn() { return VIEW.sightOn; }, get sightSide() { return VIEW.sightSide; }, anims: anims,
     addFx: addFx, arrivalQueued: arrivalQueued, arriving: arriving, boxesFor: boxesFor,
     clonePiece: clonePiece, curArea: curArea, dispX: dispX, dispY: dispY, drawFx: drawFx, fitGhost: fitGhost,
-    insertionMine: insertionMine, isAI: isAI, liftOf: liftOf, nowMs: nowMs, onTable: onTable,
+    insertionMine: insertionMine, isAI: isAI, swapAskHere: swapAskHere, liftOf: liftOf, nowMs: nowMs, onTable: onTable,
     placingSide: placingSide, shownAs: shownAs, unitById: unitById, zoneFor: zoneFor, FX: FX, H: H, ISO: ISO,
     K: K, R: R, SFX: SFX, UR: UR, W: W, cam: cam, ui: ui
   });
@@ -1149,7 +1159,7 @@
     doDemolish: doDemolish, doDesignate: doDesignate, doEnter: doEnter, doHack: doHack, doShoot: doShoot,
     doSteady: doSteady, doSupport: doSupport, drawBoard: drawBoard,
     holdArrival: holdArrival, holdInsertion: holdInsertion, hud: hud, inReserve: inReserve,
-    insertionCard: insertionCard, isAI: isAI, kyfCard: kyfCard, liftOf: liftOf, loadBefore: loadBefore,
+    insertionCard: insertionCard, isAI: isAI, swapAskHere: swapAskHere, kyfCard: kyfCard, liftOf: liftOf, loadBefore: loadBefore,
     martyrCard: martyrCard, mineCard: mineCard, movePreviewCard: movePreviewCard, mySide: mySide,
     openMenu: openMenu, pickToDeploy: pickToDeploy, placeCard: placeCard, placingSide: placingSide,
     playerSide: playerSide, relocPick: relocPick, render: render, roleOf: roleOf, roleSentence: roleSentence,

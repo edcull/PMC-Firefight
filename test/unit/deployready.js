@@ -88,6 +88,19 @@ console.log('\nA look at the table and back, and a swap changed, before going on
   ok('...and the swap chosen last is the one made', now && now.key === other.key, now && now.key);
 })();
 
+console.log('\nBoth players with their swaps open at once, at their own screens');
+(function () {
+  const e = game(true), st = e.state();
+  e.intent('A', { k: 'swapopen' });
+  const opened = e.intent('B', { k: 'swapopen' }).ok;
+  ok('the second player opening theirs leaves the first one\u2019s open', opened && st.swapOpen.A && st.swapOpen.B && st.swapAsk && st.swapAsk.side === 'A', JSON.stringify(st.swapOpen));
+  const ua = st.units.find((u) => u.side === 'A' && u.key === 'regular'), ub = st.units.find((u) => u.side === 'B' && u.key === 'regular');
+  ok('...each picks from their own list meanwhile', e.intent('A', { k: 'swappick', id: ua.id }).ok && e.intent('B', { k: 'swappick', id: ub.id }).ok &&
+    st.swapAvail.A.pick === ua.id && st.swapAvail.B.pick === ub.id);
+  ok('the first closing theirs leaves the second one\u2019s open', e.intent('A', { k: 'swapdone' }).ok && !st.swapOpen.A && st.swapOpen.B && st.swapAsk && st.swapAsk.side === 'B');
+  ok('...and the second closes theirs', e.intent('B', { k: 'swapdone' }).ok && !st.swapOpen.B && !st.swapAsk);
+})();
+
 console.log('\nWithout it (a hotseat\'s own secret round, or an older save)');
 (function () {
   const e = game(false), st = e.state();
