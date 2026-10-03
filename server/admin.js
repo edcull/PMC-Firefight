@@ -10,6 +10,12 @@
      node server/admin.js delete <name> [--yes]   says what goes with it; --yes removes it
      node server/admin.js backup [file]      a consistent copy, safe while the server runs
      node server/admin.js stats              what the server holds: accounts, battles, campaigns, backups
+     node server/admin.js games [n]          the latest battles (30, or n): code, status, players, result
+     node server/admin.js game <code>        one battle in full
+     node server/admin.js delete-game <code> [--yes]        a battle gone (one still open on the server: restart it after)
+     node server/admin.js prune-games <days> [--yes]        finished and abandoned battles older than that, gone
+     node server/admin.js campaigns [n]      the campaigns kept: id, kind, name, turn, owner (and an online one's players)
+     node server/admin.js delete-campaign <id> [--yes]      a campaign gone (an online one for both its players)
 
    DATA_DIR says where the database is, as for the server (default: data/ beside server.js). */
 'use strict';
@@ -84,13 +90,77 @@ async function main(argv) {
       say('Backups    ' + (bs.length ? bs.length + ' in ' + bdir + ', the last ' + bs[bs.length - 1] : 'none in ' + bdir));
       return 0;
     }
+    /* ---- battles ---- */
+    const day = (t) => t ? new Date(t).toISOString().slice(0, 16).replace('T', ' ') : '-';
+    const players = (g) => ['A', 'B'].map((sd) => (g.seats && g.seats[sd] && g.seats[sd].name) || '(empty)').join(' v ');
+    const outcome = (g) => g.status === 'battle' ? 'under way' : !g.result ? g.status : !g.result.winner ? 'drawn'
+      : 'won by ' + ((g.seats[g.result.winner] && g.seats[g.result.winner].name) || g.result.winner) + (g.result.forfeit ? ' (forfeit)' : '') + (g.status === 'abandoned' ? ', abandoned' : '');
+    const kindOf = (g) => g.settings && g.settings.onlineCampaign ? 'campaign battle' : g.settings && g.settings.kind === 'coop' ? 'co-op' : 'skirmish';
+    if (cmd === 'games') {
+      const all = db.allGames(+a || 30);
+      if (!all.length) { say('No battles kept.'); return 0; }
+      all.forEach((g) => say(g.code.padEnd(6) + ' ' + day(g.updated) + '  ' + outcome(g).padEnd(22) + ' ' + kindOf(g).padEnd(15) + ' ' + players(g) + '  — ' + g.name + ' (' + g.moves + (g.moves === 1 ? ' move)' : ' moves)')));
+      return 0;
+    }
+    if (cmd === 'game') {
+      const list = db.gamesByCode(String(a || '').toUpperCase());
+      if (!list.length) { say('No battle with the code ' + a + '.'); return 1; }
+      list.forEach((g) => {
+        say(g.code + ' — ' + g.name + ' (row ' + g.id + ')');
+        say('  ' + kindOf(g) + ', ' + outcome(g) + '; ' + g.moves + (g.moves === 1 ? ' move kept' : ' moves kept'));
+        say('  players  ' + players(g));
+        const s = g.settings || {};
+        say('  terms    Tier ' + (s.tier || '?') + ', PL ' + (s.pl || '?') + ', ' + (s.kind === 'coop' ? 'scenario ' + (s.soloScen || 'roll') + ', OpFor ' + (s.opFaction || '?') : 'scenario ' + (s.scenario || '?')) + ', world ' + (s.planet || '?'));
+        say('  started  ' + day(g.created) + ', last move ' + day(g.updated));
+      });
+      return 0;
+    }
+    if (cmd === 'delete-game') {
+      const list = db.gamesByCode(String(a || '').toUpperCase());
+      if (!list.length) { say('No battle with the code ' + a + '.'); return 1; }
+      const what = list.map((g) => g.code + ' (' + outcome(g) + ', ' + players(g) + ')').join(', ');
+      if (b !== '--yes') { say('This would remove ' + what + ' and every move kept for it.\nRun it again with --yes to remove it.'); return 1; }
+      list.forEach((g) => db.dropGame(g.id));
+      say('Removed ' + what + '.' + (list.some((g) => g.status === 'battle') ? ' It was still under way: restart the server (sudo systemctl restart pmc-firefight) so the open table goes too.' : ''));
+      return 0;
+    }
+    if (cmd === 'prune-games') {
+      const days = +a;
+      if (!(days > 0)) { say('How many days? e.g. prune-games 30'); return 1; }
+      const ids = db.oldGames(Date.now() - days * 86400000);
+      if (!ids.length) { say('No finished or abandoned battles older than ' + days + ' days.'); return 0; }
+      if (b !== '--yes') { say('This would remove ' + ids.length + ' finished or abandoned battle' + (ids.length === 1 ? '' : 's') + ' older than ' + days + ' days.\nRun it again with --yes to remove them.'); return 1; }
+      ids.forEach((id) => db.dropGame(id));
+      say('Removed ' + ids.length + ' battle' + (ids.length === 1 ? '' : 's') + '.');
+      return 0;
+    }
+    /* ---- campaigns ---- */
+    if (cmd === 'campaigns') {
+      const all = db.allCampaigns(+a || 30);
+      if (!all.length) { say('No campaigns kept.'); return 0; }
+      all.forEach((c) => {
+        const who = c.kind === 'online' ? db.members(c.id).map((m) => m.name + ' (' + m.side + ')').join(' & ') + (c.invite ? ', code ' + c.invite + ' open' : '') : 'owner ' + (c.owner || '?');
+        say(String(c.id).padStart(4) + '  ' + day(c.updated) + '  ' + c.kind.padEnd(8) + ' turn ' + String(c.turn || 0).padEnd(3) + ' ' + c.name + '  — ' + who);
+      });
+      return 0;
+    }
+    if (cmd === 'delete-campaign') {
+      const c = db.campaign(+a);
+      if (!c) { say('No campaign with the id ' + a + ' (see: campaigns).'); return 1; }
+      const what = c.name + ' (' + c.kind + ', turn ' + (c.turn || 0) + ')';
+      if (b !== '--yes') { say('This would remove ' + what + (c.kind === 'online' ? ', for both its players' : '') + '.\nRun it again with --yes to remove it.'); return 1; }
+      db.dropAnyCampaign(c.id);
+      say('Removed ' + what + '.');
+      return 0;
+    }
     if (cmd === 'backup') {
       const to = a || path.join(DATA, 'backup-' + new Date().toISOString().slice(0, 10) + '.db');
       await db.backup(to);
       say('Backed up to ' + to);
       return 0;
     }
-    say('Usage: node server/admin.js users | create <name> <password> [admin] [email] | activate <name> | reset-password <name> <password> | admin <name> on|off | delete <name> [--yes] | backup [file] | stats');
+    say('Usage: node server/admin.js users | create <name> <password> [admin] [email] | activate <name> | reset-password <name> <password> | admin <name> on|off | delete <name> [--yes] | backup [file] | stats\n' +
+      '       games [n] | game <code> | delete-game <code> [--yes] | prune-games <days> [--yes] | campaigns [n] | delete-campaign <id> [--yes]');
     return cmd ? 1 : 0;
   } finally { db.close(); }
 }

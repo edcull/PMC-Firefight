@@ -263,6 +263,8 @@ function create(opts) {
       return { ok: true, who: me };
     },
     mailLive: !!mailer.live,
+    // whether a password is the account's own (an admin confirming something that cannot be undone)
+    async passwordOk(user, pass) { return !!user && await checkPassword(String(pass || ''), user.pass); },
 
     async login(name, pass, ip) {
       const n = String(name || '').trim();

@@ -249,6 +249,9 @@ online.js          online campaigns: made, joined, founded, each player's comman
 onlinebattle.js    an online campaign's contract, hidden picks, its battle, a forfeit, the aftermath applied once
 coopnet.js         a cooperative game over the network: one side of both players' commandos, each seat its own units and its own go
 yourmove.js        whose move an online campaign waits on, and the email (if asked for) when it comes to be yours
+admingames.js      the console's battles and campaigns: listed, shown, removed (asked first), old ones cleared
+adminapi.js        an admin's tools in the game: admins only, a player helped, a battle closed, old ones cleared,
+                   a removal only with the admin's password and a backup first, every change logged, rate-limited
 backups.js         the database copied once a day, the last few kept, a failure logged
 hidden.js          each seat's and a watcher's view of a battle and a room: the other side's swaps, mine, bench and list kept from them
 solitairetest.js   solitaire and co-op against the OpFor
@@ -375,6 +378,7 @@ coopdeploy.js      a co-op game's deployment: a commando at a time, the order ro
 campaccount.js     a campaign kept by a signed-in player's account, across two browsers, a stale save refused
 netrestart.js      an online battle across a server restart: both back at the same table, and it goes on
 accountmail.js     an account by email: activation link, sent again, a new name, a forgotten password reset, a new address
+adminpane.js       an admin's Server tools on the account pane: only for an admin, the lists, a backup, a removal asking the password
 onlinecamp.js      an online campaign between two browsers: started, joined by code, founded, a contract, the battle, a forfeit, the questions and the aftermath
 coopplay.js        a cooperative game between two browsers: started from Start a game, both commandos on one side, each screen its own go
 ridersrecruit.js   the Riders upgrade chosen on the recruiting list, and final

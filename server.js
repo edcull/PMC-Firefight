@@ -35,6 +35,7 @@ const Auth = require('./server/auth.js');
 const Mail = require('./server/mail.js');
 const Games = require('./server/games.js');
 const Online = require('./server/online.js');
+const AdminApi = require('./server/adminapi.js');
 const Backups = require('./server/backups.js');
 
 const PORT = process.env.PORT || 8787;
@@ -86,7 +87,13 @@ if (backups) backups.start();
 const started = Date.now();
 
 /* ---- the server ---- */
+// an admin's tools in the game itself: looking, helping a player, tidying (the rest stays with admin.js)
+const adminApi = AdminApi.create({
+  db: db, auth: auth, lobby: lobby, games: games, backups: backups, log: log,
+  health: function () { const last = backups && backups.list()[0]; return { up: Math.round((Date.now() - started) / 1000), backup: last ? new Date(last.at).toISOString() : null, mail: mailer.live }; }
+});
 const handle = app.create({
+  admin: adminApi,
   campaigns: campaigns, lobby: lobby, serve: serve, auth: auth, allowOrigin: allowOrigin, online: online, games: games,
   // what /health says beyond the rooms and players: how long it has been up, and the last backup
   health: function () {

@@ -753,6 +753,11 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .acct-row b { font-size: 13px; color: var(--ink); }
 .acct-row small { display: block; font-size: 12px; color: var(--ink-dim); }
 .acct-row em { font-style: normal; font-size: 12px; color: var(--ink-dim); white-space: nowrap; }
+/* an admin's tools (account.js): a row's actions wrap under it on a narrow screen; a removal in red */
+#account .acct-row em { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+#account .acct-row .lnk { font-size: 11px; padding: 3px 7px; }
+#account .acct-danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+#account .acct-row .acct-tag { font-style: normal; }
 .acct-none { margin: 0; font-size: 12px; color: var(--ink-faint); }
 .acct-good { margin: 0; font-size: 13px; line-height: 1.45; color: var(--good); }
 .acct-forgot, .acct-resend { align-self: flex-start; }

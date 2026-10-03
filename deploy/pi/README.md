@@ -173,6 +173,19 @@ once, and each email (link and all) is written to the log instead
 (`journalctl -u pmc-firefight`). The accounts made before email came in keep
 working; their players can add an address from the account screen.
 
+### From the game
+
+An admin (made with `admin <name> on` below) has **Server tools** on their
+account screen: the server's state, the accounts, the battles and the campaigns.
+From there they can activate an account, send its activation link again or a
+password-reset link, close a battle that has stuck (its players are told; it is
+kept as abandoned), clear finished battles over 30 days old, and take a backup.
+Removing a battle, a campaign or an account asks for the admin's own password
+again, and takes a backup first; their own account and other admins' are
+removed only from the console. Making someone an admin, setting a password and
+the database itself stay with the console. Every change is written to the
+server's log with the admin's name, and an admin is held to 30 changes a minute.
+
 ### On the Pi
 
 ```
@@ -183,6 +196,21 @@ sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js activate "Their 
 sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js backup     # a copy beside it, safe while the server runs
 sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js stats      # accounts, battles, campaigns, backups
 ```
+
+The battles and campaigns:
+
+```
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js games            # the latest 30 battles (games 100 for more)
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js game P5HKM       # one battle in full
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js delete-game P5HKM --yes
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js prune-games 30 --yes   # finished/abandoned ones over 30 days old
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js campaigns        # id, kind, name, turn, owner or players
+sudo -u pi DATA_DIR=/var/lib/pmc-firefight node server/admin.js delete-campaign 12 --yes
+```
+
+Without `--yes`, each removal only says what it would remove. A battle still
+under way, removed, stays open on the running server until it is restarted
+(`sudo systemctl restart pmc-firefight`).
 
 ### Backups
 
