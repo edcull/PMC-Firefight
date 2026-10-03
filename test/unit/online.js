@@ -70,8 +70,11 @@ function ok(name, cond, note) {
   ok('a player picks their own army', cmd(brann, 'lobbyFaction', { i: 1, faction: 'rebel' }).ok && view(ash).slots[1].faction === 'rebel');
   ok('...but not another’s', !cmd(brann, 'lobbyFaction', { i: 2, faction: 'xeno' }).ok);
   ok('a colour for each slot: a player their own', cmd(brann, 'lobbyColour', { i: 1, colour: 'cobalt' }).ok && view(ash).slots[1].colour === 'cobalt');
-  ok('...never one another slot wears', /wears that colour/.test(cmd(ash, 'lobbyColour', { i: 0, colour: 'cobalt' }).why));
+  ok('...never one another player wears', /another player wears that colour/.test(cmd(ash, 'lobbyColour', { i: 0, colour: 'cobalt' }).why));
   ok('the host colours an AI force', cmd(ash, 'lobbyColour', { i: 2, colour: 'lime' }).ok);
+  ok('a player takes the colour an AI force wears: the AI force takes another at random', cmd(brann, 'lobbyColour', { i: 1, colour: 'lime' }).ok &&
+    view(ash).slots[1].colour === 'lime' && view(ash).slots[2].colour && view(ash).slots[2].colour !== 'lime');
+  cmd(brann, 'lobbyColour', { i: 1, colour: 'cobalt' }); cmd(ash, 'lobbyColour', { i: 2, colour: 'lime' });
   ok('the chat', cmd(brann, 'lobbyChat', { text: 'hello all' }).ok && view(ash).chat.some((c) => c.from === 'Brann' && c.text === 'hello all'));
   online.join(cole, made.invite);
   ok('a third takes the next open slot', view(cole).slot === 5);

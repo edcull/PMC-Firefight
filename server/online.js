@@ -412,8 +412,14 @@ function create(opts) {
       if (!(+a.i === i || (i === 0 && s.kind !== 'human'))) return no('not your slot');
       const c = text(a.colour, 20);
       if (P.COLOURS.indexOf(c) < 0) return no('no such colour');
-      if (W.slots.some((x, j) => j !== +a.i && x.colour === c)) return no('another force wears that colour');
+      // a player's colour is theirs; one an AI force (or an open slot) wears is given up, for a new one at random
+      const holder = W.slots.findIndex((x, j) => j !== +a.i && x.colour === c);
+      if (holder >= 0 && W.slots[holder].kind === 'human') return no('another player wears that colour');
       s.colour = c;
+      if (holder >= 0) {
+        const free = P.COLOURS.filter((k) => !W.slots.some((x) => x.colour === k));
+        W.slots[holder].colour = free.length ? pickOne(free) : null;
+      }
       return { ok: true };
     },
     lobbyReady(W, i, a) { W.slots[i].ready = a.ready !== false; return { ok: true }; },

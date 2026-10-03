@@ -306,8 +306,11 @@
       if (cs) {
         var cc = CO[cs.colour];
         h += '<div class="found-pop olob-pop" data-olob-popfor="' + colourFor + '"><label>Colours \u2014 ' + esc(cc ? cc.name : '') + '</label><div class="csw">' + KEYS.map(function (k) {
-          var q = CO[k], taken = (L.slots || []).some(function (x, j) { return j !== colourFor && x.colour === k; });
-          return '<button type="button"' + (k === cs.colour ? ' class="on"' : '') + ' data-olob-col="' + k + '" data-olob-for="' + colourFor + '" title="' + esc(q.name) + (taken ? ' \u2014 another force wears it' : '') + '"' + (taken ? ' disabled' : '') + '>' +
+          // greyed out only where another player wears it; an AI force's is taken from it (it gets another)
+          var q = CO[k], holder = (L.slots || []).filter(function (x, j) { return j !== colourFor && x.colour === k; })[0];
+          var taken = !!holder && holder.kind === 'human', ai = !!holder && !taken;
+          return '<button type="button" class="' + (k === cs.colour ? 'on' : '') + (ai ? ' olob-aicol' : '') + '" data-olob-col="' + k + '" data-olob-for="' + colourFor + '" title="' + esc(q.name) +
+            (taken ? ' \u2014 another player wears it' : ai ? ' \u2014 an AI force wears it, and will take another' : '') + '"' + (taken ? ' disabled' : '') + '>' +
             '<span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
         }).join('') + '</div></div>';
       }

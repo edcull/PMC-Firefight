@@ -123,11 +123,18 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await press(p1, '[data-olob-pick="2"]');
     await p1.waitForTimeout(200);
     const grid = await p1.evaluate(() => ({ n: document.querySelectorAll('#camp-body .olob-pop [data-olob-col]').length, ochre: (document.querySelector('#camp-body .olob-pop [data-olob-col="ochre"]') || {}).disabled }));
-    ok('the colour chip opens the colours, those another slot wears greyed out', grid.n > 10 && grid.ochre === true, JSON.stringify(grid));
+    ok('the colour chip opens the colours, those another player wears greyed out', grid.n > 10 && grid.ochre === true, JSON.stringify(grid));
     await press(p1, '.olob-pop [data-olob-col="lime"]');
     let limed = false;
     for (let i = 0; i < 20 && !limed; i++) { await wait(200); limed = await p1.evaluate(() => /Lime/i.test((document.querySelector('#camp-body [data-olob-pick="2"]') || {}).title || '')); }
     ok('...and a pick colours it', limed);
+    // the host's own colours: the AI force's lime may be taken (it gets another), Brann's not yet joined slot no bar
+    await press(p1, '[data-olob-pick="0"]');
+    await p1.waitForTimeout(200);
+    const lime = await p1.evaluate(() => { const b = document.querySelector('#camp-body .olob-pop [data-olob-col="lime"]'); return b ? { off: b.disabled, ai: b.classList.contains('olob-aicol') } : null; });
+    ok('...a colour an AI force wears is still there to take, marked', lime && !lime.off && lime.ai, JSON.stringify(lime));
+    await p1.evaluate(() => document.getElementById('camp-title').click());
+    await p1.waitForTimeout(200);
     await p1.evaluate(() => { const c = document.getElementById('olob-pub'); if (c && !c.checked) { c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); } });
     await p1.waitForTimeout(500);
 

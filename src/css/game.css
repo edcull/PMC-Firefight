@@ -1426,6 +1426,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .olob-chip { display: block; width: 100%; height: 100%; border-radius: 3px; }
 .found-pop.olob-pop { position: fixed; right: auto; z-index: 80; }
 .olob-pop .csw button:disabled { opacity: .25; cursor: not-allowed; }
+.olob-pop .csw button.olob-aicol { opacity: .6; }
 .olob-who { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; }
 .olob-who small { color: var(--ink-faint); font-size: 11px; }
 .olob-slot select, .olob-n select { flex: 0 1 auto; min-width: 0; max-width: 100%; background: var(--panel-3, var(--panel-2)); color: var(--ink);
