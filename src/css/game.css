@@ -1360,6 +1360,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .ojoin .tin { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: .12em; }
 .onote { margin-bottom: 10px; }
 /* the new campaign's opposing forces: one choice of army each */
+.rivlist { max-height: min(232px, 34vh); overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 .rivrow { display: flex; gap: 8px; align-items: stretch; }
 .rivrow + .rivrow { margin-top: 6px; }
 .rivrow select { flex: 1; min-width: 0; }
