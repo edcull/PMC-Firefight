@@ -30,6 +30,11 @@ const LOGS = path.join(ROOT, 'build', 'test-logs');
 const LONG = ['clienttest', 'enginetest', 'servertest'];
 const SLOW = ['scentest', 'soloplay', 'rebelplay', 'xenoplay', 'report', 'hotseatsweep'];
 const SLOW_AFTER = 90;          // seconds before a quick test is called out as slow
+/* The browser tests run the board's clock this many times over (test/fast.js), so
+   the animations they wait through are quicker — except the ones that time the
+   drawing itself, which run at the real pace. `--speed 1` runs them all as a player sees it. */
+let SPEED = 3;
+const REAL_TIME = [];
 
 const args = process.argv.slice(2);
 let jobs = 0, verbose = false;
@@ -38,6 +43,7 @@ for (let i = 0; i < args.length; i++) {
   if (args[i] === '-j') jobs = +args[++i];
   else if (/^-j\d+$/.test(args[i])) jobs = +args[i].slice(2);
   else if (args[i] === '-v') verbose = true;
+  else if (args[i] === '--speed') SPEED = +args[++i] || 1;
   else words.push(args[i]);
 }
 const SETS = { unit: 1, quick: 1, slow: 1, all: 1, browser: 1 };
@@ -73,7 +79,8 @@ try { require.resolve('playwright', { paths: [ROOT] }); } catch (e) {
    The slow ones go first, so the run is not left waiting on one at the end. */
 const cpus = os.cpus().length;
 const maxUnit = jobs || Math.max(2, cpus);
-const maxBrowser = jobs || Math.max(1, Math.floor(cpus / 2));
+// browser tests spend most of their time waiting on the page, not the processor: one a core
+const maxBrowser = jobs || Math.max(1, cpus);
 const weight = (t) => t.slow ? 3 : LONG.includes(t.name) ? 2 : t.browser ? 1 : 0;
 tests.sort((a, b) => weight(b) - weight(a));
 
@@ -87,8 +94,8 @@ function start(t) {
   const began = Date.now();
   const out = [];
   // unit tests roll seeded dice (test/seed.js); browser tests seed their pages themselves (where.js seedDice)
-  const args = t.browser ? [t.file] : ['-r', path.join(ROOT, 'test', 'seed.js'), t.file];
-  const child = spawn(process.execPath, args, { cwd: ROOT, env: env });
+  const args = t.browser ? ['-r', path.join(ROOT, 'test', 'fast.js'), t.file] : ['-r', path.join(ROOT, 'test', 'seed.js'), t.file];
+  const child = spawn(process.execPath, args, { cwd: ROOT, env: Object.assign({}, env, { PMC_TEST_SPEED: t.browser && REAL_TIME.indexOf(t.name) < 0 ? String(SPEED) : '1' }) });
   const limit = (t.slow ? 20 : t.browser ? 6 : 5) * 60 * 1000;
   const timer = setTimeout(() => { out.push('\n[timed out after ' + limit / 60000 + ' min]\n'); child.kill('SIGKILL'); }, limit);
   child.stdout.on('data', (d) => { out.push(d); if (verbose) process.stdout.write(d); });
