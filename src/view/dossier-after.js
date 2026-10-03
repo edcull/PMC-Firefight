@@ -253,8 +253,14 @@
     // the other forces' battles on the aftermath: those fought so far, and the one being fought now
     function frontsSection() {
       var fr = past ? null : E.camp.fronts, done = fr ? fr.done : (E.after.fronts || regroup(E.after.elsewhere || []));
-      if (!fr && !done.length) return '';
+      // online, the server fights them out: how many are still being fought, their reports to follow
+      var left = !fr && E.after && E.after.frontsLeft > 0 ? E.after.frontsLeft : 0;
+      if (!fr && !done.length && !left) return '';
       var h = '<h3>Elsewhere on the world</h3>';
+      if (left) {
+        h += '<div class="cpan front running"><p class="cpstat">' + (left === 1 ? 'A battle is' : left + ' battles are') +
+          ' still being fought out between the other forces — the reports follow as each one ends.</p><div class="front-bar"><i></i></div></div>';
+      }
       if (fr && fr.done.length < fr.pairs.length) {
         nextFront();
         var pr = fr.pairs[fr.done.length], rv = E.camp.rivals || [];

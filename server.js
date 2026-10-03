@@ -81,6 +81,8 @@ const online = Online.create({
   mailer: mailer,
   startBattle: function (o) { return lobby.campaignBattle(o); }
 });
+// the AI forces' battles elsewhere that a restart left half-fought, fought out
+setTimeout(function () { try { const n = online.resumeFronts(); if (n) log('fighting out the battles elsewhere of ' + n + ' online campaign' + (n === 1 ? '' : 's')); } catch (e) { } }, 0);
 lobby.restore();
 // a copy of the database once a day, the last week of them kept (phase 5)
 const backups = process.env.BACKUPS === 'off' ? null : Backups.create({

@@ -153,7 +153,16 @@ function ok(name, cond, note) {
   s = camp(ash);
   ok('every question answered: the aftermath is applied, paid, the turn moved on', !s.post && !s.pending && s.online.after && s.online.after.winner === 'A' && s.companies.A.kUC > kUC0 && s.turn === before.turn + 1, JSON.stringify(s.online.after && s.online.after.winner));
   ok('...the AI force grew from it, as a rival does', s.online.after.rival !== undefined);
-  ok('...the AI forces not in it fought elsewhere meanwhile', (s.online.after.elsewhere || []).length >= 1, JSON.stringify((s.online.after.elsewhere || []).map((x) => x.name)));
+  ok('...the AI forces not in it go off to fight each other elsewhere, played out on the server', s.online.after.frontsLeft >= 1 && !(s.online.after.elsewhere || []).length, 'fronts left: ' + s.online.after.frontsLeft);
+  ok('...and are not offered to anyone meanwhile', camp(cole).online.busyAi.length >= 2, JSON.stringify(camp(cole).online.busyAi));
+  const t0 = Date.now();
+  await online.idle();
+  s = camp(ash);
+  const els = s.online.after.elsewhere || [];
+  ok('...each battle fought out in full, the AI on both sides, and settled as a battle is', els.length >= 2 && els.every((x) => x.battle && x.battle.turns >= 1) && s.online.after.frontsLeft === 0,
+    JSON.stringify(els.map((x) => [x.name, x.result, x.battle && x.battle.turns])) + ' in ' + (Date.now() - t0) + 'ms');
+  ok('...its report added to the aftermath kept on the log', (s.log[0].after.elsewhere || []).length === els.length);
+  ok('...and the forces free again', camp(cole).online.busyAi.length === 0);
   ok('...kept on the log, to be read again', s.log.length === 1 && s.log[0].after && s.log[0].against === aiName);
   ok('...and fresh offers for the new turn', s.offersTurn === s.turn && s.offers.length >= 1);
   ok('the room is closed', !lobby.rooms.has(go.battle));
