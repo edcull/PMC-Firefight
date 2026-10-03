@@ -701,6 +701,10 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .user-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-chip:hover, .user-chip:focus-visible { border-color: var(--line); outline: none; }
 .user-chip svg { width: 18px; height: 18px; color: var(--ink-dim); flex: none; }
+/* the user chip's menu: Your account, Sign out (net/account.js) */
+.user-pop { position: fixed; z-index: 90; display: flex; flex-direction: column; gap: 4px; padding: 6px; min-width: 150px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+.user-pop[hidden] { display: none; }
 /* on the main menu, at the right end of the foot's row (the card has no top bar) */
 .menu-foot:has(.menu-chip:not([hidden])) { justify-content: flex-start; }
 .menu-foot .menu-chip { max-width: 50%; }

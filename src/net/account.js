@@ -197,8 +197,7 @@
       '<div class="camp-top"><button type="button" class="camp-back" data-acct="back">\u2190 Back</button><h1>User Account</h1></div>' +
       '<div class="sheet acct-sheet"><div id="acct-body"></div></div>';
     document.body.appendChild(host);
-    // home, as the other screens' way back to the main menu is drawn
-    if (root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(host.querySelector('.camp-back'), true);
+    // its way back is to wherever it was opened from: Back, not home
     wireHost();
     return host;
   }
@@ -269,6 +268,40 @@
       // not activated yet: the link may be sent again
       inactive = !!(r && r.j && r.j.inactive);
     });
+  }
+  /* The user chip's menu: Your account and Sign out, under the chip it was opened
+     from, as the lobby's is. One for the page, placed where it is wanted. */
+  var popFor = null;
+  function openPop(chip) {
+    var pop = el('user-pop');
+    if (!pop) {
+      pop = document.createElement('div');
+      pop.id = 'user-pop';
+      pop.className = 'user-pop';
+      pop.innerHTML = '<button type="button" class="lnk" data-pop="account">Your account</button><button type="button" class="lnk" data-pop="out">Sign out</button>';
+      document.body.appendChild(pop);
+      pop.addEventListener('click', function (ev) {
+        var b = ev.target.closest && ev.target.closest('[data-pop]');
+        if (!b) return;
+        var a = b.getAttribute('data-pop');
+        closePop();
+        if (a === 'account') openScreen(); else signOut();
+      });
+    }
+    var r = chip.getBoundingClientRect();
+    pop.hidden = false;
+    pop.style.top = Math.round(r.bottom + 4) + 'px';
+    pop.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
+    // a chip low on the page (the main menu's foot): the menu opens above it instead
+    if (r.bottom + pop.offsetHeight + 8 > window.innerHeight) pop.style.top = Math.max(8, Math.round(r.top - pop.offsetHeight - 4)) + 'px';
+    chip.setAttribute('aria-expanded', 'true');
+    popFor = chip;
+  }
+  function closePop() {
+    var pop = el('user-pop');
+    if (pop) pop.hidden = true;
+    if (popFor) popFor.setAttribute('aria-expanded', 'false');
+    popFor = null;
   }
   function signOut() {
     root.fetch('api/logout', { method: 'POST', credentials: 'same-origin' }).catch(function () { })
@@ -346,8 +379,15 @@
   function wire() {
     // the user chip, on the main menu's card and the other screens' top bars, opens it
     document.addEventListener('click', function (ev) {
-      if (ev.target.closest && ev.target.closest('.user-chip')) openScreen();
+      var chip = ev.target.closest && ev.target.closest('.user-chip');
+      var pop = el('user-pop');
+      if (pop && !pop.hidden && !(ev.target.closest && ev.target.closest('#user-pop')) && chip !== popFor) closePop();
+      if (!chip) return;
+      // signed in: a little menu under it (as the lobby's); signed out: straight to signing in
+      if (who) { if (pop && !pop.hidden && popFor === chip) closePop(); else openPop(chip); }
+      else openScreen();
     });
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closePop(); });
     refresh();
     fromLink();
   }
