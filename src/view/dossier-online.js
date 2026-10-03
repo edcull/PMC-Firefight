@@ -78,6 +78,13 @@
         E.open(E.view);
       });
     }
+    // a new one started on the server, and opened on founding Player 1's force
+    function startNew() {
+      return api('api/online', { method: 'POST' }).then(function (r) {
+        if (!r.ok) { E.note('Not started', cap(r.j.error || r.j.why || 'the server said no') + '.'); return; }
+        openCampaign(r.j.id);
+      });
+    }
     function leaveCampaign() {
       stopPoll();
       if (stashed) { E.camp = localCamp; stashed = false; localCamp = null; }
@@ -407,13 +414,7 @@
       var attr = function (a) { return t.getAttribute(a); };
       // the list
       if (attr('data-ocamp')) { openCampaign(+attr('data-ocamp')); return true; }
-      if (go === 'onew') {
-        api('api/online', { method: 'POST' }).then(function (r) {
-          if (!r.ok) { E.note('Not started', cap(r.j.error || r.j.why || 'the server said no') + '.'); return; }
-          openCampaign(r.j.id);
-        });
-        return true;
-      }
+      if (go === 'onew') { startNew(); return true; }
       if (go === 'ojoin') {
         var code = ((document.getElementById('ojoin-code') || {}).value || '').trim();
         if (!code) { E.note('Which campaign?', 'Type the code the other player gave you.'); return true; }
@@ -601,7 +602,9 @@
       afterBattle: afterBattle, fighting: function () { return fighting; },
       leave: leaveCampaign, local: function () { return stashed ? localCamp : E.camp; },
       // one opened straight from the main menu's Continue list
-      openOne: function (id) { leaveCampaign(); return openCampaign(id); }
+      openOne: function (id) { leaveCampaign(); return openCampaign(id); },
+      // one started from the lobby's Start a game
+      startNew: function () { leaveCampaign(); return startNew(); }
     };
   };
 })(window);

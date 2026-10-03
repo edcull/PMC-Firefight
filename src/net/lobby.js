@@ -263,10 +263,13 @@
     var opt = function (v, t, off) {
       return '<option value="' + esc(v) + '"' + (v === newKind ? ' selected' : '') + (off ? ' disabled' : '') + '>' + esc(t) + '</option>';
     };
-    var kinds = [opt('skirmish', 'Skirmish'), opt('coop', 'Cooperative \u2014 not available over the network yet', true)]
-      .concat(campaigns.length
-        ? campaigns.map(function (c) { return opt('camp:' + c.name, 'Campaign \u2014 ' + c.name + ', turn ' + c.turn); })
-        : [opt('camp:', 'Campaign \u2014 none kept on this server yet', true)]);
+    // a campaign is kept by an account: a guest is told so
+    var guest = !account || account.guest;
+    var kinds = [opt('skirmish', 'Skirmish'),
+      opt('ocamp', guest ? 'Campaign \u2014 sign in with an account to start one' : 'Campaign \u2014 a new one against another player, each on your own device', guest),
+      opt('coop', 'Cooperative \u2014 not available over the network yet', true)]
+      // a battle for a campaign file kept on this server (the older way: one screen keeps the campaign)
+      .concat(campaigns.map(function (c) { return opt('camp:' + c.name, 'Battle for the campaign ' + c.name + ', turn ' + c.turn); }));
     return '<div class="lob-new">' +
       '<div class="field"><label for="lob-kind">Game</label><select id="lob-kind">' + kinds.join('') + '</select></div>' +
       publicBox('lob-private', !newPrivate, '') +
@@ -502,6 +505,12 @@
         // the first press opens the form; Create the game starts it
         if (!b.getAttribute('data-go')) { creating = true; draw(); return; }
         var terms = { tier: 3, pl: 1, planet: 'random', scenario: 'roll', private: newPrivate };
+        // an online campaign: made on the server, and founded in the campaign screens (dossier-online.js)
+        if (newKind === 'ocamp') {
+          creating = false; close();
+          if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.newOnline) root.PMC_CAMPAIGN.newOnline();
+          return;
+        }
         if (newKind.indexOf('camp:') === 0) {
           if (!newKind.slice(5)) { fault = 'There is no campaign on this server to fight under.'; draw(); return; }
           terms.campaign = newKind.slice(5);

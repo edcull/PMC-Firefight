@@ -60,7 +60,14 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await p1.evaluate(() => window.PMC_CAMPAIGN.enter('online'));
   for (let i = 0; i < 30 && !/Start an online campaign/i.test(await text(p1)); i++) await wait(100);
   ok('the online campaigns screen opens for a signed-in player', /Start an online campaign/i.test(await text(p1)));
-  await press(p1, '[data-go="onew"]');
+  // started from Multiplayer's Start a game, the campaign picked from its list
+  await p1.evaluate(() => { window.PMCLobby.open(); });
+  await p1.waitForTimeout(800);
+  await p1.evaluate(() => document.querySelector('#lobby [data-lob="create"]').click());
+  await p1.waitForTimeout(200);
+  const offered = await p1.evaluate(() => { const o = document.querySelector('#lob-kind option[value="ocamp"]'); return o && !o.disabled ? o.textContent : ''; });
+  ok('Start a game offers a new online campaign', /Campaign/.test(offered), offered);
+  await p1.evaluate(() => { const s = document.getElementById('lob-kind'); s.value = 'ocamp'; s.dispatchEvent(new Event('change', { bubbles: true })); document.querySelector('#lobby [data-lob="create"][data-go]').click(); });
   let s1 = await till(p1, 'the founding screen', (s) => s.view === 'found');
   ok('a new one opens on founding Player 1’s force, with a code for Player 2', s1.side === 'A' && /^[A-Z2-9]{8}$/.test(s1.invite || ''), JSON.stringify(s1).slice(0, 120));
   await found(p1, 'Iron Wolves', ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
