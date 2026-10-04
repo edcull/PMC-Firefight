@@ -17,7 +17,8 @@ const BATTLES = [
   { scenario: 'demolish', factionA: 'pmc', factionB: 'bugs' },
   { scenario: 'takeover', factionA: 'rebel', factionB: 'xeno' },
   { scenario: 'meeting', factionA: 'bugs', factionB: 'pmc', reloadAt: 30 },
-  { coop: true, factionB: 'rebel', reloadAt: 20 }
+  // reloaded early: the OpFor's activations are not counted, and a co-op game can be over in 16 of the players'
+  { coop: true, factionB: 'rebel', reloadAt: 10 }
 ];
 
 let pass = 0, fail = 0;
