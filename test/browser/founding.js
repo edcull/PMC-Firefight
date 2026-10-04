@@ -73,6 +73,28 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
   ok('no Tier II vehicle is offered to a new force', offered.length > 10 && !offered.some(o => o.tier === 2 && o.cls !== 'infantry') &&
     offered.some(o => o.tier === 2) && offered.some(o => o.tier === 1 && o.cls !== 'infantry'), offered.length + ' offered');
 
+  // a vehicle's propulsion and Drone Control: icons; the drives in a list by the icon
+  await p.evaluate(() => { const b = [...document.querySelectorAll('#found-cat [data-add]')].find(x => x.getAttribute('data-add') === 'lpv'); b.click(); document.querySelectorAll('#camp-body .cmodal').forEach((m) => { m.hidden = true; }); });
+  await p.waitForTimeout(150);
+  const icons = await p.evaluate(() => { const c = [...document.querySelectorAll('#found-chosen .fcard')].pop(); const d = c.querySelector('[data-fdrone]'), pr = c.querySelector('[data-fprop]');
+    return { drone: !!(d && d.querySelector('svg')) && d.getAttribute('aria-pressed') === 'false' && !/crew|DRN/.test(d.textContent), prop: !!(pr && pr.querySelector('svg')) && !/std|whl|trk/.test(pr.textContent) }; });
+  ok('a vehicle’s drive and Drone Control are icons, not words', icons.drone && icons.prop, JSON.stringify(icons));
+  await p.evaluate(() => [...document.querySelectorAll('#found-chosen .fcard')].pop().querySelector('[data-fdrone]').click());
+  const droned = await p.evaluate(() => [...document.querySelectorAll('#found-chosen .fcard')].pop().querySelector('[data-fdrone]').getAttribute('aria-pressed'));
+  ok('...a tap on the crew icon makes it a drone, and the icon says so', droned === 'true');
+  await p.evaluate(() => [...document.querySelectorAll('#found-chosen .fcard')].pop().querySelector('[data-fprop]').click());
+  await p.waitForTimeout(100);
+  const pop = await p.evaluate(() => { const q = document.querySelector('#camp-body .propop'); if (!q) return null; const r = q.getBoundingClientRect(); return { n: q.querySelectorAll('[data-fpropset]').length, shown: getComputedStyle(q).visibility === 'visible' && r.width > 100 && r.top >= 0 && r.bottom <= innerHeight }; });
+  ok('...a tap on the drive icon lists the drives beside it', pop && pop.n >= 2 && pop.shown, JSON.stringify(pop));
+  await p.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/drive-pop.png' : '/dev/null' }).catch(() => {});
+  await p.evaluate(() => document.querySelector('#camp-body .propop [data-prop="tracked"]').click());
+  const after = await p.evaluate(() => ({ open: !!document.querySelector('#camp-body .propop'), title: [...document.querySelectorAll('#found-chosen .fcard')].pop().querySelector('[data-fprop]').getAttribute('aria-label') }));
+  ok('...picking one sets it and closes the list', !after.open && /Tracked/.test(after.title), JSON.stringify(after));
+  await p.evaluate(() => [...document.querySelectorAll('#found-chosen .fcard')].pop().querySelector('[data-fprop]').click());
+  await p.evaluate(() => document.getElementById('found-name').click());
+  ok('...and a tap elsewhere closes it', await p.evaluate(() => !document.querySelector('#camp-body .propop')));
+  await p.evaluate(() => [...document.querySelectorAll('#found-chosen .fcard')].pop().querySelector('[data-drop]').click());
+
   // fill a legal founding force
   const built = await p.evaluate(() => {
     const add = (sel) => { const b=[...document.querySelectorAll('#found-cat [data-add]')].find(x=>x.getAttribute('data-add')===sel); if(b) b.click(); };

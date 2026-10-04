@@ -365,7 +365,7 @@
   var wantRivals = 3, wantRivalArmies = [];
   var wantRivalColours = [], rivColourFor = null;   // ...their colours ('' rolled), and the one whose picker is open
   var enterCampaign = null;       // the way in, once the screen is wired
-  var openModal = null, modalView = null, colourOpen = false;
+  var openModal = null, modalView = null, colourOpen = false, propFor = null;
   var hubPane = 'tier';               // the hub opens on the company
   var rosterTab = 'units';
   var menOpen = {};               // which unit has its details open, by rid (one at a time)
@@ -633,7 +633,8 @@
       armyPill: armyPill, armyRules: armyRules,
       get camp() { return camp; }, set camp(v) { camp = v; }, get colourOpen() { return colourOpen; },
       get draft() { return draft; }, set draft(v) { draft = v; }, get openModal() { return openModal; },
-      get view() { return view; }, set view(v) { view = v; }, get online() { return online; }
+      get view() { return view; }, set view(v) { view = v; }, get online() { return online; },
+      get propFor() { return propFor; }
     }));
   }
   function beginOwn(side, faction) { return (KIT_FOUND || kitFound()).beginOwn(side, faction); }
@@ -804,7 +805,7 @@
     var hd = /^<h2>([\s\S]*?)<\/h2>/.exec(h);
     if (hd) h = h.slice(hd[0].length);
     el('camp-title').innerHTML = hd ? hd[1] : 'Campaign';
-    if (view !== modalView) { openModal = null; colourOpen = false; }   // a new screen starts with nothing open over it
+    if (view !== modalView) { openModal = null; colourOpen = false; propFor = null; }   // a new screen starts with nothing open over it
     modalView = view;
     // a pick in an open list redraws it: keep it where it was scrolled to
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
@@ -824,6 +825,7 @@
       }
     }
     showCard = null;
+    placeDrives(body);
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
@@ -833,6 +835,18 @@
     if (way && root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(bk, way.getAttribute('data-go') === 'menu');
   }
 
+  /* A unit's drives, opened: put by its icon (fixed, so a scrolling list does not
+     cut them off), under it, or over it when there is no room below. */
+  function placeDrives(body) {
+    body.querySelectorAll('.propop').forEach(function (pop) {
+      var btn = pop.parentNode.querySelector('[data-fprop]');
+      if (!btn || !btn.offsetParent) { pop.remove(); return; }       // the copy in a closed modal
+      var r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+      var left = Math.max(12, Math.min(r.right - w, innerWidth - w - 12));
+      var top = r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - 6 - h) : r.bottom + 6;
+      pop.style.left = left + 'px'; pop.style.top = top + 'px'; pop.style.visibility = 'visible';
+    });
+  }
   function findEntry(co, rid) { return C.byRid(co, rid); }
 
   /* A unit opened on the roster, drawn by the game's own renderer as the unit
@@ -915,6 +929,11 @@
   function onClick(ev) {
     var t = ev.target.closest('button');
     // the founding colours drop down under the chip: a tap anywhere else puts them away
+    // a unit's drives, opened beside its icon: a tap anywhere else puts them away
+    if (propFor !== null && !ev.target.closest('.propop') && !(t && t.hasAttribute('data-fprop'))) {
+      keepFoundName(); propFor = null; render();
+      if (!t) return;
+    }
     if (colourOpen && !ev.target.closest('.found-pop') && !(t && t.getAttribute('data-go') === 'fcolour')) {
       keepFoundName(); colourOpen = false; render();
       if (!t) return;
@@ -940,7 +959,7 @@
       draft.keys.push(t.getAttribute('data-add')); render(); return;
     }
     if (t.hasAttribute('data-drop')) {
-      draft.keys.splice(+t.getAttribute('data-drop'), 1); render(); return;
+      draft.keys.splice(+t.getAttribute('data-drop'), 1); propFor = null; render(); return;
     }
     if (t.hasAttribute('data-fdrone')) {
       var di = +t.getAttribute('data-fdrone'), ds = R.splitPick(draft.keys[di]);
@@ -954,6 +973,15 @@
     if (t.hasAttribute('data-fmount')) {
       var fm = R.splitPick(draft.keys[+t.getAttribute('data-fmount')]), mo = R.MOUNT_ORDER;
       draft.keys[+t.getAttribute('data-fmount')] = R.joinPick(fm.key, fm.prop, fm.drone, fm.riders, mo[(mo.indexOf(fm.mount || 'none') + 1) % mo.length]); render(); return;
+    }
+    if (t.hasAttribute('data-fprop')) {
+      var fpi = +t.getAttribute('data-fprop');
+      keepFoundName(); propFor = propFor === fpi ? null : fpi; render(); return;
+    }
+    if (t.hasAttribute('data-fpropset')) {
+      var fsi = +t.getAttribute('data-fpropset'), fs = R.splitPick(draft.keys[fsi]);
+      draft.keys[fsi] = R.joinPick(fs.key, t.getAttribute('data-prop'), fs.drone, fs.riders, fs.mount);
+      keepFoundName(); propFor = null; render(); return;
     }
     if (t.hasAttribute('data-cycle')) {
       var i = +t.getAttribute('data-cycle'), s = R.splitPick(draft.keys[i]);
@@ -1478,6 +1506,8 @@
       sign.setAttribute('data-tip', sign.getAttribute(ok ? 'data-ready' : 'data-noname'));
       sign.setAttribute('data-tip-title', ok ? 'Ready' : 'Still needed');
     });
+    // a unit's drives stay by their icon as the list under them scrolls
+    host.addEventListener('scroll', function () { if (propFor !== null) placeDrives(el('camp-body')); }, true);
     host.addEventListener('keydown', function (ev) {
       // an online campaign's lobby chat: Enter sends the line
       if (ev.key === 'Enter' && ev.target && ev.target.id === 'olob-say' && !asking) {
