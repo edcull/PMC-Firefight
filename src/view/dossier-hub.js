@@ -179,6 +179,15 @@
         : '<button class="start hubgo" data-go="' + (E.camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button>';
       // the other forces, the battles, the memorial, saving, loading and abandoning, together behind the one button
       var manage = '<button class="lnk hubicon" data-go="fmodal" data-kind="manage" title="The campaign" aria-label="The campaign">' + ICON_MANAGE + '</button>';
+      /* Online (no Contract here: it is made from the other forces) the row is three
+         tabs — the company, its dossier, and the campaign's window. */
+      if (E.online) {
+        var dos = E.hubPane === 'dossier';
+        var tab = function (on, label) {
+          return '<button class="lnk' + (on ? ' on' : '') + '" role="tab" aria-selected="' + on + '"' + (on ? '' : ' data-go="roster"') + '>' + label + '</button>';
+        };
+        return '<div class="hubbar hubtabs" role="tablist">' + tab(!dos, esc(C.words(co).Force)) + tab(dos, 'Dossier') + manage + '</div>';
+      }
       if (E.hubPane === 'dossier') {
         // in the dossier: back to the company, the campaign's window, and the contract (recruiting is at the foot of the dossier)
         return '<div class="hubbar dosbar">' + seat +
