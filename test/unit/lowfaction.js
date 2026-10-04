@@ -72,6 +72,12 @@ console.log('\nREB-2 The tactic is chosen once attacker and defender are known, 
   const inf = R.listFor('rebel').filter((p) => p.cls === 'infantry' && p.tier === 3 && !p.command && !p.noSlot)[0];
   ok('...one added', e.intent('A', { k: 'waveadd', key: inf.key }).ok && st.units.filter((u) => u.side === 'A').length === n0 + 1);
   ok('...and taken back', e.intent('A', { k: 'waveundo' }).ok && st.units.filter((u) => u.side === 'A').length === n0);
+  // a pick toggled off: that kind sent back, whichever order they were called in, and the list kept in step
+  const inf2 = R.listFor('rebel').filter((p) => p.cls === 'infantry' && p.tier === 3 && !p.command && !p.noSlot && p.key !== inf.key)[0];
+  ok('...a kind toggled off goes back, not merely the last called', e.intent('A', { k: 'waveadd', key: inf.key }).ok && e.intent('A', { k: 'waveadd', key: inf2.key }).ok &&
+    e.intent('A', { k: 'waveundo', key: inf.key }).ok && st.units.filter((u) => u.side === 'A' && u.waveExtra).map((u) => u.key).join() === inf2.key &&
+    st.units.filter((u) => u.side === 'A').every((u) => st.cfg.armyA[u.pickIdx] && R.splitPick(st.cfg.armyA[u.pickIdx]).key === u.key) &&
+    e.intent('A', { k: 'waveundo', key: inf2.key }).ok && st.units.filter((u) => u.side === 'A').length === n0);
   ok('...two, the most at PL 1', e.intent('A', { k: 'waveadd', key: inf.key }).ok && e.intent('A', { k: 'waveadd', key: inf.key }).ok &&
     !e.intent('A', { k: 'waveadd', key: inf.key }).ok);
   ok('...then on to the table', e.intent('A', { k: 'wavedone' }).ok && !st.tacticAsk && st.sc.attacker === st.cfg.roles.attacker);

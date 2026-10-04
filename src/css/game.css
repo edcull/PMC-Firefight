@@ -533,6 +533,8 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .tgt span { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .tgt:hover { border-color: var(--warn); }
 .tgt.active { border-color: var(--warn); box-shadow: inset 3px 0 0 var(--warn); }
+.tgt.sel { border-color: var(--alpha); background: color-mix(in srgb, var(--alpha) 10%, var(--panel-2)); }
+.tgt.sel b { color: var(--alpha); }
 /* the End phase: a unit picked to leave the table */
 /* red is for what cannot be undone (disband, remove, discard, surrender); orange (.warn) only cautions */
 .act.danger { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 16%, transparent); }
