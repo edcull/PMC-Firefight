@@ -199,8 +199,9 @@
         return { label: label, v: v, d: d };
       }
       var inch = function (n) { return n + '"'; };
-      // the same names and order as the muster's line: Tier, Men (a machine's Str), Move, FP, Range, Def, Asslt, Mor
-      var cols = [{ label: 'Tier', v: ROMAN[u.tier], d: 0 }, mach ? cell('Str', u.str, was.str) : cell('Men', u.size, was.size),
+      // the same names and order as the muster's line: Men (a machine's Str), Move, FP, Range, Def, Asslt, Mor
+      // (its Tier is on the card's chip: not repeated here, so the row fits a phone)
+      var cols = [mach ? cell('Str', u.str, was.str) : cell('Men', u.size, was.size),
         cell('Move', u.move, was.move, inch), cell('FP', u.fp, was.fp), cell('Range', u.range || null, was.range || null, inch),
         cell('Def', u.def, was.def), cell('Asslt', u.assault, was.assault)];
       if (!mach) cols.push(cell('Mor', u.morale, was.morale));

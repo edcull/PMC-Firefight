@@ -96,7 +96,7 @@ async function clickText(p, re) {
       statRow: [...box.querySelectorAll('.ddet-stats th')].map((t, i) => t.textContent + ' ' + box.querySelectorAll('.ddet-stats td')[i].textContent).join(' ')
     };
   }, rid);
-  check('the details show the full stat line', /Tier Men Move FP Range Def Asslt Mor/.test(det.stats), det.stats);
+  check('the details show the stat line (its Tier on the chip, not repeated)', /^Men Move FP Range Def Asslt Mor/.test(det.stats), det.stats);
   check('...special rules, honours, traumas and soldiers', det.heads.join('|') === 'Special rules|Battle Honours|Battle Traumas|Soldiers (8)', det.heads.join(' | '));
   check('...each honour and trauma spelled out', det.text.indexOf(det.honour.name) >= 0 && det.text.indexOf(det.honour.text) >= 0 &&
     det.text.indexOf(det.trauma.name) >= 0, det.honour.name + ' / ' + det.trauma.name);

@@ -212,13 +212,14 @@
           h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
             C.creedOf(co).one + ' (' + open + ' free)</button> ';
         }
-        h += promotionPanel(co, side, !!bar);
-        // at its foot, as the dossier has + Recruit: the other forces on the world (in hotseat, the other player)
+        var pp0 = promotionPanel(co, side, !!bar);
+        // at the foot of its box, as the dossier has + Recruit: the other forces on the world (in hotseat, the other player)
         if (bar) {
           var hot = E.camp.mode === 'hotseat';
-          h += '<div class="cdos-foot"><button type="button" class="lnk" data-go="fmodal" data-kind="rivals">' +
-            (hot ? (E.hubSide === 'B' ? 'Player 1' : 'Player 2') : 'Other forces') + '</button></div>';
+          pp0 = pp0.replace(/<\/div>$/, '<div class="cdos-foot"><button type="button" class="lnk" data-go="fmodal" data-kind="rivals">' +
+            (hot ? (E.hubSide === 'B' ? 'Player 1' : 'Player 2') : 'Other forces') + '</button></div></div>');
         }
+        h += pp0;
       }
       if (!co.aspiring && C.canAspire(co)) {
         h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
