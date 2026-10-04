@@ -1494,6 +1494,8 @@
         if (send) send.click();
         return;
       }
+      // its name, typed by the host: Enter puts it to the server (on change)
+      if (ev.key === 'Enter' && ev.target && ev.target.id === 'olob-name' && !asking) { ev.preventDefault(); ev.target.blur(); return; }
       if (ev.key === 'Escape' && openModal) { ev.preventDefault(); openModal = null; render(); return; }
       if (!asking) return;
       if (ev.key === 'Enter') { ev.preventDefault(); answerAsk(); }

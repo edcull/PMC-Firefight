@@ -97,12 +97,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const code = await p1.evaluate(() => { const c = document.querySelector('#camp-title .olob-code'); return c ? c.textContent : ''; });
     ok('Start a game → Campaign opens the campaign’s lobby, its code in the title bar', /^[A-Z2-9]{8}$/.test(code) && !/Give the others this code/.test(t1), code);
     ok('...its Back in the title bar, to the Multiplayer screen (no list of online campaigns any more)', await p1.evaluate(() => { const b = document.getElementById('camp-back'); return !b.hidden && b.getAttribute('data-go') === 'omulti' && !document.querySelector('#camp-body [data-go="olist"]'); }));
-    await p1.evaluate(() => document.querySelector('#camp-title [data-go="olobname"]').click());
-    await p1.waitForTimeout(150);
-    await p1.evaluate(() => { document.getElementById('ask-input').value = 'The Long War'; document.querySelector('#camp-ask [data-ask="ok"]').click(); });
+    ok('the title bar reads Campaign; the name in a field under it', await p1.evaluate(() => /^Campaign/.test(document.getElementById('camp-title').textContent) && /campaign/i.test(document.getElementById('olob-name').value)));
+    await p1.evaluate(() => { const n = document.getElementById('olob-name'); n.value = 'The Long War'; n.dispatchEvent(new Event('change', { bubbles: true })); });
     let named = false;
-    for (let i = 0; i < 20 && !named; i++) { await wait(200); named = await p1.evaluate(() => /The Long War/.test(document.getElementById('camp-title').textContent)); }
-    ok('the host renames the campaign from the title bar', named);
+    for (let i = 0; i < 20 && !named; i++) { await wait(200); named = await p1.evaluate(() => document.getElementById('olob-name').value === 'The Long War' && !document.querySelector('#camp-ask:not([hidden])')); }
+    ok('the host renames the campaign there', named);
     const lay = await p1.evaluate(() => { const bar = document.querySelector('#camp-body .olob-bar'); const b = document.getElementById('camp-body').getBoundingClientRect(), c = document.querySelector('#camp-body .olob-chat').getBoundingClientRect(), l = document.querySelector('#camp-body .olob-lines');
       return { bar: !!(bar && bar.querySelector('#olob-n') && bar.querySelector('#olob-pub') && bar.querySelector('[data-go="olobready"]')), chatLow: b.bottom - c.bottom < 80, lines: l.getBoundingClientRect().height }; });
     ok('...forces, public and the host\u2019s Ready on one row; the chat at the foot, three lines at the least', lay.bar && lay.chatLow && lay.lines >= 50, JSON.stringify(lay));

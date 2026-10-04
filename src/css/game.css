@@ -1423,8 +1423,14 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
    at the foot, three lines at the least, taking whatever room is left */
 .olob-code { font: 600 13px/1 var(--mono); letter-spacing: .18em; padding: 4px 8px; margin-left: 10px; border: 1px solid var(--alpha);
   border-radius: 5px; color: var(--alpha); vertical-align: middle; user-select: all; }
-.olob-rename { background: none; border: 0; padding: 0 4px; margin-left: 4px; color: var(--ink-dim); font-size: 15px; cursor: pointer; vertical-align: middle; }
-.olob-rename:hover { color: var(--alpha); }
+/* the code is never cut off in the title bar: the user's name gives way first */
+.camp-top h1:has(.olob-code) { flex: none; overflow: visible; }
+.camp-top:has(.olob-code) .user-chip { min-width: 0; flex-shrink: 1; }
+@media (max-width: 520px) { .olob-code { margin-left: 6px; padding: 3px 5px; letter-spacing: .08em; font-size: 12px; } }
+.olob-name { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex: none; }
+.olob-name label { font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; flex: none; }
+.olob-name .tin { flex: 1; min-width: 0; }
+.olob-name b { font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .olob-slots { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 #camp-body.fit > .olob-slots { flex: 0 1 auto; min-height: 58px; }
 .olob-slot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); flex: none; }
@@ -1443,8 +1449,9 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .olob-slot select option, .olob-n select option { background: var(--panel); color: var(--ink); }
 .olob-ai { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; cursor: pointer; }
 .olob-army { color: var(--ink-faint); font-size: 12px; }
-.olob-bar { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex-wrap: wrap; }
-.olob-bar .start { flex: 1 1 200px; margin: 0; }
+.olob-bar { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex-wrap: nowrap; flex: none; }
+.olob-bar .start { flex: 1 1 0; min-width: 0; margin: 0; padding-left: 8px; padding-right: 8px; white-space: normal; line-height: 1.2; }
+@media (max-width: 520px) { .olob-bar { gap: 8px; } .olob-bar .start { font-size: 12px; } }
 .olob-n, .olob-pub { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
 .olob-chat { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 #camp-body.fit > .olob-chat { flex: 1 1 auto; min-height: calc(3 * 1.5em + 64px); }
