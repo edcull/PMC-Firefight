@@ -157,6 +157,15 @@ class Room {
    game's row and its code together. The row alone is not enough — the database
    gives a deleted battle's number to the next one made (finished battles cleared
    away), and the campaign would take the new battle for one it has applied. */
+/* A co-op room's OpFor starts in colours of its own, rolled — none a player wears —
+   as every other force on the set-up does; the host may change them. */
+function dressOpFor(room) {
+  const s = room.settings;
+  if (s.kind !== 'coop' || s.opColour) return;
+  const worn = P.SEATS.map((sd) => room.seats[sd] && room.seats[sd].force && room.seats[sd].force.colour).filter(Boolean);
+  const free = P.COLOURS.filter((k) => worn.indexOf(k) < 0);
+  s.opColour = free[Math.floor(Math.random() * free.length)] || null;
+}
 function battleKey(id, code) { return id == null ? null : id + ':' + (code || ''); }
 
 class Lobby {
@@ -478,6 +487,7 @@ class Lobby {
     room.seats.A = p;
     p.room = room; p.seat = 'A'; p.ready = false;
     p.force = P.cleanForce(msg.force, 'A');
+    dressOpFor(room);
     this.rooms.set(room.id, room);
     this.log('room ' + room.id + ' opened by ' + p.name);
     room.push();
@@ -604,6 +614,7 @@ class Lobby {
     if (!room || !room.isHost(p)) return p.fail('only the host sets the terms');
     if (room.phase !== P.PHASE.SETUP) return p.fail('the battle has started');
     P.cleanSettings(msg.patch, room.settings);
+    dressOpFor(room);
     // the terms changed under them, so both sides say yes again
     room.players().forEach((q) => { q.ready = false; });
     room.push();
