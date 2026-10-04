@@ -22,6 +22,13 @@ console.log('\nThe battle made');
 ok('the terms are cooperative, under a solitaire scenario, against an insurgent OpFor', settings.kind === 'coop' && cfg.scenario === 's_crush' && cfg.solo.opFaction === 'rebel' && cfg.netCoop);
 ok('each player’s commando (rolled, as none was mustered) on side A, owned by its player', cfg.armyA.length > 0 && cfg.ownersA.indexOf(1) >= 0 && cfg.ownersA.indexOf(2) >= 0);
 ok('...the second in a colour of its own', cfg.colourC && cfg.colourC !== cfg.colourA, cfg.colourA + ' / ' + cfg.colourC);
+// the OpFor in the colours the host picked for it in the room; never a player's
+const oc = P.cleanSettings({ opColour: 'jade' }, P.cleanSettings({ kind: 'coop', tier: 3, opFaction: 'bugs' }));
+const cfgO = new Table(Object.assign({}, room, { settings: oc }), null, {}).buildConfig();
+ok('the OpFor wears the colours the host picked for it', oc.opColour === 'jade' && cfgO.colourB === 'jade', cfgO.colourB);
+const cfgW = new Table(Object.assign({}, room, { settings: P.cleanSettings({ opColour: 'ochre' }, P.cleanSettings({ kind: 'coop' })) }), null, {}).buildConfig();
+ok('...but not a colour a player wears (the board picks another)', cfgW.colourB === null, String(cfgW.colourB));
+ok('...and an unknown colour is not taken', P.cleanSettings({ opColour: 'tartan' }).opColour === null && P.cleanSettings({ opColour: null }, oc).opColour === null);
 t.begin(cfg);
 const st = t.engine.state();
 ok('the engine plays it as a cooperative game, the OpFor the machine’s', !!(st.solo && st.solo.coop) && st.cfg.aiSides.join() === 'B');
