@@ -97,7 +97,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const code = await p1.evaluate(() => { const c = document.querySelector('#camp-title .olob-code'); return c ? c.textContent : ''; });
     ok('Start a game → Campaign opens the campaign’s lobby, its code in the title bar', /^[A-Z2-9]{8}$/.test(code) && !/Give the others this code/.test(t1), code);
     ok('...its Back in the title bar, to the Multiplayer screen (no list of online campaigns any more)', await p1.evaluate(() => { const b = document.getElementById('camp-back'); return !b.hidden && b.getAttribute('data-go') === 'omulti' && !document.querySelector('#camp-body [data-go="olist"]'); }));
-    ok('the title bar reads Campaign; the name in a field under it', await p1.evaluate(() => /^Campaign/.test(document.getElementById('camp-title').textContent) && /campaign/i.test(document.getElementById('olob-name').value)));
+    ok('the title bar is the join code alone; the name in a field under it', await p1.evaluate(() => document.getElementById('camp-title').textContent === document.querySelector('#camp-title .olob-code').textContent && /campaign/i.test(document.getElementById('olob-name').value)));
     await p1.evaluate(() => { const n = document.getElementById('olob-name'); n.value = 'The Long War'; n.dispatchEvent(new Event('change', { bubbles: true })); });
     let named = false;
     for (let i = 0; i < 20 && !named; i++) { await wait(200); named = await p1.evaluate(() => document.getElementById('olob-name').value === 'The Long War' && !document.querySelector('#camp-ask:not([hidden])')); }

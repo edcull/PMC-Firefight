@@ -240,14 +240,14 @@
       var L = lobby || {}, host = !!L.host, me = L.slot;
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, KEYS = (root.PMCIso && root.PMCIso.COLOUR_KEYS) || Object.keys(CO);
       // the code that brings the others in, in the title bar
-      var h = '<h2>Campaign' + (L.invite ? ' <span class="olob-code" title="The code that brings the others in: Join on the Multiplayer screen">' + esc(L.invite) + '</span>' : '') + '</h2>';
+      var h = '<h2>' + (L.invite ? '<span class="olob-code" title="The code that brings the others in: Join on the Multiplayer screen">' + esc(L.invite) + '</span>' : 'Campaign') + '</h2>';
       // its name, under the top bar: the host types it in, the players read it
       h += '<div class="olob-name"><label for="olob-name">Name</label>' + (host
         ? '<input class="tin" id="olob-name" maxlength="40" autocomplete="off" value="' + esc(L.name || '') + '">'
         : '<b>' + esc(L.name || '') + '</b>') + '</div>';
       h += '<div class="olob-slots">' + (L.slots || []).map(function (s, i) {
         var mine = i === me, canSlot = host && s.kind !== 'human', canColour = mine || (host && s.kind !== 'human'), canArmy = mine || (host && s.kind === 'ai');
-        var who = s.kind === 'human' ? esc(s.name) + (s.host ? ' <i class="acct-tag">host</i>' : '') + (mine ? ' <i class="acct-tag">you</i>' : '')
+        var who = s.kind === 'human' ? esc(s.name)
           : s.kind === 'ai' ? 'AI force' : '<em>Open \u2014 waiting for a player</em>';
         // its colour: a chip like the founding screen's, opening the colours (those other slots wear greyed out)
         var c = CO[s.colour];
