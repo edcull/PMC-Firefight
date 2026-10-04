@@ -168,7 +168,7 @@
         if (R.canMount(p0, sp.riders)) R.applyMount(u0, sp.mount || 'none');
         var mach = p0.cls !== 'infantry';
         // the muster's shorthand, with the numbers as fielded
-        var line = root.PMC_STAT_SHORT ? root.PMC_STAT_SHORT(u0) : '';
+        var line = root.PMC_STAT_SHORT ? root.PMC_STAT_SHORT(u0).replace(/^(vehicle|aircraft) \u00b7 /, '') : '';   // its kind is said above it
         return '<div class="fcard">' +
           '<div class="fcard-top">' + tierChip(p0.tier) + '<b>' + esc(p0.name) + '</b>' +
           '<span class="fcard-kind">' + esc(p0.group || (mach ? p0.cls : 'Infantry')) + '</span>' +
