@@ -41,6 +41,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.evaluate(() => window.PMCAccount.show()); await wait(300);
     await p.fill('#acct-name', email); await p.fill('#acct-pass', pw);
     await click('[data-acct="go"]');
+    // signed in, the screen goes straight to the main menu: the account opened again from there
+    for (let i = 0; i < 60; i++) { if (await p.evaluate(() => document.getElementById('account').hidden && !document.getElementById('menu').hidden)) break; await wait(100); }
+    ok('signing in goes straight to the main menu', await p.evaluate(() => document.getElementById('account').hidden && !document.getElementById('menu').hidden));
+    await p.evaluate(() => window.PMCAccount.show()); await wait(300);
     await till((x) => /sign out/i.test(x), 'signed in');
   }
   const signOut = async () => { await click('[data-acct="out"]'); await till((x) => !/sign out/i.test(x), 'signed out'); };

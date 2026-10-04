@@ -147,7 +147,7 @@
     var who = root.PMCAccount && root.PMCAccount.who && root.PMCAccount.who();
     var remote = who && !who.guest ? REMOTE : { battles: [], online: [], account: [] };
     remote.account.forEach(function (c) {
-      out.push({ key: 'a:' + c.sid, where: 'server', kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : 'Campaign'), name: c.name,
+      out.push({ key: 'a:' + c.sid, where: 'account', kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : 'Campaign'), name: c.name,
         sub: ['campaign turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
     });
     // the hotseat campaigns with AI forces kept on this device
@@ -184,14 +184,18 @@
       (mine ? ' \u00b7 ' + (mine === 1 ? 'one waiting on you' : mine + ' waiting on you') : '');
     c.classList.toggle('yourmove-card', !!mine);
   }
-  /* Where a game is kept: this browser only (a screen), the server only (a cloud),
-     or both (a cloud with a tick: this browser's, saved to the account as well). */
+  /* Where a game is played: on this device (Offline, a screen — with a cloud and a
+     tick when it is backed up to the account as well), or over the server (Online,
+     a globe), each its own coloured tag so the two cannot be taken for each other. */
   var SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
-  var CLOUD = '<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18z"/>';
+  var SCREEN = '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/>';
+  var GLOBE = '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>';
+  var CLOUD = '<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18z"/><path d="M9.5 13l2 2 3.5-3.5"/>';
   var WHERE = {
-    local: '<span class="cont-where" title="Kept in this browser only">' + SVG + '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg></span>',
-    server: '<span class="cont-where" title="Kept on the server">' + SVG + CLOUD + '</svg></span>',
-    both: '<span class="cont-where" title="Kept in this browser and on the server">' + SVG + CLOUD + '<path d="M9.5 13l2 2 3.5-3.5"/></svg></span>'
+    local: '<span class="cont-where off" title="Played on this device, kept in this browser">' + SVG + SCREEN + '</svg>Offline</span>',
+    server: '<span class="cont-where on" title="Played online, kept on the server">' + SVG + GLOBE + '</svg>Online</span>',
+    both: '<span class="cont-where off" title="Played on this device, and backed up to your account">' + SVG + SCREEN + '</svg>Offline' + SVG + CLOUD + '</svg></span>',
+    account: '<span class="cont-where off" title="Kept on the server, in your account; played on this device">' + SVG + CLOUD + '</svg>Offline</span>'
   };
   var delAsked = null;
   function drawList() {

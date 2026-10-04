@@ -155,7 +155,7 @@ async function pastFronts(p) {
   check('Filter by Tier narrows it to that Tier', filt.tiers.length > 0 && filt.tiers.every(t => t === filt.tier) && /Tier/.test(filt.label), JSON.stringify(filt));
   await p.evaluate(() => { document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="dfiltclear"]').click(); });
   await p.evaluate(() => { const d = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodalclose"]'); if (d) d.click(); });
-  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .hubtabs [data-go="roster"]:first-child'); if (b) b.click(); });
   await p.waitForTimeout(200);
   const prom = await p.evaluate(() => {
     const el = document.querySelector('#camp-body .cprom');
@@ -226,64 +226,40 @@ async function pastFronts(p) {
 
   /* -------------------------------------------------------- the contract */
   console.log('\nTaking a contract');
-  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });   // the hub opens on the dossier
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .hubtabs [data-go="roster"]:first-child'); if (b) b.click(); });   // the hub opens on the dossier
   await p.waitForTimeout(200);
-  await clickText(p, '^Contract$');
+  await p.evaluate(() => document.querySelector('#camp-body [data-rivcontract]').click()); await p.waitForTimeout(200);   // a contract is made from the other forces
   txt = await body(p);
 
-  /* the three jobs on the table: who, how they fight, what it is for, and which
-     side of it you would be on — and nothing at all about what they will field */
-  const offers = await p.evaluate(() => {
-    const c = window.PMC_CAMPAIGN.get();
-    const cards = [...document.querySelectorAll('#camp-body .cpan-offer')];
+  /* the job, rolled with the offer and kept: who, the scenario, its size, the world
+     and which side of it you are on — and nothing at all about what they will field */
+  const job = () => p.evaluate(() => {
+    const c = window.PMC_CAMPAIGN.get(), t = document.getElementById('camp-body').textContent.replace(/\s+/g, ' '), k = (c.offers || []).find(o => o.rival === c.facing) || {};   // the job taken: the facing force's, kept with the turn's offers
     return {
-      cards: cards.length,
-      rivals: c.rivals.length,
-      names: c.rivals.filter(r => cards.some(k => k.textContent.includes(r.name))).length,
-      scenarios: cards.filter(k => !!k.querySelector('.offer-scen b') && !/Scenario D6/.test(k.textContent)).length,
-      planets: cards.filter(k => !!k.querySelector('.offer-scen .planetpill')).length,
-      doctrines: cards.filter(k => !!k.querySelector('.cpdoc .mk, .cpdoc .dnote')).length,
-      // their record against you, the way your own company's row shows it
-      styles: cards.filter(k => k.querySelectorAll('.cstats .cstat').length === 3 && k.querySelector('.cpdoc .armypill')).length,
-      sizes: cards.filter(k => /Battle Tier/.test(k.textContent) && /Priority Level/.test(k.textContent)).length,
-      roles: cards.filter(k => /You attack|You defend|even terms/.test(k.textContent)).length,
-      buttons: cards.filter(k => /Take this contract/.test(k.textContent)).length,
-      // nothing that gives away the list: no unit counts, no dossier peek
-      composition: cards.filter(k => /\d+ units|Their dossier/.test(k.textContent)).length,
-      stable: JSON.stringify(c.offers.map(o => o.scenario.id))
+      against: c.rivals.some(r => t.includes('against ' + r.name)),
+      scenario: !!k.scenario && t.includes(k.scenario.name) && !/Scenario D6/.test(t),
+      size: /Battle Tier ?[IV]+ ?Priority Level ?\d/.test(t),
+      world: !k.planet || k.planet === 'random' || !!document.querySelector('#camp-body .planetpill.planet-' + k.planet),
+      role: /You attack|You defend|even terms/.test(t),
+      composition: /\d+ units|Their dossier/.test(t),
+      stable: JSON.stringify([c.facing, k.scenario && k.scenario.id, k.tier, k.planet])
     };
   });
-  check('a contract is offered for each force, give or take', offers.cards >= 2 && offers.cards <= offers.rivals * 2,
-    offers.cards + ' jobs against ' + offers.rivals + ' forces');
-  check('...each named', offers.names >= Math.min(offers.cards, offers.rivals) - 1,
-    offers.names + ' of ' + offers.rivals + ' forces named');
-  check('...with their record and the kind of force they are', offers.styles === offers.cards, offers.styles + ' of ' + offers.cards);
-  check('...and how big a fight they can meet you at', offers.sizes === offers.cards);
-  check('...and what they are built around', offers.doctrines === offers.cards);
-  check('...a scenario, without its die roll', offers.scenarios === offers.cards);
-  check('...and the world it is fought on', offers.planets === offers.cards);
-  check('...and which side of it you would be on', offers.roles === offers.cards);
-  check('none of them shows their force composition', offers.composition === 0,
-    offers.composition ? offers.composition + ' cards leak the list' : 'no unit counts, no dossier');
-  check('every one can be taken', offers.buttons === offers.cards);
-  // leaving and coming back must not re-roll the jobs
-  await clickText(p, 'Back');
-  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });   // the hub opens on the dossier
+  const offers = await job();
+  check('the contract names who it is against', offers.against, JSON.stringify(offers));
+  check('...a scenario, without its die roll', offers.scenario);
+  check('...and how big a fight it is', offers.size);
+  check('...and the world it is fought on', offers.world);
+  check('...and which side of it you are on', offers.role);
+  check('nothing shows their force composition', !offers.composition);
+  // leaving and picking them again must not re-roll the job
+  await p.evaluate(() => document.querySelector('#camp-body [data-go="hub"]').click());
   await p.waitForTimeout(200);
-  await clickText(p, '^Contract$');
-  const again = await p.evaluate(() =>
-    JSON.stringify(window.PMC_CAMPAIGN.get().offers.map(o => o.scenario.id)));
-  check('...and the jobs do not change if you leave and come back', again === offers.stable, again);
+  await p.evaluate(() => document.querySelector('#camp-body [data-rivcontract]').click()); await p.waitForTimeout(200);
+  const again = await job();
+  check('...and the Tier, world and scenario do not change if you leave and pick them again', again.stable === offers.stable, again.stable + ' / ' + offers.stable);
   await shot(p, 'camp-offers.png');
-
-  await p.evaluate(() => {
-    document.querySelector('#camp-body [data-take-offer]').click();
-  });
-  await p.waitForTimeout(250);
   txt = await body(p);
-  // the scenario and the opponent were read on the offer: the force screen does not repeat them
-  check('the force screen does not repeat the scenario or the opponent', !/Against |Scenario D6|As the attacker|As the defender/.test(txt),
-    txt.split('\n').slice(0, 3).join(' / '));
   check('...nor a list of what the force still needs', !/Needs at least/.test(txt));
   /* what each unit is carrying, on the button that puts it in the list */
   const wear = await p.evaluate(() => {
@@ -303,12 +279,12 @@ async function pastFronts(p) {
   await p.waitForTimeout(200);
   txt = await body(p);
   check('the list filled legally', await p.evaluate(() => {
-    const b = [...document.querySelectorAll('#camp-body button.start')][0];
+    const b = document.querySelector('#camp-body button.start[data-go="fight"]');
     return b.getAttribute('aria-disabled') !== 'true';
   }), txt.match(/\d+ \/ \d+/)?.[0]);
   // a disabled primary button used to look exactly like a live one
   const btn = await p.evaluate(() => {
-    const b = [...document.querySelectorAll('#camp-body button.start')][0];
+    const b = document.querySelector('#camp-body button.start[data-go="fight"]');
     const cs = getComputedStyle(b);
     return { disabled: b.getAttribute('aria-disabled') === 'true', opacity: +cs.opacity, cursor: cs.cursor };
   });
@@ -317,7 +293,7 @@ async function pastFronts(p) {
   // and drops dead visibly on an illegal one — keep removing until it is
   for (let i = 0; i < 8; i++) {
     const stillLegal = await p.evaluate(() => {
-      const b = [...document.querySelectorAll('#camp-body button.start')][0];
+      const b = document.querySelector('#camp-body button.start[data-go="fight"]');
       return b.getAttribute('aria-disabled') !== 'true';
     });
     if (!stillLegal) break;
@@ -328,7 +304,7 @@ async function pastFronts(p) {
     await p.waitForTimeout(250);
   }
   const off = await p.evaluate(() => {
-    const b = [...document.querySelectorAll('#camp-body button.start')][0];
+    const b = document.querySelector('#camp-body button.start[data-go="fight"]');
     const cs = getComputedStyle(b);
     // the reason is the button's tip now, shown on a press, not a line of its own
     return { disabled: b.getAttribute('aria-disabled') === 'true', opacity: +cs.opacity, cursor: cs.cursor,
@@ -358,9 +334,9 @@ async function pastFronts(p) {
       };
     }, id);
     const want = id !== 'meeting';
-    // the role is given with the offer (and read there); the force screen does not repeat it
-    check(id + ': the role is settled, and not repeated on the force screen',
-      (!!seen.mine === want) && !seen.badge && !seen.said && !seen.other,
+    // the role is given with the job, on the contract screen, and only the one that is yours
+    check(id + ': the role is settled, and shown once with the job',
+      (!!seen.mine === want) && seen.badge === want && seen.said === want && !seen.other,
       want ? 'you are the ' + seen.mine : 'no roles to state');
   }
   await p.evaluate(() => window.__forceScenario('meeting'));
@@ -734,7 +710,7 @@ async function pastFronts(p) {
     await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.some(e => e.name === "Kowalski's Lads")));
 
   // Abandon sits in the Tier panel: close the dossier to bring it back
-  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .hubtabs [data-go="roster"]:first-child'); if (b) b.click(); });
   await p.waitForTimeout(250);
   await p.evaluate(() => document.querySelector('#camp-body [data-go="wipe"]').click());
   await p.waitForTimeout(300);

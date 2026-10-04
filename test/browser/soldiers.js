@@ -132,7 +132,7 @@ async function clickText(p, re) {
 
   console.log('\nExperience');
   // the rates sit in the company's stat row, on the hub's Company view (the dossier shows the units alone)
-  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .hubtabs [data-go="roster"]:first-child'); if (b) b.click(); });
   await p.waitForTimeout(220);
   const cell = (c) => p.evaluate((c) => { const d = document.querySelector('#camp-body .cpan-A .cstat.' + c); return d ? d.querySelector('b').textContent + ' ' + d.querySelector('span').textContent : ''; }, c);
   check('no battles yet: no wins', (await cell('cs-win')) === '0% win rate', await cell('cs-win'));

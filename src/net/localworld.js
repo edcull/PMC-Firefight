@@ -102,6 +102,7 @@
         if (a.colour) World.command(p1, id, 'lobbyColour', { i: i, colour: a.colour });
       });
       (how.factions || []).forEach(function (f, i) { if (f) World.command(PLAYERS[i], id, 'lobbyFaction', { i: i, faction: f }); });
+      (how.colours || []).forEach(function (c, i) { if (c) World.command(PLAYERS[i], id, 'lobbyColour', { i: i, colour: c }); });
       if (how.name) World.command(p1, id, 'lobbyName', { name: how.name });
       World.command(p2, id, 'lobbyReady', { ready: true });
       World.command(p1, id, 'lobbyReady', { ready: true });

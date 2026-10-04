@@ -492,16 +492,9 @@
         } else h += '<div class="cpstat">Waiting for ' + esc(ctx.foeName) + ' to set one aside.</div>';
         return h + '</div>' + backFoot();
       }
-      var SCv = root.PMCScen && root.PMCScen.SCENARIOS[k.scenario.id];
-      h += '<div class="cpan"><div class="cpstat"><b>' + esc(k.scenario.name) + '</b> — Battle Tier ' + ROMAN[k.tier] + ', Priority Level ' + k.pl +
-        (k.planet && k.planet !== 'random' ? ', on a ' + esc(k.planet) + ' world' : '') + '.</div>';
+      // the job as the offers once showed it: the scenario and world, the Tier and Levels, your side of it, what wins it
+      h += '<div class="cpan cpan-job">' + E.jobCard(k, me, k.levels);
       if (k.foreNote) h += '<div class="cpstat dnote">' + esc(k.foreNote) + '</div>';
-      if (k.roles) {
-        var ro = k.roles;
-        h += '<div class="cpstat"><b>' + esc(ctx.names[ro.attacker]) + '</b> attacks; <b>' + esc(ctx.names[ro.defender]) + '</b> defends' +
-          (ro.bestDefence && ro.bestDefence.swapped ? ' (The Best Defence is Good Offence turned it round: D6 ' + ro.bestDefence.roll + ')' : '') + '.' +
-          (SCv && SCv.roles ? ' <span class="dnote">' + esc(SCv.roles[ro.attacker === me ? 'attacker' : 'defender'] || '') + '</span>' : '') + '</div>';
-      }
       if (!ctx.ai) h += '<div class="cpstat">' + cap(duelLine(onl().duel)) + '</div>';
       h += '</div>';
       var bd = k.roles && k.roles.bestDefence;
@@ -542,6 +535,14 @@
       h += '<div class="muster"><div class="muster-head"><b>Take the field</b>' +
         '<span class="pts' + (chk.spent > chk.budget ? ' over' : '') + '">' + chk.spent + ' / ' + chk.budget + '</span>' +
         '<button class="lnk" data-go="ocauto">Pick for me</button></div>';
+      // what each Tier asks for at this Battle Tier and Priority Level, and how many of each are in the list
+      var lims = R.compFor(co.faction || 'pmc', k.tier).limits, cnt = chk.counts || {};
+      h += '<p class="limits">' + [1, 2, 3, 4, 5].map(function (t) {
+        var lo = lims[t - 1][0] * k.pl, hi = lims[t - 1][1] === 99 ? 99 : lims[t - 1][1] * k.pl;
+        if (hi === 0) return null;
+        var n = cnt[t] || 0, short = n < lo || n > hi;
+        return ROMAN[t] + ' <b' + (short ? ' class="short"' : '') + '>' + n + '/' + (hi === 99 ? lo + '+' : lo + '-' + hi) + '</b>';
+      }).filter(Boolean).join(' \u00b7 ') + '</p>';
       h += '<div class="chosen">' + units.map(function (e, i) {
         return '<span class="pickwrap"><button class="pick" data-ocunpick="' + i + '">' + esc(e.name) + ' <b>' + ROMAN[E.profile(e.key).tier] + '</b></button></span>';
       }).join('') + '</div><div class="cat tall">';
@@ -572,9 +573,11 @@
           }).join('') : '<em>No infantry picked yet.</em>') + '</span></div></div>';
       }
       var why = chk.ok ? '' : esc((chk.faults || [])[0] || 'Not a legal force yet.');
-      h += '<button class="start" data-go="ocready"' + (chk.ok ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') + '>' +
-        (ctx.ai ? 'Fight with this force' : 'Ready — fight with this force') + '</button>';
-      return h + backFoot(ctx);
+      // backing out sits in line with going in, the same button
+      h += '<div class="cacts"><button class="start cdrop" data-go="ocdrop">' + (ctx.ai ? 'Turn the contract down' : 'Call the contract off') + '</button>' +
+        '<button class="start" data-go="ocready"' + (chk.ok ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') + '>' +
+        (ctx.ai ? 'Fight with this force' : 'Ready — fight with this force') + '</button></div>';
+      return h + backFoot(null);
     }
     function backFoot(ctx) {
       return '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button>' +

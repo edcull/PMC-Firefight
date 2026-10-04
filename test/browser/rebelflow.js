@@ -172,22 +172,20 @@ async function pastFronts(p) {
 
   /* --------------------------------------------------------- the contract */
   console.log('\nA contract');
-  await p.evaluate(() => { const b = document.querySelector('#camp-body .dosbar [data-go="roster"]'); if (b) b.click(); });   // the hub opens on the dossier
+  await p.evaluate(() => { const b = document.querySelector('#camp-body .hubtabs [data-go="roster"]:first-child'); if (b) b.click(); });   // the hub opens on the dossier
   await p.waitForTimeout(200);
-  await clickText(p, '^Contract$');
+  await p.evaluate(() => document.querySelector('#camp-body [data-rivcontract]').click()); await p.waitForTimeout(200);   // a contract is made from the other forces
   await p.waitForTimeout(200);
   const offered = await p.evaluate(() => {
-    const cards = [...document.querySelectorAll('#camp-body .cpan-offer')];
-    return { n: cards.length, leaks: cards.filter(k => /\d+ units|Their dossier/.test(k.textContent)).length };
+    const c = window.PMC_CAMPAIGN.get(), t = document.getElementById('camp-body').innerText;
+    return { contract: /Battle Tier/.test(t) && /against/.test(t), leaks: /\d+ units|Their dossier/.test(t) ? 1 : 0, kept: (c.offers || []).length };
   });
-  check('contracts are offered, none showing a list',
-    offered.n >= 2 && offered.n <= 6 && offered.leaks === 0,
-    offered.n + ' offers, ' + offered.leaks + ' leaks');
-  await p.evaluate(() => { document.querySelector('#camp-body [data-take-offer]').click(); });
+  check('a contract with the force picked from the other forces, its job on the screen and none of its list',
+    offered.contract && offered.leaks === 0 && offered.kept >= 1, JSON.stringify(offered));
   await p.waitForTimeout(250);
   txt = await body(p);
-  // the scenario and the opponent were read on the offer: the force screen does not repeat them
-  check('the force screen does not repeat the scenario or the opponent', !/Against |Scenario D6|As the attacker|As the defender|Needs at least/.test(txt),
+  // the job is read here, the force picked under it: no die rolls, nothing it still needs
+  check('the force screen shows no die rolls nor a list of needs', !/Scenario D6|Needs at least/.test(txt),
     txt.split('\n').slice(0, 3).join(' / '));
   await p.evaluate(() => window.PMC_CAMPAIGN.autopick());   // the list, filled as the rival fills its own
   await p.waitForTimeout(200);

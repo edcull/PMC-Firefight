@@ -686,8 +686,11 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cont-row .mcard b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cont-row .cont-kind { display: block; font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--alpha); margin-bottom: 2px; }
 .cont-row .resume-x.confirm { min-width: 76px; }
-.cont-row .cont-where { display: inline-flex; vertical-align: -2px; margin-right: 5px; color: var(--ink-dim); }
-.cont-row .cont-where svg { width: 13px; height: 13px; }
+.cont-row .cont-where { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; padding: 1px 6px; border: 1px solid; border-radius: 3px;
+  font-size: 10px; letter-spacing: .06em; text-transform: uppercase; line-height: 14px; vertical-align: 1px; }
+.cont-row .cont-where svg { width: 12px; height: 12px; }
+.cont-row .cont-where.off { color: var(--ink-dim); border-color: var(--line); }
+.cont-row .cont-where.on { color: var(--good); border-color: color-mix(in srgb, var(--good) 50%, transparent); background: color-mix(in srgb, var(--good) 10%, transparent); }
 /* an online campaign waiting on this player */
 .yourmove { font-style: normal; color: #14110a; background: var(--alpha); border-radius: 3px; padding: 1px 5px; font-family: var(--display); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
 .cont-kind .yourmove { margin-left: 4px; }
@@ -827,7 +830,7 @@ a.mcard { text-decoration: none; line-height: normal; }
 }
 /* the top bar is the way back: the footer's own Back and Main menu are not needed twice */
 #camp-body .camp-foot [data-go="hub"], #camp-body .camp-foot [data-go="menu"], #camp-body .camp-foot [data-go="roster"],
-#camp-body .camp-foot [data-go="pastback"], #camp-body .camp-foot [data-go="foundback"], #camp-body .camp-foot [data-go="omulti"] { display: none; }
+#camp-body .camp-foot [data-go="pastback"], #camp-body .camp-foot [data-go="foundback"], #camp-body .camp-foot [data-go="omulti"], #camp-body .camp-foot [data-go="campmenu"] { display: none; }
 /* who a solo campaign is up against: one line, and a list behind it */
 .archline {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer;
@@ -2019,6 +2022,10 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
   background: linear-gradient(to top, var(--panel) 70%, transparent);
 }
 .camp-dock .start { width: 100%; }
+/* the contract's two ways out, in one row: turn it down, or go in */
+#camp-body .cacts { display: flex; gap: 8px; margin-top: 6px; }
+#camp-body .cacts .start { margin: 0; flex: 2 1 0; }
+#camp-body .cacts .start.cdrop { flex: 1 1 0; }
 .camp-dock .start:disabled { opacity: var(--off-opacity); }
 @media (min-width: 1001px) { .camp-dock { bottom: -22px; padding-bottom: 22px; } }
 .front-dev { font-size: 12px; color: var(--ink-dim); margin: 2px 0 6px; line-height: 1.45; }

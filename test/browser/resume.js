@@ -138,7 +138,7 @@ async function play(p, n) {
   await click('#camp-body button[data-doc="S2"]');
   await clickText('Sign the charter');
   ok('a company is founded', await p.evaluate(() => !!(window.PMC_CAMPAIGN.get() && window.PMC_CAMPAIGN.get().companies.A)));
-  await clickText('^Contract$');
+  await p.evaluate(() => document.querySelector('#camp-body [data-rivcontract]').click()); await p.waitForTimeout(200);   // a contract is made from the other forces
   await p.evaluate(() => { const t = document.querySelector('#camp-body [data-take-offer]'); if (t) t.click(); });
   await p.waitForTimeout(250);
   await p.evaluate(() => window.PMC_CAMPAIGN.autopick());

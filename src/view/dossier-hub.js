@@ -16,7 +16,7 @@
     /* ================= the hub ================= */
     function hubView() {
       // a multiplayer campaign goes by its name (each player's turn is their own)
-      var h = '<h2>' + (E.camp && E.online ? esc(E.camp.name || 'Campaign') : E.camp ? 'Campaign — turn ' + E.camp.turn : E.wantMode === 'hotseat' ? 'Hotseat campaign' : 'Campaign') + '</h2>';
+      var h = '<h2>' + (E.camp && E.online ? esc(E.camp.name || 'Campaign') : E.camp && E.camp.title ? esc(E.camp.title) : E.camp ? 'Campaign — turn ' + E.camp.turn : E.wantMode === 'hotseat' ? 'Hotseat campaign' : 'Campaign') + '</h2>';
       if (!E.camp) {
         function opt(v, t, want) { return '<option value="' + v + '"' + (want === v ? ' selected' : '') + '>' + t + '</option>'; }
         var pa = { faction: E.wantFaction, doctrines: [] }, pb = { faction: E.wantB, doctrines: [] };
@@ -31,32 +31,43 @@
           var c = CO[k];
           return c ? '<span class="olob-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' : '<span class="olob-chip rivrand">?</span>';
         };
-        var hot = E.wantMode === 'hotseat', nr = hot ? E.wantHotAi : E.wantRivals, ra = E.wantRivalArmies, rc = E.wantRivalColours, ci = E.rivColourFor;
-        // a player's own colours are picked when their force is founded
-        var playerRow = function (who, id, want) {
-          return '<div class="olob-slot mine"><span class="olob-colour still" title="Picked when the force is founded">' + chipOf('') + '</span>' +
+        var hot = E.wantMode === 'hotseat', nr = hot ? E.wantHotAi : E.wantRivals, ra = E.wantRivalArmies, rc = E.wantRivalColours, ci = E.rivColourFor, wc = E.wantColours;
+        // each slot's colours: its chip, opening the colours by it (a player's are theirs; an AI force's given up to whoever takes them)
+        var colourOf = function (slot) { return slot === 'A' || slot === 'B' ? wc[slot] : rc[slot]; };
+        var chipBtn = function (slot, who) {
+          var k = colourOf(slot);
+          return '<button type="button" class="olob-colour" data-go="rivcolour" data-i="' + slot + '" aria-expanded="' + (ci === slot) + '" title="' +
+            esc(k && CO[k] ? CO[k].name : 'Colours') + '" aria-label="' + esc(who) + ' colours">' + chipOf(k) + '</button>';
+        };
+        var playerRow = function (slot, who, id, want) {
+          return '<div class="olob-slot mine">' + chipBtn(slot, who) +
             '<span class="olob-who"><b>' + esc(who) + '</b></span>' +
             '<select id="' + id + '" aria-label="' + esc(who) + ' — army">' + ARMY.map(function (a) { return opt(a[0], a[1], want); }).join('') + '</select></div>';
         };
-        h += '<div class="olob-slots">' + playerRow(hot ? 'Player 1' : 'You', 'camp-faction', E.wantFaction);
-        if (hot) h += playerRow('Player 2', 'camp-bfaction', E.wantB);
+        // its name, as the online lobby has it
+        h += '<div class="olob-name"><label for="camp-name">Name</label><input class="tin" id="camp-name" maxlength="40" autocomplete="off" placeholder="' +
+          (hot ? 'Hotseat campaign' : 'Campaign') + '" value="' + esc(E.wantName || '') + '"></div>';
+        h += '<div class="olob-slots">' + playerRow('A', hot ? 'Player 1' : 'You', 'camp-faction', E.wantFaction);
+        if (hot) h += playerRow('B', 'Player 2', 'camp-bfaction', E.wantB);
         for (var ri = 0; ri < nr; ri++) {
-          h += '<div class="olob-slot"><button type="button" class="olob-colour" data-go="rivcolour" data-i="' + ri + '" aria-expanded="' + (ci === ri) + '" title="' +
-            esc(rc[ri] && CO[rc[ri]] ? CO[rc[ri]].name : 'Colours rolled at random — tap to pick') + '" aria-label="AI force ' + (ri + 1) + ' colours">' + chipOf(rc[ri]) + '</button>' +
+          h += '<div class="olob-slot">' + chipBtn(ri, 'AI force ' + (ri + 1)) +
             '<span class="olob-who"><b>AI force</b></span>' +
             '<select class="rivarmy" data-i="' + ri + '" aria-label="AI force ' + (ri + 1) + ' — army">' + opt('', 'Random', ra[ri] || '') +
             ARMY.map(function (a) { return opt(a[0], a[1], ra[ri] || ''); }).join('') + '</select></div>';
         }
         h += '</div>';
-        // an AI force's colours, popped up by its chip (one another force wears is not offered)
-        if (ci !== null && ci < nr) {
-          var others = rc.filter(function (k, j) { return k && j !== ci && j < nr; });
-          h += '<div class="found-pop olob-pop" data-rivpop="' + ci + '"><label>Colours — ' + esc(rc[ci] && CO[rc[ci]] ? CO[rc[ci]].name : 'rolled at random') + '</label><div class="csw">' +
-            '<button type="button" class="rivpick-rand' + (!rc[ci] ? ' on' : '') + '" data-rivpick="" title="Rolled at random"><span class="rivrand">?</span></button>' +
+        // the colours of the slot whose chip was tapped: one a player wears is not offered; an AI force's may be taken (it gets another)
+        if (ci !== null && (ci === 'A' || (ci === 'B' && hot) || ci < nr)) {
+          var holder = function (k) {
+            if (ci !== 'A' && wc.A === k) return 'player';
+            if (hot && ci !== 'B' && wc.B === k) return 'player';
+            return rc.some(function (x, j) { return x === k && j !== ci && j < nr; }) ? 'ai' : null;
+          };
+          h += '<div class="found-pop olob-pop" data-rivpop="' + ci + '"><label>Colours — ' + esc(colourOf(ci) && CO[colourOf(ci)] ? CO[colourOf(ci)].name : '') + '</label><div class="csw">' +
             KEYS.map(function (k) {
-              var taken = others.indexOf(k) >= 0, q = CO[k];
-              return '<button type="button"' + (k === rc[ci] ? ' class="on"' : '') + ' data-rivpick="' + k + '"' + (taken ? ' disabled' : '') +
-                ' title="' + esc(q.name + (taken ? ' — another force wears it' : '')) + '"><span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
+              var by = holder(k), q = CO[k];
+              return '<button type="button" class="' + (k === colourOf(ci) ? 'on' : '') + (by === 'ai' ? ' olob-aicol' : '') + '" data-rivpick="' + k + '"' + (by === 'player' ? ' disabled' : '') +
+                ' title="' + esc(q.name + (by === 'player' ? ' — a player wears it' : by === 'ai' ? ' — an AI force wears it, and will take another' : '')) + '"><span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
             }).join('') + '</div></div>';
         }
         // one line: how many AI forces (an odd number: with yours, the forces pair off for each round), and Raise the force
@@ -67,7 +78,8 @@
           '<button class="start" data-go="newcamp">Raise the force</button></div>';
         h += cmodal('armynew', C.words(pa).side + ' \u2014 army rules', armyRules(pa));
         h += cmodal('armynewb', C.words(pb).side + ' \u2014 army rules', armyRules(pb));
-        h += '<p class="camp-foot"><button class="lnk" data-go="menu">← Main menu</button>' +
+        // the title bar's Back: the game modes it was opened from
+        h += '<p class="camp-foot"><button class="lnk" data-go="campmenu">← Back</button>' +
           '<button class="lnk" data-go="import">Load a save file</button>' +
           '<input type="file" id="camp-file" accept="application/json" hidden></p>';
         return h;
@@ -178,9 +190,9 @@
         : '<button class="start hubgo" data-go="' + (E.camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button>';
       // the other forces, the battles, the memorial, saving, loading and abandoning, together behind the one button
       var manage = '<button class="lnk hubicon" data-go="fmodal" data-kind="manage" title="The campaign" aria-label="The campaign">' + ICON_MANAGE + '</button>';
-      /* Online (no Contract here: it is made from the other forces) the row is three
+      /* Online and alone (no Contract here: it is made from the other forces) the row is three
          tabs — the company, its dossier, and the campaign's window. */
-      if (E.online) {
+      if (E.online || E.camp.mode === 'solo') {
         var dos = E.hubPane === 'dossier';
         var tab = function (on, label) {
           return '<button class="lnk' + (on ? ' on' : '') + '" role="tab" aria-selected="' + on + '"' + (on ? '' : ' data-go="roster"') + '>' + label + '</button>';
@@ -407,12 +419,14 @@
         '</div>';
     }
 
-    /* Online, beside their dossier: a contract with them — to another player a
+    /* Beside their dossier (online, or alone): a contract with them — to another player a
        challenge, with an AI force the contract itself (its terms, then the pick). */
     function contractButton(co, ri) {
       var on = (E.camp && E.camp.online) || {}, mine = E.camp.companies.A;
       var off = function (why) { return '<button class="start" disabled title="' + esc(why) + '">' + esc(why) + '</button>'; };
       if (!(mine.roster || []).length) return off('Found your force first');
+      // alone: the job they offer this turn (or one rolled for them), then the contract screen
+      if (!E.online) return '<button class="start" data-rivcontract="' + ri + '">Contract</button>';
       if (on.contract || on.duel) return off('Something else is under way');
       if (co.human) {
         if (co.out) return off('Out of the campaign');
@@ -437,7 +451,7 @@
       var ri = idx == null ? 0 : idx, open = E.rivalOpen === ri;
       var dos = '<button class="lnk rivdos-go' + (open ? ' on' : '') + '" data-rivdos="' + ri + '" aria-expanded="' + open + '">' +
         (open ? '\u25be ' : '\u25b8 ') + 'Their dossier</button>';
-      h += E.online && !E.camp.over ? '<div class="rivacts">' + dos + contractButton(co, ri) + '</div>' : dos;
+      h += (E.online || E.camp.mode === 'solo') && !E.camp.over ? '<div class="rivacts">' + dos + contractButton(co, ri) + '</div>' : dos;
       if (open) {
         var rk = 'r' + ri, shown = co.roster.filter(function (e) { return E.unitPasses(e, rk); });
         h += '<div class="dlist rivdos">' + shown.slice().sort(function (a, b) {

@@ -55,27 +55,34 @@
           ' to ' + ROMAN[o.caught.to] + '</div>';
       }
 
-      // the job itself
-      h += '<div class="offer-job"><div class="offer-scen"><b>' + esc(o.scenario.name) + '</b>' +
-        (o.planet ? planetPill(o.planet) : '') + '</div>';
+      h += jobCard(o, 'A', o.levels);
+      h += '<button class="start" data-take-offer="' + i + '">Take this contract</button>';
+      return h + '</div>';
+    }
+
+    /* The job, as the offer put it and the contract screens show it again: the
+       scenario and its world, the Battle Tier and Priority Levels, which side of it
+       `side` is on (what that asks of them), and what wins it. `job`: an offer or a
+       contract ({ scenario, planet, tier, roles }); `levels`: those it may be fought at. */
+    function jobCard(job, side, levels) {
+      var sc = root.PMCScen && root.PMCScen.SCENARIOS[job.scenario.id];
+      var h = '<div class="offer-job"><div class="offer-scen"><b>' + esc(job.scenario.name) + '</b>' +
+        (job.planet && job.planet !== 'random' ? planetPill(job.planet) : '') + '</div>';
       // how big a fight it is: the Battle Tier the D6 gave this job, and the Priority Levels it may be fought at
-      h += '<div class="offer-size"><span>Battle Tier <b>' + ROMAN[o.tier] + '</b></span>' +
-        '<span>Priority Level <b>' + (o.levels.length ? o.levels.join(' or ') : '1') + '</b></span></div>';
-      if (o.roles) {
-        var mine = o.roles.attacker === 'A' ? 'attacker' : 'defender';
-        h += '<div class="offer-role role-' + mine + '">You ' +
-          (mine === 'attacker' ? 'attack' : 'defend') + '</div>';
-        h += '<div class="cpstat">' + esc(sc ? sc.roles[mine] : '') +
-          (o.roles.bestDefence && o.roles.bestDefence.swapped && o.roles.bestDefence.side === 'A'
-            ? ' <b>The Best Defence is Good Offence</b> pushed the attack onto them (D6 ' +
-              o.roles.bestDefence.roll + ').'
-            : '') + '</div>';
+      levels = levels && levels.length ? levels : [job.pl || 1];
+      h += '<div class="offer-size"><span>Battle Tier <b>' + ROMAN[job.tier] + '</b></span>' +
+        '<span>Priority Level <b>' + levels.join(' or ') + '</b></span></div>';
+      var ro = job.roles;
+      if (ro) {
+        var mine = ro.attacker === side ? 'attacker' : 'defender';
+        h += '<div class="offer-role role-' + mine + '">You ' + (mine === 'attacker' ? 'attack' : 'defend') + '</div>';
+        h += '<div class="cpstat">' + esc(sc && sc.roles ? sc.roles[mine] || '' : '') +
+          (ro.bestDefence && ro.bestDefence.swapped
+            ? ' <b>The Best Defence is Good Offence</b> turned it round (D6 ' + ro.bestDefence.roll + ').' : '') + '</div>';
       } else {
-        h += '<div class="cpstat">Neither side has the initiative here — you meet on even terms.</div>';
+        h += '<div class="cpstat">Neither side has the initiative here \u2014 you meet on even terms.</div>';
       }
       h += '<div class="cpstat">' + esc(sc ? sc.win : '') + '</div>';
-      h += '</div>';
-      h += '<button class="start" data-take-offer="' + i + '">Take this contract</button>';
       return h + '</div>';
     }
 
@@ -154,6 +161,22 @@
     /* The player has picked one of the three. The job was settled when it was
        offered — the enemy, the scenario, the Battle Tier and which side of the
        fight they are on — so nothing is rolled again here. */
+    /* A contract with the force picked from the other forces: its job this turn,
+       or if it is offering none, one rolled for it now as the offers are and kept
+       with them — so backing out and picking it again offers the same Tier, world
+       and scenario. */
+    function takeRival(r) {
+      var offers = C.rollOffers(E.camp), co = (E.camp.rivals || [])[r];
+      if (!co) return;
+      if (!offers.some(function (o) { return o.rival === r; })) {
+        var v = Object.assign({}, E.camp, { rivals: [co], offers: null, offersTurn: null });
+        var o = C.rollOffers(v)[0];
+        o.rival = r;
+        offers.push(o);
+        save();
+      }
+      takeOffer(offers.findIndex(function (o) { return o.rival === r; }));
+    }
     function takeOffer(i) {
       var offers = C.rollOffers(E.camp);
       var o = offers[Math.max(0, Math.min(offers.length - 1, i | 0))];
@@ -162,7 +185,8 @@
       // an offer saved before Priority Level was capped at 2 may still carry a 3 or 4
       var lvls = o.levels.filter(function (n) { return n <= 2; });
       E.contract = {
-        pl: lvls.length ? lvls[lvls.length - 1] : 1,
+        // the highest Level both can fill in full, not merely field (camp: defaultLevel)
+        pl: lvls.length ? C.defaultLevel(E.camp.companies.A, E.camp.companies.B, o.tier, lvls) : 1,
         levels: lvls,
         tierRoll: o.tierRoll, tier: o.tier, scenario: o.scenario, planet: o.planet || 'random',
         roles: o.roles, alt: o.alt || null, altRoles: o.altRoles || null, altBy: o.alt ? 'A' : null,
@@ -220,6 +244,8 @@
       var chk = R.checkArmy(keys, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null);
       var roll = E.contract.tierRoll;
       var h = '<h2>Contract</h2>';
+      // alone: who it is against, as the online contract says it (the job itself below)
+      if (!hotseat()) h += '<p class="lede">' + esc(A.name) + ' against ' + esc(B.name) + ' (an AI force).</p>';
       if (hotseat()) {
         h += '<p class="lede">' + (second ? 'Player 2' : 'Player 1') + ' \u2014 ' + esc(A.name) + '</p>';
         if (second) h += '<div class="cpdoc"><span class="mk">' + esc(B.name) + ' has picked its force: Battle Tier ' +
@@ -258,9 +284,11 @@
         h += '<div class="cpan"><div class="cpstat">' + esc(E.camp.companies[altBy].name) + '\u2019s Foresighted Command — a second scenario die showed ' +
           esc(E.contract.alt.name) + '; Player 2 chooses which to fight once you hand over.</div></div>';
       }
-      /* The scenario, the opponent and who attacks were read on the offer: here is
-         the force. What is left to decide here stays — The Best Defence is Good
-         Offence's roll, when it is waiting to be made. */
+      /* The job, rolled with the offer and kept: the scenario, the Battle Tier and
+         Level, the world, and which side of it you are on — then the force. */
+      if (!hotseat()) h += '<div class="cpan cpan-job">' + jobCard(E.contract, 'A', E.contract.levels) + '</div>';
+      /* What is left to decide here stays — The Best Defence is Good Offence's
+         roll, when it is waiting to be made. */
       // at one screen, who attacks — settled on the contract, the same for both players (HC-7)
       if (hotseat() && E.contract.roles) {
         var ro = E.contract.roles, SCv = root.PMCScen && root.PMCScen.SCENARIOS[E.contract.scenario.id];
@@ -410,8 +438,10 @@
       }
       /* What still stands in the way is the button's tip, shown on a press while it
          is greyed out (aria-disabled, so the press arrives), not a line of its own. */
-      h += '<button class="start" data-go="fight"' + (chk.ok ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') +
-        '>' + (hotseat() && !second ? 'Hand over to Player 2' : 'Take the field') + '</button>';
+      // backing out sits in line with going in, the same button (Player 2 goes back to Player 1's list instead)
+      h += '<div class="cacts">' + (second ? '' : '<button class="start cdrop" data-go="cdrop">Turn the contract down</button>') +
+        '<button class="start" data-go="fight"' + (chk.ok ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') +
+        '>' + (hotseat() && !second ? 'Hand over to Player 2' : 'Take the field') + '</button></div>';
       h += '<p class="camp-foot">' + (second ? '<button class="lnk" data-go="seatback">Back to ' + esc(B.name) + '\'s list</button>'
         : '<button class="lnk" data-go="hub">Back</button>') + '</p>';
       return h;
@@ -534,7 +564,7 @@
     }
 
     return {
-      offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, contractView: contractView,
+      offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, contractView: contractView,
       autoPick: autoPick, fight: fight, seatBack: seatBack
     };
   };

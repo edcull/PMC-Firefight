@@ -69,7 +69,7 @@
   function indexPut(lid, c) {
     var list = (readJSON(IDX) || []).filter(function (e) { return e.lid !== lid; });
     var A = c && c.companies && c.companies.A, B = c && c.mode === 'hotseat' && (c.companies.B || (c.rivals || [])[c.facing || 0]);
-    list.unshift({ lid: lid, name: A ? (A.name || 'A new force') + (B && B.name ? ' v ' + B.name : '') : 'A new campaign',
+    list.unshift({ lid: lid, name: c && c.title ? c.title : A ? (A.name || 'A new force') + (B && B.name ? ' v ' + B.name : '') : 'A new campaign',
       mode: c && c.mode === 'hotseat' ? 'hotseat' : 'solo', turn: (c && c.turn) || 0, at: Date.now(), over: !!(c && c.over) });
     ls(IDX, JSON.stringify(list));
   }
@@ -364,7 +364,40 @@
   // solo: how many forces share the world with the player's, and what each runs ('' rolled)
   var wantRivals = 3, wantRivalArmies = [];
   var wantHotAi = 0;                                  // hotseat: how many AI forces share the world (0, 2, 4, 6 or 8)
-  var wantRivalColours = [], rivColourFor = null;   // ...their colours ('' rolled), and the one whose picker is open
+  var wantRivalColours = [], rivColourFor = null;   // ...their colours, and the slot whose picker is open (a number, or 'A'/'B' for a player)
+  var wantColours = { A: null, B: null };            // the players' own colours, picked on the new-campaign page
+  var wantName = '';                                 // what the new campaign is called
+  /* Every slot on the new-campaign page starts in colours of its own, rolled — the
+     players' and up to nine AI forces' — none worn twice. */
+  /* A force's name to start from, as the online founding gives one: the player's own
+     and what they run (signed in, their account's name; at one screen, Player 1 or 2). */
+  function defaultForceName(faction, side) {
+    var who = camp && camp.mode === 'hotseat' ? 'Player ' + (side === 'B' ? 2 : 1)
+      : (root.PMCAccount && root.PMCAccount.who && root.PMCAccount.who() || {}).name || 'Player';
+    return who ? who + '\u2019s ' + ({ pmc: 'Company', rebel: 'Revolt', bugs: 'Swarm', xeno: 'Tribe' }[faction] || 'Company') : '';
+  }
+  function rollColours() {
+    var keys = ((root.PMCIso && root.PMCIso.COLOUR_KEYS) || []).slice(), taken = [];
+    var pick = function () { var free = keys.filter(function (k) { return taken.indexOf(k) < 0; }); var k = free[Math.floor(Math.random() * free.length)] || null; if (k) taken.push(k); return k; };
+    wantColours = { A: pick(), B: pick() };
+    wantRivalColours = [];
+    for (var i = 0; i < 9; i++) wantRivalColours.push(pick());
+  }
+  /* A colour picked for a slot: a player's colour is theirs alone; one an AI force
+     wears is taken from it, and it is given another free one, as in the online lobby. */
+  function setWantColour(slot, k) {
+    var all = function () { return [wantColours.A, wantColours.B].concat(wantRivalColours); };
+    if (slot === 'A' || slot === 'B') {
+      if (wantColours[slot === 'A' ? 'B' : 'A'] === k && wantMode === 'hotseat') return;
+      wantColours[slot] = k;
+    } else wantRivalColours[slot] = k;
+    var others = wantRivalColours.map(function (c, i) { return i !== slot && c === k ? i : -1; }).filter(function (i) { return i >= 0; });
+    others.forEach(function (i) {
+      var keys = (root.PMCIso && root.PMCIso.COLOUR_KEYS) || [], used = all();
+      var free = keys.filter(function (c) { return used.indexOf(c) < 0; });
+      wantRivalColours[i] = free[Math.floor(Math.random() * free.length)] || null;
+    });
+  }
   var enterCampaign = null;       // the way in, once the screen is wired
   var openModal = null, modalView = null, colourOpen = false, propFor = null;
   var hubPane = 'tier';               // the hub opens on the company
@@ -613,6 +646,7 @@
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
       get wantRivals() { return wantRivals; }, get wantRivalArmies() { return wantRivalArmies; }, get wantHotAi() { return wantHotAi; },
+      get wantColours() { return wantColours; }, get wantName() { return wantName; },
       get wantRivalColours() { return wantRivalColours; }, get rivColourFor() { return rivColourFor; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
@@ -710,7 +744,7 @@
       set hubSide(v) { hubSide = v === 'B' ? 'B' : 'A'; }, get drawState() { return drawState; }, get upState() { return upState; },
       get swapOut() { return swapOut; },
       render: function () { render(); }, open: open, toMenu: toMenu, keepFoundName: keepFoundName, beginOwn: beginOwn,
-      postView: function () { return postView(); }, offersView: function () { return offersView(); }, stripe: stripe, statRow: statRow, showPast: function (i) { (KIT_AFTER || kitAfter()).showPast(i); },
+      postView: function () { return postView(); }, offersView: function () { return offersView(); }, jobCard: function (k, side, lv) { return (KIT_CONTRACT || kitContract()).jobCard(k, side, lv); }, stripe: stripe, statRow: statRow, showPast: function (i) { (KIT_AFTER || kitAfter()).showPast(i); },
       hide: function () { el('camp').hidden = true; }, isOpen: function () { return !!el('camp') && !el('camp').hidden; },
       asking: function () { return !!asking; },
       closeModal: function () { openModal = null; promoRid = null; },
@@ -833,7 +867,7 @@
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
-    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"], .camp-foot [data-go="pastback"], .camp-foot [data-go="seatback"], .camp-foot [data-go="omulti"]'), bk = el('camp-back');
+    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"], .camp-foot [data-go="pastback"], .camp-foot [data-go="seatback"], .camp-foot [data-go="omulti"], .camp-foot [data-go="campmenu"]'), bk = el('camp-back');
     bk.hidden = !way;
     if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
     if (way && root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(bk, way.getAttribute('data-go') === 'menu');
@@ -1064,7 +1098,7 @@
     }
     // a new campaign's opposing force: its colours picked (or left to be rolled)
     if (t.hasAttribute('data-rivpick') && rivColourFor !== null) {
-      wantRivalColours[rivColourFor] = t.getAttribute('data-rivpick') || '';
+      setWantColour(rivColourFor, t.getAttribute('data-rivpick'));
       rivColourFor = null; render(); return;
     }
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
@@ -1119,6 +1153,7 @@
       });
       return;
     }
+    if (t.hasAttribute('data-rivcontract')) { if (camp.over) return; openModal = null; (KIT_CONTRACT || kitContract()).takeRival(+t.getAttribute('data-rivcontract')); render(); return; }
     if (t.hasAttribute('data-rivdos')) { var rv = +t.getAttribute('data-rivdos'); rivalOpen = rivalOpen === rv ? null : rv; render(); return; }
     if (t.hasAttribute('data-promo')) { promoRid = t.getAttribute('data-promo'); openModal = 'promote'; render(); return; }
     // a mounted unit on the roster changes what it rides
@@ -1236,7 +1271,9 @@
 
     switch (go) {
       case 'fcolour': colourOpen = !colourOpen; render(); return;
-      case 'rivcolour': { var rci = +t.getAttribute('data-i') || 0; rivColourFor = rivColourFor === rci ? null : rci; render(); return; }
+      case 'rivcolour': { var rcs = t.getAttribute('data-i'), rci = rcs === 'A' || rcs === 'B' ? rcs : +rcs || 0; rivColourFor = rivColourFor === rci ? null : rci; render(); return; }
+      // the new-campaign page's way back: the game modes it was opened from
+      case 'campmenu': close(); if (root.PMCMenu) { root.PMCMenu.open(); if (root.PMCMenu.show) root.PMCMenu.show(wantMode === 'hotseat' ? 'hotseat' : 'single'); } return;
       // hotseat: Player 1's aftermath read, the device goes to Player 2 for theirs (HC-4)
       case 'afternext': case 'afterpass': case 'postpass': (KIT_AFTER || kitAfter()).afterTurn(go, t.getAttribute('data-seat')); render(); return;
       case 'passok': contractSeen = t.getAttribute('data-seat') === 'B' ? 'B' : 'A'; render(); return;
@@ -1271,12 +1308,18 @@
         if (wantMode === 'hotseat' && wantHotAi > 0 && root.PMCLocalWorld) {
           var hai = [];
           for (var hi = 0; hi < wantHotAi; hi++) hai.push({ faction: wantRivalArmies[hi] || 'random', colour: wantRivalColours[hi] || null });
-          kitOnline().newLocal({ factions: [fac, secondFaction || 'pmc'], ai: hai });
+          var nmBox2 = el('camp-name'); if (nmBox2) wantName = nmBox2.value.trim();
+          kitOnline().newLocal({ name: wantName || null, factions: [fac, secondFaction || 'pmc'], colours: [wantColours.A, wantColours.B], ai: hai });
           return;
         }
         // a name to start from; the player settles it on the founding screen
         // no name to start from: the player gives one on the founding screen (the box suggests one)
         beginFounding('', wantMode === 'hotseat' ? 'hotseat' : 'solo', fac);
+        // its name and the player's colours, as the page had them
+        var nmBox = el('camp-name'); if (nmBox) wantName = nmBox.value.trim();
+        if (wantName) camp.title = wantName;
+        if (wantColours.A) { draft.colour = wantColours.A; draft.colourChosen = true; }
+        draft.name = defaultForceName(fac, 'A');
         draft.archs = [];                          // the world is always rolled
         draft.rivals = { n: wantRivals, factions: wantRivalArmies.slice(0, wantRivals), colours: wantRivalColours.slice(0, wantRivals) };
         render(); return;
@@ -1300,7 +1343,12 @@
         if (fs === 'A') {
           try { localStorage.setItem('pmc-colour', fco.colour); } catch (e6) { }
           // hotseat: the second player founds their own force next; solo: the rivals are raised
-          if (camp.mode === 'hotseat') { save(); beginSecond(secondFaction); render(); return; }
+          if (camp.mode === 'hotseat') {
+            save(); beginSecond(secondFaction);
+            if (wantColours.B && wantColours.B !== fco.colour) draft.colour = wantColours.B;
+            draft.name = defaultForceName(camp.companies.B.faction, 'B');
+            render(); return;
+          }
           foundRival(draft.archs, draft.rivals);
         } else ensureColours();
         save(); view = 'hub'; render(); return;
@@ -1374,6 +1422,8 @@
         contract.tierRoll = { roll: 3, cap: 3, tier: 3, standing: 3, thin: false };
         contract.terms = { done: true }; contract.picks = [];
         render(); return;
+      // the contract turned down: back to the hub, the job still on offer (rolled once a turn)
+      case 'cdrop': contract = null; if (camp) camp.savedContract = null; save(); view = 'hub'; render(); return;
       case 'fight':
         if (t.getAttribute('aria-disabled') === 'true') { if (root.PMCTips) root.PMCTips.show(t); return; }
         if (fight()) { save(); render(); }
@@ -1523,6 +1573,8 @@
     });
     // the name box: the charter can be signed as soon as it has a name, without waiting on a redraw
     host.addEventListener('input', function (ev) {
+      // the new campaign's name, kept as it is typed (a redraw of the page keeps it)
+      if (ev.target && ev.target.id === 'camp-name') { wantName = ev.target.value; return; }
       if (!ev.target || ev.target.id !== 'found-name' || !draft) return;
       draft.name = ev.target.value;
       var sign = el('found-sign');
@@ -1574,6 +1626,7 @@
       if (mode === 'online') { var su = el('setup'); if (su) su.hidden = true; kitOnline().enterList(); return; }
       if (online) kitOnline().leave();                // back to this browser's own campaign
       if (mode === 'solo' || mode === 'hotseat') wantMode = mode;
+      if (!wantColours.A) rollColours();                // the new-campaign page's slots, in colours of their own
       var setup = el('setup');
       if (setup) setup.hidden = true;                 // the muster sheet would sit on top
       /* The campaign's battle is still being fought (the page was refreshed in
@@ -1600,6 +1653,7 @@
       var setup = el('setup');
       if (setup) setup.hidden = true;
       wantMode = mode === 'hotseat' ? 'hotseat' : 'solo';
+      wantName = ''; rollColours();
       Store.use(null);
       camp = null; reset();
       open('hub');
