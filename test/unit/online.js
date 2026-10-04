@@ -217,9 +217,11 @@ function ok(name, cond, note) {
   const droom = lobby.rooms.get(dgo.battle);
   ok('...both seats held for the two players', droom && droom.seats.A.id === 'u' + ash.userId && droom.seats.B.id === 'u' + brann.userId && droom.table.cfg.mode === 'hotseat');
   ok('...the rebel\u2019s tactic asked at the table, not on the contract', droom.table.cfg.askTactics && droom.table.cfg.tactics.B === null && !!droom.table.engine.state().tacticAsk, JSON.stringify(droom.table.engine.state().tacticAsk && droom.table.engine.state().tacticAsk.order));
-  ok('Cole fights an AI force meanwhile: battles side by side', (() => {
-    const co = camp(cole), at = co.offers.findIndex((o) => co.online.busyAi.indexOf(o.rival) < 0);
-    if (at < 0 || !cmd(cole, 'aiTake', { i: at }).ok) return false;
+  ok('Cole fights an AI force meanwhile, picked from the other forces (an offer rolled for it if it had none): battles side by side', (() => {
+    const co = camp(cole), nAi = co.rivals.filter((r) => !r.human).length;
+    const free = [...Array(nAi).keys()].filter((r) => co.online.busyAi.indexOf(r) < 0);
+    const r = free.filter((x) => !co.offers.some((o) => o.rival === x))[0] ?? free[0];
+    if (r == null || !cmd(cole, 'aiContract', { r: r }).ok) return false;
     let kc = camp(cole).online.contract;
     while (kc.fore && !kc.fore.done) { const left = [0, 1, 2].filter((x) => kc.fore.ignored.indexOf(x) < 0); cmd(cole, 'aiForego', { i: left[0] }); kc = camp(cole).online.contract; }
     cmd(cole, 'aiPick', { rids: legal(camp(cole).companies.A, kc) });

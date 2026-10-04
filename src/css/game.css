@@ -1445,6 +1445,8 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .camp-top h1:has(.olob-code) { flex: none; overflow: visible; }
 .camp-top:has(.olob-code) .user-chip { min-width: 0; flex-shrink: 1; }
 .camp-top h1 .olob-code { margin-left: 0; }
+.rivacts { display: flex; gap: 6px; }
+.rivacts > button { flex: 1 1 0; min-width: 0; margin: 0; min-height: var(--row-h); }
 .olob-name { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex: none; }
 .olob-name label { font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; flex: none; }
 .olob-name .tin { flex: 1; min-width: 0; }

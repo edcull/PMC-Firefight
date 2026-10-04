@@ -74,8 +74,8 @@ const { ROOT } = require('../where.js');
     ok('the world: the two players and the two AI forces', W.slots.length === 4 && W.slots.filter((x) => x.kind === 'human').length === 2 && W.slots.filter((x) => x.kind === 'ai').length === 2);
 
     console.log('\nAgainst an AI force');
-    await press('[data-go="offers"]'); await wait(400);
-    ok('Player 2 takes a contract on offer', await press('[data-take-offer="0"]'));
+    await press('.cdos-foot [data-kind="rivals"]'); await wait(400);
+    ok('Player 2 picks an AI force from the other forces: Contract', await press('.cmodal:not([hidden]) [data-oaicontract]'));
     await wait(600);
     await pick();
     await wait(800);
@@ -89,8 +89,8 @@ const { ROOT } = require('../where.js');
 
     console.log('\nA contract between the two players');
     await press('[data-go="pastback"]'); await wait(400);
-    await press('[data-go="offers"]'); await wait(400);
-    ok('Player 2 challenges Player 1', await press('[data-ochallenge="0"]'));
+    await press('.cdos-foot [data-kind="rivals"]'); await wait(400);
+    ok('Player 2 challenges Player 1 from the other forces', await press('.cmodal:not([hidden]) [data-ochallenge="0"]'));
     await wait(500);
     await press('[data-go="oseat"]'); await wait(600); await closeNote(); await wait(200);
     s = await st();

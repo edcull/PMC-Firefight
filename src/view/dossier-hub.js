@@ -129,7 +129,9 @@
       h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'The other forces on this world',
         // the other player's force shown as a rival's is: its figures, its kind and creed, and their dossier to open
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? rivalPanel(hs === 'B' ? A : B, 0)
-          : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>');
+          // the other players first, then the AI forces (each keeps its own place for its dossier and its contract)
+          : rivals.map(function (co, i) { return { co: co, i: i }; }).sort(function (a, b) { return (b.co.human ? 1 : 0) - (a.co.human ? 1 : 0) || a.i - b.i; })
+            .map(function (x) { return rivalPanel(x.co, x.i); }).join('')) + '</div>');
       // every battle fought, the latest first (opened from the win rate even before the first)
       {
         // a battle whose aftermath was kept opens it again, read only
@@ -172,7 +174,8 @@
       var seat = E.camp.mode !== 'hotseat' || E.online ? '' : '<span class="segs hubseat">' + ['A', 'B'].map(function (sd) {
         return '<button class="lnk' + (sd === E.hubSide ? ' on' : '') + '" data-go="hubside" data-hs="' + sd + '">Player ' + (sd === 'A' ? 1 : 2) + '</button>';
       }).join('') + '</span>';
-      var go = E.camp.over ? '<button class="start hubgo" disabled title="The campaign is over">Contract</button>'
+      // online, a contract is made with a force picked from the other forces (rivalPanel): no button here
+      var go = E.online ? '' : E.camp.over ? '<button class="start hubgo" disabled title="The campaign is over">Contract</button>'
         : '<button class="start hubgo" data-go="' + (E.camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button>';
       // the other forces, the battles, the memorial, saving, loading and abandoning, together behind the one button
       var manage = '<button class="lnk hubicon" data-go="fmodal" data-kind="manage" title="The campaign" aria-label="The campaign">' + ICON_MANAGE + '</button>';
@@ -396,6 +399,23 @@
         '</div>';
     }
 
+    /* Online, beside their dossier: a contract with them — to another player a
+       challenge, with an AI force the contract itself (its terms, then the pick). */
+    function contractButton(co, ri) {
+      var on = (E.camp && E.camp.online) || {}, mine = E.camp.companies.A;
+      var off = function (why) { return '<button class="start" disabled title="' + esc(why) + '">' + esc(why) + '</button>'; };
+      if (!(mine.roster || []).length) return off('Found your force first');
+      if (on.contract || on.duel) return off('Something else is under way');
+      if (co.human) {
+        if (co.out) return off('Out of the campaign');
+        if (!(co.roster || []).length) return off('Not founded yet');
+        if ((on.challenges || []).some(function (c) { return (c.mine && c.to === co.slot) || (!c.mine && c.from === co.slot); })) return off('Challenge waiting');
+        if (co.busy) return off('Fighting someone else');
+        return '<button class="start" data-ochallenge="' + co.slot + '">Challenge</button>';
+      }
+      if ((on.busyAi || []).indexOf(ri) >= 0) return off('Fighting someone else');
+      return '<button class="start" data-oaicontract="' + ri + '">Contract</button>';
+    }
     function rivalPanel(co, idx) {
       // no 'next' on any of them: the player picks the contract, and with it who they meet
       var h = '<div class="cpan cpan-B"' + stripe(co) + '><div class="cphead">' + tierBadge(co) + '<b>' +
@@ -407,8 +427,9 @@
       }).join('') + '</div>';
       // their dossier opens in the card: their units, as your own are listed
       var ri = idx == null ? 0 : idx, open = E.rivalOpen === ri;
-      h += '<button class="lnk rivdos-go' + (open ? ' on' : '') + '" data-rivdos="' + ri + '" aria-expanded="' + open + '">' +
+      var dos = '<button class="lnk rivdos-go' + (open ? ' on' : '') + '" data-rivdos="' + ri + '" aria-expanded="' + open + '">' +
         (open ? '\u25be ' : '\u25b8 ') + 'Their dossier</button>';
+      h += E.online && !E.camp.over ? '<div class="rivacts">' + dos + contractButton(co, ri) + '</div>' : dos;
       if (open) {
         var rk = 'r' + ri, shown = co.roster.filter(function (e) { return E.unitPasses(e, rk); });
         h += '<div class="dlist rivdos">' + shown.slice().sort(function (a, b) {

@@ -188,11 +188,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('the other forces on the world: the AI forces, and Brann’s', rivals.length === 3 && rivals.some((r) => /^AI:/.test(r)) && rivals.indexOf('H:Red Dawn') >= 0, rivals.join(', '));
 
     console.log('\nAgainst an AI force');
-    await press(p1, '[data-go="offers"]');
+    ok('no Contract button on the hub: a contract is made from the other forces', await p1.evaluate(() => !document.querySelector('#camp-body .hubbar [data-go="offers"], #camp-body .hubbar [data-go="contract"]')));
+    await press(p1, '.cdos-foot [data-kind="rivals"]');
     await p1.waitForTimeout(300);
-    t1 = await text(p1);
-    ok('Contract shows the offers against the AI force, and the other players to challenge', /Take this contract/i.test(t1) && /The other players/i.test(t1) && /Challenge them/i.test(t1), t1.slice(0, 200));
-    await press(p1, '[data-take-offer="0"]');
+    const order = await p1.evaluate(() => [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) .cpan-B')].map((c) => c.querySelector('[data-ochallenge]') || /Challenge/.test(c.textContent) ? 'H' : 'AI').join(''));
+    ok('the other forces: the other player first, then the AI forces, each with a contract beside their dossier', /^H(AI)+$/.test(order) && await p1.evaluate(() => !!document.querySelector('#camp-body .cmodal:not([hidden]) .rivacts [data-oaicontract]') && !!document.querySelector('#camp-body .cmodal:not([hidden]) .rivacts [data-ochallenge="1"]')), order);
+    await press(p1, '.cmodal:not([hidden]) [data-oaicontract]');
     s1 = await till(p1, 'the contract', (s) => s.view === 'ocontract' && !!s.k);
     ok('taking one opens its contract, its terms as offered', !!s1.k.scenario && s1.k.tier >= 1);
     await fightWithPicked(p1);
@@ -209,9 +210,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p1.waitForTimeout(300);
 
     console.log('\nA duel');
-    await press(p1, '[data-go="offers"]');
+    await press(p1, '.cdos-foot [data-kind="rivals"]');
     await p1.waitForTimeout(300);
-    await press(p1, '[data-ochallenge="1"]');
+    await press(p1, '.cmodal:not([hidden]) [data-ochallenge="1"]');
     s1 = await till(p1, 'the challenge made', (s) => s.challenges.length === 1);
     s2 = await till(p2, 'the challenge seen', (s) => s.challenges.length === 1 && s.view === 'hub');
     ok('Ash challenges Brann: Brann’s hub says so', /challenges you to a contract/.test(await text(p2)));

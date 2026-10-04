@@ -535,6 +535,28 @@
           };
           return { ok: true };
         },
+        /* A contract with the AI force the player picked (from the other forces): its
+           offer this turn if it has one, otherwise one rolled for it now as an offer
+           is rolled, and kept with the others. `r`: its place among the AI forces. */
+        aiContract(W, i, a) {
+          if (busy(W, i)) return no('something else is under way — finish it first');
+          const ai = aiSlots(W), vs = ai[+a.r | 0];
+          if (vs == null || !W.forces[vs]) return no('no such force');
+          if (aiBusy(W, vs)) return no(W.forces[vs].name + ' is fighting someone else just now — try again later');
+          ensureOffers(W, i);
+          const p = W.players[i];
+          p.offers = p.offers || [];
+          let at = p.offers.findIndex((o) => ai[o.rival] === vs);
+          if (at < 0) {
+            const v = viewOf(W, i);
+            v.rivals = [W.forces[vs]]; v.companies.B = W.forces[vs]; v.offers = null; v.offersTurn = null;
+            const o = C.rollOffers(v)[0];
+            o.rival = ai.indexOf(vs);
+            p.offers.push(o);
+            at = p.offers.length - 1;
+          }
+          return AI.aiTake(W, i, { i: at });
+        },
         // backed out of before the battle: the offers stay as they were (rolled once a turn)
         aiDrop(W, i) {
           const p = W.players[i];
