@@ -118,7 +118,9 @@
       });
       var reb = co.faction === 'rebel', bug = co.faction === 'bugs', xen = co.faction === 'xeno';
       function say(pmc, rebel, bugs, xeno) { return xen ? (xeno || bugs) : bug ? bugs : reb ? rebel : pmc; }
-      var h = '<h2>' + (hot ? 'Player ' + (side === 'A' ? 1 : 2) + ' \u2014 ' : '') +
+      // a hotseat campaign kept as a world on this device: whose force it is, by the player at the screen
+      var lw = E.online && E.online.local && root.PMCLocalWorld ? root.PMCLocalWorld.playerName(root.PMCLocalWorld.seat(E.online.id)) + ' \u2014 ' : '';
+      var h = '<h2>' + lw + (hot ? 'Player ' + (side === 'A' ? 1 : 2) + ' \u2014 ' : '') +
         say('Found a company', 'Raise a revolt', 'Awaken a swarm', 'Claim a territory') + '</h2>';
       // online, the army and the colours were picked in the campaign's lobby: nothing to choose here
       if (E.online) {

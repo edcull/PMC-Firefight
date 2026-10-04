@@ -141,7 +141,8 @@
     }
     // the last aftermath this browser has shown, per campaign
     function seen(n) {
-      var k = 'pmc-online-seen2:' + (E.online ? E.online.id : '');
+      // (two players at one device: each their own)
+      var k = 'pmc-online-seen2:' + (E.online ? E.online.id + (E.online.local ? ':' + E.online.slot : '') : '');
       try {
         if (n === undefined) return +(localStorage.getItem(k) || 0);
         localStorage.setItem(k, String(n));
@@ -357,6 +358,15 @@
 
     /* ================= the hub, online ================= */
     // what the hub says of the campaign: a contract or a duel under way, a battle ready, challenges
+    // at one device (a hotseat campaign kept as a world here): the screen to the other player
+    function handOver() {
+      var LW = root.PMCLocalWorld, wid = E.online && E.online.id;
+      if (!LW || !wid) return;
+      var to = LW.seat(wid) ? 0 : 1;
+      LW.setSeat(wid, to);
+      leaveCampaign();
+      openCampaign(wid).then(function () { E.note('Over to ' + LW.playerName(to), 'Pass the device to ' + LW.playerName(to) + '.'); });
+    }
     function hubNote() {
       var on = onl(), h = '';
       // kept on this device: who is at the screen, and the hand-over to the other player
@@ -579,6 +589,8 @@
         return '<h2>After the battle</h2><p class="lede">' + esc(d ? d.foeName : 'The other player') + ' has a question to answer first (' +
           (st.kind === 'plunder' ? 'Plunderer' : st.kind === 'negotiate' ? 'Tough Negotiators' : 'No Place for the Weak!') + '). ' +
           'The aftermath follows once every question is answered.</p>' +
+          // on this device: the screen to the other player, who answers it here
+          (E.online && E.online.local ? '<div class="camp-dock"><button class="start" data-go="oseat">Hand over to ' + esc(root.PMCLocalWorld.playerName(root.PMCLocalWorld.seat(E.online.id) ? 0 : 1)) + '</button></div>' : '') +
           '<p class="camp-foot"><button class="lnk" data-go="omulti">← Multiplayer</button></p>';
       }
       return E.postView();
@@ -642,7 +654,12 @@
         var dr = E.draft, name = (dr.name || '').trim();
         if (!name) { E.note('It needs a name', 'Give the force something to be known by.'); return true; }
         cmd('found', { faction: camp.companies.A.faction || 'pmc', name: name, keys: dr.keys, doctrine: dr.doctrine, colour: dr.colour || null },
-          function () { E.draft = null; E.view = 'hub'; });
+          function () {
+            E.draft = null; E.view = 'hub';
+            // at one device, the other player founds theirs next
+            var other = E.online && E.online.local ? players().filter(function (p) { return !founded(p); })[0] : null;
+            if (other) setTimeout(function () { handOver(); }, 0);
+          });
         return true;
       }
       if (go === 'foundback') { toMulti(); return true; }
@@ -711,13 +728,7 @@
         E.render(); return true;
       }
       if (go === 'ocontract') { E.view = 'ocontract'; E.render(); return true; }
-      if (go === 'oseat' && E.online && E.online.local) {
-        var LW = root.PMCLocalWorld, wid = E.online.id, to = LW.seat(wid) ? 0 : 1;
-        LW.setSeat(wid, to);
-        leaveCampaign();
-        openCampaign(wid).then(function () { E.note('Over to ' + LW.playerName(to), 'Pass the device to ' + LW.playerName(to) + '.'); });
-        return true;
-      }
+      if (go === 'oseat' && E.online && E.online.local) { handOver(); return true; }
       if (go === 'obattle') { var bc = battleCode(); if (bc) goBattle(bc); return true; }
       if (attr('data-take-offer') !== null && attr('data-take-offer') !== undefined && t.hasAttribute('data-take-offer')) {
         cmd('aiTake', { i: +attr('data-take-offer') }, function () { E.view = 'ocontract'; });
