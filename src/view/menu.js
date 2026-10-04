@@ -201,7 +201,7 @@
   function drawList() {
     var box = el('cont-list');
     if (!box) return;
-    var all = games(), esc = function (t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); };
+    var all = games(), esc = R.esc;   // the shared one, in the rules
     box.innerHTML = all.length ? all.map(function (g) {
       var asked = delAsked === g.key;
       var word = g.abandon ? 'Abandon?' : 'Delete?';

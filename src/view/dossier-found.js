@@ -8,7 +8,7 @@
   'use strict';
   root.PMCDossierFound = function (E) {
     var C = E.C, R = E.R, ROMAN = E.ROMAN, esc = E.esc, profile = E.profile, root = E.root,
-        tierChip = E.tierChip, tip = E.tip;
+        tierChip = E.tierChip;
     /* ================= founding ================= */
     function beginFounding(name, mode, faction) {
       E.camp = C.newCampaign({
@@ -64,8 +64,7 @@
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {};
       var c = CO[colourOf(co)];
       if (!c) return '';
-      return '<span class="cflash" title="' + esc(c.name) + '" style="background:linear-gradient(135deg,' +
-        c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>';
+      return '<span class="cflash" title="' + esc(c.name) + '" style="background:' + root.PMCUi.fill(c) + '"></span>';
     }
     function colourOf(co) {
       var k = co && co.colour;
@@ -82,8 +81,7 @@
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {};
       return '<div class="csw">' + colourKeys().map(function (k) {
         var c = CO[k];
-        return '<button type="button"' + (k === pick ? ' class="on"' : '') + ' data-campcolour="' + k + '" title="' + esc(c.name) + '">' +
-          '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span></button>';
+        return root.PMCUi.swatch('type="button"' + (k === pick ? ' class="on"' : '') + ' data-campcolour="' + k + '" title="' + esc(c.name) + '"', c);
       }).join('') + '</div>';
     }
     function colourName(k) {
@@ -144,8 +142,7 @@
         say('Company name', 'What the revolt calls itself', 'What the swarm is known as', 'What the tribe is known as') + '</label>' +
         // the colour picked, a chip left of the name: tap it for the colours
         '<div class="name-row"><' + (E.online ? 'span class="chip-btn still"' : 'button type="button" class="chip-btn" data-go="fcolour" aria-expanded="' + E.colourOpen + '"') +
-        ' title="' + esc('Colours: ' + colourName(E.draft.colour)) + '"><span' + (cc ? ' style="background:linear-gradient(135deg,' +
-        cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)"' : '') + '></span></' + (E.online ? 'span' : 'button') + '>' +
+        ' title="' + esc('Colours: ' + colourName(E.draft.colour)) + '"><span' + (cc ? ' style="background:' + root.PMCUi.fill(cc) + '"' : '') + '></span></' + (E.online ? 'span' : 'button') + '>' +
         '<input class="tin" id="found-name" maxlength="28" autocomplete="off"' +
         ' placeholder="' + say('e.g. Task Force Ironhold', 'e.g. The Free Colonies', 'e.g. The Hive', 'e.g. The Ghadon Third') + '"' +
         ' value="' + esc(E.draft.name || '') + '"></div></div>' +
@@ -166,7 +163,6 @@
       /* On the page, each unit picked is a card: its name and kind, its Tier, its
          numbers and its special rules, with its drive and its remove button. The
          list scrolls when there are more than fit. */
-      var TXT = root.PMCRuleText;
       var cards = E.draft.keys.map(function (k, i) {
         var sp = R.splitPick(k), p0 = profile(sp.key);
         var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p0, { rules: (p0.rules || []).slice(), models: p0.size }), sp.prop || R.defaultDrive(p0)), !!sp.drone);
@@ -182,10 +178,7 @@
           rideButtons(p0, sp, i) +
           '<button class="lnk danger fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p0.name) + '">\u2715</button></div>' +
           '<div class="fcard-line">' + esc(line) + '</div>' +
-          ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
-            var d = TXT ? TXT.describe(r) : { name: r, text: '' };
-            return '<span class="mk" ' + tip(d.name, d.text || '') + '>' + esc(d.name) + '</span>';
-          }).join('') + '</div>' : '') +
+          root.PMCUi.ruleMarks(u0.rules) +
           '</div>';
       }).join('');
       // under the list, side by side: the units to add, and the starting doctrine
@@ -318,11 +311,9 @@
       order.forEach(function (g) {
         h += '<h4>' + esc(g) + '</h4>';
         groups[g].forEach(function (p) {
-          h += '<button class="cu" data-add="' + p.key + '">' +
-            '<span class="t">' + ROMAN[p.tier] + '</span>' +
-            // its numbers and special rules, as the skirmish muster's list gives them
-            '<span><b>' + esc(p.name) + '</b><small>' + esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')) + '</small></span>' +
-            '</button>';
+          // its numbers and special rules, as the skirmish muster's list gives them
+          h += root.PMCUi.unitRow('class="cu" data-add="' + p.key + '"', p.tier, '<b>' + esc(p.name) + '</b>',
+            esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')), null);
         });
       });
       return h;

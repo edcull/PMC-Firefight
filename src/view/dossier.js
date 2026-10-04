@@ -483,10 +483,7 @@
   /* The tooltip attributes, from tips.js. A Battle Honour or a Battle Trauma is
      a name and a rule, and the name alone tells you nothing — so wherever one is
      shown, what it does is one hover or one tap away. */
-  function tip(head, body) {
-    return window.PMCTips ? window.PMCTips.attr(head, body)
-      : 'title="' + esc((head ? head + ' — ' : '') + body) + '"';
-  }
+  function tip(head, body) { return root.PMCUi.tip(head, body); }
   function quietTip(head, body) {
     return window.PMCTips ? window.PMCTips.quiet(head, body) : tip(head, body);
   }
@@ -610,15 +607,15 @@
     var marks = [];
     (e.honours || []).forEach(function (n) {
       var hx = C.honourTable(e.key)[n - 1];
-      marks.push('<span class="mk good" ' + tip(hx.name, hx.text) + '>' + esc(hx.name) + '</span>');
+      marks.push(root.PMCUi.mark(hx, 'good'));
     });
     (e.upgrades || []).forEach(function (n) {
       var ug = C.upgradeTable(e.key)[n - 1];
-      marks.push('<span class="mk good" ' + tip(ug.name, ug.text) + '>' + esc(ug.name) + '</span>');
+      marks.push(root.PMCUi.mark(ug, 'good'));
     });
     (e.traumas || []).forEach(function (n) {
       var tx = C.traumaTable(e.key)[n - 1];
-      marks.push('<span class="mk bad" ' + tip(tx.name, tx.text) + '>' + esc(tx.name) + '</span>');
+      marks.push(root.PMCUi.mark(tx, 'bad'));
     });
     // (opened, they are written out in full on the sheet below instead)
     if (marks.length && !opts.men) h += '<div class="dmarks">' + marks.join('') + '</div>';
@@ -643,7 +640,7 @@
       ICON_LOAD: ICON_LOAD, ICON_MANAGE: ICON_MANAGE, memorialIcon: memorialIcon, ICON_SAVE: ICON_SAVE,
       ROMAN: ROMAN, Store: Store, cmodal: cmodal, coin: coin, colourName: colourName, colourOf: colourOf,
       dossierPanel: dossierPanel, entryCard: entryCard, esc: esc, memorialList: memorialList,
-      profile: profile, root: root, spendActs: spendActs, squares: squares, tip: tip,
+      profile: profile, root: root, spendActs: spendActs, squares: squares,
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
       get wantRivals() { return wantRivals; }, get wantRivalArmies() { return wantRivalArmies; }, get wantHotAi() { return wantHotAi; },
@@ -659,13 +656,14 @@
   function hubView() { return (KIT_HUB || kitHub()).hubView(); }
   function stripe(co) { return (KIT_HUB || kitHub()).stripe(co); }
   function armyPill(co, kind) { return (KIT_HUB || kitHub()).armyPill(co, kind); }
+  function doctrineMarks(co) { return (KIT_HUB || kitHub()).doctrineMarks(co); }
   function armyRules(co) { return (KIT_HUB || kitHub()).armyRules(co); }
   function statRow(co, rival) { return (KIT_HUB || kitHub()).statRow(co, rival); }
   /* ---- founding a force: in view/dossier-found.js ---- */
   var KIT_FOUND = null;
   function kitFound() {
     return KIT_FOUND || (KIT_FOUND = root.PMCDossierFound({
-      C: C, R: R, ROMAN: ROMAN, esc: esc, profile: profile, root: root, tierChip: tierChip, tip: tip,
+      C: C, R: R, ROMAN: ROMAN, esc: esc, profile: profile, root: root, tierChip: tierChip,
       armyPill: armyPill, armyRules: armyRules,
       get camp() { return camp; }, set camp(v) { camp = v; }, get colourOpen() { return colourOpen; },
       get draft() { return draft; }, set draft(v) { draft = v; }, get openModal() { return openModal; },
@@ -706,7 +704,7 @@
   var KIT_CONTRACT = null;
   function kitContract() {
     return KIT_CONTRACT || (KIT_CONTRACT = root.PMCDossierContract({
-      C: C, R: R, ROMAN: ROMAN, armyPill: armyPill, close: close, colourFlash: colourFlash,
+      C: C, R: R, ROMAN: ROMAN, armyPill: armyPill, doctrineMarks: doctrineMarks, close: close, colourFlash: colourFlash,
       colourOf: colourOf, esc: esc, note: note, profile: profile, quietTip: quietTip, root: root, save: save,
       spellOut: spellOut, statRow: statRow, stripe: stripe, tip: tip, get camp() { return camp; },
       get contract() { return contract; }, set contract(v) { contract = v; },
@@ -725,8 +723,8 @@
   var KIT_AFTER = null;
   function kitAfter() {
     return KIT_AFTER || (KIT_AFTER = root.PMCDossierAfter({
-      C: C, ROMAN: ROMAN, coin: coin, colourFlash: colourFlash, entryCard: entryCard, esc: esc, open: open,
-      profile: profile, save: save, tip: tip, get after() { return after; }, set after(v) { after = v; },
+      C: C, ROMAN: ROMAN, coin: coin, colourFlash: colourFlash, doctrineMarks: doctrineMarks, entryCard: entryCard, esc: esc, open: open,
+      profile: profile, save: save, get after() { return after; }, set after(v) { after = v; },
       get camp() { return camp; }, get docSide() { return docSide; }, get docSwap() { return docSwap; },
       get drawState() { return drawState; }, get intelIdx() { return intelIdx; },
       get swapOut() { return swapOut; }, get upState() { return upState; },
@@ -745,7 +743,7 @@
       set hubSide(v) { hubSide = v === 'B' ? 'B' : 'A'; }, get drawState() { return drawState; }, get upState() { return upState; },
       get swapOut() { return swapOut; },
       render: function () { render(); }, open: open, toMenu: toMenu, keepFoundName: keepFoundName, beginOwn: beginOwn,
-      postView: function () { return postView(); }, offersView: function () { return offersView(); }, jobCard: function (k, side, lv) { return (KIT_CONTRACT || kitContract()).jobCard(k, side, lv); }, unitWear: function (e, noTp) { return (KIT_CONTRACT || kitContract()).wear(e, noTp); }, unitTp: function (e) { return (KIT_CONTRACT || kitContract()).tpBadge(e); }, stripe: stripe, statRow: statRow, showPast: function (i) { pastFromList = false; (KIT_AFTER || kitAfter()).showPast(i); },
+      postView: function () { return postView(); }, offersView: function () { return offersView(); }, jobCard: function (k, side, lv) { return (KIT_CONTRACT || kitContract()).jobCard(k, side, lv); }, contractKit: function () { return KIT_CONTRACT || kitContract(); }, stripe: stripe, statRow: statRow, showPast: function (i) { pastFromList = false; (KIT_AFTER || kitAfter()).showPast(i); },
       hide: function () { el('camp').hidden = true; }, isOpen: function () { return !!el('camp') && !el('camp').hidden; },
       asking: function () { return !!asking; },
       closeModal: function () { openModal = null; promoRid = null; },

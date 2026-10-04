@@ -432,16 +432,11 @@
       // a square each, as the unit viewer has them, and the colour picked named in the label
       host.innerHTML = ISO.COLOUR_KEYS.map(function (k) {
         var c = ISO.COLOURS[k];
-        return '<button type="button" class="' + (k === B.muster.colour ? 'on' : '') +
+        return window.PMCUi.swatch('type="button" class="' + (k === B.muster.colour ? 'on' : '') +
           '" data-colour="' + k + '" title="' + c.name + (k === taken ? ' \u2014 Player 1\u2019s colour' : '') + '"' +
-          (k === taken ? ' disabled' : '') + '>' +
-          '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' +
-          c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span></button>';
+          (k === taken ? ' disabled' : ''), c);
       }).join('');
       colourLabel();
-      var chip = el('colour-btn-chip'), cc = ISO.COLOURS[B.muster.colour];
-      if (chip && cc) chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
-      if (el('btn-colour-pop') && cc) el('btn-colour-pop').title = 'Colours: ' + cc.name;
       host.querySelectorAll('[data-colour]').forEach(function (b) {
         b.addEventListener('click', function () {
           B.muster.colour = b.getAttribute('data-colour'); B.muster.colourChosen = true;
@@ -454,19 +449,25 @@
           // a made-up name follows the colour
           if (B.muster.hot && B.muster.hot.kind !== 'demo' && !(B.muster.hot.kind === 'ai' && B.muster.hot.step === 2)) {
             var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
-            if (!nm || isMadeUpName(nm)) { B.muster.name = ISO.COLOURS[B.muster.colour].name + ' ' + B.FORCE_NOUN[musterFaction()]; if (hn) hn.value = B.muster.name; }
+            if (!nm || isMadeUpName(nm)) { B.muster.name = window.PMCUi.forceName(B.muster.colour, musterFaction()); if (hn) hn.value = B.muster.name; }
           }
           colourPop(false);                  // the pick shuts the pop-up
           drawColourPick();
         });
       });
     }
-    // "Tribe colours — Jade": the kind of force's word in a stepped skirmish, and the colour picked
+    /* "Tribe colours — Jade": the kind of force's word in a stepped skirmish, and
+       the colour picked — named over the swatches, and painted on the chip left
+       of the name that opens them. */
     function colourLabel() {
       var lb = el('colour-box-label'), c = ISO.COLOURS[B.muster.colour];
-      if (!lb) return;
-      var n = B.muster.hot ? (B.ID_NOUN[musterFaction()] || 'Force') : 'Company';
-      lb.textContent = n + ' colours' + (c ? ' \u2014 ' + c.name : '');
+      if (lb) {
+        var n = B.muster.hot ? (B.ID_NOUN[musterFaction()] || 'Force') : 'Company';
+        lb.textContent = n + ' colours' + (c ? ' \u2014 ' + c.name : '');
+      }
+      var chip = el('colour-btn-chip');
+      if (chip && c) chip.style.background = window.PMCUi.fill(c);
+      if (el('btn-colour-pop') && c) el('btn-colour-pop').title = 'Colours: ' + c.name;
     }
     /* A colour for the opposition: anything but the ones already on the table. */
     function foeColour(taken) {

@@ -1140,7 +1140,7 @@
     // result cards still to be read (a rally's rolls, say), or one open now
     cardsPending: function () { return !!ui.resOpen || resQueue.length > 0; },
     deployWhere: deployWhere, roleSentence: roleSentence,
-    get FORCE_NOUN() { return FORCE_NOUN; }, get ID_NOUN() { return ID_NOUN; },
+    get ID_NOUN() { return ID_NOUN; },
     get VIEW_H() { return VIEW_H; }, get VIEW_W() { return VIEW_W; }, get anims() { return anims; },
     get ctx() { return ctx; }, get muster() { return muster; }, get pctx() { return pctx; },
     get state() { return state; }, get vc() { return vc(); }, get colourPop() { return colourPop; },
@@ -1207,10 +1207,10 @@
      steps are in muster.js; it borrows these of the game, and the game uses
      what it hands back. */
   var MUSTER = window.PMCMuster({
-    ISO: ISO, R: R, SC: SC, el: el, esc: esc, tip: tip, cam: cam,
+    ISO: ISO, R: R, SC: SC, el: el, esc: esc, cam: cam,
     begin: begin, openMenu: openMenu, colourLabel: colourLabel, drawColourPick: drawColourPick, foeColour: foeColour
   });
-  var FORCE_NOUN = MUSTER.FORCE_NOUN, ID_NOUN = MUSTER.ID_NOUN, applyForce = MUSTER.applyForce;
+  var ID_NOUN = MUSTER.ID_NOUN, applyForce = MUSTER.applyForce;
   var backLabel = MUSTER.backLabel, colourPop = MUSTER.colourPop, currentForce = MUSTER.currentForce;
   var demoRename = MUSTER.demoRename, drawForceList = MUSTER.drawForceList, drawMuster = MUSTER.drawMuster;
   var escHtml = MUSTER.escHtml, hotBegin = MUSTER.hotBegin, hotEnd = MUSTER.hotEnd;

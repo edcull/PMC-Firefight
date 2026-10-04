@@ -11,7 +11,7 @@
 (function (root) {
   'use strict';
 
-  var P = root.PMCProto, NET = root.PMCNet;
+  var P = root.PMCProto, NET = root.PMCNet, U = root.PMCUi;
   var net = null;
   var host = null;              // the overlay
   var view = 'lobby';           // 'lobby' | 'room'
@@ -43,12 +43,11 @@
     host.hidden = true;
     /* Laid out as the skirmish set-up and the campaign are: a bar across the top
        with the way back and the page's title, and under it the one thing that scrolls. */
-    host.innerHTML = '<canvas id="lobby-table" aria-hidden="true"></canvas><div class="camp-top"><button type="button" class="camp-back" data-lob="leave-lobby" aria-label="Back"><span class="bk-ar" aria-hidden="true">\u2190</span><span class="bk-w"> Back</span></button>' +
+    host.innerHTML = '<canvas id="lobby-table" aria-hidden="true"></canvas><div class="camp-top">' + U.backButton('data-lob="leave-lobby"') +
       '<h1 id="lobby-title">Multiplayer</h1><div class="lob-right"><span class="lob-code" id="lobby-code" hidden></span>' +
       // who is playing, on the right of the bar: a tap opens Your account and Sign out
       '<span class="lob-user-wrap"><button type="button" class="lob-user" id="lobby-user" data-lob="usermenu" hidden aria-haspopup="true">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>' +
-      '<span id="lobby-user-name"></span></button>' +
+      root.PMCAccount.USER_ICON + '<span id="lobby-user-name"></span></button>' +
       '<span class="lob-usermenu" id="lobby-usermenu" hidden><button type="button" class="lnk" data-lob="account">Your account</button>' +
       '<button type="button" class="lnk" data-lob="signout">Sign out</button></span></span></div></div>' +
       '<div class="sheet lobby-sheet"><div id="lobby-body"></div></div>';
@@ -495,19 +494,10 @@
      and its army: your own to change — tap its name to muster it — the other
      player's to read; a cooperative game's OpFor the host's. */
   var colourFor = null;         // whose colours are open: a seat ('A' or 'B'), 'op' for the OpFor, or null
-  var ARMIES = ['pmc', 'rebel', 'bugs', 'xeno'];
-  var ARMY_NAMES = { pmc: 'PMC', rebel: 'Rebel', bugs: 'Bugs', xeno: 'Xenotripods' };   // the campaign lobby's words
-  // the made-up names a force is given for its colours and kind (muster.js): such a name follows them
-  var FORCE_NOUN = { pmc: 'company', rebel: 'insurgents', bugs: 'swarm', xeno: 'tribe' };
   function colours() { return (root.PMCIso && root.PMCIso.COLOURS) || {}; }
-  function chipHTML(key) {
-    var c = colours()[key];
-    return '<span class="olob-chip"' + (c ? ' style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"' : '') + '></span>';
-  }
+  // the army, the campaign lobby's words: this player's to change, or read out (ui-parts.js)
   function armyHTML(attr, value, canChange) {
-    return canChange ? '<select ' + attr + ' aria-label="Army">' + ARMIES.map(function (f) {
-      return '<option value="' + f + '"' + (f === value ? ' selected' : '') + '>' + esc(ARMY_NAMES[f]) + '</option>';
-    }).join('') + '</select>' : '<span class="olob-army">' + esc(ARMY_NAMES[value] || '') + '</span>';
+    return canChange ? U.armySelect(attr + ' aria-label="Army"', value) : U.armyStill(value);
   }
   function forcesHTML(mine, isHost) {
     var coop = room.settings.kind === 'coop';
@@ -516,8 +506,8 @@
       // the machine's side: its army and colours the host's to pick, its list rolled at the battle
       var oc = room.settings.opColour, ocn = colours()[oc];
       h += '<div class="olob-slot lob-slot-op">' +
-        (isHost ? '<button type="button" class="olob-colour" data-lob="colours" data-for="op" aria-expanded="' + (colourFor === 'op') + '" title="' + esc(ocn ? ocn.name : 'Colours: picked for the battle') + '">' + chipHTML(oc) + '</button>'
-          : '<span class="olob-colour still" title="' + esc(ocn ? ocn.name : 'Picked for the battle') + '">' + chipHTML(oc) + '</span>') +
+        (isHost ? U.chipButton('data-lob="colours" data-for="op"', U.chip(oc), colourFor === 'op', ocn ? ocn.name : 'Colours: picked for the battle')
+          : U.chipStill(U.chip(oc), ocn ? ocn.name : 'Picked for the battle')) +
         '<span class="olob-who"><b>The OpFor</b><small>the machine’s · rolled for the battle</small></span>' +
         armyHTML('data-lob-army="op"', room.settings.opFaction || 'pmc', isHost) + '</div>';
     }
@@ -527,7 +517,7 @@
     var p = room.seats[which], coop = room.settings.kind === 'coop';
     var label = coop ? (which === 'A' ? 'Player 1' : 'Player 2') : 'Seat ' + which;
     if (!p) {
-      return '<div class="olob-slot lob-empty-seat"><span class="olob-colour still">' + chipHTML(null) + '</span>' +
+      return '<div class="olob-slot lob-empty-seat">' + U.chipStill(U.chip(null)) +
         '<span class="olob-who"><b><em>Empty — waiting for a player</em></b><small>' + label + '</small></span>' +
         (mine ? '' : '<button class="lnk" data-lob="sit" data-seat="' + which + '">Sit here</button>') + '</div>';
     }
@@ -539,8 +529,8 @@
       ' · <span class="' + (p.ready ? 'lob-ok' : 'lob-wait') + '">' + (p.ready ? 'Ready' : 'Not ready yet') + '</span>';
     var name = '<b>' + esc(f.name || (units ? 'An unnamed force' : 'No force yet')) + '</b><small>' + sub + '</small>';
     return '<div class="olob-slot' + (own ? ' mine' : '') + (p.ready ? ' ready' : '') + '">' +
-      (own ? '<button type="button" class="olob-colour" data-lob="colours" data-for="' + which + '" aria-expanded="' + (colourFor === which) + '" title="' + esc(c ? c.name : 'Colours') + '">' + chipHTML(f.colour) + '</button>'
-        : '<span class="olob-colour still" title="' + esc(c ? c.name : '') + '">' + chipHTML(f.colour) + '</span>') +
+      (own ? U.chipButton('data-lob="colours" data-for="' + which + '"', U.chip(f.colour), colourFor === which, c ? c.name : 'Colours')
+        : U.chipStill(U.chip(f.colour), c ? c.name : '')) +
       // your own force's name opens the muster, to pick its units
       (own ? '<button type="button" class="olob-who lob-who" data-lob="muster" title="Muster this force">' + name + '</button>'
         : '<span class="olob-who">' + name + '</span>') +
@@ -558,14 +548,11 @@
      once drawn. A colour another force wears is greyed out. */
   function popHTML(mine, isHost) {
     if (!colourFor) return '';
-    var CO = colours(), KEYS = (root.PMCIso && root.PMCIso.COLOUR_KEYS) || Object.keys(CO), worn = wornBy(), cur = worn[colourFor];
-    var cc = CO[cur];
-    return '<div class="found-pop olob-pop" data-lob-popfor="' + colourFor + '"><label>Colours' + (cc ? ' — ' + esc(cc.name) : '') + '</label><div class="csw">' + KEYS.map(function (k) {
-      var q = CO[k], taken = Object.keys(worn).some(function (o) { return o !== colourFor && worn[o] === k; });
-      return '<button type="button" class="' + (k === cur ? 'on' : '') + '" data-lob="colour" data-col="' + k + '" title="' + esc(q.name) +
-        (taken ? ' — another force wears it' : '') + '"' + (taken ? ' disabled' : '') + '>' +
-        '<span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
-    }).join('') + '</div></div>';
+    var worn = wornBy();
+    return U.colourPop('data-lob-popfor="' + colourFor + '"', worn[colourFor], function (k) {
+      var taken = Object.keys(worn).some(function (o) { return o !== colourFor && worn[o] === k; });
+      return { attrs: 'data-lob="colour" data-col="' + k + '"', off: taken, note: taken ? ' — another force wears it' : '' };
+    });
   }
   function placePop() {
     var pop = host && host.querySelector('.lob-sheet-room .olob-pop'); if (!pop) return;
@@ -578,16 +565,8 @@
     pop.style.top = (r.bottom + 6) + 'px';
   }
   // a name made up from a force's colours and kind, which follows them when either changes
-  function madeUpName(n) {
-    var CO = colours();
-    return !n || Object.keys(CO).some(function (k) {
-      return ARMIES.some(function (f) { return n === CO[k].name + ' ' + FORCE_NOUN[f]; });
-    });
-  }
-  function nameFor(colour, faction) {
-    var c = colours()[colour];
-    return (c ? c.name + ' ' : '') + FORCE_NOUN[faction];
-  }
+  function madeUpName(n) { return !n || U.isForceName(n); }
+  function nameFor(colour, faction) { return U.forceName(colour, faction); }
   /* Your own force, changed from its line and sent to the room as the muster
      sends it (game.force): new colours, or a new army — which rolls the force
      afresh for that army, as a commando in a cooperative game. */
@@ -611,10 +590,6 @@
     if (who === 'op') net.send('game.settings', { patch: { opColour: k } });
     else if (who && who === mySeat()) sendForce({ colour: k });
     draw();
-  }
-
-  function factionName(f) {
-    return f === 'rebel' ? 'Rebels' : f === 'bugs' ? 'Space Bugs' : f === 'xeno' ? 'Xenotripods' : 'PMC';
   }
 
   /* ================= what the screen does ================= */

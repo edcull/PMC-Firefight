@@ -322,22 +322,16 @@
         groups[g].forEach(function (p) {
           var chk = C.canRecruit(co, p.key);
           var cost = C.recruitCost(co, p.key);
-          h += '<button class="cu" data-recruit="' + p.key + '"' +
-            (chk.ok ? '' : ' disabled title="' + esc(chk.why) + '"') + '>' +
-            '<span class="t">' + ROMAN[p.tier] + '</span>' +
-            '<span><b>' + esc(p.name) + '</b><small>' + esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')) + '</small></span>' +
-            '<span class="st">' + (cost ? cost + ' ' + C.money(co) : 'free') + '</span></button>';
+          var price = cost ? cost + ' ' + C.money(co) : 'free', row = root.PMCUi.unitRow;
+          h += row('class="cu" data-recruit="' + p.key + '"' + (chk.ok ? '' : ' disabled title="' + esc(chk.why) + '"'), p.tier,
+            '<b>' + esc(p.name) + '</b>', esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')), price);
           /* the Riders upgrade, "decided when that unit is recruited. The decision is
              final" (p. 97): a squad that may take it is recruited on foot or mounted */
-          if (R.canRide(p)) h += '<button class="cu cu-riders" data-recruit="' + p.key + '" data-asriders="1"' +
-            (chk.ok ? '' : ' disabled') + '><span class="t">' + ROMAN[p.tier] + '</span>' +
-            '<span><b>' + esc(p.name) + ' \u2014 Riders</b><small>Half the models, Movement 10 and the Riders rule; final once recruited</small></span>' +
-            '<span class="st">' + (cost ? cost + ' ' + C.money(co) : 'free') + '</span></button>';
+          if (R.canRide(p)) h += row('class="cu cu-riders" data-recruit="' + p.key + '" data-asriders="1"' + (chk.ok ? '' : ' disabled'), p.tier,
+            '<b>' + esc(p.name) + ' \u2014 Riders</b>', 'Half the models, Movement 10 and the Riders rule; final once recruited', price);
           // the same hull or craft, flown remotely (p. 37)
-          if (R.canBeDrone(p)) h += '<button class="cu cu-drone" data-recruit="' + p.key + '" data-asdrone="1"' +
-            (chk.ok ? '' : ' disabled') + '><span class="t">' + ROMAN[p.tier] + '</span>' +
-            '<span><b>' + esc(p.name) + ' — drone</b><small>+1 Structure, no crew, no experience; can be hacked</small></span>' +
-            '<span class="st">' + (cost ? cost + ' ' + C.money(co) : 'free') + '</span></button>';
+          if (R.canBeDrone(p)) h += row('class="cu cu-drone" data-recruit="' + p.key + '" data-asdrone="1"' + (chk.ok ? '' : ' disabled'), p.tier,
+            '<b>' + esc(p.name) + ' — drone</b>', '+1 Structure, no crew, no experience; can be hacked', price);
         });
       });
       h += '</div>';

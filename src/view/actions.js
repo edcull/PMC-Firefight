@@ -243,7 +243,7 @@
          played out (a resync, the server's result arriving with the board) — so
          it is put up now. */
       var o = overNow(), nm = function (sd) { return (B.state.cfg['name' + sd]) || sd; };
-      var esc = function (t) { return String(t).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); };
+      var esc = root.PMC.esc;   // the shared one, in the rules
       pushRes({ kind: 'Result', title: o.winner ? esc(nm(o.winner)) + ' wins' : 'Draw', outcome: { text: esc(o.text || 'The battle is over.'), tone: 'good' },
         cont: B.state.cfg.campaign || B.state.cfg.onlineCampaign ? 'To the aftermath' : null });
     };

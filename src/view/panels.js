@@ -223,9 +223,7 @@
       }
       if (R.isMachine(u)) { drawMachineStats(u, box); return; }
       var st = R.status(u), m = R.currentMorale(u);
-      var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.paint || u.side) + '>' + u.code + '</span>' +
-        '<div class="sh-text"><h2>' + esc(u.name) + honourMarks(u) + beastTag(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
-        '</div>';
+      var h = statHead(u);
       /* Suppression as the board draws it (ISO.spSegments): a segment an SP up to
          the 12 a unit can carry, in bands as wide as the Morale — steady,
          suppressed, broken, and past three times it — lit up to the unit's SP. */
@@ -336,19 +334,20 @@
       return out.length ? '<div class="chips">' + out.join('') + '</div>' : '';
     }
     function esc(t) { return R.esc(t); }   // the shared one, in the rules
-    // the tooltip attributes, from tips.js; a page without it falls back to `title`
-    function tip(head, body) {
-      return window.PMCTips ? window.PMCTips.attr(head, body)
-        : 'title="' + esc((head ? head + ' — ' : '') + body) + '"';
+    // the tooltip attributes, from tips.js; a page without it falls back to `title` (ui-parts.js)
+    function tip(head, body) { return window.PMCUi.tip(head, body); }
+    // the unit's code in its army's colours, its name with its honours, and its Tier, over its card
+    function statHead(u) {
+      return '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.paint || u.side) + '>' + u.code + '</span>' +
+        '<div class="sh-text"><h2>' + esc(u.name) + honourMarks(u) + beastTag(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
+        '</div>';
     }
 
     // a machine has Structure and Damage where a squad has Morale and suppression
     function drawMachineStats(u, box) {
       var left = Math.max(0, u.str - u.damage);
       var pr = R.propOf(u);
-      var h = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.paint || u.side) + '>' + u.code + '</span>' +
-        '<div class="sh-text"><h2>' + esc(u.name) + honourMarks(u) + beastTag(u) + '</h2><span class="sub">Tier ' + R.ROMAN[u.tier] + groupOf(u) + '</span></div>' +
-        '</div>';
+      var h = statHead(u);
       /* its health as the board draws it (ISO.strSegments): a segment a point of
          Structure, what is left green over two thirds, amber down to a third, red
          below, and what it has lost black */
@@ -567,18 +566,7 @@
       var splits = mine.filter(function (sd) { return splitFor(sd); });
       var hulls = [].concat.apply([], mine.map(function (sd) { return carriersFor(sd); })).filter(function (u) { return !isAI(u.side); });
       var extra = splits.map(splitCard).join('') + mine.map(loadingCard).join('');
-      if (extra) {
-        var what = splits.length && hulls.length ? 'Reserves and transports' : splits.length ? 'Reserves' : 'Transports';
-        var badSplit = splits.some(function (sd) { return !splitFor(sd).ok; });
-        var aboard = hulls.reduce(function (k, v) { return k + (v.cargo || []).length; }, 0);
-        var held = splits.reduce(function (k, sd) { return k + splitFor(sd).held; }, 0);
-        var sub = [splits.length ? held + ' held back' : '', hulls.length ? aboard + ' aboard' : ''].filter(Boolean).join(' \u00b7 ');
-        h += '<div class="acts"><button class="act' + (badSplit ? ' warn' : '') + '" data-act="deploybox"><span>' + what + '</span>' +
-          '<small>' + (badSplit ? 'The split is not legal yet \u2014 ' : '') + sub + '</small></button></div>';
-        h += '<div class="cmodal" data-deploybox' + (deployBox ? '' : ' hidden') + '><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + what + '">' +
-          '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
-          '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
-      }
+      if (extra) h += reservesBox(splits, hulls, extra, ' held back');
       // each side's units, brought on for it when its turn to enter comes — or placed one by one
       mine.forEach(function (sd) {
         // (one side at this screen: the same button, and the same act, as Auto-deploy the rest)
@@ -589,14 +577,8 @@
       var sah = B.swapAskHere();
       if (sah && (mine.indexOf(sah.side) >= 0 || B.state.swapStage)) h += swapCard();
       var mySplit = mine.map(splitFor).filter(function (f) { return f && !f.ok; })[0], blocked = !mine.every(myPartDone);
-      var sr = B.state.startReady, foe = me === 'A' ? 'B' : 'A';
       h += '<div class="acts deploy-go">';
-      if (sr && sr[me]) {
-        h += '<button class="act primary blocked" aria-disabled="true" disabled><span>Ready</span><small>Waiting for ' + esc(sideName(foe)) + ' to begin the battle</small></button>';
-      } else {
-        h += '<button class="act primary' + (blocked ? ' blocked' : '') + '" aria-disabled="' + blocked + '" data-act="' + (blocked ? 'startwhy' : 'start') +
-          '"><span>Begin the battle</span><small>' + (sr && sr[foe] ? esc(sideName(foe)) + ' is ready — roll for initiative' : 'Roll for initiative, then enter the table') + '</small></button>';
-      }
+      h += beginButton(me, blocked, 'start', 'Roll for initiative, then enter the table');
       if (blocked && ui.startWhy && mySplit) {
         var need = mySplit.min === mySplit.max ? String(mySplit.min) : mySplit.min + '\u2013' + mySplit.max;
         h += '<div class="tipbubble" role="status">Choose which units to hold in reserve first: ' + need + ' of them (' + mySplit.held + ' so far).' +
@@ -1075,19 +1057,7 @@
       var splits = ['A', 'B'].filter(function (sd) { return (sd === me || !deployRoster(sd).length) && atThisScreen(sd) && splitFor(sd); });
       var hulls = carriersFor(me).filter(function (u) { return !isAI(u.side); });
       var extra = splits.map(splitCard).join('') + loadingCard(me);
-      if (extra) {
-        var what = splits.length && hulls.length ? 'Reserves and transports' : splits.length ? 'Reserves' : 'Transports';
-        var badSplit = splits.some(function (sd) { return !splitFor(sd).ok; });
-        var aboard = hulls.reduce(function (n, v) { return n + (v.cargo || []).length; }, 0);
-        var held = splits.reduce(function (n, sd) { return n + splitFor(sd).held; }, 0);
-        var sub = [splits.length ? held + (splitFor(splits[0]).kind === 'wave' ? ' in the second wave' : ' held back') : '',
-          hulls.length ? aboard + ' aboard' : ''].filter(Boolean).join(' \u00b7 ');
-        h += '<div class="acts"><button class="act' + (badSplit ? ' warn' : '') + '" data-act="deploybox"><span>' + what + '</span>' +
-          '<small>' + (badSplit ? 'The split is not legal yet \u2014 ' : '') + sub + '</small></button></div>';
-        h += '<div class="cmodal" data-deploybox' + (deployBox ? '' : ' hidden') + '><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + what + '">' +
-          '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
-          '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
-      }
+      if (extra) h += reservesBox(splits, hulls, extra, splits.length && splitFor(splits[0]).kind === 'wave' ? ' in the second wave' : ' held back');
       else {
         // no hull to fill and no split to set: the button is there, greyed out, so it is known to exist
         h += '<div class="acts"><button class="act" disabled title="Nothing in this force can carry troops"><span>Transports</span><small>No transports in this force</small></button></div>';
@@ -1115,16 +1085,7 @@
         // empty hulls of every side at this screen, not only the one shown
         var empties = (bothHere ? here : [me]).reduce(function (all, sd) { return all.concat(carriersFor(sd)); }, [])
           .filter(function (v) { return !isAI(v.side) && v.x >= 0 && !(v.cargo || []).length; });
-        // online, both players say they are ready: the battle begins once both have
-        var sr = B.state.startReady, foe = me === 'A' ? 'B' : 'A';
-        if (sr && sr[me]) {
-          h += '<button class="act primary blocked" aria-disabled="true" disabled><span>Ready</span><small>Waiting for ' +
-            esc(sideName(foe)) + ' to begin the battle</small></button>';
-        } else {
-          h += '<button class="act primary' + (blocked ? ' blocked' : '') + '" aria-disabled="' + blocked + '" data-act="' +
-            (blocked ? 'startwhy' : empties.length ? 'startask' : 'start') + '"><span>Begin the battle</span><small>' +
-            (sr && sr[foe] ? esc(sideName(foe)) + ' is ready — roll for initiative' : 'Roll for initiative') + '</small></button>';
-        }
+        h += beginButton(me, blocked, empties.length ? 'startask' : 'start', 'Roll for initiative');
         if (blocked && sblk) {
           h += '<div class="tipbubble" role="status">' + esc(sblk) + '</div>';
         } else if (blocked && ui.startWhy && mySplit) {
@@ -1146,6 +1107,31 @@
       return h + '</div>';
     }
 
+    /* The button to the reserves and transports, with how many are held back and
+       aboard under it, and the modal it opens over the card (deploying, or
+       entering the table): `extra` what goes in it, `held` the word for those
+       the scenario keeps back. */
+    function reservesBox(splits, hulls, extra, held) {
+      var what = splits.length && hulls.length ? 'Reserves and transports' : splits.length ? 'Reserves' : 'Transports';
+      var badSplit = splits.some(function (sd) { return !splitFor(sd).ok; });
+      var aboard = hulls.reduce(function (n, v) { return n + (v.cargo || []).length; }, 0);
+      var back = splits.reduce(function (n, sd) { return n + splitFor(sd).held; }, 0);
+      var sub = [splits.length ? back + held : '', hulls.length ? aboard + ' aboard' : ''].filter(Boolean).join(' \u00b7 ');
+      return '<div class="acts"><button class="act' + (badSplit ? ' warn' : '') + '" data-act="deploybox"><span>' + what + '</span>' +
+        '<small>' + (badSplit ? 'The split is not legal yet \u2014 ' : '') + sub + '</small></button></div>' +
+        '<div class="cmodal" data-deploybox' + (deployBox ? '' : ' hidden') + '><div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + what + '">' +
+        '<h3>' + what + '</h3><div class="cmodal-scroll">' + extra + '</div>' +
+        '<div class="askrow"><button class="start" data-act="deployboxdone">Done</button></div></div></div>';
+    }
+    /* Begin the battle, once this side's force is ready (greyed out, `blocked`,
+       while it is not, and pressing it says why); online, Ready once this side
+       has said so and the other has yet to. `act` what it does, `sub` under it. */
+    function beginButton(me, blocked, act, sub) {
+      var sr = B.state.startReady, foe = me === 'A' ? 'B' : 'A';
+      if (sr && sr[me]) return '<button class="act primary blocked" aria-disabled="true" disabled><span>Ready</span><small>Waiting for ' + esc(sideName(foe)) + ' to begin the battle</small></button>';
+      return '<button class="act primary' + (blocked ? ' blocked' : '') + '" aria-disabled="' + blocked + '" data-act="' + (blocked ? 'startwhy' : act) + '"><span>Begin the battle</span><small>' +
+        (sr && sr[foe] ? esc(sideName(foe)) + ' is ready — roll for initiative' : sub) + '</small></button>';
+    }
     /* The split the scenario made, for the player to change: a row for each unit,
        tapped to move it between the table and the reserve (or between the waves),
        and a count against what the rule allows. */
