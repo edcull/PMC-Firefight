@@ -559,8 +559,10 @@
       co.roster.filter(function (e) { return pk.rids.indexOf(e.rid) < 0; }).forEach(function (e) {
         var p = E.profile(e.key), rest = e.restUntil > 0;
         var bad = rest ? ['in the workshop'] : blocking(R.checkArmy(keys.concat([R.entryPick(e)]), k.tier, k.pl, co.doctrines, pk.tactic || null, co.faction).faults);
+        // what each unit is carrying, as the force screen at one table shows it: its EXP, honours and traumas, and its Trauma Points down the right
         h += '<button class="cu" data-ocpick="' + e.rid + '"' + (bad.length ? ' disabled title="' + esc(bad[0]) + '"' : '') + '>' +
-          '<span class="t">' + ROMAN[p.tier] + '</span><span><b>' + esc(e.name) + '</b><small>' + esc(p.name) + (rest ? ' — in the workshop' : '') + '</small></span></button>';
+          '<span class="t">' + ROMAN[p.tier] + '</span><span><b>' + esc(e.name) + '</b>' + E.unitWear(e, true) + '<small>' + esc(p.name) + (rest ? ' — in the workshop' : '') + '</small></span>' +
+          '<span class="st">' + (p.cls !== 'infantry' ? esc(p.cls) : C.isLeaderP(p) ? 'command' : E.unitTp(e)) + '</span></button>';
       });
       var fieldable = R.listFor(co.faction || 'pmc').filter(function (p) { return (C.isTurretP(p) || p.noSlot) && (p.tier <= k.tier || k.pl > 1); });
       if (fieldable.length) {

@@ -764,9 +764,9 @@
        button. A demo is watched, not briefed. */
     var BRIEF_PHASES = { tactics: 1, terrain: 1, deploy: 1 };
     function briefOnce() {
-      // opened by itself before the battle, it goes when the battle begins
-      if (ui.briefAuto && (!B.state || !BRIEF_PHASES[B.state.phase])) { ui.briefAuto = false; el('obj-modal').hidden = true; }
-      if (!B.state || !BRIEF_PHASES[B.state.phase] || B.state.cfg.aiSides.length === 2) return;
+      // opened by itself before the battle, it goes when the battle begins — or ends without beginning (a forfeit at the tactics)
+      if (ui.briefAuto && (!B.state || !BRIEF_PHASES[B.state.phase] || B.state.over)) { ui.briefAuto = false; el('obj-modal').hidden = true; }
+      if (!B.state || B.state.over || !BRIEF_PHASES[B.state.phase] || B.state.cfg.aiSides.length === 2) return;
       /* Which battle it is, by what does not change: on a game server the state is
          rebuilt from every snapshot, so the objects themselves are new each time,
          and the other player opening their swaps brought the briefing back up. */
