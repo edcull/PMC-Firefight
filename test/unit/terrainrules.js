@@ -46,10 +46,17 @@ var truck = mk('lcv', 'A', 5, 24);
 ok('a vehicle pays 2" into area terrain', reachCost(world([truck], [{ kind: 'crater', x: 8, y: 20, w: 3, h: 8 }]), truck, 20, 14, 24), 11);
 var wireU = mk('regular', 'A', 5, 24);
 var wired = world([wireU], [{ kind: 'wire', x: 8, y: 18, w: 1, h: 12 }]);
-var wc = reachCost(wired, wireU, 30, 12, 24);
+// asked between intents (the board's previews), nothing is rolled: the wire is priced at the worst the D6 could do
+ok('outside an intent, wire costs the worst a D6 can do', reachCost(wired, wireU, 30, 12, 24), 13);
+ok('...and nothing is rolled or written', wireU.wireRoll == null, true);
+// the engine answering an intent: the D6 is rolled on the first look, and kept
+var wc = R.answering(function () { return reachCost(wired, wireU, 30, 12, 24); });
 ok('barbed wire costs the D6 rolled for the move', wc === 7 + wireU.wireRoll, true, 'D6 ' + wireU.wireRoll + ' → ' + wc + '"');
+var kept = wireU.wireRoll;
+R.answering(function () { reachCost(wired, wireU, 30, 12, 24); });
+ok('...rolled once, before the move', wireU.wireRoll, kept);
 wireU.wireRoll = 6;
-ok('...rolled once, before the move', reachCost(wired, wireU, 30, 12, 24), 13);
+ok('...and what it rolled is what the move costs', reachCost(wired, wireU, 30, 12, 24), 13);
 
 var jet = mk('protectorshm', 'A', 5, 24); jet.jets = true;
 var pond = world([jet], [{ kind: 'deep', x: 8, y: 18, w: 5, h: 12 }, { kind: 'woods', x: 14, y: 18, w: 3, h: 12 }]);

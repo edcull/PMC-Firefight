@@ -10,7 +10,7 @@
     var bufferFromCanvas = B.bufferFromCanvas, busy = B.busy, curArea = B.curArea, deployNext = B.deployNext;
     var dispX = B.dispX, dispY = B.dispY, drawBoard = B.drawBoard, hideTerrainTip = B.hideTerrainTip;
     var liftOf = B.liftOf, myTurn = B.myTurn, other = B.other, playerSide = B.playerSide, roleOf = B.roleOf;
-    var scoreObjectives = B.scoreObjectives, sideName = B.sideName, sizeView = B.sizeView;
+    var scoreObjectives = B.scoreObjectives, heldBy = B.heldBy, sideName = B.sideName, sizeView = B.sizeView;
     var soloOwnerName = B.soloOwnerName, whenIdle = B.whenIdle, ISO = B.ISO, K = B.K, R = B.R, SFX = B.SFX;
     var ZOOMS = B.ZOOMS, cam = B.cam, el = B.el, resQueue = B.resQueue, show = B.show, ui = B.ui;
     // from modules installed after this one: looked up when called
@@ -485,7 +485,7 @@
 
     function render() {
       if (!B.state) return;
-      if (B.state.phase === 'battle') scoreObjectives();
+      scoreObjectives();   // who holds what, live in the battle (game.js)
       drawBoard();
       drawHeader();
       drawBar();
@@ -700,7 +700,7 @@
         el('hdr-init').textContent = B.state.scen.name;
       }
       var held = { A: 0, B: 0 };
-      B.state.objectives.forEach(function (o) { if (o.owner) held[o.owner]++; });
+      B.state.objectives.forEach(function (o) { var hb = heldBy(o); if (hb) held[hb]++; });
       el('hdr-obj').innerHTML = 'Objectives <b>' + held.A + '</b>–<b>' + held.B + '</b>';
       // in the three asymmetric scenarios, which side of it the player is on
       var rl = el('hdr-role');
@@ -743,7 +743,8 @@
       }
       if (B.state.objectives.length) {
         h += '<ul>' + B.state.objectives.map(function (o, i) {
-          return '<li>Objective ' + (i + 1) + ' — ' + (o.owner ? 'held by <b>' + esc(sideName(o.owner)) + '</b>' : 'nobody holds it') + '</li>';
+          var hb = heldBy(o);
+          return '<li>Objective ' + (i + 1) + ' — ' + (hb ? 'held by <b>' + esc(sideName(hb)) + '</b>' : 'nobody holds it') + '</li>';
         }).join('') + '</ul>';
       }
       if (sc.hint) h += '<p class="hint small">' + esc(sc.hint) + '</p>';

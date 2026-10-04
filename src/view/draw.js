@@ -644,10 +644,11 @@
     }
     // the palette of the side holding an objective (its first unit's colours), or null
     function holderPalette(o) {
-      if (!o || !o.owner) return null;
-      var paint = o.owner;
-      for (var i = 0; i < B.state.units.length; i++) { var u = B.state.units[i]; if (u.side === o.owner && u.paint) { paint = u.paint; break; } }
-      return ISO.PALETTE[paint] || ISO.PALETTE[o.owner] || null;
+      var side = o ? B.heldBy(o) : null;
+      if (!side) return null;
+      var paint = side;
+      for (var i = 0; i < B.state.units.length; i++) { var u = B.state.units[i]; if (u.side === side && u.paint) { paint = u.paint; break; } }
+      return ISO.PALETTE[paint] || ISO.PALETTE[side] || null;
     }
     // the sides holding each wing of a building on view: { wing, sides }
     function heldWings(blockers) {
@@ -1560,7 +1561,7 @@
       // objective control radius
       B.ctx.save(); clipTable();
       B.state.objectives.forEach(function (o) {
-        var col = o.owner ? sideInk(o.owner) : 'rgba(235,240,248,.6)';
+        var hb = B.heldBy(o), col = hb ? sideInk(hb) : 'rgba(235,240,248,.6)';
         B.ctx.setLineDash([6, 6]);
         B.ctx.lineWidth = 3; B.ctx.strokeStyle = 'rgba(8,10,14,.5)';
         isoRing(o.x, o.y, 4, liftOf(o.x, o.y)); B.ctx.stroke();

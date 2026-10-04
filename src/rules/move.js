@@ -8,7 +8,7 @@
   'use strict';
   root.PMCMove = function (E) {
     var BOARD = E.BOARD, STEP = E.STEP, TERRAIN = E.TERRAIN, UNIT_R = E.UNIT_R, angleWrap = E.angleWrap,
-        d6 = E.d6, flyInf = E.flyInf, hasOwn = E.hasOwn, isFlying = E.isFlying, kindsUnder = E.kindsUnder,
+        d6 = E.d6, mayRoll = E.mayRoll, flyInf = E.flyInf, hasOwn = E.hasOwn, isFlying = E.isFlying, kindsUnder = E.kindsUnder,
         mountOf = E.mountOf, propOf = E.propOf, rectPointDist = E.rectPointDist, inRectOf = E.inRect, sectionRect = E.sectionRect,
         terrainAt = E.terrainAt, unitNear = E.unitNear;
     /* ---------- movement ---------- */
@@ -46,7 +46,7 @@
       // a grav bike "does not suffer movement penalties" (Appendix 3), barbed wire's included
       var mt = !heavy && hasOwn(u, 'Riders') ? mountOf(u) : null;
       if (mt && mt.smooth) return 0;
-      // barbed wire: the extra D6" rolled before the move (p. 42), whatever else is crossing
+      // barbed wire: the extra D6" rolled before the move (p. 42), whatever else is crossing — the worst it could be until it is rolled (wireTest)
       if (t.wire) return u.wireRoll || 6;
       // Riders (p. 94) lose 2" to rough going where a man on foot loses 1"
       if (!heavy && hasOwn(u, 'Riders')) {
@@ -120,13 +120,24 @@
       state.units.forEach(function (o) { if (o.alive && !o.aboard && o.side !== u.side && o.x >= 0) k.push(o.x, o.y, o.bld ? 1 : 0); });
       return k.join(',') + '|' + tk;
     }
+    /* Barbed wire (p. 42): a section crossed costs the D6" rolled for this move,
+       rolled before it — here, the first time the move is looked at while the
+       engine is answering an intent (mayRoll), and kept on the unit until its
+       activation ends (engine.js). Looked at between intents — the board's
+       previews, its buttons and hints — nothing is rolled or written, and the
+       wire is priced at the worst the die could do (terrainCost). It is rolled
+       before any field is looked up, so a field the board filed under no roll
+       yet is never handed back in place of rolling. */
+    function wireTest(state, u) {
+      if (u.wireRoll != null || !mayRoll() || isFlying(u) || flyInf(u) || jumps(u)) return;
+      if (state.terrain.some(function (r) { return r.kind === 'wire'; })) u.wireRoll = d6();
+    }
     function field(state, u, allowance) {
-      var tk = terrainKey(state), wire = u.wireRoll;
+      wireTest(state, u);
+      var tk = terrainKey(state);
       var key = fieldKey(state, u, allowance, tk);
       for (var fc = 0; fc < fieldCache.length; fc++) if (fieldCache[fc].key === key && fieldCache[fc].state === state) return fieldCache[fc].f;
       var made = fieldOf(state, u, allowance, tk);
-      // the wire's D6 is rolled on the first look: file it under the roll it now has
-      if (u.wireRoll !== wire) key = fieldKey(state, u, allowance, tk);
       fieldCache.unshift({ key: key, state: state, f: made });
       if (fieldCache.length > 4) fieldCache.pop();
       return made;
@@ -218,11 +229,6 @@
       var ground = groundOf(state, N, tk), terr = ground.at;
       var kindIndex = {}; var kinds = Object.keys(TERRAIN);
       kinds.forEach(function (k, n) { kindIndex[k] = n; });
-      // a section of wire crossed costs the D6 rolled for this move
-      if (u.wireRoll == null && !isFlying(u) && !flyInf(u) && !jumps(u) && state.terrain.some(function (r) { return r.kind === 'wire'; })) {
-        u.wireRoll = d6();
-      }
-
       /* What each kind of ground means to this unit — what it costs to enter,
          whether it bars the way, whether it is linear or area terrain — asked
          once for each kind rather than at every step of the search. */
@@ -426,6 +432,7 @@
     }
 
     function driveField(state, u, allowance) {
+      wireTest(state, u);   // the wire's D6, as for any move (field)
       var key = driveKey(state, u, allowance);
       if (driveCache.key === key) return driveCache.f;
       var cols = Math.round(BOARD.w / STEP) + 1, rows = Math.round(BOARD.h / STEP) + 1;
@@ -435,7 +442,6 @@
       var terr = new Uint8Array(N), blk = new Int8Array(N);   // 0 unknown, 1 open, 2 blocked
       var kinds = Object.keys(TERRAIN), kindIndex = {};
       kinds.forEach(function (k, n) { kindIndex[k] = n; });
-      if (u.wireRoll == null && state.terrain.some(function (r) { return r.kind === 'wire'; })) u.wireRoll = d6();
       // what each kind of ground means to this hull, asked once a kind (as in fieldOf)
       var KN = kinds.length, kCost = new Float64Array(KN), kLin = new Uint8Array(KN), kArea = new Uint8Array(KN), kBar = new Uint8Array(KN);
       for (var kn = 0; kn < KN; kn++) {
@@ -691,7 +697,7 @@
     // once every kit is made, the others' functions themselves rather than the stubs for them
     function relink(L) {
       BOARD = L.BOARD; STEP = L.STEP; TERRAIN = L.TERRAIN; UNIT_R = L.UNIT_R; angleWrap = L.angleWrap;
-      d6 = L.d6; flyInf = L.flyInf; hasOwn = L.hasOwn; isFlying = L.isFlying; kindsUnder = L.kindsUnder;
+      d6 = L.d6; mayRoll = L.mayRoll; flyInf = L.flyInf; hasOwn = L.hasOwn; isFlying = L.isFlying; kindsUnder = L.kindsUnder;
       mountOf = L.mountOf; propOf = L.propOf; rectPointDist = L.rectPointDist; inRectOf = L.inRect; sectionRect = L.sectionRect;
       terrainAt = L.terrainAt; unitNear = L.unitNear;
     }
