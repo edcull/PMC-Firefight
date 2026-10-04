@@ -376,27 +376,28 @@
       if (E.online && E.online.local) {
         var L = root.PMCLocalWorld, here = L.seat(E.online.id), there = here ? 0 : 1;
         h += '<div class="cpan onote"><div class="cpstat">At the screen: <b>' + esc(L.playerName(here)) + '</b>' +
-'</div><button class="lnk" data-go="oseat">Hand over to ' + esc(L.playerName(there)) + '</button></div>';
+'</div><button class="start" data-go="oseat">Hand over to ' + esc(L.playerName(there)) + '</button></div>';
       }
       var b = battleCode();
       if (b) {
         h += '<div class="cpan onote"><div class="cpstat"><b>The battle is ready.</b></div><button class="start" data-go="obattle">Go to the battle</button></div>';
       } else if (on.contract) {
         h += '<div class="cpan onote"><div class="cpstat">A contract with <b>' + esc(E.camp.companies.B.name) + '</b> is waiting on you.</div>' +
-          '<button class="lnk" data-go="ocontract">Open the contract</button></div>';
+          '<button class="start" data-go="ocontract">Open the contract</button></div>';
       } else if (on.duel) {
         var d = on.duel;
         h += '<div class="cpan onote"><div class="cpstat">A contract with <b>' + esc(d.foeName) + '</b> (' + esc(d.player) + ') — ' + duelLine(d) + '</div>' +
-          '<button class="lnk" data-go="ocontract">Open the contract</button></div>';
+          '<button class="start" data-go="ocontract">Open the contract</button></div>';
       }
       (on.challenges || []).forEach(function (c) {
         var other = forceOfSlot(c.mine ? c.to : c.from);
         if (!other) return;
         h += c.mine
           ? '<div class="cpan onote"><div class="cpstat">You have challenged <b>' + esc(other.name) + '</b> (' + esc(other.player) + '). Waiting for them to answer.</div>' +
-            '<button class="lnk" data-ochcancel="' + c.id + '">Withdraw the challenge</button></div>'
+            '<button class="start" data-ochcancel="' + c.id + '">Withdraw the challenge</button></div>'
           : '<div class="cpan onote"><div class="cpstat"><b>' + esc(other.name) + '</b> (' + esc(other.player) + ') challenges you to a contract.</div>' +
-            '<button class="start" data-ochaccept="' + c.id + '">Accept</button> <button class="lnk" data-ochcancel="' + c.id + '">Turn it down</button></div>';
+            // turning it down and taking it up side by side, the same buttons as the contract's own two
+            '<div class="cacts"><button class="start cdrop" data-ochcancel="' + c.id + '">Turn it down</button><button class="start" data-ochaccept="' + c.id + '">Accept</button></div></div>';
       });
       return h;
     }
