@@ -1537,6 +1537,20 @@
           isoRing(o.x, o.y, 12, liftOf(o.x, o.y));
           B.ctx.fill(); B.ctx.stroke();
         });
+        /* And 12" round each enemy that would greet the landing (p. 30): coming down
+           that close is allowed, but draws a free Basic Firepower shot from the
+           nearest unsuppressed enemy that can see it. Measured as the rule measures
+           it, token edge to token edge, so the ring is where the arriving unit's
+           middle comes within 12" — a warning, not forbidden ground. */
+        var lander = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
+        B.ctx.setLineDash([4, 5]);
+        B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(240,182,74,.95)';
+        B.ctx.fillStyle = 'rgba(240,182,74,.1)';
+        B.state.units.forEach(function (e) {
+          if (!e.alive || e.side === lander || !onTable(e) || e.aboard || e.fp === null || R.status(e) !== 'ready') return;
+          isoRing(e.x, e.y, 12 + 2 * UR, liftOf(e.x, e.y));
+          B.ctx.fill(); B.ctx.stroke();
+        });
         B.ctx.setLineDash([]);
       }
 
