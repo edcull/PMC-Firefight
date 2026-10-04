@@ -234,16 +234,17 @@
             C.creedOf(co).one + ' (' + open + ' free)</button> ';
         }
         var pp0 = promotionPanel(co, side, !!bar);
-        // at the foot of its box, as the dossier has + Recruit: the other forces on the world (in hotseat, the other player)
-        if (bar) {
-          var hot = E.camp.mode === 'hotseat';
-          pp0 = pp0.replace(/<\/div>$/, '<div class="cdos-foot"><button type="button" class="lnk" data-go="fmodal" data-kind="rivals">' +
-            (hot ? (E.hubSide === 'B' ? 'Player 1' : 'Player 2') : 'Other forces') + '</button></div></div>');
+        // declaring an Aspiring Company is a step up as well: in the promotion's box, a button like its own
+        if (!co.aspiring && C.canAspire(co)) {
+          pp0 = pp0.replace(/<\/div>$/, '<button class="start" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button></div>');
         }
         h += pp0;
-      }
-      if (!co.aspiring && C.canAspire(co)) {
-        h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
+        // under it, at the foot of the screen: the other forces on the world (in hotseat, the other player)
+        if (bar) {
+          var hot = E.camp.mode === 'hotseat';
+          h += '<div class="cdos-foot hubfoot"><button type="button" class="lnk" data-go="fmodal" data-kind="rivals">' +
+            (hot ? (E.hubSide === 'B' ? 'Player 1' : 'Player 2') : 'Other forces') + '</button></div>';
+        }
       }
       var gaps = C.rebuildNeeds(co);
       if (gaps.length) {
@@ -271,24 +272,29 @@
       var uf = E.ufilter[E.hubSide] || {}, W = { honour: C.experienceStats(co).word, trauma: C.traumaStats(co).word };
       var picked = on('type').concat(on('tier').map(function (t) { return 'Tier ' + ROMAN[t]; }))
         .concat(['honour', 'trauma'].filter(function (k) { return uf[k]; }).map(function (k) { return W[k]; }));
-      var h = '<div class="dsortline">' +
-        '<button type="button" class="lnk" data-go="fmodal" data-kind="dsort">Sort: ' + by[1] + ' \u25be</button>' +
-        '<button type="button" class="lnk' + (picked.length ? ' on' : '') + '" data-go="fmodal" data-kind="dfilter">Filter: ' +
-        (picked.length ? esc(picked.length > 2 ? picked.length + ' chosen' : picked.join(', ')) : 'All') + ' \u25be</button></div>';
-      h += cmodal('dsort', 'Sort the dossier', '<div class="cmodal-scroll dpick-list">' + SORTS.map(function (x) {
-        return '<button type="button" class="lnk' + (x[0] === E.dsort ? ' on' : '') + '" data-go="dsort" data-by="' + x[0] + '" aria-pressed="' + (x[0] === E.dsort) + '">' + x[1] + '</button>';
-      }).join('') + '</div>');
+      /* Each drops down under its own button, over what is below (no title, no close:
+         its button again, or a tap anywhere else, puts it away). */
+      var pop = function (kind, label, on, inner) {
+        var open = E.openModal === kind;
+        return '<span class="dpopwrap"><button type="button" class="lnk' + (on ? ' on' : '') + '" data-go="dpop" data-kind="' + kind + '" aria-expanded="' + open + '">' +
+          label + ' \u25be</button>' + (open ? '<div class="dpop dpick-list">' + inner + '</div>' : '') + '</span>';
+      };
       var chip = function (kind, val, label) {
         var is = !!E.dfilt[kind][val];
         return '<button type="button" class="lnk' + (is ? ' on' : '') + '" data-go="dfilt" data-kind="' + kind + '" data-val="' + esc(val) + '" aria-pressed="' + is + '">' + esc(label) + '</button>';
       };
-      h += cmodal('dfilter', 'Filter the dossier', '<div class="cmodal-scroll dpick-list">' +
-        '<h4>Type</h4>' + Object.keys(types).sort().map(function (g) { return chip('type', g, g || 'Other'); }).join('') +
-        '<h4>Tier</h4>' + Object.keys(tiers).sort().map(function (t) { return chip('tier', t, 'Tier ' + ROMAN[t]); }).join('') +
-        '<h4>Has</h4>' + ['honour', 'trauma'].map(function (k) {
-          return '<button type="button" class="lnk' + (uf[k] ? ' on' : '') + '" data-go="ufilter" data-fkey="' + E.hubSide + '" data-kind="' + k + '" aria-pressed="' + !!uf[k] + '">' + esc(W[k]) + '</button>';
-        }).join('') +
-        '</div>', picked.length ? '<button type="button" class="lnk" data-go="dfiltclear">Clear</button>' : '');
+      var h = '<div class="dsortline">' +
+        pop('dsort', 'Sort: ' + by[1], false, SORTS.map(function (x) {
+          return '<button type="button" class="lnk' + (x[0] === E.dsort ? ' on' : '') + '" data-go="dsort" data-by="' + x[0] + '" aria-pressed="' + (x[0] === E.dsort) + '">' + x[1] + '</button>';
+        }).join('')) +
+        pop('dfilter', 'Filter: ' + (picked.length ? esc(picked.length > 2 ? picked.length + ' chosen' : picked.join(', ')) : 'All'), picked.length > 0,
+          '<h4>Type</h4>' + Object.keys(types).sort().map(function (g) { return chip('type', g, g || 'Other'); }).join('') +
+          '<h4>Tier</h4>' + Object.keys(tiers).sort().map(function (t) { return chip('tier', t, 'Tier ' + ROMAN[t]); }).join('') +
+          '<h4>Has</h4>' + ['honour', 'trauma'].map(function (k) {
+            return '<button type="button" class="lnk' + (uf[k] ? ' on' : '') + '" data-go="ufilter" data-fkey="' + E.hubSide + '" data-kind="' + k + '" aria-pressed="' + !!uf[k] + '">' + esc(W[k]) + '</button>';
+          }).join('') +
+          (picked.length ? '<div class="dpop-acts"><button type="button" class="lnk" data-go="dfiltclear">Clear</button></div>' : '')) +
+        '</div>';
       return h;
     }
     /* Promotion to the next Company Tier (pp. 83-84) is a handful of conditions,

@@ -982,6 +982,11 @@
       rivColourFor = null; render();
       if (!t) return;
     }
+    // the dossier's sort and filter, dropped down under their buttons: a tap anywhere else puts them away
+    if ((openModal === 'dsort' || openModal === 'dfilter') && !ev.target.closest('.dpopwrap')) {
+      openModal = null; render();
+      if (!t) return;
+    }
     // a unit's drives, opened beside its icon: a tap anywhere else puts them away
     if (propFor !== null && !ev.target.closest('.propop') && !(t && t.hasAttribute('data-fprop'))) {
       keepFoundName(); propFor = null; render();
@@ -1282,7 +1287,9 @@
       case 'hubside': hubSide = t.getAttribute('data-hs') === 'B' ? 'B' : 'A'; colourOpen = false; promoRid = null; openModal = null; render(); return;
       case 'fmodal': openModal = t.getAttribute('data-kind'); render(); return;
       // the dossier's sort (one at a time) and filter (as many as ticked), from their popups
-      case 'dsort': dsort = t.getAttribute('data-by') || 'type'; render(); return;
+      // the sort and filter pop-ups: their buttons open them, and close them again
+      case 'dpop': { var pk = t.getAttribute('data-kind'); openModal = openModal === pk ? null : pk; render(); return; }
+      case 'dsort': dsort = t.getAttribute('data-by') || 'type'; openModal = null; render(); return;
       case 'dfilt': {
         var dk = t.getAttribute('data-kind'), dv = t.getAttribute('data-val');
         dfilt[dk][dv] = !dfilt[dk][dv];

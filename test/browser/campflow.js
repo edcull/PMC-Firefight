@@ -135,26 +135,29 @@ async function pastFronts(p) {
   check('...under a line to sort and filter them', dos.line.length === 2 && /Sort: Type/.test(dos.line[0]) && /Filter: All/.test(dos.line[1]), dos.line.join(' | '));
   await p.evaluate(() => { document.querySelector('#camp-body .dsortline [data-kind="dsort"]').click(); });
   await p.waitForTimeout(150);
-  await p.evaluate(() => { document.querySelector('#camp-body .cmodal:not([hidden]) [data-by="name"]').click(); });
+  await p.evaluate(() => { document.querySelector('#camp-body .dpop [data-by="name"]').click(); });   // a pick puts the sort away
   await p.waitForTimeout(150);
   const sortedNames = await p.evaluate(() => {
     const camp = window.PMC_CAMPAIGN.get(), rids = [...document.querySelectorAll('#camp-body .cdos .dcard[data-rid]')].map(b => b.getAttribute('data-rid'));
     return rids.map(r => camp.companies.A.roster.find(e => String(e.rid) === r).name);
   });
   check('Sort by name puts them in order of name', sortedNames.length > 3 && sortedNames.every((n, i) => !i || sortedNames[i - 1].localeCompare(n) <= 0), sortedNames.join(', '));
-  await p.evaluate(() => { const d = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodalclose"]'); if (d) d.click(); });
+  check('...and the sort, a pop-up under its button, is put away once picked', await p.evaluate(() => !document.querySelector('#camp-body .dpop')));
   await p.evaluate(() => { document.querySelector('#camp-body .dsortline [data-kind="dfilter"]').click(); });
   await p.waitForTimeout(150);
   const filt = await p.evaluate(() => {
-    const b = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="dfilt"][data-kind="tier"]');
+    const b = document.querySelector('#camp-body .dpop [data-go="dfilt"][data-kind="tier"]');
     const tier = +b.getAttribute('data-val'); b.click();
     const camp = window.PMC_CAMPAIGN.get(), rids = [...document.querySelectorAll('#camp-body .cdos .dcard[data-rid]')].map(x => x.getAttribute('data-rid'));
     const tiers = rids.map(r => window.PMC.profile(camp.companies.A.roster.find(e => String(e.rid) === r).key).tier);
     return { tier, tiers, label: document.querySelector('#camp-body .dsortline [data-kind="dfilter"]').textContent };
   });
   check('Filter by Tier narrows it to that Tier', filt.tiers.length > 0 && filt.tiers.every(t => t === filt.tier) && /Tier/.test(filt.label), JSON.stringify(filt));
-  await p.evaluate(() => { document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="dfiltclear"]').click(); });
-  await p.evaluate(() => { const d = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodalclose"]'); if (d) d.click(); });
+  check('the filter stays open while ticked, under its button', await p.evaluate(() => { const w = document.querySelector('#camp-body .dsortline [data-kind="dfilter"]').parentNode; return !!w.querySelector('.dpop'); }));
+  await p.evaluate(() => { document.querySelector('#camp-body .dpop [data-go="dfiltclear"]').click(); });
+  await p.evaluate(() => document.querySelector('#camp-body .cphead').click());   // a tap elsewhere puts it away
+  await p.waitForTimeout(100);
+  check('...and a tap elsewhere puts it away', await p.evaluate(() => !document.querySelector('#camp-body .dpop')));
   await p.evaluate(() => { const b = document.querySelector('#camp-body .hubtabs [data-go="roster"]:first-child'); if (b) b.click(); });
   await p.waitForTimeout(200);
   const prom = await p.evaluate(() => {

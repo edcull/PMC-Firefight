@@ -974,6 +974,16 @@ a.mcard { text-decoration: none; line-height: normal; }
 /* the dossier's one line of sort and filter, and the choices in their popups */
 .dsortline { display: flex; gap: 8px; margin: 2px 0 0; }
 .dsortline .lnk { flex: 1 1 0; min-width: 0; min-height: var(--row-h); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px; }
+/* the sort and filter drop down under their buttons, over the list (closed by the button again, or a tap elsewhere) */
+.dsortline .dpopwrap { flex: 1 1 0; min-width: 0; position: relative; display: flex; }
+.dsortline .dpopwrap > .lnk { flex: 1 1 auto; }
+.dsortline .dpop {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; width: max-content; min-width: 100%; max-width: min(440px, calc(100vw - 32px));
+  padding: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 10px 28px rgba(0,0,0,.5);
+}
+.dsortline .dpopwrap:last-child .dpop { left: auto; right: 0; }
+.dsortline .dpop .lnk { flex: none; min-height: 0; white-space: normal; overflow: visible; }
+.dsortline .dpop .dpop-acts { flex: 0 0 100%; display: flex; justify-content: flex-end; margin-top: 4px; }
 .dpick-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .dpick-list h4 { flex: 0 0 100%; margin: 8px 0 0; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); }
 .dpick-list h4:first-child { margin-top: 0; }
@@ -1003,6 +1013,7 @@ a.mcard { text-decoration: none; line-height: normal; }
 .cdos .dtabs { margin-bottom: 9px; flex-wrap: wrap; }
 .cdos-body { gap: 0; margin: 0; }
 .cdos-foot { display: flex; padding-top: 5px; }
+.cdos-foot.hubfoot { padding-top: 8px; }
 /* the dossier: its sort line close over the list */
 .dsortline + .cprom.cdos, .dsortline ~ .cmodal + .cprom.cdos, .cpan-own > .cprom.cdos { margin-top: 6px; }
 /* the hub: its panel runs to the foot (the foot's only button is in the top bar: no room kept for it) */
