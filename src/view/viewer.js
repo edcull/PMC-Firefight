@@ -285,6 +285,8 @@
   function frame() {
     // a unit that moves by itself (rotors, scanners, a deflector, a cloak, a brain) keeps the bench running
     if (!loop && ((I.animates(unit()) && view.status !== 'destroyed') || I.animates(mark()))) start();
+    // ...and a fire keeps it ticking over slowly (frame is drawn from tick too, so not on every frame)
+    if (!loop && burning()) smoulder();
     var w = cv.width, h = cv.height;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = '#0c1014';
@@ -351,7 +353,8 @@
       // the target: its collars going off, or shot to pieces (a hull's wreck, a squad gone)
       if (m !== u && m.id === 'VTGT' && view.tcollar) { drawCollared(m, view.tcollar); return; }
       if (m !== u && m.id === 'VTGT' && targetGone(m)) {
-        if (R.isMachine(m)) I.drawWreck(g, m, { x: m.x, y: m.y }, 0, 0);
+        // on the battle's clock, as the firer's wreck is, so its flames flicker and its smoke climbs
+        if (R.isMachine(m)) I.drawWreck(g, m, { x: m.x, y: m.y }, 0, Date.now());
         return;
       }
       // a penal squad Broken: its collars going off, the men bolting and falling
@@ -514,8 +517,10 @@
       view.zCur = (view.zCur || 1) + (want - (view.zCur || 1)) * Math.min(1, dt / 140);
       busy = true;
     } else view.zCur = want;
-    // the wreck keeps burning, and a damaged hull keeps smoking
-    if (R.isMachine(unit()) && view.status !== 'ready') busy = true;
+    /* A wreck keeps burning and a damaged hull keeps smoking — the firer's or
+       the target's — but on its own that only wants the board redrawn about
+       eight times a second, as the battle redraws a fire (draw.js). */
+    var fire = burning();
     // and a shield's band of light keeps turning
     if (shielded(unit())) busy = true;
     // and a piece swinging onto its mark
@@ -528,9 +533,20 @@
     if (view.tcollar) busy = true;
     if (view.tgt && view.tgt.spFill) busy = true;      // its Suppression bar still filling
     frame();
-    if (busy) start(); else last = 0;
+    if (busy) start();
+    else { last = 0; if (fire) smoulder(); }
   }
   function start() { if (!loop) loop = requestAnimationFrame(tick); }
+  // the next frame of a fire, a beat from now (one waiting already will do)
+  var ember = null;
+  function smoulder() { if (!ember) ember = setTimeout(function () { ember = null; start(); }, 120); }
+  /* Something on the stage burning or smoking by itself: the firer as a wreck
+     or at half Structure, or the target the same way once it has been shot up. */
+  function burning() {
+    var u = unit(), t = mark();
+    if (R.isMachine(u) && (view.status === 'destroyed' || I.smoking(u))) return true;
+    return R.isMachine(t) && (targetGone(t) || I.smoking(t));
+  }
   function shielded(u) { return view.status !== 'destroyed' && !!R.ruleValue(u, 'Shield Generator'); }
 
   /* ---------- movement ----------
