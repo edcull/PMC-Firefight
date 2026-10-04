@@ -384,7 +384,17 @@
   function forcedCharge(u) { return Q.forcedCharge(u); }
   function soloOwnerName(o) { return Q.soloOwnerName(o); }
   function snapToSpot(ins, p) { return Q.snapToSpot(ins, p); }
-  function scoreObjectives() { return Q.scoreObjectives(); }
+  /* Who holds each objective as things stand, worked out at every repaint and
+     kept here on the board, for the rings, the header and the briefing to show
+     live. The battle's own owners are the ones the End phase scored: written
+     there between intents, the OpFor would go by owners a battle played again
+     from its intents never had. */
+  var liveHolders = null;
+  function scoreObjectives() { liveHolders = state && state.phase === 'battle' ? Q.objectiveHolders() : null; }
+  function heldBy(o) {
+    var i = liveHolders && state ? state.objectives.indexOf(o) : -1;
+    return i >= 0 && liveHolders[i] !== undefined ? liveHolders[i] : (o && o.owner) || null;
+  }
   function curArea() { return Q.curArea(); }
   function fitGhost(a, x, y) { return Q.fitGhost(a, x, y); }
   function clonePiece(p) { return Q.clonePiece(p); }
@@ -1110,7 +1120,7 @@
     get seats() { return seats; }, get watching() { return watching; },
     get sightOn() { return VIEW.sightOn; }, get sightSide() { return VIEW.sightSide; }, anims: anims,
     addFx: addFx, arrivalQueued: arrivalQueued, arriving: arriving, boxesFor: boxesFor,
-    clonePiece: clonePiece, curArea: curArea, dispX: dispX, dispY: dispY, drawFx: drawFx, fitGhost: fitGhost,
+    clonePiece: clonePiece, curArea: curArea, dispX: dispX, dispY: dispY, drawFx: drawFx, fitGhost: fitGhost, heldBy: heldBy,
     insertionMine: insertionMine, isAI: isAI, swapAskHere: swapAskHere, liftOf: liftOf, nowMs: nowMs, onTable: onTable,
     placingSide: placingSide, shownAs: shownAs, unitById: unitById, zoneFor: zoneFor, FX: FX, H: H, ISO: ISO,
     K: K, R: R, SFX: SFX, UR: UR, W: W, cam: cam, ui: ui
@@ -1141,7 +1151,7 @@
     get musterFaction() { return musterFaction; }, bufferFromCanvas: bufferFromCanvas, busy: busy,
     curArea: curArea, deployNext: deployNext, dispX: dispX, dispY: dispY, drawBoard: drawBoard,
     hideTerrainTip: hideTerrainTip, liftOf: liftOf, myTurn: myTurn, mySide: mySide, other: other, playerSide: playerSide,
-    roleOf: roleOf, scoreObjectives: scoreObjectives, sideName: sideName, sizeView: sizeView,
+    roleOf: roleOf, scoreObjectives: scoreObjectives, heldBy: heldBy, sideName: sideName, sizeView: sizeView,
     soloOwnerName: soloOwnerName, whenIdle: whenIdle, ISO: ISO, K: K, R: R, SFX: SFX, ZOOMS: ZOOMS, cam: cam,
     el: el, resQueue: resQueue, show: show, ui: ui
   });

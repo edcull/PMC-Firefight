@@ -388,15 +388,19 @@
        lattice and offered the way an insertion is. */
     /* Where a unit walks on from. Invasion's defender comes on "from a random
        table edge (but from a point nominated by the defender)" (p. 53): the edge
-       is rolled for the unit as it arrives, and only the point along it chosen. */
+       is rolled for the unit as it arrives, and only the point along it chosen.
+       `look`: only asked about (the board's card, arrivalWhere) — the edge is
+       not rolled then: a die rolled between intents comes from the wrong dice,
+       and a battle played again from its intents would roll it elsewhere. */
     var EDGE_NAMES = ['top', 'bottom', 'left', 'right'];
-    function entryFor(u) {
+    function entryFor(u, look) {
       var sc = E.state.sc, entry = sc && sc.entry && sc.entry[u.side];
       if (!entry || !entry.length) return entry;
       // a scenario that narrows it as the side comes on (Hostile takeover's one edge)
       if (E.state.scen.entryFor) entry = E.state.scen.entryFor(E.state, u, entry);
       if (!(sc.randomEdge && sc.randomEdge[u.side]) || entry.length !== 4) return entry;
       if (u.entryEdge == null) {
+        if (look) return entry;
         u.entryEdge = Math.floor(Math.random() * 4);
         logLine('note', u.label + ' — random table edge: the ' + EDGE_NAMES[u.entryEdge] + ' edge.');
       }
@@ -598,8 +602,9 @@
         if (u.wave === 1 && E.state.turn <= 1) return 'within 4" of any of your three landing zones';
         return 'within 4" of a landing zone you hold or that is still neutral';
       }
-      var entry = entryFor(u);
+      var entry = entryFor(u, true);
       if (sc && sc.randomEdge && sc.randomEdge[u.side] && u.entryEdge != null) return 'along the ' + EDGE_NAMES[u.entryEdge] + ' table edge, the one rolled for it';
+      if (sc && sc.randomEdge && sc.randomEdge[u.side] && entry && entry.length === 4) return 'along a table edge rolled for it as it comes on';
       if (entry && entry.length > 1) return 'along the stretches of table edge your side owns';
       return 'along your own table edge';
     }

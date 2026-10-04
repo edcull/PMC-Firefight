@@ -644,10 +644,11 @@
     }
     // the palette of the side holding an objective (its first unit's colours), or null
     function holderPalette(o) {
-      if (!o || !o.owner) return null;
-      var paint = o.owner;
-      for (var i = 0; i < B.state.units.length; i++) { var u = B.state.units[i]; if (u.side === o.owner && u.paint) { paint = u.paint; break; } }
-      return ISO.PALETTE[paint] || ISO.PALETTE[o.owner] || null;
+      var side = o ? B.heldBy(o) : null;
+      if (!side) return null;
+      var paint = side;
+      for (var i = 0; i < B.state.units.length; i++) { var u = B.state.units[i]; if (u.side === side && u.paint) { paint = u.paint; break; } }
+      return ISO.PALETTE[paint] || ISO.PALETTE[side] || null;
     }
     // the sides holding each wing of a building on view: { wing, sides }
     function heldWings(blockers) {
@@ -1537,6 +1538,20 @@
           isoRing(o.x, o.y, 12, liftOf(o.x, o.y));
           B.ctx.fill(); B.ctx.stroke();
         });
+        /* And 12" round each enemy that would greet the landing (p. 30): coming down
+           that close is allowed, but draws a free Basic Firepower shot from the
+           nearest unsuppressed enemy that can see it. Measured as the rule measures
+           it, token edge to token edge, so the ring is where the arriving unit's
+           middle comes within 12" — a warning, not forbidden ground. */
+        var lander = ui.insertion.by || (ui.insertion.unit ? ui.insertion.unit.side : 'A');
+        B.ctx.setLineDash([4, 5]);
+        B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(240,182,74,.95)';
+        B.ctx.fillStyle = 'rgba(240,182,74,.1)';
+        B.state.units.forEach(function (e) {
+          if (!e.alive || e.side === lander || !onTable(e) || e.aboard || e.fp === null || R.status(e) !== 'ready') return;
+          isoRing(e.x, e.y, 12 + 2 * UR, liftOf(e.x, e.y));
+          B.ctx.fill(); B.ctx.stroke();
+        });
         B.ctx.setLineDash([]);
       }
 
@@ -1546,7 +1561,7 @@
       // objective control radius
       B.ctx.save(); clipTable();
       B.state.objectives.forEach(function (o) {
-        var col = o.owner ? sideInk(o.owner) : 'rgba(235,240,248,.6)';
+        var hb = B.heldBy(o), col = hb ? sideInk(hb) : 'rgba(235,240,248,.6)';
         B.ctx.setLineDash([6, 6]);
         B.ctx.lineWidth = 3; B.ctx.strokeStyle = 'rgba(8,10,14,.5)';
         isoRing(o.x, o.y, 4, liftOf(o.x, o.y)); B.ctx.stroke();

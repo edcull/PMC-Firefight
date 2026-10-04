@@ -239,7 +239,7 @@ async function pastFronts(p) {
   const job = () => p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get(), t = document.getElementById('camp-body').textContent.replace(/\s+/g, ' '), k = (c.offers || []).find(o => o.rival === c.facing) || {};   // the job taken: the facing force's, kept with the turn's offers
     return {
-      against: c.rivals.some(r => t.includes('against ' + r.name)),
+      against: /against/.test(t),
       scenario: !!k.scenario && t.includes(k.scenario.name) && !/Scenario D6/.test(t),
       size: /Battle Tier ?[IV]+ ?Priority Level ?\d/.test(t),
       world: !k.planet || k.planet === 'random' || !!document.querySelector('#camp-body .planetpill.planet-' + k.planet),
@@ -249,7 +249,7 @@ async function pastFronts(p) {
     };
   });
   const offers = await job();
-  check('the contract names who it is against', offers.against, JSON.stringify(offers));
+  check('the contract opens on the job, not a line saying who it is against', !offers.against, JSON.stringify(offers));
   check('...a scenario, without its die roll', offers.scenario);
   check('...and how big a fight it is', offers.size);
   check('...and the world it is fought on', offers.world);
@@ -338,8 +338,8 @@ async function pastFronts(p) {
     }, id);
     const want = id !== 'meeting';
     // the role is given with the job, on the contract screen, and only the one that is yours
-    check(id + ': the role is settled, and shown once with the job',
-      (!!seen.mine === want) && seen.badge === want && seen.said === want && !seen.other,
+    check(id + ': the role is settled, its badge shown with the job (what it deploys is told in the briefing)',
+      (!!seen.mine === want) && seen.badge === want && !seen.said && !seen.other,
       want ? 'you are the ' + seen.mine : 'no roles to state');
   }
   await p.evaluate(() => window.__forceScenario('meeting'));

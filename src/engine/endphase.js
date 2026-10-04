@@ -424,9 +424,16 @@
     // how close a unit has to be (objDist) to hold or contest an objective
     function objReach(o) { var a = SC.areaOf(o); return a && a.strict ? 0 : 4; }
     function scoreObjectives() {
-      E.state.objectives.forEach(function (o) {
-        o.owner = SC.holderOf(E.state, o.x, o.y, 4, SC.areaOf(o));
-      });
+      var held = objectiveHolders();
+      E.state.objectives.forEach(function (o, i) { o.owner = held[i]; });
+    }
+    /* Who would hold each objective were it scored now, in the order of the
+       list — written nowhere. The board shows it live, between the End phases
+       that score it (scoreObjectives): an owner written there, between
+       intents, is what the OpFor and an Invasion's landing zones go by, and
+       a battle played again from its intents would not have it. */
+    function objectiveHolders() {
+      return E.state.objectives.map(function (o) { return SC.holderOf(E.state, o.x, o.y, 4, SC.areaOf(o)); });
     }
 
     /* What the campaign needs back from a battle: one line per unit that took the
@@ -529,7 +536,7 @@
 
     return {
       rallyPhase: rallyPhase, endAnswer: endAnswer, repairCard: repairCard, regroupCard: regroupCard, regroupFx: regroupFx,
-      objDist: objDist, objReach: objReach, fleeBroken: fleeBroken, answerNervous: answerNervous, scoreObjectives: scoreObjectives,
+      objDist: objDist, objReach: objReach, fleeBroken: fleeBroken, answerNervous: answerNervous, scoreObjectives: scoreObjectives, objectiveHolders: objectiveHolders,
       finish: finish
     };
   };

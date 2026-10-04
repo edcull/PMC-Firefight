@@ -2207,7 +2207,12 @@
       return yes;
     });
 
-    function intent(seat, it) {
+    /* Everything the engine does on a battle's behalf — its start, an intent, a
+       forfeit — is done inside R.answering: the only time a die the rules roll
+       on the first look (barbed wire's D6) may be rolled. A question asked
+       between them (the board's previews, query below) rolls and writes nothing. */
+    function intent(seat, it) { return R.answering(function () { return answer(seat, it); }); }
+    function answer(seat, it) {
       if (!state) return no('no battle');
       if (!it || typeof it.k !== 'string') return no('unreadable intent');
       // a cooperative game over the network: both seats play side A, each their own units
@@ -2281,9 +2286,10 @@
 
     /* ---- starting ---- */
     function start(cfg) {
-      newGame(cfg);
-      return state;
+      return R.answering(function () { newGame(cfg); return state; });
     }
+    // a step of the battle a test plays on its own (query below), answered as an intent is
+    function acting(fn) { return function () { var args = arguments; return R.answering(function () { return fn.apply(null, args); }); }; }
 
     makeKits();
 
@@ -2298,10 +2304,10 @@
       report: function () { return state && state.report; },
       /* A side walking away from the battle (a forfeit, online): it ends there, the
          other side the winner, with the report the engine makes of any end. */
-      concede: function (side, text) {
+      concede: acting(function (side, text) {
         if (!state || state.over) return;
         K.finish(side === 'A' ? 'B' : 'A', text || (sideName(side) + ' walks away: ' + sideName(side === 'A' ? 'B' : 'A') + ' wins by forfeit.'));
-      },
+      }),
       /* Queries a client runs over a battle it is only watching: what a unit may
          do, where it may go, what it may shoot. None of them roll a die or
          change anything, so both sides can ask freely. */
@@ -2311,14 +2317,14 @@
         scoreSpot: function (u, c, goal, behaviour) { return K.scoreSpot(u, c, goal, behaviour); },
         // one AI unit's activation, as runAI does it (the tests force a behaviour roll)
         // the Rally phase's flight on its own, for the tests
-        fleeBroken: function () { K.fleeBroken(); },
-        rallyPhase: function () { K.rallyPhase(); },
-        beginningRites: function () { beginningRites(); },
+        fleeBroken: acting(function () { K.fleeBroken(); }),
+        rallyPhase: acting(function () { K.rallyPhase(); }),
+        beginningRites: acting(function () { beginningRites(); }),
         // the OpFor's pick of target for a Defensive or Neutral result (SOL-6), for the tests
         threatTarget: function (u) { return K.threatTarget(u, 'fire'); },
-        greetArrival: function (u) { return K.greetArrival(u); },
-        reservePhase: function (done) { K.reservePhase(done || function () {}); },
-        aiAct: function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); },
+        greetArrival: acting(function (u) { return K.greetArrival(u); }),
+        reservePhase: acting(function (done) { K.reservePhase(done || function () {}); }),
+        aiAct: acting(function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); }),
         specialsFor: function (u) { return specialsFor(u); },
         targetsFor: function (u, o) { return K.targetsFor(u, o); },
         eligible: function (s) { return eligible(s); },
@@ -2361,8 +2367,8 @@
         },
         arrivalLegal: K.arrivalLegal,
         /* Who holds each objective as things stand. The board shows it live,
-           between the End phases that actually score it. */
-        scoreObjectives: K.scoreObjectives,
+           between the End phases that actually score it — and only shows it. */
+        objectiveHolders: function () { return K.objectiveHolders(); },
         insertionSpots: K.insertionSpots,
         arrivalSpots: K.arrivalSpots,
         // both companies enter in turn 1's Reserve phase: nothing is placed before the battle

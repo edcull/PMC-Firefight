@@ -83,11 +83,22 @@ function step() {
   // an activation: the first unit able to act does the first thing it can that ends its turn
   // the AI's side (a co-op game's OpFor) plays itself
   if ((s.cfg.aiSides || []).indexOf(s.activeSide) >= 0) return 'ai';
+  /* A card still being read (one in the rail stays "open" for a moment as it is
+     written), or the last move still being drawn: the player waits, as the board
+     does — the End phase's question is not put until the rally's cards are done
+     (panels.js), and nothing is this screen's to do mid-replay (game.js mySide). */
+  if (W.__resOpen() || !W.__mySide()) return 'busy';
+  /* A question still owed that no button above answered: nobody acts until it
+     is (engine.js mayAct) — the units the End phase finds unactivated (rallied
+     from Broken) included. Waited for; one that never comes is caught as a repeat. */
+  const owed = ['endAsk', 'faceAsk', 'standAsk', 'cmdOffer', 'martyrAsk', 'kyfAsk', 'nervousAsk', 'relocating', 'placeAsk'].filter((k) => s[k])[0];
+  if (owed) return 'waiting on ' + owed;
   const list = W.__eligibleUnits();
   if (!list.length) return 'nothing to act';
   const u = list[0];
   const fp = () => { const t = W.PMC_STATE(); return [t.turn, t.activeSide, t.units.filter((x) => x.activated).length, t.units.filter((x) => x.alive).length, !!t.over].join('/'); };
-  if (!W.__select(u)) return 'stuck: could not select ' + u.name;
+  W.__lastRefusal = null;
+  if (!W.__select(u)) return 'stuck: could not select ' + u.name + (W.__lastRefusal ? ' (' + W.__lastRefusal.why + ')' : '');
   const was = fp();
   for (const id of W.__actionIds(u)) {
     if (!W.__pressAction(id)) continue;
@@ -96,8 +107,8 @@ function step() {
     W.__pressCancel();
   }
   return 'stuck: ' + u.name + ' [' + u.side + '] had nothing that ended its activation (' +
-    W.__actionIds(u).map((id) => { const a = W.__actionState(u, id); return (a.on ? '+' : '-') + id + (a.on ? '' : ': ' + a.hint); }).join('; ') +
-    ', mode ' + W.__uiMode() + ', turn ' + s.turn + ')';
+    W.__actionIds(u).map((id) => { const a = W.__actionState(id); return (a.on ? '+' : '-') + id + (a.on ? '' : ': ' + a.hint); }).join('; ') +
+    ', mode ' + JSON.stringify(W.__uiMode()) + ', turn ' + s.turn + ')';
 }
 
 /* Played to the end, or until it stops. `opts.reloadAt`: after this many

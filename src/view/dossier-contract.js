@@ -76,9 +76,8 @@
       if (ro) {
         var mine = ro.attacker === side ? 'attacker' : 'defender';
         h += '<div class="offer-role role-' + mine + '">You ' + (mine === 'attacker' ? 'attack' : 'defend') + '</div>';
-        h += '<div class="cpstat">' + esc(sc && sc.roles ? sc.roles[mine] || '' : '') +
-          (ro.bestDefence && ro.bestDefence.swapped
-            ? ' <b>The Best Defence is Good Offence</b> turned it round (D6 ' + ro.bestDefence.roll + ').' : '') + '</div>';
+        // (what each side deploys is told on the table, in the briefing: only the roll that turned the roles round here)
+        if (ro.bestDefence && ro.bestDefence.swapped) h += '<div class="cpstat"><b>The Best Defence is Good Offence</b> turned it round (D6 ' + ro.bestDefence.roll + ').</div>';
       } else {
         h += '<div class="cpstat">Neither side has the initiative here \u2014 you meet on even terms.</div>';
       }
@@ -245,7 +244,6 @@
       var roll = E.contract.tierRoll;
       var h = '<h2>Contract</h2>';
       // alone: who it is against, as the online contract says it (the job itself below)
-      if (!hotseat()) h += '<p class="lede">' + esc(A.name) + ' against ' + esc(B.name) + ' (an AI force).</p>';
       if (hotseat()) {
         h += '<p class="lede">' + (second ? 'Player 2' : 'Player 1') + ' \u2014 ' + esc(A.name) + '</p>';
         if (second) h += '<div class="cpdoc"><span class="mk">' + esc(B.name) + ' has picked its force: Battle Tier ' +
@@ -313,11 +311,6 @@
             return '<button class="lnk' + (on ? ' on' : '') + '" data-tactic="' + t.id + '"' +
               (t.text ? ' ' + tip(t.name, t.text) : '') + '>' + esc(t.name) + '</button>';
           }).join('') + '</span></div></div>';
-      }
-      if (E.contract.caught && E.contract.caught.to > E.contract.caught.from) {
-        h += '<div class="cpdoc"><span class="mk">' + esc(E.contract.caught.name) +
-          ' has been fighting elsewhere — Tier ' + ROMAN[E.contract.caught.from] + ' to ' +
-          ROMAN[E.contract.caught.to] + ' since you last met.</span></div>';
       }
 
       /* On Our Terms… (p. 87): a player whose company holds it may shift the Battle

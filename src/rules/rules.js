@@ -24,6 +24,21 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
   function d3() { return 1 + Math.floor(Math.random() * 3); }
+  /* Whether the engine is answering the start of a battle or an intent — the
+     only time the battle's own dice are in Math.random (net.js, table.js). A
+     die the rules would roll the first time something is asked (barbed wire's
+     D6, move.js) is rolled only then: the board asks the same questions between
+     intents, for its previews and buttons, and a die rolled there would come
+     from the wrong dice and leave its mark on the battle, so a game played
+     again from its seed and intents (a refresh, a server restart) would no
+     longer come out the same. Asked between intents, the answer assumes the
+     worst and changes nothing. */
+  var answeringDepth = 0;
+  function answering(fn) {
+    answeringDepth++;
+    try { return fn(); } finally { answeringDepth--; }
+  }
+  function mayRoll() { return answeringDepth > 0; }
 
   // every unit a force can field (in data.js)
   var CATALOGUE = DATA.CATALOGUE;
@@ -1549,7 +1564,7 @@
   // what the move kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
   function eMove() {
     return {
-      BOARD: BOARD, STEP: STEP, TERRAIN: TERRAIN, UNIT_R: UNIT_R, angleWrap: angleWrap, d6: d6,
+      BOARD: BOARD, STEP: STEP, TERRAIN: TERRAIN, UNIT_R: UNIT_R, angleWrap: angleWrap, d6: d6, mayRoll: mayRoll,
       flyInf: flyInf, hasOwn: hasOwn, isFlying: isFlying, kindsUnder: kindsUnder, mountOf: mountOf,
       propOf: propOf, rectPointDist: rectPointDist, inRect: inRect, sectionRect: sectionRect, terrainAt: terrainAt,
       unitNear: unitNear
@@ -2122,7 +2137,7 @@
     dugIn: dugIn, nearestFacing: nearestFacing, shotRange: shotRange, shotMinRange: shotMinRange,
     profile: function (k) { return BY_KEY[k]; },
     checkArmy: checkArmy, rollArmy: rollArmy, TERRAIN: TERRAIN, WALL_REACH: WALL_REACH, wallCoverAt: wallCoverAt,
-    d10: d10, d6: d6, d3: d3, angleWrap: angleWrap, esc: esc,
+    d10: d10, d6: d6, d3: d3, answering: answering, mayRoll: mayRoll, angleWrap: angleWrap, esc: esc,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, infamyPanic: infamyPanic, panicSweep: panicSweep, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
     terrainAt: terrainAt, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
