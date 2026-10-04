@@ -68,7 +68,7 @@
       move: function () { }, shoot: function () { }, assault: function () { },
       strafe: function () { }, arrive: function () { }, sound: function () { },
       focus: function () { }, hint: function () { }, colour: function () { },
-      terrain: function () { }, newTable: function () { }, clearCards: function () { },
+      terrain: function () { }, newTable: function () { }, clearCards: function () { }, settle: function () { },
       look: function () { }, finished: function () { }, changed: function () { },
       scenery: function () { }, fit: function () { }, structures: function () { },
       flyLift: function () { return 0; }

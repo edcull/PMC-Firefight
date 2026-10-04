@@ -83,6 +83,7 @@ class Table {
       fit: () => table.rec({ e: 'fit' }),
       structures: () => table.rec({ e: 'structures' }),
       clearCards: () => table.rec({ e: 'clearcards' }),
+      settle: () => table.rec({ e: 'settle' }),
       look: (side) => table.rec({ e: 'look', side: side }),
       finished: (report) => table.finish(report),
       // a flier's height is a drawing matter; the client works it out for itself
