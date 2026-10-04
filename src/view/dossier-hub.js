@@ -119,10 +119,10 @@
           '</small></span></button>' : '') +
         '<button type="button" class="archline" data-go="fmodal" data-kind="memorial">' + memorialIcon(cur) + '<span>' + esc(C.words(cur).memorial) + '<small>' +
         esc(C.words(cur).memorialSub) + '</small></span></button>' +
-        '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
-        (E.online ? '<button type="button" class="archline" data-go="omulti">' + ICON_FORCES + '<span>Multiplayer<small>A new campaign, or one to join with its code</small></span></button>' +
-          (E.camp.over ? '' : '<button type="button" class="archline danger" data-go="oconcede">' + ICON_ABANDON + '<span>Give the campaign up<small>You leave the world; the others play on \u2014 it asks first</small></span></button>')
-          : '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
+        // online the server keeps the campaign: nothing to save to a file
+        (E.online ? (E.camp.over ? '' : '<button type="button" class="archline danger" data-go="oconcede">' + ICON_ABANDON + '<span>Give the campaign up<small>You leave the world; the others play on \u2014 it asks first</small></span></button>')
+          : '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
+        '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
         '<button type="button" class="archline danger" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>') +
         '</div>');
       // the fallen, opened from the campaign's window (Back returns to it)
@@ -131,8 +131,8 @@
         // the other player's force shown as a rival's is: its figures, its kind and creed, and their dossier to open
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? rivalPanel(hs === 'B' ? A : B, 0)
           : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>', back);
-      // every battle fought, the latest first
-      if (last) {
+      // every battle fought, the latest first (opened from the win rate even before the first)
+      {
         // a battle whose aftermath was kept opens it again, read only
         var battleRow = function (l, i) {
           var inner = '<b>' + l.turn + '</b>' +
@@ -142,8 +142,8 @@
           return l.after ? '<button type="button" class="crow crow-go" data-go="pastbattle" data-i="' + i + '">' + inner + '</button>'
             : '<div class="crow">' + inner + '</div>';
         };
-        h += cmodal('battles', 'Battles fought', '<div class="cmodal-scroll"><div class="clog">' +
-          E.camp.log.map(battleRow).reverse().join('') + '</div></div>', back);
+        h += cmodal('battles', 'Battles fought', '<div class="cmodal-scroll">' + (E.camp.log.length ? '<div class="clog">' +
+          E.camp.log.map(battleRow).reverse().join('') + '</div>' : '<p class="dnote">No battles fought yet.</p>') + '</div>', back);
       }
       // each rival's own battles, the latest first, opened from its win rate (Back to the other forces)
       var backRivals = '<button type="button" class="lnk" data-go="fmodal" data-kind="rivals">\u2190 Back</button>';
@@ -152,7 +152,7 @@
       if (E.camp.mode === 'hotseat') h += cmodal('armyB', C.words(B).side + ' \u2014 army rules', armyRules(B), backRivals);
       rivals.forEach(function (co, i) { h += cmodal('armyr' + i, co.name + ' \u2014 ' + C.words(co).side, armyRules(co), backRivals); });
       rivals.forEach(function (co, i) {
-        if (!(co.log || []).length) return;
+        if (!(co.log || []).length) { h += cmodal('rbattles' + i, co.name + ' \u2014 battles', '<div class="cmodal-scroll"><p class="dnote">No battles fought yet.</p></div>', backRivals); return; }
         h += cmodal('rbattles' + i, co.name + ' \u2014 battles', '<div class="cmodal-scroll"><div class="clog">' +
           co.log.slice().reverse().map(function (l) {
             return '<div class="crow"><b>' + l.turn + '</b>' +
@@ -383,20 +383,11 @@
         return modal ? '<button type="button" class="cstat ' + cls + '" data-go="fmodal" data-kind="' + modal + '">' + inner + '</button>'
           : '<div class="cstat ' + cls + '">' + inner + '</div>';
       }
-      /* Honours and trauma narrow the force's dossier to the units that have
-         them: toggles, lit while on (fkey says whose list; none, no toggle). */
-      function toggle(cls, pct, word, kind) {
-        var f = (E.ufilter[fkey] || {})[kind];
-        return '<button type="button" class="cstat ' + cls + (f ? ' on' : '') + '" data-go="ufilter" data-fkey="' + fkey +
-          '" data-kind="' + kind + '" aria-pressed="' + !!f + '"><b>' + pct + '</b><span>' + esc(word) + '</span></button>';
-      }
       var own = !rival && co === (E.camp.companies[E.hubSide] || E.camp.companies.A);
       return '<div class="cstats">' +
-        // your own win rate opens the battles fought; a rival's, the battles it has fought
-        cell('cs-win', pc(wn.pct), 'win rate', own && E.camp.log.length ? 'battles'
-          : fkey && fkey.charAt(0) === 'r' && (co.log || []).length ? 'rbattles' + fkey.slice(1) : null) +
-        (fkey ? toggle('cs-exp', pc(ex.pct), ex.word, 'honour') : cell('cs-exp', pc(ex.pct), ex.word)) +
-        (fkey ? toggle('cs-tra', pc(tr.pct), tr.word, 'trauma') : cell('cs-tra', pc(tr.pct), tr.word)) +
+        // your own win rate opens the battles fought, a rival's the battles it has fought — none yet, it says so
+        cell('cs-win', pc(wn.pct), 'win rate', own ? 'battles' : fkey && fkey.charAt(0) === 'r' ? 'rbattles' + fkey.slice(1) : null) +
+        cell('cs-exp', pc(ex.pct), ex.word) + cell('cs-tra', pc(tr.pct), tr.word) +
         '</div>';
     }
 

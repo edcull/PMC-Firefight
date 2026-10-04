@@ -137,6 +137,12 @@ async function clickText(p, re) {
   const cell = (c) => p.evaluate((c) => { const d = document.querySelector('#camp-body .cpan-A .cstat.' + c); return d ? d.querySelector('b').textContent + ' ' + d.querySelector('span').textContent : ''; }, c);
   check('no battles yet: no wins', (await cell('cs-win')) === '0% win rate', await cell('cs-win'));
   check('the hub shows honours', (await cell('cs-exp')) === '0% honours', await cell('cs-exp'));
+  check('...honours and trauma are figures only, not filters on the units', await p.evaluate(() => ['cs-exp', 'cs-tra'].every((c) => { const d = document.querySelector('#camp-body .cpan-A .cstat.' + c); return d && d.tagName !== 'BUTTON' && !d.hasAttribute('data-go'); })));
+  await p.evaluate(() => document.querySelector('#camp-body .cpan-A .cstat.cs-win').click());
+  await p.waitForTimeout(200);
+  check('the win rate opens the battles fought, even before the first', await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal:not([hidden])'); return !!m && /Battles fought/.test(m.textContent) && /No battles fought yet/.test(m.textContent); }));
+  await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodal"], #camp-body .cmodal:not([hidden]) .cmodal-x, #camp-body .cmodal:not([hidden]) [data-go="mclose"]'); if (m) m.click(); else document.querySelector('#camp-body .cmodal:not([hidden])').click(); });
+  await p.waitForTimeout(200);
   await p.evaluate(() => {
     const r = window.PMC_CAMPAIGN.get().companies.A.roster;
     r[1].honours = [2, 5]; r[2].honours = [4]; r[3].traumas = [1];

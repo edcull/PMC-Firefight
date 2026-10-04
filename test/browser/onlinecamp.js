@@ -182,6 +182,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     s1 = await till(p1, 'Ash’s hub, with Brann’s force founded', (s) => s.view === 'hub' && s.A === 'Iron Wolves' && s.rivals.indexOf('Red Dawn') >= 0);
     s2 = await till(p2, 'Brann’s hub', (s) => s.view === 'hub' && s.A === 'Red Dawn');
     ok('founded: each on their own hub, their own force', s1.A === 'Iron Wolves' && s2.A === 'Red Dawn');
+    ok('...its campaign window has no Save to a file and no Multiplayer (the server keeps it)', await p1.evaluate(() => !document.querySelector('#camp-body [data-go="export"]') && !document.querySelector('#camp-body .archline[data-go="omulti"]') && !!document.querySelector('#camp-body [data-go="oconcede"]')));
     ok('...its colours the lobby\u2019s: the hub\u2019s badge does not change them', await p1.evaluate(() => !!document.querySelector('#camp-body .tierbadge') && !document.querySelector('#camp-body [data-go="fcolour"]')));
     const rivals = await p1.evaluate(() => window.PMC_CAMPAIGN.online().camp.rivals.map((r) => (r.human ? 'H:' : 'AI:') + r.name));
     ok('the other forces on the world: the AI forces, and Brann’s', rivals.length === 3 && rivals.some((r) => /^AI:/.test(r)) && rivals.indexOf('H:Red Dawn') >= 0, rivals.join(', '));
