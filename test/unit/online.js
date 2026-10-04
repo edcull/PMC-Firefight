@@ -27,6 +27,7 @@ function ok(name, cond, note) {
   const auth = Auth.create({ db: db, limits: { loginName: many, loginIp: many, register: many, guest: many } });
   const games = Games.create(db);
   const told = [], mailed = [];
+  let lostSave = null;
   let online = null, listedTold = 0;
   const lobby = new Lobby({
     sweep: false, games: games,
@@ -37,6 +38,7 @@ function ok(name, cond, note) {
     db: db,
     notify: (uid, msg) => told.push([uid, msg.t, msg.id, msg.code]),
     startBattle: (o) => lobby.campaignBattle(o),
+    dropBattle: (code) => lobby.dropCampaignBattle(code),
     listedChanged: () => listedTold++,
     mailer: { link: (k, t) => '/?' + k + '=' + t, send: (m) => { mailed.push(m); return Promise.resolve({ ok: true }); } }
   });
@@ -140,6 +142,8 @@ function ok(name, cond, note) {
   const go = cmd(ash, 'aiReady');
   ok('ready: the battle is made on the server, its code given', go.ok && /^[A-Z0-9]+$/.test(go.battle || ''), JSON.stringify(go).slice(0, 120));
   ok('...and the player told where it is', told.slice(n0).some((t) => t[0] === ash.userId && t[1] === 'camp.battle' && t[3] === go.battle));
+  const roomsAt = lobby.rooms.size, again = cmd(ash, 'aiReady');
+  ok('ready a second time (a double press, a retry) is refused, and makes no second battle', !again.ok && /already made/.test(again.why) && lobby.rooms.size === roomsAt, again.why);
   const room = lobby.rooms.get(go.battle);
   ok('a private room: the player’s seat held, the AI’s side with nobody in it', room && room.settings.private && room.seats.A.id === 'u' + ash.userId && !room.seats.B);
   ok('...the table set for the AI to play side B, against the AI force’s own list', room && room.table.cfg.mode === 'ai' && room.table.cfg.nameB === aiName && room.table.cfg.armyB.length > 0 && room.table.engine.state().cfg.aiSides.indexOf('B') >= 0);
@@ -228,9 +232,17 @@ function ok(name, cond, note) {
     let kc = camp(cole).online.contract;
     while (kc.fore && !kc.fore.done) { const left = [0, 1, 2].filter((x) => kc.fore.ignored.indexOf(x) < 0); cmd(cole, 'aiForego', { i: left[0] }); kc = camp(cole).online.contract; }
     cmd(cole, 'aiPick', { rids: legal(camp(cole).companies.A, kc) });
+    // the save losing to another update meanwhile (a 409): the battle it made goes again
+    const rooms0 = lobby.rooms.size, live0 = db.liveGames().length, save0 = db.saveOnline;
+    db.saveOnline = () => false;
+    const lost = cmd(cole, 'aiReady');
+    db.saveOnline = save0;
+    lostSave = { ok: lost.ok, code: lost.code, rooms: lobby.rooms.size - rooms0, live: db.liveGames().length - live0 };
     const g = cmd(cole, 'aiReady');
     return g.ok && lobby.rooms.has(g.battle) && lobby.rooms.has(dgo.battle);
   })());
+  ok('a ready whose save lost to another update leaves no battle behind it (no room, no record), and may be pressed again',
+    lostSave && !lostSave.ok && lostSave.code === 409 && lostSave.rooms === 0 && lostSave.live === 0, JSON.stringify(lostSave));
   ok('...the others see Cole as busy, and a challenge to Cole is refused meanwhile', (() => {
     const cs = view(cole).slot, c = camp(ash).rivals.filter((r) => r.human && r.slot === cs)[0];
     return c && c.busy === true && /fighting someone else/.test(cmd(ash, 'duelAsk', { to: cs }).why);

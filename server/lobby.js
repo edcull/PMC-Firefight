@@ -318,6 +318,19 @@ class Lobby {
     this.log('room ' + room.id + ' opened for an online campaign battle');
     return room.id;
   }
+  /* An online campaign's battle taken away again before anyone has played it: the
+     command that made it did not stand (refused, or its save lost to another), so
+     no campaign points to it. Its table stopped, its room and its record gone. */
+  dropCampaignBattle(code) {
+    const room = this.rooms.get(code);
+    if (room && room.settings.onlineCampaign) {
+      if (room.table) room.table.stop();
+      this.rooms.delete(code);
+    }
+    const g = this.games && this.games.byCode(code);
+    if (g && g.settings && g.settings.onlineCampaign) this.games.drop(g.id);
+    this.log('room ' + code + ' dropped: its campaign did not take it');
+  }
   // a message to every connection a signed-in player has open (an online campaign changed, say)
   notifyUser(userId, msg) {
     const text = JSON.stringify(msg);
