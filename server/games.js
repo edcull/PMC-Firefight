@@ -23,6 +23,8 @@ function create(db, opts) {
     ended(id, status, result) { return db.endGame(id, status, result, now()); },
     live() { return db.liveGames(); },
     byCode(code) { return db.gameByCode(code); },
+    // the latest battle by that code however it went, the whole row (an online campaign's, gone back to once over)
+    lastByCode(code) { const g = db.gamesByCode(code)[0]; return g ? db.game(g.id) : null; },
     intents(id) { return db.intents(id); },
     /* A player's games, the latest first, as their list shows them: which seat was
        theirs, who they played, and how it went. */

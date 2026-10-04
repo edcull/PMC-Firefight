@@ -727,7 +727,13 @@
     });
     net.on('error', function (m) {
       fault = m.text || '';
-      if (/no game with that code/.test(fault) && lastRoom()) { keepRoom(''); fault = ''; }   // it has gone since
+      if (/no game with that code|that battle is over/.test(fault) && lastRoom()) { keepRoom(''); fault = ''; }   // it has gone since
+      // an online campaign's battle that is not there to walk into: back to the campaign, not an empty table
+      if (/no game with that code|that battle is over/.test(m.text || '') && campBattle) {
+        var hb = campBattle; campBattle = null; campOver = false; fault = '';
+        say2(/over/.test(m.text) ? 'That battle is over — back to the campaign.' : 'That battle is not on the server any more.', 'warn', 6000);
+        hb.gone();
+      }
       draw();
     });
     net.on('started', function (m) {
@@ -793,7 +799,7 @@
     if (!id || !root.PMC_CAMPAIGN || !root.PMC_CAMPAIGN.openOnline) return false;
     var go = function () { if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE(); root.PMC_CAMPAIGN.openOnline(id); };
     // (the server applies the result as the battle ends: a moment for it before the campaign is asked for)
-    if (read && root.PMC_AFTER_RESULT) root.PMC_AFTER_RESULT(function () { setTimeout(go, 600); });
+    if ((read || st.over) && root.PMC_AFTER_RESULT) root.PMC_AFTER_RESULT(function () { setTimeout(go, 600); });
     else setTimeout(go, read ? 900 : 2500);
     return true;
   }

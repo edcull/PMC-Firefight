@@ -238,6 +238,24 @@ async function main() {
   await b.till('their games', (x) => (x.mine || []).some((g) => g.code === code2 && g.status !== 'battle'));
   ok('...kept so in both players\' games', b.mine.find((g) => g.code === code2).result === 'won by forfeit');
 
+  console.log('kept battles — an online campaign’s, over without its campaign told');
+  const told = [];
+  s2.lobby.onCampaignBattle = (id, report, gameId, ref) => told.push({ id, report, gameId, ref });
+  const ccode = s2.lobby.campaignBattle({ campaignId: 7, ref: { kind: 'ai', slot: 0 }, name: 'Against the AI',
+    cfg: { tier: 3, pl: 1, scenario: 'meeting', armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'), nameA: 'Iron Wolves', nameB: 'OpFor',
+      colourA: 'ochre', colourB: 'steel', tactics: { A: null, B: null }, mode: 'ai', terrainSetup: 'auto' },
+    seats: { A: { id: s2.auth.session(tokA).id, pub: null, name: 'Ash' } } });
+  const cgame = s2.games.byCode(ccode);
+  // kept as won, and gone from memory (a restart), the campaign never having heard
+  s2.games.ended(cgame.id, 'over', { winner: 'A', why: 'kept so' });
+  s2.lobby.rooms.delete(ccode);
+  a.inbox = [];
+  a.send('game.join', { id: ccode });
+  await a.till('an answer', (x) => x.inbox.some((m) => m.t === 'error'));
+  ok('going back to it: the campaign is given its result then, and the player told it is over',
+    told.length === 1 && told[0].id === 7 && told[0].gameId === cgame.id && told[0].ref.slot === 0 && told[0].report && told[0].report.winner === 'A' &&
+    a.inbox.some((m) => m.t === 'error' && /that battle is over/.test(m.text)), JSON.stringify(told.map((t) => [t.id, t.gameId, t.report && t.report.winner])));
+
   await down(s2, [a, b, stranger]);
   console.log((bad ? 'FAILED ' + bad + ' of ' : 'all ') + checks + ' checks' + (bad ? '' : ' passed'));
   process.exit(bad ? 1 : 0);

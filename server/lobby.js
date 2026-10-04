@@ -233,6 +233,29 @@ class Lobby {
     this.rooms.set(room.id, room);
     return room;
   }
+  /* An online campaign's battle that is over but whose campaign never took its
+     result (the aftermath not applied: the campaign still sends its player to it).
+     Played back from the database and the campaign told now: once, by the game's
+     id, so telling it again does no harm. A battle that does not end the same way
+     played back (a forfeit, which is no intent) is ended as it was kept. */
+  settleEnded(p, want) {
+    const g = this.games && this.games.lastByCode ? this.games.lastByCode(want) : null;
+    if (!g || g.status === 'battle' || !this.onCampaignBattle || !(g.settings && g.settings.onlineCampaign)) return false;
+    if (g.seat_a !== p.id && g.seat_b !== p.id) return false;
+    const r = g.result || {}, loser = r.forfeit || (r.winner ? (r.winner === 'A' ? 'B' : 'A') : null);
+    const room = new Room(g.name, { id: null, name: 'Commander' });
+    room.id = g.code; room.settings = g.settings; room.phase = P.PHASE.BATTLE;
+    const table = this.makeTable(room, this);
+    try {
+      table.restore(g, this.games.intents(g.id));
+      if (!table.engine.report() && loser) { table.quiet = true; table.rolling(() => table.engine.concede(loser)); }
+    } catch (e) { this.log('could not play back ' + want + ': ' + ((e && e.stack) || e)); return false; }
+    const report = table.engine.report();
+    if (!report) return false;
+    try { this.onCampaignBattle(g.settings.onlineCampaign, report, g.id, g.settings.onlineRef || null); }
+    catch (e) { this.log('could not apply the campaign battle ' + g.id + ': ' + ((e && e.stack) || e)); return false; }
+    return true;
+  }
   /* Put this connection back in a seat being held for it (a refresh, a dropped
      connection, a restart): the room it is in now, or null. */
   rejoinHeld(p) {
@@ -470,7 +493,7 @@ class Lobby {
         }
       }
     }
-    if (!room) return p.fail('no game with that code');
+    if (!room) return p.fail(this.settleEnded(p, want) ? 'that battle is over' : 'no game with that code');
     // one of its players, coming back to the seat held for them
     if (p.room !== room && P.SEATS.some((sd) => room.seats[sd] && !room.seats[sd].sock && room.seats[sd].id === p.id)) {
       if (p.room) this.leave(p);
