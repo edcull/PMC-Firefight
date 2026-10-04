@@ -2035,8 +2035,10 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .camp-dock .start { width: 100%; }
 /* the contract's two ways out, in one row: turn it down, or go in */
 #camp-body .cacts { display: flex; gap: 8px; margin-top: 6px; }
-#camp-body .cacts .start { margin: 0; flex: 2 1 0; }
-#camp-body .cacts .start.cdrop { flex: 1 1 0; }
+#camp-body .cacts .start { margin: 0; flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#camp-body .cacts + .camp-foot { margin: 0; }
+/* the job on the contract screen: the offer card's own lines, without the rule that parted it from the force above */
+#camp-body .cpan-job .offer-job { border-top: 0; margin-top: 0; padding-top: 0; }
 .camp-dock .start:disabled { opacity: var(--off-opacity); }
 @media (min-width: 1001px) { .camp-dock { bottom: -22px; padding-bottom: 22px; } }
 .front-dev { font-size: 12px; color: var(--ink-dim); margin: 2px 0 6px; line-height: 1.45; }
@@ -2123,3 +2125,4 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
   min-height: 60vh; border: 2px solid; border-radius: 10px; cursor: pointer; font: inherit; padding: 24px 16px; }
 .passcard small { text-transform: uppercase; letter-spacing: .12em; opacity: .8; }
 .passcard b { font-size: clamp(1.6rem, 5vw, 2.6rem); line-height: 1.1; }
+@media (max-width: 520px) { #camp-body .cacts .start { white-space: normal; } }
