@@ -155,7 +155,7 @@ function ok(name, cond, note) {
   })());
   cmd(brann, 'aiDrop');
   ok('a contract not yet fought may be dropped', !camp(brann).online.contract);
-  const before = camp(ash), kUC0 = before.companies.A.kUC, gameId = room.table.gameId;
+  const before = camp(ash), kUC0 = before.companies.A.kUC, gameId = room.table.gameId + ':' + room.id;   // as the campaign knows it: the row and the code
   room.table.forfeit('B');
   s = camp(ash);
   ok('the AI force is beaten (here, by forfeit): Tough Negotiators is put to Ash', s.post && s.post.steps.length === 1 && s.post.steps[0].kind === 'negotiate', JSON.stringify(s.post && s.post.steps));

@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=ffdbe0fc94">
-<link rel="stylesheet" href="src/css/game.css?v=13c721defe">
+<link rel="stylesheet" href="src/css/game.css?v=ea738aa3b3">
 
 <div class="wrap">
   <header>
@@ -157,7 +157,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.2.0.2610041402</p>
+    <p class="menu-ver" id="menu-ver">v0.2.0.2610041518</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -170,31 +170,6 @@
     <button type="button" class="user-chip" hidden></button>
   </div>
   <div class="sheet">
-    <div class="solo-box" id="solo-box" hidden>
-      <div class="field hot-field">
-        <div>
-          <label for="sel-solo-op">The OpFor</label>
-          <select id="sel-solo-op">
-            <option value="rebel" selected>An insurgent group</option>
-            <option value="pmc">A mercenary company</option>
-            <option value="bugs">A bug swarm</option>
-            <option value="xeno">A Xenotripod tribe</option>
-          </select>
-        </div>
-      </div>
-      <div class="field hot-field">
-        <label for="sel-solo-scen">Solitaire scenario</label>
-        <select id="sel-solo-scen">
-          <option value="roll" selected>Roll for it — any of the six</option>
-          <option value="s_crush">Crushing the Resistance — drop in and wipe them out</option>
-          <option value="s_vip">Protecting the VIP — hold the evacuation point</option>
-          <option value="s_decap">Decapitation — kill the enemy leaders</option>
-          <option value="s_evac">Evacuation — get the civilians to safety</option>
-          <option value="s_sabotage">Sabotage — destroy every objective</option>
-          <option value="s_ambush">Ambush! — hit the column on the road</option>
-        </select>
-      </div>
-    </div>
     <p class="lede hot-only hot-intro" id="hot-intro"></p>
     <div class="hot-only hot-sum" id="hot-sum"></div>
     <!-- who the force is, as founding a company has it: its name, and its colours on a line that opens them in a modal -->
@@ -345,6 +320,33 @@
         <option value="demolish">Demolish — bring the objective down</option>
         <option value="takeover">Hostile takeover — a prepared position</option>
       </select>
+    </div>
+    <!-- a solitaire or co-op game's own scenario, under the planet and the table as a skirmish's is -->
+    <div class="solo-box" id="solo-box" hidden>
+      <!-- the OpFor's army: picked on its line among the forces, which keeps this in step -->
+      <div hidden>
+        <div>
+          <label for="sel-solo-op">The OpFor</label>
+          <select id="sel-solo-op">
+            <option value="rebel" selected>An insurgent group</option>
+            <option value="pmc">A mercenary company</option>
+            <option value="bugs">A bug swarm</option>
+            <option value="xeno">A Xenotripod tribe</option>
+          </select>
+        </div>
+      </div>
+      <div class="field hot-field">
+        <label for="sel-solo-scen">Solitaire scenario</label>
+        <select id="sel-solo-scen">
+          <option value="roll" selected>Roll for it — any of the six</option>
+          <option value="s_crush">Crushing the Resistance — drop in and wipe them out</option>
+          <option value="s_vip">Protecting the VIP — hold the evacuation point</option>
+          <option value="s_decap">Decapitation — kill the enemy leaders</option>
+          <option value="s_evac">Evacuation — get the civilians to safety</option>
+          <option value="s_sabotage">Sabotage — destroy every objective</option>
+          <option value="s_ambush">Ambush! — hit the column on the road</option>
+        </select>
+      </div>
     </div>
     <!-- the colours, a square each as the unit viewer has them; in a stepped skirmish they sit under the force's name -->
     <div class="field hot-force hot-colour" id="colour-wrap">
@@ -549,7 +551,7 @@
 <script src="src/view/fire.js?v=365f6f43cf"></script>
 <script src="src/view/motion.js?v=823a5c18f7"></script>
 <script src="src/view/tips.js?v=d9ad8fa292"></script>
-<script src="src/engine/protocol.js?v=12bef105c1"></script>
+<script src="src/engine/protocol.js?v=e110d6e171"></script>
 <script src="src/engine/ai.js?v=60f920051d"></script>
 <script src="src/engine/save.js?v=b7930e7b5a"></script>
 <script src="src/engine/marks.js?v=0cd28675bc"></script>
@@ -570,7 +572,7 @@
 <script src="src/net/localworld.js?v=3fc27d1773"></script>
 <script src="src/net/net.js?v=c3fd6af800"></script>
 <script src="src/net/account.js?v=0b335d4e43"></script>
-<script src="src/net/lobby.js?v=4c872996e0"></script>
+<script src="src/net/lobby.js?v=fd53b9fe8f"></script>
 <script src="src/view/replay.js?v=9bc59170a7"></script>
 <script src="src/view/hooks.js?v=10ee198650"></script>
 <script src="src/view/testhooks.js?v=fcc4880560"></script>
@@ -582,9 +584,9 @@
 <script src="src/view/draw.js?v=01522e157c"></script>
 <script src="src/view/view.js?v=73abea196b"></script>
 <script src="src/view/panels.js?v=0273003fca"></script>
-<script src="src/view/muster.js?v=b3d41c1039"></script>
+<script src="src/view/muster.js?v=177cd5cb4d"></script>
 <script src="src/view/game.js?v=75c5ee7bdf"></script>
-<script src="src/view/dossier-hub.js?v=c02a9c293e"></script>
+<script src="src/view/dossier-hub.js?v=91848ada84"></script>
 <script src="src/view/dossier-found.js?v=3ffbd1b954"></script>
 <script src="src/view/dossier-roster.js?v=affa280c0a"></script>
 <script src="src/view/dossier-contract.js?v=bd944086b6"></script>

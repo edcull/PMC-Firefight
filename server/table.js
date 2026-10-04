@@ -227,7 +227,8 @@ class Table {
       tier: tier, pl: pl, scenario: scen,
       armyA: armyA, armyB: SOLO.rollOpFor(tier, pl, opFaction, machines), ownersA: ownersA,
       nameA: a.name + ' & ' + b.name, nameB: 'OpFor',
-      colourA: a.colour, colourC: colourC, colourB: null,
+      // the OpFor in the colours the host picked for it, unless a player wears them (then the board picks)
+      colourA: a.colour, colourC: colourC, colourB: s.opColour && s.opColour !== a.colour && s.opColour !== colourC ? s.opColour : null,
       tactics: { A: null, B: null },
       // the OpFor is the machine's (side B); both seats play side A, each their own units
       mode: 'ai', netCoop: true,

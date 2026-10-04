@@ -37,10 +37,21 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('Start a game offers a cooperative game', /Co-op/.test(offered), offered);
   await p1.evaluate(() => { document.querySelector('#lobby [data-kind="coop"]').click(); document.querySelector('#lobby [data-lob="create"][data-go]').click(); });
   await wait(700);
-  const room = await p1.evaluate(() => ({ code: document.getElementById('lobby-code').textContent, terms: !!document.getElementById('term-soloScen') && !!document.getElementById('term-opFaction') && !document.getElementById('term-pl') }));
+  const room = await p1.evaluate(() => ({ code: document.getElementById('lobby-code').textContent, terms: !!document.getElementById('term-soloScen') && !!document.querySelector('#lobby select[data-lob-army="op"]') && !document.getElementById('term-pl') }));
   ok('its room has a cooperative game’s terms: a solitaire scenario and the OpFor, no Priority Level', room.terms && !!room.code, JSON.stringify(room));
+  // the OpFor a line of its own under the players', as the campaign lobby's AI slots: its army and colours the host's to pick
+  await p1.evaluate(() => { const s = document.querySelector('#lobby [data-lob-army="op"]'); s.value = 'xeno'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+  await wait(300);
+  await p1.evaluate(() => document.querySelector('#lobby [data-lob="colours"][data-for="op"]').click());
+  await wait(200);
+  const opOff = await p1.evaluate(() => [...document.querySelectorAll('#lobby .olob-pop button:disabled')].map((x) => x.getAttribute('data-col')).join());
+  await p1.evaluate(() => document.querySelector('#lobby .olob-pop [data-col="crimson"]').click());
   await p2.evaluate((c) => window.PMCLobby.net().send('game.join', { id: c }), room.code);
   await wait(600);
+  const rows = await p2.evaluate(() => [...document.querySelectorAll('#lobby .lob-slots .olob-slot')].map((r) => ({ t: r.querySelector('.olob-who').innerText.split('\n').join(' / '), sel: !!r.querySelector('select'), army: (r.querySelector('.olob-army') || {}).textContent || '' })));
+  ok('a line each for Player 1, Player 2 and the OpFor; only your own to change', rows.length === 3 && /Player 1/.test(rows[0].t) && /Player 2/.test(rows[1].t) && /OpFor/.test(rows[2].t) &&
+    !rows[0].sel && rows[1].sel && !rows[2].sel && rows[2].army === 'Xenotripods', JSON.stringify(rows));
+  ok('...the host picks the OpFor\u2019s colours, the players\u2019 greyed out', opOff === 'ochre', opOff);
   for (const p of [p1, p2]) await p.evaluate(() => window.PMCLobby.net().send('game.ready', { ready: true }));
   await wait(400);
   await p1.evaluate(() => window.PMCLobby.net().send('game.start'));
@@ -48,6 +59,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   for (let i = 0; i < 40 && !on; i++) { await wait(250); on = await p1.evaluate(() => !!(window.PMC_STATE && window.PMC_STATE())) && await p2.evaluate(() => !!(window.PMC_STATE && window.PMC_STATE())); }
   ok('both are at the table', on);
   const st = await p2.evaluate(() => { const s = window.PMC_STATE(); return { coop: !!(s.solo && s.solo.coop), net: !!s.cfg.netCoop, own1: s.units.filter((u) => u.side === 'A' && u.owner === 1).length, own2: s.units.filter((u) => u.side === 'A' && u.owner === 2).length, foe: s.units.filter((u) => u.side === 'B').length }; });
+  const opf = await p2.evaluate(() => { const s = window.PMC_STATE(); return { c: s.cfg.colourB, f: s.solo.opFaction }; });
+  ok('...the OpFor raised from the army and in the colours the host picked', opf.c === 'crimson' && opf.f === 'xeno', JSON.stringify(opf));
   ok('one side of both players’ commandos, against the OpFor', st.coop && st.net && st.own1 > 0 && st.own2 > 0 && st.foe > 0, JSON.stringify(st));
 
   console.log('\nEach their own');

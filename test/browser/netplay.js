@@ -70,31 +70,60 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const acts = await p1.evaluate(() => [...document.querySelectorAll('#lobby .lob-acts button')].map(x => x.className + ':' + x.textContent));
   ok('the room: Leave this game a link, I am ready the main button', acts.join('|') === 'lnk:Leave this game|start:I am ready', acts.join('|'));
   await p1.screenshot({ path: require('path').join(SHOTS, 'lobby-room-desktop.png') }).catch(() => {});
-  // the room on a phone: the actions, then both forces side by side, then the terms scrolling, the talk at the foot
+  // the room on a phone: the actions, then the terms scrolling — the forces a line each among them, as the campaign lobby's slots — the talk at the foot
   await p2.setViewportSize({ width: 390, height: 700 });
   await p2.waitForTimeout(200);
   const rm = await p2.evaluate(() => {
     const q = (s) => document.querySelector('#lobby ' + s), r = (s) => q(s).getBoundingClientRect();
-    const seats = document.querySelectorAll('#lobby .lob-forces .hot-side');
+    const seats = document.querySelectorAll('#lobby .lob-slots .olob-slot');
     const sc = q('.lob-scroll'), chat = q('.lob-chat');
-    return { order: r('.lob-acts').bottom <= r('.lob-forces').top && r('.lob-forces').bottom <= r('.lob-scroll').top && r('.lob-scroll').bottom <= chat.getBoundingClientRect().top,
-      sideBySide: seats.length === 2 && Math.abs(seats[0].getBoundingClientRect().top - seats[1].getBoundingClientRect().top) < 2,
+    return { order: r('.lob-acts').bottom <= r('.lob-scroll').top && r('.lob-scroll').bottom <= chat.getBoundingClientRect().top,
+      among: r('#term-tier').bottom <= r('.lob-slots').top && r('.lob-slots').bottom <= r('#term-scenario').top,
+      lineEach: seats.length === 2 && seats[0].getBoundingClientRect().bottom <= seats[1].getBoundingClientRect().top,
+      // your own force's colours and army to change, the other's to read
+      own: !!seats[1].querySelector('button.olob-colour') && !!seats[1].querySelector('select[data-lob-army="B"]') && !!seats[1].querySelector('[data-lob="muster"]'),
+      theirs: !!seats[0].querySelector('.olob-colour.still') && !seats[0].querySelector('select') && seats[0].querySelector('.olob-army').textContent === 'PMC',
       scrolls: getComputedStyle(sc).overflowY === 'auto', foot: Math.round(innerHeight - chat.getBoundingClientRect().bottom),
       lines: Math.round(q('.lob-lines').getBoundingClientRect().height),
+      wide: document.documentElement.scrollWidth > innerWidth,
       talk: /Table talk|host sets the terms|A game over the network/.test(q('#lobby-body').textContent),
       pub: !!q('#term-private[type=checkbox]') && q('#term-private').disabled };
   });
   await p2.screenshot({ path: require('path').join(SHOTS, 'lobby-room-phone.png') }).catch(() => {});
-  ok('the room on a phone: actions, then the forces side by side, then the terms', rm.order && rm.sideBySide, JSON.stringify(rm));
+  ok('the room on a phone: actions, then the terms, the forces a line each between the Tier and the scenario', rm.order && rm.among && rm.lineEach && !rm.wide, JSON.stringify(rm));
+  ok('...your own force\'s colours and army to change, the other\'s to read', rm.own && rm.theirs, JSON.stringify(rm));
   ok('...the terms scroll and the talk keeps the foot, three lines tall', rm.scrolls && rm.foot < 40 && rm.lines < 90, JSON.stringify(rm));
   ok('...no helper text, and Public is a box only the host can tick', !rm.talk && rm.pub, JSON.stringify(rm));
+  // the colours under the chip: the other force's greyed out; one picked goes to the room
+  await p2.evaluate(() => document.querySelector('#lobby [data-lob="colours"][data-for="B"]').click());
+  await p2.waitForTimeout(200);
+  const pop = await p2.evaluate(() => { const p = document.querySelector('#lobby .olob-pop'), c = document.querySelector('#lobby [data-for="B"]');
+    return p ? { off: [...p.querySelectorAll('button:disabled')].map(x => x.getAttribute('data-col')).join(), under: p.getBoundingClientRect().top >= c.getBoundingClientRect().bottom } : null; });
+  ok('...the colours open under the chip, the other force\'s greyed out', !!pop && pop.off === 'ochre' && pop.under, JSON.stringify(pop));
+  await p2.evaluate(() => document.querySelector('#lobby .olob-pop [data-col="jade"]').click());
+  await p2.waitForTimeout(400);
+  const jade = await p1.evaluate(() => window.__room && window.__room.seats.B.force.colour);
+  ok('...and one picked is the room\'s', jade === 'jade' && await p2.evaluate(() => !document.querySelector('#lobby .olob-pop')), jade);
+  await p2.evaluate(() => document.querySelector('#lobby [data-lob="colours"][data-for="B"]').click());
+  await p2.mouse.click(5, 5);
+  await p2.waitForTimeout(200);
+  ok('...a tap elsewhere puts them away', await p2.evaluate(() => !document.querySelector('#lobby .olob-pop')));
+  // another army: the force rolled afresh for it, its keys kept from the other player
+  await p2.evaluate(() => { const s = document.querySelector('#lobby [data-lob-army="B"]'); s.value = 'bugs'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+  await p2.waitForTimeout(400);
+  const army = await p1.evaluate(() => { const f = window.__room.seats.B.force; return { f: f.faction, units: f.units, keys: !!f.keys, read: document.querySelectorAll('#lobby .lob-slots .olob-slot')[1].querySelector('.olob-army').textContent }; });
+  ok('...another army rolls the force afresh for it, the other player reading only the army and how many', army.f === 'bugs' && army.units > 0 && !army.keys && army.read === 'Bugs', JSON.stringify(army));
+  await p2.evaluate((f) => window.PMCLobby.net().send('game.force', { force: Object.assign({}, f, { colour: 'rose' }) }), force);
+  await p2.waitForTimeout(300);
   await p2.setViewportSize({ width: 1340, height: 900 });
   // table talk: each name in the colour of the force that player has picked
   await p1.evaluate(() => window.PMCLobby.net().send('game.chat', { text: 'hello from the host' }));
   await p2.waitForTimeout(400);
   const talk = await p2.evaluate(() => {
-    const b = [...document.querySelectorAll('#room-say-lines .said b')].pop(), seat = document.querySelector('.lob-forces .hot-side b');
-    return { line: b ? b.textContent : '', col: b ? getComputedStyle(b).color : '', force: seat ? getComputedStyle(seat).color : '' };
+    const b = [...document.querySelectorAll('#room-say-lines .said b')].pop(), t = document.createElement('i');
+    t.style.color = window.PMCIso.COLOURS[window.__room.seats.A.force.colour].light; document.body.appendChild(t);
+    const force = getComputedStyle(t).color; t.remove();
+    return { line: b ? b.textContent : '', col: b ? getComputedStyle(b).color : '', force: force };
   });
   ok('table talk names the player in their force\u2019s colour', !!talk.line && talk.col === talk.force, JSON.stringify(talk));
   await p2.setViewportSize({ width: 1340, height: 900 });

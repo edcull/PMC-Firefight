@@ -252,8 +252,9 @@ async function main() {
   a.inbox = [];
   a.send('game.join', { id: ccode });
   await a.till('an answer', (x) => x.inbox.some((m) => m.t === 'error'));
-  ok('going back to it: the campaign is given its result then, and the player told it is over',
-    told.length === 1 && told[0].id === 7 && told[0].gameId === cgame.id && told[0].ref.slot === 0 && told[0].report && told[0].report.winner === 'A' &&
+  // known to the campaign by its row and its code together: a cleared battle's number is given again
+  ok('going back to it: the campaign is given its result then (known by row and code), and the player told it is over',
+    told.length === 1 && told[0].id === 7 && told[0].gameId === cgame.id + ':' + ccode && told[0].ref.slot === 0 && told[0].report && told[0].report.winner === 'A' &&
     a.inbox.some((m) => m.t === 'error' && /that battle is over/.test(m.text)), JSON.stringify(told.map((t) => [t.id, t.gameId, t.report && t.report.winner])));
 
   await down(s2, [a, b, stranger]);

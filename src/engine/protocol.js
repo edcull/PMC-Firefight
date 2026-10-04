@@ -89,7 +89,8 @@
       private: false,        // left out of the game list: joined by its code only
       kind: 'skirmish',      // or 'coop': both players' commandos against the OpFor
       soloScen: 'roll',      // a cooperative game's scenario: one of the solitaire ones, or rolled
-      opFaction: 'pmc'       // ...and the army the OpFor is raised from
+      opFaction: 'pmc',      // ...and the army the OpFor is raised from
+      opColour: null         // ...and the colours it wears, or null for ones the players do not
     };
   }
 
@@ -112,6 +113,7 @@
     if ('kind' in patch) s.kind = oneOf(patch.kind, ['skirmish', 'coop'], s.kind || 'skirmish');
     if ('soloScen' in patch) s.soloScen = oneOf(patch.soloScen, SOLO_SCENARIOS, s.soloScen || 'roll');
     if ('opFaction' in patch) s.opFaction = oneOf(patch.opFaction, FACTIONS, s.opFaction || 'pmc');
+    if ('opColour' in patch) s.opColour = patch.opColour == null ? null : oneOf(patch.opColour, COLOURS, s.opColour || null);
     return s;
   }
 

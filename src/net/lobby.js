@@ -136,13 +136,15 @@
       '.lob-ok{color:var(--good)}',
       '.lob-status{font-size:12px;color:var(--ink-faint)}',
       '.lob-code{font-family:var(--mono);font-size:14px;letter-spacing:.18em;padding:2px 8px;border:1px solid var(--line);border-radius:5px;color:var(--ink)}',
-      '.lob-forces{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}',
-      '.lob-forces .hot-side{margin:0}',
-      // on a narrow card the word that opens the muster keeps the corner under the name, clear of it
-      '@media (max-width:700px){.lob-forces .hot-side{position:relative}.lob-forces .hot-side em{position:absolute;right:10px;bottom:8px}}',
-      '.lob-forces .hot-side.ready{border-color:color-mix(in srgb,var(--good) 55%,transparent)}',
-      '.lob-forces .lob-empty-seat{opacity:.7}',
-      '.lob-forces .lob-empty-seat .lnk{margin-top:6px}',
+      /* the forces a line each among the terms, as the campaign lobby's slots (game.css .olob-*):
+         the list grows with the terms rather than scrolling by itself; your own force's name opens its muster */
+      '#lobby .lob-slots{overflow:visible;margin:2px 0 12px;padding-right:0}',
+      '.lob-scroll > .lob-terms:first-child{margin-top:10px}',
+      '#lobby .lob-slots .olob-who small{white-space:normal}',
+      '.lob-who{background:none;border:0;padding:0;margin:0;text-align:left;color:var(--ink);font:inherit;cursor:pointer}',
+      '.lob-who:hover b,.lob-who:focus-visible b{color:var(--alpha)}',
+      '.lob-slots .lob-empty-seat{opacity:.7}',
+      '.lob-slots .lob-empty-seat .lnk{flex:none}',
       '.lob-wait{opacity:.6}',
       '.lob-new{margin:4px 0 14px;padding:10px 12px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}',
       '.lob-new .lob-foot{margin-top:4px;flex-wrap:nowrap;align-items:stretch}',
@@ -390,13 +392,21 @@
       '<button class="lnk" data-lob="say" data-where="' + where + '">Send</button></div></div>';
   }
 
-  /* The room, top to bottom: what to do next (leave, ready, start), a card
-     for each force side by side — tap your own to muster it — then the terms,
-     which scroll, and the table talk kept at the foot. */
+  /* The room, top to bottom: what to do next (leave, ready, start), then the
+     terms with a line for each force among them as the campaign lobby has its
+     slots (dossier-online.js) — the size of the battle first, then the forces,
+     then where it is fought — all of it scrolling, and the table talk kept at the foot. */
   function roomHTML() {
     var host_ = room.hostId === me.id;
     var mine = mySeat();
     var ready = mine && room.seats[mine] && room.seats[mine].ready;
+    // the colours left open on a force that is no longer there (a player gone) close
+    if (colourFor && colourFor !== 'op' && !(colourFor === mine && room.seats[mine])) colourFor = null;
+    if (colourFor === 'op' && !(host_ && room.settings.kind === 'coop')) colourFor = null;
+    setTimeout(function () {
+      placePop();
+      var sc = host && host.querySelector('.lob-scroll'); if (sc) sc.onscroll = placePop;
+    }, 0);
     return '<p class="lob-bad">' + esc(fault) + '</p>' +
       /* as every other screen has it: the way out a quiet link, the one thing to
          do next the full-width button — say you are ready, then (the host) take the field */
@@ -409,11 +419,11 @@
         : '<button class="start" disabled>' +
           (room.canStart ? 'Waiting for the host to start' : 'Waiting for both sides') + '</button>') +
       '</div>' +
-      '<div class="hot-sum lob-forces">' + seatHTML('A', mine) + seatHTML('B', mine) + '</div>' +
       (room.watchers.length
         ? '<p class="small lob-watch">Watching: ' +
           room.watchers.map(function (w) { return esc(w.name); }).join(', ') + '</p>' : '') +
-      '<div class="lob-scroll">' + termsHTML(host_) + '</div>' +
+      '<div class="lob-scroll">' + termsHTML(host_, mine) + '</div>' +
+      popHTML(mine, host_) +
       chatHTML('room');
   }
 
@@ -431,8 +441,11 @@
     return o ? o.textContent : fallback;
   }
 
-  function termsHTML(isHost) {
-    var s = room.settings, d = isHost ? '' : ' disabled';
+  /* The terms: the Battle Tier (and, a skirmish, its Priority Level) on top, the
+     forces under them a line each, then the scenario, the world, the table and
+     whether the game is listed. Only the host changes them. */
+  function termsHTML(isHost, mine) {
+    var s = room.settings, d = isHost ? '' : ' disabled', coop = s.kind === 'coop';
     function sel(id, label, options, value) {
       return '<div class="field"><label for="' + id + '">' + label + '</label>' +
         '<select id="' + id + '" data-term="' + id.replace('term-', '') + '"' + d + '>' +
@@ -441,71 +454,163 @@
           return '<option value="' + esc(v) + '"' + (String(v) === String(value) ? ' selected' : '') + '>' + esc(t) + '</option>';
         }).join('') + '</select></div>';
     }
-    // a cooperative game: commandos (Priority Level 1 each) under a solitaire scenario, against the OpFor
-    if (s.kind === 'coop') {
-      var SOLO = root.PMCSolo;
-      return '<div class="lob-terms">' +
-        sel('term-tier', 'Battle Tier', P.TIERS.map(function (t) {
-          return { v: t, t: root.PMC.ROMAN[t] + ' — ' + root.PMC.COMPOSITION[t].points + ' points' };
-        }), s.tier) +
-        sel('term-soloScen', 'Scenario', [{ v: 'roll', t: optionText('sel-solo-scen', 'roll', 'Roll for it') }].concat((SOLO ? SOLO.ORDER : []).map(function (x) {
-          return { v: x, t: optionText('sel-solo-scen', x, (SOLO && SOLO.SCENARIOS[x] && SOLO.SCENARIOS[x].name) || x) };
-        })), s.soloScen || 'roll') +
-        sel('term-opFaction', 'The OpFor', ['rebel', 'pmc', 'bugs', 'xeno'].map(function (x) {
-          return { v: x, t: optionText('sel-solo-op', x, x) };
-        }), s.opFaction || 'rebel') +
-        sel('term-planet', 'World', P.PLANET_CHOICES.map(function (x) {
-          return { v: x, t: optionText('sel-planet', x, x) };
-        }), s.planet) +
-        sel('term-terrain', 'Terrain set-up', [
-          { v: 'auto', t: optionText('sel-terrain', 'auto', 'Generate the table') },
-          { v: 'manual', t: optionText('sel-terrain', 'manual', 'Set it up by hand') }
-        ], s.terrain || 'auto') +
-        publicBox('term-private', !s.private, ' data-term="private"' + d) +
-        '<p class="lob-note">Cooperative: each of you musters a commando; the OpFor is the machine\u2019s. You take turns, an activation each.</p>' +
-        '</div>';
-    }
-    return '<div class="lob-terms">' +
-      sel('term-tier', 'Battle Tier', P.TIERS.map(function (t) {
-        return { v: t, t: root.PMC.ROMAN[t] + ' — ' + root.PMC.COMPOSITION[t].points + ' points' };
-      }), s.tier) +
-      sel('term-pl', 'Priority Level', [{ v: 1, t: '1 — skirmish' }, { v: 2, t: '2 — full battle' }], s.pl) +
-      sel('term-scenario', 'Scenario', P.SCENARIOS.map(function (x) {
-        return { v: x, t: optionText('sel-scen', x, x) };
-      }), s.scenario) +
-      sel('term-planet', 'World', P.PLANET_CHOICES.map(function (x) {
-        return { v: x, t: optionText('sel-planet', x, x) };
-      }), s.planet) +
+    var tier = sel('term-tier', 'Battle Tier', P.TIERS.map(function (t) {
+      return { v: t, t: root.PMC.ROMAN[t] + ' — ' + root.PMC.COMPOSITION[t].points + ' points' };
+    }), s.tier);
+    var world = sel('term-planet', 'World', P.PLANET_CHOICES.map(function (x) {
+      return { v: x, t: optionText('sel-planet', x, x) };
+    }), s.planet) +
       sel('term-terrain', 'Terrain set-up', [
         { v: 'auto', t: optionText('sel-terrain', 'auto', 'Generate the table') },
         { v: 'manual', t: optionText('sel-terrain', 'manual', 'Set it up by hand') }
       ], s.terrain || 'auto') +
-      publicBox('term-private', !s.private, ' data-term="private"' + d) +
+      publicBox('term-private', !s.private, ' data-term="private"' + d);
+    // a cooperative game: commandos (Priority Level 1 each) under a solitaire scenario, against the OpFor
+    if (coop) {
+      var SOLO = root.PMCSolo;
+      return '<div class="lob-terms">' + tier + '</div>' +
+        forcesHTML(mine, isHost) +
+        '<div class="lob-terms">' +
+        sel('term-soloScen', 'Scenario', [{ v: 'roll', t: optionText('sel-solo-scen', 'roll', 'Roll for it') }].concat((SOLO ? SOLO.ORDER : []).map(function (x) {
+          return { v: x, t: optionText('sel-solo-scen', x, (SOLO && SOLO.SCENARIOS[x] && SOLO.SCENARIOS[x].name) || x) };
+        })), s.soloScen || 'roll') +
+        world +
+        '<p class="lob-note">Cooperative: each of you musters a commando; the OpFor is the machine’s. You take turns, an activation each.</p>' +
+        '</div>';
+    }
+    return '<div class="lob-terms">' + tier +
+      sel('term-pl', 'Priority Level', [{ v: 1, t: '1 — skirmish' }, { v: 2, t: '2 — full battle' }], s.pl) +
+      '</div>' +
+      forcesHTML(mine, isHost) +
+      '<div class="lob-terms">' +
+      sel('term-scenario', 'Scenario', P.SCENARIOS.map(function (x) {
+        return { v: x, t: optionText('sel-scen', x, x) };
+      }), s.scenario) +
+      world +
       '</div>';
   }
 
-  // a force's card, as on the battlefield step: its name in its colour; your own opens the muster
-  function seatHTML(which, mine) {
-    var p = room.seats[which];
+  /* ---- the forces, a line each, as the campaign lobby's slots ----
+     Each its colours (a chip that opens them), its name with who holds it under,
+     and its army: your own to change — tap its name to muster it — the other
+     player's to read; a cooperative game's OpFor the host's. */
+  var colourFor = null;         // whose colours are open: a seat ('A' or 'B'), 'op' for the OpFor, or null
+  var ARMIES = ['pmc', 'rebel', 'bugs', 'xeno'];
+  var ARMY_NAMES = { pmc: 'PMC', rebel: 'Rebel', bugs: 'Bugs', xeno: 'Xenotripods' };   // the campaign lobby's words
+  // the made-up names a force is given for its colours and kind (muster.js): such a name follows them
+  var FORCE_NOUN = { pmc: 'company', rebel: 'insurgents', bugs: 'swarm', xeno: 'tribe' };
+  function colours() { return (root.PMCIso && root.PMCIso.COLOURS) || {}; }
+  function chipHTML(key) {
+    var c = colours()[key];
+    return '<span class="olob-chip"' + (c ? ' style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"' : '') + '></span>';
+  }
+  function armyHTML(attr, value, canChange) {
+    return canChange ? '<select ' + attr + ' aria-label="Army">' + ARMIES.map(function (f) {
+      return '<option value="' + f + '"' + (f === value ? ' selected' : '') + '>' + esc(ARMY_NAMES[f]) + '</option>';
+    }).join('') + '</select>' : '<span class="olob-army">' + esc(ARMY_NAMES[value] || '') + '</span>';
+  }
+  function forcesHTML(mine, isHost) {
+    var coop = room.settings.kind === 'coop';
+    var h = '<div class="olob-slots lob-slots">' + slotHTML('A', mine) + slotHTML('B', mine);
+    if (coop) {
+      // the machine's side: its army and colours the host's to pick, its list rolled at the battle
+      var oc = room.settings.opColour, ocn = colours()[oc];
+      h += '<div class="olob-slot lob-slot-op">' +
+        (isHost ? '<button type="button" class="olob-colour" data-lob="colours" data-for="op" aria-expanded="' + (colourFor === 'op') + '" title="' + esc(ocn ? ocn.name : 'Colours: picked for the battle') + '">' + chipHTML(oc) + '</button>'
+          : '<span class="olob-colour still" title="' + esc(ocn ? ocn.name : 'Picked for the battle') + '">' + chipHTML(oc) + '</span>') +
+        '<span class="olob-who"><b>The OpFor</b><small>the machine’s · rolled for the battle</small></span>' +
+        armyHTML('data-lob-army="op"', room.settings.opFaction || 'pmc', isHost) + '</div>';
+    }
+    return h + '</div>';
+  }
+  function slotHTML(which, mine) {
+    var p = room.seats[which], coop = room.settings.kind === 'coop';
+    var label = coop ? (which === 'A' ? 'Player 1' : 'Player 2') : 'Seat ' + which;
     if (!p) {
-      return '<div class="hot-side lob-empty-seat"><b>Seat ' + which + '</b>' +
-        '<small>Empty — waiting for a player' + (mine ? '' : '') + '</small>' +
+      return '<div class="olob-slot lob-empty-seat"><span class="olob-colour still">' + chipHTML(null) + '</span>' +
+        '<span class="olob-who"><b><em>Empty — waiting for a player</em></b><small>' + label + '</small></span>' +
         (mine ? '' : '<button class="lnk" data-lob="sit" data-seat="' + which + '">Sit here</button>') + '</div>';
     }
-    var f = p.force || {};
-    var col = root.PMCIso && root.PMCIso.COLOURS && root.PMCIso.COLOURS[f.colour];
+    var f = p.force || {}, own = which === mine, c = colours()[f.colour];
     // the other player's list is kept from this screen until the battle (server/hidden.js): only how many
     var units = f.keys ? f.keys.length : (f.units || 0);
-    var who = esc(p.name) + (p.host ? ' · host' : '') + (p.away ? ' · away' : '');
-    var body = '<b style="color:' + (col ? col.light : 'inherit') + '">' + esc(f.name || (units ? 'An unnamed force' : 'No force yet')) + '</b>' +
-      (which === mine ? '<em>' + (units ? 'change' : 'muster') + '</em>' : '') +
-      '<small>' + who + ' · ' + esc(factionName(f.faction)) + ' · ' +
-      (units ? units + ' units' + (f.hidden ? ', the list kept from you until the battle' : '') : (which === mine ? 'tap to muster it' : 'still mustering')) +
-      (f.tactic ? ' · ' + esc(f.tactic) : '') + '</small>' +
-      '<small class="' + (p.ready ? 'lob-ok' : 'lob-wait') + '">' + (p.ready ? 'Ready' : 'Not ready yet') + '</small>';
-    return which === mine
-      ? '<button type="button" class="hot-side' + (p.ready ? ' ready' : '') + '" data-lob="muster">' + body + '</button>'
-      : '<div class="hot-side' + (p.ready ? ' ready' : '') + '">' + body + '</div>';
+    var sub = label + ' · ' + esc(p.name) + (p.host ? ' · host' : '') + (p.away ? ' · away' : '') + ' · ' +
+      (units ? units + ' units' : own ? 'tap to muster it' : 'still mustering') + (own && f.tactic ? ' · ' + esc(f.tactic) : '') +
+      ' · <span class="' + (p.ready ? 'lob-ok' : 'lob-wait') + '">' + (p.ready ? 'Ready' : 'Not ready yet') + '</span>';
+    var name = '<b>' + esc(f.name || (units ? 'An unnamed force' : 'No force yet')) + '</b><small>' + sub + '</small>';
+    return '<div class="olob-slot' + (own ? ' mine' : '') + (p.ready ? ' ready' : '') + '">' +
+      (own ? '<button type="button" class="olob-colour" data-lob="colours" data-for="' + which + '" aria-expanded="' + (colourFor === which) + '" title="' + esc(c ? c.name : 'Colours') + '">' + chipHTML(f.colour) + '</button>'
+        : '<span class="olob-colour still" title="' + esc(c ? c.name : '') + '">' + chipHTML(f.colour) + '</span>') +
+      // your own force's name opens the muster, to pick its units
+      (own ? '<button type="button" class="olob-who lob-who" data-lob="muster" title="Muster this force">' + name + '</button>'
+        : '<span class="olob-who">' + name + '</span>') +
+      armyHTML('data-lob-army="' + which + '"', f.faction || 'pmc', own) + '</div>';
+  }
+  // the colours each force wears now: the two seats', and a cooperative game's OpFor's
+  function wornBy() {
+    var w = {};
+    P.SEATS.forEach(function (sd) { var p = room.seats[sd]; if (p && p.force && p.force.colour) w[sd] = p.force.colour; });
+    if (room.settings.kind === 'coop' && room.settings.opColour) w.op = room.settings.opColour;
+    return w;
+  }
+  /* The colours, popped up under the chip as the campaign lobby's are: drawn
+     outside the scrolling terms (so they are not cut off), and put by the chip
+     once drawn. A colour another force wears is greyed out. */
+  function popHTML(mine, isHost) {
+    if (!colourFor) return '';
+    var CO = colours(), KEYS = (root.PMCIso && root.PMCIso.COLOUR_KEYS) || Object.keys(CO), worn = wornBy(), cur = worn[colourFor];
+    var cc = CO[cur];
+    return '<div class="found-pop olob-pop" data-lob-popfor="' + colourFor + '"><label>Colours' + (cc ? ' — ' + esc(cc.name) : '') + '</label><div class="csw">' + KEYS.map(function (k) {
+      var q = CO[k], taken = Object.keys(worn).some(function (o) { return o !== colourFor && worn[o] === k; });
+      return '<button type="button" class="' + (k === cur ? 'on' : '') + '" data-lob="colour" data-col="' + k + '" title="' + esc(q.name) +
+        (taken ? ' — another force wears it' : '') + '"' + (taken ? ' disabled' : '') + '>' +
+        '<span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
+    }).join('') + '</div></div>';
+  }
+  function placePop() {
+    var pop = host && host.querySelector('.lob-sheet-room .olob-pop'); if (!pop) return;
+    var chip = host.querySelector('[data-lob="colours"][data-for="' + pop.getAttribute('data-lob-popfor') + '"]');
+    var body = host.querySelector('.lobby-sheet');
+    if (!chip || !body) return;
+    var r = chip.getBoundingClientRect(), b = body.getBoundingClientRect(), w = Math.min(380, b.width - 16);
+    pop.style.width = w + 'px';
+    pop.style.left = Math.max(b.left + 8, Math.min(r.left, b.right - w - 8)) + 'px';
+    pop.style.top = (r.bottom + 6) + 'px';
+  }
+  // a name made up from a force's colours and kind, which follows them when either changes
+  function madeUpName(n) {
+    var CO = colours();
+    return !n || Object.keys(CO).some(function (k) {
+      return ARMIES.some(function (f) { return n === CO[k].name + ' ' + FORCE_NOUN[f]; });
+    });
+  }
+  function nameFor(colour, faction) {
+    var c = colours()[colour];
+    return (c ? c.name + ' ' : '') + FORCE_NOUN[faction];
+  }
+  /* Your own force, changed from its line and sent to the room as the muster
+     sends it (game.force): new colours, or a new army — which rolls the force
+     afresh for that army, as a commando in a cooperative game. */
+  function sendForce(change) {
+    var mine = mySeat(), p = mine && room.seats[mine];
+    if (!p) return;
+    var f = Object.assign({}, p.force || {}, change);
+    if (change.faction && change.faction !== (p.force || {}).faction) {
+      var s = room.settings, R = root.PMC, SOLO = root.PMCSolo;
+      f.tactic = ''; f.roster = null;
+      f.keys = s.kind === 'coop' ? (SOLO ? SOLO.rollCommando(s.tier, 1, f.faction) : [])
+        : (R && R.rollArmy ? R.rollArmy(s.tier, s.pl, null, f.faction) : []);
+    }
+    if (madeUpName(f.name)) f.name = nameFor(f.colour, f.faction || 'pmc');
+    myForce = f;
+    net.send('game.force', { force: f });
+  }
+  function pickColour(k) {
+    var who = colourFor;
+    colourFor = null;
+    if (who === 'op') net.send('game.settings', { patch: { opColour: k } });
+    else if (who && who === mySeat()) sendForce({ colour: k });
+    draw();
   }
 
   function factionName(f) {
@@ -522,6 +627,8 @@
   function onClick(e) {
     var b = e.target.closest ? e.target.closest('[data-lob]') : null;
     if (!b || b.getAttribute('data-lob') !== 'usermenu') { if (el('lobby-usermenu') && !el('lobby-usermenu').hidden && !(b && /^(signout|account)$/.test(b.getAttribute('data-lob')))) userMenu(false); }
+    // a tap anywhere but the colours (or the chip that opens them) puts them away
+    if (colourFor && !(e.target.closest && e.target.closest('.olob-pop, [data-lob="colours"]'))) { colourFor = null; if (!b) draw(); }
     if (b) { act(b.getAttribute('data-lob'), b); return; }
     var t = e.target.closest ? e.target.closest('[data-term]') : null;
     if (t) return;                    // handled on change, below
@@ -564,7 +671,7 @@
       case 'join': return join(b.getAttribute('data-id') || (el('join-code') || {}).value);
       case 'resume': return join(b.getAttribute('data-id'));
       case 'sit': net.send('game.seat', { seat: b.getAttribute('data-seat') }); return;
-      case 'leave': keepRoom(''); net.send('game.leave'); view = 'lobby'; draw(); return;
+      case 'leave': colourFor = null; keepRoom(''); net.send('game.leave'); view = 'lobby'; draw(); return;
       case 'leave-lobby':
         close();
         // back to the battle if one is on, otherwise to the menu
@@ -582,6 +689,9 @@
         return;
       }
       case 'muster': askForMuster(); return;
+      // a force's colours, under its chip; one picked from them
+      case 'colours': { var w = b.getAttribute('data-for'); colourFor = colourFor === w ? null : w; draw(); return; }
+      case 'colour': if (!b.disabled) pickColour(b.getAttribute('data-col')); return;
       case 'start': net.send('game.start'); return;
       case 'say': say(b.getAttribute('data-where'), null); return;
     }
@@ -644,6 +754,13 @@
   function onTermChange(e) {
     if (e.target && e.target.id === 'lob-private') { newPrivate = !e.target.checked; return; }
     var box = e.target, k = box && box.getAttribute && box.getAttribute('data-term');
+    // an army picked on a force's line: your own (rolled afresh for it), or the host's for the OpFor
+    var army = box && box.getAttribute && box.getAttribute('data-lob-army');
+    if (army && net && room) {
+      if (army === 'op') net.send('game.settings', { patch: { opFaction: box.value } });
+      else if (army === mySeat()) sendForce({ faction: box.value });
+      return;
+    }
     if (!k || !net) return;
     var patch = {};
     patch[k] = k === 'tier' || k === 'pl' ? +box.value : k === 'private' ? !box.checked : box.value;
