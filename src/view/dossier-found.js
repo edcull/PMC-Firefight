@@ -93,16 +93,15 @@
     /* A list opened over the page (the founding screen's pickers, the hub's
        rivals): drawn with the page, hidden unless open, so a pick made in it
        redraws it along with everything else. */
-    /* A window over the page: its title across the top, with its way back (to
-       the window it was opened from, if any) on the left as the title bar's is
-       — the arrow alone on a phone — and a close on the right. */
-    function cmodal(kind, title, inner, back) {
-      var bk = back ? back.replace('class="lnk"', 'class="camp-back cmodal-back" aria-label="Back"')
-        .replace(/\u2190 Back|← Back/, '<span class="bk-ar" aria-hidden="true">\u2190</span><span class="bk-w"> Back</span>') : '';
+    /* A window over the page: its title across the top and a close on the right
+       (a tap outside it closes it too); under it, any action of its own (the
+       filters' Clear). */
+    function cmodal(kind, title, inner, acts) {
       return '<div class="cmodal" data-modal="' + kind + '"' + (E.openModal === kind ? '' : ' hidden') + '>' +
         '<div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
-        '<div class="cmodal-head">' + bk + '<h3>' + esc(title) + '</h3>' +
-        '<button type="button" class="xclose" data-go="fmodalclose" title="Close" aria-label="Close">\u2715</button></div>' + inner + '</div></div>';
+        '<div class="cmodal-head"><h3>' + esc(title) + '</h3>' +
+        '<button type="button" class="xclose" data-go="fmodalclose" title="Close" aria-label="Close">\u2715</button></div>' + inner +
+        (acts ? '<div class="askrow">' + acts + '</div>' : '') + '</div></div>';
     }
     function rivalName() { return 'Rival company'; }
     // what this campaign calls its money, and what its creed is called

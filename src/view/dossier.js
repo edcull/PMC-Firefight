@@ -647,7 +647,7 @@
   function freeColour(taken) { return (KIT_FOUND || kitFound()).freeColour(taken); }
   function squares(pick) { return (KIT_FOUND || kitFound()).squares(pick); }
   function colourName(k) { return (KIT_FOUND || kitFound()).colourName(k); }
-  function cmodal(kind, title, inner, foot) { return (KIT_FOUND || kitFound()).cmodal(kind, title, inner, foot); }
+  function cmodal(kind, title, inner, acts) { return (KIT_FOUND || kitFound()).cmodal(kind, title, inner, acts); }
   function coin() { return (KIT_FOUND || kitFound()).coin(); }
   function foundView() { return (KIT_FOUND || kitFound()).foundView(); }
   function ourList(co) { return (KIT_FOUND || kitFound()).ourList(co); }

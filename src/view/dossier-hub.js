@@ -58,10 +58,10 @@
                 ' title="' + esc(q.name + (taken ? ' — another force wears it' : '')) + '"><span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
             }).join('') + '</div></div>';
         }
-        // one line: how many forces share the world (always an even number, so they pair off), and Raise the force
+        // one line: how many AI forces (an odd number: with yours, the forces pair off for each round), and Raise the force
         h += '<div class="olob-bar">' + (hot ? '<span class="olob-n">2 forces</span>'
-          : '<label class="olob-n">Forces <select id="camp-rivals">' + [1, 3, 5, 7].map(function (n) {
-            return '<option value="' + n + '"' + (n === nr ? ' selected' : '') + '>' + (n + 1) + '</option>';
+          : '<label class="olob-n">AI forces <select id="camp-rivals">' + [1, 3, 5, 7, 9].map(function (n) {
+            return '<option value="' + n + '"' + (n === nr ? ' selected' : '') + '>' + n + '</option>';
           }).join('') + '</select></label>') +
           '<button class="start" data-go="newcamp">Raise the force</button></div>';
         h += cmodal('armynew', C.words(pa).side + ' \u2014 army rules', armyRules(pa));
@@ -105,7 +105,6 @@
          player's force), the battles fought, the fallen, and the campaign's
          file: out to a file, back in from one, or given up. */
       var last = E.camp.log.length ? E.camp.log[E.camp.log.length - 1] : null;
-      var back = '<button type="button" class="lnk" data-go="fmodal" data-kind="manage">\u2190 Back</button>';
       // won or lost from where the hub's player stands (hotseat: either of them, HC-13)
       var result = function (l) { return !l.winner ? 'drawn' : l.winner === (hs || 'A') ? 'won' : 'lost'; };
       var vsOf = function (l) { return E.camp.mode === 'hotseat' ? (hs === 'B' ? A : B).name : l.against; };
@@ -126,11 +125,11 @@
         '<button type="button" class="archline danger" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>') +
         '</div>');
       // the fallen, opened from the campaign's window (Back returns to it)
-      h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>', back);
+      h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>');
       h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'The other forces on this world',
         // the other player's force shown as a rival's is: its figures, its kind and creed, and their dossier to open
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? rivalPanel(hs === 'B' ? A : B, 0)
-          : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>', back);
+          : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>');
       // every battle fought, the latest first (opened from the win rate even before the first)
       {
         // a battle whose aftermath was kept opens it again, read only
@@ -143,22 +142,21 @@
             : '<div class="crow">' + inner + '</div>';
         };
         h += cmodal('battles', 'Battles fought', '<div class="cmodal-scroll">' + (E.camp.log.length ? '<div class="clog">' +
-          E.camp.log.map(battleRow).reverse().join('') + '</div>' : '<p class="dnote">No battles fought yet.</p>') + '</div>', back);
+          E.camp.log.map(battleRow).reverse().join('') + '</div>' : '<p class="dnote">No battles fought yet.</p>') + '</div>');
       }
-      // each rival's own battles, the latest first, opened from its win rate (Back to the other forces)
-      var backRivals = '<button type="button" class="lnk" data-go="fmodal" data-kind="rivals">\u2190 Back</button>';
+      // each rival's own battles, the latest first, opened from its win rate
       // each army's rules, opened from its pill
       h += cmodal('armyA', C.words(A).side + ' \u2014 army rules', armyRules(A));
-      if (E.camp.mode === 'hotseat') h += cmodal('armyB', C.words(B).side + ' \u2014 army rules', armyRules(B), backRivals);
-      rivals.forEach(function (co, i) { h += cmodal('armyr' + i, co.name + ' \u2014 ' + C.words(co).side, armyRules(co), backRivals); });
+      if (E.camp.mode === 'hotseat') h += cmodal('armyB', C.words(B).side + ' \u2014 army rules', armyRules(B));
+      rivals.forEach(function (co, i) { h += cmodal('armyr' + i, co.name + ' \u2014 ' + C.words(co).side, armyRules(co)); });
       rivals.forEach(function (co, i) {
-        if (!(co.log || []).length) { h += cmodal('rbattles' + i, co.name + ' \u2014 battles', '<div class="cmodal-scroll"><p class="dnote">No battles fought yet.</p></div>', backRivals); return; }
+        if (!(co.log || []).length) { h += cmodal('rbattles' + i, co.name + ' \u2014 battles', '<div class="cmodal-scroll"><p class="dnote">No battles fought yet.</p></div>'); return; }
         h += cmodal('rbattles' + i, co.name + ' \u2014 battles', '<div class="cmodal-scroll"><div class="clog">' +
           co.log.slice().reverse().map(function (l) {
             return '<div class="crow"><b>' + l.turn + '</b>' +
               '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl +
               '<small>vs ' + esc(l.vs) + '</small></span><em>' + l.result + '</em></div>';
-          }).join('') + '</div></div>', backRivals);
+          }).join('') + '</div></div>');
       });
       h += '<p class="camp-foot">' +
         '<button class="lnk" data-go="menu">← Main menu</button>' +
