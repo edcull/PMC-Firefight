@@ -63,6 +63,8 @@
 
     window.__begin = function (cfg, opts) { return begin(cfg, opts); };
     window.__startBattle = function () { startBattle(); };
+    // a side walking away from the battle on this device's table: it ends there, as a forfeit online does
+    window.__concede = function (side) { B.concede(side); };
     /* The deployment card's Begin the battle, for a harness to press: pressing
        it goes through the question about empty transports, as a player
        answering "Begin" would. Null while it is not on offer. */

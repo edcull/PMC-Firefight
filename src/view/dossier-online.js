@@ -31,6 +31,8 @@
 
     function api(path, opts) {
       opts = opts || {};
+      // a hotseat campaign with AI forces is the same world, kept on this device (net/localworld.js)
+      if (root.PMCLocalWorld && /api\/online\/h\d+/.test(path)) return root.PMCLocalWorld.api(path, opts);
       opts.credentials = 'same-origin';
       opts.cache = 'no-store';
       if (opts.body) opts.headers = { 'content-type': 'application/json' };
@@ -50,6 +52,8 @@
     /* Out of the campaign, back to the Multiplayer screen (where a new one is
        started or one joined; the main menu's Continue opens one again). */
     function toMulti() {
+      // one kept on this device was not opened from Multiplayer: the main menu
+      if (E.online && E.online.local) { leaveCampaign(); E.toMenu(); return; }
       leaveCampaign();
       E.hide();
       if (root.PMCLobby && root.PMCLobby.available()) root.PMCLobby.open(); else E.toMenu();
@@ -59,7 +63,7 @@
       return api('api/online/' + id).then(function (r) {
         if (!r.ok) { E.note('That campaign will not open', cap(r.j.error || 'the server said no') + '.'); return; }
         if (!stashed) { localCamp = E.camp; stashed = true; }
-        E.online = { id: r.j.id, slot: r.j.slot, version: 0, side: 'A' };
+        E.online = { id: r.j.id, slot: r.j.slot, version: 0, side: 'A', local: !!(root.PMCLocalWorld && root.PMCLocalWorld.isLocal(r.j.id)) };
         E.hubSide = 'A';
         take(r.j, true);
         startPoll();
@@ -212,6 +216,7 @@
       return (on.battle && on.battle.code) || (on.duel && on.duel.battle && on.duel.battle.code) || null;
     }
     function goBattle(code) {
+      if (E.online && E.online.local) { localBattle(code); return; }
       if (!root.PMCLobby || !root.PMCLobby.joinBattle) { E.note('No battle here', 'This page cannot reach the game server.'); return; }
       fighting = code;
       E.hide();
@@ -219,6 +224,29 @@
         over: function () { afterBattle(true); },
         gone: function () { afterBattle(false); }
       });
+    }
+    /* A battle of a campaign kept on this device: laid on this device's own table,
+       both players at it for a contract between them (each modifying their army
+       unseen, in turn), the AI playing its side otherwise. */
+    function localBattle(code) {
+      var L = root.PMCLocalWorld, b = L && L.battle(code);
+      if (!b || !root.PMC_NEWGAME) { E.note('No battle here', 'That battle is not kept on this device.'); return; }
+      var cfg = Object.assign({}, b.cfg, { localBattle: code, campLid: null });
+      if (cfg.mode === 'hotseat') { cfg.readyUp = false; cfg.secretSwaps = true; }
+      fighting = code;
+      E.hide();
+      root.PMC_NEWGAME(cfg);
+    }
+    /* Its result: handed to the world (once, by the battle's code), and the campaign
+       opened again on what follows — for the player whose battle it was. */
+    function localOver(report, cfg) {
+      var L = root.PMCLocalWorld, code = cfg && cfg.localBattle, b = L && L.battle(code);
+      if (!b) return;
+      if (b.ref && b.ref.kind === 'ai') L.setSeat(b.id, +b.ref.slot);
+      L.battleOver(code, report);
+      fighting = null;
+      var back = function () { if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE(); leaveCampaign(); openCampaign(b.id); };
+      if (root.PMC_AFTER_RESULT) root.PMC_AFTER_RESULT(back); else back();
     }
     // the battle over (read the result first) or walked away from: back to the campaign, as the server has it now
     function afterBattle(read) {
@@ -331,6 +359,12 @@
     // what the hub says of the campaign: a contract or a duel under way, a battle ready, challenges
     function hubNote() {
       var on = onl(), h = '';
+      // kept on this device: who is at the screen, and the hand-over to the other player
+      if (E.online && E.online.local) {
+        var L = root.PMCLocalWorld, here = L.seat(E.online.id), there = here ? 0 : 1;
+        h += '<div class="cpan onote"><div class="cpstat">At the screen: <b>' + esc(L.playerName(here)) + '</b>' +
+'</div><button class="lnk" data-go="oseat">Hand over to ' + esc(L.playerName(there)) + '</button></div>';
+      }
       var b = battleCode();
       if (b) {
         h += '<div class="cpan onote"><div class="cpstat"><b>The battle is ready.</b></div><button class="start" data-go="obattle">Go to the battle</button></div>';
@@ -677,6 +711,13 @@
         E.render(); return true;
       }
       if (go === 'ocontract') { E.view = 'ocontract'; E.render(); return true; }
+      if (go === 'oseat' && E.online && E.online.local) {
+        var LW = root.PMCLocalWorld, wid = E.online.id, to = LW.seat(wid) ? 0 : 1;
+        LW.setSeat(wid, to);
+        leaveCampaign();
+        openCampaign(wid).then(function () { E.note('Over to ' + LW.playerName(to), 'Pass the device to ' + LW.playerName(to) + '.'); });
+        return true;
+      }
       if (go === 'obattle') { var bc = battleCode(); if (bc) goBattle(bc); return true; }
       if (attr('data-take-offer') !== null && attr('data-take-offer') !== undefined && t.hasAttribute('data-take-offer')) {
         cmd('aiTake', { i: +attr('data-take-offer') }, function () { E.view = 'ocontract'; });
@@ -787,6 +828,14 @@
       inLobby: function () { return !!(E.online && E.online.phase === 'lobby'); },
       // one opened straight from the main menu's Continue list
       openOne: function (id) { leaveCampaign(); return openCampaign(id); },
+      localOver: localOver,
+      // a new hotseat campaign with AI forces, kept on this device, opened on Player 1's founding
+      newLocal: function (how) {
+        var made = root.PMCLocalWorld.make(how);
+        if (!made.ok) { E.note('Not started', cap(made.why || 'it could not be made') + '.'); return; }
+        leaveCampaign();
+        return openCampaign(made.id);
+      },
       // one started from the lobby's Start a game
       startNew: function (how) { leaveCampaign(); return startNew(how); }
     };

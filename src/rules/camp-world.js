@@ -381,7 +381,7 @@
 
       /* ================= the commands ================= */
       const LOBBY = {
-        // the host: how many slots (2, 4, 6, 8 or 10); only open and AI slots go
+        // the host: how many slots (two to ten); only open and AI slots go
         lobbySlots(W, i, a) {
           if (i !== 0) return no('the host sets the slots');
           const n = Math.max(MIN_SLOTS, Math.min(MAX_SLOTS, Math.round(+a.n || 0)));

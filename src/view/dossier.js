@@ -363,6 +363,7 @@
   var wantFaction = 'pmc', wantB = 'pmc';   // what the new campaign's forces will be, as picked so far
   // solo: how many forces share the world with the player's, and what each runs ('' rolled)
   var wantRivals = 3, wantRivalArmies = [];
+  var wantHotAi = 0;                                  // hotseat: how many AI forces share the world (0, 2, 4, 6 or 8)
   var wantRivalColours = [], rivColourFor = null;   // ...their colours ('' rolled), and the one whose picker is open
   var enterCampaign = null;       // the way in, once the screen is wired
   var openModal = null, modalView = null, colourOpen = false, propFor = null;
@@ -611,7 +612,7 @@
       profile: profile, root: root, spendActs: spendActs, squares: squares, tip: tip,
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
-      get wantRivals() { return wantRivals; }, get wantRivalArmies() { return wantRivalArmies; },
+      get wantRivals() { return wantRivals; }, get wantRivalArmies() { return wantRivalArmies; }, get wantHotAi() { return wantHotAi; },
       get wantRivalColours() { return wantRivalColours; }, get rivColourFor() { return rivColourFor; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
@@ -720,6 +721,8 @@
   }
   // the battle fought: its contract is done with (a kept one included)
   function onFinish(report, cfg) {
+    // a battle of a hotseat campaign kept on this device as a world: its result goes to the world (dossier-online.js)
+    if (cfg && cfg.localBattle) { kitOnline().localOver(report, cfg); return; }
     /* A battle fought for a campaign not the one open (another was opened while it
        was on): that campaign is opened to take the result. */
     if (cfg && cfg.campLid && cfg.campLid !== Store.lid()) {
@@ -1263,6 +1266,14 @@
       case 'newcamp': {
         var fac = el('camp-faction') ? el('camp-faction').value : 'pmc';
         secondFaction = el('camp-bfaction') ? el('camp-bfaction').value : null;
+        /* hotseat with AI forces: the online campaign's world, kept on this device
+           (each player takes contracts against the AI forces, or challenges the other) */
+        if (wantMode === 'hotseat' && wantHotAi > 0 && root.PMCLocalWorld) {
+          var hai = [];
+          for (var hi = 0; hi < wantHotAi; hi++) hai.push({ faction: wantRivalArmies[hi] || 'random', colour: wantRivalColours[hi] || null });
+          kitOnline().newLocal({ factions: [fac, secondFaction || 'pmc'], ai: hai });
+          return;
+        }
         // a name to start from; the player settles it on the founding screen
         // no name to start from: the player gives one on the founding screen (the box suggests one)
         beginFounding('', wantMode === 'hotseat' ? 'hotseat' : 'solo', fac);
@@ -1546,6 +1557,7 @@
       else if (ev.target.id === 'camp-bfaction') { wantB = ev.target.value; render(); }
       // solo: how many opposing forces, and what each of them runs
       else if (ev.target.id === 'camp-rivals') { wantRivals = +ev.target.value || 3; render(); }
+      else if (ev.target.id === 'camp-hotai') { wantHotAi = +ev.target.value || 0; render(); }
       else if (ev.target.classList && ev.target.classList.contains('rivarmy')) { wantRivalArmies[+ev.target.getAttribute('data-i')] = ev.target.value; }
       else if (ev.target.id === 'camp-pl') {
         var want = +ev.target.value;
@@ -1653,6 +1665,7 @@
     fresh: function (mode) { if (enterFresh) enterFresh(mode); },
     resume: function (lid) { return enterResume ? enterResume(lid) : null; },
     adopt: function (sid) { return enterResume ? enterResume(null, sid) : null; },
+    newLocalWorld: function (how) { var su = el('setup'); if (su) su.hidden = true; return kitOnline().newLocal(how); },
     openOnline: function (id) { var su = el('setup'); if (su) su.hidden = true; return kitOnline().openOne(id); },
     newOnline: function (how) { var su = el('setup'); if (su) su.hidden = true; return kitOnline().startNew(how); },
     lid: function () { return Store.lid(); },
