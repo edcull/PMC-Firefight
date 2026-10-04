@@ -73,11 +73,63 @@ async function signInLobby(page, name, mode, password) {
   }
   await page.waitForFunction(() => !!(window.PMCLobby.net() && window.PMCLobby.net().live) && document.getElementById('account').hidden && !document.getElementById('lobby').hidden, null, { timeout: 8000 });
 }
+/* A battle between browsers at one game server driven on by intents, each page
+   answering what is put to its own seat (the deployment done for it, no tactic
+   taken, every unit skipping its go, every question answered no) until the End
+   phase, where the seat `quits` surrenders (asked twice, as a player is). True
+   once the battle is over; false if it is not by `ms`. `log`, if given, hears
+   what each page did, for a test that has stuck. */
+async function driveToEnd(pages, quits, ms, log) {
+  const stop = Date.now() + (ms || 150000);
+  while (Date.now() < stop) {
+    for (const p of pages) {
+      const r = await p.evaluate((sur) => {
+        const st = window.PMC_STATE && window.PMC_STATE();
+        if (!st || !st.phase) return 'none';
+        if (st.over) return 'over';
+        const me = window.__seats()[0];
+        if (!me) return 'watching';
+        if (window.__busy() || window.__showQueue()) return 'busy';
+        const say = (it) => { window.__sendIntent(it); return it.k; };
+        if (st.endAsk) return st.endAsk.side === me ? say({ k: me === sur ? 'surrender' : 'enddone' }) : 'wait';
+        const asks = { faceAsk: 'vfaceall', kyfAsk: 'nokyf', martyrAsk: 'nomartyr', nervousAsk: 'nonervous', standAsk: 'nostand', cmdOffer: 'cmdskip' };
+        for (const k in asks) if (st[k] && (st[k].side == null || st[k].side === me)) return say({ k: asks[k] });
+        if (st.tacticAsk) return st.tacticAsk.order[st.tacticAsk.step] === me && !st.tacticAsk.wave ? say({ k: 'tactic', tactic: null }) : 'wait';
+        if (st.placeAsk && st.placeAsk.side === me) return say({ k: 'placeauto' });
+        if (st.relocating && st.relocating.side === me) return say({ k: 'relocdone' });
+        if (st.phase === 'deploy') {
+          if (st.deployReady && !st.deployReady[me]) say({ k: 'deployready' });
+          say({ k: 'autosplit' }); say({ k: 'autodeploy' });
+          return say({ k: 'start' });
+        }
+        if (st.phase === 'battle' && window.__mySide() === me) {
+          // a unit coming in by insertion: held back if it may be, else put down at the first spot that will take it
+          if (window.__insertionAsking && window.__insertionAsking()) {
+            const ins = window.__insertionState();
+            if (ins && ins.kind === 'insert') return say({ k: 'holdinsert' });
+            const spot = (window.__insertionSpotsNow() || []).filter((q) => window.__insertionLegal(q))[0] || (window.__insertionSpotsNow() || [])[0];
+            return spot ? say({ k: 'insert', x: spot.x, y: spot.y }) : 'no spot';
+          }
+          const list = window.__eligibleUnits();
+          if (!list.length) return 'nothing to act';
+          say({ k: 'select', id: list[0].id });
+          return say({ k: 'action', id: 'skip' });
+        }
+        return 'wait ' + st.phase + ' ' + st.activeSide;
+      }, quits);
+      if (log) log(r);
+      if (r === 'over') return true;
+    }
+    await new Promise((res) => setTimeout(res, 350));
+  }
+  return false;
+}
 // a data directory of its own for a test's server: a fresh database every run
 function tmpData() { return fs.mkdtempSync(path.join(require('os').tmpdir(), 'pmc-data-')); }
 
 module.exports = {
   signInLobby: signInLobby,
+  driveToEnd: driveToEnd,
   tmpData: tmpData,
   startSkirmish: startSkirmish,
   seedDice: seedDice,

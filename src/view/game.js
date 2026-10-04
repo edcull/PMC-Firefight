@@ -239,7 +239,10 @@
       setHint(null, m.why ? m.why.charAt(0).toUpperCase() + m.why.slice(1) + '.' : 'Not allowed.');
       render();
     });
-    transport.on('over', function () { render(); });
+    /* Told it is over. The board may not be there yet — the last events still
+       being drawn, or a table that missed them — so what the message says of the
+       end is kept, for the result card to be put up from if no other comes. */
+    transport.on('over', function (m) { ui.serverOver = (m && m.over) || null; render(); });
     // the battle could not be written to this device's storage (HB-12)
     transport.on('unsaved', function (m) { notice(m.text); });
     transport.on('finished', function (m) {
@@ -986,7 +989,17 @@
     wireNet: wireNet, FX: FX, H: H, ISO: ISO, R: R, W: W, anims: anims, cam: cam, el: el, fx: fx,
     idleCbs: idleCbs, resQueue: resQueue, show: show, ui: ui,
     // (the tests) a side walking away from a battle played on this device
-    concede: function (side) { if (mirror && mirror.concede) mirror.concede(side); }
+    /* A side walking away on this device's table: the engine ends it there and
+       then, outside any intent, so what it wrote (the result card) is sent on to
+       the board as an intent's would be. */
+    concede: function (side) {
+      if (!mirror || !mirror.concede) return;
+      mirror.concede(side);
+      if (net && window.PMCNet && net instanceof window.PMCNet.Local) {
+        net.flush();
+        if (mirror.over && mirror.over()) net.emit('over', { report: mirror.report(), over: mirror.over() });
+      }
+    }
   };
   window.PMCHooks(hookBoard);
   if (window.PMCTestHooks) window.PMCTestHooks(hookBoard);

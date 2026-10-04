@@ -252,7 +252,8 @@ class Lobby {
      result (the aftermath not applied: the campaign still sends its player to it).
      Played back from the database and the campaign told now: once, by the game's
      id, so telling it again does no harm. A battle that does not end the same way
-     played back (a forfeit, which is no intent) is ended as it was kept. */
+     played back (a forfeit, which is no intent) is ended as it was kept.
+     Settled: { campaign } (the campaign's id); otherwise false. */
   settleEnded(p, want) {
     const g = this.games && this.games.lastByCode ? this.games.lastByCode(want) : null;
     if (!g || g.status === 'battle' || !this.onCampaignBattle || !(g.settings && g.settings.onlineCampaign)) return false;
@@ -269,7 +270,7 @@ class Lobby {
     if (!report) return false;
     try { this.onCampaignBattle(g.settings.onlineCampaign, report, battleKey(g.id, g.code), g.settings.onlineRef || null); }
     catch (e) { this.log('could not apply the campaign battle ' + g.id + ': ' + ((e && e.stack) || e)); return false; }
-    return true;
+    return { campaign: g.settings.onlineCampaign };
   }
   /* Put this connection back in a seat being held for it (a refresh, a dropped
      connection, a restart): the room it is in now, or null. */
@@ -522,7 +523,13 @@ class Lobby {
         }
       }
     }
-    if (!room) return p.fail(this.settleEnded(p, want) ? 'that battle is over' : 'no game with that code');
+    if (!room) {
+      /* Over: which campaign it was fought for goes with the word, so a player
+         who left before reading the result (a refresh) is taken to its aftermath. */
+      const ended = this.settleEnded(p, want);
+      if (ended) return p.send('error', { text: 'that battle is over', fatal: false, campaign: ended.campaign });
+      return p.fail('no game with that code');
+    }
     // one of its players, coming back to the seat held for them
     if (p.room !== room && P.SEATS.some((sd) => room.seats[sd] && !room.seats[sd].sock && room.seats[sd].id === p.id)) {
       if (p.room) this.leave(p);

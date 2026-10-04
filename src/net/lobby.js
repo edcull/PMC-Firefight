@@ -826,8 +826,8 @@
     });
     net.on('game', function (m) {
       room = m.room;
-      // remembered to resume only once its battle is under way
-      keepRoom(room && room.phase === P.PHASE.BATTLE ? room.id : '');
+      // remembered to resume only once its battle is under way (or, ended, until its result is read: see 'over')
+      if (!(unread && !room)) keepRoom(room && room.phase === P.PHASE.BATTLE ? room.id : '');
       if (!room) { view = 'lobby'; draw(); return; }
       chat.room = room.chat || chat.room;
       view = 'room';
@@ -851,6 +851,15 @@
         say2(/over/.test(m.text) ? 'That battle is over — back to the campaign.' : 'That battle is not on the server any more.', 'warn', 6000);
         hb.gone();
       }
+      /* Come back (a refresh, the Continue list) to a campaign's battle that ended
+         before its result was read here: on to that campaign, where its aftermath
+         is waiting. */
+      else if (/that battle is over/.test(m.text || '') && m.campaign && root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.openOnline) {
+        fault = '';
+        say2('That battle is over — on to its aftermath.', 'warn', 6000);
+        close();
+        root.PMC_CAMPAIGN.openOnline(m.campaign);
+      }
       draw();
     });
     net.on('started', function (m) {
@@ -859,16 +868,36 @@
       battleChat();
     });
     net.on('over', function () {
-      keepRoom(''); if (net) net.send('games.mine'); /* the board shows the result; the room reopens by itself */
+      if (net) net.send('games.mine');
+      /* A campaign's battle is remembered until its result has been read here:
+         a refresh before then comes back to it, finds it over, and goes on to
+         its aftermath (the 'error' above). Anything else is forgotten now. */
+      var st = root.PMC_STATE && root.PMC_STATE(), campaign = !!(campBattle || (st && st.cfg && st.cfg.onlineCampaign));
+      if (!campaign || !root.PMC_AFTER_RESULT) keepRoom('');
+      else { unread = true; root.PMC_AFTER_RESULT(function () { unread = false; keepRoom(''); }); }
       // an online campaign's battle: the campaign takes it from here (dossier-online.js)
       if (campBattle) { var h = campBattle; campBattle = null; campOver = true; h.over(); }
       // come back to some other way (the Continue list, a reload): once the result is read, its campaign
-      else backToCampaign(true);
+      else if (!backToCampaign(true)) afterSkirmish();
     });
+    /* A battle between two players over: once this player has read the result
+       and pressed Continue, the room comes up for a rematch — or, if they have
+       left it (the other player walked away), the list of games. */
+    function afterSkirmish() {
+      if (!root.PMC_AFTER_RESULT) return;
+      root.PMC_AFTER_RESULT(function () {
+        if (!net) return;
+        if (room) { open('room'); return; }
+        if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE();
+        open('lobby');
+      });
+    }
+    function overOnBoard() { var st = root.PMC_STATE && root.PMC_STATE(); return !!(st && st.over); }
     /* The other player dropping out, coming back or walking away, said on the
        board while the battle is on (the room's chat is not on screen then). */
     net.on('game.presence', function (m) {
-      if (!m || m.id === me.id || !root.PMC_BATTLE_LIVE || !root.PMC_BATTLE_LIVE()) return;
+      // (a battle just ended by it — a forfeit — is still on the board, its result up)
+      if (!m || m.id === me.id || !((root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE()) || overOnBoard())) return;
       var who = m.name || 'Your opponent';
       if (m.kind === 'dropped') say2(who + ' has lost connection. Their seat is being held for them.', 'warn');
       else if (m.kind === 'back') say2(who + ' is back.', 'good');
@@ -886,6 +915,10 @@
         var coopGone = !!(root.PMC_STATE && root.PMC_STATE() && root.PMC_STATE().cfg && root.PMC_STATE().cfg.netCoop);
         say2(who + ' has left the battle' + (coopGone ? ' \u2014 without them, the OpFor has it.' : m.forfeit ? ' \u2014 you win by forfeit.' : '. It cannot go on without them.'), coopGone ? 'bad' : m.forfeit ? 'good' : 'bad', 7000);
         if (net) net.send('games.mine');
+        /* Walked away from, the battle was ended on the server with this side the
+           winner, and its result is on the board: this player leaves the room now,
+           and goes on to the list of games once it is read (afterSkirmish). */
+        if (m.forfeit && overOnBoard()) { net.send('game.leave'); room = null; return; }
         /* The battle on the screen is over, and so is the game: this player
            leaves its room too (it would only hold them in a game with nobody
            to play), and is put back in the list of games to start another. */
@@ -911,10 +944,14 @@
   /* A campaign battle this screen came back to without the campaign's hooks (from
      the Continue list, or after a reload): its campaign (cfg.onlineCampaign) is
      opened again once it is over — the result read first, if it is on the board. */
+  var backing = null;
+  var unread = false;              // an online campaign's battle over, its result not yet read here
   function backToCampaign(read) {
     var st = root.PMC_STATE && root.PMC_STATE(), id = st && st.cfg && st.cfg.onlineCampaign;
     if (!id || !root.PMC_CAMPAIGN || !root.PMC_CAMPAIGN.openOnline) return false;
-    var go = function () { if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE(); root.PMC_CAMPAIGN.openOnline(id); };
+    if (backing === id) return true;                 // already on its way back (told it is over, then that the other player left)
+    backing = id;
+    var go = function () { backing = null; if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE(); root.PMC_CAMPAIGN.openOnline(id); };
     // (the server applies the result as the battle ends: a moment for it before the campaign is asked for)
     if ((read || st.over) && root.PMC_AFTER_RESULT) root.PMC_AFTER_RESULT(function () { setTimeout(go, 600); });
     else setTimeout(go, read ? 900 : 2500);
@@ -929,7 +966,7 @@
     /* Walk away from the battle under way: the seat is given up, which ends it
        for the other player too, and this browser forgets it was ever in it. */
     abandon: function () {
-      keepRoom('');
+      unread = false; keepRoom('');
       if (net) net.send('game.leave');
       if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE();
       var hc = campBattle; campBattle = null; campOver = false;

@@ -65,6 +65,8 @@
       ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
       ui.insertion = null; ui.preview = null; ui.deployPick = null;
       ui.watch = null; ui.inspect = false;
+      ui.serverOver = null;                // what the server said of the last battle's end
+      ui.afterResult = null;               // and what was waiting on its result card
     }
 
     /* A unit whose arrival is still waiting in the queue is already on the
