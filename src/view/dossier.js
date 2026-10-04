@@ -745,7 +745,7 @@
       set hubSide(v) { hubSide = v === 'B' ? 'B' : 'A'; }, get drawState() { return drawState; }, get upState() { return upState; },
       get swapOut() { return swapOut; },
       render: function () { render(); }, open: open, toMenu: toMenu, keepFoundName: keepFoundName, beginOwn: beginOwn,
-      postView: function () { return postView(); }, offersView: function () { return offersView(); }, jobCard: function (k, side, lv) { return (KIT_CONTRACT || kitContract()).jobCard(k, side, lv); }, stripe: stripe, statRow: statRow, showPast: function (i) { pastFromList = false; (KIT_AFTER || kitAfter()).showPast(i); },
+      postView: function () { return postView(); }, offersView: function () { return offersView(); }, jobCard: function (k, side, lv) { return (KIT_CONTRACT || kitContract()).jobCard(k, side, lv); }, unitWear: function (e, noTp) { return (KIT_CONTRACT || kitContract()).wear(e, noTp); }, unitTp: function (e) { return (KIT_CONTRACT || kitContract()).tpBadge(e); }, stripe: stripe, statRow: statRow, showPast: function (i) { pastFromList = false; (KIT_AFTER || kitAfter()).showPast(i); },
       hide: function () { el('camp').hidden = true; }, isOpen: function () { return !!el('camp') && !el('camp').hidden; },
       asking: function () { return !!asking; },
       closeModal: function () { openModal = null; promoRid = null; },

@@ -564,7 +564,7 @@
     }
 
     return {
-      offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, contractView: contractView,
+      offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
       autoPick: autoPick, fight: fight, seatBack: seatBack
     };
   };
