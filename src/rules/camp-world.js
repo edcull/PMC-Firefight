@@ -527,7 +527,7 @@
           if (aiBusy(W, vs)) return no(W.forces[vs].name + ' is fighting someone else just now — take another, or try again later');
           const lv = o.levels.filter((n) => n <= 2);
           p.contract = {
-            vs: vs, tierRoll: o.tierRoll, tier: o.tier, levels: lv, pl: lv.length ? lv[lv.length - 1] : 1,
+            vs: vs, tierRoll: o.tierRoll, tier: o.tier, levels: lv, pl: C.defaultLevel(W.forces[i], W.forces[vs], o.tier, lv),
             scenario: o.scenario, planet: o.planet || 'random', roles: o.roles || null,
             alt: o.alt || null, altRoles: o.altRoles || null, altBy: o.alt ? 'A' : null, altUsed: false,
             fore: o.fore ? JSON.parse(JSON.stringify(o.fore)) : null, foreNote: o.foreNote || null,
@@ -577,7 +577,7 @@
           k.tier = Math.max(1, Math.min(k.tierRoll.cap, k.tier + dir));
           if (k.tier !== was) {
             k.levels = C.levelsFor(W.forces[i], W.forces[k.vs], k.tier).filter((n) => n <= 2);
-            if (k.levels.indexOf(k.pl) < 0) k.pl = k.levels[k.levels.length - 1] || 1;
+            if (k.levels.indexOf(k.pl) < 0) k.pl = C.defaultLevel(W.forces[i], W.forces[k.vs], k.tier, k.levels);
             k.picks.A = null; k.ready.A = false;
           }
           return { ok: true };

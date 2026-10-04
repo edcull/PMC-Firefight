@@ -164,7 +164,7 @@
         if (!(A.roster || []).length || !(B.roster || []).length) return no('both forces must be founded first');
         const tier = C.rollBattleTier(A, B), fs = C.foresight(A, B, false), levels = C.levelsFor(A, B, tier.tier);
         const k = {
-          tierRoll: tier, tier: tier.tier, levels: levels, pl: levels.length ? levels[levels.length - 1] : 1,
+          tierRoll: tier, tier: tier.tier, levels: levels, pl: C.defaultLevel(A, B, tier.tier, levels),
           scenario: fs.scenario || fs.fore.dice[0], planet: 'random',
           alt: fs.alt || null, altBy: fs.altBy || (fs.alt ? 'A' : null), altUsed: false,
           fore: fs.fore || null, foreNote: fs.note || null,
@@ -189,7 +189,7 @@
           const was = k.tier;
           k.tier = Math.max(1, Math.min(k.tierRoll.cap, k.tier + d));
           k.levels = C.levelsFor(camp.companies.A, camp.companies.B, k.tier);
-          if (k.levels.indexOf(k.pl) < 0) k.pl = k.levels[0] || 1;
+          if (k.levels.indexOf(k.pl) < 0) k.pl = C.defaultLevel(camp.companies.A, camp.companies.B, k.tier, k.levels);
           if (k.tier !== was) { k.picks = { A: null, B: null }; unready(k); }
         };
         if (!both) { if (dir) shift(dir); }
