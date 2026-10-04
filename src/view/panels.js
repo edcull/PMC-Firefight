@@ -500,14 +500,16 @@
       if (called.length) {
         h += '<p class="hint small">Called up: ' + called.map(function (u) { return esc(u.name); }).join(', ') + '</p>';
       }
+      // each kind a toggle: tapped, it is called up; tapped again, sent back
       h += '<div class="targets">';
       pool.forEach(function (p) {
-        h += '<button class="tgt" data-act="waveadd" data-key="' + esc(p.key) + '"' + (w.left ? '' : ' disabled') + '><b>' + esc(p.name) +
+        var on = called.some(function (u) { return u.key === p.key; });
+        h += '<button class="tgt' + (on ? ' sel' : '') + '" data-act="' + (on ? 'waveundo' : 'waveadd') + '" data-key="' + esc(p.key) + '" aria-pressed="' + on + '"' +
+          (on || w.left ? '' : ' disabled') + '><b>' + (on ? '\u2713 ' : '') + esc(p.name) +
           '</b><span>' + p.size + ' models \u00b7 Move ' + p.move + ' \u00b7 FP ' + p.fp + ' \u00b7 Def ' + p.def + ' \u00b7 Morale ' + p.morale + '</span></button>';
       });
       h += '</div><div class="acts">' +
         (w.left ? '<button class="act" data-act="waveauto"><span>Call them up for me</span><small>Fills the wave at random</small></button>' : '') +
-        (called.length ? '<button class="act" data-act="waveundo"><span>Take the last back</span></button>' : '') +
         '<button class="act primary" data-act="wavedone"><span>' + (w.left ? 'Go with ' + called.length : 'Done') + '</span><small>On to the terrain</small></button>' +
         '</div></div>';
       return h;
@@ -1431,7 +1433,8 @@
           else if ((a === 'enddone' || a === 'surrender') && endBoth()) { endBothAnswer(a, b.getAttribute('data-side')); return; }
           else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
           else if (a === 'waveadd') { send({ k: 'waveadd', key: b.getAttribute('data-key') }); return; }
-          else if (a === 'waveundo' || a === 'waveauto' || a === 'wavedone') { send({ k: a }); return; }
+          else if (a === 'waveundo') { send({ k: a, key: b.getAttribute('data-key') }); return; }
+          else if (a === 'waveauto' || a === 'wavedone') { send({ k: a }); return; }
           else if (a === 'tactic') { send({ k: 'tactic', tactic: b.getAttribute('data-alt') || null }); return; }
           else if (a === 'droppick') { send({ k: 'droppick', id: b.getAttribute('data-id') }); return; }
           else if (a === 'entersec') { var sq = ui.sections[+b.getAttribute('data-alt')]; if (sq && ui.selected) doEnter(ui.selected, sq); }

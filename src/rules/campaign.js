@@ -1494,6 +1494,19 @@
     return out;
   }
 
+  /* The Priority Level a contract starts at: the highest on offer at which both
+     forces can fill the whole of the composition points (a legal army that leaves
+     points unspent is a smaller battle than the Level says), else the lowest. */
+  function fillsLevel(co, tier, pl) {
+    var res = R.checkArmy(pickForce(co, tier, pl).map(function (e) { return R.entryPick(e); }), tier, pl, co.doctrines || []);
+    return res.ok && res.spent >= res.budget;
+  }
+  function defaultLevel(coA, coB, tier, levels) {
+    levels = levels || levelsFor(coA, coB, tier);
+    var full = levels.filter(function (pl) { return fillsLevel(coA, tier, pl) && fillsLevel(coB, tier, pl); });
+    return full.length ? full[full.length - 1] : (levels[0] || 1);
+  }
+
   /* The forces on a world pair off between battles, so there is always an even
      number of them: the players' own, and the others. A world with one over
      gets one more rival — a new force arriving — founded the usual way. */
@@ -1536,7 +1549,7 @@
     rehydrate: rehydrate, forSave: forSave, catchUp: catchUp, catchUpTarget: catchUpTarget,
     rivalCanAfford: rivalCanAfford,
     salvageRolls: salvageRolls,
-    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, canStandard: canStandard, rollTP: rollTP, weakCandidates: weakCandidates, rebirth: rebirth, deepen: deepen,
+    idleTurn: idleTurn, fieldableTier: fieldableTier, levelsFor: levelsFor, defaultLevel: defaultLevel, canStandard: canStandard, rollTP: rollTP, weakCandidates: weakCandidates, rebirth: rebirth, deepen: deepen,
     HONOURS: HONOURS, TRAUMAS: TRAUMAS, UPGRADES: UPGRADES,
     RECRUIT_COST: RECRUIT_COST, COMPANY_COST: COMPANY_COST,
     SCENARIOS: SCENARIOS, SCENARIO_NAMES: SCENARIO_NAMES,

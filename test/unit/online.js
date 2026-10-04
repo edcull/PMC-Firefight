@@ -195,7 +195,10 @@ function ok(name, cond, note) {
     dk = camp(ash).online.duel.contract;
   }
   // the Priority Level: the highest both can field to begin with; it changes only when both want the same
-  ok('the Priority Level starts at the highest both forces can field', dk.pl === Math.max.apply(null, dk.levels), JSON.stringify(dk.levels) + ' ' + dk.pl);
+  // the highest both can fill to the last point: newly founded forces can field a Level 2 army but not fill it, so it starts at 1
+  const fills = (co, pl) => { const r = R.checkArmy(C.pickForce(co, dk.tier, pl).map((e) => R.entryPick(e)), dk.tier, pl, co.doctrines); return r.ok && r.spent >= r.budget; };
+  const both2 = fills(camp(ash).companies.A, 2) && fills(camp(brann).companies.A, 2);
+  ok('the Priority Level starts at the highest both forces can fill in full, not merely field', dk.pl === (both2 && dk.levels.indexOf(2) >= 0 ? 2 : dk.levels[0]), JSON.stringify(dk.levels) + ' ' + dk.pl + (both2 ? ' (both fill 2)' : ' (2 not filled)'));
   if (dk.levels.length > 1) {
     const other = dk.levels.filter((n) => n !== dk.pl)[0];
     cmd(brann, 'duel', { cmd: 'contractLevel', args: { pl: other } });

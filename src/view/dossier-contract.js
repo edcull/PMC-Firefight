@@ -135,7 +135,8 @@
       var fs = C.foresight(A, B, !hotseat());
       var levels = C.levelsFor(A, B, tier.tier);
       E.contract = {
-        pl: levels.length ? levels[levels.length - 1] : 1,
+        // the highest Level both can fill in full, not merely field (camp: defaultLevel)
+        pl: C.defaultLevel(A, B, tier.tier, levels),
         levels: levels,
         tierRoll: tier, tier: tier.tier, scenario: fs.scenario || fs.fore.dice[0], planet: 'random',
         alt: fs.alt || null, altBy: fs.altBy || (fs.alt ? 'A' : null), fore: fs.fore || null, foreNote: fs.note || null,

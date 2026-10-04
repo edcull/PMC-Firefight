@@ -590,12 +590,16 @@
     R.musterMen(u, null, state.namesTaken);
     return u;
   }
-  function waveUndo(sd) {
+  // one called-up unit sent back: the last, or the last of the kind named (a pick toggled off)
+  function waveUndo(sd, key) {
     var cfg = state.cfg, armyKey = sd === 'A' ? 'armyA' : 'armyB';
-    var last = state.units.filter(function (u) { return u.side === sd && u.waveExtra; }).pop();
-    if (!last) return false;
-    state.units.splice(state.units.indexOf(last), 1);
-    cfg[armyKey] = cfg[armyKey].slice(0, -1);
+    var gone = state.units.filter(function (u) { return u.side === sd && u.waveExtra && (!key || u.key === key); }).pop();
+    if (!gone) return false;
+    state.units.splice(state.units.indexOf(gone), 1);
+    var at = gone.pickIdx;
+    cfg[armyKey] = cfg[armyKey].slice(0, at).concat(cfg[armyKey].slice(at + 1));
+    // the side's later picks move up one
+    state.units.forEach(function (u) { if (u.side === sd && u.pickIdx > at) u.pickIdx--; });
     return true;
   }
   function autoWave(sd, n) {
@@ -2134,7 +2138,7 @@
         if (!waveChoices(side).some(function (p) { return p.key === it.key; })) return no('only infantry of the Battle Tier');
         waveAdd(side, it.key); w.left--;
       } else if (it.k === 'waveundo') {
-        if (!waveUndo(side)) return no('nothing to take back');
+        if (!waveUndo(side, it.key)) return no('nothing to take back');
         w.left++;
       } else if (it.k === 'waveauto') {
         autoWave(side, w.left); w.left = 0;
