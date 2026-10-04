@@ -1341,16 +1341,10 @@
     return h + '</div>';
   }
 
-  /* The FP column: the Firepower as printed, or — where Fire! at the range
-     set would shoot with more — what it shoots with, marked, the printed
-     figure and every addition on it as a tooltip (Fire!, half range,
-     Anti-tank against a hull). */
+  /* The FP column: the Firepower as printed. What Fire! adds at the range set
+     (half range, Anti-tank against a hull, Fire! itself) is told under the slider. */
   function fpCell(p) {
-    var m = p.fp === null || p.fp === undefined ? null : shotNow();
-    if (!m || m.fp === p.fp) return '<td id="vfpcell">' + (p.fp === null ? '—' : esc(p.fp)) + '</td>';
-    var adds = m.parts.filter(function (q) { return q.label !== 'Firepower' && !/ models$/.test(q.label); });
-    var tip = 'Printed: ' + p.fp + ' · Fire! at ' + view.range + '": ' + adds.map(function (q) { return q.label + ' ' + (q.v >= 0 ? '+' : '') + q.v; }).join(', ');
-    return '<td id="vfpcell" class="vmod" title="' + esc(tip) + '">' + esc(m.fp) + '</td>';
+    return '<td id="vfpcell">' + (p.fp === null || p.fp === undefined ? '—' : esc(p.fp)) + '</td>';
   }
 
   /* Who is in the unit, by rank, as the battle musters it (rules.js rankFor):
