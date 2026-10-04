@@ -152,6 +152,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p2.evaluate(() => document.querySelector('#lobby .lob-list [data-lob="join"]').click());
     let s2 = await till(p2, 'Brann in the lobby', (s) => s.view === 'olobby' && s.slot === 1);
     ok('joined from the list: Brann takes the open slot', s2.slot === 1 && /Brann Online/.test(await text(p2)));
+    ok('...the AI tick-boxes are the host’s alone: a player sees none', await p2.evaluate(() => !document.querySelector('#camp-body [data-olob-ai]') && !document.querySelector('#camp-body .olob-ai')));
     await choose(p2, '[data-olob-army="1"]', 'rebel');
     await p2.waitForTimeout(500);
     // Enter sends the line
