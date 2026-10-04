@@ -742,8 +742,12 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .acct-editbtn svg { width: 15px; height: 15px; }
 /* what the server and the browser keep: its own scrolling box when there is more than fits */
 .acct-data { display: flex; flex-direction: column; gap: 6px; max-height: min(420px, 50vh); overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
-/* on a phone the account screen is the whole page and scrolls itself: the list runs down it, not in a box of its own */
-@media (max-width: 1000px) { .acct-data { max-height: none; overflow: visible; } }
+/* on a phone the page stays put and the list takes all the height left below what is above it, scrolling in itself */
+@media (max-width: 1000px) {
+  #account > .sheet:has(.acct-data) { display: flex; flex-direction: column; overflow: hidden; }
+  #account > .sheet:has(.acct-data) > #acct-body { flex: 1; min-height: 0; }
+  #acct-body > .acct-data { flex: 1 1 auto; min-height: 120px; max-height: none; }
+}
 .acct-signout { margin-left: auto; }
 .acct-lede { margin: 0 0 4px; font-size: 13px; line-height: 1.45; color: var(--ink-dim); }
 .acct-tabs { display: flex; gap: 6px; }
