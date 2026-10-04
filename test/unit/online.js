@@ -254,7 +254,8 @@ function ok(name, cond, note) {
   ok('a force that can still fight cannot be said to be finished', /can still field an army/.test(cmd(cole, 'campEnd').why));
   ok('a player gives it up: out of the world', cmd(brann, 'concede').ok && view(brann).slots[1].out && view(brann).waiting === null);
   ok('...and does no more in it', /out of this campaign/.test(cmd(brann, 'recruit', { key: 'rciv' }).why));
-  ok('...while the others play on', view(ash).phase === 'run' && cmd(ash, 'colour', { colour: 'olive' }).ok);
+  ok('...while the others play on', view(ash).phase === 'run' && !view(ash).slots[0].out);
+  ok('a force\u2019s colours stay the ones picked in the lobby', /picked in the lobby/.test(cmd(ash, 'colour', { colour: 'olive' }).why));
 
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
   process.exit(fail ? 1 : 0);

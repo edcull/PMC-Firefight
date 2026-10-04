@@ -203,11 +203,12 @@
     function companyPanel(co, side, bar) {
       // the force being managed (the one with the bar) fills the screen, whichever side it is
       var h = '<div class="cpan cpan-' + side + (bar ? ' cpan-own' : '') + '"' + stripe(co) + '>';
-      h += '<div class="cphead">' + tierBadge(co, !!bar) + '<b>' + esc(co.name) + '</b>' +
+      // online, the colours are the ones picked in the lobby: not changed here
+      h += '<div class="cphead">' + tierBadge(co, !!bar && !E.online) + '<b>' + esc(co.name) + '</b>' +
         (co.aspiring ? '<span class="ctier">aspiring</span>' : '') +
         '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
       // the colours, dropped down under your own badge
-      if (bar && E.colourOpen) {
+      if (bar && E.colourOpen && !E.online) {
         h += '<div class="found-pop tierpop"><label>' + esc(C.words(co).Force + ' colours \u2014 ' + colourName(colourOf(co))) +
           '</label>' + squares(colourOf(co)) + '</div>';
       }

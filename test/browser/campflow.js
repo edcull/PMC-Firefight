@@ -580,12 +580,12 @@ async function pastFronts(p) {
   });
   const deskRow = await rowAt();
   check('an opened unit\u2019s buttons run down the right, its picture centred on the card, clear of them', deskRow.n === 3 && deskRow.column && deskRow.right && deskRow.picCentred && deskRow.clear && deskRow.barsClear, JSON.stringify(deskRow));
-  // closed, a card shows only Promote, and only with the experience for it, at the right of its line
+  // closed, a card shows Promote with the experience for it, Rename in its place without, at the right of its line
   const shut = await p.evaluate(() => [...document.querySelectorAll('#camp-body .dcard:not(.open)')].map(c => {
     const bs = [...c.querySelectorAll('.dacts button')], row = c.querySelector('.drow'), r = row && row.getBoundingClientRect(), b = bs[0] && bs[0].getBoundingClientRect();
-    return { n: bs.length, promo: bs.every(x => x.hasAttribute('data-promo')), right: !b || r.right - b.right < 4 };
+    return { n: bs.length, promo: bs.every(x => x.hasAttribute('data-promo')), rename: bs.every(x => x.hasAttribute('data-rename')), right: !b || r.right - b.right < 4 };
   }));
-  check('a closed card shows only Promote, at the right', shut.length > 0 && shut.every(x => x.n <= 1 && x.promo && x.right) && shut.some(x => x.n === 1), JSON.stringify(shut));
+  check('a closed card shows one button at the right: Promote, or Rename where there is nothing to spend', shut.length > 0 && shut.every(x => x.n === 1 && (x.promo || x.rename) && x.right) && shut.some(x => x.promo) && shut.some(x => x.rename), JSON.stringify(shut));
   // on a narrow phone too, the closed card's Promote stays on the EXP/TP line: the TP bar shrinks for it
   const vp0 = p.viewportSize();
   await p.setViewportSize({ width: 340, height: 780 });
@@ -605,11 +605,11 @@ async function pastFronts(p) {
     await new Promise(r => setTimeout(r, 200));
     document.querySelectorAll('#camp-body .cmodal').forEach(m => { m.hidden = true; });
     const ws = [...document.querySelectorAll('#camp-body .dcard:not(.open) .drow .dtp')].map(t => Math.round(t.getBoundingClientRect().width));
-    const bare = document.querySelector('#camp-body .dcard[data-rid="' + e.rid + '"] .dacts button') === null;
+    const bare = !!document.querySelector('#camp-body .dcard[data-rid="' + e.rid + '"] .dacts button[data-rename]');
     e.exp = was; window.PMC_CAMPAIGN.set(camp);
     return { widths: [...new Set(ws)], bare };
   });
-  check('...every closed card\u2019s TP bar the same width, Promote or not', widths.bare && widths.widths.length === 1, JSON.stringify(widths));
+  check('...every closed card\u2019s TP bar the same width, Promote or Rename', widths.bare && widths.widths.length === 1, JSON.stringify(widths));
   await p.setViewportSize(vp0);
   await p.waitForTimeout(200);
   const vp = p.viewportSize();
