@@ -826,6 +826,7 @@
     }
     showCard = null;
     placeDrives(body);
+    placeRivPop(body);
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
@@ -846,6 +847,15 @@
       var top = r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - 6 - h) : r.bottom + 6;
       pop.style.left = left + 'px'; pop.style.top = top + 'px'; pop.style.visibility = 'visible';
     });
+  }
+  // an AI force's colours on the new-campaign page: fixed by its chip, as the online lobby's are
+  function placeRivPop(body) {
+    var pop = body.querySelector('.olob-pop[data-rivpop]'); if (!pop) return;
+    var chip = body.querySelector('[data-go="rivcolour"][data-i="' + pop.getAttribute('data-rivpop') + '"]'); if (!chip) return;
+    var r = chip.getBoundingClientRect(), b = body.getBoundingClientRect(), w = Math.min(380, b.width - 16);
+    pop.style.width = w + 'px';
+    pop.style.left = Math.max(b.left + 8, Math.min(r.left, b.right - w - 8)) + 'px';
+    pop.style.top = (r.bottom + 6) + 'px';
   }
   function findEntry(co, rid) { return C.byRid(co, rid); }
 
@@ -929,6 +939,11 @@
   function onClick(ev) {
     var t = ev.target.closest('button');
     // the founding colours drop down under the chip: a tap anywhere else puts them away
+    // an AI force's colours, popped up by its chip on the new-campaign page: a tap anywhere else puts them away
+    if (rivColourFor !== null && !ev.target.closest('.olob-pop') && !(t && t.getAttribute('data-go') === 'rivcolour')) {
+      rivColourFor = null; render();
+      if (!t) return;
+    }
     // a unit's drives, opened beside its icon: a tap anywhere else puts them away
     if (propFor !== null && !ev.target.closest('.propop') && !(t && t.hasAttribute('data-fprop'))) {
       keepFoundName(); propFor = null; render();
@@ -1047,7 +1062,7 @@
     // a new campaign's opposing force: its colours picked (or left to be rolled)
     if (t.hasAttribute('data-rivpick') && rivColourFor !== null) {
       wantRivalColours[rivColourFor] = t.getAttribute('data-rivpick') || '';
-      rivColourFor = null; openModal = null; render(); return;
+      rivColourFor = null; render(); return;
     }
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
     if (t.hasAttribute('data-recruit')) {
@@ -1218,7 +1233,7 @@
 
     switch (go) {
       case 'fcolour': colourOpen = !colourOpen; render(); return;
-      case 'rivcolour': rivColourFor = +t.getAttribute('data-i') || 0; openModal = 'rivcol'; render(); return;
+      case 'rivcolour': { var rci = +t.getAttribute('data-i') || 0; rivColourFor = rivColourFor === rci ? null : rci; render(); return; }
       // hotseat: Player 1's aftermath read, the device goes to Player 2 for theirs (HC-4)
       case 'afternext': case 'afterpass': case 'postpass': (KIT_AFTER || kitAfter()).afterTurn(go, t.getAttribute('data-seat')); render(); return;
       case 'passok': contractSeen = t.getAttribute('data-seat') === 'B' ? 'B' : 'A'; render(); return;
@@ -1507,7 +1522,7 @@
       sign.setAttribute('data-tip-title', ok ? 'Ready' : 'Still needed');
     });
     // a unit's drives stay by their icon as the list under them scrolls
-    host.addEventListener('scroll', function () { if (propFor !== null) placeDrives(el('camp-body')); }, true);
+    host.addEventListener('scroll', function () { if (propFor !== null) placeDrives(el('camp-body')); if (rivColourFor !== null) placeRivPop(el('camp-body')); }, true);
     host.addEventListener('keydown', function (ev) {
       // an online campaign's lobby chat: Enter sends the line
       if (ev.key === 'Enter' && ev.target && ev.target.id === 'olob-say' && !asking) {

@@ -62,7 +62,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   // the Hotseat menu's campaign card: a new campaign (the solo one kept), no choice of how to play, it is hotseat
   await p.evaluate(() => window.PMC_CAMPAIGN.fresh('hotseat'));
   await p.waitForTimeout(300);
-  check('...it asks what player 2 is running instead', await p.evaluate(() => !document.getElementById('camp-bwrap').hidden &&
+  check('...it asks what player 2 is running instead, in their slot', await p.evaluate(() => /Player 2/.test(document.getElementById('camp-bfaction').closest('.olob-slot').textContent) &&
     [...document.getElementById('camp-bfaction').options].map(o => o.value).join() === 'pmc,rebel,bugs,xeno'));
   await p.evaluate(() => { document.getElementById('camp-bfaction').value = 'xeno'; });
   await clickText(p, 'Raise the force');
