@@ -332,6 +332,7 @@
       return {
         kind: 'Rally', side: u.side,
         title: cardName(u),
+        alert: !!r.gone,          // a unit fleeing the field: its outcome put up over the table too, not only in the rail
         note: 'Morale ' + r.morale + ' — roll ' + r.morale + 'D6, each 4+ clears 1 SP' +
           (r.reroll ? '. Inspiring Presence re-rolls the failures.' : '.'),
         dice: r.dice.map(function (d) {

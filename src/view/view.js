@@ -757,14 +757,16 @@
       el('obj-modal').hidden = false;
       if (SFX && !quiet) SFX.click();
     }
-    /* The briefing comes up by itself the once, as a battle's deployment
-       begins: the scenario, what wins it, and where the forces go down. After
-       that it is the header's Objectives button. A demo is watched, not
-       briefed. */
+    /* The briefing comes up by itself the once, before anything is settled on the
+       table: the scenario, what wins it, and where the forces go down — so at the
+       first of the tactics (a rebel's, chosen before a piece of terrain goes down),
+       the terrain or the deployment. After that it is the header's Objectives
+       button. A demo is watched, not briefed. */
+    var BRIEF_PHASES = { tactics: 1, terrain: 1, deploy: 1 };
     function briefOnce() {
-      // opened by itself for the deployment, it goes with the deployment
-      if (ui.briefAuto && (!B.state || B.state.phase !== 'deploy')) { ui.briefAuto = false; el('obj-modal').hidden = true; }
-      if (!B.state || B.state.phase !== 'deploy' || B.state.cfg.aiSides.length === 2) return;
+      // opened by itself before the battle, it goes when the battle begins
+      if (ui.briefAuto && (!B.state || !BRIEF_PHASES[B.state.phase])) { ui.briefAuto = false; el('obj-modal').hidden = true; }
+      if (!B.state || !BRIEF_PHASES[B.state.phase] || B.state.cfg.aiSides.length === 2) return;
       /* Which battle it is, by what does not change: on a game server the state is
          rebuilt from every snapshot, so the objects themselves are new each time,
          and the other player opening their swaps brought the briefing back up. */

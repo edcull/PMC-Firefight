@@ -24,7 +24,7 @@ function ok(name, cond, note) {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const drain = async () => { for (let i = 0; i < 20 && !document.getElementById('resolution').hidden; i++) { document.getElementById('res-continue').click(); await wait(100); } };
     window.PMC_NEWGAME({ tier: 3, pl: 1, mode: 'hotseat', planet: 'barren', scenario: 'meeting', nameA: 'Ours', nameB: 'Theirs',
-      armyA: ['cmd2', 'regular', 'regular', 'veterans'], armyB: ['cmd2', 'regular', 'regular', 'regular'] });
+      armyA: ['cmd2', 'regular', 'regular', 'regular', 'veterans'], armyB: ['cmd2', 'regular', 'regular', 'regular'] });
     await wait(900); await drain();
     const s = window.PMC_STATE();
     s.terrain.length = 0;
@@ -54,6 +54,7 @@ function ok(name, cond, note) {
     // the End phase: everyone has acted, and one unit of ours carries Suppression into the Rally
     const v = s.units.find((x) => x.side === 'A' && x.key === 'veterans');
     v.sp = v.morale + 1;
+
     // the side whose go it is has one unit left to act, and nobody else has any
     for (let i = 0; i < 100 && (window.__busy() || window.__showQueue()); i++) { await drain(); await wait(50); }
     await drain();
@@ -61,20 +62,24 @@ function ok(name, cond, note) {
     const last = s.units.find((x) => x.side === 'A' && x.alive && x !== v && x !== u && !x.command);
     s.units.forEach((x) => { x.activated = x !== last; });
     last.sp = 1;                                  // Regroup is only on offer with something to shake off
+    // and one past three times its Morale with too few dice to shed enough: it flees at the Rally
+    const w = s.units.find((x) => x.side === 'A' && x.alive && x !== v && x !== u && x !== last && !x.command && x.key === 'regular');
+    if (w) { w.morale = 2; w.sp = 12; w.activated = true; }
     window.__clearSel();
     window.__select(last); window.__pressAction('regroup');
     const seen2 = new Set();
     let rallyCard = null;
+    const popped = [];
     for (let i = 0; i < 250; i++) {
       if (rallyCard) window.__fxkinds().forEach((k) => seen2.add(k));
       const rc = [...document.querySelectorAll('.feedcard')].find((c) => /rally/i.test((c.querySelector('.res-kind') || {}).textContent || ''));
       if (rc && !rallyCard) rallyCard = { dice: rc.querySelectorAll('.dice .die').length, title: (rc.querySelector('h3') || {}).textContent };
       const modal = document.querySelector('#resolution:not([hidden])');
-      if (modal) document.getElementById('res-continue').click();
-      if (rallyCard && seen2.has('regroup')) break;
+      if (modal) { popped.push(modal.textContent.replace(/\s+/g, ' ')); document.getElementById('res-continue').click(); }
+      if (rallyCard && seen2.has('regroup') && (!w || popped.length)) break;
       await wait(40);
     }
-    return { action, end: { fx: [...seen2], rallyCard, phase: s.phase, turn: s.turn, feed: [...document.querySelectorAll('.feedcard .res-kind')].slice(0, 6).map((q) => q.textContent) } };
+    return { action, end: { fx: [...seen2], rallyCard, popped, fled: !!(w && w.fled), fleeFeed: [...document.querySelectorAll('.feedcard')].some((c) => /flees the field/.test(c.textContent) && c.querySelectorAll('.dice .die').length > 0), phase: s.phase, turn: s.turn, feed: [...document.querySelectorAll('.feedcard .res-kind')].slice(0, 6).map((q) => q.textContent) } };
   });
   console.log('\nThe Regroup action');
   ok('pressed', got.action.pressed);
@@ -86,6 +91,10 @@ function ok(name, cond, note) {
   console.log('\nThe Rally in the End phase');
   ok('the rally card, as before', !!got.end.rallyCard && got.end.rallyCard.dice > 0, JSON.stringify(got.end.rallyCard || got.end.feed));
   ok('...and the unit seen to regroup there too', got.end.fx.includes('regroup'), got.end.fx.join(' '));
+  // the results run as a feed on a desktop, but a unit lost to the field is a card to read
+  ok('a unit fleeing its suppression: its card in the feed as any other, and the flight put up over the table', got.end.fled && got.end.fleeFeed &&
+    got.end.popped.some((t) => /flees the field/.test(t) && !/D6/.test(t)),
+    (got.end.fled ? 'fled' : 'did not flee') + ' · ' + got.end.popped.map((t) => t.slice(0, 60)).join(' | '));
 
   // to look at: the effect, part way through
   await p.evaluate(() => {
