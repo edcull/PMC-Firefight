@@ -74,7 +74,7 @@
     function feedMode(res) {
       if (!feedHosts().length) return false;
       if (res && res.kind === 'Result') return false;         // the battle is over: say so properly
-      if (res && res.modal) return false;                     // so is a unit lost to the field (one fleeing its suppression)
+      if (res && res.alertOnly) return false;                 // the line a card wants read, put up over the table (alertCard)
       return true;
     }
 
@@ -152,6 +152,10 @@
         ui.currentRes = res;
         if (res.onShow) res.onShow();
         pushFeed(res);
+        /* A card whose outcome must not slip by in the rail (a unit fleeing the
+           field): the card goes in the rail as any other, and its outcome is put up
+           over the table as well, on a card of its own, to be read and dismissed. */
+        if (res.alert && res.outcome) resQueue.unshift({ kind: res.kind, side: res.side, title: res.title, outcome: res.outcome, alertOnly: true });
         if (SFX) {
           if (res.kind === 'Initiative') { SFX.dice(); SFX.chime(); }
           else if (res.dice || res.blocks) SFX.dice();

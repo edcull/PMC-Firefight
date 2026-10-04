@@ -76,10 +76,10 @@ function ok(name, cond, note) {
       if (rc && !rallyCard) rallyCard = { dice: rc.querySelectorAll('.dice .die').length, title: (rc.querySelector('h3') || {}).textContent };
       const modal = document.querySelector('#resolution:not([hidden])');
       if (modal) { popped.push(modal.textContent.replace(/\s+/g, ' ')); document.getElementById('res-continue').click(); }
-      if (rallyCard && seen2.has('regroup')) break;
+      if (rallyCard && seen2.has('regroup') && (!w || popped.length)) break;
       await wait(40);
     }
-    return { action, end: { fx: [...seen2], rallyCard, popped, fled: !!(w && w.fled), phase: s.phase, turn: s.turn, feed: [...document.querySelectorAll('.feedcard .res-kind')].slice(0, 6).map((q) => q.textContent) } };
+    return { action, end: { fx: [...seen2], rallyCard, popped, fled: !!(w && w.fled), fleeFeed: [...document.querySelectorAll('.feedcard')].some((c) => /flees the field/.test(c.textContent) && c.querySelectorAll('.dice .die').length > 0), phase: s.phase, turn: s.turn, feed: [...document.querySelectorAll('.feedcard .res-kind')].slice(0, 6).map((q) => q.textContent) } };
   });
   console.log('\nThe Regroup action');
   ok('pressed', got.action.pressed);
@@ -92,7 +92,8 @@ function ok(name, cond, note) {
   ok('the rally card, as before', !!got.end.rallyCard && got.end.rallyCard.dice > 0, JSON.stringify(got.end.rallyCard || got.end.feed));
   ok('...and the unit seen to regroup there too', got.end.fx.includes('regroup'), got.end.fx.join(' '));
   // the results run as a feed on a desktop, but a unit lost to the field is a card to read
-  ok('a unit fleeing its suppression comes up as a card to read, not only in the feed', got.end.fled && got.end.popped.some((t) => /flees the field/.test(t)),
+  ok('a unit fleeing its suppression: its card in the feed as any other, and the flight put up over the table', got.end.fled && got.end.fleeFeed &&
+    got.end.popped.some((t) => /flees the field/.test(t) && !/D6/.test(t)),
     (got.end.fled ? 'fled' : 'did not flee') + ' · ' + got.end.popped.map((t) => t.slice(0, 60)).join(' | '));
 
   // to look at: the effect, part way through
