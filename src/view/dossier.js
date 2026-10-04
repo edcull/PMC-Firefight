@@ -659,6 +659,7 @@
   function doctrineMarks(co) { return (KIT_HUB || kitHub()).doctrineMarks(co); }
   function armyRules(co) { return (KIT_HUB || kitHub()).armyRules(co); }
   function statRow(co, rival) { return (KIT_HUB || kitHub()).statRow(co, rival); }
+  function foeCard(co) { return (KIT_HUB || kitHub()).foeCard(co); }
   /* ---- founding a force: in view/dossier-found.js ---- */
   var KIT_FOUND = null;
   function kitFound() {
@@ -707,6 +708,7 @@
       C: C, R: R, ROMAN: ROMAN, armyPill: armyPill, doctrineMarks: doctrineMarks, close: close, colourFlash: colourFlash,
       colourOf: colourOf, esc: esc, note: note, profile: profile, quietTip: quietTip, root: root, save: save,
       spellOut: spellOut, statRow: statRow, stripe: stripe, tip: tip, get camp() { return camp; },
+      cmodal: cmodal, foeCard: foeCard,
       get contract() { return contract; }, set contract(v) { contract = v; },
       get view() { return view; }, set view(v) { view = v; }
     }));
@@ -743,7 +745,7 @@
       set hubSide(v) { hubSide = v === 'B' ? 'B' : 'A'; }, get drawState() { return drawState; }, get upState() { return upState; },
       get swapOut() { return swapOut; },
       render: function () { render(); }, open: open, toMenu: toMenu, keepFoundName: keepFoundName, beginOwn: beginOwn,
-      postView: function () { return postView(); }, offersView: function () { return offersView(); }, jobCard: function (k, side, lv) { return (KIT_CONTRACT || kitContract()).jobCard(k, side, lv); }, contractKit: function () { return KIT_CONTRACT || kitContract(); }, stripe: stripe, statRow: statRow, showPast: function (i) { pastFromList = false; (KIT_AFTER || kitAfter()).showPast(i); },
+      postView: function () { return postView(); }, offersView: function () { return offersView(); }, jobCard: function (k, side, lv) { return (KIT_CONTRACT || kitContract()).jobCard(k, side, lv); }, contractKit: function () { return KIT_CONTRACT || kitContract(); }, foeCard: foeCard, stripe: stripe, statRow: statRow, showPast: function (i) { pastFromList = false; (KIT_AFTER || kitAfter()).showPast(i); },
       hide: function () { el('camp').hidden = true; }, isOpen: function () { return !!el('camp') && !el('camp').hidden; },
       asking: function () { return !!asking; },
       closeModal: function () { openModal = null; promoRid = null; },
@@ -845,7 +847,7 @@
     modalView = view;
     // a pick in an open list redraws it: keep it where it was scrolled to
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
-    body.classList.toggle('fit', view === 'found' || view === 'contract' || view === 'honour' || view === 'olobby');
+    body.classList.toggle('fit', view === 'found' || view === 'honour' || view === 'olobby');
     body.classList.toggle('hubfit', view === 'hub' && !!camp);
     var dl = body.querySelector('.cdos-body'), dlTop = dl ? dl.scrollTop : 0;
     body.innerHTML = h;
