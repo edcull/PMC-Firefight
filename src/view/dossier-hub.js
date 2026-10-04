@@ -10,9 +10,9 @@
     var C = E.C, ICON_ABANDON = E.ICON_ABANDON, ICON_BATTLES = E.ICON_BATTLES, ICON_FORCES = E.ICON_FORCES,
         ICON_LOAD = E.ICON_LOAD, ICON_MANAGE = E.ICON_MANAGE, memorialIcon = E.memorialIcon,
         ICON_SAVE = E.ICON_SAVE, ROMAN = E.ROMAN, Store = E.Store, cmodal = E.cmodal, coin = E.coin,
-        colourName = E.colourName, colourOf = E.colourOf, dossierPanel = E.dossierPanel,
+        colourOf = E.colourOf, dossierPanel = E.dossierPanel,
         entryCard = E.entryCard, esc = E.esc, memorialList = E.memorialList, profile = E.profile,
-        root = E.root, spendActs = E.spendActs, squares = E.squares, tip = E.tip;
+        root = E.root, spendActs = E.spendActs, tip = E.tip;
     /* ================= the hub ================= */
     function hubView() {
       var h = '<h2>' + (E.camp ? 'Campaign — turn ' + E.camp.turn : E.wantMode === 'hotseat' ? 'Hotseat campaign' : 'Campaign') + '</h2>';
@@ -203,14 +203,10 @@
     function companyPanel(co, side, bar) {
       // the force being managed (the one with the bar) fills the screen, whichever side it is
       var h = '<div class="cpan cpan-' + side + (bar ? ' cpan-own' : '') + '"' + stripe(co) + '>';
-      h += '<div class="cphead">' + tierBadge(co, !!bar) + '<b>' + esc(co.name) + '</b>' +
+      // the colours are the ones the force was founded in: not changed here
+      h += '<div class="cphead">' + tierBadge(co) + '<b>' + esc(co.name) + '</b>' +
         (co.aspiring ? '<span class="ctier">aspiring</span>' : '') +
         '<span class="cmoney">' + co.kUC + ' ' + C.money(co) + '</span></div>';
-      // the colours, dropped down under your own badge
-      if (bar && E.colourOpen) {
-        h += '<div class="found-pop tierpop"><label>' + esc(C.words(co).Force + ' colours \u2014 ' + colourName(colourOf(co))) +
-          '</label>' + squares(colourOf(co)) + '</div>';
-      }
       h += bar || '';
       // the dossier is the units, sorted and filtered; the figures, the army and its creed are the company's
       if (bar && E.hubPane === 'dossier') {
@@ -333,15 +329,11 @@
     }
 
     /* The Company Tier as a badge, in the force's own word for it on hover. */
-    function tierBadge(co, pick) {
-      // in the force's own colours; on your own force it is also where the colours are changed
+    function tierBadge(co) {
+      // in the force's own colours
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, c = CO[colourOf(co)];
       var st = c ? ' style="border-color:' + c.light + ';background:' + c.dark + ';color:' + c.light + '"' : '';
       var what = C.words(co).tier + ' Tier ' + ROMAN[co.tier];
-      if (pick) {
-        return '<button type="button" class="tierbadge tierpick"' + st + ' data-go="fcolour" aria-expanded="' + E.colourOpen + '" title="' +
-          esc(what + ' \u2014 change colours') + '" aria-label="' + esc(what + ', change colours') + '">' + ROMAN[co.tier] + '</button>';
-      }
       return '<span class="tierbadge"' + st + ' title="' + esc(what) + '">' + ROMAN[co.tier] + '</span>';
     }
     /* The side stripe down a force's panel, in its own colour. */

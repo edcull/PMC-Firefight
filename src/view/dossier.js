@@ -1179,14 +1179,6 @@
       if (chosen) { draft.colour = keepColour; draft.colourChosen = true; }
       save(); render(); return;                            // kept across a reload (HC-13)
     }
-    if (t.hasAttribute('data-campcolour') && view === 'hub' && camp) {
-      var cc0 = hubCo(), other0 = camp.mode === 'hotseat' ? camp.companies[cc0 === camp.companies.A ? 'B' : 'A'] : null;
-      var want0 = t.getAttribute('data-campcolour');
-      if (other0 && other0.colour === want0) { note('That colour is taken', other0.name + ' already wears it. Pick another, so the two sides can be told apart.'); return; }
-      cc0.colour = want0;
-      if (cc0 === camp.companies.A) { try { localStorage.setItem('pmc-colour', cc0.colour); } catch (e) { } }
-      save(); colourOpen = false; render(); return;
-    }
     if (t.hasAttribute('data-campcolour')) {
       draft.colour = t.getAttribute('data-campcolour'); draft.colourChosen = true;
       colourOpen = false;

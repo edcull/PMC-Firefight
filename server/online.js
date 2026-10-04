@@ -491,6 +491,7 @@ function create(opts) {
     const co = W.forces[i];
     // the army and the colours are the ones picked in the lobby
     if (cmd === 'found') { a.faction = co.faction; a.colour = co.colour; }
+    if (cmd === 'colour') return no('the colours are the ones picked in the lobby');
     if (cmd === 'found' || cmd === 'colour') {
       const name = cmd === 'found' ? text(a.name, 40).toLowerCase() : null;
       const others = W.forces.filter((x, j) => j !== i && x);
