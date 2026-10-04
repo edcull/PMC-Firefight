@@ -497,7 +497,6 @@
       // the job as the offers once showed it: the scenario and world, the Tier and Levels, your side of it, what wins it
       h += '<div class="cpan cpan-job">' + E.jobCard(k, me, k.levels);
       if (k.foreNote) h += '<div class="cpstat dnote">' + esc(k.foreNote) + '</div>';
-      if (!ctx.ai) h += '<div class="cpstat">' + cap(duelLine(onl().duel)) + '</div>';
       h += '</div>';
       var bd = k.roles && k.roles.bestDefence;
       if (bd && bd.pending && bd.side === me) h += '<div class="cpdoc"><button class="lnk" data-go="ocbestdef">The Best Defence is Good Offence — roll to attack (2+)</button></div>';
