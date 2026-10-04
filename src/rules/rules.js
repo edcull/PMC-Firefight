@@ -80,8 +80,8 @@
   var PROPULSION = {
     // the optional propulsions are just that (p. 166): without one, a hull follows the standard rules
     none: {
-      key: 'none', name: 'None', short: 'std',
-      note: 'No optional propulsion: the standard vehicle rules.'
+      key: 'none', name: 'Standard', short: 'std',
+      note: 'Default look. Follows all the standard rules.'
     },
     wheeled: {
       key: 'wheeled', name: 'Wheeled', short: 'whl',
