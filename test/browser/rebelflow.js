@@ -178,7 +178,7 @@ async function pastFronts(p) {
   await p.waitForTimeout(200);
   const offered = await p.evaluate(() => {
     const c = window.PMC_CAMPAIGN.get(), t = document.getElementById('camp-body').innerText;
-    return { contract: /Battle Tier/.test(t) && /against/.test(t), leaks: /\d+ units|Their dossier/.test(t) ? 1 : 0, kept: (c.offers || []).length };
+    return { contract: /Battle Tier/.test(t) && !!document.querySelector('#camp-body .cpan-job'), leaks: /\d+ units|Their dossier/.test(t) ? 1 : 0, kept: (c.offers || []).length };
   });
   check('a contract with the force picked from the other forces, its job on the screen and none of its list',
     offered.contract && offered.leaks === 0 && offered.kept >= 1, JSON.stringify(offered));

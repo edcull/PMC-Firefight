@@ -489,7 +489,6 @@
       var h = '<h2>Contract</h2>';
       if (!ctx) return h + '<p class="lede">There is no contract just now.</p>' + backFoot();
       var k = ctx.k, me = ctx.me, them = ctx.them;
-      h += '<p class="lede">' + esc(co.name) + ' against ' + esc(ctx.foeName) + (ctx.ai ? ' (an AI force)' : ' (' + esc(ctx.player) + ')') + '.</p>';
       var fore = k.fore;
       if (fore && !fore.done) {
         var who = fore.order[fore.ignored.length];
