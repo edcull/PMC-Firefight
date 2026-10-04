@@ -157,7 +157,7 @@
     });
     remote.online.forEach(function (c) {
       out.push({ key: 'o:' + c.id, where: 'server', kind: 'Online campaign', name: c.name, mine: c.waiting === 'you',
-        sub: [c.waiting === 'you' ? 'Your move' : c.waiting === 'them' ? 'their move' : c.phase === 'lobby' ? 'in its lobby' : '', (c.forces || 2) + ' forces', c.phase === 'lobby' ? '' : 'turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
+        sub: [c.waiting === 'them' ? 'their move' : c.phase === 'lobby' ? 'in its lobby' : '', (c.forces || 2) + ' forces', c.phase === 'lobby' ? '' : 'turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
     });
     remote.battles.forEach(function (g) {
       if (g.code === liveCode) return;          // the one on the table: first, above
@@ -206,8 +206,9 @@
       var asked = delAsked === g.key;
       var word = g.abandon ? 'Abandon?' : 'Delete?';
       return '<div class="cont-row"><button class="mcard' + (g.live ? ' live' : '') + '" data-cont="' + esc(g.key) + '">' +
-        '<span class="cont-kind">' + WHERE[g.where || 'local'] + esc(g.kind) + (g.mine ? ' <i class="yourmove">Your move</i>' : '') + '</span><b>' + esc(g.name) + '</b><small>' +
-        esc(!asked ? g.sub : g.abandon ? 'Tap Abandon? to walk away — the battle ends for your opponent too' : 'Tap Delete? to put it away — it cannot be had back') + '</small></button>' +
+        '<span class="cont-kind">' + WHERE[g.where || 'local'] + esc(g.kind) + '</span><b>' + esc(g.name) + '</b><small>' +
+        (!asked ? (g.mine ? '<em class="yourmove">Your move</em>' + (g.sub ? ' \u00b7 ' : '') : '') + esc(g.sub) :
+        esc(g.abandon ? 'Tap Abandon? to walk away — the battle ends for your opponent too' : 'Tap Delete? to put it away — it cannot be had back')) + '</small></button>' +
         (g.del ? '<button class="resume-x' + (asked ? ' confirm' : '') + '" data-contdel="' + esc(g.key) + '" aria-label="' + (g.abandon ? 'Abandon this battle' : 'Put this away') + '" title="' + (g.abandon ? 'Abandon this battle' : 'Put this away') + '">' + (asked ? word : '\u2715') + '</button>' : '') +
         '</div>';
     }).join('') : '<p class="cont-none">Nothing under way.</p>';
