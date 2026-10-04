@@ -130,7 +130,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
       bdoc: c.companies.B.doctrines.length, rivals: (c.rivals || []).length, colours: [c.companies.A.colour, c.companies.B.colour] };
   });
   // player 2's force is in the campaign's window
-  const p2 = () => p.evaluate(() => { const b = document.querySelector('#camp-body [data-kind="rivals"]'); return b ? b.textContent : ''; });
+  const p2 = () => p.evaluate(() => { const b = document.querySelector('#camp-body .archline[data-kind="rivals"]'); return b ? b.textContent : ''; });
   check('both forces are on the hub', /Task Force Ironhold/.test(txt) && /The Hive/.test(await p2()), camp.A + ' / ' + camp.B);
   check('...player 2\'s as founded, and no generated rivals', camp.bf === 'bugs' && camp.bn === 9 && camp.bdoc === 1 && camp.rivals === 1,
     camp.bn + ' units, ' + camp.rivals + ' rival');
