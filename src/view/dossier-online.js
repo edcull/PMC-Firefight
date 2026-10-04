@@ -27,7 +27,7 @@
     var fighting = null;                            // the battle walked into: its code
     var lobby = null;                               // the campaign while it is in its lobby, as the server sent it
     var localCamp, stashed = false;                 // the browser's own campaign, put aside while an online one is open
-    var FACTION_NAMES = { pmc: 'PMC', rebel: 'Revolt', bugs: 'Bug swarm', xeno: 'Xenotripod tribe', random: 'Random' };
+    var FACTION_NAMES = { pmc: 'PMC', rebel: 'Rebel', bugs: 'Bugs', xeno: 'Xenotripods', random: 'Random' };
 
     function api(path, opts) {
       opts = opts || {};
