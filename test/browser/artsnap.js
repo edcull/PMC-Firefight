@@ -72,6 +72,7 @@ const DIFF = path.join(ROOT, 'test', 'art', 'diff');
       V.set('stance', 'ready'); V.set('sling', 'none');
       for (const k in (c.set || {})) V.set(k, c.set[k]);
       V.set('face', c.face);
+      V.zoom(3);                                        // close in on the unit, as the pictures were taken (the stage opens wide)
       V.set('zCur', V.zoom().zoom);                    // no easing: straight to the zoom it will settle at
       V.set('face', c.face);
       const cv = document.getElementById('vboard');

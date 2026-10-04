@@ -292,12 +292,14 @@
       draw();
     }, function () { busy = false; fault = 'The server could not be reached.'; draw(); });
   }
-  function signedIn(j) {
+  function signedIn(j, stay) {
     who = j.who; mode = 'signin'; edit = null;
     changed();
     // signed in on the way somewhere: on to it
     var then = purpose && purpose.then;
-    if (then) { purpose = null; returnTo = null; host.hidden = true; notice = ''; then(); }
+    if (then) { purpose = null; returnTo = null; host.hidden = true; notice = ''; then(); return; }
+    // otherwise straight on to the main menu (a new password stays to say it is changed)
+    if (!stay) { purpose = null; returnTo = null; host.hidden = true; notice = ''; if (root.PMCMenu) root.PMCMenu.open(); if (root.PMC_BACKDROP) root.PMC_BACKDROP(); }
   }
   function go() {
     var reg = mode === 'register', name = val('acct-name'), pass = (el('acct-pass') || {}).value || '';
@@ -414,7 +416,7 @@
         send('api/reset', { token: linkToken, password: (el('acct-pass') || {}).value || '' }, function (j) {
           if (!j) return;
           linkToken = null; notice = 'Your password is changed, and you are signed in. Every other device was signed out.';
-          signedIn(j);
+          signedIn(j, true);
         });
       }
       else if (a === 'edit') { edit = b.getAttribute('data-what'); fault = ''; notice = ''; draw(); var f = el(edit === 'name' ? 'acct-newname' : edit === 'pass' ? 'acct-oldpass' : 'acct-newemail'); if (f) f.focus(); }

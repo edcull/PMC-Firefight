@@ -14,10 +14,10 @@ const ok=(n,c,note)=>{c?pass++:fail++;console.log('  '+(c?'✓':'✗')+' '+n+(no
   await p.waitForTimeout(500);
 
   const first = await p.evaluate(() => ({
-    hasName: !!document.getElementById('camp-name'),
+    hasName: !!document.getElementById('found-name'), campName: !!document.getElementById('camp-name'),
     fields: [...document.querySelectorAll('#camp-body .field label')].map(l=>l.textContent.trim())
   }));
-  ok('the first screen no longer asks for the name', !first.hasName, first.fields.join(' | '));
+  ok('the first screen asks for the campaign’s name, not the force’s', !first.hasName && first.campName, first.fields.join(' | '));
 
   await p.evaluate(() => document.querySelector('[data-go="newcamp"]').click());
   await p.waitForTimeout(400);

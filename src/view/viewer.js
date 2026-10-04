@@ -20,20 +20,24 @@
 
   /* ---------- the stage ----------
      A small patch of flat ground with the unit in the middle and a target to
-     its right, drawn at a fixed zoom. The world is 24" x 16"; the firer stands
-     at 6" and the mark at 19". */
-  var W = 24, H = 16;
-  var FROM = { x: 6, y: 8 }, TO = { x: 19, y: 8 };
+     its right, drawn at a fixed zoom. The world is 32" x 16"; the firer stands
+     at 6" and the mark as far off to its right as the Range slider says
+     (placeTarget), 12" to begin with. */
+  var W = 32, H = 16;
+  var FROM = { x: 6, y: 8 }, TO = { x: 20, y: 8 };
+  var RANGE_MIN = 3, RANGE_MAX = 18;
 
   var cv, g, FX, STANDING;
   // the stage opens close on the unit; it pulls out to the whole firing line to show a shot
   // the stage's zooms: the whole firing line, the unit, and a close look at it
   var ZOOMS = [1, 3, 4.5], ZOOM_CLOSE = 3;
   var view = {
-    zoom: ZOOM_CLOSE, zCur: ZOOM_CLOSE, wide: false,
+    zoom: ZOOMS[0], zCur: ZOOMS[0], wide: false,   // wide: the firer and its target both on the stage, the range between them
     key: 'regular', prop: 'none', side: 'A', status: 'ready',
     // what is shot at (a profile key), and what the shots have left of it — fresh again on any change
     target: 'regular', tgt: null, lastShot: '',
+    // how far off the target stands, in inches, measured as the battle measures it
+    range: 12,
     models: null, walking: false, walkT: 0, at: null, facing: 0, face: 'SE',
     sound: true,
     // each side's paint, from every colour an army can take
@@ -175,29 +179,69 @@
       }).join('') + '</optgroup>';
     }).join('');
   }
+  /* ---------- range ----------
+     The target stands as far from the firer as the Range slider says, measured
+     the way the battle measures between two units (space.js unitDist): from the
+     nearest edge of one to the nearest edge of the other, so the two centres
+     are the range and a unit's breadth either side apart. */
+  function placeTarget() { TO.x = FROM.x + view.range + 2 * R.UNIT_R; }
+  // the firer where it stands to shoot (not wherever a walk has got it to), and a table with the two on it
+  function shooter() { return Object.assign({}, unit(), { x: FROM.x, y: FROM.y, shotFrom: [] }); }
+  function table(a, t) {
+    return { units: [a, t], terrain: [], objectives: [], cfg: { aiSides: [], tier: a.tier, pl: 1 }, turn: 1, sc: {}, scen: {}, phase: 'battle' };
+  }
+  /* Why Fire! cannot be given at this range, or '' if it can: beyond the
+     weapon's reach, inside its Minimum Range (a mortar's 12"), or a cloaked
+     target further than 12" — the range checks of the battle's own canShoot,
+     with the battle's reach and Minimum Range for the weapon as it stands
+     (dug in, a gun reaches 24" and no closer than 6", p. 94). */
+  function outOfRange() {
+    var a = shooter(), t = mark();
+    if (a.fp === null || a.fp === undefined) return '';
+    var d = Math.round(R.unitDist(a, t) * 10) / 10, reach = R.shotRange(a), minR = R.shotMinRange(a) || 0;
+    if (d > reach) return 'Out of range: its weapon reaches ' + reach + '" and the target is ' + d + '" away';
+    if (minR && d < minR) return 'Too close: inside its Minimum Range of ' + minR + '"';
+    if (R.has(t, 'Cloaking System') && d > 12) return 'Cloaking System: nobody draws a bead on the target from further than 12"';
+    return '';
+  }
+  /* Everything Fire! puts on the shot at this range (rules.js shotMods): the
+     Firepower, the models, +1 for Fire! and +2 within half range — neither
+     for Basic Firepower, as an Indirect Fire weapon shoots unless dug in —
+     Anti-tank against a hull, limited to 6" for Anti-tank (limited). Null
+     when it cannot shoot the target at all. */
+  function shotNow() {
+    var a = shooter(), t = mark(), st = table(a, t);
+    if (outOfRange() || !R.canShoot(st, a, t, 'fire', {})) return null;
+    var m = R.shotMods(st, a, t, 'fire', {});
+    // the Firepower the weapon brings, as the FP column shows it: all of it bar the squad's size
+    m.fp = m.total - (R.sizeBonus(a.models) || 0);
+    return m;
+  }
+  function fpLine() {
+    var m = shotNow(), why = outOfRange();
+    if (why) return why + '.';
+    if (!m) return 'It cannot shoot this target.';
+    return 'Fire! at ' + view.range + '": ' + m.parts.map(function (q, i) {
+      return i ? q.label + ' ' + (q.v >= 0 ? '+' : '') + q.v : q.label + ' ' + q.v;
+    }).join(', ') + ' = ' + m.total + ' against Defence ' + m.def.value +
+      (m.basic ? ' (Basic Firepower: no Fire! or half-range bonus)' : '');
+  }
+
   /* Fire! makes a real shot at the target, the battle's own (R.shoot), with an
      average attack roll: what it is hit with, what that does to it. The shots are drawn landing as many as
      hit, and the target shows what is left of it once they have. */
   function rollShot() {
     // every shot is at a fresh target: no Suppression, no losses, no Damage from the last one
     freshTarget(); drawControls();
-    var a = Object.assign({}, unit(), { shotFrom: [] }), t = mark();
+    var a = shooter(), t = mark();
     t.before = t.models;
-    var st = { units: [a, t], terrain: [], objectives: [], cfg: { aiSides: [], tier: a.tier, pl: 1 }, turn: 1, sc: {}, scen: {}, phase: 'battle' };
-    /* The stage stands the two 11" apart. A weapon that cannot shoot that far,
-       or must not shoot that close (a mortar's Minimum Range), is rolled as if
-       the target stood where it could be shot — the readout says where. */
-    var at = '';
+    var st = table(a, t);
+    /* Fire! is never given out of range or inside a Minimum Range (outOfRange);
+       anything else the target cannot be shot for — a SAM at a squad, say —
+       still shows the shot going, and says so. */
     if (!R.canShoot(st, a, t, 'fire', {})) {
-      var d = R.unitDist(a, t), minR = R.ruleValue(a, 'Minimum Range') || 0, want = null;
-      if (minR && d < minR) want = minR + 1;
-      else if (a.range && d > a.range) want = Math.max(1, a.range - 1);
-      if (want != null) { t.x = a.x + want + 2 * R.UNIT_R; at = ' (rolled at ' + want + '")'; }
-      if (!R.canShoot(st, a, t, 'fire', {})) {
-        t.x = TO.x;
-        view.lastShot = a.fp === null || a.fp === undefined ? 'No Firepower' : 'Cannot shoot it';
-        return { hits: 0, t: t, missed: true };
-      }
+      view.lastShot = a.fp === null || a.fp === undefined ? 'No Firepower' : 'Cannot shoot it';
+      return { hits: 0, t: t, missed: true };
     }
     /* Nothing is rolled: what the shot does on average is worked out (R.expectedShot)
        — the hits off every face of the D10, what each hit does off the hit table with
@@ -221,9 +265,8 @@
     // penal troops the average shot breaks: the collars go off (Expendable, p. 57)
     if (t.alive !== false && !mach) { var st2 = { units: [t] }; R.collars(st2); }
     var hits = Math.round(avg('hits'));
-    t.x = TO.x;                                    // back on its spot on the stage
-    view.lastShot = avg('hits') < 0.05 ? 'No hits' + at
-      : 'Average ' + one(avg('hits')) + ' hit' + (one(avg('hits')) === '1' ? '' : 's') + at + ' \u2192 ' +
+    view.lastShot = avg('hits') < 0.05 ? 'No hits'
+      : 'Average ' + one(avg('hits')) + ' hit' + (one(avg('hits')) === '1' ? '' : 's') + ' \u2192 ' +
         (mach ? one(avg('dmg')) + ' Damage' : one(avg('lost')) + ' casualt' + (one(avg('lost')) === '1' ? 'y' : 'ies')) +
         (mach ? '' : ' \u00b7 ' + one(avg('sp')) + ' SP');
     return { hits: hits, t: t };
@@ -428,8 +471,8 @@
         g.fill();
       }
     }
-    // the line the shot will take, and a tick every 2"
-    var a = toScreen(FROM.x, FROM.y), b = toScreen(TO.x, TO.y);
+    // the line the shot will take, and the inches along it as the battle measures them: from the firer's edge
+    var a = toScreen(FROM.x, FROM.y), b = toScreen(TO.x, TO.y), edge = FROM.x + R.UNIT_R;
     g.strokeStyle = 'rgba(140,160,190,.16)';
     g.setLineDash([4, 6]); g.lineWidth = 1;
     g.beginPath(); g.moveTo(a.x, a.y - I.K * 0.5); g.lineTo(b.x, b.y - I.K * 0.5); g.stroke();
@@ -437,10 +480,15 @@
     g.font = '500 9px "IBM Plex Mono", monospace';
     g.fillStyle = 'rgba(140,160,190,.4)';
     g.textAlign = 'center';
-    for (var d = 2; d < TO.x - FROM.x; d += 4) {
-      var tk = toScreen(FROM.x + d, FROM.y);
+    for (var d = 2; d < view.range - 1; d += 4) {
+      var tk = toScreen(edge + d, FROM.y);
       g.fillText(d + '"', tk.x, tk.y - I.K * 0.7);
     }
+    // ...and the range itself, under the middle of the gap (at the target's edge the figures would hide it)
+    var re = toScreen(edge + view.range / 2, FROM.y);
+    g.font = '600 10px "IBM Plex Mono", monospace';
+    g.fillStyle = 'rgba(170,190,215,.75)';
+    g.fillText('\u2190 ' + view.range + '" \u2192', re.x, re.y + I.K * 0.15);
   }
 
   function tick(t) {
@@ -583,8 +631,8 @@
      speed with its guns going, and the ground walks up under it. */
   /* A strafing run takes as long as the game gives the same stretch of table
      (game.js playStrafe: 1.1s plus 140ms an inch, between 1.9s and 4s). The
-     bench's run is from 6" short of the start mark to 6" past the target. */
-  var STRAFE_MS = MOTION.strafeMs((TO.x + 6) - (FROM.x - 6));
+     bench's run is from 6" short of the start mark to 6" past the target, wherever the target stands. */
+  function strafeMs() { return MOTION.strafeMs((TO.x + 6) - (FROM.x - 6)); }
   function canStrafe() { return unit().cls === 'aircraft'; }
 
   /* A unit's special ability, played on the stage: the first rule it has that
@@ -740,17 +788,17 @@
       }
       if (view.sound && SFX) SFX.strafe(R.isXeno(unit()) ? 'xeno' : unit().faction, R.weaponStyle(unit()));
       fired++;
-      setTimeout(burst, STRAFE_MS * 0.6 / guns);
+      setTimeout(burst, strafeMs() * 0.6 / guns);
       start();
     })();
-    setTimeout(function () { drawControls(); }, STRAFE_MS);
+    setTimeout(function () { drawControls(); }, strafeMs());
     start();
     drawControls();
   }
   // where it is along the run, or nothing once it has gone by
   function strafing() {
     if (!view.strafeAt) return null;
-    var k = (Date.now() - view.strafeAt) / STRAFE_MS;
+    var k = (Date.now() - view.strafeAt) / strafeMs();
     if (k >= 1) { view.strafeAt = 0; view.at = null; view.facing = 0; return null; }
     var a = FROM.x - 6, b = TO.x + 6;
     view.at = { x: a + (b - a) * k, y: FROM.y };
@@ -885,7 +933,7 @@
      to the nearest facing (unless dug in), then the gun traversing onto it —
      and only then shoots. */
   function fire() {
-    if (view.status === 'destroyed' || onTow() || outOfArc() || view.turning) return;
+    if (view.status === 'destroyed' || onTow() || outOfArc() || outOfRange() || view.turning) return;
     var u0 = unit();
     if (turns(u0)) {
       var from = { f: u0.facing, a: u0.aim }, brg = bearingToMark(u0);
@@ -904,7 +952,7 @@
     fireNow();
   }
   function fireNow() {
-    if (view.status === 'destroyed' || onTow() || outOfArc()) return;
+    if (view.status === 'destroyed' || onTow() || outOfArc() || outOfRange()) return;
     showWide();
     var u = unit(), spec = R.weaponSpec(u);
     // a flier shoots from its airframe, not from the grass under it
@@ -1107,6 +1155,33 @@
       '<div class="varmybody">' + armyRulesHtml(fac) + '</div></div>';
     m.hidden = false;
   }
+  // why the Fire button is greyed out, if it is: on tow, the mark out of its arc, or out of range
+  function fireBarred() {
+    return onTow() ? 'On tow: deploy it to fire'
+      : outOfArc() ? 'Dug in: the mark is outside its 90° fire arc — turn it to face the mark'
+      : outOfRange();
+  }
+  function fireBlock() { var why = fireBarred(); return why ? ' disabled title="' + esc(why) + '"' : ''; }
+  /* The Range slider moved: the target is stood off at the new range, the
+     stage pulled out to the whole firing line to hold both, and what reads
+     off the range put right — without drawing the panel again under a drag. */
+  function setRange(r) {
+    view.range = Math.max(RANGE_MIN, Math.min(RANGE_MAX, Math.round(+r) || 12));
+    placeTarget(); freshTarget();
+    setZoom(ZOOMS[0]);
+    var lab = el('vrangelab'), fb = el('vctl').querySelector('[data-do="fire"]');
+    if (lab) lab.textContent = 'Range — ' + view.range + '"';
+    if (el('vfpline')) el('vfpline').textContent = fpLine();
+    if (el('vtgtline')) el('vtgtline').textContent = targetLine();
+    if (fb) {
+      var why = fireBarred();
+      fb.disabled = !!why;
+      if (why) fb.title = why; else fb.removeAttribute('title');
+    }
+    var fc = el('vfpcell');
+    if (fc) fc.outerHTML = fpCell(profile());
+    frame();
+  }
   function drawControls() {
     drawColourButton();
     var p = profile();
@@ -1126,8 +1201,7 @@
     h += '<div class="vtabbody voptsbody" role="tabpanel"' + (tab === 'opts' ? '' : ' hidden') + '>';
     h += '<div class="vacts">' +
       // a gun on tow is limbered up behind its vehicle: it does not fire
-      '<button class="vbtn primary" data-do="fire"' + (onTow() ? ' disabled title="On tow: deploy it to fire"'
-        : outOfArc() ? ' disabled title="Dug in: the mark is outside its 90° fire arc — turn it to face the mark"' : '') + '>Fire</button>' +
+      '<button class="vbtn primary" data-do="fire"' + fireBlock() + '>Fire</button>' +
       '<button class="vbtn" data-do="walk">' + (view.walking ? 'Stop' : 'Walk') + '</button>' +
       '<button class="vbtn" data-do="insert">Insert</button>' +
       (canStrafe() ? '<button class="vbtn" data-do="strafe">Strafe</button>' : '') +
@@ -1137,6 +1211,10 @@
     // what Fire shoots at, chosen from every unit; what the shots have left of it
     h += '<div class="vgrp"><label for="vtarget">Target</label><select id="vtarget" class="vselect">' + targetOptions() + '</select>' +
       '<p class="vtgtline" id="vtgtline">' + esc(targetLine()) + '</p></div>';
+    // how far off it stands, and what Fire! brings to bear at that range
+    h += '<div class="vgrp"><label for="vrange" id="vrangelab">Range — ' + view.range + '"</label>' +
+      '<input type="range" id="vrange" min="' + RANGE_MIN + '" max="' + RANGE_MAX + '" step="1" value="' + view.range + '">' +
+      '<p class="vtgtline" id="vfpline">' + esc(fpLine()) + '</p></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
       seg('status', statesFor(p), view.status) + '</div></div>';
     // on foot or mounted, where the unit may take the Riders upgrade; and on what, if it rides
@@ -1235,7 +1313,7 @@
     var cols = [['Tier', R.ROMAN[p.tier]], mach ? ['Structure', mod(u.str, p.str, u.str)] : ['Models', mod(u.size, p.size, u.size)],
       ['Move', u.move === p.move && u.turn === p.turn ? mv
         : { t: mv, mod: true, was: p.move + '"' + (p.turn != null ? ' (' + p.turn + ')' : '') }],
-      ['FP', p.fp === null ? '—' : p.fp], ['Range', p.range ? p.range + '"' : '—'],
+      ['FP', { cell: fpCell(p) }], ['Range', p.range ? p.range + '"' : '—'],
       ['Def', mod(u.def, p.def, u.def + (p.defPierced ? '/' + p.defPierced : ''))], ['Assault', p.assault]];
     if (!mach) cols.push(['Morale', p.morale]);
     var h = '<div class="vrules"><label>' + esc(FACTION_NAME[p.faction || 'pmc'] || '') + ' · ' +
@@ -1243,6 +1321,7 @@
     h += '<table class="vtable"><tr>' + cols.map(function (c) { return '<th>' + c[0] + '</th>'; }).join('') +
       '</tr><tr>' + cols.map(function (c) {
         var v = c[1];
+        if (v && v.cell) return v.cell;
         if (v && typeof v === 'object') {
           return v.mod ? '<td class="vmod" title="' + esc('Printed: ' + v.was) + '">' + esc(v.t) + '</td>' : '<td>' + esc(v.t) + '</td>';
         }
@@ -1260,6 +1339,18 @@
         (d.text ? '<p>' + esc(d.text) + '</p>' : '') + '</div>';
     });
     return h + '</div>';
+  }
+
+  /* The FP column: the Firepower as printed, or — where Fire! at the range
+     set would shoot with more — what it shoots with, marked, the printed
+     figure and every addition on it as a tooltip (Fire!, half range,
+     Anti-tank against a hull). */
+  function fpCell(p) {
+    var m = p.fp === null || p.fp === undefined ? null : shotNow();
+    if (!m || m.fp === p.fp) return '<td id="vfpcell">' + (p.fp === null ? '—' : esc(p.fp)) + '</td>';
+    var adds = m.parts.filter(function (q) { return q.label !== 'Firepower' && !/ models$/.test(q.label); });
+    var tip = 'Printed: ' + p.fp + ' · Fire! at ' + view.range + '": ' + adds.map(function (q) { return q.label + ' ' + (q.v >= 0 ? '+' : '') + q.v; }).join(', ');
+    return '<td id="vfpcell" class="vmod" title="' + esc(tip) + '">' + esc(m.fp) + '</td>';
   }
 
   /* Who is in the unit, by rank, as the battle musters it (rules.js rankFor):
@@ -1343,6 +1434,7 @@
     STANDING = root.PMCFx.create({ lift: function () { return 0; } });
     I.setSideColour('A', view.colour.A);
     I.setSideColour('B', view.colour.B);
+    placeTarget();
     fit();
     drawPicker();
     drawControls();
@@ -1475,6 +1567,7 @@
       drawControls(); frame();
     });
     el('vctl').addEventListener('input', function (e) {
+      if (e.target.id === 'vrange') { setRange(e.target.value); return; }
       if (e.target.id === 'vmodels') {
         view.models = +e.target.value;
         freshTarget();
@@ -1565,6 +1658,12 @@
       drawPicker(); drawControls(); frame();
     },
     zoom: function (z) { if (z != null) setZoom(z); return { zoom: view.zoom, cur: view.zCur, wide: view.wide }; },
+    // the range the target stands at: set it as the slider does; where the two stand, and why Fire! is barred
+    range: function (r) {
+      if (r != null) setRange(r);
+      return { range: view.range, from: { x: FROM.x, y: FROM.y }, to: { x: TO.x, y: TO.y }, dist: R.unitDist(shooter(), mark()), barred: outOfRange() };
+    },
+    shot: function () { var m = shotNow(); return m ? { fp: m.fp, total: m.total, basic: m.basic, parts: m.parts } : null; },
     set: function (k, v) {
       if (k === 'status') { setStatus(v); return; }
       view[k] = v; drawControls(); frame();

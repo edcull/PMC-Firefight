@@ -208,8 +208,19 @@
         return;
       }
       // (with nobody at the table to read it, as when both sides are the AI's, it does not wait)
-      if (!resultKey() || ui.resultRead === resultKey() || B.state.cfg.aiSides.length === 2) fn();
-      else ui.afterResult = fn;
+      if (!resultKey() || ui.resultRead === resultKey() || B.state.cfg.aiSides.length === 2) { fn(); return; }
+      ui.afterResult = fn;
+      /* The card that says how it ended may never have come — a table loaded rather
+         than played out (a resync, the server's result arriving with the board), or
+         the battle ended on the other player's screen — so it is put up now: nothing
+         goes on to the aftermath until it has been read and Continue pressed. */
+      var showing = (ui.currentRes && ui.currentRes.kind === 'Result') || resQueue.some(function (r) { return r.kind === 'Result'; });
+      if (!showing) {
+        var o = B.state.over, nm = function (sd) { return (B.state.cfg['name' + sd]) || sd; };
+        var esc = function (t) { return String(t).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); };
+        pushRes({ kind: 'Result', title: o.winner ? esc(nm(o.winner)) + ' wins' : 'Draw', outcome: { text: esc(o.text || 'The battle is over.'), tone: 'good' },
+          cont: 'To the aftermath' });
+      }
     };
     function closeRes() {
       clearTimeout(ui.resTimer);
