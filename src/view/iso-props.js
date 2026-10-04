@@ -319,9 +319,9 @@
         if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz });
       });
       props.forEach(function (p) {
-        // the search-site hatch draws over its own scatter, so it stays readable
+        // the search-site hatch draws over its own scatter, so it stays readable; an objective's flag over the hatch it stands in
         p.depth = (p.w ? p.x + p.w / 2 + p.y + p.h / 2 : p.x + p.y) +
-          (p.kind === 'rubble' ? -0.01 : p.kind === 'searchsite' ? 2.4 : 0);
+          (p.kind === 'rubble' ? -0.01 : p.kind === 'searchsite' ? 2.4 : p.kind === 'beacon' ? 2.5 : 0);
       });
       props.sort(function (a, b) { return a.depth - b.depth; });
       /* Two blocks side by side are not ordered by their middles: a small wing at
