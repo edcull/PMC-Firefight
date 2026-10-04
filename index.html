@@ -5,7 +5,7 @@
 <title>PMC 2670 Firefight</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="src/css/base.css?v=3a3a0881c6">
+<link rel="stylesheet" href="src/css/base.css?v=ffdbe0fc94">
 <link rel="stylesheet" href="src/css/game.css?v=94de45aa96">
 
 <div class="wrap">
@@ -157,14 +157,14 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.2.0.2610040841</p>
+    <p class="menu-ver" id="menu-ver">v0.2.0.2610040848</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
   <!-- on a desktop the set-up sits over a table, as the main menu does -->
   <canvas id="setup-table" aria-hidden="true"></canvas>
   <div class="camp-top">
-    <button type="button" class="camp-back" id="btn-setup-back">← Back</button>
+    <button type="button" class="camp-back" id="btn-setup-back" aria-label="Back"><span class="bk-ar" aria-hidden="true">←</span><span class="bk-w"> Back</span></button>
     <h1 id="setup-title">Muster your force</h1>
     <!-- who is signed in, or the way to sign in (net/account.js) -->
     <button type="button" class="user-chip" hidden></button>
@@ -360,7 +360,7 @@
   <!-- on a desktop the campaign sits over a table, as a new battle's set-up does -->
   <canvas id="camp-table" aria-hidden="true"></canvas>
   <div class="camp-top">
-    <button type="button" class="camp-back" id="camp-back" data-go="menu">← Back</button>
+    <button type="button" class="camp-back" id="camp-back" data-go="menu" aria-label="Back"><span class="bk-ar" aria-hidden="true">←</span><span class="bk-w"> Back</span></button>
     <h1 id="camp-title">Campaign</h1>
     <!-- who is signed in, or the way to sign in (net/account.js) -->
     <button type="button" class="user-chip" hidden></button>
@@ -566,8 +566,8 @@
 <script src="src/engine/engine.js?v=256202b6c3"></script>
 <script src="src/engine/offtable.js?v=ef8edae603"></script>
 <script src="src/net/net.js?v=c3fd6af800"></script>
-<script src="src/net/account.js?v=7c245b1865"></script>
-<script src="src/net/lobby.js?v=1f6467287e"></script>
+<script src="src/net/account.js?v=b734819e4b"></script>
+<script src="src/net/lobby.js?v=aa1ff5b954"></script>
 <script src="src/view/replay.js?v=9bc59170a7"></script>
 <script src="src/view/hooks.js?v=10ee198650"></script>
 <script src="src/view/testhooks.js?v=e38c1c0602"></script>
@@ -579,7 +579,7 @@
 <script src="src/view/draw.js?v=01522e157c"></script>
 <script src="src/view/view.js?v=73abea196b"></script>
 <script src="src/view/panels.js?v=ea2f318c62"></script>
-<script src="src/view/muster.js?v=416d9b2fa6"></script>
+<script src="src/view/muster.js?v=b3d41c1039"></script>
 <script src="src/view/game.js?v=5ea1738904"></script>
 <script src="src/view/dossier-hub.js?v=c622ff83cd"></script>
 <script src="src/view/dossier-found.js?v=2f3a94787d"></script>

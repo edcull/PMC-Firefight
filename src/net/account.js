@@ -235,7 +235,7 @@
     host.id = 'account';
     host.hidden = true;
     host.innerHTML = '<canvas id="account-table" aria-hidden="true"></canvas>' +
-      '<div class="camp-top"><button type="button" class="camp-back" data-acct="back">\u2190 Back</button><h1>User Account</h1></div>' +
+      '<div class="camp-top"><button type="button" class="camp-back" data-acct="back" aria-label="Back"><span class="bk-ar" aria-hidden="true">\u2190</span><span class="bk-w"> Back</span></button><h1>User Account</h1></div>' +
       '<div class="sheet acct-sheet"><div id="acct-body"></div></div>';
     document.body.appendChild(host);
     // its way back is to wherever it was opened from: Back, not home

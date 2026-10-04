@@ -49,6 +49,13 @@
 .camp-back.home { display: inline-grid; place-items: center; padding: 5px 9px; }
 .camp-back.home svg { width: 17px; height: 17px; display: block; }
 @media (pointer: coarse) { .camp-back.home { padding: 8px 12px; } .camp-back.home svg { width: 19px; height: 19px; } }
+/* on a phone, Back is its arrow alone, the size of the home icon's button */
+.camp-back .bk-ar { font-family: var(--body, inherit); }
+@media (max-width: 1000px) {
+  .camp-back .bk-w { display: none; }
+  .camp-back:has(.bk-ar) { display: inline-grid; place-items: center; min-width: 36px; padding: 3px 9px; font-size: 18px; line-height: 1; letter-spacing: 0; }
+}
+@media (max-width: 1000px) and (pointer: coarse) { .camp-back:has(.bk-ar) { min-width: 45px; padding: 6px 12px; font-size: 20px; } }
 /* A close ✕: a panel or list put away (a destructive remove is .fcard-drop's red ✕) */
 .xclose {
   width: 34px; height: 34px; flex: none; display: inline-grid; place-items: center; padding: 0;

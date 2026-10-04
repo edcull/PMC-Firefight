@@ -43,7 +43,7 @@
     host.hidden = true;
     /* Laid out as the skirmish set-up and the campaign are: a bar across the top
        with the way back and the page's title, and under it the one thing that scrolls. */
-    host.innerHTML = '<canvas id="lobby-table" aria-hidden="true"></canvas><div class="camp-top"><button type="button" class="camp-back" data-lob="leave-lobby">\u2190 Back</button>' +
+    host.innerHTML = '<canvas id="lobby-table" aria-hidden="true"></canvas><div class="camp-top"><button type="button" class="camp-back" data-lob="leave-lobby" aria-label="Back"><span class="bk-ar" aria-hidden="true">\u2190</span><span class="bk-w"> Back</span></button>' +
       '<h1 id="lobby-title">Multiplayer</h1><div class="lob-right"><span class="lob-code" id="lobby-code" hidden></span>' +
       // who is playing, on the right of the bar: a tap opens Your account and Sign out
       '<span class="lob-user-wrap"><button type="button" class="lob-user" id="lobby-user" data-lob="usermenu" hidden aria-haspopup="true">' +
