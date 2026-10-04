@@ -24,6 +24,13 @@
     var SUPPRESSED_OK = { move: 1, enter: 1, exitbld: 1, aux: 1, regroup: 1, assault: 1, plainassault: 1, laststand: 1 };
     function actionState(u, id) {
       if (!u) return { on: false, hint: 'Select one of your units on the table.' };
+      /* The Reserve phase comes before the Action phase (p. 30): until the turn's
+         reinforcements are on and the Action phase opens (phaseCount), nobody acts —
+         the initiative is rolled and the flags cleared before it, so without this a
+         unit could go while the reserves were still being chosen. */
+      if (E.state.phase === 'battle' && !E.state.phaseCount && !E.state.solo) {
+        return { on: false, hint: 'The Reserve phase first: reinforcements come on before anyone acts.' };
+      }
       /* Carried or towed, a unit does not activate at all: a gun on the hook is
          limbered up, and nobody fires, digs in or does anything else from the back
          of a hull (p. 94). It acts once it is off. */
