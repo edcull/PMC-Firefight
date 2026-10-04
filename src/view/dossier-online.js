@@ -734,7 +734,9 @@
         cmd('aiTake', { i: +attr('data-take-offer') }, function () { E.view = 'ocontract'; });
         return true;
       }
-      if (attr('data-ochallenge')) { cmd('duelAsk', { to: +attr('data-ochallenge') }, function () { E.view = 'hub'; }); return true; }
+      if (attr('data-ochallenge')) { cmd('duelAsk', { to: +attr('data-ochallenge') }, function () { E.closeModal(); E.view = 'hub'; }); return true; }
+      // a contract with the AI force picked from the other forces: its terms come up
+      if (attr('data-oaicontract')) { cmd('aiContract', { r: +attr('data-oaicontract') }, function () { E.closeModal(); E.view = 'ocontract'; }); return true; }
       if (attr('data-ochaccept')) { cmd('duelAccept', { id: +attr('data-ochaccept') }, function () { E.view = 'ocontract'; }); return true; }
       if (attr('data-ochcancel')) { cmd('duelCancel', { id: +attr('data-ochcancel') }); return true; }
       // nothing of the campaign's file is this browser's to change

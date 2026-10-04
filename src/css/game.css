@@ -947,6 +947,10 @@ a.mcard { text-decoration: none; line-height: normal; }
 .hubbar .lnk { flex: 1 1 auto; text-align: center; margin: 0; min-height: 0; padding-block: 0; }
 .hubbar .hubicon { flex: none; display: inline-grid; place-items: center; padding: 0 12px; }
 .hubbar .hubicon svg { width: 17px; height: 17px; display: block; }
+/* online: the company, its dossier and the campaign's window as tabs, 2 : 2 : 1 */
+.hubbar.hubtabs { display: grid; grid-template-columns: 2fr 2fr 1fr; }
+.hubbar.hubtabs .lnk { width: 100%; padding: 0 6px; }
+.hubbar.hubtabs .lnk.on { border-color: var(--alpha); color: var(--alpha); background: color-mix(in srgb, var(--alpha) 10%, transparent); cursor: default; }
 .hubbar .start.hubgo { flex: 0 0 auto; width: auto; margin: 0 0 0 auto; padding: 0 12px; font-size: 11px; letter-spacing: .08em; }
 .hubnote { margin: 0 0 8px; }
 /* what a unit can spend its experience on, on its own card after its other actions */
@@ -994,11 +998,12 @@ a.mcard { text-decoration: none; line-height: normal; }
 .cdos-foot { display: flex; padding-top: 5px; }
 /* the dossier: its sort line close over the list */
 .dsortline + .cprom.cdos, .dsortline ~ .cmodal + .cprom.cdos, .cpan-own > .cprom.cdos { margin-top: 6px; }
+/* the hub: its panel runs to the foot (the foot's only button is in the top bar: no room kept for it) */
+#camp-body.hubfit > .cpan-own { margin-bottom: 0; }
+#camp-body.hubfit > .camp-foot { margin: 0; }
 @media (max-width: 700px) {
   /* on a phone the hub keeps its margins tight: under the title bar, round the dossier, and at the foot */
   #camp.overlay > #camp-body.sheet.hubfit { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
-  #camp-body.hubfit > .cpan-own { margin-bottom: 0; }
-  #camp-body.hubfit > .camp-foot { margin: 0; }          /* its only button is in the top bar: no room kept for it */
   .cdos .cprom-list { padding-bottom: 0; }
 }
 .cdos-foot .lnk { flex: 1; margin: 0; text-align: center; padding-block: 0; min-height: var(--row-h); }
@@ -1444,6 +1449,8 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .camp-top h1:has(.olob-code) { flex: none; overflow: visible; }
 .camp-top:has(.olob-code) .user-chip { min-width: 0; flex-shrink: 1; }
 .camp-top h1 .olob-code { margin-left: 0; }
+.rivacts { display: flex; gap: 6px; }
+.rivacts > button { flex: 1 1 0; min-width: 0; margin: 0; min-height: var(--row-h); }
 .olob-name { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex: none; }
 .olob-name label { font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; flex: none; }
 .olob-name .tin { flex: 1; min-width: 0; }
