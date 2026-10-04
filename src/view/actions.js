@@ -74,6 +74,7 @@
     function feedMode(res) {
       if (!feedHosts().length) return false;
       if (res && res.kind === 'Result') return false;         // the battle is over: say so properly
+      if (res && res.modal) return false;                     // so is a unit lost to the field (one fleeing its suppression)
       return true;
     }
 
