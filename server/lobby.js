@@ -153,6 +153,12 @@ class Room {
   }
 }
 
+/* What an online campaign knows a battle by, to apply its aftermath once: the
+   game's row and its code together. The row alone is not enough — the database
+   gives a deleted battle's number to the next one made (finished battles cleared
+   away), and the campaign would take the new battle for one it has applied. */
+function battleKey(id, code) { return id == null ? null : id + ':' + (code || ''); }
+
 class Lobby {
   constructor(opts) {
     opts = opts || {};
@@ -224,7 +230,7 @@ class Lobby {
     if (table.stopped) {
       // it ended just before the restart: an online campaign still has its aftermath to apply (once, by the game's id)
       if (room.settings && room.settings.onlineCampaign && this.onCampaignBattle && table.engine.report()) {
-        try { this.onCampaignBattle(room.settings.onlineCampaign, table.engine.report(), g.id, room.settings.onlineRef || null); }
+        try { this.onCampaignBattle(room.settings.onlineCampaign, table.engine.report(), battleKey(g.id, g.code), room.settings.onlineRef || null); }
         catch (e) { this.log('could not apply the campaign battle ' + g.id + ': ' + ((e && e.stack) || e)); }
       }
       return null;
@@ -252,7 +258,7 @@ class Lobby {
     } catch (e) { this.log('could not play back ' + want + ': ' + ((e && e.stack) || e)); return false; }
     const report = table.engine.report();
     if (!report) return false;
-    try { this.onCampaignBattle(g.settings.onlineCampaign, report, g.id, g.settings.onlineRef || null); }
+    try { this.onCampaignBattle(g.settings.onlineCampaign, report, battleKey(g.id, g.code), g.settings.onlineRef || null); }
     catch (e) { this.log('could not apply the campaign battle ' + g.id + ': ' + ((e && e.stack) || e)); return false; }
     return true;
   }
@@ -708,7 +714,7 @@ class Lobby {
   finished(room, report, gameId) {
     // an online campaign's battle: the campaign is told, to apply its aftermath (once, by the game's id)
     if (room.settings.onlineCampaign && this.onCampaignBattle && report) {
-      try { this.onCampaignBattle(room.settings.onlineCampaign, report, gameId, room.settings.onlineRef || null); }
+      try { this.onCampaignBattle(room.settings.onlineCampaign, report, battleKey(gameId, room.id), room.settings.onlineRef || null); }
       catch (e) { this.log('could not apply the campaign battle ' + gameId + ': ' + ((e && e.stack) || e)); }
     }
     room.table = null;
