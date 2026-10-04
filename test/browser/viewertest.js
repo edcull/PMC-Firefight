@@ -137,16 +137,47 @@ async function pickAndFire(p, key, ms) {
   ok('the Target list offers every unit', shot.options > 100, shot.options + ' units');
   ok('Fire! works out the average shot at the target and says what it does', /^Average [\d.]+ hits? \u2192 [\d.]+ casualt(y|ies) · [\d.]+ SP — |No hits —/.test(shot.after) && shot.after !== shot.fresh, shot.after);
   ok('...the same every time it fires at the same target', shot.again === shot.after, shot.again);
-  // a mortar must not shoot that close (Minimum Range 12"): it is rolled where it could shoot, and says so
-  const mortarLine = await p.evaluate(async () => {
-    window.__viewer.pick('mortarbattery');
-    await new Promise(r => setTimeout(r, 60));
-    const tab = document.querySelector('[data-tab="opts"]'); if (tab) tab.click();
-    document.querySelector('[data-do="fire"]').click();
+  /* The Range slider stands the target off at that range, measured as the battle
+     measures it, and pulls the stage out to hold both; Fire! is barred where the
+     weapon cannot reach or must not shoot (a mortar's Minimum Range 12"), and
+     what it brings changes with the range (half range, limited Anti-tank). */
+  const ranged = await p.evaluate(async () => {
+    const V = window.__viewer, fire = () => document.querySelector('[data-do="fire"]');
+    const slide = (v) => { const r = document.getElementById('vrange'); r.value = v; r.dispatchEvent(new Event('input', { bubbles: true })); };
+    const out = {};
+    V.pick('regular');
+    // (the panel is drawn afresh on a pick: the list is looked up each time)
+    const aim = (k) => { const sel = document.getElementById('vtarget'); sel.value = k; sel.dispatchEvent(new Event('change', { bubbles: true })); };
+    aim('regular');
+    out.start = V.range();
+    slide(16); out.far = V.range(); out.farShot = V.shot(); out.zoom = V.zoom().zoom;
+    slide(9); out.half = V.shot(); out.label = document.getElementById('vrangelab').textContent;
+    V.pick('mortarbattery');
+    slide(6); out.close = { range: V.range(), disabled: fire().disabled, title: fire().title };
+    slide(12); out.mortar = { disabled: fire().disabled, shot: V.shot() };
+    fire().click();
     await new Promise(r => setTimeout(r, 1100));
-    return (document.getElementById('vtgtline') || {}).textContent || '';
+    out.mortarLine = (document.getElementById('vtgtline') || {}).textContent || '';
+    V.pick('ecobats');
+    aim('lcv');
+    slide(6); out.at6 = V.shot();
+    slide(8); out.at8 = V.shot();
+    aim('regular');
+    slide(12);
+    return out;
   });
-  ok('a mortar too close for its Minimum Range is rolled as if at a range it could shoot', /rolled at 13"/.test(mortarLine), mortarLine);
+  ok('the target stands at the range set, as the battle measures it', ranged.start.dist === 12 && Math.abs(ranged.far.dist - 16) < 1e-9 && ranged.far.to.x - ranged.start.to.x === 4,
+    ranged.start.dist + '" → ' + ranged.far.dist + '"');
+  ok('...the stage pulls out to the whole firing line to hold both', ranged.zoom === 1, 'zoom ' + ranged.zoom);
+  ok('...and the slider reads the range', /Range — 9"/.test(ranged.label), ranged.label);
+  const lbl = (m) => (m ? m.parts.map((q) => q.label) : []);
+  ok('within half range Fire! shoots with +2 more', ranged.half.fp === ranged.farShot.fp + 2 && lbl(ranged.half).indexOf('within half range') >= 0,
+    'FP ' + ranged.farShot.fp + ' → ' + ranged.half.fp);
+  ok('a mortar inside its Minimum Range cannot be told to fire, and says why', ranged.close.disabled && /Minimum Range of 12"/.test(ranged.close.title), ranged.close.title);
+  ok('...at 12" it fires, at Basic Firepower: no Fire! bonus', !ranged.mortar.disabled && ranged.mortar.shot.basic && lbl(ranged.mortar.shot).indexOf('Fire! (stationary)') < 0 &&
+    /^Average|^No hits/.test(ranged.mortarLine), ranged.mortarLine);
+  ok('limited Anti-tank bears on a hull at 6" and not at 8"', lbl(ranged.at6).indexOf('Anti-tank') >= 0 && lbl(ranged.at8).indexOf('Anti-tank') < 0,
+    lbl(ranged.at6).join(', ') + ' / ' + lbl(ranged.at8).join(', '));
   // the target's Suppression bar fills once the shot lands, as in the battle
   const fill = await p.evaluate(async () => {
     window.__viewer.pick('hmgteam');
