@@ -612,10 +612,30 @@
       if (el('btn-saves')) el('btn-saves').addEventListener('click', function () { saves.classList.add('open'); });
       if (el('btn-demo-saves-done')) el('btn-demo-saves-done').addEventListener('click', function () { saves.classList.remove('open'); });
       if (saves) saves.addEventListener('click', function (ev) { if (ev.target === saves) saves.classList.remove('open'); });
-      if (el('hot-sum')) el('hot-sum').addEventListener('click', function (ev) {
-        var b = ev.target.closest && ev.target.closest('[data-hotside]');
-        if (b) hotEdit(+b.getAttribute('data-hotside'));
-      });
+      if (el('hot-sum')) {
+        el('hot-sum').addEventListener('click', function (ev) {
+          var t = ev.target.closest && ev.target.closest('button');
+          if (!t || t.disabled) return;
+          var h = muster.hot;
+          if (t.hasAttribute('data-hotcolour')) { var ci = hotLine(t.getAttribute('data-hotcolour')); hotColourFor(h && h.colourFor === ci ? null : ci); return; }
+          if (t.hasAttribute('data-hotcol')) { if (h && h.colourFor != null) hotColour(h.colourFor, t.getAttribute('data-hotcol')); return; }
+          if (t.hasAttribute('data-hotside')) hotEdit(+t.getAttribute('data-hotside'));
+        });
+        el('hot-sum').addEventListener('change', function (ev) {
+          var s = ev.target.closest && ev.target.closest('[data-hotarmy]');
+          if (s) hotArmy(hotLine(s.getAttribute('data-hotarmy')), s.value);
+        });
+        // a force's colours, open by its chip: a tap anywhere else puts them away
+        document.addEventListener('click', function (ev) {
+          var h = muster.hot;
+          if (!h || h.colourFor == null || !ev.target.closest) return;
+          if (ev.target.closest('#hot-sum .olob-pop') || ev.target.closest('[data-hotcolour]')) return;
+          hotColourFor(null);
+        });
+        var hs = el('setup') && el('setup').querySelector('.sheet');
+        if (hs) hs.addEventListener('scroll', hotPlacePop);
+        window.addEventListener('resize', hotPlacePop);
+      }
       el('btn-start').addEventListener('click', function () {
         /* The lobby borrowed this screen to have a force built. Hand the force
            back rather than starting a battle: the one that matters is being
@@ -928,20 +948,135 @@
         : step === 2 ? 'Next: the battlefield' : kind === 'demo' ? 'Watch the battle' : 'Take the field';
       if (el('colour-hint')) el('colour-hint').textContent = step === 1 ? 'What ' + hotWho(1).replace(/^Your/, 'your') + '’s troops are painted in.'
           : 'What ' + hotWho(2).replace(/^The/, 'the') + '’s troops are painted in — anything but ' + hotWho(1).replace(/^Your/, 'your') + '’s colour.';
-      if (step === 3) {
-        // each force is a button: tap it to go back and change it
-        // two forces side by side, so the battlefield step fits a phone without scrolling
-        el('hot-sum').classList.toggle('two', h.sides.length === 2);
-        el('hot-sum').innerHTML = h.sides.map(function (sd, i) {
-          var c = ISO.COLOURS[sd.colour] || {};
-          return '<button type="button" class="hot-side" data-hotside="' + i + '"><b style="color:' + (c.light || 'inherit') + '">' + escHtml(sd.name) + '</b>' +
-            '<em>change</em>' +
-            '<small>' + (sd.name === hotWho(i + 1) ? '' : hotWho(i + 1) + ' · ') + (FORCE_KIND[sd.faction] || sd.faction) + ' · ' +
-            (sd.keys.length ? sd.keys.length + ' units' : 'no units yet \u2014 tap to muster it') +
-            (sd.tactic ? ' · ' + escHtml(R.tacticById(sd.tactic).name) : '') + '</small></button>';
-        }).join('');
-      }
+      if (step === 3) hotSum();
       drawColourPick();
+    }
+    /* The battlefield's forces, laid out as the campaign lobby's slots are: a
+       line for each, with its colours on a chip (opening them by it), its name
+       (tap it to muster the force: units, name and colours) and its army. A
+       different army rolls the force again for it, at the Tier and Priority
+       Level set above. A solitaire or co-op game has a line for the OpFor too:
+       its army and its colours, the force itself rolled when the battle starts. */
+    var HOT_ARMY = [['pmc', 'PMC'], ['rebel', 'Rebel'], ['bugs', 'Bugs'], ['xeno', 'Xenotripods']];
+    function hotCommando(kind) { return kind === 'coop' || kind === 'solo'; }
+    function hotChip(k) {
+      var c = ISO.COLOURS[k];
+      return '<span class="olob-chip"' + (c ? ' style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"' : '') + '></span>';
+    }
+    // a line's colours: a force's own, or ('op') the OpFor's
+    function hotColourOf(i) { var h = muster.hot; return i === 'op' ? h.opColour : h.sides[i] && h.sides[i].colour; }
+    // the colours every other line wears, which this one cannot take
+    function hotTaken(i) {
+      var h = muster.hot, taken = [];
+      h.sides.forEach(function (x, n) { if (x && n !== i) taken.push(x.colour); });
+      if (hotCommando(h.kind) && i !== 'op' && h.opColour) taken.push(h.opColour);
+      return taken;
+    }
+    function hotWhoOf(i) { return i === 'op' ? 'The OpFor' : hotWho(i + 1); }
+    function hotSum() {
+      var h = muster.hot, box = el('hot-sum');
+      if (!h || !box) return;
+      var cmd = hotCommando(h.kind), cf = h.colourFor;
+      // the OpFor in a colour neither commando is wearing, kept so until it is changed
+      if (cmd && (!h.opColour || hotTaken('op').indexOf(h.opColour) >= 0)) h.opColour = foeColour(hotTaken('op'));
+      if (cf != null && !(cf === 'op' ? cmd : h.sides[cf])) cf = h.colourFor = null;
+      box.classList.remove('two');
+      var chipBtn = function (i) {
+        var c = ISO.COLOURS[hotColourOf(i)];
+        return '<button type="button" class="olob-colour" data-hotcolour="' + i + '" aria-expanded="' + (cf === i) + '" title="' + escHtml(c ? c.name : 'Colours') +
+          '" aria-label="' + escHtml(hotWhoOf(i)) + ' colours">' + hotChip(hotColourOf(i)) + '</button>';
+      };
+      var armySel = function (i, want) {
+        return '<select data-hotarmy="' + i + '" aria-label="' + escHtml(hotWhoOf(i)) + ' \u2014 army">' + HOT_ARMY.map(function (a) {
+          return '<option value="' + a[0] + '"' + (a[0] === want ? ' selected' : '') + '>' + a[1] + '</option>';
+        }).join('') + '</select>';
+      };
+      var html = '<div class="olob-slots">' + h.sides.map(function (sd, i) {
+        var who = hotWho(i + 1);
+        // a player's own force is theirs, as the lobby marks the slot you hold; a force rolled for the AI is not
+        var mine = hotOwn(h.kind) && !(h.kind === 'ai' && i === 1);
+        return '<div class="olob-slot' + (mine ? ' mine' : '') + '">' + chipBtn(i) +
+          // the name opens the force, to pick its units; what it has so far is under it
+          '<button type="button" class="olob-who hot-who" data-hotside="' + i + '"><b>' + escHtml(sd.name) + '</b>' +
+          '<small>' + (sd.name === who ? '' : who + ' \u00b7 ') +
+          (sd.keys.length ? sd.keys.length + ' units \u00b7 change' : 'no units yet \u2014 tap to muster it') + '</small></button>' +
+          armySel(i, sd.faction) + '</div>';
+      }).join('');
+      // the OpFor: its army drives the hidden "The OpFor" choice the battle reads
+      if (cmd) {
+        var opPL = musterPL() + (h.kind === 'coop' ? 1 : 0);
+        html += '<div class="olob-slot">' + chipBtn('op') +
+          '<span class="olob-who"><b>OpFor</b><small>rolled at Priority Level ' + opPL + '</small></span>' +
+          armySel('op', el('sel-solo-op') ? el('sel-solo-op').value : 'rebel') + '</div>';
+      }
+      html += '</div>';
+      // the colours of the line whose chip was tapped: those another line wears are not offered (each must be told apart)
+      if (cf != null) {
+        var ac = ISO.COLOURS[hotColourOf(cf)], taken = hotTaken(cf);
+        html += '<div class="found-pop olob-pop" data-hotpop="' + cf + '"><label>Colours \u2014 ' + escHtml(ac ? ac.name : '') + '</label><div class="csw">' +
+          ISO.COLOUR_KEYS.map(function (k) {
+            var q = ISO.COLOURS[k], off = taken.indexOf(k) >= 0;
+            return '<button type="button" class="' + (k === hotColourOf(cf) ? 'on' : '') + '" data-hotcol="' + k + '"' + (off ? ' disabled' : '') +
+              ' title="' + escHtml(q.name + (off ? ' \u2014 another force wears it' : '')) + '">' +
+              '<span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
+          }).join('') + '</div></div>';
+      }
+      box.innerHTML = html;
+      hotPlacePop();
+    }
+    // the colours sit fixed by their chip, as the lobby's do, and follow it as the sheet scrolls
+    function hotPlacePop() {
+      var pop = document.querySelector('#hot-sum .olob-pop'); if (!pop) return;
+      var chip = document.querySelector('#hot-sum [data-hotcolour="' + pop.getAttribute('data-hotpop') + '"]');
+      var sheet = el('setup') && el('setup').querySelector('.sheet');
+      if (!chip || !sheet) return;
+      var r = chip.getBoundingClientRect(), b = sheet.getBoundingClientRect(), w = Math.min(380, b.width - 16);
+      pop.style.width = w + 'px';
+      pop.style.left = Math.max(b.left + 8, Math.min(r.left, b.right - w - 8)) + 'px';
+      pop.style.top = (r.bottom + 6) + 'px';
+    }
+    // a line as its chip or select names it: a force's number, or 'op'
+    function hotLine(v) { return v === 'op' ? 'op' : +v; }
+    function hotColourFor(i) {
+      var h = muster.hot;
+      if (!h) return;
+      h.colourFor = i;
+      hotSum();
+    }
+    /* A force's name made up from its colours (the Jade Brood, Crimson company)
+       follows a new colour or army; one a player typed stays. */
+    function hotRename(sd, i) {
+      var nm = sd.name || '';
+      if (hotRolled(i + 1)) {
+        if (nm && !isDemoName(nm) && !isMadeUpName(nm)) return;
+        var list = DEMO_NOUNS[sd.faction] || DEMO_NOUNS.pmc;
+        if (list.indexOf(sd.noun) < 0) sd.noun = list[Math.floor(Math.random() * list.length)];
+        sd.name = demoName(sd.colour || 'ochre', sd.noun);
+      } else if (isMadeUpName(nm)) {
+        sd.name = (ISO.COLOURS[sd.colour] ? ISO.COLOURS[sd.colour].name + ' ' : '') + FORCE_NOUN[sd.faction];
+      }
+    }
+    function hotColour(i, k) {
+      var h = muster.hot;
+      if (!h || !ISO.COLOURS[k] || hotTaken(i).indexOf(k) >= 0) return;   // not another force's colours
+      if (i === 'op') h.opColour = k;
+      else if (h.sides[i]) { h.sides[i].colour = k; hotRename(h.sides[i], i); }
+      h.colourFor = null;
+      hotSum();
+    }
+    // another army for a force: a fresh build of that army, rolled at the Tier and Priority Level set above
+    function hotArmy(i, f) {
+      var h = muster.hot;
+      if (!h || HOT_FACTIONS.indexOf(f) < 0) return;
+      h.colourFor = null;
+      if (i === 'op') { if (el('sel-solo-op')) el('sel-solo-op').value = f; hotSum(); return; }
+      var sd = h.sides[i];
+      if (!sd) return;
+      sd.faction = f;
+      sd.tactic = null;
+      sd.keys = hotCommando(h.kind) ? SOLO.rollCommando(musterTier(), musterPL(), f) : R.rollArmy(musterTier(), musterPL(), null, f);
+      hotRename(sd, i);
+      hotSum();
     }
     function escHtml(t) { return R.esc(t); }
     function hotRefuse(why) {
@@ -1009,8 +1144,9 @@
           tier: tier, pl: gamePL, scenario: scen,
           armyA: armyA, armyB: SOLO.rollOpFor(tier, gamePL, opFaction, machines), ownersA: ownersA,
           nameA: coop ? a.name + ' & ' + b.name : a.name, nameB: 'OpFor',
-          // each commando in its own colour; the OpFor in one neither is wearing
-          colourA: a.colour, colourC: coop ? b.colour : null, colourB: foeColour(coop ? [a.colour, b.colour] : [a.colour]),
+          // each commando in its own colour; the OpFor in the one picked on its line (one neither is wearing)
+          colourA: a.colour, colourC: coop ? b.colour : null,
+          colourB: h.opColour && (coop ? [a.colour, b.colour] : [a.colour]).indexOf(h.opColour) < 0 ? h.opColour : foeColour(coop ? [a.colour, b.colour] : [a.colour]),
           tactics: { A: null, B: null }, mode: 'ai', planet: planet, terrainSetup: terrainSetup,
           solo: { coop: coop, faction: a.faction || 'pmc', opFaction: opFaction, names: coop ? [a.name, b.name] : [a.name] }
         });

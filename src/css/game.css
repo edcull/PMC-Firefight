@@ -1217,6 +1217,10 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 #setup[data-hot="3"] .hot-sum.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .hot-sum.two .hot-side { margin-bottom: 0; min-width: 0; }
 .hot-sum.two .hot-side b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the battlefield's forces, a line each as the campaign lobby's slots: the name is a button that opens the force */
+#setup[data-hot="3"] .hot-sum .olob-slots { overflow: visible; }
+.hot-sum .hot-who { background: none; border: 0; padding: 0; margin: 0; text-align: left; color: var(--ink); font: inherit; cursor: pointer; }
+.hot-sum .hot-who:hover b, .hot-sum .hot-who:focus-visible b { color: var(--alpha); }
 .lnk.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 .lnk.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
 .lnk.on { color: var(--ink); border-color: var(--alpha); background: var(--on-bg); }

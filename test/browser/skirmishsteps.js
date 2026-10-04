@@ -70,7 +70,9 @@ const { ROOT, SHOTS, seedDice } = require('../where.js');
   await p.waitForTimeout(200);
   check('it opens on the battlefield, a card for each commando', /^The battlefield$/.test(await title()) &&
     await p.evaluate(() => document.querySelectorAll('#hot-sum [data-hotside]').length) === 2, await title());
-  check('...with the OpFor and the solitaire scenario there, the old player tabs out of the way', await shown('sel-solo-op') && await shown('sel-solo-scen') &&
+  // the OpFor has a line of its own among the forces: its army and its colours
+  const opLine = () => p.evaluate(() => { const s = document.querySelector('#hot-sum [data-hotarmy="op"]'), c = document.querySelector('#hot-sum [data-hotcolour="op"]'); return !!s && s.offsetParent !== null && !!c && c.offsetParent !== null; });
+  check('...with the OpFor and the solitaire scenario there, the old player tabs out of the way', await opLine() && !(await shown('sel-solo-op')) && await shown('sel-solo-scen') &&
     !(await shown('solo-players')) && !(await shown('sel-solo-mode')) && !(await shown('sel-scen')));
   await next();
   check('taking the field with an empty commando opens it instead', /^Player 1 — muster your commando$/.test(await title()), await title());
@@ -181,10 +183,13 @@ const { ROOT, SHOTS, seedDice } = require('../where.js');
   await p.evaluate(() => { window.PMCMenu.open(); window.PMC_SKIRMISH('solo'); });
   await p.waitForTimeout(200);
   check('solitaire opens on the battlefield, a card for your commando', /^The battlefield$/.test(await title()) &&
-    await p.evaluate(() => document.querySelectorAll('#hot-sum [data-hotside]').length) === 1 && await shown('sel-solo-scen') && await shown('sel-solo-op') &&
+    await p.evaluate(() => document.querySelectorAll('#hot-sum [data-hotside]').length) === 1 && await shown('sel-solo-scen') &&
+    await p.evaluate(() => { const s = document.querySelector('#hot-sum [data-hotarmy="op"]'); return !!s && s.offsetParent !== null; }) &&
     !(await p.evaluate(() => document.getElementById('sel-tier').disabled)));
-  check('...and can be up against a Xenotripod tribe', await p.evaluate(() => [...document.getElementById('sel-solo-op').options].some(o => o.value === 'xeno')));
-  await setVal('sel-solo-op', 'xeno');
+  check('...and can be up against a Xenotripod tribe', await p.evaluate(() => [...document.querySelector('#hot-sum [data-hotarmy="op"]').options].some(o => o.value === 'xeno')));
+  // picked on the OpFor's line, which keeps the battle's "The OpFor" choice in step
+  await p.evaluate(() => { const e = document.querySelector('#hot-sum [data-hotarmy="op"]'); e.value = 'xeno'; e.dispatchEvent(new Event('change', { bubbles: true })); });
+  check('...the OpFor\'s line drives it', await p.evaluate(() => document.getElementById('sel-solo-op').value) === 'xeno');
   await setVal('sel-solo-scen', 's_decap');
   await p.evaluate(() => document.querySelector('[data-hotside="0"]').click()); await p.waitForTimeout(200);
   check('...tap it to muster your commando', /^Muster your commando$/.test(await title()), await title());
