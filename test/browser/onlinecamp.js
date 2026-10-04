@@ -108,7 +108,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('...four slots: the host, one open, two AI forces', (await slotCount(p1)) === 4 && /Open — waiting for a player/.test(t1) && (t1.match(/AI force/g) || []).length >= 2);
     await choose(p1, '#olob-n', '6');
     for (let i = 0; i < 30 && (await slotCount(p1)) !== 6; i++) await wait(150);
-    ok('the forces: 2, 4, 6, 8 or 10', (await p1.evaluate(() => [...document.querySelectorAll('#olob-n option')].map((o) => o.value).join())) === '2,4,6,8,10' && (await slotCount(p1)) === 6);
+    ok('the forces: any number from 2 to 10', (await p1.evaluate(() => [...document.querySelectorAll('#olob-n option')].map((o) => o.value).join())) === '2,3,4,5,6,7,8,9,10' && (await slotCount(p1)) === 6);
     await choose(p1, '#olob-n', '4');
     for (let i = 0; i < 30 && (await slotCount(p1)) !== 4; i++) await wait(150);
     ok('...and back to four', (await slotCount(p1)) === 4);

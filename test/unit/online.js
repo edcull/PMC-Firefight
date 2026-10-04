@@ -58,7 +58,8 @@ function ok(name, cond, note) {
   ok('...and public again', cmd(ash, 'lobbyListed', { on: true }).ok && online.listed().some((c) => c.invite === made.invite) && view(ash).listed);
   ok('only the host sets the slots', !cmd(brann, 'lobbySlots', { n: 6 }).ok && !cmd(brann, 'lobbyListed', { on: false }).ok);
   ok('the host makes it six', cmd(ash, 'lobbySlots', { n: 6 }).ok && view(ash).slots.length === 6);
-  ok('...always an even number, up to ten', cmd(ash, 'lobbySlots', { n: 11 }).ok && view(ash).slots.length === 10 && cmd(ash, 'lobbySlots', { n: 6 }).ok && view(ash).slots.length === 6);
+  ok('...any number from two up to ten, odd ones too', cmd(ash, 'lobbySlots', { n: 11 }).ok && view(ash).slots.length === 10 && cmd(ash, 'lobbySlots', { n: 5 }).ok && view(ash).slots.length === 5 &&
+    cmd(ash, 'lobbySlots', { n: 6 }).ok && view(ash).slots.length === 6);
   ok('...the new ones open', view(ash).slots.slice(4).every((s) => s.kind === 'open'));
   const j1 = online.join(brann, made.invite);
   ok('a player joins with the code: the first open slot', j1.ok && j1.slot === 1 && view(brann).slots[1].you && view(brann).slots[1].name === 'Brann');

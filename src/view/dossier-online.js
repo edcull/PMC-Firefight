@@ -284,7 +284,7 @@
          host's Start or a player's Ready. */
       var mineSlot = (L.slots || [])[me] || {}, n = (L.slots || []).length;
       h += '<div class="olob-bar">';
-      h += host ? '<label class="olob-n">Forces <select id="olob-n">' + [2, 4, 6, 8, 10].map(function (k) {
+      h += host ? '<label class="olob-n">Forces <select id="olob-n">' + [2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (k) {
         return '<option value="' + k + '"' + (k === n ? ' selected' : '') + '>' + k + '</option>';
       }).join('') + '</select></label>' : '<span class="olob-n">' + n + ' forces</span>';
       h += host ? '<label class="olob-pub"><input type="checkbox" id="olob-pub"' + (L.listed ? ' checked' : '') + '> Public</label>'
