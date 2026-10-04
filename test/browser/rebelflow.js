@@ -123,7 +123,7 @@ async function pastFronts(p) {
     return window.PMC.profile(window.PMCCamp.byRid(c, c.cmdRid).key).group;
   }) === 'First Among Equals');
   // who else is on the world is in the campaign's window
-  const foes = await p.evaluate(() => { const b = document.querySelector('#camp-body [data-kind="rivals"]'); return b ? b.textContent : ''; });
+  const foes = await p.evaluate(() => { const b = document.querySelector('#camp-body .archline[data-kind="rivals"]'); return b ? b.textContent : ''; });
   check('...and faces somebody', /forces|Rival|against/.test(foes), foes);
   await shot(p, 'rebel-hub.png');
 

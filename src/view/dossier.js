@@ -363,9 +363,10 @@
   var wantFaction = 'pmc', wantB = 'pmc';   // what the new campaign's forces will be, as picked so far
   // solo: how many forces share the world with the player's, and what each runs ('' rolled)
   var wantRivals = 3, wantRivalArmies = [];
+  var wantHotAi = 0;                                  // hotseat: how many AI forces share the world (0, 2, 4, 6 or 8)
   var wantRivalColours = [], rivColourFor = null;   // ...their colours ('' rolled), and the one whose picker is open
   var enterCampaign = null;       // the way in, once the screen is wired
-  var openModal = null, modalView = null, colourOpen = false;
+  var openModal = null, modalView = null, colourOpen = false, propFor = null;
   var hubPane = 'tier';               // the hub opens on the company
   var rosterTab = 'units';
   var menOpen = {};               // which unit has its details open, by rid (one at a time)
@@ -611,7 +612,7 @@
       profile: profile, root: root, spendActs: spendActs, squares: squares, tip: tip,
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
-      get wantRivals() { return wantRivals; }, get wantRivalArmies() { return wantRivalArmies; },
+      get wantRivals() { return wantRivals; }, get wantRivalArmies() { return wantRivalArmies; }, get wantHotAi() { return wantHotAi; },
       get wantRivalColours() { return wantRivalColours; }, get rivColourFor() { return rivColourFor; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
@@ -633,7 +634,8 @@
       armyPill: armyPill, armyRules: armyRules,
       get camp() { return camp; }, set camp(v) { camp = v; }, get colourOpen() { return colourOpen; },
       get draft() { return draft; }, set draft(v) { draft = v; }, get openModal() { return openModal; },
-      get view() { return view; }, set view(v) { view = v; }, get online() { return online; }
+      get view() { return view; }, set view(v) { view = v; }, get online() { return online; },
+      get propFor() { return propFor; }
     }));
   }
   function beginOwn(side, faction) { return (KIT_FOUND || kitFound()).beginOwn(side, faction); }
@@ -646,7 +648,7 @@
   function freeColour(taken) { return (KIT_FOUND || kitFound()).freeColour(taken); }
   function squares(pick) { return (KIT_FOUND || kitFound()).squares(pick); }
   function colourName(k) { return (KIT_FOUND || kitFound()).colourName(k); }
-  function cmodal(kind, title, inner, foot) { return (KIT_FOUND || kitFound()).cmodal(kind, title, inner, foot); }
+  function cmodal(kind, title, inner, acts) { return (KIT_FOUND || kitFound()).cmodal(kind, title, inner, acts); }
   function coin() { return (KIT_FOUND || kitFound()).coin(); }
   function foundView() { return (KIT_FOUND || kitFound()).foundView(); }
   function ourList(co) { return (KIT_FOUND || kitFound()).ourList(co); }
@@ -719,6 +721,8 @@
   }
   // the battle fought: its contract is done with (a kept one included)
   function onFinish(report, cfg) {
+    // a battle of a hotseat campaign kept on this device as a world: its result goes to the world (dossier-online.js)
+    if (cfg && cfg.localBattle) { kitOnline().localOver(report, cfg); return; }
     /* A battle fought for a campaign not the one open (another was opened while it
        was on): that campaign is opened to take the result. */
     if (cfg && cfg.campLid && cfg.campLid !== Store.lid()) {
@@ -804,7 +808,7 @@
     var hd = /^<h2>([\s\S]*?)<\/h2>/.exec(h);
     if (hd) h = h.slice(hd[0].length);
     el('camp-title').innerHTML = hd ? hd[1] : 'Campaign';
-    if (view !== modalView) { openModal = null; colourOpen = false; }   // a new screen starts with nothing open over it
+    if (view !== modalView) { openModal = null; colourOpen = false; propFor = null; }   // a new screen starts with nothing open over it
     modalView = view;
     // a pick in an open list redraws it: keep it where it was scrolled to
     var ms = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0, mKind = openModal;
@@ -824,6 +828,8 @@
       }
     }
     showCard = null;
+    placeDrives(body);
+    placeRivPop(body);
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
@@ -833,6 +839,27 @@
     if (way && root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(bk, way.getAttribute('data-go') === 'menu');
   }
 
+  /* A unit's drives, opened: put by its icon (fixed, so a scrolling list does not
+     cut them off), under it, or over it when there is no room below. */
+  function placeDrives(body) {
+    body.querySelectorAll('.propop').forEach(function (pop) {
+      var btn = pop.parentNode.querySelector('[data-fprop]');
+      if (!btn || !btn.offsetParent) { pop.remove(); return; }       // the copy in a closed modal
+      var r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+      var left = Math.max(12, Math.min(r.right - w, innerWidth - w - 12));
+      var top = r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - 6 - h) : r.bottom + 6;
+      pop.style.left = left + 'px'; pop.style.top = top + 'px'; pop.style.visibility = 'visible';
+    });
+  }
+  // an AI force's colours on the new-campaign page: fixed by its chip, as the online lobby's are
+  function placeRivPop(body) {
+    var pop = body.querySelector('.olob-pop[data-rivpop]'); if (!pop) return;
+    var chip = body.querySelector('[data-go="rivcolour"][data-i="' + pop.getAttribute('data-rivpop') + '"]'); if (!chip) return;
+    var r = chip.getBoundingClientRect(), b = body.getBoundingClientRect(), w = Math.min(380, b.width - 16);
+    pop.style.width = w + 'px';
+    pop.style.left = Math.max(b.left + 8, Math.min(r.left, b.right - w - 8)) + 'px';
+    pop.style.top = (r.bottom + 6) + 'px';
+  }
   function findEntry(co, rid) { return C.byRid(co, rid); }
 
   /* A unit opened on the roster, drawn by the game's own renderer as the unit
@@ -915,6 +942,16 @@
   function onClick(ev) {
     var t = ev.target.closest('button');
     // the founding colours drop down under the chip: a tap anywhere else puts them away
+    // an AI force's colours, popped up by its chip on the new-campaign page: a tap anywhere else puts them away
+    if (rivColourFor !== null && !ev.target.closest('.olob-pop') && !(t && t.getAttribute('data-go') === 'rivcolour')) {
+      rivColourFor = null; render();
+      if (!t) return;
+    }
+    // a unit's drives, opened beside its icon: a tap anywhere else puts them away
+    if (propFor !== null && !ev.target.closest('.propop') && !(t && t.hasAttribute('data-fprop'))) {
+      keepFoundName(); propFor = null; render();
+      if (!t) return;
+    }
     if (colourOpen && !ev.target.closest('.found-pop') && !(t && t.getAttribute('data-go') === 'fcolour')) {
       keepFoundName(); colourOpen = false; render();
       if (!t) return;
@@ -940,7 +977,7 @@
       draft.keys.push(t.getAttribute('data-add')); render(); return;
     }
     if (t.hasAttribute('data-drop')) {
-      draft.keys.splice(+t.getAttribute('data-drop'), 1); render(); return;
+      draft.keys.splice(+t.getAttribute('data-drop'), 1); propFor = null; render(); return;
     }
     if (t.hasAttribute('data-fdrone')) {
       var di = +t.getAttribute('data-fdrone'), ds = R.splitPick(draft.keys[di]);
@@ -954,6 +991,15 @@
     if (t.hasAttribute('data-fmount')) {
       var fm = R.splitPick(draft.keys[+t.getAttribute('data-fmount')]), mo = R.MOUNT_ORDER;
       draft.keys[+t.getAttribute('data-fmount')] = R.joinPick(fm.key, fm.prop, fm.drone, fm.riders, mo[(mo.indexOf(fm.mount || 'none') + 1) % mo.length]); render(); return;
+    }
+    if (t.hasAttribute('data-fprop')) {
+      var fpi = +t.getAttribute('data-fprop');
+      keepFoundName(); propFor = propFor === fpi ? null : fpi; render(); return;
+    }
+    if (t.hasAttribute('data-fpropset')) {
+      var fsi = +t.getAttribute('data-fpropset'), fs = R.splitPick(draft.keys[fsi]);
+      draft.keys[fsi] = R.joinPick(fs.key, t.getAttribute('data-prop'), fs.drone, fs.riders, fs.mount);
+      keepFoundName(); propFor = null; render(); return;
     }
     if (t.hasAttribute('data-cycle')) {
       var i = +t.getAttribute('data-cycle'), s = R.splitPick(draft.keys[i]);
@@ -1019,7 +1065,7 @@
     // a new campaign's opposing force: its colours picked (or left to be rolled)
     if (t.hasAttribute('data-rivpick') && rivColourFor !== null) {
       wantRivalColours[rivColourFor] = t.getAttribute('data-rivpick') || '';
-      rivColourFor = null; openModal = null; render(); return;
+      rivColourFor = null; render(); return;
     }
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
     if (t.hasAttribute('data-recruit')) {
@@ -1190,7 +1236,7 @@
 
     switch (go) {
       case 'fcolour': colourOpen = !colourOpen; render(); return;
-      case 'rivcolour': rivColourFor = +t.getAttribute('data-i') || 0; openModal = 'rivcol'; render(); return;
+      case 'rivcolour': { var rci = +t.getAttribute('data-i') || 0; rivColourFor = rivColourFor === rci ? null : rci; render(); return; }
       // hotseat: Player 1's aftermath read, the device goes to Player 2 for theirs (HC-4)
       case 'afternext': case 'afterpass': case 'postpass': (KIT_AFTER || kitAfter()).afterTurn(go, t.getAttribute('data-seat')); render(); return;
       case 'passok': contractSeen = t.getAttribute('data-seat') === 'B' ? 'B' : 'A'; render(); return;
@@ -1220,6 +1266,14 @@
       case 'newcamp': {
         var fac = el('camp-faction') ? el('camp-faction').value : 'pmc';
         secondFaction = el('camp-bfaction') ? el('camp-bfaction').value : null;
+        /* hotseat with AI forces: the online campaign's world, kept on this device
+           (each player takes contracts against the AI forces, or challenges the other) */
+        if (wantMode === 'hotseat' && wantHotAi > 0 && root.PMCLocalWorld) {
+          var hai = [];
+          for (var hi = 0; hi < wantHotAi; hi++) hai.push({ faction: wantRivalArmies[hi] || 'random', colour: wantRivalColours[hi] || null });
+          kitOnline().newLocal({ factions: [fac, secondFaction || 'pmc'], ai: hai });
+          return;
+        }
         // a name to start from; the player settles it on the founding screen
         // no name to start from: the player gives one on the founding screen (the box suggests one)
         beginFounding('', wantMode === 'hotseat' ? 'hotseat' : 'solo', fac);
@@ -1478,6 +1532,8 @@
       sign.setAttribute('data-tip', sign.getAttribute(ok ? 'data-ready' : 'data-noname'));
       sign.setAttribute('data-tip-title', ok ? 'Ready' : 'Still needed');
     });
+    // a unit's drives stay by their icon as the list under them scrolls
+    host.addEventListener('scroll', function () { if (propFor !== null) placeDrives(el('camp-body')); if (rivColourFor !== null) placeRivPop(el('camp-body')); }, true);
     host.addEventListener('keydown', function (ev) {
       // an online campaign's lobby chat: Enter sends the line
       if (ev.key === 'Enter' && ev.target && ev.target.id === 'olob-say' && !asking) {
@@ -1501,6 +1557,7 @@
       else if (ev.target.id === 'camp-bfaction') { wantB = ev.target.value; render(); }
       // solo: how many opposing forces, and what each of them runs
       else if (ev.target.id === 'camp-rivals') { wantRivals = +ev.target.value || 3; render(); }
+      else if (ev.target.id === 'camp-hotai') { wantHotAi = +ev.target.value || 0; render(); }
       else if (ev.target.classList && ev.target.classList.contains('rivarmy')) { wantRivalArmies[+ev.target.getAttribute('data-i')] = ev.target.value; }
       else if (ev.target.id === 'camp-pl') {
         var want = +ev.target.value;
@@ -1608,6 +1665,7 @@
     fresh: function (mode) { if (enterFresh) enterFresh(mode); },
     resume: function (lid) { return enterResume ? enterResume(lid) : null; },
     adopt: function (sid) { return enterResume ? enterResume(null, sid) : null; },
+    newLocalWorld: function (how) { var su = el('setup'); if (su) su.hidden = true; return kitOnline().newLocal(how); },
     openOnline: function (id) { var su = el('setup'); if (su) su.hidden = true; return kitOnline().openOne(id); },
     newOnline: function (how) { var su = el('setup'); if (su) su.hidden = true; return kitOnline().startNew(how); },
     lid: function () { return Store.lid(); },

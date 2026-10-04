@@ -28,7 +28,7 @@ const LOGS = path.join(ROOT, 'build', 'test-logs');
    that starts taking this long is flagged in the summary so it can be moved. */
 // the longest plain scripts, started first so the run is not left waiting on them
 const LONG = ['clienttest', 'enginetest', 'servertest'];
-const SLOW = ['scentest', 'soloplay', 'rebelplay', 'xenoplay', 'report', 'hotseatsweep', 'followtoggle', 'bugplay'];
+const SLOW = ['scentest', 'soloplay', 'rebelplay', 'xenoplay', 'report', 'hotseatsweep', 'followtoggle', 'bugplay', 'hotseatworld'];
 const SLOW_AFTER = 90;          // seconds before a quick test is called out as slow
 /* The browser tests run the board's clock this many times over (test/fast.js), so
    the animations they wait through are quicker — except the ones that time the

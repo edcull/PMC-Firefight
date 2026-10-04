@@ -96,7 +96,7 @@ async function clickText(p, re) {
       statRow: [...box.querySelectorAll('.ddet-stats th')].map((t, i) => t.textContent + ' ' + box.querySelectorAll('.ddet-stats td')[i].textContent).join(' ')
     };
   }, rid);
-  check('the details show the full stat line', /Tier Men Move FP Range Def Asslt Mor/.test(det.stats), det.stats);
+  check('the details show the stat line (its Tier on the chip, not repeated)', /^Men Move FP Range Def Asslt Mor/.test(det.stats), det.stats);
   check('...special rules, honours, traumas and soldiers', det.heads.join('|') === 'Special rules|Battle Honours|Battle Traumas|Soldiers (8)', det.heads.join(' | '));
   check('...each honour and trauma spelled out', det.text.indexOf(det.honour.name) >= 0 && det.text.indexOf(det.honour.text) >= 0 &&
     det.text.indexOf(det.trauma.name) >= 0, det.honour.name + ' / ' + det.trauma.name);
@@ -137,6 +137,12 @@ async function clickText(p, re) {
   const cell = (c) => p.evaluate((c) => { const d = document.querySelector('#camp-body .cpan-A .cstat.' + c); return d ? d.querySelector('b').textContent + ' ' + d.querySelector('span').textContent : ''; }, c);
   check('no battles yet: no wins', (await cell('cs-win')) === '0% win rate', await cell('cs-win'));
   check('the hub shows honours', (await cell('cs-exp')) === '0% honours', await cell('cs-exp'));
+  check('...honours and trauma are figures only, not filters on the units', await p.evaluate(() => ['cs-exp', 'cs-tra'].every((c) => { const d = document.querySelector('#camp-body .cpan-A .cstat.' + c); return d && d.tagName !== 'BUTTON' && !d.hasAttribute('data-go'); })));
+  await p.evaluate(() => document.querySelector('#camp-body .cpan-A .cstat.cs-win').click());
+  await p.waitForTimeout(200);
+  check('the win rate opens the battles fought, even before the first', await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal:not([hidden])'); return !!m && /Battles fought/.test(m.textContent) && /No battles fought yet/.test(m.textContent); }));
+  await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodal"], #camp-body .cmodal:not([hidden]) .cmodal-x, #camp-body .cmodal:not([hidden]) [data-go="mclose"]'); if (m) m.click(); else document.querySelector('#camp-body .cmodal:not([hidden])').click(); });
+  await p.waitForTimeout(200);
   await p.evaluate(() => {
     const r = window.PMC_CAMPAIGN.get().companies.A.roster;
     r[1].honours = [2, 5]; r[2].honours = [4]; r[3].traumas = [1];

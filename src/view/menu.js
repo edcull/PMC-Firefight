@@ -150,6 +150,11 @@
       out.push({ key: 'a:' + c.sid, where: 'server', kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : 'Campaign'), name: c.name,
         sub: ['campaign turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
     });
+    // the hotseat campaigns with AI forces kept on this device
+    if (root.PMCLocalWorld) root.PMCLocalWorld.list().forEach(function (c) {
+      out.push({ key: 'w:' + c.id, where: 'local', kind: 'Hotseat campaign', name: c.name, mine: c.waiting === 'you',
+        sub: [c.forces + ' forces', 'turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
+    });
     remote.online.forEach(function (c) {
       out.push({ key: 'o:' + c.id, where: 'server', kind: 'Online campaign', name: c.name, mine: c.waiting === 'you',
         sub: [c.waiting === 'you' ? 'Your move' : c.waiting === 'them' ? 'their move' : c.phase === 'lobby' ? 'in its lobby' : '', (c.forces || 2) + ' forces', c.phase === 'lobby' ? '' : 'turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
@@ -220,6 +225,8 @@
     if (kind === 'c') { if (root.PMC_CAMPAIGN) root.PMC_CAMPAIGN.resume(id); return; }
     if (kind === 'a') { if (root.PMC_CAMPAIGN) root.PMC_CAMPAIGN.adopt(id); return; }
     if (kind === 'o') { if (root.PMC_CAMPAIGN) { close(); root.PMC_CAMPAIGN.openOnline(+id); } return; }
+    // a hotseat campaign with AI forces, kept on this device (net/localworld.js)
+    if (kind === 'w') { if (root.PMC_CAMPAIGN) { close(); root.PMC_CAMPAIGN.openOnline(id); } return; }
     if (kind === 'g') {
       if (!freshOk()) return;
       close();
@@ -231,6 +238,8 @@
     if (key === 'live') {
       if (abandonable()) { if (root.PMCLobby && root.PMCLobby.abandon) root.PMCLobby.abandon(); }
       else if (root.PMC_DISCARD_BATTLE) root.PMC_DISCARD_BATTLE();
+    } else if (kind === 'w') {
+      if (root.PMCLocalWorld) root.PMCLocalWorld.drop(id);
     } else if (kind === 'b') {
       if (root.PMCNet && root.PMCNet.forgetBattle) root.PMCNet.forgetBattle(id);
     } else if (kind === 'c') {

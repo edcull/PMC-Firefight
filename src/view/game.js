@@ -984,7 +984,9 @@
     placeInsertion: placeInsertion, placingSide: placingSide, restoreCanvases: restoreCanvases,
     select: select, send: send, specialsFor: specialsFor, startBattle: startBattle, terrainAct: terrainAct,
     wireNet: wireNet, FX: FX, H: H, ISO: ISO, R: R, W: W, anims: anims, cam: cam, el: el, fx: fx,
-    idleCbs: idleCbs, resQueue: resQueue, show: show, ui: ui
+    idleCbs: idleCbs, resQueue: resQueue, show: show, ui: ui,
+    // (the tests) a side walking away from a battle played on this device
+    concede: function (side) { if (mirror && mirror.concede) mirror.concede(side); }
   };
   window.PMCHooks(hookBoard);
   if (window.PMCTestHooks) window.PMCTestHooks(hookBoard);

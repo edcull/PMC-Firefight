@@ -18,66 +18,54 @@
       var h = '<h2>' + (E.camp ? 'Campaign — turn ' + E.camp.turn : E.wantMode === 'hotseat' ? 'Hotseat campaign' : 'Campaign') + '</h2>';
       if (!E.camp) {
         function opt(v, t, want) { return '<option value="' + v + '"' + (want === v ? ' selected' : '') + '>' + t + '</option>'; }
-        // beside each choice, its army's pill: tapped, the army's rules
         var pa = { faction: E.wantFaction, doctrines: [] }, pb = { faction: E.wantB, doctrines: [] };
-        h += '<div class="field"><label for="camp-faction">What you are running</label>' +
-          '<select id="camp-faction">' +
-          opt('pmc', 'A private military company \u2014 paid in credits, built around doctrines', E.wantFaction) +
-          opt('rebel', 'An insurgent revolt \u2014 paid in Influence Points, built around Paths', E.wantFaction) +
-          opt('bugs', 'A Space Bug swarm \u2014 paid in Resource Points, built around Evolutionary Pathways', E.wantFaction) +
-          opt('xeno', 'A Xenotripod tribe \u2014 paid in Territorial Points, built around Tribe Advancements', E.wantFaction) +
-          '</select><div class="carch newarch">' + armyPill(pa, 'armynew') + '</div></div>';
-        /* The way of playing is the menu card it was opened from (Single player or
-           Hotseat). Solo: how many forces share the world, and what each runs
-           (rolled, unless picked). Hotseat: there are no rolled rivals, only the
-           second player's force, so this asks what kind that is. */
-        var ARMIES = [['pmc', 'A private military company'], ['rebel', 'An insurgent revolt'], ['bugs', 'A Space Bug swarm'], ['xeno', 'A Xenotripod tribe']];
-        if (E.wantMode === 'hotseat') {
-          h += '<div class="field" id="camp-bwrap"><label for="camp-bfaction">What Player 2 is running</label>' +
-            '<select id="camp-bfaction">' + ARMIES.map(function (a) { return opt(a[0], a[1], E.wantB); }).join('') +
-            '</select><div class="carch newarch">' + armyPill(pb, 'armynewb') + '</div></div>';
-        } else {
-          var nr = E.wantRivals, ra = E.wantRivalArmies;
-          h += '<div class="field"><label for="camp-rivals">Opposing forces</label>' +
-            '<select id="camp-rivals">' + [1, 3, 5, 7].map(function (n) {
-              return '<option value="' + n + '"' + (n === nr ? ' selected' : '') + '>' + n + (n === 1 ? ' force' : ' forces') + (n === 3 ? ' (the usual)' : '') + '</option>';
-            }).join('') + '</select>' +
-            '<p class="dnote">An odd number: with yours, the forces on the world pair off for each round of battles.</p></div>';
-          /* Each force's army, and its colours beside it: a swatch, rolled unless one
-             is picked from the popup (a colour another force has is not offered) */
-          var CO = (E.root.PMCIso && E.root.PMCIso.COLOURS) || {}, KEYS = (E.root.PMCIso && E.root.PMCIso.COLOUR_KEYS) || [];
-          var rc = E.wantRivalColours;
-          var swatch = function (k) {
-            var c = CO[k];
-            return c ? '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' : '<span class="rivrand">?</span>';
-          };
-          // the rows scroll in their own box when there are more than fit (7 forces on a phone)
-          h += '<div class="field rivarmies"><label>Their armies and colours</label><div class="rivlist">';
-          for (var ri = 0; ri < nr; ri++) {
-            h += '<div class="rivrow"><select class="rivarmy" data-i="' + ri + '" aria-label="Opposing force ' + (ri + 1) + '">' +
-              opt('', 'Force ' + (ri + 1) + ' \u2014 rolled at random', ra[ri] || '') +
-              ARMIES.map(function (a) { return opt(a[0], 'Force ' + (ri + 1) + ' \u2014 ' + a[1].replace(/^An? /, '').replace(/^./, function (c) { return c.toUpperCase(); }), ra[ri] || ''); }).join('') +
-              '</select><button type="button" class="rivcol" data-go="rivcolour" data-i="' + ri + '" title="' +
-              esc(rc[ri] && CO[rc[ri]] ? CO[rc[ri]].name : 'Colours rolled at random \u2014 tap to pick') + '" aria-label="Force ' + (ri + 1) + ' colours">' +
-              swatch(rc[ri]) + '</button></div>';
-          }
-          h += '</div></div>';
-          // the colour picker for the force whose swatch was tapped
-          var ci = E.rivColourFor;
-          if (ci !== null && ci < nr) {
-            var others = rc.filter(function (k, j) { return k && j !== ci && j < nr; });
-            h += cmodal('rivcol', 'Force ' + (ci + 1) + ' \u2014 colours', '<div class="csw">' +
-              '<button type="button" class="rivpick-rand' + (!rc[ci] ? ' on' : '') + '" data-rivpick="" title="Rolled at random"><span class="rivrand">?</span></button>' +
-              KEYS.map(function (k) {
-                var taken = others.indexOf(k) >= 0;
-                return '<button type="button"' + (k === rc[ci] ? ' class="on"' : '') + ' data-rivpick="' + k + '"' + (taken ? ' disabled' : '') +
-                  ' title="' + esc(CO[k].name + (taken ? ' \u2014 another force wears it' : '')) + '">' + swatch(k) + '</button>';
-              }).join('') + '</div><p class="dnote">If your own force takes the same colours, this one is given others.</p>');
-          }
+        /* Laid out as the online campaign's lobby is: a slot for each force on the
+           world — yours (and Player 2's, in hotseat), then the AI forces, each with
+           its colours and its army — and under them one line: how many forces, and
+           the button that raises yours. The way of playing is the menu card it was
+           opened from (Single player or Hotseat). */
+        var ARMY = [['pmc', 'PMC'], ['rebel', 'Rebel'], ['bugs', 'Bugs'], ['xeno', 'Xenotripods']];
+        var CO = (E.root.PMCIso && E.root.PMCIso.COLOURS) || {}, KEYS = (E.root.PMCIso && E.root.PMCIso.COLOUR_KEYS) || [];
+        var chipOf = function (k) {
+          var c = CO[k];
+          return c ? '<span class="olob-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' : '<span class="olob-chip rivrand">?</span>';
+        };
+        var hot = E.wantMode === 'hotseat', nr = hot ? E.wantHotAi : E.wantRivals, ra = E.wantRivalArmies, rc = E.wantRivalColours, ci = E.rivColourFor;
+        // a player's own colours are picked when their force is founded
+        var playerRow = function (who, id, want) {
+          return '<div class="olob-slot mine"><span class="olob-colour still" title="Picked when the force is founded">' + chipOf('') + '</span>' +
+            '<span class="olob-who"><b>' + esc(who) + '</b></span>' +
+            '<select id="' + id + '" aria-label="' + esc(who) + ' — army">' + ARMY.map(function (a) { return opt(a[0], a[1], want); }).join('') + '</select></div>';
+        };
+        h += '<div class="olob-slots">' + playerRow(hot ? 'Player 1' : 'You', 'camp-faction', E.wantFaction);
+        if (hot) h += playerRow('Player 2', 'camp-bfaction', E.wantB);
+        for (var ri = 0; ri < nr; ri++) {
+          h += '<div class="olob-slot"><button type="button" class="olob-colour" data-go="rivcolour" data-i="' + ri + '" aria-expanded="' + (ci === ri) + '" title="' +
+            esc(rc[ri] && CO[rc[ri]] ? CO[rc[ri]].name : 'Colours rolled at random — tap to pick') + '" aria-label="AI force ' + (ri + 1) + ' colours">' + chipOf(rc[ri]) + '</button>' +
+            '<span class="olob-who"><b>AI force</b></span>' +
+            '<select class="rivarmy" data-i="' + ri + '" aria-label="AI force ' + (ri + 1) + ' — army">' + opt('', 'Random', ra[ri] || '') +
+            ARMY.map(function (a) { return opt(a[0], a[1], ra[ri] || ''); }).join('') + '</select></div>';
         }
+        h += '</div>';
+        // an AI force's colours, popped up by its chip (one another force wears is not offered)
+        if (ci !== null && ci < nr) {
+          var others = rc.filter(function (k, j) { return k && j !== ci && j < nr; });
+          h += '<div class="found-pop olob-pop" data-rivpop="' + ci + '"><label>Colours — ' + esc(rc[ci] && CO[rc[ci]] ? CO[rc[ci]].name : 'rolled at random') + '</label><div class="csw">' +
+            '<button type="button" class="rivpick-rand' + (!rc[ci] ? ' on' : '') + '" data-rivpick="" title="Rolled at random"><span class="rivrand">?</span></button>' +
+            KEYS.map(function (k) {
+              var taken = others.indexOf(k) >= 0, q = CO[k];
+              return '<button type="button"' + (k === rc[ci] ? ' class="on"' : '') + ' data-rivpick="' + k + '"' + (taken ? ' disabled' : '') +
+                ' title="' + esc(q.name + (taken ? ' — another force wears it' : '')) + '"><span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
+            }).join('') + '</div></div>';
+        }
+        // one line: how many AI forces (an odd number: with yours, the forces pair off for each round), and Raise the force
+        // (hotseat: none, or an even number — with the two players, the forces pair off)
+        h += '<div class="olob-bar"><label class="olob-n">AI forces <select id="' + (hot ? 'camp-hotai' : 'camp-rivals') + '">' + (hot ? [0, 2, 4, 6, 8] : [1, 3, 5, 7, 9]).map(function (n) {
+          return '<option value="' + n + '"' + (n === nr ? ' selected' : '') + '>' + n + '</option>';
+        }).join('') + '</select></label>' +
+          '<button class="start" data-go="newcamp">Raise the force</button></div>';
         h += cmodal('armynew', C.words(pa).side + ' \u2014 army rules', armyRules(pa));
         h += cmodal('armynewb', C.words(pb).side + ' \u2014 army rules', armyRules(pb));
-        h += '<button class="start" data-go="newcamp">Raise the force</button>';
         h += '<p class="camp-foot"><button class="lnk" data-go="menu">← Main menu</button>' +
           '<button class="lnk" data-go="import">Load a save file</button>' +
           '<input type="file" id="camp-file" accept="application/json" hidden></p>';
@@ -117,7 +105,6 @@
          player's force), the battles fought, the fallen, and the campaign's
          file: out to a file, back in from one, or given up. */
       var last = E.camp.log.length ? E.camp.log[E.camp.log.length - 1] : null;
-      var back = '<button type="button" class="lnk" data-go="fmodal" data-kind="manage">\u2190 Back</button>';
       // won or lost from where the hub's player stands (hotseat: either of them, HC-13)
       var result = function (l) { return !l.winner ? 'drawn' : l.winner === (hs || 'A') ? 'won' : 'lost'; };
       var vsOf = function (l) { return E.camp.mode === 'hotseat' ? (hs === 'B' ? A : B).name : l.against; };
@@ -131,20 +118,20 @@
           '</small></span></button>' : '') +
         '<button type="button" class="archline" data-go="fmodal" data-kind="memorial">' + memorialIcon(cur) + '<span>' + esc(C.words(cur).memorial) + '<small>' +
         esc(C.words(cur).memorialSub) + '</small></span></button>' +
-        '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
-        (E.online ? '<button type="button" class="archline" data-go="omulti">' + ICON_FORCES + '<span>Multiplayer<small>A new campaign, or one to join with its code</small></span></button>' +
-          (E.camp.over ? '' : '<button type="button" class="archline danger" data-go="oconcede">' + ICON_ABANDON + '<span>Give the campaign up<small>You leave the world; the others play on \u2014 it asks first</small></span></button>')
-          : '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
+        // online the server keeps the campaign: nothing to save to a file
+        (E.online ? (E.camp.over ? '' : '<button type="button" class="archline danger" data-go="oconcede">' + ICON_ABANDON + '<span>Give the campaign up<small>You leave the world; the others play on \u2014 it asks first</small></span></button>')
+          : '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
+        '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
         '<button type="button" class="archline danger" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>') +
         '</div>');
       // the fallen, opened from the campaign's window (Back returns to it)
-      h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>', back);
+      h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>');
       h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'The other forces on this world',
         // the other player's force shown as a rival's is: its figures, its kind and creed, and their dossier to open
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? rivalPanel(hs === 'B' ? A : B, 0)
-          : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>', back);
-      // every battle fought, the latest first
-      if (last) {
+          : rivals.map(function (co, i) { return rivalPanel(co, i); }).join('')) + '</div>');
+      // every battle fought, the latest first (opened from the win rate even before the first)
+      {
         // a battle whose aftermath was kept opens it again, read only
         var battleRow = function (l, i) {
           var inner = '<b>' + l.turn + '</b>' +
@@ -154,23 +141,22 @@
           return l.after ? '<button type="button" class="crow crow-go" data-go="pastbattle" data-i="' + i + '">' + inner + '</button>'
             : '<div class="crow">' + inner + '</div>';
         };
-        h += cmodal('battles', 'Battles fought', '<div class="cmodal-scroll"><div class="clog">' +
-          E.camp.log.map(battleRow).reverse().join('') + '</div></div>', back);
+        h += cmodal('battles', 'Battles fought', '<div class="cmodal-scroll">' + (E.camp.log.length ? '<div class="clog">' +
+          E.camp.log.map(battleRow).reverse().join('') + '</div>' : '<p class="dnote">No battles fought yet.</p>') + '</div>');
       }
-      // each rival's own battles, the latest first, opened from its win rate (Back to the other forces)
-      var backRivals = '<button type="button" class="lnk" data-go="fmodal" data-kind="rivals">\u2190 Back</button>';
+      // each rival's own battles, the latest first, opened from its win rate
       // each army's rules, opened from its pill
       h += cmodal('armyA', C.words(A).side + ' \u2014 army rules', armyRules(A));
-      if (E.camp.mode === 'hotseat') h += cmodal('armyB', C.words(B).side + ' \u2014 army rules', armyRules(B), backRivals);
-      rivals.forEach(function (co, i) { h += cmodal('armyr' + i, co.name + ' \u2014 ' + C.words(co).side, armyRules(co), backRivals); });
+      if (E.camp.mode === 'hotseat') h += cmodal('armyB', C.words(B).side + ' \u2014 army rules', armyRules(B));
+      rivals.forEach(function (co, i) { h += cmodal('armyr' + i, co.name + ' \u2014 ' + C.words(co).side, armyRules(co)); });
       rivals.forEach(function (co, i) {
-        if (!(co.log || []).length) return;
+        if (!(co.log || []).length) { h += cmodal('rbattles' + i, co.name + ' \u2014 battles', '<div class="cmodal-scroll"><p class="dnote">No battles fought yet.</p></div>'); return; }
         h += cmodal('rbattles' + i, co.name + ' \u2014 battles', '<div class="cmodal-scroll"><div class="clog">' +
           co.log.slice().reverse().map(function (l) {
             return '<div class="crow"><b>' + l.turn + '</b>' +
               '<span>' + esc(C.SCENARIO_NAMES[l.scenario] || l.scenario) + ', Tier ' + ROMAN[l.tier] + ' PL' + l.pl +
               '<small>vs ' + esc(l.vs) + '</small></span><em>' + l.result + '</em></div>';
-          }).join('') + '</div></div>', backRivals);
+          }).join('') + '</div></div>');
       });
       h += '<p class="camp-foot">' +
         '<button class="lnk" data-go="menu">← Main menu</button>' +
@@ -224,7 +210,14 @@
           h += '<button class="lnk" data-go="doctrine" data-side="' + side + '">Choose a ' +
             C.creedOf(co).one + ' (' + open + ' free)</button> ';
         }
-        h += promotionPanel(co, side, !!bar);
+        var pp0 = promotionPanel(co, side, !!bar);
+        // at the foot of its box, as the dossier has + Recruit: the other forces on the world (in hotseat, the other player)
+        if (bar) {
+          var hot = E.camp.mode === 'hotseat';
+          pp0 = pp0.replace(/<\/div>$/, '<div class="cdos-foot"><button type="button" class="lnk" data-go="fmodal" data-kind="rivals">' +
+            (hot ? (E.hubSide === 'B' ? 'Player 1' : 'Player 2') : 'Other forces') + '</button></div></div>');
+        }
+        h += pp0;
       }
       if (!co.aspiring && C.canAspire(co)) {
         h += ' <button class="lnk" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button>';
@@ -395,20 +388,11 @@
         return modal ? '<button type="button" class="cstat ' + cls + '" data-go="fmodal" data-kind="' + modal + '">' + inner + '</button>'
           : '<div class="cstat ' + cls + '">' + inner + '</div>';
       }
-      /* Honours and trauma narrow the force's dossier to the units that have
-         them: toggles, lit while on (fkey says whose list; none, no toggle). */
-      function toggle(cls, pct, word, kind) {
-        var f = (E.ufilter[fkey] || {})[kind];
-        return '<button type="button" class="cstat ' + cls + (f ? ' on' : '') + '" data-go="ufilter" data-fkey="' + fkey +
-          '" data-kind="' + kind + '" aria-pressed="' + !!f + '"><b>' + pct + '</b><span>' + esc(word) + '</span></button>';
-      }
       var own = !rival && co === (E.camp.companies[E.hubSide] || E.camp.companies.A);
       return '<div class="cstats">' +
-        // your own win rate opens the battles fought; a rival's, the battles it has fought
-        cell('cs-win', pc(wn.pct), 'win rate', own && E.camp.log.length ? 'battles'
-          : fkey && fkey.charAt(0) === 'r' && (co.log || []).length ? 'rbattles' + fkey.slice(1) : null) +
-        (fkey ? toggle('cs-exp', pc(ex.pct), ex.word, 'honour') : cell('cs-exp', pc(ex.pct), ex.word)) +
-        (fkey ? toggle('cs-tra', pc(tr.pct), tr.word, 'trauma') : cell('cs-tra', pc(tr.pct), tr.word)) +
+        // your own win rate opens the battles fought, a rival's the battles it has fought — none yet, it says so
+        cell('cs-win', pc(wn.pct), 'win rate', own ? 'battles' : fkey && fkey.charAt(0) === 'r' ? 'rbattles' + fkey.slice(1) : null) +
+        cell('cs-exp', pc(ex.pct), ex.word) + cell('cs-tra', pc(tr.pct), tr.word) +
         '</div>';
     }
 

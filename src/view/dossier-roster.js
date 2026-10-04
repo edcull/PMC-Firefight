@@ -33,16 +33,15 @@
         if (shown.length && !ordered.length) h += '<p class="cpstat">No unit matches the filter.</p>';
         ordered.forEach(function (e) {
           // on a phone each is its icon alone, so the three sit on one row
-          var rename = '<button class="lnk dact" data-rename="' + e.rid + '" title="Rename" aria-label="Rename">' + ICON_RENAME + '<span>Rename</span></button>';
-          var acts = rename;
+          var acts = '<button class="lnk dact" data-rename="' + e.rid + '" title="Rename" aria-label="Rename">' + ICON_RENAME + '<span>Rename</span></button>';
           var open = !!E.menOpen[e.rid];
           // enough experience for something: a Promote button, opening the choices in a window
           var spend = canSpend(e, co) ? '<button class="lnk good dact" data-promo="' + e.rid + '" title="Promote" aria-label="Promote">' + ICON_PROMOTE + '<span>Promote</span></button>' : '';
           var dis = C.canDisband(co, e);
           acts += '<button class="lnk danger dact" data-disband="' + e.rid + '" aria-label="Disband"' + (dis.ok ? ' title="Disband"' : ' disabled title="' + esc(dis.why) + '"') + '>' + ICON_DISBAND + '<span>Disband</span></button>';
           if (spend) acts += spend;
-          // closed, a card offers Promote when there is the experience for it, and Rename in its place when not; opened, all of them
-          h += entryCard(e, co, { actions: open ? acts : spend || rename, men: open ? detailPanel(e, co) : '', expand: true, portrait: open, rowActs: true });
+          // closed, a card offers only Promote (when there is the experience for it); opened, all of them
+          h += entryCard(e, co, { actions: open ? acts : spend, men: open ? detailPanel(e, co) : '', expand: true, portrait: open, rowActs: true });
         });
         h += '</div>';
       } else if (E.rosterTab === 'spend') {
@@ -200,8 +199,9 @@
         return { label: label, v: v, d: d };
       }
       var inch = function (n) { return n + '"'; };
-      // the same names and order as the muster's line: Tier, Men (a machine's Str), Move, FP, Range, Def, Asslt, Mor
-      var cols = [{ label: 'Tier', v: ROMAN[u.tier], d: 0 }, mach ? cell('Str', u.str, was.str) : cell('Men', u.size, was.size),
+      // the same names and order as the muster's line: Men (a machine's Str), Move, FP, Range, Def, Asslt, Mor
+      // (its Tier is on the card's chip: not repeated here, so the row fits a phone)
+      var cols = [mach ? cell('Str', u.str, was.str) : cell('Men', u.size, was.size),
         cell('Move', u.move, was.move, inch), cell('FP', u.fp, was.fp), cell('Range', u.range || null, was.range || null, inch),
         cell('Def', u.def, was.def), cell('Asslt', u.assault, was.assault)];
       if (!mach) cols.push(cell('Mor', u.morale, was.morale));

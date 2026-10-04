@@ -93,11 +93,15 @@
     /* A list opened over the page (the founding screen's pickers, the hub's
        rivals): drawn with the page, hidden unless open, so a pick made in it
        redraws it along with everything else. */
-    function cmodal(kind, title, inner, foot) {
+    /* A window over the page: its title across the top and a close on the right
+       (a tap outside it closes it too); under it, any action of its own (the
+       filters' Clear). */
+    function cmodal(kind, title, inner, acts) {
       return '<div class="cmodal" data-modal="' + kind + '"' + (E.openModal === kind ? '' : ' hidden') + '>' +
         '<div class="cmodal-box" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
-        '<h3>' + esc(title) + '</h3>' + inner +
-        '<div class="askrow">' + (foot || '') + '<button type="button" class="start" data-go="fmodalclose">Done</button></div></div></div>';
+        '<div class="cmodal-head"><h3>' + esc(title) + '</h3>' +
+        '<button type="button" class="xclose" data-go="fmodalclose" title="Close" aria-label="Close">\u2715</button></div>' + inner +
+        (acts ? '<div class="askrow">' + acts + '</div>' : '') + '</div></div>';
     }
     function rivalName() { return 'Rival company'; }
     // what this campaign calls its money, and what its creed is called
@@ -114,7 +118,9 @@
       });
       var reb = co.faction === 'rebel', bug = co.faction === 'bugs', xen = co.faction === 'xeno';
       function say(pmc, rebel, bugs, xeno) { return xen ? (xeno || bugs) : bug ? bugs : reb ? rebel : pmc; }
-      var h = '<h2>' + (hot ? 'Player ' + (side === 'A' ? 1 : 2) + ' \u2014 ' : '') +
+      // a hotseat campaign kept as a world on this device: whose force it is, by the player at the screen
+      var lw = E.online && E.online.local && root.PMCLocalWorld ? root.PMCLocalWorld.playerName(root.PMCLocalWorld.seat(E.online.id)) + ' \u2014 ' : '';
+      var h = '<h2>' + lw + (hot ? 'Player ' + (side === 'A' ? 1 : 2) + ' \u2014 ' : '') +
         say('Found a company', 'Raise a revolt', 'Awaken a swarm', 'Claim a territory') + '</h2>';
       // online, the army and the colours were picked in the campaign's lobby: nothing to choose here
       if (E.online) {
@@ -155,11 +161,7 @@
         var s = R.splitPick(k), p = profile(s.key);
         return '<span class="pickwrap"><button class="pick" data-drop="' + i + '">' +
           esc(p.name) + ' <b>' + ROMAN[p.tier] + '</b></button>' +
-          (R.propsFor(p).length ? '<button class="drive" data-cycle="' + i + '">' +
-            R.PROPULSION[s.prop || 'none'].short + '</button>' : '') +
-          (R.canBeDrone(p) ? '<button class="drive' + (s.drone ? ' on' : '') + '" data-fdrone="' + i +
-            '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' +
-            (s.drone ? 'DRN' : 'crew') + '</button>' : '') + rideButtons(p, s, i) + '</span>';
+          driveButton(p, s, i) + droneButton(p, s, i) + rideButtons(p, s, i) + '</span>';
       }).join('');
       /* On the page, each unit picked is a card: its name and kind, its Tier, its
          numbers and its special rules, with its drive and its remove button. The
@@ -176,9 +178,7 @@
         return '<div class="fcard">' +
           '<div class="fcard-top">' + tierChip(p0.tier) + '<b>' + esc(p0.name) + '</b>' +
           '<span class="fcard-kind">' + esc(p0.group || (mach ? p0.cls : 'Infantry')) + '</span>' +
-          (R.propsFor(p0).length ? '<button class="drive" data-cycle="' + i + '">' + R.PROPULSION[sp.prop || 'none'].short + '</button>' : '') +
-          (R.canBeDrone(p0) ? '<button class="drive' + (sp.drone ? ' on' : '') + '" data-fdrone="' + i +
-            '" title="Drone Control: +1 Structure, no crew, never earns experience — but Hackers can reach it">' + (sp.drone ? 'DRN' : 'crew') + '</button>' : '') +
+          driveButton(p0, sp, i) + droneButton(p0, sp, i) +
           rideButtons(p0, sp, i) +
           '<button class="lnk danger fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p0.name) + '">\u2715</button></div>' +
           '<div class="fcard-line">' + esc(line) + '</div>' +
@@ -248,6 +248,43 @@
     /* What a unit rides: the Riders upgrade where it may take it (Holy Warriors,
        First Among Equals), and a motorbike, grav bike or horse for anyone who
        rides — the Mounted Warriors always, the others once mounted. */
+    /* A ground vehicle's propulsion: its icon, opening the drives it may take
+       in a list beside it; and Drone Control, an icon (crew or drone) that
+       flips on a tap. */
+    var SVG = function (d) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
+    var HULL = '<path d="M3 12h18v-2.5L18 6H8L5 9.5H3z"/>';
+    var DRIVE_ICON = {
+      none: SVG('<path d="M3 14h18v-3l-3-4H8l-3 4H3z"/><path d="M3 14v3h18v-3"/>'),
+      wheeled: SVG(HULL + '<circle cx="7.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>'),
+      tracked: SVG('<path d="M5 9h14l-2-3H7z"/><rect x="2.5" y="11" width="19" height="7.5" rx="3.75"/><circle cx="7" cy="14.75" r="1.3"/><circle cx="12" cy="14.75" r="1.3"/><circle cx="17" cy="14.75" r="1.3"/>'),
+      grav: SVG(HULL + '<path d="M6 15.5h12M8 18.5h8M10.5 21.5h3"/>'),
+      hover: SVG(HULL + '<path d="M3 13.5h18l-2.5 3.5h-13z"/><path d="M7 20.5l-1 1M12 20v1.5M17 20.5l1 1"/>'),
+      walker: SVG('<path d="M5 6h14v5H5z"/><path d="M8 11l-2.5 5 2.5 5.5M16 11l2.5 5-2.5 5.5"/>')
+    };
+    var CREW_ICON = SVG('<circle cx="12" cy="8" r="3.6"/><path d="M8.6 6.6c.6-2 1.8-3 3.4-3s2.8 1 3.4 3"/><path d="M4.5 21c0-4 3.4-6.8 7.5-6.8s7.5 2.8 7.5 6.8"/>');
+    var DRONE_ICON = SVG('<rect x="9" y="10" width="6" height="4" rx="1"/><path d="M9.5 10.5 6.5 7.5M14.5 10.5l3-3M9.5 13.5l-3 3M14.5 13.5l3 3"/><circle cx="5.5" cy="6.5" r="2.3"/><circle cx="18.5" cy="6.5" r="2.3"/><circle cx="5.5" cy="17.5" r="2.3"/><circle cx="18.5" cy="17.5" r="2.3"/>');
+    function driveButton(p, s, i) {
+      var props = R.propsFor(p);
+      if (!props.length) return '';
+      var now = s.prop || 'none', P = R.PROPULSION[now], open = E.propFor === i;
+      var h = '<span class="fdrive"><button type="button" class="drive dicon' + (open ? ' on' : '') + '" data-fprop="' + i + '" aria-expanded="' + open +
+        '" title="' + esc(P.name + ' \u2014 ' + P.note) + '" aria-label="Propulsion: ' + esc(P.name) + '">' + DRIVE_ICON[now] + '</button>';
+      if (open) {
+        h += '<div class="found-pop propop" role="listbox"><label>Propulsion</label>' + props.map(function (k) {
+          var Q = R.PROPULSION[k];
+          return '<button type="button" class="propopt' + (k === now ? ' on' : '') + '" role="option" aria-selected="' + (k === now) + '" data-fpropset="' + i + '" data-prop="' + k + '">' +
+            DRIVE_ICON[k] + '<span><b>' + esc(Q.name) + '</b><small>' + esc(Q.note) + '</small></span></button>';
+        }).join('') + '</div>';
+      }
+      return h + '</span>';
+    }
+    function droneButton(p, s, i) {
+      if (!R.canBeDrone(p)) return '';
+      return '<button type="button" class="drive dicon' + (s.drone ? ' on' : '') + '" data-fdrone="' + i + '" aria-pressed="' + !!s.drone + '" title="' +
+        (s.drone ? 'Drone Control: +1 Structure, no crew, never earns experience \u2014 but Hackers can reach it. Tap for a crew.'
+          : 'Crewed. Tap for Drone Control: +1 Structure, no crew, never earns experience \u2014 but Hackers can reach it.') +
+        '" aria-label="' + (s.drone ? 'Drone Control' : 'Crewed') + '">' + (s.drone ? DRONE_ICON : CREW_ICON) + '</button>';
+    }
     function rideButtons(p, s, i) {
       var h = '';
       if (R.canRide(p)) h += '<button class="drive' + (s.riders ? ' on' : '') + '" data-friders="' + i +

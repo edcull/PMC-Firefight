@@ -1057,7 +1057,7 @@
     function backLabel(btn, home) {
       if (!btn) return;
       btn.classList.toggle('home', !!home);
-      btn.innerHTML = home ? HOME_ICON : '\u2190 Back';
+      btn.innerHTML = home ? HOME_ICON : '<span class="bk-ar" aria-hidden="true">\u2190</span><span class="bk-w"> Back</span>';
       btn.setAttribute('aria-label', home ? 'Main menu' : 'Back');
       btn.title = home ? 'Main menu' : 'Back';
     }

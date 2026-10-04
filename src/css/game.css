@@ -866,6 +866,21 @@ a.mcard { text-decoration: none; line-height: normal; }
 .fcard-top b { font-family: var(--display); font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fcard-kind { font-size: 11px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: auto; }
 .fcard-top .drive { flex: none; }
+/* a vehicle's propulsion and its Drone Control as icons; the drives listed beside the icon when it is tapped */
+.drive.dicon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 28px; padding: 0; border-radius: 5px; color: var(--ink-dim); }
+.pickwrap .drive.dicon { height: auto; width: 30px; border-radius: 0; }
+.drive.dicon svg { width: 19px; height: 19px; }
+.drive.dicon.on { color: var(--alpha); border-color: color-mix(in srgb, var(--alpha) 60%, transparent); background: color-mix(in srgb, var(--alpha) 12%, var(--panel-2)); }
+.fdrive { position: relative; display: inline-flex; flex: none; }
+.found-pop.propop { position: fixed; left: auto; right: auto; top: 0; z-index: 70; width: min(300px, calc(100vw - 24px)); max-height: 70vh; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; visibility: hidden; }
+.propop label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); margin: 0 2px 2px; }
+.propopt { display: flex; align-items: flex-start; gap: 9px; width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+.propopt svg { flex: none; width: 22px; height: 22px; color: var(--ink-dim); margin-top: 1px; }
+.propopt b { display: block; font-size: 13px; }
+.propopt small { display: block; font-size: 11px; line-height: 1.35; color: var(--ink-faint); }
+.propopt:hover { border-color: var(--ink-dim); }
+.propopt.on { border-color: var(--alpha); }
+.propopt.on svg, .propopt.on b { color: var(--alpha); }
 .fcard-drop { flex: none; padding: 2px 8px; }
 /* a chosen unit's numbers: the add list's shorthand, in its size and colour */
 .fcard-line { margin: 4px 0 0; font-size: 11px; color: var(--ink-faint); }
@@ -919,6 +934,8 @@ a.mcard { text-decoration: none; line-height: normal; }
   display: flex; flex-direction: column; box-shadow: 0 18px 50px rgba(0, 0, 0, .6); min-width: 0;
 }
 .cmodal-box h3 { font-family: var(--display); font-size: 15px; margin: 0 0 8px; color: var(--ink); letter-spacing: .02em; }
+.cmodal-head { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+.cmodal-head h3 { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cmodal-box > * { flex: none; }
 .cmodal-box > .cmodal-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .cmodal-box > .cat { max-height: none; }

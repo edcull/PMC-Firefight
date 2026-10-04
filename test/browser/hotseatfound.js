@@ -62,7 +62,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
   // the Hotseat menu's campaign card: a new campaign (the solo one kept), no choice of how to play, it is hotseat
   await p.evaluate(() => window.PMC_CAMPAIGN.fresh('hotseat'));
   await p.waitForTimeout(300);
-  check('...it asks what player 2 is running instead', await p.evaluate(() => !document.getElementById('camp-bwrap').hidden &&
+  check('...it asks what player 2 is running instead, in their slot', await p.evaluate(() => /Player 2/.test(document.getElementById('camp-bfaction').closest('.olob-slot').textContent) &&
     [...document.getElementById('camp-bfaction').options].map(o => o.value).join() === 'pmc,rebel,bugs,xeno'));
   await p.evaluate(() => { document.getElementById('camp-bfaction').value = 'xeno'; });
   await clickText(p, 'Raise the force');
@@ -130,7 +130,7 @@ const body = (p) => p.evaluate(() => document.getElementById('camp-title').textC
       bdoc: c.companies.B.doctrines.length, rivals: (c.rivals || []).length, colours: [c.companies.A.colour, c.companies.B.colour] };
   });
   // player 2's force is in the campaign's window
-  const p2 = () => p.evaluate(() => { const b = document.querySelector('#camp-body [data-kind="rivals"]'); return b ? b.textContent : ''; });
+  const p2 = () => p.evaluate(() => { const b = document.querySelector('#camp-body .archline[data-kind="rivals"]'); return b ? b.textContent : ''; });
   check('both forces are on the hub', /Task Force Ironhold/.test(txt) && /The Hive/.test(await p2()), camp.A + ' / ' + camp.B);
   check('...player 2\'s as founded, and no generated rivals', camp.bf === 'bugs' && camp.bn === 9 && camp.bdoc === 1 && camp.rivals === 1,
     camp.bn + ' units, ' + camp.rivals + ' rival');
