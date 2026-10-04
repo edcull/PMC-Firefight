@@ -692,9 +692,7 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cont-row .cont-where.off { color: var(--ink-dim); border-color: var(--line); }
 .cont-row .cont-where.on { color: var(--good); border-color: color-mix(in srgb, var(--good) 50%, transparent); background: color-mix(in srgb, var(--good) 10%, transparent); }
 /* an online campaign waiting on this player */
-.yourmove { font-style: normal; color: #14110a; background: var(--alpha); border-radius: 3px; padding: 1px 5px; font-family: var(--display); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
-.cont-kind .yourmove { margin-left: 4px; }
-.crow em.yourmove { color: #14110a; }
+.yourmove { font-style: normal; font-weight: 700; color: var(--alpha); }
 #btn-continue.yourmove-card { border-color: color-mix(in srgb, var(--alpha) 70%, transparent); }
 .cont-none { color: var(--ink-dim); font-size: 13px; margin: 4px 2px 8px; }
 #btn-continue { border-color: color-mix(in srgb, var(--good) 50%, transparent); }

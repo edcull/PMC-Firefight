@@ -7,8 +7,8 @@
 (function (root) {
   'use strict';
   root.PMCDossierAfter = function (E) {
-    var C = E.C, ROMAN = E.ROMAN, coin = E.coin, colourFlash = E.colourFlash, entryCard = E.entryCard,
-        esc = E.esc, open = E.open, profile = E.profile, save = E.save, tip = E.tip;
+    var C = E.C, ROMAN = E.ROMAN, coin = E.coin, colourFlash = E.colourFlash, doctrineMarks = E.doctrineMarks, entryCard = E.entryCard,
+        esc = E.esc, open = E.open, profile = E.profile, save = E.save;
     /* ================= the aftermath ================= */
     function onFinish(report) {
       if (!E.camp || !E.camp.pending) return;
@@ -635,9 +635,7 @@
       h += '<div class="cpan cpan-B"><div class="cpstat">Record between you: ' +
         head + ' to you, ' + lost + ' to them, ' +
         mine2.filter(function (l) { return !l.winner; }).length + ' drawn.</div>' +
-        '<div class="cpdoc">' + co.doctrines.map(function (d) {
-          return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
-        }).join('') + '</div></div>';
+        '<div class="cpdoc">' + doctrineMarks(co) + '</div></div>';
       h += '<div class="dlist">';
       co.roster.slice().sort(function (x, y) {
         return profile(y.key).tier - profile(x.key).tier || y.exp - x.exp;

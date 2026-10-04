@@ -77,6 +77,10 @@
     return '<div class="field"><label for="' + id + '">' + label + '</label><input class="tin" id="' + id + '" type="' + type + '" maxlength="' + max + '"' +
       (auto ? ' autocomplete="' + auto + '"' : '') + (value ? ' value="' + esc(value) + '"' : '') + '></div>';
   }
+  // an edit's buttons: Cancel (`cancel` its act), and the one that does it
+  function editRow(cancel, act, text) {
+    return '<div class="acct-editrow"><button type="button" class="lnk" data-acct="' + cancel + '">Cancel</button>' + goButton(act, text) + '</div>';
+  }
   function goButton(act, text) {
     return '<button type="button" class="start" data-acct="' + act + '"' + (busy ? ' disabled' : '') + '>' + (busy ? 'One moment…' : text) + '</button>';
   }
@@ -138,7 +142,7 @@
     // a removal: the admin's own password again (a backup is taken first)
     var confirm = function () {
       return '<div class="acct-edit">' + field('acct-admpass', 'Your password, to remove ' + esc(adminAsk.label) + ' (a backup is taken first)', 'password', 'current-password', 200) +
-        '<div class="acct-editrow"><button type="button" class="lnk" data-acct="adm-cancel">Cancel</button>' + goButton('adm-confirm', 'Remove it') + '</div></div>';
+        editRow('adm-cancel', 'adm-confirm', 'Remove it') + '</div>';
     };
     h += '<div class="acct-data">';
     h += '<div class="acct-sec"><h3>Server</h3><div class="acct-row"><span><b>' + [(st.users || 0) + ' account' + (st.users === 1 ? '' : 's')].concat(Object.keys(st.games || {}).map(function (k) { return st.games[k] + ' ' + (k === 'battle' ? 'under way' : k); })).join(', ') + '</b>' +
@@ -193,7 +197,7 @@
     // who they are: the name and the address, each changed here
     if (edit === 'name') {
       h += '<div class="acct-edit">' + field('acct-newname', 'New name', 'text', 'username', 24, who.name) +
-        '<div class="acct-editrow"><button type="button" class="lnk" data-acct="cancel">Cancel</button>' + goButton('rename', 'Change the name') + '</div></div>';
+        editRow('cancel', 'rename', 'Change the name') + '</div>';
     } else {
       // Sign out, in line with the name
       h += '<div class="acct-line"><span>Name</span><b>' + esc(who.name) + '</b>' + editBtn('name', 'Change your name') +
@@ -202,7 +206,7 @@
     if (edit === 'email') {
       h += '<div class="acct-edit">' + field('acct-newemail', 'New email address', 'email', 'email', 254, who.email || '') +
         field('acct-pass', 'Your password', 'password', 'current-password', 200) +
-        '<div class="acct-editrow"><button type="button" class="lnk" data-acct="cancel">Cancel</button>' + goButton('email', who.email ? 'Change the address' : 'Add the address') + '</div></div>';
+        editRow('cancel', 'email', who.email ? 'Change the address' : 'Add the address') + '</div>';
     } else {
       h += '<div class="acct-line"><span>Email</span>' + (who.email ? '<b>' + esc(who.email) + '</b>' + editBtn('email', 'Change your email address') +
         (who.emailOk ? '' : '<span class="acct-tag">unconfirmed</span>')
@@ -219,7 +223,7 @@
     if (edit === 'pass') {
       h += '<div class="acct-edit">' + field('acct-oldpass', 'Current password', 'password', 'current-password', 200) +
         field('acct-newpass', 'New password (at least 8 characters)', 'password', 'new-password', 200) +
-        '<div class="acct-editrow"><button type="button" class="lnk" data-acct="cancel">Cancel</button>' + goButton('pass', 'Change the password') + '</div>' +
+        editRow('cancel', 'pass', 'Change the password') +
         (mailOn && who.email ? '<button type="button" class="lnk acct-forgot" data-acct="sendreset">Forgotten it? Email me a reset link</button>' : '') + '</div>';
     } else {
       h += '<div class="acct-line"><span>Password</span><b>\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022</b>' + editBtn('pass', 'Change your password') + '</div>';
@@ -235,7 +239,7 @@
     host.id = 'account';
     host.hidden = true;
     host.innerHTML = '<canvas id="account-table" aria-hidden="true"></canvas>' +
-      '<div class="camp-top"><button type="button" class="camp-back" data-acct="back" aria-label="Back"><span class="bk-ar" aria-hidden="true">\u2190</span><span class="bk-w"> Back</span></button><h1>User Account</h1></div>' +
+      '<div class="camp-top">' + root.PMCUi.backButton('data-acct="back"') + '<h1>User Account</h1></div>' +
       '<div class="sheet acct-sheet"><div id="acct-body"></div></div>';
     document.body.appendChild(host);
     // its way back is to wherever it was opened from: Back, not home
@@ -497,6 +501,7 @@
   }
 
   root.PMCAccount = {
+    USER_ICON: USER_ICON,   // the person on the top bars' account buttons, the lobby's too
     // the screen opened, as it stands, then brought up to date
     show: function () { openScreen(); },
     refresh: function () { refresh(draw); },

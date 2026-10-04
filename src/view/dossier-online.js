@@ -20,14 +20,13 @@
 (function (root) {
   'use strict';
   root.PMCDossierOnline = function (E) {
-    var C = E.C, R = E.R, ROMAN = E.ROMAN, esc = E.esc;
+    var C = E.C, R = E.R, ROMAN = E.ROMAN, esc = E.esc, U = root.PMCUi;
     var busy = false;                               // a command on its way: the next waits
     var poll = null;                                // the campaign asked for again now and then, for the others' changes
     var pick = null, pickFor = null;                // the player's force for a contract, as picked so far here, and for which
     var fighting = null;                            // the battle walked into: its code
     var lobby = null;                               // the campaign while it is in its lobby, as the server sent it
     var localCamp, stashed = false;                 // the browser's own campaign, put aside while an online one is open
-    var FACTION_NAMES = { pmc: 'PMC', rebel: 'Rebel', bugs: 'Bugs', xeno: 'Xenotripods', random: 'Random' };
 
     function api(path, opts) {
       opts = opts || {};
@@ -277,7 +276,7 @@
     var colourFor = null;                           // the lobby slot whose colours are open, if any
     function lobbyView() {
       var L = lobby || {}, host = !!L.host, me = L.slot;
-      var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, KEYS = (root.PMCIso && root.PMCIso.COLOUR_KEYS) || Object.keys(CO);
+      var CO = (root.PMCIso && root.PMCIso.COLOURS) || {};
       // the code that brings the others in, in the title bar
       var h = '<h2>' + (L.invite ? '<span class="olob-code" title="The code that brings the others in: Join on the Multiplayer screen">' + esc(L.invite) + '</span>' : 'Campaign') + '</h2>';
       // its name, under the top bar: the host types it in, the players read it
@@ -289,18 +288,14 @@
         var who = s.kind === 'human' ? esc(s.name)
           : s.kind === 'ai' ? 'AI force' : '<em>Open \u2014 waiting for a player</em>';
         // its colour: a chip like the founding screen's, opening the colours (those other slots wear greyed out)
-        var c = CO[s.colour];
-        var chip = '<span class="olob-chip"' + (c ? ' style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"' : '') + '></span>';
+        var c = CO[s.colour], chip = U.chip(s.colour);
         var row = '<div class="olob-slot' + (mine ? ' mine' : '') + '">' +
-          (canColour ? '<button type="button" class="olob-colour" data-olob-pick="' + i + '" aria-expanded="' + (colourFor === i) + '" title="' + esc(c ? c.name : 'Colour') + '">' + chip + '</button>' : '<span class="olob-colour still">' + chip + '</span>') +
+          (canColour ? U.chipButton('data-olob-pick="' + i + '"', chip, colourFor === i, c ? c.name : 'Colour') : U.chipStill(chip)) +
           '<span class="olob-who"><b>' + who + '</b>' + (s.kind === 'human' ? '<small>' + (s.ready ? 'Ready' : 'Not ready') + '</small>' : '') + '</span>';
         // the host: an AI force in this slot, or open for a player
         if (canSlot) row += '<label class="olob-ai"><input type="checkbox" data-olob-ai="' + i + '"' + (s.kind === 'ai' ? ' checked' : '') + '> AI</label>';
         if (s.kind !== 'open') {
-          var facs = s.kind === 'ai' ? ['random', 'pmc', 'rebel', 'bugs', 'xeno'] : ['pmc', 'rebel', 'bugs', 'xeno'];
-          row += canArmy ? '<select data-olob-army="' + i + '">' + facs.map(function (f) {
-            return '<option value="' + f + '"' + (f === s.faction ? ' selected' : '') + '>' + esc(FACTION_NAMES[f]) + '</option>';
-          }).join('') + '</select>' : '<span class="olob-army">' + esc(FACTION_NAMES[s.faction] || '') + '</span>';
+          row += canArmy ? U.armySelect('data-olob-army="' + i + '"', s.faction, s.kind === 'ai' ? 'random' : null) : U.armyStill(s.faction);
         }
         row += '</div>';
         return row;
@@ -309,15 +304,13 @@
          outside the scrolling list (so it is not cut off), and put by the chip once drawn. */
       var cs = colourFor != null && (L.slots || [])[colourFor];
       if (cs) {
-        var cc = CO[cs.colour];
-        h += '<div class="found-pop olob-pop" data-olob-popfor="' + colourFor + '"><label>Colours \u2014 ' + esc(cc ? cc.name : '') + '</label><div class="csw">' + KEYS.map(function (k) {
+        h += U.colourPop('data-olob-popfor="' + colourFor + '"', cs.colour, function (k) {
           // greyed out only where another player wears it; an AI force's is taken from it (it gets another)
-          var q = CO[k], holder = (L.slots || []).filter(function (x, j) { return j !== colourFor && x.colour === k; })[0];
+          var holder = (L.slots || []).filter(function (x, j) { return j !== colourFor && x.colour === k; })[0];
           var taken = !!holder && holder.kind === 'human', ai = !!holder && !taken;
-          return '<button type="button" class="' + (k === cs.colour ? 'on' : '') + (ai ? ' olob-aicol' : '') + '" data-olob-col="' + k + '" data-olob-for="' + colourFor + '" title="' + esc(q.name) +
-            (taken ? ' \u2014 another player wears it' : ai ? ' \u2014 an AI force wears it, and will take another' : '') + '"' + (taken ? ' disabled' : '') + '>' +
-            '<span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
-        }).join('') + '</div></div>';
+          return { attrs: 'data-olob-col="' + k + '" data-olob-for="' + colourFor + '"', off: taken, ai: ai,
+            note: taken ? ' \u2014 another player wears it' : ai ? ' \u2014 an AI force wears it, and will take another' : '' };
+        });
       }
       /* One row: how many forces, whether it is listed for anyone to join, and the
          host's Start or a player's Ready. */
@@ -383,27 +376,28 @@
       if (E.online && E.online.local) {
         var L = root.PMCLocalWorld, here = L.seat(E.online.id), there = here ? 0 : 1;
         h += '<div class="cpan onote"><div class="cpstat">At the screen: <b>' + esc(L.playerName(here)) + '</b>' +
-'</div><button class="lnk" data-go="oseat">Hand over to ' + esc(L.playerName(there)) + '</button></div>';
+'</div><button class="start" data-go="oseat">Hand over to ' + esc(L.playerName(there)) + '</button></div>';
       }
       var b = battleCode();
       if (b) {
         h += '<div class="cpan onote"><div class="cpstat"><b>The battle is ready.</b></div><button class="start" data-go="obattle">Go to the battle</button></div>';
       } else if (on.contract) {
         h += '<div class="cpan onote"><div class="cpstat">A contract with <b>' + esc(E.camp.companies.B.name) + '</b> is waiting on you.</div>' +
-          '<button class="lnk" data-go="ocontract">Open the contract</button></div>';
+          '<button class="start" data-go="ocontract">Open the contract</button></div>';
       } else if (on.duel) {
         var d = on.duel;
         h += '<div class="cpan onote"><div class="cpstat">A contract with <b>' + esc(d.foeName) + '</b> (' + esc(d.player) + ') — ' + duelLine(d) + '</div>' +
-          '<button class="lnk" data-go="ocontract">Open the contract</button></div>';
+          '<button class="start" data-go="ocontract">Open the contract</button></div>';
       }
       (on.challenges || []).forEach(function (c) {
         var other = forceOfSlot(c.mine ? c.to : c.from);
         if (!other) return;
         h += c.mine
           ? '<div class="cpan onote"><div class="cpstat">You have challenged <b>' + esc(other.name) + '</b> (' + esc(other.player) + '). Waiting for them to answer.</div>' +
-            '<button class="lnk" data-ochcancel="' + c.id + '">Withdraw the challenge</button></div>'
+            '<button class="start" data-ochcancel="' + c.id + '">Withdraw the challenge</button></div>'
           : '<div class="cpan onote"><div class="cpstat"><b>' + esc(other.name) + '</b> (' + esc(other.player) + ') challenges you to a contract.</div>' +
-            '<button class="start" data-ochaccept="' + c.id + '">Accept</button> <button class="lnk" data-ochcancel="' + c.id + '">Turn it down</button></div>';
+            // turning it down and taking it up side by side, the same buttons as the contract's own two
+            '<div class="cacts"><button class="start cdrop" data-ochcancel="' + c.id + '">Turn it down</button><button class="start" data-ochaccept="' + c.id + '">Accept</button></div></div>';
       });
       return h;
     }
@@ -504,7 +498,6 @@
       // the job as the offers once showed it: the scenario and world, the Tier and Levels, your side of it, what wins it
       h += '<div class="cpan cpan-job">' + E.jobCard(k, me, k.levels);
       if (k.foreNote) h += '<div class="cpstat dnote">' + esc(k.foreNote) + '</div>';
-      if (!ctx.ai) h += '<div class="cpstat">' + cap(duelLine(onl().duel)) + '</div>';
       h += '</div>';
       var bd = k.roles && k.roles.bestDefence;
       if (bd && bd.pending && bd.side === me) h += '<div class="cpdoc"><button class="lnk" data-go="ocbestdef">The Best Defence is Good Offence — roll to attack (2+)</button></div>';
@@ -541,35 +534,24 @@
           '<button class="lnk" data-go="ocunready">Change my force</button></div>';
         return h + backFoot(ctx);
       }
-      h += '<div class="muster"><div class="muster-head"><b>Take the field</b>' +
-        '<span class="pts' + (chk.spent > chk.budget ? ' over' : '') + '">' + chk.spent + ' / ' + chk.budget + '</span>' +
-        '<button class="lnk" data-go="ocauto">Pick for me</button></div>';
+      // the list as the contract screen at one table draws it (dossier-contract.js)
+      var K = E.contractKit();
+      h += K.takeHead(chk, '<button class="lnk" data-go="ocauto">Pick for me</button>');
       // what each Tier asks for at this Battle Tier and Priority Level, and how many of each are in the list
-      var lims = R.compFor(co.faction || 'pmc', k.tier).limits, cnt = chk.counts || {};
-      h += '<p class="limits">' + [1, 2, 3, 4, 5].map(function (t) {
-        var lo = lims[t - 1][0] * k.pl, hi = lims[t - 1][1] === 99 ? 99 : lims[t - 1][1] * k.pl;
-        if (hi === 0) return null;
-        var n = cnt[t] || 0, short = n < lo || n > hi;
-        return ROMAN[t] + ' <b' + (short ? ' class="short"' : '') + '>' + n + '/' + (hi === 99 ? lo + '+' : lo + '-' + hi) + '</b>';
-      }).filter(Boolean).join(' \u00b7 ') + '</p>';
-      h += '<div class="chosen">' + units.map(function (e, i) {
-        return '<span class="pickwrap"><button class="pick" data-ocunpick="' + i + '">' + esc(e.name) + ' <b>' + ROMAN[E.profile(e.key).tier] + '</b></button></span>';
-      }).join('') + '</div><div class="cat tall">';
+      h += '<p class="limits">' + U.limitsLine(R.compFor(co.faction || 'pmc', k.tier).limits, chk.counts || {}, k.pl) + '</p>';
+      h += K.chosenRow(units, 'data-ocunpick') + '<div class="cat tall">';
       co.roster.filter(function (e) { return pk.rids.indexOf(e.rid) < 0; }).forEach(function (e) {
-        var p = E.profile(e.key), rest = e.restUntil > 0;
+        var rest = e.restUntil > 0;
         var bad = rest ? ['in the workshop'] : blocking(R.checkArmy(keys.concat([R.entryPick(e)]), k.tier, k.pl, co.doctrines, pk.tactic || null, co.faction).faults);
         // what each unit is carrying, as the force screen at one table shows it: its EXP, honours and traumas, and its Trauma Points down the right
-        h += '<button class="cu" data-ocpick="' + e.rid + '"' + (bad.length ? ' disabled title="' + esc(bad[0]) + '"' : '') + '>' +
-          '<span class="t">' + ROMAN[p.tier] + '</span><span><b>' + esc(e.name) + '</b>' + E.unitWear(e, true) + '<small>' + esc(p.name) + (rest ? ' — in the workshop' : '') + '</small></span>' +
-          '<span class="st">' + (p.cls !== 'infantry' ? esc(p.cls) : C.isLeaderP(p) ? 'command' : E.unitTp(e)) + '</span></button>';
+        h += K.rosterRow('data-ocpick="' + e.rid + '"', e, bad, rest ? ' — in the workshop' : '');
       });
       var fieldable = R.listFor(co.faction || 'pmc').filter(function (p) { return (C.isTurretP(p) || p.noSlot) && (p.tier <= k.tier || k.pl > 1); });
       if (fieldable.length) {
         h += '<h4>Fielded for this battle</h4>';
         fieldable.forEach(function (p) {
           var bad = blocking(R.checkArmy(keys.concat([p.key]), k.tier, k.pl, co.doctrines, pk.tactic || null, co.faction).faults);
-          h += '<button class="cu" data-ocfield="' + p.key + '"' + (bad.length ? ' disabled title="' + esc(bad[0]) + '"' : '') + '>' +
-            '<span class="t">' + ROMAN[p.tier] + '</span><span><b>' + esc(p.name) + '</b><small>not bought — for this battle only</small></span></button>';
+          h += K.fieldRow('data-ocfield="' + p.key + '"', p, bad);
         });
       }
       h += '</div></div>';
@@ -585,9 +567,7 @@
       }
       var why = chk.ok ? '' : esc((chk.faults || [])[0] || 'Not a legal force yet.');
       // backing out sits in line with going in, the same button
-      h += '<div class="cacts"><button class="start cdrop" data-go="ocdrop">' + (ctx.ai ? 'Turn the contract down' : 'Call the contract off') + '</button>' +
-        '<button class="start" data-go="ocready"' + (chk.ok ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') + '>' +
-        (ctx.ai ? 'Fight with this force' : 'Ready — fight with this force') + '</button></div>';
+      h += K.fightBar('ocdrop', ctx.ai ? 'Turn the contract down' : 'Call the contract off', 'ocready', ctx.ai ? 'Fight with this force' : 'Ready — fight with this force', chk.ok ? null : why);
       return h + backFoot(null);
     }
     function backFoot(ctx) {

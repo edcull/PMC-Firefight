@@ -12,11 +12,8 @@
   var R = root.PMC, I = root.PMCIso, SFX = root.SFX;
   var MOTION = root.PMCMotion;   // how things move: the battle's own gait, burrow, flight and arrival (motion.js)
   var el = function (id) { return document.getElementById(id); };
-  var esc = function (t) {
-    return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
-    });
-  };
+  var UI = root.PMCUi;   // the markup the game's screens share (ui-parts.js)
+  var esc = function (t) { return R.esc(t); };   // the shared one, in the rules
 
   /* ---------- the stage ----------
      A small patch of flat ground with the unit in the middle and a target to
@@ -1290,22 +1287,22 @@
     if (!box) return;
     var k = view.colour[view.side], c = I.COLOURS[k];
     box.innerHTML = '<button type="button" class="vcolnow" aria-expanded="' + colOpen + '" title="Colours: ' + esc(c.name) + '" aria-label="Colours: ' + esc(c.name) + '">' +
-      '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span></button>' +
+      UI.face(c) + '</button>' +
       (colOpen ? '<div class="vcolpop"><label>Colours — ' + esc(c.name) + '</label><div class="vsw">' + swatches(k) + '</div></div>' : '');
   }
   function swatches(now) {
     return I.COLOUR_KEYS.map(function (k) {
       var c = I.COLOURS[k];
-      return '<button class="' + (k === now ? 'on' : '') + '" data-colour="' + k + '" title="' + esc(c.name) + '">' +
-        '<span style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' +
-        c.dark + ' 74%)"></span></button>';
+      return UI.swatch('class="' + (k === now ? 'on' : '') + '" data-colour="' + k + '" title="' + esc(c.name) + '"', c);
     }).join('');
   }
 
   /* The whole profile as the book prints it — the statistics, then every
      special rule with what it does. The rule's text is written out in full and
      also sits on its name as a tooltip, the way the game shows it on a card. */
-  var FACTION_NAME = { pmc: 'PMC', rebel: 'Rebels', bugs: 'Space Bugs', xeno: 'Xenotripods' };
+  // each army by the rules' own name for it
+  var FACTION_NAME = {};
+  Object.keys(R.FACTIONS).forEach(function (f) { FACTION_NAME[f] = R.FACTIONS[f].name; });
   function rulesHtml(p) {
     var mach = R.isMachine(p);
     /* The stats as fielded: a ground vehicle's propulsion (Appendix 3) changes

@@ -10,7 +10,7 @@
     var C = E.C, R = E.R, ROMAN = E.ROMAN, armyPill = E.armyPill, close = E.close,
         colourFlash = E.colourFlash, colourOf = E.colourOf, esc = E.esc, note = E.note, profile = E.profile,
         quietTip = E.quietTip, root = E.root, save = E.save, spellOut = E.spellOut, statRow = E.statRow,
-        stripe = E.stripe, tip = E.tip;
+        stripe = E.stripe, tip = E.tip, doctrineMarks = E.doctrineMarks, U = root.PMCUi;
     /* ================= the contract ================= */
     /* ================= the contracts on offer =================
        Three forces are on this world, and three jobs are on the table. Each names
@@ -45,10 +45,7 @@
       // won, veterancy and trauma, as your own company's row shows them — never what they field
       h += statRow(co, true);
       // the kind of force, then what it is built around: a pill each, what each does in its tip
-      h += '<div class="cpdoc carch">' + armyPill(co) + (co.doctrines.length ? co.doctrines.map(function (d) {
-        var dd = C.doctrine(d);
-        return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
-      }).join('') : '<span class="dnote">No ' + esc(creedName) + ' declared yet.</span>') + '</div>';
+      h += '<div class="cpdoc carch">' + armyPill(co) + (co.doctrines.length ? doctrineMarks(co) : '<span class="dnote">No ' + esc(creedName) + ' declared yet.</span>') + '</div>';
       // grown since you last met, fighting someone else
       if (o.caught && o.caught.to > o.caught.from) {
         h += '<div class="cpstat">Fighting elsewhere since you last met — Tier ' + ROMAN[o.caught.from] +
@@ -100,25 +97,49 @@
         'table and the count starts again.') + '>' + tp + '/' + cap + ' TP</span>';
     }
     function wear(e, noTp) {
-      var co = E.camp.companies[seat()] || E.camp.companies.A, wd = C.words(co);
-      var cap = C.traumaThreshold(co);
-      var tp = e.tp || 0;
-      var near = tp >= cap - 2;
       var h = '<span class="wear">';
       if (e.exp) h += '<span class="w-exp">' + e.exp + ' EXP</span>';
-      if (!noTp) h += '<span class="w-tp' + (near ? ' hot' : '') + '" ' + tip('Trauma Points',
-        tp + ' of ' + cap + '. A unit that reaches ' + cap + ' rolls on the ' + wd.trauma + ' ' +
-        'table and the count starts again.') + '>' + tp + '/' + cap + ' TP</span>';
+      if (!noTp) h += tpBadge(e);
       // each honour and trauma a tag of its own, as the dossier shows them, with its rule on hover
       (e.honours || []).forEach(function (n) {
         var x = C.honourTable(e.key)[n - 1];
-        if (x) h += '<span class="mk good" ' + tip(x.name, x.text) + '>' + esc(x.name) + '</span>';
+        if (x) h += U.mark(x, 'good');
       });
       (e.traumas || []).forEach(function (n) {
         var x = C.traumaTable(e.key)[n - 1];
-        if (x) h += '<span class="mk bad" ' + tip(x.name, x.text) + '>' + esc(x.name) + '</span>';
+        if (x) h += U.mark(x, 'bad');
       });
       return h + '</span>';
+    }
+    /* The pieces of picking a force for a contract, the same at one table and
+       online (dossier-online.js): the list's head with its points, the units in
+       it (`attr` the data-… that takes one out), a unit on the books or one
+       fielded for this battle only to put in (`bad`: why it cannot go, greying
+       it out), and the buttons that back out of it or go in (`why`: what still
+       stands in the way, already escaped; null when nothing does). */
+    function takeHead(chk, extra) {
+      return '<div class="muster"><div class="muster-head"><b>Take the field</b>' +
+        '<span class="pts' + (chk.spent > chk.budget ? ' over' : '') + '">' + chk.spent + ' / ' + chk.budget + '</span>' + (extra || '') + '</div>';
+    }
+    function chosenRow(units, attr) {
+      return '<div class="chosen">' + units.map(function (e, i) {
+        return '<span class="pickwrap"><button class="pick" ' + attr + '="' + i + '">' + esc(e.name) + ' <b>' + ROMAN[profile(e.key).tier] + '</b></button></span>';
+      }).join('') + '</div>';
+    }
+    function barred(bad) { return bad.length ? ' disabled title="' + esc(bad[0]) + '"' : ''; }
+    // down the right: the Trauma Points it carries, or what kind of machine it is (machines take none)
+    function rosterRow(attr, e, bad, note) {
+      var p = profile(e.key);
+      return U.unitRow('class="cu" ' + attr + barred(bad), p.tier, '<b>' + esc(e.name) + '</b>' + wear(e, true), esc(p.name) + (note || ''),
+        p.cls !== 'infantry' ? esc(p.cls) : C.isLeaderP(p) ? 'command' : tpBadge(e));
+    }
+    // `kind`: with what kind of unit it is down the right
+    function fieldRow(attr, p, bad, kind) {
+      return U.unitRow('class="cu" ' + attr + barred(bad), p.tier, '<b>' + esc(p.name) + '</b>', 'not bought \u2014 for this battle only', kind ? p.cls : null);
+    }
+    function fightBar(dropGo, dropLabel, go, label, why) {
+      return '<div class="cacts">' + (dropGo ? '<button class="start cdrop" data-go="' + dropGo + '">' + dropLabel + '</button>' : '') +
+        '<button class="start" data-go="' + go + '"' + (why == null ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') + '>' + label + '</button></div>';
     }
 
     function beginContract() {
@@ -358,35 +379,18 @@
             (can ? '' : ' (neither force can fill it)') + '</option>';
         }).join('') + '</select></div></div>';   // the world was rolled with the job, and shown on the offer
 
-      h += '<div class="muster"><div class="muster-head"><b>Take the field</b>' +
-        '<span class="pts' + (chk.spent > chk.budget ? ' over' : '') + '">' + chk.spent + ' / ' + chk.budget + '</span></div>';
+      h += takeHead(chk);
       /* What each Tier asks for at this Battle Tier and Priority Level, and how
          many of each are in the list — the line the skirmish muster sheet shows. */
-      var lims = R.compFor(A.faction || 'pmc', E.contract.tier).limits, cnt = chk.counts || {};
-      h += '<p class="limits">' + [1, 2, 3, 4, 5].map(function (t) {
-        var lo = lims[t - 1][0] * E.contract.pl, hi = lims[t - 1][1] === 99 ? 99 : lims[t - 1][1] * E.contract.pl;
-        if (hi === 0) return null;
-        var n = cnt[t] || 0, short = n < lo || n > hi;
-        return ROMAN[t] + ' <b' + (short ? ' class="short"' : '') + '>' + n + '/' + (hi === 99 ? lo + '+' : lo + '-' + hi) + '</b>';
-      }).filter(Boolean).join(' \u00b7 ') + '</p>';
-      h += '<div class="chosen">' + E.contract.picks.map(function (e, i) {
-        var p = profile(e.key);
-        return '<span class="pickwrap"><button class="pick" data-unpick="' + i + '">' +
-          esc(e.name) + ' <b>' + ROMAN[p.tier] + '</b></button></span>';
-      }).join('') + '</div>';
+      h += '<p class="limits">' + U.limitsLine(R.compFor(A.faction || 'pmc', E.contract.tier).limits, chk.counts || {}, E.contract.pl) + '</p>';
+      h += chosenRow(E.contract.picks, 'data-unpick');
       h += '<div class="cat tall">';
       var avail = contractPicks(A).filter(function (e) { return E.contract.picks.indexOf(e) < 0; });
       if (!avail.length) h += '<p class="dnote">Every unit on the books is already in the list.</p>';
       avail.forEach(function (e) {
-        var p = profile(e.key);
         var trial = keys.concat([R.entryPick(e)]);
         var bad = blocking(R.checkArmy(trial, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
-        h += '<button class="cu" data-pick="' + e.rid + '"' +
-          (bad.length ? ' disabled title="' + esc(bad[0]) + '"' : '') + '>' +
-          '<span class="t">' + ROMAN[p.tier] + '</span>' +
-          '<span><b>' + esc(e.name) + '</b>' + wear(e, true) + '<small>' + esc(p.name) +
-          // down the right: the Trauma Points it carries, or what kind of machine it is (machines take none)
-          '</small></span><span class="st">' + (p.cls !== 'infantry' ? p.cls : C.isLeaderP(p) ? 'command' : tpBadge(e)) + '</span></button>';
+        h += rosterRow('data-pick="' + e.rid + '"', e, bad);
       });
       /* A tribe's turrets and a company's rapid insertion platforms are not bought
          (pp. 86, 140): they are put in the force for the battle, as many as the
@@ -401,17 +405,14 @@
         h += '<h4>Fielded for this battle</h4>';
         fieldable.forEach(function (p) {
           var bad = blocking(R.checkArmy(keys.concat([p.key]), E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
-          h += '<button class="cu" data-field="' + p.key + '"' + (bad.length ? ' disabled title="' + esc(bad[0]) + '"' : '') + '>' +
-            '<span class="t">' + ROMAN[p.tier] + '</span><span><b>' + esc(p.name) + '</b><small>not bought \u2014 for this battle only</small></span>' +
-            '<span class="st">' + p.cls + '</span></button>';
+          h += fieldRow('data-field="' + p.key + '"', p, bad, true);
         });
       }
       var resting = A.roster.filter(function (e) { return e.restUntil > 0; });
       if (resting.length) {
         h += '<h4>In the workshop — sitting this one out</h4>';
         resting.forEach(function (e) {
-          h += '<button class="cu" disabled><span class="t">' + ROMAN[profile(e.key).tier] + '</span>' +
-            '<span><b>' + esc(e.name) + '</b><small>salvaged from the last battle</small></span></button>';
+          h += U.unitRow('class="cu" disabled', profile(e.key).tier, '<b>' + esc(e.name) + '</b>', 'salvaged from the last battle', null);
         });
       }
       h += '</div></div>';
@@ -432,9 +433,7 @@
       /* What still stands in the way is the button's tip, shown on a press while it
          is greyed out (aria-disabled, so the press arrives), not a line of its own. */
       // backing out sits in line with going in, the same button (Player 2 goes back to Player 1's list instead)
-      h += '<div class="cacts">' + (second ? '' : '<button class="start cdrop" data-go="cdrop">Turn the contract down</button>') +
-        '<button class="start" data-go="fight"' + (chk.ok ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') +
-        '>' + (hotseat() && !second ? 'Hand over to Player 2' : 'Take the field') + '</button></div>';
+      h += fightBar(second ? null : 'cdrop', 'Turn the contract down', 'fight', hotseat() && !second ? 'Hand over to Player 2' : 'Take the field', chk.ok ? null : why);
       h += '<p class="camp-foot">' + (second ? '<button class="lnk" data-go="seatback">Back to ' + esc(B.name) + '\'s list</button>'
         : '<button class="lnk" data-go="hub">Back</button>') + '</p>';
       return h;
@@ -558,6 +557,7 @@
 
     return {
       offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
+      takeHead: takeHead, chosenRow: chosenRow, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
       autoPick: autoPick, fight: fight, seatBack: seatBack
     };
   };

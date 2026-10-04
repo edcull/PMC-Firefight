@@ -12,37 +12,32 @@
         ICON_SAVE = E.ICON_SAVE, ROMAN = E.ROMAN, Store = E.Store, cmodal = E.cmodal, coin = E.coin,
         colourOf = E.colourOf, dossierPanel = E.dossierPanel,
         entryCard = E.entryCard, esc = E.esc, memorialList = E.memorialList, profile = E.profile,
-        root = E.root, spendActs = E.spendActs, tip = E.tip;
+        root = E.root, spendActs = E.spendActs, U = root.PMCUi;
     /* ================= the hub ================= */
     function hubView() {
       // a multiplayer campaign goes by its name (each player's turn is their own)
       var h = '<h2>' + (E.camp && E.online ? esc(E.camp.name || 'Campaign') : E.camp && E.camp.title ? esc(E.camp.title) : E.camp ? 'Campaign — turn ' + E.camp.turn : E.wantMode === 'hotseat' ? 'Hotseat campaign' : 'Campaign') + '</h2>';
       if (!E.camp) {
-        function opt(v, t, want) { return '<option value="' + v + '"' + (want === v ? ' selected' : '') + '>' + t + '</option>'; }
         var pa = { faction: E.wantFaction, doctrines: [] }, pb = { faction: E.wantB, doctrines: [] };
         /* Laid out as the online campaign's lobby is: a slot for each force on the
            world — yours (and Player 2's, in hotseat), then the AI forces, each with
            its colours and its army — and under them one line: how many forces, and
            the button that raises yours. The way of playing is the menu card it was
            opened from (Single player or Hotseat). */
-        var ARMY = [['pmc', 'PMC'], ['rebel', 'Rebel'], ['bugs', 'Bugs'], ['xeno', 'Xenotripods']];
-        var CO = (E.root.PMCIso && E.root.PMCIso.COLOURS) || {}, KEYS = (E.root.PMCIso && E.root.PMCIso.COLOUR_KEYS) || [];
-        var chipOf = function (k) {
-          var c = CO[k];
-          return c ? '<span class="olob-chip" style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"></span>' : '<span class="olob-chip rivrand">?</span>';
-        };
+        var CO = (E.root.PMCIso && E.root.PMCIso.COLOURS) || {};
+        // an AI force's colours left to chance: a question mark
+        var chipOf = function (k) { return CO[k] ? U.chip(k) : '<span class="olob-chip rivrand">?</span>'; };
         var hot = E.wantMode === 'hotseat', nr = hot ? E.wantHotAi : E.wantRivals, ra = E.wantRivalArmies, rc = E.wantRivalColours, ci = E.rivColourFor, wc = E.wantColours;
         // each slot's colours: its chip, opening the colours by it (a player's are theirs; an AI force's given up to whoever takes them)
         var colourOf = function (slot) { return slot === 'A' || slot === 'B' ? wc[slot] : rc[slot]; };
         var chipBtn = function (slot, who) {
           var k = colourOf(slot);
-          return '<button type="button" class="olob-colour" data-go="rivcolour" data-i="' + slot + '" aria-expanded="' + (ci === slot) + '" title="' +
-            esc(k && CO[k] ? CO[k].name : 'Colours') + '" aria-label="' + esc(who) + ' colours">' + chipOf(k) + '</button>';
+          return U.chipButton('data-go="rivcolour" data-i="' + slot + '" aria-label="' + esc(who) + ' colours"', chipOf(k), ci === slot, k && CO[k] ? CO[k].name : 'Colours');
         };
         var playerRow = function (slot, who, id, want) {
           return '<div class="olob-slot mine">' + chipBtn(slot, who) +
             '<span class="olob-who"><b>' + esc(who) + '</b></span>' +
-            '<select id="' + id + '" aria-label="' + esc(who) + ' — army">' + ARMY.map(function (a) { return opt(a[0], a[1], want); }).join('') + '</select></div>';
+            U.armySelect('id="' + id + '" aria-label="' + esc(who) + ' — army"', want) + '</div>';
         };
         // its name, as the online lobby has it
         h += '<div class="olob-name"><label for="camp-name">Name</label><input class="tin" id="camp-name" maxlength="40" autocomplete="off" placeholder="' +
@@ -52,8 +47,7 @@
         for (var ri = 0; ri < nr; ri++) {
           h += '<div class="olob-slot">' + chipBtn(ri, 'AI force ' + (ri + 1)) +
             '<span class="olob-who"><b>AI force</b></span>' +
-            '<select class="rivarmy" data-i="' + ri + '" aria-label="AI force ' + (ri + 1) + ' — army">' + opt('', 'Random', ra[ri] || '') +
-            ARMY.map(function (a) { return opt(a[0], a[1], ra[ri] || ''); }).join('') + '</select></div>';
+            U.armySelect('class="rivarmy" data-i="' + ri + '" aria-label="AI force ' + (ri + 1) + ' — army"', ra[ri] || '', '') + '</div>';
         }
         h += '</div>';
         // the colours of the slot whose chip was tapped: one a player wears is not offered; an AI force's may be taken (it gets another)
@@ -63,12 +57,11 @@
             if (hot && ci !== 'B' && wc.B === k) return 'player';
             return rc.some(function (x, j) { return x === k && j !== ci && j < nr; }) ? 'ai' : null;
           };
-          h += '<div class="found-pop olob-pop" data-rivpop="' + ci + '"><label>Colours — ' + esc(colourOf(ci) && CO[colourOf(ci)] ? CO[colourOf(ci)].name : '') + '</label><div class="csw">' +
-            KEYS.map(function (k) {
-              var by = holder(k), q = CO[k];
-              return '<button type="button" class="' + (k === colourOf(ci) ? 'on' : '') + (by === 'ai' ? ' olob-aicol' : '') + '" data-rivpick="' + k + '"' + (by === 'player' ? ' disabled' : '') +
-                ' title="' + esc(q.name + (by === 'player' ? ' — a player wears it' : by === 'ai' ? ' — an AI force wears it, and will take another' : '')) + '"><span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
-            }).join('') + '</div></div>';
+          h += U.colourPop('data-rivpop="' + ci + '"', colourOf(ci), function (k) {
+            var by = holder(k);
+            return { attrs: 'data-rivpick="' + k + '"', off: by === 'player', ai: by === 'ai',
+              note: by === 'player' ? ' — a player wears it' : by === 'ai' ? ' — an AI force wears it, and will take another' : '' };
+          });
         }
         // one line: how many AI forces (an odd number: with yours, the forces pair off for each round), a save file to load instead, and Raise the force
         // (hotseat: none, or an even number — with the two players, the forces pair off)
@@ -223,10 +216,7 @@
       } else {
         h += statRow(co, false, side);
         h += '<div class="cpdoc carch">' + armyPill(co, 'army' + side) + (co.doctrines.length
-          ? co.doctrines.map(function (d) {
-            var dd = C.doctrine(d);
-            return '<span class="mk" ' + tip(dd.name, dd.text) + '>' + esc(dd.name) + '</span>';
-          }).join('')
+          ? doctrineMarks(co)
           : '<span class="dnote">No ' + C.creedOf(co).one + ' chosen.</span>') + '</div>';
         var open = C.doctrineSlots(co) - co.doctrines.length;
         if (open > 0) {
@@ -373,6 +363,10 @@
       if (kind) return '<button type="button" class="mk armypill"' + st + ' data-go="fmodal" data-kind="' + kind + '" title="Army rules">' + esc(C.words(co).side) + '</button>';
       return '<span class="mk armypill"' + st + '>' + esc(C.words(co).side) + '</span>';
     }
+    // what a force is built around, a tag each with what it does in its tip
+    function doctrineMarks(co) {
+      return co.doctrines.map(function (d) { return U.mark(C.doctrine(d)); }).join('');
+    }
     /* An army's own rules: how it fights its campaign, and the special rules
        only its units carry (read off the unit profiles, so it stays in step
        with them), each with the rule's text. */
@@ -450,9 +444,7 @@
         esc(co.name) + '</b></div>';
       h += statRow(co, true, 'r' + (idx == null ? 0 : idx));
       // the kind of force, and its doctrines beside it on the one line
-      h += '<div class="cpdoc carch">' + armyPill(co, 'armyr' + (idx == null ? 0 : idx)) + co.doctrines.map(function (d) {
-        return '<span class="mk" ' + tip(C.doctrine(d).name, C.doctrine(d).text) + '>' + esc(C.doctrine(d).name) + '</span>';
-      }).join('') + '</div>';
+      h += '<div class="cpdoc carch">' + armyPill(co, 'armyr' + (idx == null ? 0 : idx)) + doctrineMarks(co) + '</div>';
       // their dossier opens in the card: their units, as your own are listed
       var ri = idx == null ? 0 : idx, open = E.rivalOpen === ri;
       var dos = '<button class="lnk rivdos-go' + (open ? ' on' : '') + '" data-rivdos="' + ri + '" aria-expanded="' + open + '">' +
@@ -471,7 +463,7 @@
     }
 
     return {
-      hubView: hubView, stripe: stripe, armyPill: armyPill, armyRules: armyRules, statRow: statRow
+      hubView: hubView, stripe: stripe, armyPill: armyPill, doctrineMarks: doctrineMarks, armyRules: armyRules, statRow: statRow
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCDossierHub;

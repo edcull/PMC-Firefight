@@ -10,11 +10,11 @@
 (function (root) {
   'use strict';
   root.PMCMuster = function (G) {
-    var ISO = G.ISO, R = G.R, SC = G.SC, el = G.el, esc = G.esc, tip = G.tip, cam = G.cam;
+    var ISO = G.ISO, R = G.R, SC = G.SC, el = G.el, esc = G.esc, cam = G.cam;
     var begin = G.begin, openMenu = G.openMenu, colourLabel = G.colourLabel, drawColourPick = G.drawColourPick, foeColour = G.foeColour;
 
     var muster = { keys: [], name: '', solo: false };
-    var SOLO = window.PMCSolo, SFX = window.SFX;
+    var SOLO = window.PMCSolo, SFX = window.SFX, U = window.PMCUi;
 
     /* The composition check the muster screen is building against: the standard
        table, or in a solitaire game the commando table (p. 147). */
@@ -143,13 +143,7 @@
       pts.classList.toggle('over', c.spent > c.budget);
 
       // the count at each Tier against its limits, on one line: I 1/0-8 · II 0/0-8 · …
-      el('limits').innerHTML = (muster.solo ? 'Commando — ' : '') + [1, 2, 3, 4, 5].map(function (t) {
-        var lo = lims[t - 1][0], hi = lims[t - 1][1];
-        if (hi === 0) return null;
-        var txt = hi === 99 ? lo + '+' : lo + '-' + hi;
-        var short = c.counts[t] < lo || c.counts[t] > hi;
-        return R.ROMAN[t] + ' <b' + (short ? ' class="short"' : '') + '>' + c.counts[t] + '/' + txt + '</b>';
-      }).filter(Boolean).join(' · ');
+      el('limits').innerHTML = (muster.solo ? 'Commando — ' : '') + U.limitsLine(lims, c.counts);
 
       el('chosen').innerHTML = muster.keys.map(function (k, i) {
         var pick = R.splitPick(k), p = R.profile(pick.key);
@@ -184,7 +178,6 @@
           pick.prop || R.defaultDrive(p)), !!pick.drone);
         // the add list's shorthand, with the numbers as fielded (drive, drone and riders worked in)
         var line = statLine(Object.assign({}, u0, { size: pick.riders ? Math.ceil(u0.size / 2) : u0.size, move: Math.floor(u0.move) }));
-        var TXT = window.PMCRuleText;
         return '<div class="fcard' + (freeIdx[i] ? ' free' : '') + '">' +
           '<div class="fcard-top"><span class="ct">' + R.ROMAN[p.tier] + '</span><b>' + esc(p.name) + (pick.riders ? ' (mounted)' : '') + '</b>' +
           '<span class="fcard-kind">' + esc(p.group || '') + '</span>' +
@@ -192,10 +185,7 @@
           drive + drone + ride + mnt +
           '<button type="button" class="lnk danger fcard-drop" data-drop="' + i + '" title="Remove" aria-label="Remove ' + esc(p.name) + '">\u2715</button></div>' +
           '<div class="fcard-line">' + esc(line) + '</div>' +
-          ((u0.rules || []).length ? '<div class="fcard-rules">' + u0.rules.map(function (r) {
-            var d = TXT ? TXT.describe(r) : { name: r, text: '' };
-            return '<span class="mk" ' + tip(d.name, d.text || '') + '>' + esc(d.name) + '</span>';
-          }).join('') + '</div>' : '') + '</div>';
+          U.ruleMarks(u0.rules) + '</div>';
       }).join('');
       el('chosen').classList.add('fcards');
 
@@ -221,10 +211,8 @@
             : ok ? ((p.rules.join(', ') || 'No special rules') +
               (R.propsFor(p).length ? ' — pick its propulsion once it is in the list' : ''))
               : 'No room left — over points, or at this unit\'s limit';
-          return '<button type="button" class="cu" data-add="' + p.key + '"' + (ok ? '' : ' disabled') +
-            ' title="' + why + '">' +
-            '<span class="t">' + R.ROMAN[p.tier] + '</span>' +
-            '<span>' + p.name + '<small>' + statLine(p) + (p.rules.length ? ' · ' + p.rules.join(', ') : '') + '</small></span></button>';
+          return U.unitRow('type="button" class="cu" data-add="' + p.key + '"' + (ok ? '' : ' disabled') + ' title="' + why + '"', p.tier,
+            p.name, statLine(p) + (p.rules.length ? ' · ' + p.rules.join(', ') : ''), null);
         }).join('');
       }).join('');
 
@@ -443,7 +431,7 @@
           // a force the player musters: a made-up name follows the kind of force
           if (id === 'sel-faction' && muster.hot && muster.hot.kind !== 'demo' && !hotRolled(muster.hot.step)) {
             var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
-            if (!nm || isMadeUpName(nm)) { muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[musterFaction()]; if (hn) hn.value = muster.name; }
+            if (!nm || isMadeUpName(nm)) { muster.name = U.forceName(muster.colour, musterFaction()); if (hn) hn.value = muster.name; }
           }
           // a force that starts rolled keeps a rolled build, whatever it is changed to
           if (muster.hot && muster.hot.step < 3 && hotRolled(muster.hot.step)) hotRandomise(muster.hot.step - 1, true);
@@ -673,7 +661,6 @@
        the opposition starts that way. Each step keeps what was built, so Back
        loses nothing. */
     var HOT_FACTIONS = ['pmc', 'rebel', 'bugs', 'xeno'];
-    var FORCE_NOUN = { pmc: 'company', rebel: 'insurgents', bugs: 'swarm', xeno: 'tribe' };
     var FORCE_KIND = { pmc: 'Mercenary company', rebel: 'Insurgent group', bugs: 'Bug swarm', xeno: 'Xenotripod tribe' };
     function hotWho(step) {
       var k = muster.hot.kind;
@@ -768,18 +755,15 @@
       // a name the player gave it stays; one made up from its colour and kind follows them
       var typed = ((el('hot-name') && el('hot-name').value) || '').trim();
       if (typed && !isMadeUpName(typed)) { muster.name = typed; return; }
-      muster.name = (ISO.COLOURS[muster.colour] ? ISO.COLOURS[muster.colour].name + ' ' : '') + FORCE_NOUN[f];
+      muster.name = U.forceName(muster.colour, f);
       if (el('hot-name')) el('hot-name').value = muster.name;
     }
     // "The Jade Brood": a name made up from a colour, the way a demo force is named
     function isDemoName(n) {
       return ISO.COLOUR_KEYS.some(function (k) { return n.indexOf(demoName(k, '')) === 0; });
     }
-    function isMadeUpName(n) {
-      return ISO.COLOUR_KEYS.some(function (k) {
-        return HOT_FACTIONS.some(function (f) { return n === ISO.COLOURS[k].name + ' ' + FORCE_NOUN[f]; });
-      });
-    }
+    // "Jade swarm": a name made up from a force's colours and kind (ui-parts.js)
+    function isMadeUpName(n) { return U.isForceName(n); }
     function hotSaveSide() {
       var i = muster.hot.step - 1;
       muster.hot.sides[i] = {
@@ -813,9 +797,6 @@
       if (el('hot-name-label')) el('hot-name-label').textContent = n + ' name';
       if (el('hot-name')) el('hot-name').placeholder = n + ' name';
       colourLabel();
-      var chip = el('colour-btn-chip'), cc = ISO.COLOURS[muster.colour];
-      if (chip && cc) chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
-      if (el('btn-colour-pop') && cc) el('btn-colour-pop').title = 'Colours: ' + cc.name;
     }
     // the colours dropped down under the chip left of the name
     function colourPop(on) {
@@ -868,9 +849,6 @@
       var cwp = el('colour-wrap');
       if (cwp && colourHomeAt && cwp.parentNode !== colourHomeAt.parent) colourHomeAt.parent.insertBefore(cwp, colourHomeAt.next);
       colourLabel();
-      var chip = el('colour-btn-chip'), cc = ISO.COLOURS[muster.colour];
-      if (chip && cc) chip.style.background = 'linear-gradient(135deg,' + cc.light + ' 0 38%,' + cc.mid + ' 38% 74%,' + cc.dark + ' 74%)';
-      if (el('btn-colour-pop') && cc) el('btn-colour-pop').title = 'Colours: ' + cc.name;
     }
     function catModal(on) {
       var m = document.querySelector('#setup .muster.hot-force');   // the units, not the name panel
@@ -957,12 +935,7 @@
        different army rolls the force again for it, at the Tier and Priority
        Level set above. A solitaire or co-op game has a line for the OpFor too:
        its army and its colours, the force itself rolled when the battle starts. */
-    var HOT_ARMY = [['pmc', 'PMC'], ['rebel', 'Rebel'], ['bugs', 'Bugs'], ['xeno', 'Xenotripods']];
     function hotCommando(kind) { return kind === 'coop' || kind === 'solo'; }
-    function hotChip(k) {
-      var c = ISO.COLOURS[k];
-      return '<span class="olob-chip"' + (c ? ' style="background:linear-gradient(135deg,' + c.light + ' 0 38%,' + c.mid + ' 38% 74%,' + c.dark + ' 74%)"' : '') + '></span>';
-    }
     // a line's colours: a force's own, or ('op') the OpFor's
     function hotColourOf(i) { var h = muster.hot; return i === 'op' ? h.opColour : h.sides[i] && h.sides[i].colour; }
     // the colours every other line wears, which this one cannot take
@@ -983,13 +956,10 @@
       box.classList.remove('two');
       var chipBtn = function (i) {
         var c = ISO.COLOURS[hotColourOf(i)];
-        return '<button type="button" class="olob-colour" data-hotcolour="' + i + '" aria-expanded="' + (cf === i) + '" title="' + escHtml(c ? c.name : 'Colours') +
-          '" aria-label="' + escHtml(hotWhoOf(i)) + ' colours">' + hotChip(hotColourOf(i)) + '</button>';
+        return U.chipButton('data-hotcolour="' + i + '" aria-label="' + escHtml(hotWhoOf(i)) + ' colours"', U.chip(hotColourOf(i)), cf === i, c ? c.name : 'Colours');
       };
       var armySel = function (i, want) {
-        return '<select data-hotarmy="' + i + '" aria-label="' + escHtml(hotWhoOf(i)) + ' \u2014 army">' + HOT_ARMY.map(function (a) {
-          return '<option value="' + a[0] + '"' + (a[0] === want ? ' selected' : '') + '>' + a[1] + '</option>';
-        }).join('') + '</select>';
+        return U.armySelect('data-hotarmy="' + i + '" aria-label="' + escHtml(hotWhoOf(i)) + ' \u2014 army"', want);
       };
       var html = '<div class="olob-slots">' + h.sides.map(function (sd, i) {
         var who = hotWho(i + 1);
@@ -1012,14 +982,11 @@
       html += '</div>';
       // the colours of the line whose chip was tapped: those another line wears are not offered (each must be told apart)
       if (cf != null) {
-        var ac = ISO.COLOURS[hotColourOf(cf)], taken = hotTaken(cf);
-        html += '<div class="found-pop olob-pop" data-hotpop="' + cf + '"><label>Colours \u2014 ' + escHtml(ac ? ac.name : '') + '</label><div class="csw">' +
-          ISO.COLOUR_KEYS.map(function (k) {
-            var q = ISO.COLOURS[k], off = taken.indexOf(k) >= 0;
-            return '<button type="button" class="' + (k === hotColourOf(cf) ? 'on' : '') + '" data-hotcol="' + k + '"' + (off ? ' disabled' : '') +
-              ' title="' + escHtml(q.name + (off ? ' \u2014 another force wears it' : '')) + '">' +
-              '<span style="background:linear-gradient(135deg,' + q.light + ' 0 38%,' + q.mid + ' 38% 74%,' + q.dark + ' 74%)"></span></button>';
-          }).join('') + '</div></div>';
+        var taken = hotTaken(cf);
+        html += U.colourPop('data-hotpop="' + cf + '"', hotColourOf(cf), function (k) {
+          var off = taken.indexOf(k) >= 0;
+          return { attrs: 'data-hotcol="' + k + '"', off: off, note: off ? ' \u2014 another force wears it' : '' };
+        });
       }
       box.innerHTML = html;
       hotPlacePop();
@@ -1053,7 +1020,7 @@
         if (list.indexOf(sd.noun) < 0) sd.noun = list[Math.floor(Math.random() * list.length)];
         sd.name = demoName(sd.colour || 'ochre', sd.noun);
       } else if (isMadeUpName(nm)) {
-        sd.name = (ISO.COLOURS[sd.colour] ? ISO.COLOURS[sd.colour].name + ' ' : '') + FORCE_NOUN[sd.faction];
+        sd.name = U.forceName(sd.colour, sd.faction);
       }
     }
     function hotColour(i, k) {
@@ -1218,7 +1185,6 @@
     }
 
     return {
-      FORCE_NOUN: FORCE_NOUN,
       ID_NOUN: ID_NOUN,
       applyForce: applyForce,
       backLabel: backLabel,
