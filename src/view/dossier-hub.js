@@ -15,7 +15,8 @@
         root = E.root, spendActs = E.spendActs, tip = E.tip;
     /* ================= the hub ================= */
     function hubView() {
-      var h = '<h2>' + (E.camp ? 'Campaign — turn ' + E.camp.turn : E.wantMode === 'hotseat' ? 'Hotseat campaign' : 'Campaign') + '</h2>';
+      // a multiplayer campaign goes by its name (each player's turn is their own)
+      var h = '<h2>' + (E.camp && E.online ? esc(E.camp.name || 'Campaign') : E.camp ? 'Campaign — turn ' + E.camp.turn : E.wantMode === 'hotseat' ? 'Hotseat campaign' : 'Campaign') + '</h2>';
       if (!E.camp) {
         function opt(v, t, want) { return '<option value="' + v + '"' + (want === v ? ' selected' : '') + '>' + t + '</option>'; }
         var pa = { faction: E.wantFaction, doctrines: [] }, pb = { faction: E.wantB, doctrines: [] };
