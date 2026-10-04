@@ -147,6 +147,14 @@
       '.lob-new{margin:4px 0 14px;padding:10px 12px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}',
       '.lob-new .lob-foot{margin-top:4px;flex-wrap:nowrap;align-items:stretch}',
       '.lob-new .lob-foot .lnk{flex:none}',
+      '.lob-kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}',
+      '.lob-kind{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);text-align:left;cursor:pointer;font:inherit}',
+      '.lob-kind b{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase}',
+      '.lob-kind small{font-size:11.5px;line-height:1.3;color:var(--ink-dim)}',
+      '.lob-kind:hover:not(:disabled){border-color:var(--ink-dim)}',
+      '.lob-kind.on{border-color:var(--alpha);background:color-mix(in srgb,var(--alpha) 12%,var(--panel));box-shadow:inset 0 0 0 1px var(--alpha)}',
+      '.lob-kind.on b{color:var(--alpha)}',
+      '.lob-kind:disabled{opacity:.5;cursor:default}',
       '.lob-go{border-color:var(--alpha)!important;color:var(--alpha)!important}'
     ].join('\n');
     document.head.appendChild(s);
@@ -258,16 +266,19 @@
      yet over the network), or a battle in one of the campaigns kept on this
      server — and whether it is listed for anyone to join or found by its code only. */
   function kindsHTML() {
-    var opt = function (v, t, off) {
-      return '<option value="' + esc(v) + '"' + (v === newKind ? ' selected' : '') + (off ? ' disabled' : '') + '>' + esc(t) + '</option>';
+    // three cards side by side, the one picked lit
+    var card = function (v, t, sub, off) {
+      return '<button type="button" class="lob-kind' + (v === newKind ? ' on' : '') + '" data-lob="kind" data-kind="' + esc(v) + '" aria-pressed="' + (v === newKind) + '"' +
+        (off ? ' disabled' : '') + '><b>' + esc(t) + '</b><small>' + esc(sub) + '</small></button>';
     };
     // a campaign is kept by an account: a guest is told so
     var guest = !account || account.guest;
-    var kinds = [opt('skirmish', 'Skirmish'),
-      opt('ocamp', guest ? 'Campaign \u2014 sign in with an account to start one' : 'Campaign \u2014 a new one against another player, each on your own device', guest),
-      opt('coop', 'Cooperative \u2014 the two of you against the OpFor')];
+    if (guest && newKind === 'ocamp') newKind = 'skirmish';
+    var kinds = [card('skirmish', 'Skirmish', 'One battle, one against one'),
+      card('coop', 'Co-op', 'The two of you against the OpFor'),
+      card('ocamp', 'Campaign', guest ? 'Sign in with an account to start one' : 'A world of forces, players and AI', guest)];
     return '<div class="lob-new">' +
-      '<div class="field"><label for="lob-kind">Game</label><select id="lob-kind">' + kinds.join('') + '</select></div>' +
+      '<div class="field"><label>Game</label><div class="lob-kinds" role="group" aria-label="Game">' + kinds.join('') + '</div></div>' +
       publicBox('lob-private', !newPrivate, '') +
       '<div class="lob-foot"><button class="lnk" data-lob="uncreate">Cancel</button>' +
       '<button class="start" data-lob="create" data-go="1">Create the game</button></div></div>';
@@ -548,6 +559,7 @@
         });
         return;
       }
+      case 'kind': newKind = b.getAttribute('data-kind'); draw(); return;
       case 'uncreate': creating = false; draw(); return;
       case 'join': return join(b.getAttribute('data-id') || (el('join-code') || {}).value);
       case 'resume': return join(b.getAttribute('data-id'));
@@ -630,7 +642,6 @@
   /* Terms are sent as they are changed rather than on a button: the other side
      should see the tier move while it is being argued about. */
   function onTermChange(e) {
-    if (e.target && e.target.id === 'lob-kind') { newKind = e.target.value; return; }
     if (e.target && e.target.id === 'lob-private') { newPrivate = !e.target.checked; return; }
     var box = e.target, k = box && box.getAttribute && box.getAttribute('data-term');
     if (!k || !net) return;

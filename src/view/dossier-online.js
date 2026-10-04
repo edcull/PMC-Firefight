@@ -27,7 +27,7 @@
     var fighting = null;                            // the battle walked into: its code
     var lobby = null;                               // the campaign while it is in its lobby, as the server sent it
     var localCamp, stashed = false;                 // the browser's own campaign, put aside while an online one is open
-    var FACTION_NAMES = { pmc: 'Private military company', rebel: 'Revolt', bugs: 'Bug swarm', xeno: 'Xenotripod tribe', random: 'Rolled at random' };
+    var FACTION_NAMES = { pmc: 'PMC', rebel: 'Rebel', bugs: 'Bugs', xeno: 'Xenotripods', random: 'Random' };
 
     function api(path, opts) {
       opts = opts || {};
@@ -160,14 +160,13 @@
           }
           if (r.j.version === o.version) return;
           var before = battleCode(), waitingOnIt = E.view === 'ocontract';
-          // a line being typed into the lobby's chat survives the redraw
-          var say = document.getElementById('olob-say'), typed = say ? say.value : '', typing = say && document.activeElement === say;
+          // a line being typed into the lobby's chat (or its name, by the host) survives the redraw
+          var kept = ['olob-say', 'olob-name'].map(function (k) { var x = document.getElementById(k); return x && (k === 'olob-say' || document.activeElement === x) ? { k: k, v: x.value, on: document.activeElement === x } : null; }).filter(Boolean);
           take(r.j);
           var shown = E.isOpen();
           if (shown && E.view === 'olobby') {
             E.render();
-            var say2 = document.getElementById('olob-say');
-            if (say2) { say2.value = typed; if (typing) say2.focus(); }
+            kept.forEach(function (o) { var x = document.getElementById(o.k); if (x) { x.value = o.v; if (o.on) x.focus(); } });
             return;
           }
           // a contract with a player: when both are ready the battle is made, and a player waiting on it goes in
@@ -241,11 +240,14 @@
       var L = lobby || {}, host = !!L.host, me = L.slot;
       var CO = (root.PMCIso && root.PMCIso.COLOURS) || {}, KEYS = (root.PMCIso && root.PMCIso.COLOUR_KEYS) || Object.keys(CO);
       // the code that brings the others in, in the title bar
-      var h = '<h2>' + esc(L.name || 'Campaign') +
-        (host ? ' <button type="button" class="olob-rename" data-go="olobname" title="Rename the campaign" aria-label="Rename the campaign">\u270e</button>' : '') + (L.invite ? ' <span class="olob-code" title="The code that brings the others in: Join on the Multiplayer screen">' + esc(L.invite) + '</span>' : '') + '</h2>';
+      var h = '<h2>' + (L.invite ? '<span class="olob-code" title="The code that brings the others in: Join on the Multiplayer screen">' + esc(L.invite) + '</span>' : 'Campaign') + '</h2>';
+      // its name, under the top bar: the host types it in, the players read it
+      h += '<div class="olob-name"><label for="olob-name">Name</label>' + (host
+        ? '<input class="tin" id="olob-name" maxlength="40" autocomplete="off" value="' + esc(L.name || '') + '">'
+        : '<b>' + esc(L.name || '') + '</b>') + '</div>';
       h += '<div class="olob-slots">' + (L.slots || []).map(function (s, i) {
         var mine = i === me, canSlot = host && s.kind !== 'human', canColour = mine || (host && s.kind !== 'human'), canArmy = mine || (host && s.kind === 'ai');
-        var who = s.kind === 'human' ? esc(s.name) + (s.host ? ' <i class="acct-tag">host</i>' : '') + (mine ? ' <i class="acct-tag">you</i>' : '')
+        var who = s.kind === 'human' ? esc(s.name)
           : s.kind === 'ai' ? 'AI force' : '<em>Open \u2014 waiting for a player</em>';
         // its colour: a chip like the founding screen's, opening the colours (those other slots wear greyed out)
         var c = CO[s.colour];
@@ -574,11 +576,6 @@
         if (said) cmd('lobbyChat', { text: said });
         return true;
       }
-      if (go === 'olobname' && lobby && lobby.host) {
-        E.ask({ kind: 'text', title: 'Rename the campaign', value: lobby.name || '', max: 40, okLabel: 'Rename',
-          onOk: function (v) { if (v) cmd('lobbyName', { name: v }); } });
-        return true;
-      }
       if (go === 'omulti' && E.view !== 'olobby') { toMulti(); return true; }
       if (go === 'omulti') {
         var host = !!(lobby && lobby.host);
@@ -770,6 +767,11 @@
       if (!E.online) return false;
       if (target.id === 'oc-pl') { var ctx = activeContract(); if (ctx) send(ctx, 'contractLevel', { pl: +target.value }); return true; }
       if (target.id === 'olob-n') { cmd('lobbySlots', { n: +target.value }); return true; }
+      if (target.id === 'olob-name') {
+        var nm = target.value.trim();
+        if (nm && lobby && nm !== lobby.name) cmd('lobbyName', { name: nm }); else if (lobby) target.value = lobby.name || '';
+        return true;
+      }
       if (target.id === 'olob-pub') { cmd('lobbyListed', { on: !!target.checked }); return true; }
       if (target.hasAttribute('data-olob-ai')) { cmd('lobbySlot', { i: +target.getAttribute('data-olob-ai'), kind: target.checked ? 'ai' : 'open' }); return true; }
       if (target.hasAttribute('data-olob-army')) { cmd('lobbyFaction', { i: +target.getAttribute('data-olob-army'), faction: target.value }); return true; }
