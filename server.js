@@ -79,7 +79,8 @@ const online = Online.create({
   listedChanged: function () { lobby.pushLobby(); },
   // and, if they asked for it, an email when a campaign comes to be waiting on them
   mailer: mailer,
-  startBattle: function (o) { return lobby.campaignBattle(o); }
+  startBattle: function (o) { return lobby.campaignBattle(o); },
+  dropBattle: function (code) { lobby.dropCampaignBattle(code); }
 });
 // the AI forces' battles elsewhere that a restart left half-fought, fought out
 setTimeout(function () { try { const n = online.resumeFronts(); if (n) log('fighting out the battles elsewhere of ' + n + ' online campaign' + (n === 1 ? '' : 's')); } catch (e) { } }, 0);

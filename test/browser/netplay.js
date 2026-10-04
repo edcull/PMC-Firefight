@@ -1,7 +1,8 @@
 /* Two browsers at one game server, a battle between them: each screen says
    whose turn it is from its own seat, forces left unnamed are named for their
    seat, the other player dropping out and coming back is said on the board,
-   and abandoning from the menu ends the battle for both. */
+   and abandoning from the menu ends the battle for both: the one left at the
+   table is shown the result (a win by forfeit) and goes on when they press Continue. */
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
 const { ROOT, SHOTS , signInLobby, tmpData } = require('../where.js');
@@ -343,8 +344,17 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const gone2 = await p2.evaluate(() => window.PMC_BATTLE_LIVE());
   ok('the other player is told it is over, and that they win by forfeit', left.some(t => /has left the battle — you win by forfeit/.test(t)), left.join(' | ') || 'no toast');
   ok('...and their board lets it go', !gone2);
-  // not held in the old game's room, with nobody to play: back to the list of games
+  // the result on their battlefield, who won and why, until they have read it
+  const card = () => p2.evaluate(() => { const r = document.getElementById('resolution'), c = document.getElementById('res-card');
+    return { up: !r.hidden && /Result/.test((c.querySelector('.res-kind') || {}).textContent || ''), title: (c.querySelector('h3') || {}).textContent || '', text: (c.querySelector('.outcome') || {}).textContent || '' }; });
+  const rc = await card();
+  ok('...and the result comes up on their battlefield: they win, by forfeit', rc.up && /Player 2 Force/.test(rc.title) && /wins/.test(rc.title) && /walks away/.test(rc.text) && /forfeit/.test(rc.text), JSON.stringify(rc));
   await wait(3000);
+  const held = await card();
+  ok('...where they stay until they press Continue', held.up && await p2.evaluate(() => document.getElementById('lobby').hidden), JSON.stringify(held));
+  await p2.evaluate(() => document.getElementById('res-continue').click());
+  // not held in the old game's room, with nobody to play: back to the list of games
+  await wait(1500);
   const after = await p2.evaluate(() => ({ room: !!window.PMCLobby.net() && !!document.querySelector('#lobby [data-lob="leave"]'),
     list: !!document.querySelector('#lobby [data-lob="create"]'), resume: window.PMCLobby.resumable() }));
   ok('...and they are out of its room, at the list of games', !after.room && after.list && !after.resume, JSON.stringify(after));

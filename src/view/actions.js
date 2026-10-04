@@ -195,37 +195,57 @@
     // closes them on a timer.
     function armAutoClose(res) {
       if (!ui.autoAdvance) return;
+      if (res.kind === 'Result') return;     // how the battle ended is read, and Continue pressed, by a person
       var actor = res.side || B.state.activeSide;
       if (!isAI(actor) && B.state.cfg.aiSides.length < 2) return;
       var wait = res.kind === 'Assault' ? 3200 : res.kind === 'Initiative' ? 1400 : 2200;
       ui.resTimer = setTimeout(closeRes, wait / (+window.PMC_TIME_SCALE || 1));
     }
 
-    /* A campaign's aftermath waits for the battle's result to be read: the
-       winner, and what won it, on its own card before the screen changes. */
-    function resultKey() { var s = B.state; return s && s.over ? s.seed + '|' + s.turn + '|' + s.over.text : null; }
+    /* Whatever comes after the battle (a campaign's aftermath, the way back to
+       the campaign, the post-game room) waits for its result to be read: the
+       winner, and what won it, on its own card on the battlefield, and Continue
+       pressed. Nothing else moves this screen on.
+       The end as the board has it, or — told by the server before the board has
+       caught up — as the message said. */
+    function overNow() { var s = B.state; return (s && s.over) || ui.serverOver || null; }
+    function resultKey() { var s = B.state, o = overNow(); return s && o ? s.seed + '|' + o.text : null; }
+    // the result card up now, waiting its turn among the cards, or still to come in the events being drawn
+    function resultComing() {
+      if (ui.currentRes && ui.currentRes.kind === 'Result') return true;
+      if (resQueue.some(function (r) { return r.kind === 'Result'; })) return true;
+      return show.queue.some(function (ev) { return ev && ev.e === 'card' && ev.card && ev.card.kind === 'Result'; });
+    }
+    // the battle on the board over, and its result not yet read here (dossier-online.js holds its aftermath back meanwhile)
+    window.PMC_RESULT_UNREAD = function () { var k = resultKey(); return !!k && ui.resultRead !== k; };
+    // more than one may wait on it (the campaign going on, the lobby forgetting the battle)
+    function waitOn(fn) { (ui.afterResult = ui.afterResult || []).push(fn); }
     window.PMC_AFTER_RESULT = function (fn, tries) {
-      /* Told it is over (by the server) while this screen is still playing out the
-         last moves: wait for the board to get there, so the result card is shown. */
       tries = tries || 0;
-      if (B.state && !B.state.over && tries < 80 && ((B.replaying && B.replaying()) || (B.cardsPending && B.cardsPending()))) {
-        setTimeout(function () { window.PMC_AFTER_RESULT(fn, tries + 1); }, 250);
-        return;
+      /* Asked from inside the move that ended it (a battle on this device says it
+         is finished before its last events reach the board): looked at once
+         they have. */
+      if (!tries) { setTimeout(function () { window.PMC_AFTER_RESULT(fn, 1); }, 0); return; }
+      var busyNow = (B.replaying && B.replaying()) || (B.cardsPending && B.cardsPending());
+      if (!resultKey()) {
+        // told it is over while the board is still playing out the last moves: wait for it to get there
+        if (B.state && tries < 80 && busyNow) { setTimeout(function () { window.PMC_AFTER_RESULT(fn, tries + 1); }, 250); return; }
+        fn(); return;
       }
       // (with nobody at the table to read it, as when both sides are the AI's, it does not wait)
-      if (!resultKey() || ui.resultRead === resultKey() || B.state.cfg.aiSides.length === 2) { fn(); return; }
-      ui.afterResult = fn;
-      /* The card that says how it ended may never have come — a table loaded rather
-         than played out (a resync, the server's result arriving with the board), or
-         the battle ended on the other player's screen — so it is put up now: nothing
-         goes on to the aftermath until it has been read and Continue pressed. */
-      var showing = (ui.currentRes && ui.currentRes.kind === 'Result') || resQueue.some(function (r) { return r.kind === 'Result'; });
-      if (!showing) {
-        var o = B.state.over, nm = function (sd) { return (B.state.cfg['name' + sd]) || sd; };
-        var esc = function (t) { return String(t).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); };
-        pushRes({ kind: 'Result', title: o.winner ? esc(nm(o.winner)) + ' wins' : 'Draw', outcome: { text: esc(o.text || 'The battle is over.'), tone: 'good' },
-          cont: 'To the aftermath' });
-      }
+      if (B.state.cfg && B.state.cfg.aiSides && B.state.cfg.aiSides.length === 2) { ui.resultRead = resultKey(); fn(); return; }
+      if (resultComing()) { waitOn(fn); return; }
+      if (ui.resultRead === resultKey()) { fn(); return; }
+      // the events that carry the card may be a moment behind the word that it is over
+      if (tries < 5) { setTimeout(function () { window.PMC_AFTER_RESULT(fn, tries + 1); }, 250); return; }
+      waitOn(fn);
+      /* The card that says how it ended never came — a table loaded rather than
+         played out (a resync, the server's result arriving with the board) — so
+         it is put up now. */
+      var o = overNow(), nm = function (sd) { return (B.state.cfg['name' + sd]) || sd; };
+      var esc = function (t) { return String(t).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); };
+      pushRes({ kind: 'Result', title: o.winner ? esc(nm(o.winner)) + ' wins' : 'Draw', outcome: { text: esc(o.text || 'The battle is over.'), tone: 'good' },
+        cont: B.state.cfg.campaign || B.state.cfg.onlineCampaign ? 'To the aftermath' : null });
     };
     function closeRes() {
       clearTimeout(ui.resTimer);
@@ -237,8 +257,8 @@
       // the battle's result read: what was waiting on it (a campaign's aftermath) goes on
       if (res && res.kind === 'Result') {
         ui.resultRead = resultKey();
-        var then = ui.afterResult; ui.afterResult = null;
-        if (then) { then(); return; }
+        var then = ui.afterResult || []; ui.afterResult = null;
+        if (then.length) { then.forEach(function (f) { f(); }); return; }
       }
       if (resQueue.length) showNextRes();
       else { render(); show.pump(); }

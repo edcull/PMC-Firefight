@@ -129,7 +129,15 @@
       if (E.view === 'post') E.view = 'hub';
       // a battle's aftermath not yet read: shown once, from the player's log
       var af = onl().after;
-      if (af && af.n > seen()) {
+      /* Not while its battle is still being fought, or over on the board behind
+         the campaign with its result not yet read there: marked shown then, a
+         refresh before Continue would come back to the hub rather than to the
+         aftermath. (A battle on this device stays on the board once read; it no
+         longer holds anything back then.) */
+      var st = root.PMC_STATE && root.PMC_STATE();
+      var ours = !!(st && st.cfg && st.cfg.onlineCampaign && E.online && String(st.cfg.onlineCampaign) === String(E.online.id));
+      var board = !!fighting || (ours && ((root.PMC_BATTLE_LIVE && root.PMC_BATTLE_LIVE()) || (root.PMC_RESULT_UNREAD && root.PMC_RESULT_UNREAD())));
+      if (af && af.n > seen() && !board) {
         var at = -1;
         (camp.log || []).forEach(function (l, i) { if (l.turn === af.turn && l.after) at = i; });
         seen(af.n);

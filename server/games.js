@@ -23,6 +23,8 @@ function create(db, opts) {
     ended(id, status, result) { return db.endGame(id, status, result, now()); },
     live() { return db.liveGames(); },
     byCode(code) { return db.gameByCode(code); },
+    // a battle that is not to be after all (its campaign's command did not stand): gone, intents and all
+    drop(id) { return db.dropGame(id); },
     // the latest battle by that code however it went, the whole row (an online campaign's, gone back to once over)
     lastByCode(code) { const g = db.gamesByCode(code)[0]; return g ? db.game(g.id) : null; },
     intents(id) { return db.intents(id); },

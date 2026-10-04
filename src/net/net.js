@@ -478,6 +478,8 @@
       fit: function () { rec({ e: 'fit' }); },
       structures: function () { rec({ e: 'structures' }); },
       clearCards: function () { rec({ e: 'clearcards' }); },
+      // a pause in the show: the table settled and the cards read before what follows (the Rally phase)
+      settle: function () { rec({ e: 'settle' }); },
       look: function (side) { rec({ e: 'look', side: side }); },
       finished: function (report) { if (!net.replaying) net.emit('finished', { report: report }); },
       flyLift: function (u) { return root.PMCIso ? root.PMCIso.flyLift(u) : 0; }

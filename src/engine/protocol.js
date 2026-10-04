@@ -25,7 +25,8 @@
 
    ---- server to client ----
    welcome      { you, games, chat }
-   error        { text, fatal }
+   error        { text, fatal, campaign? }      `campaign`: with 'that battle is over', the online
+                                                campaign it was fought for (its aftermath to go on to)
    lobby        { games }                       the open games, whenever they change
    lobby.chat   { from, text, at }
    game         { room }                        the room you are in, whole

@@ -147,6 +147,8 @@
     }
 
     function rallyPhase() {
+      // the screen finishes the last action first — its shots drawn, its cards read — and pauses before the phase begins
+      if (V.settle) V.settle();
       logLine('phase', 'Rally phase.');
       R.collars(E.state).forEach(function (l) { logLine(l.t, l.text); });
       E.state.nervousAsked = {};

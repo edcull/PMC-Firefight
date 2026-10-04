@@ -14,7 +14,7 @@ function ok(name, cond, note) {
 
 const settings = P.cleanSettings({ kind: 'coop', tier: 3, soloScen: 's_crush', opFaction: 'rebel', planet: 'sparse' });
 const seat = (name, colour) => ({ name: name, force: { faction: 'pmc', keys: [], name: name, colour: colour }, send() { }, sock: null });
-const room = { id: 'COOP1', settings: settings, seats: { A: seat('Ash', 'ochre'), B: seat('Brann', 'ochre') }, everyone() { return []; } };
+const room = { id: 'COOP1', settings: settings, seats: { A: seat('Ash', 'ochre'), B: seat('Brann', 'ochre') }, everyone() { return []; }, broadcast() { } };
 const t = new Table(room, null, {});
 const cfg = t.buildConfig();
 
@@ -49,6 +49,7 @@ ok('both seats are shown the table as side A sees it', t.sideOf('B') === 'A' && 
 
 console.log('\nWalking away');
 ok('one player leaving gives the battle to the OpFor', t.forfeit('B') === 'B');
+ok('...ended the engine\u2019s way, so the result is there to be shown', !!t.engine.over() && t.engine.over().winner === 'B' && /walks away/.test(t.engine.over().text), JSON.stringify(t.engine.over()));
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

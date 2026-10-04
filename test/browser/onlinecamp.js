@@ -5,11 +5,16 @@
    a contract against an AI force from the offers, fights it on the server (the AI
    side played there) and walks away; the aftermath comes up. Then one challenges
    the other, the contract is drawn up once accepted, both walk into the battle,
-   one walks away, and each reads the aftermath as their own. */
+   which is played to the End phase, where one surrenders: the result comes up on
+   both battlefields; one presses Continue and goes on to the aftermath, the other
+   stays on the result until they refresh, and coming back lands on the aftermath.
+   Each reads it as their own. */
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
-const { ROOT, tmpData } = require('../where.js');
+const { ROOT, tmpData, driveToEnd } = require('../where.js');
 
+// where the end-of-battle card's picture goes: the session's scratchpad when one is named, else build/shots
+const SCRATCH = process.env.PMC_SHOTS_DIR || '';
 const PORT = 8800 + Math.floor(Math.random() * 400);
 let pass = 0, fail = 0;
 function ok(name, cond, note) {
@@ -79,6 +84,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       await wait(400);
     }
   }
+  // the result card on the battlefield: up, and what it says
+  const resultCard = (p) => p.evaluate(() => {
+    const box = document.getElementById('resolution'), card = document.getElementById('res-card');
+    const kind = card && card.querySelector('.res-kind'), h = card && card.querySelector('h3'), o = card && card.querySelector('.outcome');
+    return { up: !!box && !box.hidden && !!kind && kind.textContent === 'Result', title: h ? h.textContent : '', text: o ? o.textContent : '',
+      cont: (document.getElementById('res-continue') || {}).textContent || '' };
+  });
   const onBoard = (p) => p.evaluate(() => { const st = window.PMC_STATE && window.PMC_STATE(); return !!(st && st.cfg && document.getElementById('camp').hidden); });
   const slotCount = (p) => p.evaluate(() => document.querySelectorAll('#camp-body .olob-slot').length);
 
@@ -236,10 +248,28 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     let rejoined = false;
     for (let i = 0; i < 60 && !rejoined; i++) { await wait(250); rejoined = await onBoard(p1); }
     ok('Ash reloads and goes back to the battle from Continue, which knows its campaign', rejoined && await p1.evaluate(() => !!window.PMC_STATE().cfg.onlineCampaign), dcode);
-    await p2.evaluate(() => window.PMCLobby.abandon());
+    // the battle played to its first End phase (every unit skipping its go), where Brann surrenders
+    const did = [];
+    const ended = await driveToEnd([p1, p2], 'B', 150000, (r) => { did.push(r); if (did.length > 12) did.shift(); });
+    ok('the duel is played to the End phase, and Brann surrenders there', ended, JSON.stringify(await p1.evaluate(() => { const s = window.PMC_STATE(); return s && { phase: s.phase, turn: s.turn, active: s.activeSide, end: s.endAsk }; })) + ' ' + did.join(','));
+    const card1 = await resultCard(p1), card2 = await resultCard(p2);
+    ok('the result comes up on the battlefield for both players: who won, and why', card1.up && card2.up && /Iron Wolves/.test(card1.title) && /wins/.test(card1.title) && /surrenders/.test(card1.text) && card2.title === card1.title, JSON.stringify([card1, card2]));
+    ok('...with nothing moved on yet: both still at the table', (await onBoard(p1)) && (await onBoard(p2)));
+    await p2.screenshot({ path: SCRATCH ? require('path').join(SCRATCH, 'endpop-online.png') : require('path').join(require('../where.js').SHOTS, 'endpop-online.png') }).catch(() => {});
+    // Ash reads it and goes on; Brann does not press Continue
+    await p1.evaluate(() => document.getElementById('res-continue').click());
     s1 = await throughPost(p1, 'Ash’s aftermath');
-    s2 = await till(p2, 'Brann’s aftermath', (s) => s.view === 'aftermath', 30000);
-    ok('Brann walks away: Ash reads a win, Brann a loss, each as their own', s1.after.winner === 'A' && s2.after.winner === 'B' && s1.turn === 2 && s2.turn === 1, JSON.stringify([s1.after.winner, s2.after.winner, s1.turn, s2.turn]));
+    ok('Ash presses Continue: on to the aftermath, a win', s1.after && s1.after.winner === 'A' && s1.turn === 2, JSON.stringify(s1.after && s1.after.winner) + ' turn ' + s1.turn);
+    await wait(2500);
+    const still = await resultCard(p2);
+    ok('...while Brann, who has not pressed it, stays on the result', still.up && (await onBoard(p2)), JSON.stringify(still));
+    // Brann refreshes before reading it: coming back to the battle finds it over, and goes on to the aftermath
+    await p2.reload(); await p2.waitForTimeout(1200);
+    const resume = await p2.evaluate(() => window.PMCLobby.resumable());
+    await p2.evaluate(() => window.PMCLobby.open());
+    s2 = await till(p2, 'Brann’s aftermath', (s) => s.view === 'aftermath' || s.view === 'post', 30000);
+    ok('Brann reloads: coming back to the battle lands on the campaign’s aftermath, a loss, not an empty table', !!resume && s2.after && s2.after.winner === 'B' && s2.turn === 1 && !(await p2.evaluate(() => !!(window.PMC_BATTLE_LIVE && window.PMC_BATTLE_LIVE()))), JSON.stringify([resume, s2.view, s2.after && s2.after.winner, s2.turn]));
+    ok('...each reads the aftermath as their own', s1.after.winner === 'A' && s2.after.winner === 'B');
 
     console.log('\nThe Continue list');
     await press(p1, '[data-go="pastback"]');

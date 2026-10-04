@@ -263,6 +263,17 @@
       const db = opts.db, notify = opts.notify || function () { }, mailer = opts.mailer || null;
       const opened = opts.listedChanged || function () { };   // the lobby's list of public campaigns changed
       const startBattle = opts.startBattle || null;          // makes a battle (lobby.campaignBattle): its room's code
+      const dropBattle = opts.dropBattle || null;            // ...and takes one away again, unplayed (lobby.dropCampaignBattle)
+      /* The battles a command has made, while it runs: a battle is made inside the
+         command, before the campaign is saved, and if the command then fails or its
+         save loses to another (a 409) they go again — no battle left live that no
+         campaign points to. */
+      let madeNow = null;
+      function makeBattle(o) {
+        const code = startBattle(o);
+        if (madeNow) madeNow.push(code);
+        return code;
+      }
       const offTable = opts.offTable === undefined ? (root.PMCOffTable || null) : opts.offTable;
       const now = opts.now || Date.now;
       const mailedAt = {};
@@ -631,12 +642,14 @@
           if (a.ready === false) { k.ready.A = false; return { ok: true }; }
           if (!k.picks.A) return no('pick a force first');
           if (k.fore && !k.fore.done) return no('Foresighted Command’s dice are still out');
+          // ready once: a second press (or a retry) does not make a second battle
+          if (p.battle) return no('the battle is already made — go to it');
           if (!startBattle) return no('this server cannot run battles');
           k.ready.A = true;
           const made = aiBattleConfig(W, i, k);
           p.pending = made.pending;
           made.cfg.onlineCampaign = ctx.id;            // which campaign it is for: a screen that comes back to it any way finds it again
-          const code = startBattle({ campaignId: ctx.id, ref: { kind: 'ai', slot: i }, name: W.forces[i].name + ' v ' + W.forces[k.vs].name,
+          const code = makeBattle({ campaignId: ctx.id, ref: { kind: 'ai', slot: i }, name: W.forces[i].name + ' v ' + W.forces[k.vs].name,
             cfg: made.cfg, seats: { A: seat(W, i) } });
           p.battle = { code: code, at: now() };
           return { ok: true, battle: code };
@@ -692,11 +705,12 @@
           if (!r.ok) return r;
           d.contract = camp.online.contract;
           if (sub === 'contractReady' && r.both) {
+            if (d.battle) return no('the battle is already made — go to it');
             if (!startBattle) return no('this server cannot run battles');
             const made = duelBattleConfig(W, d);
             d.pending = made.pending;
             made.cfg.onlineCampaign = ctx.id;
-            const code = startBattle({ campaignId: ctx.id, ref: { kind: 'duel', id: d.id }, name: W.forces[d.a].name + ' v ' + W.forces[d.b].name,
+            const code = makeBattle({ campaignId: ctx.id, ref: { kind: 'duel', id: d.id }, name: W.forces[d.a].name + ' v ' + W.forces[d.b].name,
               cfg: made.cfg, seats: { A: seat(W, d.a), B: seat(W, d.b) } });
             d.battle = { code: code, at: now() };
             d.phase = 'battle';
@@ -1043,6 +1057,7 @@
           if (!me || me.guest) return no('sign in to play a campaign online', 401);
           let out = null, W = null;
           const before = mailer ? waitsNow(id) : {};
+          madeNow = [];
           db.transaction(() => {
             const row = db.campaign(id);
             if (!isWorld(row)) { out = no('no such campaign of yours', 404); return; }
@@ -1057,6 +1072,9 @@
             row.version += 1;
             out = Object.assign({}, r, { version: row.version }, shownTo(W, i, row));
           });
+          // a battle made by a command that did not stand (refused, or its save lost) goes again
+          const made = madeNow; madeNow = null;
+          if (!out.ok && dropBattle) made.forEach((code) => { try { dropBattle(code); } catch (e) { } });
           if (out.ok) {
             tellAll(id, W, me.userId);
             if (out.battle) {

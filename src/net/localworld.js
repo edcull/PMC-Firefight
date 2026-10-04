@@ -63,7 +63,10 @@
     return code;
   }
 
-  var World = root.PMCWorld.create({ db: db, startBattle: startBattle, offTable: root.PMCOffTable || null, now: now });
+  // ...and one made by a command that did not stand, forgotten again
+  function dropBattle(code) { delete store.battles[code]; persist(); }
+
+  var World = root.PMCWorld.create({ db: db, startBattle: startBattle, dropBattle: dropBattle, offTable: root.PMCOffTable || null, now: now });
 
   // whose turn at the screen it is in a world: the player in that slot
   function seatOf(id) { var r = store.rows[id]; return r ? r.seat || 0 : 0; }

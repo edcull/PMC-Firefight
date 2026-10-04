@@ -65,6 +65,8 @@
       ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = [];
       ui.insertion = null; ui.preview = null; ui.deployPick = null;
       ui.watch = null; ui.inspect = false;
+      ui.serverOver = null;                // what the server said of the last battle's end
+      ui.afterResult = null;               // and what was waiting on its result card
     }
 
     /* A unit whose arrival is still waiting in the queue is already on the
@@ -220,6 +222,8 @@
              with: its cards read and put away, not just its shots drawn. Closing
              the last card pumps again (closeRes). */
           if (ev.e === 'focus' && (ui.resOpen || resQueue.length) && otherSides(ev.id)) return;
+          // so does a new phase (settle): the last action's cards are put away before it begins
+          if (ev.e === 'settle' && (ui.resOpen || resQueue.length)) return;
           show.queue.shift();
           if (!waits) {
             try { applyEvent(ev); }
@@ -294,14 +298,15 @@
     }
     // which events start something that takes time, and which land at once
     var SHOWN = {
-      move: 'wait', shoot: 'wait', assault: 'wait', strafe: 'wait', arrive: 'wait',
+      move: 'wait', shoot: 'wait', assault: 'wait', strafe: 'wait', arrive: 'wait', settle: 'wait',
       // the camera settling on the other side's unit is itself worth a moment
       focus: 'wait'
     };
     /* A beat before the other side acts. Their whole turn arrives at once and
        would otherwise start drawing the instant the player's own shot finished,
        which reads as the opponent interrupting rather than answering. */
-    var OPPONENT_BEAT = 1400;             // long enough to see which unit is about to act
+    var OPPONENT_BEAT = 1400;
+    var SETTLE_BEAT = 900;                // the last shot of the turn read before the Rally phase begins             // long enough to see which unit is about to act
     function beat(ms) {
       anims.push({ kind: 'beat', dur: ms, t0: nowMs() });
       startLoop();
@@ -425,6 +430,8 @@
         case 'newtable': newTable(ev.whole); return;
         case 'scenery': queueBake(); return;
         case 'fit': fitView(); return;
+        // a beat between the last action and the next phase, once the table has settled and its cards are read
+        case 'settle': beat(SETTLE_BEAT); return false;
         case 'structures': if (B.vc.structs) paintStructures(); return;
         case 'clearcards': {
           /* Clear the table's cards and effects, but not the rest of the batch

@@ -83,8 +83,15 @@ class Table {
       fit: () => table.rec({ e: 'fit' }),
       structures: () => table.rec({ e: 'structures' }),
       clearCards: () => table.rec({ e: 'clearcards' }),
+      settle: () => table.rec({ e: 'settle' }),
       look: (side) => table.rec({ e: 'look', side: side }),
-      finished: (report) => table.finish(report),
+      /* The engine says it is over in the middle of the intent that ended it,
+         before the events that got there have gone out. Told then, a client
+         would hear the battle is over while its board was a move behind — no
+         result on it yet, so the aftermath came up with no result card first.
+         So in play the end waits for the events (intent and forfeit finish once
+         they are flushed); only a battle replayed out of sight notes it here. */
+      finished: (report) => { if (table.quiet) table.finish(report); },
       // a flier's height is a drawing matter; the client works it out for itself
       flyLift: () => 0
     });
@@ -398,9 +405,11 @@ class Table {
     // in a cooperative game the players are one side: one walking away gives it to the OpFor
     if (this.cfg && this.cfg.netCoop) seat = 'A';
     const winner = seat === 'A' ? 'B' : 'A';
-    /* An online campaign's battle ends the engine's own way, so there is a report
-       for the aftermath to be applied from (decision 5: in a campaign it is). */
-    if (this.room.settings.onlineCampaign && this.engine.concede) {
+    /* The battle ends the engine's own way, so the side left at the table is
+       shown the result as any other end is (who won, and that it was by
+       forfeit), and an online campaign has a report for the aftermath to be
+       applied from (decision 5: in a campaign it is). */
+    if (this.engine.concede && this.engine.state && this.engine.state() && !this.engine.over()) {
       this.forfeitBy = seat;
       this.events = [];
       this.rolling(() => this.engine.concede(seat));
