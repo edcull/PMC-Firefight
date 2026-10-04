@@ -950,7 +950,9 @@ a.mcard { text-decoration: none; line-height: normal; }
 /* online: the company, its dossier and the campaign's window as tabs, 2 : 2 : 1 */
 .hubbar.hubtabs { display: grid; grid-template-columns: 2fr 2fr 1fr; }
 .hubbar.hubtabs .lnk { width: 100%; padding: 0 6px; }
-.hubbar.hubtabs .lnk.on { border-color: var(--alpha); color: var(--alpha); background: color-mix(in srgb, var(--alpha) 10%, transparent); cursor: default; }
+/* the company view's way to the other forces: amber, as the tab it is on is */
+.cdos-foot [data-kind="rivals"], .hubbar.hubtabs .lnk.on { border-color: var(--alpha); color: var(--alpha); background: color-mix(in srgb, var(--alpha) 10%, transparent); }
+.hubbar.hubtabs .lnk.on { cursor: default; }
 .hubbar .start.hubgo { flex: 0 0 auto; width: auto; margin: 0 0 0 auto; padding: 0 12px; font-size: 11px; letter-spacing: .08em; }
 .hubnote { margin: 0 0 8px; }
 /* what a unit can spend its experience on, on its own card after its other actions */

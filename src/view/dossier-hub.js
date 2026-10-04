@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   root.PMCDossierHub = function (E) {
-    var C = E.C, ICON_ABANDON = E.ICON_ABANDON, ICON_BATTLES = E.ICON_BATTLES, ICON_FORCES = E.ICON_FORCES,
+    var C = E.C, ICON_ABANDON = E.ICON_ABANDON, ICON_BATTLES = E.ICON_BATTLES,
         ICON_LOAD = E.ICON_LOAD, ICON_MANAGE = E.ICON_MANAGE, memorialIcon = E.memorialIcon,
         ICON_SAVE = E.ICON_SAVE, ROMAN = E.ROMAN, Store = E.Store, cmodal = E.cmodal, coin = E.coin,
         colourOf = E.colourOf, dossierPanel = E.dossierPanel,
@@ -72,7 +72,7 @@
         return h;
       }
       var A = E.camp.companies.A, B = E.camp.companies.B;
-      var rivals = E.camp.mode === 'hotseat' ? [] : (E.camp.rivals || [B]), n = rivals.length;
+      var rivals = E.camp.mode === 'hotseat' ? [] : (E.camp.rivals || [B]);
       if (Store.note()) h += '<p class="dnote hubnote">' + esc(Store.note()) +
         // saved on another device since: which copy to go on with (decision 7)
         (Store.conflict && Store.conflict() ? ' <button type="button" class="lnk" data-go="storeuse">Use that copy</button> <button type="button" class="lnk" data-go="storekeep">Keep this one</button>' : '') +
@@ -108,10 +108,8 @@
       // won or lost from where the hub's player stands (hotseat: either of them, HC-13)
       var result = function (l) { return !l.winner ? 'drawn' : l.winner === (hs || 'A') ? 'won' : 'lost'; };
       var vsOf = function (l) { return E.camp.mode === 'hotseat' ? (hs === 'B' ? A : B).name : l.against; };
+      // (the other forces are opened from the foot of the company view, not from here)
       h += cmodal('manage', 'The campaign', '<div class="cmodal-scroll manage-list">' +
-        '<button type="button" class="archline" data-go="fmodal" data-kind="rivals">' + ICON_FORCES + '<span>' +
-        (E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'The other forces on this world') + '<small>' +
-        (E.camp.mode === 'hotseat' ? esc((hs === 'B' ? A : B).name) : n > 1 ? n + ' forces' : esc(B.name)) + '</small></span></button>' +
         (last ? '<button type="button" class="archline" data-go="fmodal" data-kind="battles">' + ICON_BATTLES + '<span>Battles fought<small>' +
           (E.camp.log.length > 1 ? E.camp.log.length + ' battles \u2014 the last: ' : '') +
           esc(C.SCENARIO_NAMES[last.scenario] || last.scenario) + ', Tier ' + ROMAN[last.tier] + ' PL' + last.pl + ', ' + result(last) +
