@@ -399,6 +399,7 @@
     });
   }
   var enterCampaign = null;       // the way in, once the screen is wired
+  var pastFromList = false;     // the aftermath on screen was opened from the list of battles fought
   var openModal = null, modalView = null, colourOpen = false, propFor = null;
   var hubPane = 'tier';               // the hub opens on the company
   var rosterTab = 'units';
@@ -744,7 +745,7 @@
       set hubSide(v) { hubSide = v === 'B' ? 'B' : 'A'; }, get drawState() { return drawState; }, get upState() { return upState; },
       get swapOut() { return swapOut; },
       render: function () { render(); }, open: open, toMenu: toMenu, keepFoundName: keepFoundName, beginOwn: beginOwn,
-      postView: function () { return postView(); }, offersView: function () { return offersView(); }, jobCard: function (k, side, lv) { return (KIT_CONTRACT || kitContract()).jobCard(k, side, lv); }, stripe: stripe, statRow: statRow, showPast: function (i) { (KIT_AFTER || kitAfter()).showPast(i); },
+      postView: function () { return postView(); }, offersView: function () { return offersView(); }, jobCard: function (k, side, lv) { return (KIT_CONTRACT || kitContract()).jobCard(k, side, lv); }, stripe: stripe, statRow: statRow, showPast: function (i) { pastFromList = false; (KIT_AFTER || kitAfter()).showPast(i); },
       hide: function () { el('camp').hidden = true; }, isOpen: function () { return !!el('camp') && !el('camp').hidden; },
       asking: function () { return !!asking; },
       closeModal: function () { openModal = null; promoRid = null; },
@@ -1297,8 +1298,9 @@
         else { hubPane = 'dossier'; rosterTab = 'units'; docSide = fk; }
         render(); return;
       }
-      case 'pastbattle': (KIT_AFTER || kitAfter()).showPast(+t.getAttribute('data-i')); openModal = null; view = 'aftermath'; render(); return;
-      case 'pastback': (KIT_AFTER || kitAfter()).showPast(null); view = 'hub'; openModal = 'battles'; render(); return;
+      case 'pastbattle': pastFromList = true; (KIT_AFTER || kitAfter()).showPast(+t.getAttribute('data-i')); openModal = null; view = 'aftermath'; render(); return;
+      // back to the list of battles it was opened from; a battle's own aftermath, just fought, back to the hub
+      case 'pastback': (KIT_AFTER || kitAfter()).showPast(null); view = 'hub'; openModal = pastFromList ? 'battles' : null; pastFromList = false; render(); return;
       case 'fmodalclose': openModal = null; render(); return;
       case 'newcamp': {
         var fac = el('camp-faction') ? el('camp-faction').value : 'pmc';

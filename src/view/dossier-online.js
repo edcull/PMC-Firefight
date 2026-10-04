@@ -254,7 +254,9 @@
       if (!fighting) return false;
       fighting = null;
       var back = function () { if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE(); refresh(function () { E.open(E.view); }); };
-      if (!read || !root.PMC_AFTER_RESULT) { setTimeout(back, read ? 900 : 2500); return true; }
+      // over on the board (whoever ended it): its result read first, as a battle played to the end is
+      var st = root.PMC_STATE && root.PMC_STATE();
+      if (!root.PMC_AFTER_RESULT || !(read || (st && st.over))) { setTimeout(back, read ? 900 : 2500); return true; }
       root.PMC_AFTER_RESULT(back);
       return true;
     }
