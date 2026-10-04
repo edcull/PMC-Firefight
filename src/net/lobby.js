@@ -739,6 +739,8 @@
       keepRoom(''); if (net) net.send('games.mine'); /* the board shows the result; the room reopens by itself */
       // an online campaign's battle: the campaign takes it from here (dossier-online.js)
       if (campBattle) { var h = campBattle; campBattle = null; campOver = true; h.over(); }
+      // come back to some other way (the Continue list, a reload): once the result is read, its campaign
+      else backToCampaign(true);
     });
     /* The other player dropping out, coming back or walking away, said on the
        board while the battle is on (the room's chat is not on screen then). */
@@ -754,6 +756,7 @@
         var hc = campBattle; campBattle = null; campOver = false;
         if (hc) { if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE(); hc.gone(); }
       }
+      else if (m.kind === 'left' && backToCampaign(false)) { keepRoom(''); say2(who + ' has left the battle \u2014 you win by forfeit.', 'good', 7000); }
       else if (m.kind === 'left') {
         keepRoom('');
         // a cooperative game: the partner gone, the two of them lose it together
@@ -782,6 +785,18 @@
       .catch(function () { campaigns = []; });
   }
 
+  /* A campaign battle this screen came back to without the campaign's hooks (from
+     the Continue list, or after a reload): its campaign (cfg.onlineCampaign) is
+     opened again once it is over — the result read first, if it is on the board. */
+  function backToCampaign(read) {
+    var st = root.PMC_STATE && root.PMC_STATE(), id = st && st.cfg && st.cfg.onlineCampaign;
+    if (!id || !root.PMC_CAMPAIGN || !root.PMC_CAMPAIGN.openOnline) return false;
+    var go = function () { if (root.PMC_BATTLE_GONE) root.PMC_BATTLE_GONE(); root.PMC_CAMPAIGN.openOnline(id); };
+    // (the server applies the result as the battle ends: a moment for it before the campaign is asked for)
+    if (read && root.PMC_AFTER_RESULT) root.PMC_AFTER_RESULT(function () { setTimeout(go, 600); });
+    else setTimeout(go, read ? 900 : 2500);
+    return true;
+  }
   function say2(text, kind, ms) { if (root.PMC_TOAST) root.PMC_TOAST(text, kind, ms); }
 
   /* An online campaign's battle walked into (dossier-online.js): what to do when it

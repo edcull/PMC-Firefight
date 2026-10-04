@@ -228,6 +228,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     let both = false;
     for (let i = 0; i < 100 && !both; i++) { await wait(250); both = (await onBoard(p1)) && (await onBoard(p2)); }
     ok('both ready: both are taken into the battle', both);
+    // Ash reloads and comes back to the battle from Continue: no campaign hooks then, but the battle knows its campaign
+    const dcode = await p1.evaluate(() => window.PMCLobby.resumable());
+    await p1.reload(); await p1.waitForTimeout(1200);
+    await p1.evaluate((c) => window.PMCLobby.rejoin(c), dcode);
+    let rejoined = false;
+    for (let i = 0; i < 60 && !rejoined; i++) { await wait(250); rejoined = await onBoard(p1); }
+    ok('Ash reloads and goes back to the battle from Continue, which knows its campaign', rejoined && await p1.evaluate(() => !!window.PMC_STATE().cfg.onlineCampaign), dcode);
     await p2.evaluate(() => window.PMCLobby.abandon());
     s1 = await throughPost(p1, 'Ash’s aftermath');
     s2 = await till(p2, 'Brann’s aftermath', (s) => s.view === 'aftermath', 30000);

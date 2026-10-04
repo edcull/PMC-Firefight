@@ -635,6 +635,7 @@
           k.ready.A = true;
           const made = aiBattleConfig(W, i, k);
           p.pending = made.pending;
+          made.cfg.onlineCampaign = ctx.id;            // which campaign it is for: a screen that comes back to it any way finds it again
           const code = startBattle({ campaignId: ctx.id, ref: { kind: 'ai', slot: i }, name: W.forces[i].name + ' v ' + W.forces[k.vs].name,
             cfg: made.cfg, seats: { A: seat(W, i) } });
           p.battle = { code: code, at: now() };
@@ -694,6 +695,7 @@
             if (!startBattle) return no('this server cannot run battles');
             const made = duelBattleConfig(W, d);
             d.pending = made.pending;
+            made.cfg.onlineCampaign = ctx.id;
             const code = startBattle({ campaignId: ctx.id, ref: { kind: 'duel', id: d.id }, name: W.forces[d.a].name + ' v ' + W.forces[d.b].name,
               cfg: made.cfg, seats: { A: seat(W, d.a), B: seat(W, d.b) } });
             d.battle = { code: code, at: now() };
