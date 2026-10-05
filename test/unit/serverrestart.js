@@ -192,11 +192,9 @@ async function main() {
   ok('...and the battle goes on to a result', !!a.over && !!b.over, a.over ? '' : 'turn ' + (a.state && a.state.turn));
   a.send('games.mine'); b.send('games.mine');
   await a.till('their games', (x) => !!x.mine); await b.till('their games', (x) => !!x.mine);
-  const ma = a.mine.find((g) => g.code === code), mb = b.mine.find((g) => g.code === code);
-  const w = a.over && a.over.over && a.over.over.winner;
-  const want = (sd) => !w ? 'drawn' : w === sd ? 'won' : 'lost';
-  ok('each player\'s own list has it, how it went for them, and who they played', !!ma && !!mb && ma.result === want('A') && mb.result === want('B') && ma.against === 'Brann',
-    JSON.stringify({ ma, mb, w }));
+  // over, it is not kept: gone from both players' lists, and from the database, intents and all
+  ok('over, the battle is cleared away: in neither player\'s list, nor kept', !a.mine.some((g) => g.code === code) && !b.mine.some((g) => g.code === code) &&
+    !s2.games.lastByCode(code), JSON.stringify(a.mine.map((g) => g.code)));
   ok('...and it is no longer among the battles being fought', s2.games.live().length === 0);
 
   console.log('kept battles — put away, and brought back');
@@ -235,8 +233,8 @@ async function main() {
   const left = b.presence.find((m) => m.kind === 'left');
   ok('walking away from a battle loses it by forfeit, and the other player is told they win', left.forfeit === true && left.winner === 'B', JSON.stringify(left));
   b.send('games.mine');
-  await b.till('their games', (x) => (x.mine || []).some((g) => g.code === code2 && g.status !== 'battle'));
-  ok('...kept so in both players\' games', b.mine.find((g) => g.code === code2).result === 'won by forfeit');
+  await b.till('their games', (x) => !!x.mine && !(x.mine || []).some((g) => g.code === code2 && g.status === 'battle'));
+  ok('...and, over, is cleared away like any other', !b.mine.some((g) => g.code === code2) && !s2.games.lastByCode(code2));
 
   console.log('kept battles — an online campaign’s, over without its campaign told');
   const told = [];
@@ -256,6 +254,13 @@ async function main() {
   ok('going back to it: the campaign is given its result then (known by row and code), and the player told it is over',
     told.length === 1 && told[0].id === 7 && told[0].gameId === cgame.id + ':' + ccode && told[0].ref.slot === 0 && told[0].report && told[0].report.winner === 'A' &&
     a.inbox.some((m) => m.t === 'error' && /that battle is over/.test(m.text)), JSON.stringify(told.map((t) => [t.id, t.gameId, t.report && t.report.winner])));
+  // its result taken, the battle is cleared away — and coming back to it again still says which campaign it was for
+  a.inbox = [];
+  a.send('game.join', { id: ccode });
+  await a.till('an answer', (x) => x.inbox.some((m) => m.t === 'error'));
+  const again = a.inbox.find((m) => m.t === 'error');
+  ok('...then cleared away; going back again is told it is over, and for which campaign, the result not given twice',
+    !s2.games.lastByCode(ccode) && /that battle is over/.test(again.text) && again.campaign === 7 && told.length === 1, JSON.stringify(again));
 
   await down(s2, [a, b, stranger]);
   console.log((bad ? 'FAILED ' + bad + ' of ' : 'all ') + checks + ' checks' + (bad ? '' : ' passed'));

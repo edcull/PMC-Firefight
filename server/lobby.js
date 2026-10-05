@@ -178,6 +178,10 @@ class Lobby {
     this.known = new Map();                     // private id -> { secret, pub }, every browser seen
     this.limits = opts.limits || LIMITS;        // what a connection may send (a test may raise them)
     this.games = opts.games || null;            // the battles kept in the database (games.js), when there is one
+    /* Battles of online campaigns over and cleared away, by code: who played and for
+       which campaign, so a player coming back to one (a refresh) is still sent on to
+       its aftermath. In memory only, the latest few hundred. */
+    this.endedCodes = new Map();
     this.onCampaignBattle = opts.onCampaignBattle || null;
     this.listedCampaigns = opts.listedCampaigns || null;   // the online campaigns open to anyone: () => [{ invite, owner, at }]   // an online campaign's battle over: (campaign id, report, game id)
     this.log = opts.log || function () { };
@@ -210,11 +214,39 @@ class Lobby {
      held for the players, who walk back into them when they reconnect. */
   restore() {
     if (!this.games) return 0;
+    this.clearEnded();
     let n = 0;
     this.games.live().forEach((g) => { try { if (this.revive(g)) n++; } catch (e) { this.log('could not bring back battle ' + g.code + ': ' + ((e && e.stack) || e)); } });
     if (n) this.log('brought back ' + n + ' battle' + (n === 1 ? '' : 's') + ' in progress');
     return n;
   }
+  /* A battle over and done with is not kept: once its campaign (if it was fought
+     for one) has its result, the row and every intent of it go. `campaign`: that
+     campaign's id, noted by the code for a player who comes back to it. */
+  forget(gameId, code, campaign, seats) {
+    if (!this.games || gameId == null) return;
+    try { this.games.drop(gameId); } catch (e) { this.log('could not clear battle ' + gameId + ': ' + ((e && e.message) || e)); }
+    if (campaign && code) {
+      this.endedCodes.set(code, { campaign: campaign, seats: (seats || []).filter(Boolean) });
+      while (this.endedCodes.size > 300) this.endedCodes.delete(this.endedCodes.keys().next().value);
+    }
+  }
+  /* At start-up: the battles kept as over. An online campaign's whose result its
+     campaign never took is played back and the campaign told first (once, by the
+     game's id); then each goes. One whose result cannot be worked out for its
+     campaign is kept, to be settled when a player comes back to it. */
+  clearEnded() {
+    const rows = this.games.finishedRows ? this.games.finishedRows() : [];
+    let n = 0;
+    rows.forEach((g) => {
+      if (!g) return;
+      const camp = g.settings && g.settings.onlineCampaign;
+      if (camp && !(g.result && g.result.closed === 'admin') && !this.settleRow(g)) return;
+      try { if (this.games.drop(g.id)) n++; } catch (e) { }
+    });
+    if (n) this.log('cleared away ' + n + ' finished battle' + (n === 1 ? '' : 's'));
+  }
+
   // one kept battle, as a room in memory again, played back to where it was; null if it turns out to be over
   revive(g) {
     const have = this.rooms.get(g.code);
@@ -239,9 +271,12 @@ class Lobby {
     if (table.stopped) {
       // it ended just before the restart: an online campaign still has its aftermath to apply (once, by the game's id)
       if (room.settings && room.settings.onlineCampaign && this.onCampaignBattle && table.engine.report()) {
-        try { this.onCampaignBattle(room.settings.onlineCampaign, table.engine.report(), battleKey(g.id, g.code), room.settings.onlineRef || null); }
+        try {
+          this.onCampaignBattle(room.settings.onlineCampaign, table.engine.report(), battleKey(g.id, g.code), room.settings.onlineRef || null);
+          this.forget(g.id, g.code, room.settings.onlineCampaign, [g.seat_a, g.seat_b]);
+        }
         catch (e) { this.log('could not apply the campaign battle ' + g.id + ': ' + ((e && e.stack) || e)); }
-      }
+      } else if (!(room.settings && room.settings.onlineCampaign)) this.forget(g.id, g.code, null);
       return null;
     }
     room.table = table;
@@ -258,6 +293,13 @@ class Lobby {
     const g = this.games && this.games.lastByCode ? this.games.lastByCode(want) : null;
     if (!g || g.status === 'battle' || !this.onCampaignBattle || !(g.settings && g.settings.onlineCampaign)) return false;
     if (g.seat_a !== p.id && g.seat_b !== p.id) return false;
+    if (!this.settleRow(g)) return false;
+    this.forget(g.id, g.code, g.settings.onlineCampaign, [g.seat_a, g.seat_b]);
+    return { campaign: g.settings.onlineCampaign };
+  }
+  // the campaign told of a kept battle that is over, played back for its report: true once it has it
+  settleRow(g) {
+    if (!this.onCampaignBattle || !(g.settings && g.settings.onlineCampaign)) return false;
     const r = g.result || {}, loser = r.forfeit || (r.winner ? (r.winner === 'A' ? 'B' : 'A') : null);
     const room = new Room(g.name, { id: null, name: 'Commander' });
     room.id = g.code; room.settings = g.settings; room.phase = P.PHASE.BATTLE;
@@ -265,12 +307,12 @@ class Lobby {
     try {
       table.restore(g, this.games.intents(g.id));
       if (!table.engine.report() && loser) { table.quiet = true; table.rolling(() => table.engine.concede(loser)); }
-    } catch (e) { this.log('could not play back ' + want + ': ' + ((e && e.stack) || e)); return false; }
+    } catch (e) { this.log('could not play back ' + g.code + ': ' + ((e && e.stack) || e)); return false; }
     const report = table.engine.report();
     if (!report) return false;
     try { this.onCampaignBattle(g.settings.onlineCampaign, report, battleKey(g.id, g.code), g.settings.onlineRef || null); }
     catch (e) { this.log('could not apply the campaign battle ' + g.id + ': ' + ((e && e.stack) || e)); return false; }
-    return { campaign: g.settings.onlineCampaign };
+    return true;
   }
   /* Put this connection back in a seat being held for it (a refresh, a dropped
      connection, a restart): the room it is in now, or null. */
@@ -526,7 +568,8 @@ class Lobby {
     if (!room) {
       /* Over: which campaign it was fought for goes with the word, so a player
          who left before reading the result (a refresh) is taken to its aftermath. */
-      const ended = this.settleEnded(p, want);
+      const gone = this.endedCodes.get(want);
+      const ended = gone && gone.seats.indexOf(p.id) >= 0 ? gone : this.settleEnded(p, want);
       if (ended) return p.send('error', { text: 'that battle is over', fatal: false, campaign: ended.campaign });
       return p.fail('no game with that code');
     }
@@ -719,7 +762,7 @@ class Lobby {
      forces as they were (MP-7): ready up again for a rematch, change the terms or
      the forces first, or leave. */
   /* An admin closing a battle that has stuck (adminapi.js): its players told and
-     put back in the lobby, the battle kept as abandoned with no winner. True if
+     put back in the lobby, the battle cleared away with no winner. True if
      there was one, open here or kept as still under way. */
   adminClose(code) {
     const room = this.rooms.get(code);
@@ -727,7 +770,7 @@ class Lobby {
     if (room && room.phase === P.PHASE.BATTLE) {
       found = true;
       const t = room.table;
-      if (t && t.store && t.gameId != null) { try { t.store.ended(t.gameId, 'abandoned', { winner: null, closed: 'admin' }); } catch (e) { } }
+      if (t && t.gameId != null) this.forget(t.gameId, code, null);
       if (t) t.stop();
       room.broadcast('game.presence', { kind: 'left', id: null, name: 'An admin', seat: null, forfeit: false, winner: null });
       room.everyone().forEach((p) => { p.room = null; p.seat = null; p.ready = false; p.send('game', { room: null }); });
@@ -737,17 +780,22 @@ class Lobby {
     // kept as under way, but not open here (put away): ended as well
     if (this.games) {
       const g = this.games.byCode(code);
-      if (g) { found = true; try { this.games.ended(g.id, 'abandoned', { winner: null, closed: 'admin' }); } catch (e) { } }
+      if (g) { found = true; this.forget(g.id, code, null); }
     }
     return found;
   }
 
   finished(room, report, gameId) {
     // an online campaign's battle: the campaign is told, to apply its aftermath (once, by the game's id)
+    // ...then, its result taken, the battle is not kept (one whose campaign could not take it is, to settle later)
+    const seats = P.SEATS.map((sd) => room.seats[sd] && room.seats[sd].id);
     if (room.settings.onlineCampaign && this.onCampaignBattle && report) {
-      try { this.onCampaignBattle(room.settings.onlineCampaign, report, battleKey(gameId, room.id), room.settings.onlineRef || null); }
+      try {
+        this.onCampaignBattle(room.settings.onlineCampaign, report, battleKey(gameId, room.id), room.settings.onlineRef || null);
+        this.forget(gameId, room.id, room.settings.onlineCampaign, seats);
+      }
       catch (e) { this.log('could not apply the campaign battle ' + gameId + ': ' + ((e && e.stack) || e)); }
-    }
+    } else if (!room.settings.onlineCampaign) this.forget(gameId, room.id, null);
     room.table = null;
     /* An online campaign's battle is fought once: there is no rematch, so the room
        closes and its players go back to the lobby (the campaign carries on in the
