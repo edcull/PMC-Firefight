@@ -462,26 +462,8 @@
       return h;
     }
 
-    /* The force a contract is against, at the top of the contract screen: its Tier,
-       its record, what kind of army it is and what it is built around, as its card
-       on the hub shows them — and its dossier, its units, in a window over the page. */
-    function foeCard(co) {
-      var h = '<div class="cpan cpan-B cfoe"' + stripe(co) + '><div class="cphead">' + tierBadge(co) + '<b>' + esc(co.name) + '</b></div>';
-      h += statRow(co, true);
-      h += '<div class="cpdoc carch">' + armyPill(co, 'cfoearmy') + doctrineMarks(co) + '</div>';
-      h += '<button class="lnk rivdos-go" data-go="fmodal" data-kind="cfoedos">\u25b8 Their dossier</button></div>';
-      var units = (co.roster || []).slice().sort(function (a, b) {
-        var la = C.isLeaderP(profile(a.key)) ? 1 : 0, lb = C.isLeaderP(profile(b.key)) ? 1 : 0;
-        return lb - la || profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
-      });
-      h += cmodal('cfoearmy', co.name + ' \u2014 ' + C.words(co).side, armyRules(co));
-      h += cmodal('cfoedos', co.name, '<div class="cmodal-scroll"><div class="dlist rivdos">' +
-        (units.length ? units.map(function (e) { return entryCard(e, co, {}); }).join('') : '<p class="cpstat">No units on the books.</p>') + '</div></div>');
-      return h;
-    }
-
     return {
-      foeCard: foeCard, hubView: hubView, stripe: stripe, armyPill: armyPill, doctrineMarks: doctrineMarks, armyRules: armyRules, statRow: statRow
+      hubView: hubView, stripe: stripe, armyPill: armyPill, doctrineMarks: doctrineMarks, armyRules: armyRules, statRow: statRow
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCDossierHub;

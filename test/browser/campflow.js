@@ -244,7 +244,8 @@ async function pastFronts(p) {
       size: /Battle Tier ?[IV]+ ?Priority Level ?\d/.test(t),
       world: !k.planet || k.planet === 'random' || !!document.querySelector('#camp-body .planetpill.planet-' + k.planet),
       role: /You attack|You defend|even terms/.test(t),
-      foe: !!document.querySelector('#camp-body .cfoe .tierbadge') && !!document.querySelector('#camp-body .cfoe [data-kind="cfoedos"]'),
+      // (on the page itself: the picker's window, over it, is your own force)
+      composition: (() => { const cl = document.getElementById('camp-body').cloneNode(true); cl.querySelectorAll('.cmodal').forEach(m => m.remove()); return /\d+ units|Dossier/i.test(cl.textContent); })(),
       stable: JSON.stringify([c.facing, k.scenario && k.scenario.id, k.tier, k.planet])
     };
   });
@@ -254,7 +255,7 @@ async function pastFronts(p) {
   check('...and how big a fight it is', offers.size);
   check('...and the world it is fought on', offers.world);
   check('...and which side of it you are on', offers.role);
-  check('...under the card of the force it is against, with its dossier a press away', offers.foe);
+  check('nothing shows their force composition', !offers.composition);
   // leaving and picking them again must not re-roll the job
   await p.evaluate(() => document.querySelector('#camp-body [data-go="hub"]').click());
   await p.waitForTimeout(200);

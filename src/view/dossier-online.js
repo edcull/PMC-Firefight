@@ -495,8 +495,6 @@
         } else h += '<div class="cpstat">Waiting for ' + esc(ctx.foeName) + ' to set one aside.</div>';
         return h + '</div>' + backFoot();
       }
-      // who it is against, first: their Tier, record, army and doctrines, and their dossier
-      if (ctx.foe) h += E.foeCard(ctx.foe);
       // the job as the offers once showed it: the scenario and world, the Tier and Levels, your side of it, what wins it
       h += '<div class="cpan cpan-job">' + E.jobCard(k, me, k.levels);
       if (k.foreNote) h += '<div class="cpstat dnote">' + esc(k.foreNote) + '</div>';
@@ -522,7 +520,7 @@
       else if (!ctx.ai && theirWant && theirWant !== k.pl) plNote = esc(ctx.foeName) + ' wants Priority Level ' + theirWant + ' \u2014 choose it too to change it.';
       else if (!ctx.ai && mineWant && mineWant !== k.pl) plNote = 'You want Priority Level ' + mineWant + ' \u2014 waiting for ' + esc(ctx.foeName) + ' to agree. It stays at ' + k.pl + ' until then.';
       else if (!ctx.ai) plNote = 'Both of you choose; it changes only when you agree.';
-      h += '<div class="field"><div><label for="oc-pl">Priority Level</label>' +
+      h += '<div class="field plrow"><div><label for="oc-pl">Priority Level</label>' +
         '<select id="oc-pl"' + (lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2].map(function (n) {
           var can = lv.indexOf(n) >= 0;
           return '<option value="' + n + '"' + (shownPl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + (n === 1 ? ' — skirmish' : ' — full battle') + '</option>';
@@ -553,8 +551,6 @@
           list += K.fieldRow('data-ocfield="' + p.key + '"', p, bad);
         });
       }
-      // the list as the contract screen at one table draws it (dossier-contract.js): the force on the page, the picker in a window over it
-      h += K.forceBox(chk, units, limits, K.chosenRow(units, 'data-ocunpick'), list, '<button class="lnk" data-go="ocauto">Pick for me</button>');
       // (a rebel's tactic is chosen at the table, when the battle begins)
       if (C.hasDoctrine(co, 'V4')) {
         var able = units.filter(function (e) { var p = E.profile(e.key); return p.cls === 'infantry' && p.group !== 'First Among Equals' && !p.command; });
@@ -565,6 +561,9 @@
             return '<button class="lnk' + (on ? ' on' : '') + '" data-ocdrug="' + e.rid + '"' + (!on && pk.drugs.length >= n ? ' disabled' : '') + '>' + esc(e.name) + '</button>';
           }).join('') : '<em>No infantry picked yet.</em>') + '</span></div></div>';
       }
+      h = K.scrollTop(h);
+      // the list as the contract screen at one table draws it (dossier-contract.js): the force on the page, the picker in a window over it
+      h += K.forceBox(chk, units, limits, K.chosenRow(units, 'data-ocunpick'), list, '<button class="lnk" data-go="ocauto">Pick for me</button>');
       var why = chk.ok ? '' : esc((chk.faults || [])[0] || 'Not a legal force yet.');
       // backing out sits in line with going in, the same button
       h += K.fightBar('ocdrop', ctx.ai ? 'Turn the contract down' : 'Call the contract off', 'ocready', ctx.ai ? 'Fight with this force' : 'Ready — fight with this force', chk.ok ? null : why);

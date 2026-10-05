@@ -147,6 +147,13 @@
       return h + E.cmodal('cpick', 'Take the field', '<div class="muster-head"><b>' + units.length + (units.length === 1 ? ' unit' : ' units') + '</b>' + pts + (extra || '') + '</div>' + limits + chosen +
         '<div class="cat tall cmodal-scroll">' + list + '</div>', '<button class="start" data-go="fmodalclose">Done</button>');
     }
+    /* The contract screen fits the phone: what is above the force (who it is
+       against, the job, what is left to settle) scrolls in a box of its own, and
+       the force and the buttons under it stay put (game.css, .cfit). */
+    function scrollTop(h) {
+      var hd = '<h2>Contract</h2>';
+      return h.indexOf(hd) === 0 ? hd + '<div class="cscroll">' + h.slice(hd.length) + '</div>' : h;
+    }
     function fightBar(dropGo, dropLabel, go, label, why) {
       return '<div class="cacts">' + (dropGo ? '<button class="start cdrop" data-go="' + dropGo + '">' + dropLabel + '</button>' : '') +
         '<button class="start" data-go="' + go + '"' + (why == null ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') + '>' + label + '</button></div>';
@@ -280,8 +287,6 @@
         if (second) h += '<div class="cpdoc"><span class="mk">' + esc(B.name) + ' has picked its force: Battle Tier ' +
           ROMAN[E.contract.tier] + ', Priority Level ' + E.contract.pl + '. Pick yours.</span></div>';
       }
-      // who it is against, first: their Tier, record, army and doctrines, and their dossier
-      h += E.foeCard(B);
       /* Foresighted Command (XEN-11): with both holding it, three dice, and each side
          ignores one in turn before anything else is settled */
       var fore = E.contract.fore;
@@ -383,7 +388,7 @@
       // only offer a Priority Level both forces could actually fill
       var lv = E.contract.levels || [1, 2];
       var PLN = { 1: 'skirmish', 2: 'full battle' };
-      h += '<div class="field"><div><label for="camp-pl">Priority Level</label>' +
+      h += '<div class="field plrow"><div><label for="camp-pl">Priority Level</label>' +
         '<select id="camp-pl"' + (E.contract.standard || second ? ' disabled' : '') + '>' + [1, 2].map(function (n) {
           var can = lv.indexOf(n) >= 0;
           return '<option value="' + n + '"' + (E.contract.pl === n ? ' selected' : '') +
@@ -425,8 +430,8 @@
           list += U.unitRow('class="cu" disabled', profile(e.key).tier, '<b>' + esc(e.name) + '</b>', 'salvaged from the last battle', null);
         });
       }
+      h = scrollTop(h + ordersPanel(A));
       h += forceBox(chk, E.contract.picks, limits, chosenRow(E.contract.picks, 'data-unpick'), list);
-      h += ordersPanel(A);
       if (!chk.ok) {
         var why;
         if (blocking(chk.faults).length) {
@@ -567,7 +572,7 @@
 
     return {
       offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
-      forceBox: forceBox, chosenRow: chosenRow, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
+      forceBox: forceBox, scrollTop: scrollTop, chosenRow: chosenRow, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
       autoPick: autoPick, fight: fight, seatBack: seatBack
     };
   };

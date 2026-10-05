@@ -1470,12 +1470,33 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .camp-top:has(.olob-code) .user-chip { min-width: 0; flex-shrink: 1; }
 .camp-top h1 .olob-code { margin-left: 0; }
 .rivacts { display: flex; gap: 6px; }
-/* the contract: who it is against, and the force on the page with its picker in a window */
+/* the contract: the force on the page, with its picker in a window */
 .cforce .chosen:empty::before { content: 'No units yet.'; }
 .cforce .chosen .pick { cursor: default; }
 .cforce .chosen .pick::after { content: none; }
 .cforce-go { display: block; width: 100%; margin: 10px 0 0; }
 .cmodal-box > .muster-head { margin-bottom: 6px; }
+/* The contract fits the screen: the top (who, the job, what is left to settle) scrolls
+   in its own box; the force and the buttons stay at the foot. */
+#camp.overlay > #camp-body.sheet.cfit { display: flex; flex-direction: column; overflow: hidden; }
+#camp-body.cfit > * { flex: none; }
+#camp-body.cfit > .cscroll { flex: 0 1 auto; min-height: 80px; overflow-y: auto; overscroll-behavior: contain; margin-bottom: 10px; }
+#camp-body.cfit > .cscroll > :last-child { margin-bottom: 0; }
+#camp-body.cfit > .cforce { margin-bottom: 10px; }
+#camp-body.cfit > .cacts { margin: 0; }
+#camp-body.cfit > .camp-foot { margin: 0; }
+.cforce .chosen { max-height: 64px; overflow-y: auto; }
+.cforce .limits { margin-bottom: 6px; }
+.cforce-go { margin-top: 8px; }
+/* the Priority Level on one line: its name, then the choice */
+.field.plrow { margin-bottom: 10px; }
+.field.plrow > div { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.field.plrow label { margin: 0; flex: none; }
+.field.plrow select { flex: 1 1 140px; width: auto; padding: 7px 10px; }
+.field.plrow .dnote { flex-basis: 100%; margin: 0; }
+@media (max-width: 700px) {
+  #camp.overlay > #camp-body.sheet.cfit { padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+}
 .rivacts > button { flex: 1 1 0; min-width: 0; margin: 0; min-height: var(--row-h); }
 .olob-name { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex: none; }
 .olob-name label { font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; flex: none; }
