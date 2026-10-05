@@ -495,6 +495,8 @@
         } else h += '<div class="cpstat">Waiting for ' + esc(ctx.foeName) + ' to set one aside.</div>';
         return h + '</div>' + backFoot();
       }
+      // who it is against, first: their Tier, record, army and doctrines, and their dossier
+      if (ctx.foe) h += E.foeCard(ctx.foe);
       // the job as the offers once showed it: the scenario and world, the Tier and Levels, your side of it, what wins it
       h += '<div class="cpan cpan-job">' + E.jobCard(k, me, k.levels);
       if (k.foreNote) h += '<div class="cpstat dnote">' + esc(k.foreNote) + '</div>';
@@ -534,27 +536,25 @@
           '<button class="lnk" data-go="ocunready">Change my force</button></div>';
         return h + backFoot(ctx);
       }
-      // the list as the contract screen at one table draws it (dossier-contract.js)
-      var K = E.contractKit();
-      h += K.takeHead(chk, '<button class="lnk" data-go="ocauto">Pick for me</button>');
+      var K = E.contractKit(), list = '';
       // what each Tier asks for at this Battle Tier and Priority Level, and how many of each are in the list
-      h += '<p class="limits">' + U.limitsLine(R.compFor(co.faction || 'pmc', k.tier).limits, chk.counts || {}, k.pl) + '</p>';
-      h += K.chosenRow(units, 'data-ocunpick') + '<div class="cat tall">';
+      var limits = '<p class="limits">' + U.limitsLine(R.compFor(co.faction || 'pmc', k.tier).limits, chk.counts || {}, k.pl) + '</p>';
       co.roster.filter(function (e) { return pk.rids.indexOf(e.rid) < 0; }).forEach(function (e) {
         var rest = e.restUntil > 0;
         var bad = rest ? ['in the workshop'] : blocking(R.checkArmy(keys.concat([R.entryPick(e)]), k.tier, k.pl, co.doctrines, pk.tactic || null, co.faction).faults);
         // what each unit is carrying, as the force screen at one table shows it: its EXP, honours and traumas, and its Trauma Points down the right
-        h += K.rosterRow('data-ocpick="' + e.rid + '"', e, bad, rest ? ' — in the workshop' : '');
+        list += K.rosterRow('data-ocpick="' + e.rid + '"', e, bad, rest ? ' — in the workshop' : '');
       });
       var fieldable = R.listFor(co.faction || 'pmc').filter(function (p) { return (C.isTurretP(p) || p.noSlot) && (p.tier <= k.tier || k.pl > 1); });
       if (fieldable.length) {
-        h += '<h4>Fielded for this battle</h4>';
+        list += '<h4>Fielded for this battle</h4>';
         fieldable.forEach(function (p) {
           var bad = blocking(R.checkArmy(keys.concat([p.key]), k.tier, k.pl, co.doctrines, pk.tactic || null, co.faction).faults);
-          h += K.fieldRow('data-ocfield="' + p.key + '"', p, bad);
+          list += K.fieldRow('data-ocfield="' + p.key + '"', p, bad);
         });
       }
-      h += '</div></div>';
+      // the list as the contract screen at one table draws it (dossier-contract.js): the force on the page, the picker in a window over it
+      h += K.forceBox(chk, units, limits, K.chosenRow(units, 'data-ocunpick'), list, '<button class="lnk" data-go="ocauto">Pick for me</button>');
       // (a rebel's tactic is chosen at the table, when the battle begins)
       if (C.hasDoctrine(co, 'V4')) {
         var able = units.filter(function (e) { var p = E.profile(e.key); return p.cls === 'infantry' && p.group !== 'First Among Equals' && !p.command; });

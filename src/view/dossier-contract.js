@@ -112,15 +112,11 @@
       return h + '</span>';
     }
     /* The pieces of picking a force for a contract, the same at one table and
-       online (dossier-online.js): the list's head with its points, the units in
+       online (dossier-online.js): the force on the page with its picker in a window (forceBox), the units in
        it (`attr` the data-… that takes one out), a unit on the books or one
        fielded for this battle only to put in (`bad`: why it cannot go, greying
        it out), and the buttons that back out of it or go in (`why`: what still
        stands in the way, already escaped; null when nothing does). */
-    function takeHead(chk, extra) {
-      return '<div class="muster"><div class="muster-head"><b>Take the field</b>' +
-        '<span class="pts' + (chk.spent > chk.budget ? ' over' : '') + '">' + chk.spent + ' / ' + chk.budget + '</span>' + (extra || '') + '</div>';
-    }
     function chosenRow(units, attr) {
       return '<div class="chosen">' + units.map(function (e, i) {
         return '<span class="pickwrap"><button class="pick" ' + attr + '="' + i + '">' + esc(e.name) + ' <b>' + ROMAN[profile(e.key).tier] + '</b></button></span>';
@@ -136,6 +132,20 @@
     // `kind`: with what kind of unit it is down the right
     function fieldRow(attr, p, bad, kind) {
       return U.unitRow('class="cu" ' + attr + barred(bad), p.tier, '<b>' + esc(p.name) + '</b>', 'not bought \u2014 for this battle only', kind ? p.cls : null);
+    }
+    /* The force on the contract screen: its points, what each Tier asks for, the
+       units in it so far — and a button to the picker, a window over the page with
+       the list to choose from (`list`) and the units chosen (`chosen`, each a press
+       to take it out). `extra`: the auto-pick, where there is one. */
+    function forceBox(chk, units, limits, chosen, list, extra) {
+      var pts = '<span class="pts' + (chk.spent > chk.budget ? ' over' : '') + '">' + chk.spent + ' / ' + chk.budget + '</span>';
+      var h = '<div class="muster cforce"><div class="muster-head"><b>Your force</b>' + pts + '</div>' + limits +
+        '<div class="chosen">' + units.map(function (e) {
+          return '<span class="pick">' + esc(e.name) + ' <b>' + ROMAN[profile(e.key).tier] + '</b></span>';
+        }).join('') + '</div>' +
+        '<button class="start cforce-go" data-go="fmodal" data-kind="cpick">' + (units.length ? 'Change your force' : 'Pick your force') + '</button></div>';
+      return h + E.cmodal('cpick', 'Take the field', '<div class="muster-head"><b>' + units.length + (units.length === 1 ? ' unit' : ' units') + '</b>' + pts + (extra || '') + '</div>' + limits + chosen +
+        '<div class="cat tall cmodal-scroll">' + list + '</div>', '<button class="start" data-go="fmodalclose">Done</button>');
     }
     function fightBar(dropGo, dropLabel, go, label, why) {
       return '<div class="cacts">' + (dropGo ? '<button class="start cdrop" data-go="' + dropGo + '">' + dropLabel + '</button>' : '') +
@@ -270,6 +280,8 @@
         if (second) h += '<div class="cpdoc"><span class="mk">' + esc(B.name) + ' has picked its force: Battle Tier ' +
           ROMAN[E.contract.tier] + ', Priority Level ' + E.contract.pl + '. Pick yours.</span></div>';
       }
+      // who it is against, first: their Tier, record, army and doctrines, and their dossier
+      h += E.foeCard(B);
       /* Foresighted Command (XEN-11): with both holding it, three dice, and each side
          ignores one in turn before anything else is settled */
       var fore = E.contract.fore;
@@ -379,18 +391,16 @@
             (can ? '' : ' (neither force can fill it)') + '</option>';
         }).join('') + '</select></div></div>';   // the world was rolled with the job, and shown on the offer
 
-      h += takeHead(chk);
+      var list = '';
       /* What each Tier asks for at this Battle Tier and Priority Level, and how
          many of each are in the list — the line the skirmish muster sheet shows. */
-      h += '<p class="limits">' + U.limitsLine(R.compFor(A.faction || 'pmc', E.contract.tier).limits, chk.counts || {}, E.contract.pl) + '</p>';
-      h += chosenRow(E.contract.picks, 'data-unpick');
-      h += '<div class="cat tall">';
+      var limits = '<p class="limits">' + U.limitsLine(R.compFor(A.faction || 'pmc', E.contract.tier).limits, chk.counts || {}, E.contract.pl) + '</p>';
       var avail = contractPicks(A).filter(function (e) { return E.contract.picks.indexOf(e) < 0; });
-      if (!avail.length) h += '<p class="dnote">Every unit on the books is already in the list.</p>';
+      if (!avail.length) list += '<p class="dnote">Every unit on the books is already in the list.</p>';
       avail.forEach(function (e) {
         var trial = keys.concat([R.entryPick(e)]);
         var bad = blocking(R.checkArmy(trial, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
-        h += rosterRow('data-pick="' + e.rid + '"', e, bad);
+        list += rosterRow('data-pick="' + e.rid + '"', e, bad);
       });
       /* A tribe's turrets and a company's rapid insertion platforms are not bought
          (pp. 86, 140): they are put in the force for the battle, as many as the
@@ -402,20 +412,20 @@
         return (C.isTurretP(p) || p.noSlot) && (p.tier <= E.contract.tier || E.contract.pl > 1);
       });
       if (fieldable.length) {
-        h += '<h4>Fielded for this battle</h4>';
+        list += '<h4>Fielded for this battle</h4>';
         fieldable.forEach(function (p) {
           var bad = blocking(R.checkArmy(keys.concat([p.key]), E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
-          h += fieldRow('data-field="' + p.key + '"', p, bad, true);
+          list += fieldRow('data-field="' + p.key + '"', p, bad, true);
         });
       }
       var resting = A.roster.filter(function (e) { return e.restUntil > 0; });
       if (resting.length) {
-        h += '<h4>In the workshop — sitting this one out</h4>';
+        list += '<h4>In the workshop — sitting this one out</h4>';
         resting.forEach(function (e) {
-          h += U.unitRow('class="cu" disabled', profile(e.key).tier, '<b>' + esc(e.name) + '</b>', 'salvaged from the last battle', null);
+          list += U.unitRow('class="cu" disabled', profile(e.key).tier, '<b>' + esc(e.name) + '</b>', 'salvaged from the last battle', null);
         });
       }
-      h += '</div></div>';
+      h += forceBox(chk, E.contract.picks, limits, chosenRow(E.contract.picks, 'data-unpick'), list);
       h += ordersPanel(A);
       if (!chk.ok) {
         var why;
@@ -557,7 +567,7 @@
 
     return {
       offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
-      takeHead: takeHead, chosenRow: chosenRow, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
+      forceBox: forceBox, chosenRow: chosenRow, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
       autoPick: autoPick, fight: fight, seatBack: seatBack
     };
   };

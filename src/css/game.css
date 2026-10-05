@@ -1470,6 +1470,12 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .camp-top:has(.olob-code) .user-chip { min-width: 0; flex-shrink: 1; }
 .camp-top h1 .olob-code { margin-left: 0; }
 .rivacts { display: flex; gap: 6px; }
+/* the contract: who it is against, and the force on the page with its picker in a window */
+.cforce .chosen:empty::before { content: 'No units yet.'; }
+.cforce .chosen .pick { cursor: default; }
+.cforce .chosen .pick::after { content: none; }
+.cforce-go { display: block; width: 100%; margin: 10px 0 0; }
+.cmodal-box > .muster-head { margin-bottom: 6px; }
 .rivacts > button { flex: 1 1 0; min-width: 0; margin: 0; min-height: var(--row-h); }
 .olob-name { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex: none; }
 .olob-name label { font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; flex: none; }
