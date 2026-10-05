@@ -162,6 +162,7 @@ function wrap(db) {
     dropGame: db.prepare('DELETE FROM games WHERE id = ?'),
     oldGames: db.prepare("SELECT id FROM games WHERE status != 'battle' AND updated < ?"),
     endedGames: db.prepare("SELECT * FROM games WHERE status != 'battle' ORDER BY id"),
+    settledGame: db.prepare("UPDATE games SET result = json_set(COALESCE(result, '{}'), '$.settled', 1) WHERE id = ?"),
     allCampaigns: db.prepare('SELECT c.id, c.kind, c.name, c.turn, c.created, c.updated, c.invite, u.name AS owner FROM campaigns c LEFT JOIN users u ON u.id = c.owner ORDER BY c.updated DESC LIMIT ?'),
     dropAnyCampaign: db.prepare('DELETE FROM campaigns WHERE id = ?'),
     statCamps: db.prepare('SELECT kind, COUNT(*) n FROM campaigns GROUP BY kind'),
@@ -260,6 +261,8 @@ function wrap(db) {
     oldGames: (before) => q.oldGames.all(before).map((r) => r.id),
     // every battle over (or abandoned) still kept: cleared away at start-up (lobby.js restore)
     endedGames: () => q.endedGames.all().map(parse),
+    // its campaign has its result: nothing left to work out from it when it is cleared away
+    settledGame: (id) => q.settledGame.run(id).changes > 0,
     allCampaigns: (n) => q.allCampaigns.all(n || 30),
     dropAnyCampaign: (id) => q.dropAnyCampaign.run(id).changes > 0,
     liveGames: () => q.liveGames.all().map(parse),
