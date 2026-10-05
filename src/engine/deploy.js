@@ -335,6 +335,20 @@
       if (Math.hypot(to.x - u.x, to.y - u.y) < 0.1) return R.nearestFacing(u.facing == null ? (u.side === 'A' ? 0 : Math.PI) : u.facing);
       return R.nearestFacing(Math.atan2(to.y - u.y, to.x - u.x));
     }
+    /* An aircraft comes on flying in from the table edge it entered by: facing
+       straight away from the nearest edge to `from` (where it came on, or the
+       middle of its deployment zone). Nowhere near an edge (an Invasion landing
+       zone, a defender's circle), it faces the enemy as a hull does. */
+    function faceInward(u, from) {
+      var p = from || u;
+      var e = [[p.x, 0], [W - p.x, Math.PI], [p.y, Math.PI / 2], [H - p.y, -Math.PI / 2]].sort(function (a, b) { return a[0] - b[0]; })[0];
+      return e[0] <= 12 ? e[1] : faceDefault(u);
+    }
+    // the facing a machine is given as it comes on: a hull the enemy's way, an aircraft in from its edge
+    function faceOnArrival(u) {
+      if (faces(u)) u.facing = faceDefault(u);
+      else if (u && u.cls === 'aircraft' && !u.aboard && u.x >= 0) u.facing = faceInward(u);
+    }
     /* Each vehicle gets the default at once, so the game never waits on one it
        did not need to ask about; a player is then asked about theirs, one at a
        time, and `then` goes on once the last has been answered. Hands back
@@ -724,7 +738,11 @@
           : sideName(E.state.sc.attacker) + ' enters in the Reserve phase of turn 1.');
       }
       // a hull nobody was asked about faces the enemy
-      E.state.units.forEach(function (u) { if (faces(u) && u.facing == null) u.facing = faceDefault(u); });
+      E.state.units.forEach(function (u) {
+        if (faces(u) && u.facing == null) u.facing = faceDefault(u);
+        // an aircraft flies in over its own table edge
+        else if (u.cls === 'aircraft' && u.alive && !u.aboard && u.x >= 0 && u.facing == null) u.facing = faceInward(u, zoneCentre(u.side));
+      });
       E.state.phase = 'battle';
       // Ambush!: each unit settles into its hide before the first turn (p. 156)
       if (E.state.scen.beforeBattle) {
@@ -744,7 +762,7 @@
       pickToDeploy: pickToDeploy, nearestDeploySpot: nearestDeploySpot, emptyPlatforms: emptyPlatforms,
       seatPlatforms: seatPlatforms, splitFor: splitFor, baselineSplits: baselineSplits,
       toggleHold: toggleHold, deploymentDone: deploymentDone, sideDone: sideDone, startBattle: startBattle,
-      clearSplits: clearSplits, autoSplit: autoSplit, faces: faces, faceDefault: faceDefault,
+      clearSplits: clearSplits, autoSplit: autoSplit, faces: faces, faceDefault: faceDefault, faceInward: faceInward, faceOnArrival: faceOnArrival,
       askFacing: askFacing, answerFacing: answerFacing, splitsOK: splitsOK, insertionFor: insertionFor, toggleInsertion: toggleInsertion
     };
   };

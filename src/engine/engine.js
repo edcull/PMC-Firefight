@@ -135,7 +135,7 @@
        otherwise be shown getting up off the ground — falls out of the sky the
        way a hull does. */
     function landUnit(u) {
-      if (K.faces(u)) u.facing = K.faceDefault(u);
+      K.faceOnArrival(u);
       var orbit = state.scen.id === 'invasion' && state.sc && u.side === state.sc.attacker;
       V.arrive(u, orbit ? 'orbital' : 'drop');
       greet(u);
