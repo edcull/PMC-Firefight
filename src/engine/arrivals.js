@@ -537,7 +537,7 @@
     // put an arriving unit down and tell the player what the scenario makes of it
     function landArrival(u, p, log) {
       u.x = p.x; u.y = p.y; u.reserve = false; u.wave = 0;
-      if (E.faces(u)) u.facing = E.faceDefault(u);
+      E.faceOnArrival(u);
       var note = E.state.scen.onArrive ? E.state.scen.onArrive(E.state, u) : null;
       var line = u.label + ' arrives' + (p.why ? ' ' + p.why : '') + (note ? ' — ' + note.text : '') + '.';
       if (log) log.push(line);
