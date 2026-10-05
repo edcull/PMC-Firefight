@@ -1530,14 +1530,18 @@
           B.ctx.setLineDash([6, 6]); B.ctx.lineWidth = 2; B.ctx.strokeStyle = 'rgba(235,240,248,.85)';
           isoRing(z.x, z.y, 4, liftOf(z.x, z.y)); B.ctx.stroke(); B.ctx.setLineDash([]);
         });
-        // and the 12" exclusion round each objective, so the shape makes sense
-        B.ctx.setLineDash([7, 6]);
-        B.ctx.lineWidth = 1.6; B.ctx.strokeStyle = 'rgba(224,120,104,.6)';
-        B.ctx.fillStyle = forbid;
-        B.state.objectives.forEach(function (o) {
-          isoRing(o.x, o.y, 12, liftOf(o.x, o.y));
-          B.ctx.fill(); B.ctx.stroke();
-        });
+        /* and the 12" exclusion round each objective, so the shape makes sense —
+           a Battlefield Insertion's rule only: walking on from a table edge, a
+           landing zone or a shove has none (the ground offered says so already) */
+        if (ui.insertion.kind === 'insert') {
+          B.ctx.setLineDash([7, 6]);
+          B.ctx.lineWidth = 1.6; B.ctx.strokeStyle = 'rgba(224,120,104,.6)';
+          B.ctx.fillStyle = forbid;
+          B.state.objectives.forEach(function (o) {
+            isoRing(o.x, o.y, 12, liftOf(o.x, o.y));
+            B.ctx.fill(); B.ctx.stroke();
+          });
+        }
         /* And 12" round each enemy that would greet the landing (p. 30): coming down
            that close is allowed, but draws a free Basic Firepower shot from the
            nearest unsuppressed enemy that can see it. Measured as the rule measures

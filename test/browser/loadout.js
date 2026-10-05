@@ -62,15 +62,37 @@ async function run(p, label) {
     return {
       rows: box.querySelectorAll('.loadrow').length,
       loads: box.querySelectorAll('[data-load]').length,
-      unloads: box.querySelectorAll('[data-unload]').length
+      unloads: box.querySelectorAll('[data-unload]').length,
+      // the drop pod's row: its squad shown (never taken off, p. 79), and the others it could be swapped for
+      pod: (() => {
+        const row = [...box.querySelectorAll('.loadrow')].find((r) => /must carry a squad/.test(r.textContent));
+        return row ? { aboard: /1 of 1/.test(row.textContent), off: row.querySelectorAll('[data-unload]').length, swaps: row.querySelectorAll('[data-load]').length } : null;
+      })()
     };
   });
   ok('the deployment screen offers the hulls', !there.none && there.rows >= 2,
     there.none ? 'no loading card' : there.rows + ' hulls');
   ok('...with somebody to put in them', there.loads > 0, there.loads + ' units offered');
   // a drop pod is seated automatically, so there is already somebody to take off
-  ok('...and the drop pod already has a squad aboard', there.unloads > 0,
-    there.unloads + ' aboard');
+  ok('...and the drop pod already has a squad aboard: kept on, and swapped for another rather than taken off',
+    !!there.pod && there.pod.aboard && there.pod.off === 0 && there.pod.swaps > 0, JSON.stringify(there.pod));
+
+  // pressing one of the others puts it in the pod in place of the one there
+  const swapped = await p.evaluate(async () => {
+    const hosts = [document.getElementById('modal-host'), document.getElementById('context'), document.getElementById('panel')];
+    let box = null;
+    for (const h of hosts) if (h && h.querySelector('.loadbox')) box = h.querySelector('.loadbox');
+    const row = [...box.querySelectorAll('.loadrow')].find((r) => /must carry a squad/.test(r.textContent));
+    const btn = row && row.querySelector('[data-load]');
+    if (!btn) return { none: true };
+    const s = window.PMC_STATE(), hull = s.units.find(u => u.id === btn.getAttribute('data-hull'));
+    const was = (hull.cargo || [])[0], want = btn.getAttribute('data-load');
+    btn.click();
+    await new Promise(r => setTimeout(r, 260));
+    const v = s.units.find(u => u.id === hull.id), c = (v.cargo || []).map((u) => u.id || u);
+    return { n: c.length, in: c.indexOf(want) >= 0, out: c.indexOf(was && (was.id || was)) < 0 };
+  });
+  ok('...and swapping it puts the other squad in its place', !swapped.none && swapped.n === 1 && swapped.in && swapped.out, JSON.stringify(swapped));
 
   /* ---- putting a squad aboard ---- */
   const loaded = await p.evaluate(async () => {
