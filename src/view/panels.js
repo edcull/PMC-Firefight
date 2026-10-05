@@ -44,7 +44,8 @@
          other side acting, or what has already happened still being drawn: every
          button is off until the move comes back here (render redraws the bar then). */
       var waitTurn = !!u && B.state && B.state.phase === 'battle' && !B.state.over && !mySide();
-      var WAIT = { on: false, hint: 'Not your move yet — the actions come back when it is.' };
+      var other = B.showingSide && B.showingSide(), otherActing = !!other && (B.seats || []).indexOf(other) < 0;
+      var WAIT = { on: false, hint: otherActing ? (other === 'A' ? B.state.cfg.nameA : B.state.cfg.nameB) + ' is acting — the actions come back on your move.' : 'Not your move yet — the actions come back when it is.' };
       function stateOf(id) { return waitTurn ? WAIT : actionState(u, id); }
 
       STANDARD.forEach(function (a, n) {
@@ -70,7 +71,8 @@
         b.addEventListener('mouseleave', function () { setHint(null); });
         b.addEventListener('focus', function () { setHint(id); });
       });
-      setHint(null);
+      // while it is not this screen's move, the line under the table says so (and whose it is)
+      setHint(null, waitTurn ? WAIT.hint : undefined);
     }
 
     function setHint(id, override) {

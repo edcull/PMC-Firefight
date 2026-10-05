@@ -49,7 +49,7 @@
     function resetShow() {
       if (stepTimer) { clearTimeout(stepTimer); stepTimer = null; }
       show.queue.length = 0;
-      show.waiting = false; show.gen++;
+      show.waiting = false; show.gen++; show.side = null;
       slideAfter = {};
       pendingArrive = {};
       clearHeld();
@@ -284,6 +284,7 @@
         slideAfter = {};
         snapshotShown();
         show.running = false;
+        show.side = null;                      // nobody's activation is being drawn now
         syncUI();
         render();
         stepWatched();
@@ -421,6 +422,10 @@
           // the other side's unit borrows the camera; it is handed back once they are done. (Whose
           // turn it is by the state would be wrong here: by the time this is drawn it is already ours.)
           focusUnit(fu, false, B.seats.indexOf(fu.side) < 0);
+          /* whose activation is being drawn: against the AI its whole go is resolved
+             at once, so the rules are back to this screen's turn before it is shown —
+             the header and the bar go by this while it plays */
+          if (show.side !== fu.side) { show.side = fu.side; render(); }
           // a pause before the other side's unit acts — and before every unit in a demo, where both sides are the AI's
           if (B.seats.indexOf(fu.side) < 0 || handsOff()) beat(OPPONENT_BEAT);
           return;

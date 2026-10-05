@@ -1137,6 +1137,8 @@
     // the sides this screen plays: without them every side reads as this screen's, and a networked game never says "Your turn"
     get seats() { return seats; },
     replaying: function () { return replaying(); },
+    // whose activation the table is drawing now (null when it is not drawing one)
+    showingSide: function () { return replaying() ? show.side || null : null; },
     // result cards still to be read (a rally's rolls, say), or one open now
     cardsPending: function () { return !!ui.resOpen || resQueue.length > 0; },
     deployWhere: deployWhere, roleSentence: roleSentence,
@@ -1174,6 +1176,8 @@
     get Q() { return Q; }, get ctx() { return ctx; }, get state() { return state; }, get vc() { return vc(); }, get seats() { return seats; },
     get setMTab() { return setMTab; }, get openObjectives() { return openObjectives; }, get closeRes() { return closeRes; },
     replaying: function () { return replaying(); },
+    // whose activation the table is drawing now (null when it is not drawing one)
+    showingSide: function () { return replaying() ? show.side || null : null; },
     // result cards still to be read (a rally's rolls, say), or one open now
     cardsPending: function () { return !!ui.resOpen || resQueue.length > 0; },
     actionState: actionState, autoDeployMine: autoDeployMine, boardableFor: boardableFor, byId: byId,
