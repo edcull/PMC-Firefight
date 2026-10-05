@@ -98,6 +98,8 @@ function metrics() {
     ok('the old slide-out drawer is gone', !m.drawerBtn);
 
     /* ------------------------------------------- picking a unit, and acting */
+    // the bar is off until it is this screen's move: what is still being drawn finishes first
+    await p.waitForFunction(() => window.__showQueue() === 0 && !window.__busy(), null, { timeout: 20000 }).catch(() => {});
     const picked = await p.evaluate(() => {
       const s = window.PMC_STATE();
       s.activeSide = 'A';
