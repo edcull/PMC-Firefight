@@ -558,17 +558,32 @@
   function profile(key) { return R.profile(key); }
   function tierChip(t) { return '<span class="ct">' + ROMAN[t] + '</span>'; }
 
+  var MARK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+  function markButton(e) {
+    var m = e.mark === 'fav' ? 'fav' : e.mark === 'unfav' ? 'unfav' : '';
+    var icon = m === 'unfav' ? MARK_SVG + '<circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg>'
+      : MARK_SVG + '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"' + (m === 'fav' ? ' fill="currentColor"' : '') + '/></svg>';
+    var what = m === 'fav' ? 'Favoured for the next contract — press to mark unfavoured'
+      : m === 'unfav' ? 'Unfavoured for the next contract — press to clear' : 'Mark favoured for the next contract';
+    return '<button type="button" class="lnk dmark' + (m ? ' ' + m : '') + '" data-mark="' + e.rid + '" title="' + what + '" aria-label="' + what + '">' + icon + '</button>';
+  }
+  // the next mark round: none, favoured, unfavoured
+  function nextMark(e) { return e.mark === 'fav' ? 'unfav' : e.mark === 'unfav' ? null : 'fav'; }
+
   function entryCard(e, co, opts) {
     opts = opts || {};
     var p = profile(e.key), h = '';
     var machine = p.cls !== 'infantry';
     var threshold = C.traumaThreshold(co);
-    h += '<div class="dcard' + (e.restUntil > 0 ? ' resting' : '') + (opts.expand ? ' dclick' + (opts.men ? ' open' : '') : '') + '" data-rid="' + e.rid + '"' +
+    h += '<div class="dcard' + (e.restUntil > 0 ? ' resting' : '') + (e.mark === 'fav' ? ' fav' : e.mark === 'unfav' ? ' unfav' : '') + (opts.expand ? ' dclick' + (opts.men ? ' open' : '') : '') + '" data-rid="' + e.rid + '"' +
       (opts.expand ? ' aria-expanded="' + !!opts.men + '"' : '') + '>';
     h += '<div class="dtop">' + tierChip(p.tier) +
       '<b class="dname">' + esc(e.name) + '</b>' +
       (e.name === p.name ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
     if (e.restUntil > 0) h += '<span class="dtag warn">in the workshop</span>';
+    /* Your own: favoured or unfavoured for the next contract, a press going round
+       the three (the force picker highlights the one, greys the other) */
+    if (opts.mark) h += markButton(e);
     h += '</div>';
     /* Opened, the card's own facts sit in a column on the left — experience and
        trauma, its honours and traumas, what can be done with it — and the unit
@@ -747,7 +762,7 @@
       postView: function () { return postView(); }, offersView: function () { return offersView(); }, jobCard: function (k, side, lv) { return (KIT_CONTRACT || kitContract()).jobCard(k, side, lv); }, contractKit: function () { return KIT_CONTRACT || kitContract(); }, stripe: stripe, statRow: statRow, showPast: function (i) { pastFromList = false; (KIT_AFTER || kitAfter()).showPast(i); },
       hide: function () { el('camp').hidden = true; }, isOpen: function () { return !!el('camp') && !el('camp').hidden; },
       asking: function () { return !!asking; },
-      closeModal: function () { openModal = null; promoRid = null; },
+      closeModal: function () { openModal = null; promoRid = null; }, nextMark: nextMark,
       toDossier: function () { view = 'hub'; hubPane = 'dossier'; rosterTab = 'units'; },
       clearSwap: function () { swapOut = null; docSwap = false; },
       closeColours: function () { colourOpen = false; }
@@ -1131,6 +1146,13 @@
         onOk: function () { C.disband(co, e); save(); render(); }
       });
       return;
+    }
+    if (t.hasAttribute('data-mark')) {
+      var me2 = findEntry(co, t.getAttribute('data-mark'));
+      if (!me2) return;
+      var nm2 = nextMark(me2);
+      if (nm2) me2.mark = nm2; else delete me2.mark;
+      save(); render(); return;
     }
     if (t.hasAttribute('data-rename')) {
       var re = findEntry(co, t.getAttribute('data-rename'));

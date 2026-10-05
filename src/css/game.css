@@ -621,6 +621,19 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cu:disabled { opacity: var(--off-opacity); cursor: not-allowed; }
 .cu .t { font-family: var(--display); font-size: 11px; color: var(--alpha); }
 .cu .st { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
+/* marked on the dossier for the next contract: favoured stands out, unfavoured recedes (and can still be picked) */
+.cu.fav { border-color: color-mix(in srgb, var(--alpha) 55%, transparent); background: color-mix(in srgb, var(--alpha) 8%, transparent); }
+.cu.fav b::before { content: '\2605 '; color: var(--alpha); }
+.cu.unfav:not(:disabled) { opacity: .5; }
+.cu.unfav:not(:disabled):hover { opacity: .8; }
+/* the dossier's own mark button, in the card's head, and the card it marks */
+.dtop .dmark { margin-left: auto; flex: none; padding: 2px 4px; min-height: 0; border: 0; background: none; color: var(--ink-faint); line-height: 0; }
+.dtop .dmark svg { width: 16px; height: 16px; }
+.dtop .dmark.fav { color: var(--alpha); }
+.dtop .dmark.unfav { color: var(--bad); }
+.dcard.dclick .dtop:has(.dmark)::after { margin-left: 0; }
+.dcard.fav { border-color: color-mix(in srgb, var(--alpha) 55%, var(--line)); }
+.dcard.unfav { opacity: .6; }
 .cu small { display: block; font-size: 11px; color: var(--ink-faint); }
 
 .start {

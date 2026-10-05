@@ -119,11 +119,19 @@
        fielded for this battle only to put in (`bad`: why it cannot go, greying
        it out), and the buttons that back out of it or go in (`why`: what still
        stands in the way, already escaped; null when nothing does). */
+    // the units marked favoured on the dossier first, those marked unfavoured last; otherwise as they stand
+    function byMark(list) {
+      var rank = function (e) { return e.mark === 'fav' ? 0 : e.mark === 'unfav' ? 2 : 1; };
+      return list.map(function (e, i) { return { e: e, i: i }; })
+        .sort(function (a, b) { return rank(a.e) - rank(b.e) || a.i - b.i; }).map(function (x) { return x.e; });
+    }
     function barred(bad) { return bad.length ? ' disabled title="' + esc(bad[0]) + '"' : ''; }
     // down the right: the Trauma Points it carries, or what kind of machine it is (machines take none)
     function rosterRow(attr, e, bad, note) {
       var p = profile(e.key);
-      return U.unitRow('class="cu" ' + attr + barred(bad), p.tier, '<b>' + esc(e.name) + '</b>' + wear(e, true), esc(p.name) + (note || ''),
+      // marked on the dossier for this: favoured highlighted, unfavoured greyed (still to be picked, if wanted)
+      var mk = e.mark === 'fav' ? ' fav' : e.mark === 'unfav' ? ' unfav' : '';
+      return U.unitRow('class="cu' + mk + '" ' + attr + barred(bad), p.tier, '<b>' + esc(e.name) + '</b>' + wear(e, true), esc(p.name) + (note || ''),
         p.cls !== 'infantry' ? esc(p.cls) : C.isLeaderP(p) ? 'command' : tpBadge(e));
     }
     // `kind`: with what kind of unit it is down the right
@@ -450,7 +458,7 @@
       /* What each Tier asks for at this Battle Tier and Priority Level, and how
          many of each are in the list — the line the skirmish muster sheet shows. */
       var limits = '<p class="limits">' + U.limitsLine(R.compFor(A.faction || 'pmc', E.contract.tier).limits, chk.counts || {}, E.contract.pl) + '</p>';
-      var avail = contractPicks(A).filter(function (e) { return E.contract.picks.indexOf(e) < 0; });
+      var avail = byMark(contractPicks(A).filter(function (e) { return E.contract.picks.indexOf(e) < 0; }));
       if (!avail.length) list += '<p class="dnote">Every unit on the books is already in the list.</p>';
       avail.forEach(function (e) {
         var trial = keys.concat([R.entryPick(e)]);
@@ -622,7 +630,7 @@
 
     return {
       offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
-      forceBox: forceBox, scrollTop: scrollTop, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
+      forceBox: forceBox, scrollTop: scrollTop, byMark: byMark, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
       autoPick: autoPick, fight: fight, seatBack: seatBack
     };
   };
