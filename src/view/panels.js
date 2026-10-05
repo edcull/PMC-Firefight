@@ -1277,20 +1277,26 @@
           '<div class="loadhead"><b>' + esc(v.name) + '</b>' +
           '<span class="mk">' + cargo.length + ' of ' + v.transport + (R.has(v, 'Lifter') ? ' slung' : ' aboard') + '</span>' +
           (must ? '<span class="mk warn">must carry a squad</span>' : '') + '</div>';
+        /* A drop platform "has to start the battle with a single infantry unit
+           onboard" (p. 79): its squad is never taken off, only swapped for another
+           (the engine's load does the swap), so a full one still lists who could
+           go in instead. */
+        var pod = must && v.transport;
         if (cargo.length) {
           h += '<div class="loadlist">' + cargo.map(function (c) {
-            return '<button class="lnk" data-unload="' + c.id + '" data-hull="' + v.id + '">' +
-              esc(c.name) + ' ✕</button>';
+            return pod ? '<span class="mk">' + esc(c.name) + '</span>'
+              : '<button class="lnk" data-unload="' + c.id + '" data-hull="' + v.id + '">' + esc(c.name) + ' ✕</button>';
           }).join('') + '</div>';
         }
-        if (room > 0) {
-          var can = boardableFor(v);
+        if (room > 0 || pod) {
+          var can = boardableFor(v), swap = pod && room <= 0;
           h += can.length
-            ? '<div class="loadlist">' + can.slice(0, 8).map(function (c) {
-              return '<button class="lnk" data-load="' + c.id + '" data-hull="' + v.id + '">+ ' +
+            ? (swap ? '<div class="hint small">Swap it for:</div>' : '') +
+              '<div class="loadlist">' + can.slice(0, 8).map(function (c) {
+              return '<button class="lnk" data-load="' + c.id + '" data-hull="' + v.id + '">' + (swap ? '\u21c4 ' : '+ ') +
                 esc(c.name) + '</button>';
             }).join('') + '</div>'
-            : '<div class="hint small">' + (R.has(v, 'Lifter') ? 'No vehicle left to sling under it.' : 'No infantry left to put aboard.') + '</div>';
+            : '<div class="hint small">' + (R.has(v, 'Lifter') ? 'No vehicle left to sling under it.' : swap ? 'No other infantry to swap in.' : 'No infantry left to put aboard.') + '</div>';
         }
         h += '</div>';
       });
