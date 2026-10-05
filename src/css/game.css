@@ -2178,3 +2178,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .passcard small { text-transform: uppercase; letter-spacing: .12em; opacity: .8; }
 .passcard b { font-size: clamp(1.6rem, 5vw, 2.6rem); line-height: 1.1; }
 @media (max-width: 520px) { #camp-body .cacts .start { white-space: normal; } }
+
+/* a Battle Honour's chevron, sized to the text it sits in */
+svg.chev { width: .8em; height: .65em; vertical-align: .05em; display: inline-block; }
+.mark-hon svg.chev + svg.chev { margin-left: 1px; }
