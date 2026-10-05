@@ -667,7 +667,7 @@
             : ui.insertion.kind === 'ilz' ? 'Nominate landing zone ' + ui.insertion.n + ' of 3' : 'Pick a landing zone';
         act.className = 'pill pill-wait';
       } else if (B.state.solo) {
-        if (B.state.activeSide === 'B') { act.textContent = 'OpFor phase'; act.className = 'pill pill-B'; }
+        if ((B.showingSide && B.showingSide() || B.state.activeSide) === 'B') { act.textContent = 'OpFor phase'; act.className = 'pill pill-B'; }
         else {
           act.textContent = B.state.solo.coop ? soloOwnerName(B.state.activeOwner) + ' to act' : 'Your commando';
           act.className = 'pill pill-' + (B.state.solo.coop ? (B.state.activeOwner === 2 ? 'C' : 'P1') : 'A');
@@ -680,24 +680,27 @@
           act.className = 'pill pill-' + B.state.endAsk.side;
         }
       } else {
-        act.textContent = turnWords(B.state.activeSide);
-        act.className = 'pill pill-' + B.state.activeSide;
+        /* whose activation it is: the one being drawn, while it is (against the AI the
+           rules are already back to this screen's turn when the AI's go starts playing) */
+        var goingNow = (B.showingSide && B.showingSide()) || B.state.activeSide;
+        act.textContent = turnWords(goingNow);
+        act.className = 'pill pill-' + goingNow;
       }
       /* Whose go it is, on the header itself: a bar of that side's colour along
          its foot (the phone shows the pill too, whatever the kind of game). */
       if (hdrEl) {
         var cdw = B.state.phase === 'deploy' && B.state.solo && B.state.solo.coop && B.Q && B.Q.deployOwner ? B.Q.deployOwner() : null;
         var going = cdw ? (cdw === 2 ? 'C' : 'P1') : B.state.phase === 'battle' && !B.state.over ? B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : (B.state.solo && B.state.activeSide === 'A' && B.state.solo.coop
-          ? (B.state.activeOwner === 2 ? 'C' : 'P1') : B.state.activeSide) : null;
+          ? (B.state.activeOwner === 2 ? 'C' : 'P1') : ((B.showingSide && B.showingSide()) || B.state.activeSide)) : null;
         ['A', 'B', 'C', 'P1'].forEach(function (k) { hdrEl.classList.toggle('turn-' + k, going === k); });
-        var goer = B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : B.state.activeSide;
+        var goer = B.state.endAsk && !B.replaying() && !B.cardsPending() ? B.state.endAsk.side : ((B.showingSide && B.showingSide()) || B.state.activeSide);
         hdrEl.classList.toggle('your-turn', !!going && !isAI(goer) && mineToPlay(goer));
       }
       turnBanner();
       briefOnce();
       showFollow();                     // hidden at a two-player screen
       if (B.state.solo && B.state.phase !== 'deploy' && B.state.phase !== 'terrain') {
-        el('hdr-phase').textContent = 'Turn ' + B.state.turn + ' · ' + (B.state.activeSide === 'B' ? 'OpFor phase' : 'Action phase');
+        el('hdr-phase').textContent = 'Turn ' + B.state.turn + ' · ' + (((B.showingSide && B.showingSide()) || B.state.activeSide) === 'B' ? 'OpFor phase' : 'Action phase');
         el('hdr-init').textContent = B.state.scen.name;
       }
       var held = { A: 0, B: 0 };
