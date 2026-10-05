@@ -312,7 +312,8 @@ async function pastFronts(p) {
     const cs = getComputedStyle(b);
     // the reason is the button's tip now, shown on a press, not a line of its own
     return { disabled: b.getAttribute('aria-disabled') === 'true', opacity: +cs.opacity, cursor: cs.cursor,
-      why: b.getAttribute('data-tip'), line: !!document.querySelector('#camp-body .blockwhy, #camp-body p.faults') };
+      // (the muster's window keeps a faults line of its own: not on the page)
+      why: b.getAttribute('data-tip'), line: [...document.querySelectorAll('#camp-body .blockwhy, #camp-body p.faults')].some(x => !x.closest('.cmodal')) };
   });
   check('...and visibly dead, with the reason as its tip, on an illegal one',
     off.disabled && off.opacity < 0.6 && off.cursor === 'not-allowed' && !!off.why && !off.line,
@@ -339,8 +340,8 @@ async function pastFronts(p) {
     }, id);
     const want = id !== 'meeting';
     // the role is given with the job, on the contract screen, and only the one that is yours
-    check(id + ': the role is settled, its badge shown with the job (what it deploys is told in the briefing)',
-      (!!seen.mine === want) && seen.badge === want && !seen.said && !seen.other,
+    check(id + ': the role is settled, its badge shown with the job, and where it deploys',
+      (!!seen.mine === want) && seen.badge === want && seen.said === want && !seen.other,
       want ? 'you are the ' + seen.mine : 'no roles to state');
   }
   await p.evaluate(() => window.__forceScenario('meeting'));

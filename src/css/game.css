@@ -1470,11 +1470,18 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .camp-top:has(.olob-code) .user-chip { min-width: 0; flex-shrink: 1; }
 .camp-top h1 .olob-code { margin-left: 0; }
 .rivacts { display: flex; gap: 6px; }
-/* the contract: the force on the page, with its picker in a window */
-.cforce .chosen:empty::before { content: 'No units yet.'; }
-.cforce .chosen .pick { cursor: default; }
-.cforce .chosen .pick::after { content: none; }
-.cforce-go { display: block; width: 100%; margin: 10px 0 0; }
+/* the contract: the force's line on the page, as the other modes' player bars; its muster in a window */
+#camp-body .cforce { margin: 0 0 10px; overflow: visible; }
+#camp-body .cforce .hot-who { background: none; border: 0; padding: 0; margin: 0; text-align: left; color: var(--ink); font: inherit; cursor: pointer; }
+#camp-body .cforce .hot-who:hover b, #camp-body .cforce .hot-who:focus-visible b { color: var(--alpha); }
+.cmodal-box > .cmuster { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; margin: 0; }
+.cmuster > * { flex: none; }
+.cmuster > .chosen.fcards { flex: 1 1 auto; min-height: 60px; max-height: none; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.cmuster > .faults { margin: 8px 0 0; }
+.cmuster-btns { display: flex; gap: 6px; margin: 9px 0 0; }
+.cmuster-btns .lnk { flex: 1; margin: 0; }
+.cmuster-btns .ico { display: grid; place-items: center; padding: 6px 0; min-height: var(--row-h); }
+.cmuster-btns .ico svg { width: 20px; height: 20px; }
 .cmodal-box > .muster-head { margin-bottom: 6px; }
 /* The contract fits the screen: the top (who, the job, what is left to settle) scrolls
    in its own box; the force and the buttons stay at the foot. */

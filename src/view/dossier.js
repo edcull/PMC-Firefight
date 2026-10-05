@@ -1424,6 +1424,7 @@
       case 'postnext':
         if (camp.post) { camp.post.steps.shift(); save(); render(); }
         return;
+      case 'cclear': contract.picks = []; render(); return;
       case 'autopick': contract.picks = autoPick(pickCo(), contract.tier, contract.pl, contract.tactic || null); render(); return;
       case 'standard':
         if (!contract || !C.canStandard(camp.companies.A, camp.companies.B)) return;
