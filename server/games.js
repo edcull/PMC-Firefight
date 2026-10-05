@@ -22,6 +22,7 @@ function create(db, opts) {
     intent(id, seq, seat, it) { db.addIntent(id, seq, seat, it, now()); },
     ended(id, status, result) { return db.endGame(id, status, result, now()); },
     live() { return db.liveGames(); },
+    settled(id) { return db.settledGame ? db.settledGame(id) : false; },
     finishedRows() { return db.endedGames ? db.endedGames() : []; },
     byCode(code) { return db.gameByCode(code); },
     // a battle that is not to be after all (its campaign's command did not stand): gone, intents and all

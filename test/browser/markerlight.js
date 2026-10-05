@@ -226,6 +226,9 @@ async function press(p, label) {
     const s = window.PMC_STATE();
     const u = s.units.find(x => x.code === 'CM1');
     const t = s.units.filter(x => x.side === 'B')[0];
+    // a Suppressed unit cannot Fire! (p. 34), so it is never called up to answer
+    const pinned = s.units.find(x => x.side === 'A' && x.key === 'hmgteam');
+    pinned.sp = window.PMC.currentMorale(pinned) + 1;
     window.__select(u);
     window.__pressAction('marktarget');
     window.__tapUnit(t);
@@ -233,7 +236,7 @@ async function press(p, label) {
     const shooter = window.__eligibleCodes();
     return {
       kind: s2.mark ? s2.mark.kind : null,
-      eligible: shooter,
+      eligible: shooter, pinned: pinned.code, pinnedStatus: window.PMC.status(pinned),
       bonus: (function () {
         const g = s2.units.find(x => x.code === shooter[0] && x.side === 'A');
         if (!g) return null;
@@ -246,6 +249,8 @@ async function press(p, label) {
     };
   });
   ok('it puts a Mark call on the table', mk.kind === 'mark', String(mk.kind));
+  ok('...and a Suppressed unit, which cannot Fire!, is not called up to answer it',
+    mk.pinnedStatus === 'suppressed' && mk.eligible.indexOf(mk.pinned) < 0, mk.pinned + ' ' + mk.pinnedStatus + ' · ' + mk.eligible.join(', '));
   ok('...and never calls an Indirect Fire unit', !mk.eligible.includes('MRT'),
     mk.eligible.join(', ') || 'nobody');
   ok('...and the unit it calls fires as though at half range', mk.bonus === 2,

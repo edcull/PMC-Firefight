@@ -609,10 +609,11 @@
           for (var sn = 0; sn < 5; sn++) {
             dot(g, p.x - a(3) + sr() * a(6), p.y - a(1.4) + sr() * a(2.8), '#6e6e64');
           }
-          // a location ruled out is struck through
-          if (pr.checked && pr.cold) {
-            edgeLine(g, [p.x - a(4), p.y - a(2)], [p.x + a(4), p.y + a(2)], '#8c3c2e', 2);
-            edgeLine(g, [p.x - a(4), p.y + a(2)], [p.x + a(4), p.y - a(2)], '#8c3c2e', 2);
+          /* a location ruled out is struck through in red: searched and empty, or
+             left cold once the objective turned up somewhere else */
+          if (pr.checked && !pr.found) {
+            edgeLine(g, [p.x - a(6.5), p.y - a(3.2)], [p.x + a(6.5), p.y + a(3.2)], '#d0503c', 4);
+            edgeLine(g, [p.x - a(6.5), p.y + a(3.2)], [p.x + a(6.5), p.y - a(3.2)], '#d0503c', 4);
           }
           break;
         }

@@ -72,7 +72,9 @@
         var cmdBy = E.state.chain.by && byId(E.state.chain.by);
         return { on: false, hint: E.state.chain.kind === 'mark'
           ? 'Answering the ' + (E.state.mark && E.state.mark.kind === 'mark' ? 'mark' : 'designation') + ': only a unit that can fire at ' +
-            (E.state.mark && E.state.mark.targets[0] ? E.state.mark.targets[0].name : 'the target') + ' may act.'
+            (E.state.mark && E.state.mark.targets[0] ? E.state.mark.targets[0].name : 'the target') + ' may act' +
+            // which ones, so it is plain what to pick (each may Skip instead, to let the call go)
+            (waiting ? ': ' + waiting + ' (or Skip it to let the call go).' : '.')
           : E.state.chain.kind === 'turrets'
             ? 'The turrets act as one (p. 130): ' + waiting + ' must act (or Skip) first.'
             : 'Only the units in ' + (cmdBy ? cmdBy.name + '’s' : 'this') + ' chain may act now' + (waiting ? ': ' + waiting + '.' : '.') };

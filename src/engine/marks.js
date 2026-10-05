@@ -170,6 +170,10 @@
     function canAnswerMark(o, target, kind) {
       if (!target || !target.alive || target.aboard) return false;
       if (o.fp == null || !o.fp || !o.range) return false;
+      /* Answering is a Fire! — which a Suppressed unit cannot take (only its
+         auxiliary weapon, p. 34) — so one is never called up, nor waited on. */
+      var st = R.status(o);
+      if (st === 'suppressed' || st === 'broken') return false;
       /* Turrets "are not affected by any other rule which changes activation order"
          (p. 130): a call fetches no turret out of its turn, which is all of them at once. */
       if (R.has(o, 'Turret')) return false;
