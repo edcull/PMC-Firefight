@@ -505,7 +505,7 @@
       }
 
       // the force's own changes (campcmds.js), on the camp of whatever the player has under way
-      const FORCE = ['found', 'recruit', 'disband', 'rename', 'renameSoldier', 'promote', 'honour', 'upgrade', 'mount', 'takeDoctrine', 'swapDoctrine', 'promoteCompany', 'aspire', 'colour'];
+      const FORCE = ['found', 'recruit', 'disband', 'rename', 'mark', 'renameSoldier', 'promote', 'honour', 'upgrade', 'mount', 'takeDoctrine', 'swapDoctrine', 'promoteCompany', 'aspire', 'colour'];
       function forceCmd(W, i, cmd, a) {
         const co = W.forces[i];
         // the army and the colours are the ones picked in the lobby

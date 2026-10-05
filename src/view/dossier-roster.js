@@ -41,7 +41,7 @@
           acts += '<button class="lnk danger dact" data-disband="' + e.rid + '" aria-label="Disband"' + (dis.ok ? ' title="Disband"' : ' disabled title="' + esc(dis.why) + '"') + '>' + ICON_DISBAND + '<span>Disband</span></button>';
           if (spend) acts += spend;
           // closed, a card offers only Promote (when there is the experience for it); opened, all of them
-          h += entryCard(e, co, { actions: open ? acts : spend, men: open ? detailPanel(e, co) : '', expand: true, portrait: open, rowActs: true });
+          h += entryCard(e, co, { actions: open ? acts : spend, men: open ? detailPanel(e, co) : '', expand: true, portrait: open, rowActs: true, mark: true });
         });
         h += '</div>';
       } else if (E.rosterTab === 'spend') {

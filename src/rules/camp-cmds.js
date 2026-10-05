@@ -53,6 +53,15 @@
         e.name = name;
         return { ok: true };
       },
+      /* A note for the next contract's force: favoured (to be looked at first) or
+         unfavoured (left out if it can be), or neither. It changes nothing in the
+         rules; the force picker shows it. */
+      mark(camp, side, a) {
+        const e = entry(camp.companies[side], a.rid);
+        if (!e) return no('no such unit');
+        if (a.mark === 'fav' || a.mark === 'unfav') e.mark = a.mark; else delete e.mark;
+        return { ok: true };
+      },
       renameSoldier(camp, side, a) {
         const e = entry(camp.companies[side], a.rid);
         if (!e) return no('no such unit');

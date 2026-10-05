@@ -1816,12 +1816,16 @@
       /* A campaign unit wears its record beside its code: a gold star once it
          holds a Battle Honour, a red heart once it carries a Battle Trauma. They
          are drawn rather than typed, so they look the same on every machine. */
-      function star(cx, cy, r) {
+      // a Battle Honour held: a rank chevron (the star is the dossier's 'favoured')
+      function chevron(cx, cy, r) {
+        var t = r * 0.55;                              // the stripe's thickness
         B.ctx.beginPath();
-        for (var k = 0; k < 10; k++) {
-          var rr = k % 2 ? r * 0.45 : r, an = -Math.PI / 2 + k * Math.PI / 5;
-          B.ctx[k ? 'lineTo' : 'moveTo'](cx + Math.cos(an) * rr, cy + Math.sin(an) * rr);
-        }
+        B.ctx.moveTo(cx - r, cy + r * 0.55);
+        B.ctx.lineTo(cx, cy - r * 0.55);
+        B.ctx.lineTo(cx + r, cy + r * 0.55);
+        B.ctx.lineTo(cx + r, cy + r * 0.55 + t);
+        B.ctx.lineTo(cx, cy - r * 0.55 + t);
+        B.ctx.lineTo(cx - r, cy + r * 0.55 + t);
         B.ctx.closePath(); B.ctx.fillStyle = '#f2c14e'; B.ctx.fill();
       }
       // a unit yet to activate this turn: a play arrow, in the green the board uses for "go"
@@ -1861,7 +1865,7 @@
         var tx = p.x - w / 2 + 4 + (toGo ? 10 : 0) + tw / 2;
         B.ctx.fillText(u2.code, tx, p.y);
         var ix = tx + tw / 2 + 6.5;
-        if (honoured) { star(ix, p.y - 3.5, 4.6); ix += 11; }
+        if (honoured) { chevron(ix, p.y - 4.5, 4.6); ix += 11; }
         if (scarred) heart(ix, p.y - 3.5, 4.2);
         if (mark) {
           B.ctx.fillStyle = mark.col;

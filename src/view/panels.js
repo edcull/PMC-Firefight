@@ -298,6 +298,8 @@
         return x ? x.name + ' — ' + x.text : '?';
       }).join('\n');
     }
+    // a Battle Honour: a rank chevron (the star is the dossier's 'favoured' mark)
+    var CHEVRON = '<svg class="chev" viewBox="0 0 10 8" aria-hidden="true"><path d="M1 7.2L5 3.2l4 4V5L5 1 1 5z" fill="currentColor"/></svg>';
     function honourMarks(u) {
       var c = u && u.camp;
       if (!c) return '';
@@ -308,7 +310,7 @@
       if (hon.length) {
         h += '<span class="mark-hon" ' + tip(
           hon.length === 1 ? (bug ? 'Adaptation' : 'Battle Honour') : hon.length + (bug ? ' Adaptations' : ' Battle Honours'),
-          spellOut(hon, C.honourTable(u.key))) + '>' + new Array(hon.length + 1).join('★') + '</span>';
+          spellOut(hon, C.honourTable(u.key))) + '>' + new Array(hon.length + 1).join(CHEVRON) + '</span>';
       }
       if (tra.length) {
         h += '<span class="mark-tra" ' + tip(
@@ -329,7 +331,7 @@
       var out = [];
       (c.honours || []).forEach(function (n) {
         var x = C.honourTable(u.key)[n - 1];
-        if (x) out.push('<span class="chip chip-hon" ' + tip(x.name, x.text) + '>★ ' + esc(x.name) + '</span>');
+        if (x) out.push('<span class="chip chip-hon" ' + tip(x.name, x.text) + '>' + CHEVRON + ' ' + esc(x.name) + '</span>');
       });
       (c.traumas || []).forEach(function (n) {
         var x = C.traumaTable(u.key)[n - 1];

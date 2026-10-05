@@ -787,5 +787,27 @@ ok('a salvaged unit also ticks off its spell in the workshop', (function () {
   return hull.restUntil;
 })(), 2);
 
+/* ------------------------------------------------- marked for the contract */
+head('Pick a force for me: the dossier\'s marks');
+(function () {
+  // more Tier I than a Tier I, Priority Level 1 contract can take: the pick has a choice to make
+  var co = C.newCompany('Marked', { faction: 'pmc' });
+  ['cmd4', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits'].forEach(function (k) { co.roster.push(C.newEntry(k)); });
+  var rec = co.roster.filter(function (e) { return e.key === 'recruits'; });
+  var plain = C.pickForce(co, 1, 1, null);
+  var left = rec.filter(function (e) { return plain.indexOf(e) < 0; });
+  ok('...with more units than the contract takes, some are left out', left.length > 0, true);
+  // the one left out favoured, the first one taken unfavoured
+  var fav = left[0], unfav = rec.filter(function (e) { return plain.indexOf(e) >= 0; })[0];
+  fav.mark = 'fav'; unfav.mark = 'unfav';
+  var marked = C.pickForce(co, 1, 1, null);
+  ok('a favoured unit is taken', marked.indexOf(fav) >= 0, true);
+  ok('...and an unfavoured one left out while others will do', marked.indexOf(unfav) < 0, true);
+  ok('...the force still legal', R.checkArmy(marked.map(function (e) { return R.entryPick(e); }), 1, 1, co.doctrines || []).ok, true);
+  // nothing else will do: the unfavoured are taken after all
+  rec.forEach(function (e) { e.mark = 'unfav'; });
+  ok('...but taken when nothing else will do', R.checkArmy(C.pickForce(co, 1, 1, null).map(function (e) { return R.entryPick(e); }), 1, 1, co.doctrines || []).ok, true);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

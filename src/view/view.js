@@ -49,7 +49,7 @@
       B.ctx.strokeStyle = col; B.ctx.lineWidth = lw;
       B.ctx.stroke();
     }
-    // what a unit's label carries beside its code: a star for honours held, a heart for traumas carried
+    // what a unit's label carries beside its code: a chevron for honours held (rec.star), a heart for traumas carried
     function labelIcons(u) {
       var c = u && u.camp;
       return { star: !!(c && (c.honours || []).length), heart: !!(c && (c.traumas || []).length) };

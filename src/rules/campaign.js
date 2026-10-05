@@ -1439,8 +1439,12 @@
      whose loss leaves the fewest hard faults dropped, and again. A swarm fields
      one Leader Bug of the Battle Tier or higher (p. 114). */
   function pickForce(co, tier, pl, tactic) {
+    /* The units marked on the dossier for the contract come into it that way: the
+       favoured looked at first, the unfavoured only when nothing else will do —
+       each Tier's slots, and the points after, filled in that order. */
+    var markRank = function (e) { return e.mark === 'fav' ? 0 : e.mark === 'unfav' ? 2 : 1; };
     var avail = co.roster.filter(function (e) { return !(e.restUntil > 0); }).slice().sort(function (a, b) {
-      return profile(b.key).tier - profile(a.key).tier;
+      return markRank(a) - markRank(b) || profile(b.key).tier - profile(a.key).tier;
     });
     var docs = co.doctrines || [];
     var comp = R.compFor(co.faction, tier), out = [], used = {};
