@@ -123,7 +123,8 @@
            server: the list of them, to pick one up -->
       <button class="mcard" id="btn-continue" data-menu="continue" hidden>Continue<small id="menu-continue-sub"></small></button>
       <button class="mcard" data-menu="single">Single player<small>Skirmish, solitaire or a campaign, against the AI</small></button>
-      <button class="mcard" data-menu="hotseat">Hotseat<small>Two players, one screen</small></button>
+      <!-- hidden for now: hotseat games already under way are still in Continue -->
+      <button class="mcard" data-menu="hotseat" hidden>Hotseat<small>Two players, one screen</small></button>
       <!-- only offered when the page came from a game server: a game opened
            from a file has nobody to play against -->
       <button class="mcard" id="btn-multi" disabled>Multiplayer<small id="menu-multi-sub">Online multiplayer unavailable</small></button>
