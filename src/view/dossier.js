@@ -580,7 +580,7 @@
       if (!machine || C.takesHonours(p)) {
         var pct = Math.min(100, Math.round(100 * e.tp / threshold));
         bars += '<span class="dtp" title="' + e.tp + ' of ' + threshold + ' Trauma Points">' +
-          '<i style="width:' + pct + '%"></i></span><span class="dtpn">' + e.tp + '/' + threshold + ' TP</span>';
+          '<i style="width:' + pct + '%"></i></span><span class="dtpn' + (e.tp >= 5 ? ' red' : '') + '">' + e.tp + '/' + threshold + ' TP</span>';
       }
       bars += '</div>';
     }                                                // a command unit or a turret: no experience bars, and nothing said about it

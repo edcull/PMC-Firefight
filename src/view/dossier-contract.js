@@ -94,7 +94,8 @@
       // the picker's own company: Player 2's Mental Training counts on Player 2's screen (HC-12)
       var co = E.camp.companies[seat()] || E.camp.companies.A, wd = C.words(co);
       var cap = C.traumaThreshold(co), tp = e.tp || 0;
-      return '<span class="w-tp' + (tp >= cap - 2 ? ' hot' : '') + '" ' + tip('Trauma Points',
+      // 5 or more: in red, a unit worth thinking twice about taking
+      return '<span class="w-tp' + (tp >= 5 ? ' red' : '') + '" ' + tip('Trauma Points',
         tp + ' of ' + cap + '. A unit that reaches ' + cap + ' rolls on the ' + wd.trauma + ' ' +
         'table and the count starts again.') + '>' + tp + '/' + cap + ' TP</span>';
     }
@@ -151,7 +152,7 @@
         if (p0.cls === 'infantry' || C.takesHonours(p0)) {
           var cap = C.traumaThreshold(co), tp = e.tp || 0, pct = Math.min(100, Math.round(100 * tp / cap));
           h += '<span class="dtp" title="' + tp + ' of ' + cap + ' Trauma Points"><i style="width:' + pct + '%"></i></span>' +
-            '<span class="dtpn">' + tp + '/' + cap + ' TP</span>';
+            '<span class="dtpn' + (tp >= 5 ? ' red' : '') + '">' + tp + '/' + cap + ' TP</span>';
         }
         h += '</div>';
       }

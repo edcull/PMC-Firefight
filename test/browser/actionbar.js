@@ -26,6 +26,8 @@ async function battle(p) {
     await wait(300);
     const b = window.__beginButton(); if (b) b.click();
     await wait(500); await drain();
+    // the bar is off until it is this screen's move: the walk-ons drawn first
+    for (let i = 0; i < 150 && (window.__showQueue() > 0 || window.__busy()); i++) { await wait(100); await drain(); }
   });
 }
 // select the unit with the most actions on offer, and measure the bar

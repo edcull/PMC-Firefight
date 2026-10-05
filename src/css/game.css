@@ -1453,6 +1453,9 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .dtp { flex: 1; max-width: 140px; height: 4px; background: var(--panel-3); border-radius: 2px; overflow: hidden; }
 .dtp i { display: block; height: 100%; background: var(--bad); }
 .dtpn { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
+/* 5 Trauma Points or more: in red, wherever a unit's count is shown */
+.dtpn.red, .w-tp.red { color: var(--bad); }
+.w-tp.red { border-color: color-mix(in srgb, var(--bad) 55%, var(--line)); }
 .dnote { font-size: 11px; color: var(--ink-faint); }
 /* online campaigns (dossier-online.js): the code for the open seat, joining with one */
 .ocode { font: 600 22px/1.2 var(--mono); letter-spacing: .22em; padding: 8px 12px; margin-top: 6px; text-align: center;
