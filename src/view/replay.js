@@ -150,6 +150,21 @@
           if (was.models !== u.models || was.sp !== u.sp || was.alive !== u.alive || was.damage !== u.damage) held[id] = was;
         });
       });
+      /* A batch that runs on into the Rally phase (settle): what the phase does to a
+         unit no event names — its Suppression rallied off — is not shown while the
+         last activation is still playing. It is held as the table last showed it
+         until the pause before the phase. */
+      var si = -1;
+      events.forEach(function (ev, i) { if (ev.e === 'settle') si = i; });
+      if (si < 0) return;
+      var se = events[si], last = {};
+      events.forEach(function (ev, i) { evIds(ev).forEach(function (id) { last[id] = i; }); });
+      B.state.units.forEach(function (su) {
+        var was = shown[su.id];
+        if (!was || !was.alive || held[su.id] || last[su.id] !== undefined) return;
+        if (was.models === su.models && was.sp === su.sp && was.alive === su.alive && was.damage === su.damage) return;
+        held[su.id] = was; heldTill[su.id] = se;
+      });
     }
     // the units an event names: who acts, who is hit, who dies
     function evIds(ev) {
@@ -158,6 +173,8 @@
     }
     function releaseFor(ev) {
       if (!ev) return;
+      // the pause before the Rally phase: everything held for it is let go
+      if (ev.e === 'settle') Object.keys(heldTill).forEach(function (id) { if (heldTill[id] === ev) { delete held[id]; delete heldTill[id]; } });
       evIds(ev).forEach(function (id) {
         if (!heldTill[id] || heldTill[id] === ev) { delete held[id]; delete heldTill[id]; }
         if (!slideAfter[id]) return;

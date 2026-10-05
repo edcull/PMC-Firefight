@@ -40,9 +40,15 @@
       bar.classList.remove('bar-none');
       var specials = specialsFor(u);
       var html = '';
+      /* One of this screen's units picked while it is not this screen's move — the
+         other side acting, or what has already happened still being drawn: every
+         button is off until the move comes back here (render redraws the bar then). */
+      var waitTurn = !!u && B.state && B.state.phase === 'battle' && !B.state.over && !mySide();
+      var WAIT = { on: false, hint: 'Not your move yet — the actions come back when it is.' };
+      function stateOf(id) { return waitTurn ? WAIT : actionState(u, id); }
 
       STANDARD.forEach(function (a, n) {
-        var st = actionState(u, a.id);
+        var st = stateOf(a.id);
         var active = ui.mode === a.id || (a.id === 'advance' && (ui.mode === 'advance-move' || ui.mode === 'advance-fire'));
         html += '<button class="slot' + (active ? ' active' : '') + '" data-action="' + a.id + '"' +
           (st.on ? '' : ' disabled') + ' title="' + a.label + ' — ' + st.hint.replace(/"/g, '&quot;') + '">' +
@@ -50,7 +56,7 @@
       });
       // the unit's special actions, as many as it has: no empty slots held open for them
       specials.forEach(function (sp) {
-        var st2 = actionState(u, sp.id);
+        var st2 = stateOf(sp.id);
         html += '<button class="slot special' + (ui.mode === sp.id ? ' active' : '') + '" data-action="' + sp.id + '"' +
           (st2.on ? '' : ' disabled') + ' title="' + sp.label + ' — ' + st2.hint.replace(/"/g, '&quot;') + '">' +
           (ICONS[sp.id] || '') + '<span>' + sp.label + '</span></button>';
@@ -611,7 +617,10 @@
       else if (ui.reservePick) html = reservePickCard();
       else if (ui.insertion) html = insertionCard();
       else if (B.state.cmdOffer) html = cmdOfferCard();
-      else if (B.state.standAsk && !isAI(B.state.standAsk.side)) html = standCard();
+      /* The Rally phase's questions wait, as the End phase's does, for the last
+         activation to be drawn and its cards read: the phase begins on the table
+         only once the table has settled (render redraws this then). */
+      else if (B.state.standAsk && !isAI(B.state.standAsk.side) && !B.replaying() && !B.cardsPending()) html = standCard();
       // the End phase is asked once the other side's last activations have been drawn, not while they play
       else if (B.state.endAsk && !isAI(B.state.endAsk.side) && !B.state.over && !B.replaying() && !B.cardsPending()) {
         html = endCard();
@@ -621,7 +630,7 @@
       }
       else if (B.state.martyrAsk && !isAI(B.state.martyrAsk.side)) html = martyrCard();
       else if (B.state.kyfAsk && !isAI(B.state.kyfAsk.side)) html = kyfCard();
-      else if (B.state.nervousAsk && !isAI(B.state.nervousAsk.side)) html = atThisScreen(B.state.nervousAsk.side) ? nervousCard()
+      else if (B.state.nervousAsk && !isAI(B.state.nervousAsk.side) && !B.replaying() && !B.cardsPending()) html = atThisScreen(B.state.nervousAsk.side) ? nervousCard()
         : '<div class="card"><h2>Rally phase</h2><p class="sub"><b>' + esc(sideName(B.state.nervousAsk.side)) + '</b> is deciding whether the hive-mind steadies the swarm.</p></div>';
       else if (B.state.over) html = overCard();
       else if (ui.terrain.length && ui.selected &&
