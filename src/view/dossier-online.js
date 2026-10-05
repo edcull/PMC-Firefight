@@ -563,7 +563,7 @@
       }
       h = K.scrollTop(h);
       // the list as the contract screen at one table draws it (dossier-contract.js): the force on the page, the picker in a window over it
-      h += K.forceBox(chk, units, limits, K.chosenRow(units, 'data-ocunpick'), list, '<button class="lnk" data-go="ocauto">Pick for me</button>');
+      h += K.forceBox({ co: co, chk: chk, units: units, limits: limits, drop: 'data-ocunpick', list: list, auto: 'ocauto', clear: 'occlear' });
       var why = chk.ok ? '' : esc((chk.faults || [])[0] || 'Not a legal force yet.');
       // backing out sits in line with going in, the same button
       h += K.fightBar('ocdrop', ctx.ai ? 'Turn the contract down' : 'Call the contract off', 'ocready', ctx.ai ? 'Fight with this force' : 'Ready — fight with this force', chk.ok ? null : why);
@@ -783,6 +783,7 @@
           if (at >= 0) pk.drugs.splice(at, 1); else pk.drugs.push(dg);
           E.render(); return true;
         }
+        if (go === 'occlear') { pk.rids = []; pk.field = []; pk.drugs = []; E.render(); return true; }
         if (go === 'ocauto') {
           var got = C.pickForce(myCo(), k.tier, k.pl, pk.tactic || null) || [];
           pk.rids = got.filter(function (e) { return !e.fielded; }).map(function (e) { return e.rid; });

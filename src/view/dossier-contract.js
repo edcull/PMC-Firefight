@@ -73,8 +73,10 @@
       if (ro) {
         var mine = ro.attacker === side ? 'attacker' : 'defender';
         h += '<div class="offer-role role-' + mine + '">You ' + (mine === 'attacker' ? 'attack' : 'defend') + '</div>';
-        // (what each side deploys is told on the table, in the briefing: only the roll that turned the roles round here)
-        if (ro.bestDefence && ro.bestDefence.swapped) h += '<div class="cpstat"><b>The Best Defence is Good Offence</b> turned it round (D6 ' + ro.bestDefence.roll + ').</div>';
+        // where your side deploys, and the roll that turned the roles round, if one did
+        h += '<div class="cpstat">' + esc(sc && sc.roles ? sc.roles[mine] || '' : '') +
+          (ro.bestDefence && ro.bestDefence.swapped
+            ? ' <b>The Best Defence is Good Offence</b> turned it round (D6 ' + ro.bestDefence.roll + ').' : '') + '</div>';
       } else {
         h += '<div class="cpstat">Neither side has the initiative here \u2014 you meet on even terms.</div>';
       }
@@ -112,16 +114,10 @@
       return h + '</span>';
     }
     /* The pieces of picking a force for a contract, the same at one table and
-       online (dossier-online.js): the force on the page with its picker in a window (forceBox), the units in
-       it (`attr` the data-… that takes one out), a unit on the books or one
+       online (dossier-online.js): the force's line on the page and its muster (forceBox), a unit on the books or one
        fielded for this battle only to put in (`bad`: why it cannot go, greying
        it out), and the buttons that back out of it or go in (`why`: what still
        stands in the way, already escaped; null when nothing does). */
-    function chosenRow(units, attr) {
-      return '<div class="chosen">' + units.map(function (e, i) {
-        return '<span class="pickwrap"><button class="pick" ' + attr + '="' + i + '">' + esc(e.name) + ' <b>' + ROMAN[profile(e.key).tier] + '</b></button></span>';
-      }).join('') + '</div>';
-    }
     function barred(bad) { return bad.length ? ' disabled title="' + esc(bad[0]) + '"' : ''; }
     // down the right: the Trauma Points it carries, or what kind of machine it is (machines take none)
     function rosterRow(attr, e, bad, note) {
@@ -133,19 +129,54 @@
     function fieldRow(attr, p, bad, kind) {
       return U.unitRow('class="cu" ' + attr + barred(bad), p.tier, '<b>' + esc(p.name) + '</b>', 'not bought \u2014 for this battle only', kind ? p.cls : null);
     }
-    /* The force on the contract screen: its points, what each Tier asks for, the
-       units in it so far — and a button to the picker, a window over the page with
-       the list to choose from (`list`) and the units chosen (`chosen`, each a press
-       to take it out). `extra`: the auto-pick, where there is one. */
-    function forceBox(chk, units, limits, chosen, list, extra) {
-      var pts = '<span class="pts' + (chk.spent > chk.budget ? ' over' : '') + '">' + chk.spent + ' / ' + chk.budget + '</span>';
-      var h = '<div class="muster cforce"><div class="muster-head"><b>Your force</b>' + pts + '</div>' + limits +
-        '<div class="chosen">' + units.map(function (e) {
-          return '<span class="pick">' + esc(e.name) + ' <b>' + ROMAN[profile(e.key).tier] + '</b></span>';
-        }).join('') + '</div>' +
-        '<button class="start cforce-go" data-go="fmodal" data-kind="cpick">' + (units.length ? 'Change your force' : 'Pick your force') + '</button></div>';
-      return h + E.cmodal('cpick', 'Take the field', '<div class="muster-head"><b>' + units.length + (units.length === 1 ? ' unit' : ' units') + '</b>' + pts + (extra || '') + '</div>' + limits + chosen +
-        '<div class="cat tall cmodal-scroll">' + list + '</div>', '<button class="start" data-go="fmodalclose">Done</button>');
+    /* The force on the contract screen, as the other modes show a force: one line
+       in the player bars' style (its colour, its name, how far the muster has got,
+       its army), which opens the muster — the units in it as the skirmish muster's
+       cards, with the EXP, Trauma Points, honours and traumas each carries; the
+       count at each Tier; and the add, pick-for-me and clear buttons. The add list
+       is a window of its own (`list`: the company's units, and those fielded for
+       this battle only). o: { co, chk, units, limits, drop (the data-… that takes a
+       unit out, by its place in `units`), list, auto, clear (their data-go) }. */
+    var ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+    var ICO_ADD = ICO + '<path d="M12 5v14M5 12h14"/></svg>',
+        ICO_ROLL = ICO + '<path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>',
+        ICO_CLEAR = ICO + '<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>';
+    function forceCard(e, i, drop) {
+      var p0 = profile(e.key), mach = p0.cls !== 'infantry';
+      var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p0, { rules: (p0.rules || []).slice(), models: p0.size }), e.prop || R.defaultDrive(p0)), !!e.drone);
+      var line = root.PMC_STAT_SHORT ? root.PMC_STAT_SHORT(u0) : '';
+      return '<div class="fcard">' +
+        '<div class="fcard-top"><span class="ct">' + ROMAN[p0.tier] + '</span><b>' + esc(e.name) + '</b>' +
+        '<span class="fcard-kind">' + esc(e.fielded ? 'for this battle only' : p0.group || (mach ? p0.cls : 'Infantry')) + '</span>' +
+        '<button class="lnk danger fcard-drop" ' + drop + '="' + i + '" title="Remove" aria-label="Remove ' + esc(e.name) + '">✕</button></div>' +
+        '<div class="fcard-line">' + esc(line) + '</div>' +
+        // what it carries: its EXP and Trauma Points, its honours and traumas (machines take no Trauma Points)
+        (e.fielded ? '' : '<div class="fcard-wear">' + wear(Object.assign({}, e, { exp: 0 }), mach)
+          .replace('<span class="wear">', '<span class="wear"><span class="w-exp">' + (e.exp || 0) + ' EXP</span>') + '</div>') +
+        '</div>';
+    }
+    function forceBox(o) {
+      var co = o.co, chk = o.chk, units = o.units, n = units.length;
+      var pts = '<span class="pts' + (chk.spent > chk.budget ? ' over' : '') + '">' + chk.spent + ' / ' + chk.budget + ' points</span>';
+      var h = '<div class="olob-slots cforce"><div class="olob-slot mine">' +
+        '<span class="olob-colour still">' + U.chip(colourOf(co)) + '</span>' +
+        '<button type="button" class="olob-who hot-who" data-go="fmodal" data-kind="cpick"><b>' + esc(co.name) + '</b>' +
+        '<small>' + (n ? n + (n === 1 ? ' unit' : ' units') + ' · ' + chk.spent + '/' + chk.budget + ' points · change' : 'no units yet — tap to muster it') + '</small></button>' +
+        '<span class="olob-army">' + esc(C.words(co).side) + '</span></div></div>';
+      var faults = !n ? 'Add units, or let it pick a force for you.' : chk.ok ? 'A legal force at this Battle Tier and Priority Level.' : esc((chk.faults || []).join(' '));
+      var body = '<div class="muster cmuster"><div class="muster-head"><b>Your force</b>' + pts + '</div>' + o.limits +
+        '<div class="chosen fcards cmodal-scroll">' + units.map(function (e, i) { return forceCard(e, i, o.drop); }).join('') + '</div>' +
+        '<p class="faults' + (n && chk.ok ? ' ok' : '') + '">' + faults + '</p>' +
+        '<div class="cmuster-btns">' +
+        '<button type="button" class="lnk ico" data-go="fmodal" data-kind="cadd" title="Add units" aria-label="Add units">' + ICO_ADD + '</button>' +
+        '<button type="button" class="lnk ico" data-go="' + o.auto + '" title="Pick a force for me" aria-label="Pick a force for me">' + ICO_ROLL + '</button>' +
+        '<button type="button" class="lnk ico" data-go="' + o.clear + '" title="Clear" aria-label="Clear"' + (n ? '' : ' disabled') + '>' + ICO_CLEAR + '</button>' +
+        '</div></div>';
+      h += E.cmodal('cpick', 'Muster your force', body, '<button class="start" data-go="fmodalclose">Done</button>');
+      // the add list: back to the muster when done
+      h += E.cmodal('cadd', 'Add units', '<div class="muster-head"><b>' + n + (n === 1 ? ' unit' : ' units') + '</b>' + pts + '</div>' + o.limits +
+        '<div class="cat cmodal-scroll">' + o.list + '</div>', '<button class="start" data-go="fmodal" data-kind="cpick">Done</button>');
+      return h;
     }
     /* The contract screen fits the phone: what is above the force (who it is
        against, the job, what is left to settle) scrolls in a box of its own, and
@@ -431,7 +462,7 @@
         });
       }
       h = scrollTop(h + ordersPanel(A));
-      h += forceBox(chk, E.contract.picks, limits, chosenRow(E.contract.picks, 'data-unpick'), list);
+      h += forceBox({ co: A, chk: chk, units: E.contract.picks, limits: limits, drop: 'data-unpick', list: list, auto: 'autopick', clear: 'cclear' });
       if (!chk.ok) {
         var why;
         if (blocking(chk.faults).length) {
@@ -572,7 +603,7 @@
 
     return {
       offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
-      forceBox: forceBox, scrollTop: scrollTop, chosenRow: chosenRow, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
+      forceBox: forceBox, scrollTop: scrollTop, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
       autoPick: autoPick, fight: fight, seatBack: seatBack
     };
   };
