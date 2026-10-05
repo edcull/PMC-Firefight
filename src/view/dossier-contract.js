@@ -141,7 +141,26 @@
     var ICO_ADD = ICO + '<path d="M12 5v14M5 12h14"/></svg>',
         ICO_ROLL = ICO + '<path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>',
         ICO_CLEAR = ICO + '<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>';
-    function forceCard(e, i, drop) {
+    /* EXP, and the Trauma Points on a meter filling toward the next trauma (the
+       dossier's .dbars); a command unit carries neither, and a machine no Trauma
+       Points unless it earns honours. Its honours and traumas follow as tags. */
+    function carried(e, p0, co) {
+      var h = '';
+      if (!C.isLeaderP(p0)) {
+        h += '<div class="dbars"><span class="dexp">' + (e.exp || 0) + ' EXP</span>';
+        if (p0.cls === 'infantry' || C.takesHonours(p0)) {
+          var cap = C.traumaThreshold(co), tp = e.tp || 0, pct = Math.min(100, Math.round(100 * tp / cap));
+          h += '<span class="dtp" title="' + tp + ' of ' + cap + ' Trauma Points"><i style="width:' + pct + '%"></i></span>' +
+            '<span class="dtpn">' + tp + '/' + cap + ' TP</span>';
+        }
+        h += '</div>';
+      }
+      var marks = '';
+      (e.honours || []).forEach(function (n) { var x = C.honourTable(e.key)[n - 1]; if (x) marks += U.mark(x, 'good'); });
+      (e.traumas || []).forEach(function (n) { var x = C.traumaTable(e.key)[n - 1]; if (x) marks += U.mark(x, 'bad'); });
+      return h + (marks ? '<div class="fcard-rules">' + marks + '</div>' : '');
+    }
+    function forceCard(e, i, drop, co) {
       var p0 = profile(e.key), mach = p0.cls !== 'infantry';
       var u0 = R.applyDrone(R.applyPropulsion(Object.assign({}, p0, { rules: (p0.rules || []).slice(), models: p0.size }), e.prop || R.defaultDrive(p0)), !!e.drone);
       var line = root.PMC_STAT_SHORT ? root.PMC_STAT_SHORT(u0) : '';
@@ -150,9 +169,8 @@
         '<span class="fcard-kind">' + esc(e.fielded ? 'for this battle only' : p0.group || (mach ? p0.cls : 'Infantry')) + '</span>' +
         '<button class="lnk danger fcard-drop" ' + drop + '="' + i + '" title="Remove" aria-label="Remove ' + esc(e.name) + '">✕</button></div>' +
         '<div class="fcard-line">' + esc(line) + '</div>' +
-        // what it carries: its EXP and Trauma Points, its honours and traumas (machines take no Trauma Points)
-        (e.fielded ? '' : '<div class="fcard-wear">' + wear(Object.assign({}, e, { exp: 0 }), mach)
-          .replace('<span class="wear">', '<span class="wear"><span class="w-exp">' + (e.exp || 0) + ' EXP</span>') + '</div>') +
+        // what it carries: its EXP and Trauma Points as the dossier's cards show them, then its honours and traumas
+        (e.fielded ? '' : carried(e, p0, co)) +
         '</div>';
     }
     function forceBox(o) {
@@ -165,7 +183,7 @@
         '<span class="olob-army">' + esc(C.words(co).side) + '</span></div></div>';
       var faults = !n ? 'Add units, or let it pick a force for you.' : chk.ok ? 'A legal force at this Battle Tier and Priority Level.' : esc((chk.faults || []).join(' '));
       var body = '<div class="muster cmuster"><div class="muster-head"><b>Your force</b>' + pts + '</div>' + o.limits +
-        '<div class="chosen fcards cmodal-scroll">' + units.map(function (e, i) { return forceCard(e, i, o.drop); }).join('') + '</div>' +
+        '<div class="chosen fcards cmodal-scroll">' + units.map(function (e, i) { return forceCard(e, i, o.drop, co); }).join('') + '</div>' +
         '<p class="faults' + (n && chk.ok ? ' ok' : '') + '">' + faults + '</p>' +
         '<div class="cmuster-btns">' +
         '<button type="button" class="lnk ico" data-go="fmodal" data-kind="cadd" title="Add units" aria-label="Add units">' + ICO_ADD + '</button>' +

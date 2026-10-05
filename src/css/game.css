@@ -1478,7 +1478,6 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .cmuster > * { flex: none; }
 .cmuster > .chosen.fcards { flex: 1 1 auto; min-height: 60px; max-height: none; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .cmuster > .faults { margin: 8px 0 0; }
-.fcard-wear .wear { margin: 5px 0 0; }
 .cmuster-btns { display: flex; gap: 6px; margin: 9px 0 0; }
 .cmuster-btns .lnk { flex: 1; margin: 0; }
 .cmuster-btns .ico { display: grid; place-items: center; padding: 6px 0; min-height: var(--row-h); }
