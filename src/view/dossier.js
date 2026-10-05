@@ -422,6 +422,8 @@
   /* The dossier's own sort and filter (the line above its list): sorted by one
      thing, and narrowed to the types and Tiers ticked (none ticked, all shown). */
   var dsort = 'type', dfilt = { type: {}, tier: {} };
+  // the sort or filter popup open inside a window (the contract's add list), which stays open under it
+  var subPop = null;
   function dossierOrder(list) {
     function p(e) { return profile(e.key) || {}; }
     function lead(e) { return C.isLeaderP(p(e)) ? 1 : 0; }
@@ -664,7 +666,7 @@
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses,
-      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get rosterTab() { return rosterTab; },
+      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get rosterTab() { return rosterTab; }, get subPop() { return subPop; },
       get online() { return online; }, onlineNote: function () { return online ? (KIT_ONLINE || kitOnline()).hubNote() : ''; }
     }));
   }
@@ -723,6 +725,9 @@
       colourOf: colourOf, esc: esc, note: note, profile: profile, quietTip: quietTip, root: root, save: save,
       spellOut: spellOut, statRow: statRow, stripe: stripe, tip: tip, get camp() { return camp; },
       cmodal: cmodal,
+      // the dossier's sort and filter, for the contract's add list
+      sortLine: function (co, fkey) { return (KIT_HUB || kitHub()).sortLine(co, fkey, true); },
+      dossierOrder: dossierOrder, unitPasses: unitPasses,
       get contract() { return contract; }, set contract(v) { contract = v; },
       get view() { return view; }, set view(v) { view = v; }
     }));
@@ -1000,6 +1005,10 @@
     // the dossier's sort and filter, dropped down under their buttons: a tap anywhere else puts them away
     if ((openModal === 'dsort' || openModal === 'dfilter') && !ev.target.closest('.dpopwrap')) {
       openModal = null; render();
+      if (!t) return;
+    }
+    if (subPop && !ev.target.closest('.dpopwrap')) {
+      subPop = null; render();
       if (!t) return;
     }
     // a unit's drives, opened beside its icon: a tap anywhere else puts them away
@@ -1310,8 +1319,14 @@
       case 'fmodal': openModal = t.getAttribute('data-kind'); render(); return;
       // the dossier's sort (one at a time) and filter (as many as ticked), from their popups
       // the sort and filter pop-ups: their buttons open them, and close them again
-      case 'dpop': { var pk = t.getAttribute('data-kind'); openModal = openModal === pk ? null : pk; render(); return; }
-      case 'dsort': dsort = t.getAttribute('data-by') || 'type'; openModal = null; render(); return;
+      case 'dpop': {
+        var pk = t.getAttribute('data-kind');
+        // inside a window: a popup of the window's own, the window left open under it
+        if (t.closest('.cmodal')) subPop = subPop === pk ? null : pk;
+        else openModal = openModal === pk ? null : pk;
+        render(); return;
+      }
+      case 'dsort': dsort = t.getAttribute('data-by') || 'type'; if (subPop) subPop = null; else openModal = null; render(); return;
       case 'dfilt': {
         var dk = t.getAttribute('data-kind'), dv = t.getAttribute('data-val');
         dfilt[dk][dv] = !dfilt[dk][dv];
@@ -1324,7 +1339,7 @@
         fl[kind] = !fl[kind];
         // the list it narrows is opened to show it
         if (fk.charAt(0) === 'r') rivalOpen = +fk.slice(1);
-        else { hubPane = 'dossier'; rosterTab = 'units'; docSide = fk; }
+        else if (view === 'hub') { hubPane = 'dossier'; rosterTab = 'units'; docSide = fk; }
         render(); return;
       }
       case 'pastbattle': pastFromList = true; (KIT_AFTER || kitAfter()).showPast(+t.getAttribute('data-i')); openModal = null; view = 'aftermath'; render(); return;
