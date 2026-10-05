@@ -73,10 +73,11 @@ function ok(name, cond, note) {
 
   console.log('\nBattles');
   r = await api.handle(me, 'close-game', { code: 'live2' });
-  ok('a stuck battle is closed, kept as abandoned', r.ok && db.gamesByCode('LIVE2')[0].status === 'abandoned', r.why);
+  // a finished battle is not kept (lobby.js forget): closed, it is cleared away
+  ok('a stuck battle is closed, and cleared away', r.ok && !db.gamesByCode('LIVE2').length, r.why);
   ok('...and closing one that is not under way is said so', !(await api.handle(me, 'close-game', { code: 'LIVE2' })).ok);
   r = await api.handle(me, 'prune', { days: 30 });
-  ok('old finished battles are cleared, newer ones kept', r.ok && !db.gamesByCode('OLD11').length && db.gamesByCode('LIVE2').length === 1, r.text);
+  ok('old finished battles are cleared, those under way kept', r.ok && !db.gamesByCode('OLD11').length && db.gamesByCode('GONE3').length === 1, r.text);
 
   console.log('\nRemoving');
   const before = backups.list().length;
