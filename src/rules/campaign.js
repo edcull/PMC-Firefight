@@ -1427,6 +1427,7 @@
       creedById: creedById, creedOf: creedOf, d6: d6, drawHonours: drawHonours, fieldReport: fieldReport,
       found: found, hasDoctrine: hasDoctrine, isLeaderP: isLeaderP, levelsFor: levelsFor,
       maxBattleTier: maxBattleTier, newCompany: newCompany, pick: pick, profile: profile,
+      fillsArmy: fillsArmy, fullTier: fullTier,
       promoteCompany: promoteCompany, promoteUnit: promoteUnit, promotionCost: promotionCost,
       promotionTargets: promotionTargets, rebuildNeeds: rebuildNeeds, recruit: recruit,
       recruitCost: recruitCost, rollBattleTier: rollBattleTier, rollPayment: rollPayment,
@@ -1473,6 +1474,20 @@
   function traumaBand(co, e) {
     var th = traumaThreshold(co) || 10, tp = e.tp || 0;
     return tp >= th - 3 ? 2 : tp >= Math.ceil(th * 0.4) ? 1 : 0;
+  }
+  /* Whether a force can put a real army on the table at this Tier and Level: a legal
+     list that fills at least four fifths of the composition points — what a contract
+     against an AI force is offered at, so it does not turn up a third short. */
+  function fillsArmy(co, tier, pl) {
+    var picks = pickForce(co, tier, pl || 1, null);
+    if (!picks.length) return false;
+    var res = R.checkArmy(picks.map(function (e) { return R.entryPick(e); }), tier, pl || 1, co.doctrines || [], null);
+    return res.ok && res.spent >= Math.ceil(0.8 * res.budget);
+  }
+  // the highest Battle Tier (up to `cap`) at which it can, or 0
+  function fullTier(co, pl, cap) {
+    for (var t = Math.min(5, cap || effectiveTier(co)); t >= 1; t--) if (fillsArmy(co, t, pl || 1)) return t;
+    return 0;
   }
   function pickForce(co, tier, pl, tactic) {
     /* Nursing the force: a unit one bad battle from a Battle Trauma is left at home
@@ -1581,7 +1596,7 @@
   }
 
   root.PMCCamp = {
-    VERSION: VERSION, migrate: migrate, ordinalName: ordinalName, isDefaultName: isDefaultName,
+    VERSION: VERSION, migrate: migrate, fillsArmy: fillsArmy, fullTier: fullTier, ordinalName: ordinalName, isDefaultName: isDefaultName,
     DOCTRINES: DOCTRINES, CATEGORIES: CATEGORIES,
     doctrine: function (id) { return BY_DOCTRINE[id] || BY_PATH[id] || BY_PATHWAY[id] || BY_ADVANCEMENT[id]; },
     PATHS: PATHS, PATH_GROUPS: PATH_GROUPS, BY_PATH: BY_PATH,

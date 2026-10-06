@@ -276,10 +276,11 @@
        and scenario. */
     function takeRival(r) {
       var offers = C.rollOffers(E.camp), co = (E.camp.rivals || [])[r];
-      if (!co) return;
+      if (!co || co.regrouping) return;               // sitting this turn out
       if (!offers.some(function (o) { return o.rival === r; })) {
         var v = Object.assign({}, E.camp, { rivals: [co], offers: null, offersTurn: null });
         var o = C.rollOffers(v)[0];
+        if (!o) return;
         o.rival = r;
         offers.push(o);
         save();

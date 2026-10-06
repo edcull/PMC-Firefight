@@ -828,5 +828,24 @@ head('Pick a force (and the AI forces): Trauma Points');
   ok('...but sent when the army cannot be legal without them', R.checkArmy(C.pickForce(co, 1, 1, null).map(function (e) { return R.entryPick(e); }), 1, 1, co.doctrines || []).ok, true);
 })();
 
+/* ------------------------------------------------- a force a third short */
+head('Contracts at a Tier the AI force can field near full strength');
+(function () {
+  // the Ivenbean Brood after a bad battle: legal at Tier III (2+ Tier III for a swarm) but 12 of 18 points
+  var brood = C.newCompany('Ivenbean Brood', { faction: 'bugs' }); brood.tier = 3; brood.kUC = 0;
+  ['bwatchers', 'bwatchlarva', 'bpathfinder', 'bsmallpath', 'bsmall', 'btiny', 'btiny'].forEach(function (k) { brood.roster.push(C.newEntry(k)); });
+  brood.cmdRid = brood.roster[0].rid;
+  ok('legal at Tier III PL1 but short of the points', C.canFieldArmy(brood, 3, 1) && !C.fillsArmy(brood, 3, 1), true);
+  ok('...the highest Tier it fields near full strength', C.fullTier(brood, 1) < 3, true);
+  var camp = C.newCampaign({ mode: 'solo', nameA: 'Us', factionA: 'pmc' });
+  C.found(camp.companies.A, ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
+  camp.companies.A.tier = 3;
+  camp.rivals = [brood]; camp.companies.B = brood; camp.facing = 0;
+  var offers = C.rollOffers(camp);
+  ok('an offer against it is no bigger than it can field', offers.length > 0 && offers.every(function (o) { return o.tier <= C.fullTier(brood, 1) && o.capTier <= C.fullTier(brood, 1); }), true,
+    offers.map(function (o) { return 'T' + o.tier + '/cap' + o.capTier; }).join(' '));
+  ok('...and not regrouping', !brood.regrouping, true);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -14,6 +14,7 @@
         creedOf = E.creedOf, d6 = E.d6, drawHonours = E.drawHonours, fieldReport = E.fieldReport,
         found = E.found, hasDoctrine = E.hasDoctrine, isLeaderP = E.isLeaderP, levelsFor = E.levelsFor,
         maxBattleTier = E.maxBattleTier, newCompany = E.newCompany, pick = E.pick, profile = E.profile,
+        fillsArmy = E.fillsArmy, fullTier = E.fullTier,
         promoteCompany = E.promoteCompany, promoteUnit = E.promoteUnit, promotionCost = E.promotionCost,
         promotionTargets = E.promotionTargets, rebuildNeeds = E.rebuildNeeds, recruit = E.recruit,
         recruitCost = E.recruitCost, rollBattleTier = E.rollBattleTier, rollPayment = E.rollPayment,
@@ -125,15 +126,29 @@
         return co.tier < want ? catchUp(co, want) : null;
       });
 
+      /* What each force can really put on the table: the highest Tier at which it can
+         field an army near full strength. One that cannot even manage Tier I sits the
+         turn out to regroup — it hires what it can (the free Tier I units included)
+         and offers no contract until it is fit to fight again. */
+      var caps = rivals.map(function (co) {
+        var c = fullTier(co, 1);
+        if (!c) { developRival(co); c = fullTier(co, 1); }
+        co.regrouping = !c;
+        return c;
+      });
+      var able = rivals.map(function (co, i) { return i; }).filter(function (i) { return caps[i] > 0; });
+      // (if nobody on the world is fit, the contracts go ahead at whatever they can field)
+      if (!able.length) { able = rivals.map(function (co, i) { return i; }); rivals.forEach(function (co) { co.regrouping = false; }); }
+
       /* How many jobs there are this turn. One a force is the usual week; now and
          then the world is quiet and one of them has nothing to offer, and now and
          then it is busy and somebody is fighting on two fronts at once. */
-      var n = rivals.length, roll = d6();
+      var n = able.length, roll = d6();
       var count = roll === 1 ? n - 1 : roll === 6 ? n + (d6() >= 5 ? 2 : 1) : n;
       count = Math.max(1, Math.min(n * 2, count));
 
       // deal the forces out: everyone gets one before anyone gets two
-      var order = shuffle(rivals.map(function (co, i) { return i; }));
+      var order = shuffle(able.slice());
       var deal = [];
       while (deal.length < count) {
         deal = deal.concat(order.slice(0, Math.min(order.length, count - deal.length)));
@@ -148,6 +163,13 @@
         var fs = foresight(A, co, true);
         var scen = fs.scenario || fs.fore.dice[0];
         var tier = rollBattleTier(A, co);
+        // no bigger a fight than the force can field near full strength
+        if (caps[idx] && caps[idx] < tier.cap) {
+          tier.cap = caps[idx]; tier.tier = Math.min(tier.roll, tier.cap);
+          tier.thin = tier.cap < Math.min(tier.roll, tier.standing);
+        }
+        var cap1 = caps[idx] ? Math.min(maxBattleTier(A, co, 1), caps[idx]) : maxBattleTier(A, co, 1);
+        var full2 = function (t, levels) { return levels.filter(function (pl) { return pl === 1 || fillsArmy(co, t, pl); }); };
         var docs = { A: A.doctrines || [], B: co.doctrines || [] };
         var alt = fs.alt || null;
         return {
@@ -158,10 +180,10 @@
           scenario: scen,
           tierRoll: tier,
           tier: tier.tier,
-          levels: levelsFor(A, co, tier.tier),
+          levels: full2(tier.tier, levelsFor(A, co, tier.tier)),
           // the biggest fight this pairing could put on, whatever the D6 said
-          capTier: maxBattleTier(A, co, 1),
-          capLevels: levelsFor(A, co, maxBattleTier(A, co, 1)),
+          capTier: cap1,
+          capLevels: full2(cap1, levelsFor(A, co, cap1)),
           roles: SC ? SC.rollRoles(scen.id, docs, null, ['A']) : null,
           caught: caught[idx]
         };

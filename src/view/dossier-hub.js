@@ -462,6 +462,8 @@
       var on = (E.camp && E.camp.online) || {}, mine = E.camp.companies.A;
       var off = function (why) { return '<button class="start" disabled title="' + esc(why) + '">' + esc(why) + '</button>'; };
       if (!(mine.roster || []).length) return off('Found your force first');
+      // too battered to field a real army: it sits this turn out and rebuilds
+      if (co.regrouping) return off('Regrouping this turn');
       // alone: the job they offer this turn (or one rolled for them), then the contract screen
       if (!E.online) return '<button class="start" data-rivcontract="' + ri + '">Contract</button>';
       if (on.contract || on.duel) return off('Something else is under way');

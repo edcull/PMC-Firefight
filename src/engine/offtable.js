@@ -25,7 +25,9 @@
      either force cannot put a legal army on the table even after hiring in. */
   function setUp(coA, coB, opts) {
     opts = opts || {};
-    var tier = Math.max(1, Math.min(coA.tier || 1, coB.tier || 1)), pl = 1;
+    // the Battle Tier the weaker side can field near full strength (no army a third short)
+    var fa = C.fullTier ? C.fullTier(coA, 1) : 0, fb = C.fullTier ? C.fullTier(coB, 1) : 0;
+    var tier = Math.max(1, Math.min(coA.tier || 1, coB.tier || 1, fa || coA.tier || 1, fb || coB.tier || 1)), pl = 1;
     var tacA = coA.faction === 'rebel' ? TACTICS[Math.floor(Math.random() * TACTICS.length)] : null;
     var tacB = coB.faction === 'rebel' ? TACTICS[Math.floor(Math.random() * TACTICS.length)] : null;
     var a = pickArmy(coA, tier, pl, tacA), b = pickArmy(coB, tier, pl, tacB);
