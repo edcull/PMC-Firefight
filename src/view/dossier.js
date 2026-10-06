@@ -432,7 +432,8 @@
       case 'name': { var c = (String(e.name).charAt(0) || '?').toUpperCase(); return { label: c, rank: c }; }
       case 'tier': return { label: 'Tier ' + ROMAN[p.tier], rank: -p.tier };
       case 'xp': { var x = Math.floor((e.exp || 0) / 5) * 5; return { label: x + '\u2013' + (x + 4) + ' EXP', rank: -x }; }
-      case 'tp': return { label: (e.tp || 0) + ' TP', rank: -(e.tp || 0) };
+      // 0, then in threes: 1–3, 4–6, 7–9…
+      case 'tp': { var tp = e.tp || 0, lo = tp ? Math.floor((tp - 1) / 3) * 3 + 1 : 0; return { label: tp ? lo + '\u2013' + (lo + 2) + ' TP' : '0 TP', rank: -lo }; }
       default: { var g = C.isLeaderP(p) ? 'Command' : p.group || 'Other'; return { label: g, rank: (g === 'Command' ? '0' : '1') + g }; }
     }
   }
@@ -482,6 +483,18 @@
         default: return byType || byTier || byName;
       }
     }
+  }
+  /* A promotion turns a unit into another kind, for good: asked first, with what it
+     costs and what it becomes (`onOk` does it, here or through the server) */
+  function askPromote(co, e, key, onOk) {
+    var q = profile(key), c = C.promotionCost(e, key), word = C.money(co);
+    ask({
+      kind: 'confirm', title: 'Promote ' + e.name + ' to ' + q.name + '?',
+      text: 'It costs ' + c.exp + ' EXP' + (c.kUC ? ' and ' + c.kUC + ' ' + word : '') + '. It becomes ' + q.name + ' (Tier ' + ROMAN[q.tier] +
+        (q.group ? ', ' + q.group : '') + ') and keeps its honours, traumas and history. This cannot be undone.',
+      okLabel: 'Promote',
+      onOk: onOk
+    });
   }
   function unitPasses(e, key) {
     var f = ufilter[key];
@@ -798,7 +811,7 @@
   var KIT_ONLINE = null;
   function kitOnline() {
     return KIT_ONLINE || (KIT_ONLINE = root.PMCDossierOnline({
-      C: C, R: R, ROMAN: ROMAN, esc: esc, note: note, ask: ask, tip: tip, profile: profile, root: root,
+      C: C, R: R, ROMAN: ROMAN, esc: esc, note: note, ask: ask, tip: tip, profile: profile, root: root, askPromote: askPromote,
       get camp() { return camp; }, set camp(v) { camp = v; }, get view() { return view; }, set view(v) { view = v; },
       get draft() { return draft; }, set draft(v) { draft = v; }, get online() { return online; }, set online(v) { online = v; },
       set hubSide(v) { hubSide = v === 'B' ? 'B' : 'A'; }, get drawState() { return drawState; }, get upState() { return upState; },
@@ -1241,8 +1254,10 @@
       me.mount = t.getAttribute('data-m'); save(); render(); return;
     }
     if (t.hasAttribute('data-promote')) {
-      var pe = findEntry(co, t.getAttribute('data-promote'));
-      C.promoteUnit(co, pe, t.getAttribute('data-to')); openModal = null; promoRid = null; save(); render(); return;
+      var pe = findEntry(co, t.getAttribute('data-promote')), pto = t.getAttribute('data-to');
+      if (!pe) return;
+      askPromote(co, pe, pto, function () { C.promoteUnit(co, pe, pto); openModal = null; promoRid = null; save(); render(); });
+      return;
     }
     if (t.hasAttribute('data-honour')) {
       var he = findEntry(co, t.getAttribute('data-honour'));

@@ -202,7 +202,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
     console.log('\nAgainst an AI force');
     ok('no Contract button on the hub: a contract is made from the other forces', await p1.evaluate(() => !document.querySelector('#camp-body .hubbar [data-go="offers"], #camp-body .hubbar [data-go="contract"]')));
-    await press(p1, '.cdos-foot [data-kind="rivals"]');
+    await press(p1, '.hubtake [data-kind="rivals"]');
     await p1.waitForTimeout(300);
     const order = await p1.evaluate(() => [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) .cpan-B')].map((c) => c.querySelector('[data-ochallenge]') || /Challenge/.test(c.textContent) ? 'H' : 'AI').join(''));
     ok('the other forces: the other player first, then the AI forces, each with a contract beside their dossier', /^H(AI)+$/.test(order) && await p1.evaluate(() => !!document.querySelector('#camp-body .cmodal:not([hidden]) .rivacts [data-oaicontract]') && !!document.querySelector('#camp-body .cmodal:not([hidden]) .rivacts [data-ochallenge="1"]')), order);
@@ -223,7 +223,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p1.waitForTimeout(300);
 
     console.log('\nA duel');
-    await press(p1, '.cdos-foot [data-kind="rivals"]');
+    await press(p1, '.hubtake [data-kind="rivals"]');
     await p1.waitForTimeout(300);
     await press(p1, '.cmodal:not([hidden]) [data-ochallenge="1"]');
     s1 = await till(p1, 'the challenge made', (s) => s.challenges.length === 1);

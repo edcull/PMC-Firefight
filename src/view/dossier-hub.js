@@ -86,7 +86,8 @@
       // in hotseat, the player whose force the hub shows and works on (HC-1)
       var hs = E.hubSide, cur = E.camp.companies[hs] || A;
       // online: who is waiting on whom, the code for the open seat, the battle when it is made
-      if (E.online) h += E.onlineNote();
+      var onote = E.online ? E.onlineNote() : '';
+      h += onote;
       /* A force that can no longer field an army, and cannot recruit back to one, ends
          the campaign (HC-14): said here, and the contract is closed. */
       var done = E.camp.over;
@@ -99,6 +100,11 @@
         var fco = E.camp.companies[finished];
         h += '<div class="cpan"><div class="cpstat"><b>' + esc(fco.name) + ' can no longer field an army</b>, and cannot recruit back to one. ' +
           'The campaign ends here.</div><button class="start" data-go="campend" data-side="' + finished + '">End the campaign</button></div>';
+      }
+      /* Taking a contract is what the screen is for (alone, or on a world): at the top,
+         where a contract or a battle under way says so instead */
+      if (!done && !finished && (E.online || E.camp.mode === 'solo') && !/data-go="(obattle|ocontract)"/.test(onote)) {
+        h += '<div class="cpan onote hubtake"><button class="start" data-go="fmodal" data-kind="rivals">Take a contract</button></div>';
       }
       h += companyPanel(cur, hs, hubBar());
       // what a unit can spend its experience on: an honour, an upgrade, or a promotion to another unit
@@ -130,7 +136,7 @@
         '</div>');
       // the fallen, opened from the campaign's window (Back returns to it)
       h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>');
-      h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'The other forces on this world',
+      h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'Take a contract',
         // the other player's force shown as a rival's is: its figures, its kind and creed, and their dossier to open
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? rivalPanel(hs === 'B' ? A : B, 0)
           // the other players first, then the AI forces (each keeps its own place for its dossier and its contract)
@@ -229,8 +235,8 @@
           pp0 = pp0.replace(/<\/div>$/, '<button class="start" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button></div>');
         }
         h += pp0;
-        // under it, at the foot of the screen: the other forces on the world (in hotseat, the other player)
-        if (bar) {
+        // under it, at the foot of the screen, in hotseat: the other player (alone or on a world, Take a contract is at the top)
+        if (bar && E.camp.mode === 'hotseat' && !E.online) {
           var hot = E.camp.mode === 'hotseat';
           h += '<div class="cdos-foot hubfoot"><button type="button" class="lnk" data-go="fmodal" data-kind="rivals">' +
             (hot ? (E.hubSide === 'B' ? 'Player 1' : 'Player 2') : 'Other forces') + '</button></div>';

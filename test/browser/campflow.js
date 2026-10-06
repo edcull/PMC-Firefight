@@ -568,6 +568,27 @@ async function pastFronts(p) {
   check('a promotion the force cannot afford says what it is short of, on its row', !!broke && /kUC short/.test(broke.row) && !broke.disabled, JSON.stringify(broke));
   check('...and pressed, says why and does nothing else', !!broke && /Short of/.test(broke.tip) && broke.same, broke && broke.tip);
   await p.evaluate(() => { window.PMCTips && window.PMCTips.hide(); const x = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodalclose"]'); if (x) x.click(); });
+  // one it can afford is asked first: cancelled, nothing changes; confirmed, the unit becomes the other kind
+  const beforePromo = await p.evaluate(() => { const camp = window.PMC_CAMPAIGN.get(), was = JSON.stringify(camp); camp.companies.A.kUC = 20; window.PMC_CAMPAIGN.set(camp); return was; });
+  await p.waitForTimeout(250);
+  await p.evaluate(() => { const b = [...document.querySelectorAll('#camp-body button[data-promo]')].find(x => /Recruits|Enforcers|rifle/i.test(x.closest('.dcard').textContent)); if (b) b.click(); });
+  await p.waitForTimeout(250);
+  const promoAsk = await p.evaluate(() => {
+    const b = [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) button[data-promote]')].find(x => x.getAttribute('aria-disabled') !== 'true');
+    if (!b) return null;
+    const rid = b.getAttribute('data-promote'), to = b.getAttribute('data-to'), keyOf = () => window.PMC_CAMPAIGN.get().companies.A.roster.find(e => String(e.rid) === rid).key;
+    const was = keyOf();
+    b.click();
+    const box = document.getElementById('camp-askbox'), title = box && !box.hidden ? box.textContent : '';
+    box.querySelector('[data-ask="close"]').click();
+    const kept = keyOf() === was;
+    const again = [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) button[data-promote]')].find(x => x.getAttribute('data-promote') === rid && x.getAttribute('data-to') === to);
+    if (again) { again.click(); document.querySelector('#camp-askbox [data-ask="ok"]').click(); }
+    return { title, kept, now: keyOf() === to };
+  });
+  check('promoting a unit to another kind asks first, with what it costs', !!promoAsk && /Promote .+ to .+\?/.test(promoAsk.title) && /costs \d+ EXP/.test(promoAsk.title), promoAsk && promoAsk.title.slice(0, 160));
+  check('...cancelled, nothing changes; confirmed, it is promoted', !!promoAsk && promoAsk.kept && promoAsk.now, JSON.stringify(promoAsk && { kept: promoAsk.kept, now: promoAsk.now }));
+  await p.evaluate((was) => { window.PMC_CAMPAIGN.set(JSON.parse(was)); }, beforePromo);
   await p.evaluate((k) => { const camp = window.PMC_CAMPAIGN.get(); camp.companies.A.kUC = k; window.PMC_CAMPAIGN.set(camp); }, kucWas);
   await p.waitForTimeout(250);
 

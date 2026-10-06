@@ -699,7 +699,11 @@
         return true;
       }
       if (attr('data-emount')) { cmd('mount', { rid: attr('data-emount'), mount: attr('data-m') }); return true; }
-      if (attr('data-promote')) { cmd('promote', { rid: attr('data-promote'), to: attr('data-to') }, function () { E.closeModal(); }); return true; }
+      if (attr('data-promote')) {
+        var pr = attr('data-promote'), pto = attr('data-to'), pe = C.byRid(co, pr);
+        if (pe) E.askPromote(co, pe, pto, function () { cmd('promote', { rid: pr, to: pto }, function () { E.closeModal(); }); });
+        return true;
+      }
       if (attr('data-fit')) { var up = E.upState; cmd('upgrade', { rid: up && up.rid, n: +attr('data-fit') }, function () { E.toDossier(); }); return true; }
       if (attr('data-take')) { cmd('takeDoctrine', { id: attr('data-take') }, function () { E.view = 'hub'; }); return true; }
       if (attr('data-swapin')) { cmd('swapDoctrine', { out: E.swapOut, in: attr('data-swapin') }, function () { E.clearSwap(); E.view = 'hub'; }); return true; }
