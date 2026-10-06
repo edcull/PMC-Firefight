@@ -145,7 +145,11 @@
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? rivalPanel(hs === 'B' ? A : B, 0)
           // the other players first, then the AI forces (each keeps its own place for its dossier and its contract)
           : rivals.map(function (co, i) { return { co: co, i: i }; }).sort(function (a, b) { return (b.co.human ? 1 : 0) - (a.co.human ? 1 : 0) || a.i - b.i; })
-            .map(function (x) { return rivalPanel(x.co, x.i); }).join('')) + '</div>');
+            .map(function (x) { return rivalPanel(x.co, x.i); }).join('') +
+            // the forces broken up: nothing left but their free units, and no recovering from it
+            (E.camp.brokenUp || []).map(function (g) {
+              return '<p class="cpstat cgone">' + esc(g.name) + ' broke up in turn ' + g.turn + ' — too few left to field even a Tier I army.</p>';
+            }).join('')) + '</div>');
       // every battle fought, the latest first (opened from the win rate even before the first)
       {
         // a battle whose aftermath was kept opens it again, read only
@@ -462,6 +466,8 @@
       var on = (E.camp && E.camp.online) || {}, mine = E.camp.companies.A;
       var off = function (why) { return '<button class="start" disabled title="' + esc(why) + '">' + esc(why) + '</button>'; };
       if (!(mine.roster || []).length) return off('Found your force first');
+      // too battered to field a real army: it sits this turn out and rebuilds
+      if (co.regrouping) return off('Regrouping this turn');
       // alone: the job they offer this turn (or one rolled for them), then the contract screen
       if (!E.online) return '<button class="start" data-rivcontract="' + ri + '">Contract</button>';
       if (on.contract || on.duel) return off('Something else is under way');

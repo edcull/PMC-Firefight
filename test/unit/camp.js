@@ -809,5 +809,111 @@ head('Pick a force for me: the dossier\'s marks');
   ok('...but taken when nothing else will do', R.checkArmy(C.pickForce(co, 1, 1, null).map(function (e) { return R.entryPick(e); }), 1, 1, co.doctrines || []).ok, true);
 })();
 
+/* ------------------------------------------------- nursing the wounded */
+head('Pick a force (and the AI forces): Trauma Points');
+(function () {
+  var co = C.newCompany('Worn', { faction: 'pmc' });
+  ['cmd4', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits'].forEach(function (k) { co.roster.push(C.newEntry(k)); });
+  var rec = co.roster.filter(function (e) { return e.key === 'recruits'; });
+  var first = C.pickForce(co, 1, 1, null).filter(function (e) { return e.key === 'recruits'; });
+  // the ones it would take first: one a battle from a Trauma, one getting close
+  first[0].tp = 8; first[1].tp = 5;
+  var picked = C.pickForce(co, 1, 1, null);
+  var spare = rec.length - picked.filter(function (e) { return e.key === 'recruits'; }).length;
+  ok('a unit at 7+ of 10 TP is left at home while others will do', picked.indexOf(first[0]) < 0, true);
+  ok('...and one at 4+ only after the fresher ones', picked.indexOf(first[1]) < 0 || spare < 2, true);
+  ok('...the force still legal', R.checkArmy(picked.map(function (e) { return R.entryPick(e); }), 1, 1, co.doctrines || []).ok, true);
+  // everyone worn: they go all the same, rather than no force at all
+  rec.forEach(function (e) { e.tp = 9; });
+  ok('...but sent when the army cannot be legal without them', R.checkArmy(C.pickForce(co, 1, 1, null).map(function (e) { return R.entryPick(e); }), 1, 1, co.doctrines || []).ok, true);
+})();
+
+/* ------------------------------------------------- a force a third short */
+head('Contracts at a Tier the AI force can field in full');
+(function () {
+  // the Ivenbean Brood after a bad battle: legal at Tier III (2+ Tier III for a swarm) but 12 of 18 points
+  var brood = C.newCompany('Ivenbean Brood', { faction: 'bugs' }); brood.tier = 3; brood.kUC = 0;
+  ['bwatchers', 'bwatchlarva', 'bpathfinder', 'bsmallpath', 'bsmall', 'btiny', 'btiny'].forEach(function (k) { brood.roster.push(C.newEntry(k)); });
+  brood.cmdRid = brood.roster[0].rid;
+  ok('a Tier fielded must fill every point, not most of them', C.fillsArmy(brood, 2, 1) === (function () {
+    var r = R.checkArmy(C.pickForce(brood, 2, 1).map(function (e) { return R.entryPick(e); }), 2, 1, []); return r.ok && r.spent === r.budget; })(), true);
+  ok('legal at Tier III PL1 but short of the points', C.canFieldArmy(brood, 3, 1) && !C.fillsArmy(brood, 3, 1), true);
+  ok('...the highest Tier it fields near full strength', C.fullTier(brood, 1) < 3, true);
+  var camp = C.newCampaign({ mode: 'solo', nameA: 'Us', factionA: 'pmc' });
+  C.found(camp.companies.A, ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
+  camp.companies.A.tier = 3;
+  camp.rivals = [brood]; camp.companies.B = brood; camp.facing = 0;
+  var offers = C.rollOffers(camp);
+  ok('an offer against it is no bigger than it can field', offers.length > 0 && offers.every(function (o) { return o.tier <= C.fullTier(brood, 1) && o.capTier <= C.fullTier(brood, 1); }), true,
+    offers.map(function (o) { return 'T' + o.tier + '/cap' + o.capTier; }).join(' '));
+  ok('...and not regrouping', !brood.regrouping, true);
+  ok('it took on free Tiny bug swarms only to four', brood.roster.filter(function (e) { return e.key === 'btiny'; }).length <= 4, true);
+
+  // the only force that cannot fight: its four free units and no Tier II command to make up the points
+  var thin = C.newCompany('Thin', { faction: 'rebel' }); thin.tier = 1; thin.kUC = 0;
+  ['rciv', 'rciv', 'rciv', 'rciv'].forEach(function (k) { thin.roster.push(C.newEntry(k)); });
+  ok('four Armed civilians alone: 4 of 6 points — no Tier I army', C.fullTier(thin, 1), 0);
+  thin.roster.push(C.newEntry('rinstigators'));
+  ok('...with a Tier I leader, 5 of 6 — still none', C.fullTier(thin, 1), 0);
+  thin.roster.pop(); thin.roster.push(C.newEntry('rsecondary'));
+  ok('...with a Tier II leader in their place, 6 of 6 — Tier I', C.fullTier(thin, 1), 1);
+  var pen = C.newCompany('Pen', { faction: 'pmc' });
+  ok('Penal troops are always free (four to an army); Armed civilians while fewer than four', [0, 4, 6].map(function (n) {
+    pen.roster = []; for (var i = 0; i < n; i++) pen.roster.push(C.newEntry('penal'));
+    return C.recruitCost(pen, 'penal');
+  }).join(',') + ' / ' + [3, 4].map(function (n) {
+    thin.roster = []; for (var i = 0; i < n; i++) thin.roster.push(C.newEntry('rciv'));
+    return C.recruitCost(thin, 'rciv');
+  }).join(','), '0,0,0 / 0,1');
+
+  // a force that can only regroup has its turn of recovery, then is broken up
+  var camp2 = C.newCampaign({ mode: 'solo', nameA: 'Us', factionA: 'pmc' });
+  C.found(camp2.companies.A, ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
+  C.foundRivals(camp2, 2, { factions: ['pmc', 'xeno'], bugs: false });
+  var doomed = camp2.rivals[1]; doomed.kUC = 0; doomed.tier = 1; doomed.doctrines = [];   // (no Hermetic Society doubling the bill)
+  // the dice held steady, so nobody is caught up to the player's standing in the middle of it
+  var rnd = Math.random, roll = function () { Math.random = function () { return 0.3; }; try { C.clearOffers(camp2); C.rollOffers(camp2); } finally { Math.random = rnd; } };
+  doomed.roster = ['xeps1', 'xeps1', 'xeps1', 'xeps1'].map(function (k) { return C.newEntry(k); }); doomed.cmdRid = null;
+  roll();
+  ok('nothing but its four free units: it regroups, and offers no contract', doomed.regrouping && camp2.offers.every(function (o) { return camp2.rivals[o.rival] !== doomed; }), true);
+  ok('...scraping a resource point together, spent on a fifth unit', doomed.roster.length, 5, doomed.roster.map(function (e) { return e.key; }).join(','));
+  camp2.turn++; roll();
+  ok('...another point the next turn, a sixth unit: back to a Tier I army', camp2.rivals.indexOf(doomed) >= 0 && !doomed.regrouping && C.fullTier(doomed, 1) === 1, true);
+  // one that cannot buy even with the point (deep in debt) is broken up after its turn of recovery
+  doomed.roster = ['xeps1', 'xeps1', 'xeps1', 'xeps1'].map(function (k) { return C.newEntry(k); }); doomed.kUC = -10;
+  camp2.turn++; roll();
+  ok('a force that cannot recover regroups first', doomed.regrouping && camp2.rivals.indexOf(doomed) >= 0, true);
+  camp2.turn++; roll();
+  ok('...and still unable after that turn: broken up and gone from the campaign', camp2.rivals.indexOf(doomed) < 0 && (camp2.brokenUp || []).length === 1 && camp2.companies.B === camp2.rivals[camp2.facing], true);
+
+  // a promoted force wants back a command of the grade it left: a swarm first of all, the others most turns
+  var sw = C.newCompany('Sw', { faction: 'bugs' });
+  C.foundRival(sw, null, []); sw.kUC = 30; sw.tier = 1;
+  sw.wantCmdTier = null;
+  var g0 = 0; while (sw.tier < 2 && g0++ < 40) { sw.kUC = Math.max(sw.kUC, 30); C.developRival(sw); }
+  ok('a promoted swarm spawns a Leader Bug of the grade it left', sw.tier >= 2 && sw.roster.some(function (e) { return e.key === 'bwatchlarva'; }), true,
+    'tier ' + sw.tier + ': ' + sw.roster.map(function (e) { return e.key; }).join(','));
+  var ups = [0, 1, 2, 3, 4, 5].map(function () {
+    var up = C.newCompany('Up', { faction: 'pmc' });
+    C.foundRival(up, 'elite', []);
+    var guard = 0; while (up.tier < 2 && guard++ < 40) { up.kUC = 200; C.developRival(up); }
+    up.kUC = 200; C.developRival(up); C.developRival(up);
+    return up.roster.some(function (e) { return e.key === 'cmd4'; });
+  });
+  ok('...and a company recruits its old field command grade too, within a turn or two', ups.filter(Boolean).length >= 4, true, ups.join(','));
+
+  // the AI founds with units it paid for: the free ones come later
+  var freeAtFounding = [];
+  C.ARCHETYPES.concat(C.archetypesFor('rebel'), C.archetypesFor('bugs'), C.archetypesFor('xeno')).forEach(function (a) {
+    for (var i = 0; i < 4; i++) {
+      var co = C.newCompany('R', { faction: a.faction || 'pmc' });
+      C.foundRival(co, a.id, []);
+      co.roster.forEach(function (e) { if (C.freeUnit(e.key)) freeAtFounding.push(a.id + ':' + e.key); });
+    }
+  });
+  ok('no AI force founds with Penal troops, Armed civilians, Tiny bug swarms or Primitive Epsilons', freeAtFounding.length, 0, freeAtFounding.slice(0, 5).join(' '));
+  ok('...and they are marked as the free ones', [C.freeUnit('penal'), C.freeUnit('rciv'), C.freeUnit('btiny'), C.freeUnit('xeps1')].every(Boolean) && !C.freeUnit('recruits'), true);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

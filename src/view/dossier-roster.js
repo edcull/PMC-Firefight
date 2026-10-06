@@ -337,7 +337,7 @@
           var off = chk.ok ? '' : blocked(chk.why);
           if (!chk.ok && cost > co.kUC && p.tier <= co.tier + 2) price = (cost - co.kUC) + ' ' + C.money(co) + ' short';
           h += row('class="cu" data-recruit="' + p.key + '"' + off, p.tier,
-            '<b>' + esc(p.name) + '</b>', esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')), price);
+            root.PMCUi.freeMark(p.key) + '<b>' + esc(p.name) + '</b>', esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')), price);
           /* the Riders upgrade, "decided when that unit is recruited. The decision is
              final" (p. 97): a squad that may take it is recruited on foot or mounted */
           if (R.canRide(p)) h += row('class="cu cu-riders" data-recruit="' + p.key + '" data-asriders="1"' + off, p.tier,

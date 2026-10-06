@@ -124,7 +124,36 @@
       revealConsole();
       render();
     }
+    /* An AI force in a campaign battle that has lost most of its men, holds no
+       objective and is clearly worse off than the enemy sees no point in being
+       wiped out: it surrenders in the End phase, as a player could, and keeps what
+       it has left for the next contract. */
+    function lossShare(side) {
+      var start = 0, lost = 0;
+      E.state.units.forEach(function (u) {
+        if (u.side !== side || (u.free && !u.rid)) return;
+        var machine = R.isMachine(u), s0 = machine ? 1 : (u.startSize != null ? u.startSize : u.size) || 0;
+        var now = machine ? (u.alive ? 1 : 0) : (u.alive ? u.models : 0);
+        start += s0; lost += Math.max(0, s0 - now);
+      });
+      return start ? lost / start : 0;
+    }
+    function aiYields(side) {
+      var cfg = E.state.cfg || {};
+      if (!cfg.campaign || !isAI(side) || (E.state.turn || 0) < 4) return false;
+      if ((E.state.objectives || []).some(function (o) { return o.owner === side; })) return false;
+      var mine = lossShare(side), theirs = lossShare(side === 'A' ? 'B' : 'A');
+      return mine >= 0.6 && mine - theirs >= 0.25;
+    }
     function endAsks() {
+      var quit = ['A', 'B'].filter(aiYields)[0];
+      if (quit) {
+        var w = quit === 'A' ? 'B' : 'A';
+        E.state.endAsk = null;
+        finish(w, sideName(quit) + ' surrenders, its force shattered and no ground held \u2014 ' + sideName(w) + ' wins the battle.');
+        render();
+        return;
+      }
       askEnd(['A', 'B'].filter(function (s) {
         return !isAI(s) && E.state.units.some(function (u) { return u.side === s && onTable(u); });
       }));

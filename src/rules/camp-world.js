@@ -555,6 +555,7 @@
           if (vs == null || !W.forces[vs]) return no('no such force');
           if (aiBusy(W, vs)) return no(W.forces[vs].name + ' is fighting someone else just now — try again later');
           ensureOffers(W, i);
+          if (W.forces[vs].regrouping) return no(W.forces[vs].name + ' is regrouping this turn — too battered to field an army');
           const p = W.players[i];
           p.offers = p.offers || [];
           let at = p.offers.findIndex((o) => ai[o.rival] === vs);
@@ -562,6 +563,7 @@
             const v = viewOf(W, i);
             v.rivals = [W.forces[vs]]; v.companies.B = W.forces[vs]; v.offers = null; v.offersTurn = null;
             const o = C.rollOffers(v)[0];
+            if (!o) return no(W.forces[vs].name + ' is regrouping this turn — too battered to field an army');
             o.rival = ai.indexOf(vs);
             p.offers.push(o);
             at = p.offers.length - 1;

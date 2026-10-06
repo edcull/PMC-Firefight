@@ -14,6 +14,7 @@
         creedOf = E.creedOf, d6 = E.d6, drawHonours = E.drawHonours, fieldReport = E.fieldReport,
         found = E.found, hasDoctrine = E.hasDoctrine, isLeaderP = E.isLeaderP, levelsFor = E.levelsFor,
         maxBattleTier = E.maxBattleTier, newCompany = E.newCompany, pick = E.pick, profile = E.profile,
+        fillsArmy = E.fillsArmy, fullTier = E.fullTier, freeUnit = E.freeUnit, effectiveTier = E.effectiveTier, commandKey = E.commandKey,
         promoteCompany = E.promoteCompany, promoteUnit = E.promoteUnit, promotionCost = E.promotionCost,
         promotionTargets = E.promotionTargets, rebuildNeeds = E.rebuildNeeds, recruit = E.recruit,
         recruitCost = E.recruitCost, rollBattleTier = E.rollBattleTier, rollPayment = E.rollPayment,
@@ -125,15 +126,50 @@
         return co.tier < want ? catchUp(co, want) : null;
       });
 
+      /* What each force can really put on the table: the highest Tier at which it can
+         field a legal army that spends the whole of the composition points, the free
+         Tier I units taken on first if they help. A force that cannot field even Tier I
+         (nothing left but its four free units) sits the turn out to regroup; one still
+         unable after that turn of recovery is broken up and leaves the campaign. */
+      var caps = rivals.map(function (co) {
+        var c = fullTier(co, 1);
+        if (c < effectiveTier(co)) { topUpFree(co); c = fullTier(co, 1); }
+        /* Regrouping: a resource point scraped together (once a turn) and spent at
+           once on what it can buy towards a Tier I army. */
+        if (!c) {
+          if (co.regroupPaid !== campaign.turn) { co.kUC = (co.kUC || 0) + 1; co.regroupPaid = campaign.turn; }
+          topUpFree(co); developRival(co); c = fullTier(co, 1);
+        }
+        if (!c && !co.regrouping) co.regroupTurn = campaign.turn;
+        co.regrouping = !c;
+        return c;
+      });
+      if (campaign.mode === 'solo' && !campaign.world && rivals === campaign.rivals) {
+        var gone = rivals.filter(function (co) { return co.regrouping && co.regroupTurn < campaign.turn; });
+        if (gone.length && gone.length < rivals.length) {
+          var B0 = campaign.companies.B;
+          campaign.brokenUp = (campaign.brokenUp || []).concat(gone.map(function (co) {
+            return { name: co.name, faction: co.faction, turn: campaign.turn };
+          }));
+          var stay = function (x, i) { return gone.indexOf(rivals[i]) < 0; };
+          caps = caps.filter(stay); caught = caught.filter(stay);
+          rivals = campaign.rivals = rivals.filter(function (co) { return gone.indexOf(co) < 0; });
+          faceRival(campaign, Math.max(0, rivals.indexOf(B0)));
+        }
+      }
+      var able = rivals.map(function (co, i) { return i; }).filter(function (i) { return caps[i] > 0; });
+      // (if nobody on the world is fit, the contracts go ahead at whatever they can field)
+      if (!able.length) { able = rivals.map(function (co, i) { return i; }); rivals.forEach(function (co) { co.regrouping = false; }); }
+
       /* How many jobs there are this turn. One a force is the usual week; now and
          then the world is quiet and one of them has nothing to offer, and now and
          then it is busy and somebody is fighting on two fronts at once. */
-      var n = rivals.length, roll = d6();
+      var n = able.length, roll = d6();
       var count = roll === 1 ? n - 1 : roll === 6 ? n + (d6() >= 5 ? 2 : 1) : n;
       count = Math.max(1, Math.min(n * 2, count));
 
       // deal the forces out: everyone gets one before anyone gets two
-      var order = shuffle(rivals.map(function (co, i) { return i; }));
+      var order = shuffle(able.slice());
       var deal = [];
       while (deal.length < count) {
         deal = deal.concat(order.slice(0, Math.min(order.length, count - deal.length)));
@@ -148,6 +184,13 @@
         var fs = foresight(A, co, true);
         var scen = fs.scenario || fs.fore.dice[0];
         var tier = rollBattleTier(A, co);
+        // no bigger a fight than the force can field in full
+        if (caps[idx] && caps[idx] < tier.cap) {
+          tier.cap = caps[idx]; tier.tier = Math.min(tier.roll, tier.cap);
+          tier.thin = tier.cap < Math.min(tier.roll, tier.standing);
+        }
+        var cap1 = caps[idx] ? Math.min(maxBattleTier(A, co, 1), caps[idx]) : maxBattleTier(A, co, 1);
+        var full2 = function (t, levels) { return levels.filter(function (pl) { return pl === 1 || fillsArmy(co, t, pl); }); };
         var docs = { A: A.doctrines || [], B: co.doctrines || [] };
         var alt = fs.alt || null;
         return {
@@ -158,10 +201,10 @@
           scenario: scen,
           tierRoll: tier,
           tier: tier.tier,
-          levels: levelsFor(A, co, tier.tier),
+          levels: full2(tier.tier, levelsFor(A, co, tier.tier)),
           // the biggest fight this pairing could put on, whatever the D6 said
-          capTier: maxBattleTier(A, co, 1),
-          capLevels: levelsFor(A, co, maxBattleTier(A, co, 1)),
+          capTier: cap1,
+          capLevels: full2(cap1, levelsFor(A, co, cap1)),
           roles: SC ? SC.rollRoles(scen.id, docs, null, ['A']) : null,
           caught: caught[idx]
         };
@@ -259,7 +302,10 @@
       var hulls = a.machines.slice(0, a.vehicles);
       var h1 = hulls.filter(function (k) { return profile(k).tier === 1; });
       var h2 = hulls.filter(function (k) { return profile(k).tier === 2; });
-      var keys = [], t1pool = a.t1.slice(), t2pool = a.t2.slice();
+      /* It starts with units it paid for: the free ones (Penal troops, Armed civilians,
+         Tiny bug swarms, Primitive Epsilon troopers) are taken on later, as it needs them. */
+      var paid = a.t1.filter(function (k) { return !freeUnit(k); });
+      var keys = [], t1pool = paid.length ? paid : a.t1.slice(), t2pool = a.t2.slice();
       for (var i = 0; i < 6 - h1.length; i++) keys.push(t1pool[i % t1pool.length]);
       h1.forEach(function (k) { keys.push(k); });
       for (var j = 0; j < 2 - h2.length; j++) keys.push(t2pool[j % t2pool.length]);
@@ -283,11 +329,67 @@
       return co;
     }
 
+    /* The free Tier I units taken on when they let a force field a bigger army in
+       full — its own Tier at most. Only while it has fewer than four of a kind (the
+       free ones), and kept only if they helped. A force that cannot field even Tier I
+       keeps them, and buys the cheapest Tier I units it can afford until it can. */
+    function topUpFree(co) {
+      var want = effectiveTier(co), was = fullTier(co, 1), added = [];
+      if (was >= want) return [];
+      function freeOne() {
+        // (Penal troops never stop being free, but no more than four go in an army)
+        return R.listFor(co.faction).filter(function (q) {
+          return freeUnit(q.key) && recruitCost(co, q.key) === 0 && canRecruit(co, q.key).ok &&
+            co.roster.filter(function (e) { return e.key === q.key; }).length < 4;
+        })[0];
+      }
+      for (var n = 0; n < 8 && fullTier(co, 1) < want; n++) {
+        var p = freeOne();
+        if (!p) break;
+        var r = recruit(co, p.key);
+        if (!r.ok) break;
+        added.push(r.entry);
+      }
+      if (was > 0 && added.length && fullTier(co, 1) <= was) {
+        co.roster = co.roster.filter(function (e) { return added.indexOf(e) < 0; });
+        added = [];
+      }
+      for (var m = 0; m < 6 && !fullTier(co, 1); m++) {
+        var t1 = R.listFor(co.faction).filter(function (q) {
+          return q.tier === 1 && q.cls === 'infantry' && !isLeaderP(q) && canRecruit(co, q.key).ok;
+        }).sort(function (x, y) { return recruitCost(co, x.key) - recruitCost(co, y.key); })[0];
+        if (!t1) break;
+        var r1 = recruit(co, t1.key);
+        if (!r1.ok) break;
+        added.push(r1.entry);
+      }
+      return added.map(function (e) { return { what: 'recruit', text: 'took on ' + e.name }; });
+    }
+    /* Its field command goes up a grade with the force's Tier; the grade it left is
+       wanted back as a second command unit (bought at the usual price), for the smaller
+       fights the new one is too senior for. A swarm cannot field a smaller fight at all
+       without a Leader Bug low enough, so it buys one first, before anything else; any
+       other force buys it first when the smaller fight is out of reach without it, and
+       otherwise two turns in three — useful to have, but the money has other calls. */
+    function rehireCommand(co) {
+      if (!co.wantCmdTier) return [];
+      var key = commandKey(co, co.wantCmdTier);
+      if (!key || co.roster.some(function (e) { return e.key === key; })) { co.wantCmdTier = null; return []; }
+      if (!canRecruit(co, key).ok) return [];
+      if (co.faction !== 'bugs' && fillsArmy(co, co.wantCmdTier, 1) && Math.random() >= 2 / 3) return [];
+      var r = recruit(co, key);
+      if (!r.ok) return [];
+      co.wantCmdTier = null;
+      return [{ what: 'recruit', text: 'raised a second command, ' + r.entry.name }];
+    }
+
     /* One campaign turn of development, in the archetype's own direction. */
     function developRival(co) {
       var a = archetype(co.archetype);
-      var did = [];
+      var did = rehireCommand(co);            // first call on the money, when it is due
       function wanted(p) { return a.groups.indexOf(p.group) >= 0; }
+      // Penal troops are free for ever but four to an army: a fifth is no use to anyone
+      function fullUp(p) { return p.key === 'penal' && co.roster.filter(function (e) { return e.key === 'penal'; }).length >= 4; }
 
       /* Close every legality gap, cheapest Tier first, until the money runs out.
          Run once before spending and once after, because promoting a Tier I unit
@@ -313,7 +415,7 @@
           var room = machineCount() < 3;
           var pool = R.listFor(co.faction).filter(function (p) {
             if (p.tier !== t || isLeaderP(p) || !canRecruit(co, p.key).ok) return false;
-            if (p.noSlot) return false;                          // a platform fills no slot, so it can close no gap
+            if (p.noSlot || fullUp(p)) return false;                          // a platform fills no slot, so it can close no gap
             if (p.cls !== 'infantry') return room && wanted(p);   // only a machine company buys a hull to fill a gap
             return true;
           });
@@ -331,6 +433,7 @@
         }
       }
       fillGaps();
+      did = did.concat(rehireCommand(co));
 
       // spend experience, the units closest to a decision first
       co.roster.slice().sort(function (x, y) { return y.exp - x.exp; }).forEach(function (e) {
@@ -396,7 +499,7 @@
           var pool2 = R.listFor(co.faction).filter(function (p) {
             if (p.cls !== 'infantry' || isLeaderP(p) || p.tier > co.tier) return false;
             if (!wanted(p) && a.t1.indexOf(p.key) < 0 && a.t2.indexOf(p.key) < 0) return false;
-            if (!canRecruit(co, p.key).ok) return false;
+            if (!canRecruit(co, p.key).ok || fullUp(p)) return false;
             return p.key === 'penal' || RECRUIT_COST[p.tier] <= co.kUC / 2;
           });
           if (!pool2.length) break;
@@ -450,7 +553,10 @@
       }
       var pr = canPromoteCompany(co);
       if (pr.ok) {
+        var leftTier = co.tier;
         promoteCompany(co);
+        co.wantCmdTier = leftTier;
+        did = did.concat(rehireCommand(co));
         var creed = creedOf(co);
         var next = (co.docPlan || a.doctrines).filter(function (d) { return canTakeDoctrine(co, d).ok; });
         var free = next.length ? next

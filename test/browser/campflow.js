@@ -83,6 +83,10 @@ async function pastFronts(p) {
   check('...and for its colours',
     await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); return document.querySelectorAll('#camp-body [data-campcolour]').length > 1; }));
 
+  check('founding marks Penal troops as free with the gift tag', await p.evaluate(() => {
+    const pen = document.querySelector('#camp-body button[data-add="penal"]'), rec = document.querySelector('#camp-body button[data-add="recruits"]');
+    return !!pen && !!pen.querySelector('.freemark') && !!rec && !rec.querySelector('.freemark');
+  }));
   // six Tier I, two Tier II, one of them a vehicle
   const picks = ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'];
   for (const k of picks) {
@@ -538,6 +542,11 @@ async function pastFronts(p) {
   await click(p, '#camp-body .hubtabs [data-go="roster"]');
   await p.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="recruit"]').click()); await p.waitForTimeout(220);
   check('Recruit opens in a window, closed by its ✕', await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal:not([hidden])'); return !!m && !!m.querySelector('[data-recruit]') && !!m.querySelector('[data-go="fmodalclose"]'); }));
+  check('the free units carry the gift tag, the paid ones do not', await p.evaluate(() => {
+    const row = (k) => document.querySelector('#camp-body .cmodal:not([hidden]) [data-recruit="' + k + '"]:not([data-asdrone]):not([data-asriders])');
+    return !!row('penal') && !!row('penal').querySelector('.freemark') && !!row('recruits') && !row('recruits').querySelector('.freemark');
+  }));
+  if (process.env.SHOT) await p.screenshot({ path: 'build/ux/recruit-free.png' });
   const before = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   const recruited = await click(p, '#camp-body button[data-recruit="recruits"]');
   // it asks first, saying what it costs and what there is to spend
@@ -837,6 +846,18 @@ async function pastFronts(p) {
   check('...with the money intact', back === spent, back + ' kUC');
   const rosterBack = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   check('...and the recruit still on the books', rosterBack === now, rosterBack + ' units');
+
+  /* ------------------------------------------- after a Company Tier promotion */
+  console.log('\nAfter a promotion');
+  const hint = await p.evaluate(() => {
+    const c = window.PMC_CAMPAIGN.get(); c.companies.A.tier = 2;
+    c.companies.A.roster = c.companies.A.roster.filter((e) => e.key !== 'cmd4');
+    window.PMC_CAMPAIGN.set(c);
+    const go = document.createElement('button'); go.setAttribute('data-go', 'doctrine');
+    document.getElementById('camp-body').appendChild(go); go.click();
+    const h = document.querySelector('#camp-body .cmdhint'); return h ? h.textContent : '';
+  });
+  check('the doctrine screen says the old command grade can be recruited again, at its price', /Field command 4th grade/.test(hint) && /for \d+ kUC/.test(hint) && !/free/i.test(hint), hint);
 
   console.log('\nproblems: ' + (problems.length ? problems.join('; ') : 'none'));
   console.log('page errors: ' + (errs.length ? errs.join(' | ') : 'none'));

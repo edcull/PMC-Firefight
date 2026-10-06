@@ -104,6 +104,14 @@
     return '<button ' + attrs + '><span class="t">' + root.PMC.ROMAN[tier] + '</span><span>' + name + '<small>' + small + '</small></span>' +
       (st == null ? '' : '<span class="st">' + st + '</span>') + '</button>';
   }
+  /* The free units (Penal troops, Armed civilians, Tiny bug swarms, Primitive Epsilon
+     troopers) carry a gift tag next to their name wherever they are recruited. */
+  var GIFT = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">' +
+    '<path d="M4 12v9h16v-9M2.5 8h19v4h-19zM12 8v13M12 8C10 3.5 6.5 4 7 6s3 2 5 2zM12 8c2-4.5 5.5-4 5-2s-3 2-5 2z"/></svg>';
+  function freeMark(key) {
+    var why = root.PMCCamp && root.PMCCamp.freeUnit ? root.PMCCamp.freeUnit(key) : null;
+    return why ? '<span class="freemark" title="' + esc(why) + '" aria-label="' + esc(why) + '">' + GIFT + '</span>' : '';
+  }
   /* The count at each Tier against what the composition allows, on one line:
      I 1/0-8 · II 0/0-8 · … — `limits` from R.compFor, multiplied up by the
      Priority Level `pl` (1 when they come already worked out). */
@@ -127,6 +135,6 @@
     fill: fill, face: face, swatch: swatch, chip: chip, chipButton: chipButton, chipStill: chipStill, colourPop: colourPop,
     ARMIES: ARMIES, ARMY_NAMES: ARMY_NAMES, armySelect: armySelect, armyStill: armyStill,
     FORCE_NOUN: FORCE_NOUN, forceName: forceName, isForceName: isForceName,
-    tip: tip, mark: mark, ruleMarks: ruleMarks, unitRow: unitRow, limitsLine: limitsLine, backButton: backButton
+    tip: tip, mark: mark, ruleMarks: ruleMarks, unitRow: unitRow, freeMark: freeMark, limitsLine: limitsLine, backButton: backButton
   };
 })(window);

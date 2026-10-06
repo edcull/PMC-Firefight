@@ -681,6 +681,15 @@
       h += '<p class="lede">' + esc(co.name) + ' has ' + open + ' ' + cr.one +
         ' slot' + (open === 1 ? '' : 's') + ' free — one per ' + C.words(co).tier +
         ' Tier, and no more than two ' + (reb || bug ? 'from any one group.' : 'from a category.') + '</p>';
+      // the command grade the force has just left, there to be recruited again (at its price) for the smaller fights
+      var oldCmd = co.tier > 1 ? C.commandKey(co, co.tier - 1) : null;
+      if (oldCmd && !co.roster.some(function (e) { return e.key === oldCmd; })) {
+        var w = C.words(co);
+        h += '<p class="cpstat cmdhint">Your old ' + esc(w.cmd) + ', ' + esc(profile(oldCmd).name) + ', can be ' + esc(w.recruited) +
+          ' again as a second one for ' + C.recruitCost(co, oldCmd) + ' ' + esc(C.money(co)) + ' \u2014 ' +
+          (co.faction === 'bugs' ? 'a swarm fields a Leader Bug of the Battle Tier or higher, and without one this low it cannot field the smaller fights.'
+            : 'the new one is too senior for the smaller fights.') + '</p>';
+      }
       cr.cats.forEach(function (cat) {
         var held = co.doctrines.filter(function (x) {
           return cr.by[x] && cr.by[x].cat === cat;

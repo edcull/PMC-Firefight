@@ -1427,6 +1427,7 @@
       creedById: creedById, creedOf: creedOf, d6: d6, drawHonours: drawHonours, fieldReport: fieldReport,
       found: found, hasDoctrine: hasDoctrine, isLeaderP: isLeaderP, levelsFor: levelsFor,
       maxBattleTier: maxBattleTier, newCompany: newCompany, pick: pick, profile: profile,
+      fillsArmy: fillsArmy, fullTier: fullTier, freeUnit: freeUnit, effectiveTier: effectiveTier, commandKey: commandKey,
       promoteCompany: promoteCompany, promoteUnit: promoteUnit, promotionCost: promotionCost,
       promotionTargets: promotionTargets, rebuildNeeds: rebuildNeeds, recruit: recruit,
       recruitCost: recruitCost, rollBattleTier: rollBattleTier, rollPayment: rollPayment,
@@ -1467,13 +1468,52 @@
      keeps the list legal, biggest first; and if that overshot, the one unit
      whose loss leaves the fewest hard faults dropped, and again. A swarm fields
      one Leader Bug of the Battle Tier or higher (p. 114). */
+  /* How near a unit is to its next Battle Trauma: 0 well clear, 1 getting close (4+
+     Trauma Points of 10), 2 one bad battle away (7+ of 10) — scaled to the force's own
+     threshold (Mental Training's 15). Machines take none. */
+  function traumaBand(co, e) {
+    var th = traumaThreshold(co) || 10, tp = e.tp || 0;
+    return tp >= th - 3 ? 2 : tp >= Math.ceil(th * 0.4) ? 1 : 0;
+  }
+  /* Whether a force can put a real army on the table at this Tier and Level: a legal
+     list — every Tier's minimum met and none over its maximum — that also fills the
+     whole of the composition points. Short of either, it cannot field that Tier. */
+  function fillsArmy(co, tier, pl) {
+    var picks = pickForce(co, tier, pl || 1, null);
+    if (!picks.length) return false;
+    var res = R.checkArmy(picks.map(function (e) { return R.entryPick(e); }), tier, pl || 1, co.doctrines || [], null);
+    return res.ok && res.spent >= res.budget;
+  }
+  /* The highest Battle Tier (up to `cap`) a force can field in full, or 0. With the
+     free units (four Penal troops to an army, four each of Armed civilians, Tiny bug
+     swarms, Primitive Epsilon troopers) any force can reach Tier I unless that is all it has. */
+  function fullTier(co, pl, cap) {
+    for (var t = Math.min(5, cap || effectiveTier(co)); t >= 1; t--) if (fillsArmy(co, t, pl || 1)) return t;
+    return 0;
+  }
+  // the units nobody pays to recruit: Penal troops always (four to an army), the others while the force has fewer than four
+  var FREE_UNITS = { penal: 'Always free to recruit \u2014 four to an army', rciv: 1, btiny: 1, xeps1: 1 };
+  function freeUnit(key) {
+    var f = FREE_UNITS[key];
+    return f ? (typeof f === 'string' ? f : 'Free to recruit while the force has fewer than four') : null;
+  }
   function pickForce(co, tier, pl, tactic) {
+    /* Nursing the force: a unit one bad battle from a Battle Trauma is left at home
+       unless the army cannot be legal without it, and one getting close is taken only
+       after the rest — so the AI forces (and Pick a force for me) spread the wear. */
+    var fresh = pickFrom(co, tier, pl, tactic, true);
+    var docs0 = co.doctrines || [];
+    if (fresh.length && R.checkArmy(fresh.map(function (e) { return R.entryPick(e); }), tier, pl, docs0, tactic).ok) return fresh;
+    return pickFrom(co, tier, pl, tactic, false);
+  }
+  function pickFrom(co, tier, pl, tactic, spare) {
     /* The units marked on the dossier for the contract come into it that way: the
        favoured looked at first, the unfavoured only when nothing else will do —
-       each Tier's slots, and the points after, filled in that order. */
+       each Tier's slots, and the points after, filled in that order; within those,
+       the ones furthest from a Battle Trauma first. */
     var markRank = function (e) { return e.mark === 'fav' ? 0 : e.mark === 'unfav' ? 2 : 1; };
-    var avail = co.roster.filter(function (e) { return !(e.restUntil > 0); }).slice().sort(function (a, b) {
-      return markRank(a) - markRank(b) || profile(b.key).tier - profile(a.key).tier;
+    var avail = co.roster.filter(function (e) { return !(e.restUntil > 0) && !(spare && traumaBand(co, e) === 2); }).slice().sort(function (a, b) {
+      return markRank(a) - markRank(b) || traumaBand(co, a) - traumaBand(co, b) || profile(b.key).tier - profile(a.key).tier;
     });
     var docs = co.doctrines || [];
     var comp = R.compFor(co.faction, tier), out = [], used = {};
@@ -1564,7 +1604,7 @@
   }
 
   root.PMCCamp = {
-    VERSION: VERSION, migrate: migrate, ordinalName: ordinalName, isDefaultName: isDefaultName,
+    VERSION: VERSION, migrate: migrate, fillsArmy: fillsArmy, fullTier: fullTier, freeUnit: freeUnit, ordinalName: ordinalName, isDefaultName: isDefaultName,
     DOCTRINES: DOCTRINES, CATEGORIES: CATEGORIES,
     doctrine: function (id) { return BY_DOCTRINE[id] || BY_PATH[id] || BY_PATHWAY[id] || BY_ADVANCEMENT[id]; },
     PATHS: PATHS, PATH_GROUPS: PATH_GROUPS, BY_PATH: BY_PATH,
