@@ -2227,3 +2227,8 @@ svg.chev { width: .8em; height: .65em; vertical-align: .05em; display: inline-bl
 /* the force's own command: a crown beside its name */
 .dcmdr { display: inline-flex; align-self: center; color: var(--alpha); flex: none; line-height: 0; }
 .dcmdr svg { width: 14px; height: 14px; display: block; }
+
+/* the company view: the promotion, battles, field hospital and the file buttons scroll together under the figures */
+#camp-body.hubfit > .cpan-own > .hubscroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.hubscroll > .cprom { margin-top: 10px; }
+.hubscroll .cprom-list { overflow: visible; max-height: none; }

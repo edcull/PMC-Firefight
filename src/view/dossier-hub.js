@@ -238,15 +238,16 @@
         if (!co.aspiring && C.canAspire(co)) {
           pp0 = pp0.replace(/<\/div>$/, '<button class="start" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button></div>');
         }
-        h += pp0;
-        // the campaign's own business, under the promotion (no window of its own any more)
-        if (bar && manage) h += manage;
+        /* the promotion and the campaign's own business under it scroll together in the
+           room left under the figures (on a phone the panel fits the screen) */
+        h += bar ? '<div class="hubscroll">' + pp0 + (manage || '') : pp0;
         // under it, at the foot of the screen, in hotseat: the other player (alone or on a world, Take a contract is at the top)
         if (bar && E.camp.mode === 'hotseat' && !E.online) {
           var hot = E.camp.mode === 'hotseat';
           h += '<div class="cdos-foot hubfoot"><button type="button" class="lnk" data-go="fmodal" data-kind="rivals">' +
             (hot ? (E.hubSide === 'B' ? 'Player 1' : 'Player 2') : 'Other forces') + '</button></div>';
         }
+        if (bar) h += '</div>';
       }
       var gaps = C.rebuildNeeds(co);
       if (gaps.length) {
