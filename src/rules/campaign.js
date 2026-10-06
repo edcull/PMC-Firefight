@@ -1427,7 +1427,7 @@
       creedById: creedById, creedOf: creedOf, d6: d6, drawHonours: drawHonours, fieldReport: fieldReport,
       found: found, hasDoctrine: hasDoctrine, isLeaderP: isLeaderP, levelsFor: levelsFor,
       maxBattleTier: maxBattleTier, newCompany: newCompany, pick: pick, profile: profile,
-      fillsArmy: fillsArmy, fullTier: fullTier, freeUnit: freeUnit, effectiveTier: effectiveTier,
+      fillsArmy: fillsArmy, fullTier: fullTier, freeUnit: freeUnit, effectiveTier: effectiveTier, commandKey: commandKey,
       promoteCompany: promoteCompany, promoteUnit: promoteUnit, promotionCost: promotionCost,
       promotionTargets: promotionTargets, rebuildNeeds: rebuildNeeds, recruit: recruit,
       recruitCost: recruitCost, rollBattleTier: rollBattleTier, rollPayment: rollPayment,
@@ -1484,18 +1484,16 @@
     var res = R.checkArmy(picks.map(function (e) { return R.entryPick(e); }), tier, pl || 1, co.doctrines || [], null);
     return res.ok && res.spent >= res.budget;
   }
-  /* The highest Battle Tier (up to `cap`) a force can field in full. Tier I is the
-     floor: the free units (Penal troops, Armed civilians, Tiny bug swarms, Primitive
-     Epsilon troopers) mean any force can always field one, so a legal Tier I list
-     counts even short of points. 0 only when not even that is legal. */
+  /* The highest Battle Tier (up to `cap`) a force can field in full, or 0. With the
+     free units (four each of Penal troops, Armed civilians, Tiny bug swarms, Primitive
+     Epsilon troopers) any force can reach Tier I unless that is all it has. */
   function fullTier(co, pl, cap) {
     for (var t = Math.min(5, cap || effectiveTier(co)); t >= 1; t--) if (fillsArmy(co, t, pl || 1)) return t;
-    var t1 = pickForce(co, 1, pl || 1, null);
-    return t1.length && R.checkArmy(t1.map(function (e) { return R.entryPick(e); }), 1, pl || 1, co.doctrines || [], null).ok ? 1 : 0;
+    return 0;
   }
-  // the units nobody pays to recruit: Penal troops always, the others while a force has fewer than four
-  var FREE_UNITS = { penal: 'Always free to recruit', rciv: 'The first four are free to recruit', btiny: 'The first four are free to recruit', xeps1: 'The first four are free to recruit' };
-  function freeUnit(key) { return FREE_UNITS[key] || null; }
+  // the units nobody pays to recruit while the force has fewer than four of them
+  var FREE_UNITS = { penal: 1, rciv: 1, btiny: 1, xeps1: 1 };
+  function freeUnit(key) { return FREE_UNITS[key] ? 'Free to recruit while the force has fewer than four' : null; }
   function pickForce(co, tier, pl, tactic) {
     /* Nursing the force: a unit one bad battle from a Battle Trauma is left at home
        unless the army cannot be legal without it, and one getting close is taken only

@@ -145,7 +145,11 @@
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? rivalPanel(hs === 'B' ? A : B, 0)
           // the other players first, then the AI forces (each keeps its own place for its dossier and its contract)
           : rivals.map(function (co, i) { return { co: co, i: i }; }).sort(function (a, b) { return (b.co.human ? 1 : 0) - (a.co.human ? 1 : 0) || a.i - b.i; })
-            .map(function (x) { return rivalPanel(x.co, x.i); }).join('')) + '</div>');
+            .map(function (x) { return rivalPanel(x.co, x.i); }).join('') +
+            // the forces broken up: nothing left but their free units, and no recovering from it
+            (E.camp.brokenUp || []).map(function (g) {
+              return '<p class="cpstat cgone">' + esc(g.name) + ' broke up in turn ' + g.turn + ' — too few left to field even a Tier I army.</p>';
+            }).join('')) + '</div>');
       // every battle fought, the latest first (opened from the win rate even before the first)
       {
         // a battle whose aftermath was kept opens it again, read only

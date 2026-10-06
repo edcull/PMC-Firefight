@@ -849,10 +849,37 @@ head('Contracts at a Tier the AI force can field in full');
   ok('...and not regrouping', !brood.regrouping, true);
   ok('it took on free Tiny bug swarms only to four', brood.roster.filter(function (e) { return e.key === 'btiny'; }).length <= 4, true);
 
-  // a thin force short of Tier I's points still fields Tier I: the floor every army has
-  var thin = C.newCompany('Thin', { faction: 'rebel' }); thin.tier = 1;
-  ['rciv', 'rciv', 'rciv'].forEach(function (k) { thin.roster.push(C.newEntry(k)); });
-  ok('three Armed civilians: legal at Tier I, 3 of 6 points — still Tier I', !C.fillsArmy(thin, 1, 1) && C.fullTier(thin, 1) === 1, true);
+  // the only force that cannot fight: its four free units and no Tier II command to make up the points
+  var thin = C.newCompany('Thin', { faction: 'rebel' }); thin.tier = 1; thin.kUC = 0;
+  ['rciv', 'rciv', 'rciv', 'rciv'].forEach(function (k) { thin.roster.push(C.newEntry(k)); });
+  ok('four Armed civilians alone: 4 of 6 points — no Tier I army', C.fullTier(thin, 1), 0);
+  thin.roster.push(C.newEntry('rinstigators'));
+  ok('...with a Tier I leader, 5 of 6 — still none', C.fullTier(thin, 1), 0);
+  thin.roster.pop(); thin.roster.push(C.newEntry('rsecondary'));
+  ok('...with a Tier II leader in their place, 6 of 6 — Tier I', C.fullTier(thin, 1), 1);
+  var pen = C.newCompany('Pen', { faction: 'pmc' });
+  ok('Penal troops: free while fewer than four', [0, 1, 2, 3, 4].map(function (n) {
+    pen.roster = []; for (var i = 0; i < n; i++) pen.roster.push(C.newEntry('penal'));
+    return C.recruitCost(pen, 'penal');
+  }).join(','), '0,0,0,0,1');
+
+  // a force that can only regroup has its turn of recovery, then is broken up
+  var camp2 = C.newCampaign({ mode: 'solo', nameA: 'Us', factionA: 'pmc' });
+  C.found(camp2.companies.A, ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
+  C.foundRivals(camp2, 2, { factions: ['pmc', 'xeno'], bugs: false });
+  var doomed = camp2.rivals[1]; doomed.kUC = 0; doomed.tier = 1;
+  doomed.roster = ['xeps1', 'xeps1', 'xeps1', 'xeps1'].map(function (k) { return C.newEntry(k); }); doomed.cmdRid = null;
+  C.rollOffers(camp2);
+  ok('nothing but its four free units: it regroups, and offers no contract', doomed.regrouping && camp2.offers.every(function (o) { return camp2.rivals[o.rival] !== doomed; }), true);
+  doomed.kUC = 0; camp2.turn++; C.clearOffers(camp2); C.rollOffers(camp2);
+  ok('...still unable after that turn: broken up and gone from the campaign', camp2.rivals.indexOf(doomed) < 0 && (camp2.brokenUp || []).length === 1 && camp2.companies.B === camp2.rivals[camp2.facing], true);
+
+  // a promoted force wants back a command of the grade it left
+  var up = C.newCompany('Up', { faction: 'pmc' });
+  C.foundRival(up, 'elite', []); up.kUC = 200;
+  var guard = 0; while (up.tier < 2 && guard++ < 40) { up.kUC = 200; C.developRival(up); }
+  ok('after promotion it raised a second command at the Tier it left', up.tier >= 2 && up.roster.some(function (e) { return e.key === 'cmd4'; }), true,
+    'tier ' + up.tier + ': ' + up.roster.filter(function (e) { return /^cmd/.test(e.key); }).map(function (e) { return e.key; }).join(','));
 
   // the AI founds with units it paid for: the free ones come later
   var freeAtFounding = [];

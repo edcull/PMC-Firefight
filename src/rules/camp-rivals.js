@@ -14,7 +14,7 @@
         creedOf = E.creedOf, d6 = E.d6, drawHonours = E.drawHonours, fieldReport = E.fieldReport,
         found = E.found, hasDoctrine = E.hasDoctrine, isLeaderP = E.isLeaderP, levelsFor = E.levelsFor,
         maxBattleTier = E.maxBattleTier, newCompany = E.newCompany, pick = E.pick, profile = E.profile,
-        fillsArmy = E.fillsArmy, fullTier = E.fullTier, freeUnit = E.freeUnit, effectiveTier = E.effectiveTier,
+        fillsArmy = E.fillsArmy, fullTier = E.fullTier, freeUnit = E.freeUnit, effectiveTier = E.effectiveTier, commandKey = E.commandKey,
         promoteCompany = E.promoteCompany, promoteUnit = E.promoteUnit, promotionCost = E.promotionCost,
         promotionTargets = E.promotionTargets, rebuildNeeds = E.rebuildNeeds, recruit = E.recruit,
         recruitCost = E.recruitCost, rollBattleTier = E.rollBattleTier, rollPayment = E.rollPayment,
@@ -128,15 +128,30 @@
 
       /* What each force can really put on the table: the highest Tier at which it can
          field a legal army that spends the whole of the composition points, the free
-         Tier I units taken on first if they help. Tier I is always within reach; one
-         that somehow cannot field even that sits the turn out to regroup. */
+         Tier I units taken on first if they help. A force that cannot field even Tier I
+         (nothing left but its four free units) sits the turn out to regroup; one still
+         unable after that turn of recovery is broken up and leaves the campaign. */
       var caps = rivals.map(function (co) {
         var c = fullTier(co, 1);
         if (c < effectiveTier(co)) { topUpFree(co); c = fullTier(co, 1); }
         if (!c) { developRival(co); c = fullTier(co, 1); }
+        if (!c && !co.regrouping) co.regroupTurn = campaign.turn;
         co.regrouping = !c;
         return c;
       });
+      if (campaign.mode === 'solo' && !campaign.world && rivals === campaign.rivals) {
+        var gone = rivals.filter(function (co) { return co.regrouping && co.regroupTurn < campaign.turn; });
+        if (gone.length && gone.length < rivals.length) {
+          var B0 = campaign.companies.B;
+          campaign.brokenUp = (campaign.brokenUp || []).concat(gone.map(function (co) {
+            return { name: co.name, faction: co.faction, turn: campaign.turn };
+          }));
+          var stay = function (x, i) { return gone.indexOf(rivals[i]) < 0; };
+          caps = caps.filter(stay); caught = caught.filter(stay);
+          rivals = campaign.rivals = rivals.filter(function (co) { return gone.indexOf(co) < 0; });
+          faceRival(campaign, Math.max(0, rivals.indexOf(B0)));
+        }
+      }
       var able = rivals.map(function (co, i) { return i; }).filter(function (i) { return caps[i] > 0; });
       // (if nobody on the world is fit, the contracts go ahead at whatever they can field)
       if (!able.length) { able = rivals.map(function (co, i) { return i; }); rivals.forEach(function (co) { co.regrouping = false; }); }
@@ -310,26 +325,49 @@
     }
 
     /* The free Tier I units taken on when they let a force field a bigger army in
-       full — its own Tier at most. Four of a kind at the most (the first four are the
-       free ones, and Penal troops are four to an army); kept only if they helped. */
+       full — its own Tier at most. Only while it has fewer than four of a kind (the
+       free ones), and kept only if they helped. A force that cannot field even Tier I
+       keeps them, and buys the cheapest Tier I units it can afford until it can. */
     function topUpFree(co) {
       var want = effectiveTier(co), was = fullTier(co, 1), added = [];
       if (was >= want) return [];
+      function freeOne() {
+        return R.listFor(co.faction).filter(function (q) { return freeUnit(q.key) && recruitCost(co, q.key) === 0 && canRecruit(co, q.key).ok; })[0];
+      }
       for (var n = 0; n < 8 && fullTier(co, 1) < want; n++) {
-        var p = R.listFor(co.faction).filter(function (q) {
-          return freeUnit(q.key) && recruitCost(co, q.key) === 0 && canRecruit(co, q.key).ok &&
-            co.roster.filter(function (e) { return e.key === q.key; }).length < 4;
-        })[0];
+        var p = freeOne();
         if (!p) break;
         var r = recruit(co, p.key);
         if (!r.ok) break;
         added.push(r.entry);
       }
-      if (added.length && fullTier(co, 1) <= was) {
+      if (was > 0 && added.length && fullTier(co, 1) <= was) {
         co.roster = co.roster.filter(function (e) { return added.indexOf(e) < 0; });
-        return [];
+        added = [];
+      }
+      for (var m = 0; m < 6 && !fullTier(co, 1); m++) {
+        var t1 = R.listFor(co.faction).filter(function (q) {
+          return q.tier === 1 && q.cls === 'infantry' && !isLeaderP(q) && canRecruit(co, q.key).ok;
+        }).sort(function (x, y) { return recruitCost(co, x.key) - recruitCost(co, y.key); })[0];
+        if (!t1) break;
+        var r1 = recruit(co, t1.key);
+        if (!r1.ok) break;
+        added.push(r1.entry);
       }
       return added.map(function (e) { return { what: 'recruit', text: 'took on ' + e.name }; });
+    }
+    /* Its field command goes up a grade with the force's Tier; the grade it left is
+       wanted back as a second command unit, for the smaller fights the new one is too
+       senior for. Tried after the promotion and each turn after until it is bought. */
+    function rehireCommand(co) {
+      if (!co.wantCmdTier) return [];
+      var key = commandKey(co, co.wantCmdTier);
+      if (!key || co.roster.some(function (e) { return e.key === key; })) { co.wantCmdTier = null; return []; }
+      if (!canRecruit(co, key).ok) return [];
+      var r = recruit(co, key);
+      if (!r.ok) return [];
+      co.wantCmdTier = null;
+      return [{ what: 'recruit', text: 'raised a second command, ' + r.entry.name }];
     }
 
     /* One campaign turn of development, in the archetype's own direction. */
@@ -380,7 +418,7 @@
         }
       }
       fillGaps();
-      did = did.concat(topUpFree(co));
+      did = did.concat(rehireCommand(co), topUpFree(co));
 
       // spend experience, the units closest to a decision first
       co.roster.slice().sort(function (x, y) { return y.exp - x.exp; }).forEach(function (e) {
@@ -500,7 +538,10 @@
       }
       var pr = canPromoteCompany(co);
       if (pr.ok) {
+        var leftTier = co.tier;
         promoteCompany(co);
+        co.wantCmdTier = leftTier;
+        did = did.concat(rehireCommand(co));
         var creed = creedOf(co);
         var next = (co.docPlan || a.doctrines).filter(function (d) { return canTakeDoctrine(co, d).ok; });
         var free = next.length ? next
