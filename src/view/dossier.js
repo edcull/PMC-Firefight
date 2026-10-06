@@ -469,14 +469,17 @@
     });
     function within(a, b) {
       var byName = String(a.name).localeCompare(String(b.name));
+      // by type: the command first, then each group together
+      var byType = lead(b) - lead(a) || String(p(a).group || '').localeCompare(String(p(b).group || ''));
+      var byTier = p(b).tier - p(a).tier;
       switch (dsort) {
         case 'name': return byName;
-        case 'tier': return p(b).tier - p(a).tier || byName;
+        // the higher Tier first, and within each Tier by type
+        case 'tier': return byTier || byType || byName;
         case 'xp': return (b.exp || 0) - (a.exp || 0) || byName;
         case 'tp': return (b.tp || 0) - (a.tp || 0) || byName;
-        // by type: the command first, then each group together, the higher Tier first
-        default: return lead(b) - lead(a) || String(p(a).group || '').localeCompare(String(p(b).group || '')) ||
-          p(b).tier - p(a).tier || (b.exp || 0) - (a.exp || 0);
+        // by type, and within each the higher Tier first
+        default: return byType || byTier || byName;
       }
     }
   }
