@@ -1557,8 +1557,10 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .olob-name label { font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; flex: none; }
 .olob-name .tin { flex: 1; min-width: 0; }
 .olob-name b { font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.olob-slots { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
-#camp-body.fit > .olob-slots { flex: 0 1 auto; min-height: 58px; }
+.olob-slots { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; padding-right: 2px; }
+/* a list of its own to scroll only on a screen fitted to the window (the online lobby); anywhere else
+   a drag that starts on a row must scroll the page, so it is no scroll box (and holds no scroll in) */
+#camp-body.fit > .olob-slots { flex: 0 1 auto; min-height: 58px; overflow-y: auto; overscroll-behavior: contain; }
 .olob-slot { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); flex: none; }
 .olob-slot.mine { border-color: var(--alpha); }
 .olob-colour { flex: none; width: 26px; height: 26px; padding: 2px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); cursor: pointer; }
