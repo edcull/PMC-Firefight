@@ -234,12 +234,12 @@
             C.creedOf(co).one + ' (' + open + ' free)</button> ';
         }
         var pp0 = promotionPanel(co, side, !!bar);
-        // an army it can no longer field at a Tier it holds: said in the promotion's box, under its line
+        // an army it can no longer field at a Tier it holds: said at the foot of the promotion's box, opened
         var gaps0 = C.rebuildNeeds(co);
         if (gaps0.length) {
           var warn = '<div class="cpwarn">Cannot field a legal army at Tier ' + gaps0.map(function (t) { return ROMAN[t]; }).join(', ') +
             ' \u2014 recruit or promote from the lowest Tier up.</div>';
-          pp0 = pp0.indexOf('</span></button>') >= 0 ? pp0.replace('</span></button>', '</span></button>' + warn) : pp0.replace(/<\/div>$/, warn + '</div>');
+          if (pp0.indexOf('cprom-list') >= 0 || pp0.indexOf('cprom-toggle') < 0) pp0 = pp0.replace(/<\/div>$/, warn + '</div>');
         }
         // declaring an Aspiring Company is a step up as well: in the promotion's box, a button like its own
         if (!co.aspiring && C.canAspire(co)) {

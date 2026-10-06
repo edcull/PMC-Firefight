@@ -2232,4 +2232,4 @@ svg.chev { width: .8em; height: .65em; vertical-align: .05em; display: inline-bl
 #camp-body.hubfit > .cpan-own > .hubscroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .hubscroll > .cprom { margin-top: 10px; }
 .hubscroll .cprom-list { overflow: visible; max-height: none; }
-.cprom > .cpwarn { margin: 0 0 9px; }
+.cprom > .cpwarn { margin: 9px 0 0; }
