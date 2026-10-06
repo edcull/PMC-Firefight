@@ -426,6 +426,8 @@
      (`gkey`) — each unit type (the command first), each Tier, each letter, each
      band of EXP, each TP — and the sort within each */
   var dgroup = true, gkey = 'type';
+  // the hub's promotion checklist: folded to one line until tapped open
+  var promoOpen = false;
   function groupOf(e) {
     var p = profile(e.key) || {};
     switch (gkey) {
@@ -726,7 +728,7 @@
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses,
-      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get dgroup() { return dgroup; }, get rosterTab() { return rosterTab; }, get subPop() { return subPop; },
+      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get dgroup() { return dgroup; }, get promoOpen() { return promoOpen; }, get rosterTab() { return rosterTab; }, get subPop() { return subPop; },
       get online() { return online; }, onlineNote: function () { return online ? (KIT_ONLINE || kitOnline()).hubNote() : ''; }
     }));
   }
@@ -1400,6 +1402,7 @@
         render(); return;
       }
       case 'dgroup': dgroup = !dgroup; render(); return;
+      case 'promoopen': promoOpen = !promoOpen; render(); return;
       case 'dfiltclear': dfilt = { type: {}, tier: {} }; gkey = dsort; ufilter[camp && camp.mode === 'hotseat' ? hubSide : 'A'] = {}; render(); return;
       case 'ufilter': {
         var fk = t.getAttribute('data-fkey'), kind = t.getAttribute('data-kind');

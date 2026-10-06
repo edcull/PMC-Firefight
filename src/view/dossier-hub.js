@@ -321,11 +321,18 @@
           '<span class="mk">as high as a ' + kind + ' goes</span></div>' +
           '<div class="cprom-row">' + swap + quit + '</div></div>';
       }
-      var h = '<div class="cprom' + (pp.ok ? ' ready' : '') + '">';
-      h += '<div class="cprom-head"><b>Promotion to Tier ' + ROMAN[pp.next] + '</b>' +
-        '<span class="cprom-count">' + pp.done + ' of ' + pp.total + '</span></div>';
-      h += '<div class="cprom-bar"><i style="width:' +
-        Math.round(100 * pp.done / pp.total) + '%"></i></div>';
+      /* One line, folded: the next Tier and how far along; a tap opens what each
+         condition still needs (and the promote button, once they are all met, either way) */
+      var open = !!E.promoOpen;
+      var h = '<div class="cprom' + (pp.ok ? ' ready' : '') + (open ? '' : ' shut') + '">';
+      h += '<button type="button" class="cprom-toggle" data-go="promoopen" aria-expanded="' + open + '">' +
+        '<span class="cprom-head"><b>Promotion to Tier ' + ROMAN[pp.next] + '</b>' +
+        '<span class="cprom-count">' + pp.done + ' of ' + pp.total + ' <span class="cprom-ar" aria-hidden="true">' + (open ? '\u25be' : '\u25b8') + '</span></span></span>';
+      h += '<span class="cprom-bar"><i style="width:' +
+        Math.round(100 * pp.done / pp.total) + '%"></i></span></button>';
+      if (!open && !pp.ok) return h + '</div>';
+      if (!open) return h + '<div class="cprom-row"><button class="start cprom-go" data-go="promoteco" data-side="' + side + '">' +
+        'Promote to Tier ' + ROMAN[pp.next] + ' — ' + pp.cost + ' ' + C.money(co) + '</button>' + quit + '</div></div>';
       h += '<ul class="cprom-list">';
       pp.steps.forEach(function (st) {
         var pct = st.need > 1 ? Math.round(100 * st.have / st.need) : (st.done ? 100 : 0);

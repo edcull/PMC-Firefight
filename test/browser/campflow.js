@@ -175,6 +175,15 @@ async function pastFronts(p) {
   check('...and a tap elsewhere puts it away', await p.evaluate(() => !document.querySelector('#camp-body .dpop')));
   await p.evaluate(() => { const b = document.querySelector('#camp-body .hubtabs [data-go="roster"]:first-child'); if (b) b.click(); });
   await p.waitForTimeout(200);
+  // folded to one line (the next Tier and how far along), opened by a tap
+  const fold = await p.evaluate(() => {
+    const el = document.querySelector('#camp-body .cprom');
+    const shut = !!el && !el.querySelector('.cprom-list') && !!el.querySelector('.cprom-toggle .cprom-bar');
+    el.querySelector('.cprom-toggle').click();
+    const now = document.querySelector('#camp-body .cprom');
+    return { shut, opened: !!now.querySelector('.cprom-list li') };
+  });
+  check('the promotion checklist is one line, opening on a tap', fold.shut && fold.opened, JSON.stringify(fold));
   const prom = await p.evaluate(() => {
     const el = document.querySelector('#camp-body .cprom');
     if (!el) return { none: true };

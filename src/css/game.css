@@ -1274,6 +1274,12 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 .cprom.ready { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); background: color-mix(in srgb, var(--good) 7%, transparent); }
 .cprom.done > .cprom-head { opacity: .75; }
 .cprom-head { display: flex; align-items: baseline; gap: 10px; }
+/* the checklist's line: its title, count and bar, one button that opens it */
+.cprom-toggle { display: block; width: 100%; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.cprom-toggle .cprom-bar { display: block; }
+.cprom.shut .cprom-bar { margin-bottom: 2px; }
+.cprom-ar { color: var(--ink-dim); margin-left: 4px; }
+#camp-body.hubfit > .cpan-own > .cprom.shut { flex: none; }
 .cprom-head b { font-family: var(--display); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
 .cprom-count { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-dim); }
 .cprom-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.08); margin: 7px 0 9px; overflow: hidden; }
