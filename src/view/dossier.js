@@ -634,6 +634,20 @@
   // the next mark round: none, favoured, unfavoured
   function nextMark(e) { return e.mark === 'fav' ? 'unfav' : e.mark === 'unfav' ? null : 'fav'; }
 
+  /* The force's own command — the free one it was founded with, which rises with the
+     force's Tier — marked by a crown beside its name */
+  var CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18l-1.6-10-4.9 4.2L12 5l-2.5 7.2L4.6 8z" fill="currentColor"/><rect x="3" y="19.5" width="18" height="2" rx="1" fill="currentColor"/></svg>';
+  function commanderMark(co, e) {
+    if (!co || !e || e.rid !== co.cmdRid) return '';
+    var w = C.words(co), what = 'The ' + w.force + '\u2019s own ' + w.cmd + ' \u2014 it rises with the ' + w.force + '\u2019s Tier';
+    return '<span class="dcmdr" title="' + esc(what) + '" aria-label="' + esc(what) + '">' + CROWN + '</span>';
+  }
+  // the name, the mark (if any) kept on the same line as its last word
+  function nameWithMark(name, mark) {
+    if (!mark) return esc(name);
+    var at = String(name).lastIndexOf(' ');
+    return esc(String(name).slice(0, at + 1)) + '<span class="dnowrap">' + esc(String(name).slice(at + 1)) + mark + '</span>';
+  }
   function entryCard(e, co, opts) {
     opts = opts || {};
     var p = profile(e.key), h = '';
@@ -642,7 +656,7 @@
     h += '<div class="dcard' + (e.restUntil > 0 ? ' resting' : '') + (e.mark === 'fav' ? ' fav' : e.mark === 'unfav' ? ' unfav' : '') + (opts.expand ? ' dclick' + (opts.men ? ' open' : '') : '') + '" data-rid="' + e.rid + '"' +
       (opts.expand ? ' aria-expanded="' + !!opts.men + '"' : '') + '>';
     h += '<div class="dtop">' + tierChip(p.tier) +
-      '<b class="dname">' + esc(e.name) + '</b>' +
+      '<b class="dname">' + nameWithMark(e.name, commanderMark(co, e)) + '</b>' +
       (C.isDefaultName(e) ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
     if (e.restUntil > 0) h += '<span class="dtag warn">in the workshop</span>';
     /* Your own: favoured or unfavoured for the next contract, a press going round
@@ -787,7 +801,7 @@
       C: C, R: R, ROMAN: ROMAN, armyPill: armyPill, doctrineMarks: doctrineMarks, close: close, colourFlash: colourFlash,
       colourOf: colourOf, esc: esc, note: note, profile: profile, quietTip: quietTip, root: root, save: save,
       spellOut: spellOut, statRow: statRow, stripe: stripe, tip: tip, get camp() { return camp; },
-      cmodal: cmodal,
+      cmodal: cmodal, commanderMark: commanderMark,
       // the dossier's sort and filter, for the contract's add list
       sortLine: function (co, fkey) { return (KIT_HUB || kitHub()).sortLine(co, fkey, true); },
       dossierOrder: dossierOrder, unitPasses: unitPasses, groupHead: groupHead, groupOrder: groupOrder,

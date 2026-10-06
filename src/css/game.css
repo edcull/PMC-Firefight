@@ -2219,3 +2219,11 @@ svg.chev { width: .8em; height: .65em; vertical-align: .05em; display: inline-bl
 /* the recruiting window: as tall as the screen allows, its list scrolling inside it */
 .cmodal[data-modal="recruit"] .cmodal-box { height: min(92vh, 900px); }
 .cmodal[data-modal="recruit"] .cat, .cmodal[data-modal="recruit"] .cat.tall { max-height: none; overflow: visible; }
+
+/* the force's own command: a crown beside its name */
+.dcmdr { display: inline-block; color: var(--alpha); margin-left: 4px; vertical-align: -2px; line-height: 0; }
+.dcmdr svg { width: 14px; height: 14px; display: block; }
+.dnowrap { white-space: nowrap; }
+/* its name takes what room there is (and wraps in it) rather than pushing the row onto two lines */
+.dtop:has(.dcmdr) { flex-wrap: nowrap; gap: 6px; }
+.dtop:has(.dcmdr) > .dname { flex: 0 1 auto; min-width: 0; }
