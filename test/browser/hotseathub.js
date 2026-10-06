@@ -48,7 +48,7 @@ const { ROOT } = require('../where.js');
   const shown = await p.evaluate(() => document.getElementById('camp-body').innerText);
   check('...and turns to Player 2\'s force', /The Red Dawn/.test(shown.split('\n').slice(0, 6).join(' ')), shown.split('\n').slice(0, 4).join(' / '));
   await click('#camp-body [data-go="roster"]');
-  await click('#camp-body [data-rtab="recruit"]');
+  await click('#camp-body [data-go="fmodal"][data-kind="recruit"]');
   const offer = await p.evaluate(() => [...document.querySelectorAll('#camp-body [data-recruit]')].map(x => x.getAttribute('data-recruit')));
   check('the recruiting list is Player 2\'s own (insurgents)', offer.length > 0 && offer.some(k => /^r/.test(k)) && !offer.some(k => k === 'recruits'), offer.slice(0, 5).join(','));
   const before = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return { a: c.companies.A.roster.length, b: c.companies.B.roster.length, bk: c.companies.B.kUC }; });

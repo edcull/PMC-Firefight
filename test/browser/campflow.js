@@ -23,7 +23,7 @@ async function click(p, sel) {
 }
 // the dossier's unit cards: tap the lit tab to go back to them
 async function toUnits(p) {
-  await p.evaluate(() => { const b = document.querySelector('#camp-body [data-rtab="units"]'); if (b) b.click(); });
+  await p.evaluate(() => { const b = document.querySelector('#camp-body [data-rtab="units"]') || document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodalclose"]'); if (b) b.click(); });
   await p.waitForTimeout(220);
 }
 
@@ -135,10 +135,15 @@ async function pastFronts(p) {
   const dos = await p.evaluate(() => ({ cdos: !!document.querySelector('#camp-body .cdos'), stats: !!document.querySelector('#camp-body .cpan-A .cstats'),
     creed: !!document.querySelector('#camp-body .cpan-A .cpdoc'), line: [...document.querySelectorAll('#camp-body .dsortline button')].map(b => b.textContent) }));
   check('the dossier shows the units, without the figures, army and creed', dos.cdos && !dos.stats && !dos.creed, JSON.stringify(dos));
-  check('...under a line to sort and filter them', dos.line.length === 3 && /Sort: Type/.test(dos.line[0]) && /Filter: All/.test(dos.line[1]) && dos.line[2] === 'Group', dos.line.join(' | '));
+  check('...under a line to sort and filter them', dos.line.length === 2 && /Sort: Type/.test(dos.line[0]) && /Filter: All/.test(dos.line[1]), dos.line.join(' | '));
   // grouped from the start: a header over each unit type, the command's first
-  const heads = await p.evaluate(() => ({ on: document.querySelector('#camp-body .dsortline .dgrp').getAttribute('aria-pressed'),
-    heads: [...document.querySelectorAll('#camp-body .cdos .dgrouphead')].map(h => h.textContent) }));
+  // (the Group tick box is in the sort's pop-up)
+  const heads = await p.evaluate(() => {
+    document.querySelector('#camp-body .dsortline [data-kind="dsort"]').click();
+    const box = document.querySelector('#camp-body .dpop .dgrpchk'), on = box ? box.getAttribute('aria-checked') : null;
+    document.querySelector('#camp-body .dsortline [data-kind="dsort"]').click();
+    return { on, heads: [...document.querySelectorAll('#camp-body .cdos .dgrouphead')].map(h => h.textContent) };
+  });
   check('...grouped by type from the start, under headers, the command first', heads.on === 'true' && heads.heads.length > 2 && heads.heads[0] === 'Command', JSON.stringify(heads));
   await p.evaluate(() => { document.querySelector('#camp-body .dsortline [data-kind="dsort"]').click(); });
   await p.waitForTimeout(150);
@@ -167,12 +172,13 @@ async function pastFronts(p) {
     document.querySelector('#camp-body .dpop [data-go="dfilt"][data-kind="tier"]').click();
     const heads = [...document.querySelectorAll('#camp-body .cdos .dgrouphead')].map(h => h.textContent);
     document.querySelector('#camp-body .dpop [data-go="dfiltclear"]').click();
-    document.querySelector('#camp-body .dsortline .dgrp').click();
+    document.querySelector('#camp-body .dsortline [data-kind="dsort"]').click();
+    document.querySelector('#camp-body .dpop .dgrpchk').click();
     const off = document.querySelectorAll('#camp-body .cdos .dgrouphead').length;
-    document.querySelector('#camp-body .dsortline .dgrp').click();
+    document.querySelector('#camp-body .dpop .dgrpchk').click();
     return { heads, off };
   });
-  check('a Tier filter, grouped, puts Tier headers over the list; the Group toggle takes them away', byTier.heads.length === 1 && /^Tier /.test(byTier.heads[0]) && byTier.off === 0, JSON.stringify(byTier));
+  check('a Tier filter, grouped, puts Tier headers over the list; the Group tick box takes them away', byTier.heads.length === 1 && /^Tier /.test(byTier.heads[0]) && byTier.off === 0, JSON.stringify(byTier));
   await p.evaluate(() => document.querySelector('#camp-body .cphead').click());   // a tap elsewhere puts it away
   await p.waitForTimeout(100);
   check('...and a tap elsewhere puts it away', await p.evaluate(() => !document.querySelector('#camp-body .dpop')));
@@ -530,7 +536,8 @@ async function pastFronts(p) {
   await click(p, '#camp-body .camp-dock [data-go="afterhub"]');
   check('the aftermath returns to the hub, on the company', await p.evaluate(() => !!document.querySelector('#camp-body .cpan-A .cstats') && !document.querySelector('#camp-body .cdos')));
   await click(p, '#camp-body .hubtabs [data-go="roster"]');
-  await p.evaluate(() => document.querySelector('#camp-body [data-rtab="recruit"]').click()); await p.waitForTimeout(220);
+  await p.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="recruit"]').click()); await p.waitForTimeout(220);
+  check('Recruit opens in a window, closed by its ✕', await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal:not([hidden])'); return !!m && !!m.querySelector('[data-recruit]') && !!m.querySelector('[data-go="fmodalclose"]'); }));
   const before = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   const recruited = await click(p, '#camp-body button[data-recruit="recruits"]');
   // it asks first, saying what it costs and what there is to spend

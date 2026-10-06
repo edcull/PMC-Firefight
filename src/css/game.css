@@ -967,6 +967,11 @@ a.mcard { text-decoration: none; line-height: normal; }
 .hubbar.hubtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border-bottom: 1px solid var(--line); min-height: 0; }
 /* the campaign's business on the company view, under the promotion */
 .hubmanage { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.hubfile { display: flex; gap: 6px; }
+.hubfile .lnk.ico { flex: 1 1 0; display: inline-grid; place-items: center; min-height: var(--row-h); padding: 0; margin: 0; }
+.hubfile .lnk.ico svg { width: 18px; height: 18px; }
+.hubfile .lnk.ico.wide { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.hubfile .lnk.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 .hubbar.hubtabs .lnk { width: 100%; padding: 0 6px; }
 /* tabs as the unit viewer's (.vtabs): the one it is on lifted onto the line under them, in amber */
 .hubbar.hubtabs .lnk { background: none; border: 1px solid transparent; border-bottom: none; border-radius: 5px 5px 0 0; margin-bottom: -1px;
@@ -999,9 +1004,11 @@ a.mcard { text-decoration: none; line-height: normal; }
   padding: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 10px 28px rgba(0,0,0,.5);
 }
 .dsortline .dpopwrap + .dpopwrap .dpop { left: auto; right: 0; }
-.dsortline > .lnk.dgrp { flex: none; }
-/* on: lit as a toggle (brighter, an amber line under it, as the hub's tabs), not as a primary button */
-.dsortline > .lnk.dgrp.on { color: var(--ink); background: var(--panel-3); border-color: var(--line); box-shadow: inset 0 -2px 0 var(--alpha); }
+/* the sort's tick box: group the list under headers */
+.dgrprow { justify-content: flex-start !important; border-top: 1px solid var(--line); padding-top: 8px; }
+.dgrpchk { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 2px 0; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.dgrpchk .box { width: 16px; height: 16px; border: 1px solid var(--ink-dim); border-radius: 3px; display: inline-grid; place-items: center; font-size: 12px; line-height: 1; color: var(--alpha); }
+.dgrpchk[aria-checked="true"] .box { border-color: var(--alpha); }
 .dgrouphead { margin: 8px 2px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
 .dgrouphead:first-child { margin-top: 0; }
 .dsortline .dpop .lnk { flex: none; min-height: 0; white-space: normal; overflow: visible; }
@@ -2207,3 +2214,6 @@ svg.chev { width: .8em; height: .65em; vertical-align: .05em; display: inline-bl
 .olob-acts { display: flex; gap: 8px; align-items: stretch; margin: 0 0 10px; flex: none; }
 .olob-acts .lnk { flex: none; white-space: nowrap; margin: 0; }
 .olob-acts .start { flex: 1 1 auto; margin: 0; }
+/* the recruiting window: as tall as the screen allows, its list scrolling inside it */
+.cmodal[data-modal="recruit"] .cmodal-box { height: min(92vh, 900px); }
+.cmodal[data-modal="recruit"] .cat, .cmodal[data-modal="recruit"] .cat.tall { max-height: none; overflow: visible; }

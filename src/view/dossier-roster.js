@@ -57,11 +57,10 @@
        box: its tabs across the top and the list scrolling under them. */
     function dossierPanel(co) {
       // the recruiting list fills the panel and scrolls itself; the others scroll the panel
-      /* At its foot, the way in to recruiting; while recruiting, the same
-         button goes back to the units, and says so. */
+      /* At its foot, the way in to recruiting. */
+      // recruiting opens in a window of its own (its close, top right, back to the dossier)
       var rec = E.rosterTab === 'recruit';
-      var foot = '<div class="cdos-foot"><button class="lnk' + (rec ? ' on' : '') + '" data-rtab="' + (rec ? 'units' : 'recruit') + '" aria-pressed="' + rec + '">' +
-        (rec ? '\u2190 Back to the dossier' : '+ ' + esc(C.words(co).recruit)) + '</button></div>';
+      var foot = '<div class="cdos-foot"><button class="lnk" data-go="fmodal" data-kind="recruit">+ ' + esc(C.words(co).recruit) + '</button></div>';
       return '<div class="cprom cdos"><div class="cprom-list cdos-body' + (rec ? ' cdos-fill' : '') + '">' + rosterBody(co) + '</div>' + foot + '</div>';
     }
     /* Every soldier the force has lost in the campaign, most recent battle
@@ -353,7 +352,7 @@
     }
 
     return {
-      dossierPanel: dossierPanel, memorialList: memorialList, spendActs: spendActs
+      dossierPanel: dossierPanel, memorialList: memorialList, spendActs: spendActs, recruitList: recruitList
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCDossierRoster;
