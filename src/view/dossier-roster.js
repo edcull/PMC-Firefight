@@ -40,7 +40,7 @@
           // enough experience for something: a Promote button, opening the choices in a window
           var spend = canSpend(e, co) ? '<button class="lnk good dact" data-promo="' + e.rid + '" title="Promote" aria-label="Promote">' + ICON_PROMOTE + '<span>Promote</span></button>' : '';
           var dis = C.canDisband(co, e);
-          acts += '<button class="lnk danger dact" data-disband="' + e.rid + '" aria-label="Disband"' + (dis.ok ? ' title="Disband"' : ' disabled title="' + esc(dis.why) + '"') + '>' + ICON_DISBAND + '<span>Disband</span></button>';
+          acts += '<button class="lnk danger dact" data-disband="' + e.rid + '" aria-label="Disband"' + (dis.ok ? ' title="Disband"' : blocked(dis.why, 'Cannot disband')) + '>' + ICON_DISBAND + '<span>Disband</span></button>';
           if (spend) acts += spend;
           // closed, a card offers only Promote (when there is the experience for it); opened, all of them
           h += entryCard(e, co, { actions: open ? acts : spend, men: open ? detailPanel(e, co) : '', expand: true, portrait: open, rowActs: true, mark: true });
@@ -266,6 +266,11 @@
       }).join('') + '</ol>';
     }
 
+    /* A button that cannot be pressed yet still takes the press, greyed out, and
+       says why (aria-disabled rather than disabled — a phone has no hover for a title) */
+    function blocked(why, head) {
+      return ' aria-disabled="true" data-tip="' + esc(why || '') + '" data-tip-title="' + esc(head || 'Not yet') + '"';
+    }
     /* What a unit can spend its experience on: a promotion to each unit it may
        become, and an honour (or an upgrade, for a machine). */
     function spendActs(e, co) {
@@ -275,27 +280,31 @@
       var acts = '';
         C.promotionTargets(e, co).forEach(function (q) {
           var c = C.promotionCost(e, q.key);
-          var can = e.exp >= c.exp && co.kUC >= c.kUC;
+          // what it is short of, said on the row and again when it is pressed
+          var shortExp = Math.max(0, c.exp - e.exp), shortKuc = Math.max(0, c.kUC - co.kUC), word = C.money(co);
+          var short = [shortExp ? shortExp + ' EXP' : '', shortKuc ? shortKuc + ' ' + word : ''].filter(Boolean).join(' and ');
+          var why = short ? 'Short of ' + short + '. It costs ' + c.exp + ' EXP' + (c.kUC ? ' and ' + c.kUC + ' ' + word : '') +
+            '; the unit has ' + e.exp + ' EXP' + (c.kUC ? ' and the force ' + co.kUC + ' ' + word : '') + '.' : '';
           acts += '<button class="lnk" data-promote="' + e.rid + '" data-to="' + q.key + '"' +
-            (can ? '' : ' disabled') + '>→ ' + esc(q.name) + ' · ' + c.exp + ' EXP' +
-            (c.kUC ? ' + ' + c.kUC + ' ' + C.money(co) : '') +
+            (short ? blocked(why) : '') + '>→ ' + esc(q.name) + ' · ' + c.exp + ' EXP' +
+            (c.kUC ? ' + ' + c.kUC + ' ' + word : '') + (short ? ' <em class="short">\u2014 ' + short + ' short</em>' : '') +
             // what it becomes: its Tier and the group it joins
             '<small class="promo-to">Tier ' + ROMAN[q.tier] + (q.group ? ' · ' + esc(q.group) : '') + '</small></button>';
         });
         if (C.takesHonours(p)) {
           var hc = C.canTakeHonour(e, co);
           acts += '<button class="lnk good" data-honour="' + e.rid + '"' +
-            (hc.ok ? '' : ' disabled title="' + esc(hc.why || '') + '"') + '>' + C.words(co).honour + ' · ' +
+            (hc.ok ? '' : blocked(hc.why)) + '>' + C.words(co).honour + ' · ' +
             C.honourCost(e, co) + ' EXP</button>';
         } else {
           var uc = C.canTakeUpgrade(e);
           acts += '<button class="lnk good" data-upgrade="' + e.rid + '"' +
-            (uc.ok ? '' : ' disabled title="' + esc(uc.why || '') + '"') + '>Upgrade · 10 EXP</button>';
+            (uc.ok ? '' : blocked(uc.why)) + '>Upgrade · 10 EXP</button>';
         }
       return acts;
     }
     // whether a unit can afford anything it could spend its experience on
-    function canSpend(e, co) { return /<button(?![^>]*disabled)[^>]*data-(promote|honour|upgrade)=/.test(spendActs(e, co)); }
+    function canSpend(e, co) { return /<button(?![^>]*aria-disabled)[^>]*data-(promote|honour|upgrade)=/.test(spendActs(e, co)); }
     function spendList(co) {
       var h = '<div class="dlist">';
       var any = false;
@@ -325,14 +334,17 @@
           var chk = C.canRecruit(co, p.key);
           var cost = C.recruitCost(co, p.key);
           var price = cost ? cost + ' ' + C.money(co) : 'free', row = root.PMCUi.unitRow;
-          h += row('class="cu" data-recruit="' + p.key + '"' + (chk.ok ? '' : ' disabled title="' + esc(chk.why) + '"'), p.tier,
+          // greyed out, a row still takes the press and says why; short of money, it says by how much in place of the price
+          var off = chk.ok ? '' : blocked(chk.why);
+          if (!chk.ok && cost > co.kUC && p.tier <= co.tier + 2) price = (cost - co.kUC) + ' ' + C.money(co) + ' short';
+          h += row('class="cu" data-recruit="' + p.key + '"' + off, p.tier,
             '<b>' + esc(p.name) + '</b>', esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')), price);
           /* the Riders upgrade, "decided when that unit is recruited. The decision is
              final" (p. 97): a squad that may take it is recruited on foot or mounted */
-          if (R.canRide(p)) h += row('class="cu cu-riders" data-recruit="' + p.key + '" data-asriders="1"' + (chk.ok ? '' : ' disabled'), p.tier,
+          if (R.canRide(p)) h += row('class="cu cu-riders" data-recruit="' + p.key + '" data-asriders="1"' + off, p.tier,
             '<b>' + esc(p.name) + ' \u2014 Riders</b>', 'Half the models, Movement 10 and the Riders rule; final once recruited', price);
           // the same hull or craft, flown remotely (p. 37)
-          if (R.canBeDrone(p)) h += row('class="cu cu-drone" data-recruit="' + p.key + '" data-asdrone="1"' + (chk.ok ? '' : ' disabled'), p.tier,
+          if (R.canBeDrone(p)) h += row('class="cu cu-drone" data-recruit="' + p.key + '" data-asdrone="1"' + off, p.tier,
             '<b>' + esc(p.name) + ' — drone</b>', '+1 Structure, no crew, no experience; can be hacked', price);
         });
       });

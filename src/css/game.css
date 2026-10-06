@@ -617,8 +617,8 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   background: none; border: 1px solid transparent; border-radius: 4px; padding: 4px 6px;
   color: var(--ink); text-align: left; cursor: pointer; font-family: var(--body); font-size: 12px;
 }
-.cu:hover:not(:disabled) { background: var(--panel-3); border-color: var(--line); }
-.cu:disabled { opacity: var(--off-opacity); cursor: not-allowed; }
+.cu:hover:not(:disabled):not([aria-disabled="true"]) { background: var(--panel-3); border-color: var(--line); }
+.cu:disabled, .cu[aria-disabled="true"] { opacity: var(--off-opacity); cursor: not-allowed; }
 .cu .t { font-family: var(--display); font-size: 11px; color: var(--alpha); }
 .cu .st { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
 /* marked on the dossier for the next contract: favoured stands out, unfavoured recedes (and can still be picked) */
@@ -1238,7 +1238,9 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 .lnk.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 .lnk.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
 .lnk.on { color: var(--ink); border-color: var(--alpha); background: var(--on-bg); }
-.lnk:disabled { opacity: var(--off-opacity); cursor: not-allowed; }
+.lnk:disabled, .lnk[aria-disabled="true"] { opacity: var(--off-opacity); cursor: not-allowed; }
+/* what a greyed-out promotion is short of, on its row */
+.lnk em.short { font-style: normal; color: var(--bad); margin-left: 4px; }
 
 .cpan { border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); padding: 11px; margin-bottom: 12px; }
 .cpan-A { border-left: 3px solid var(--alpha); }

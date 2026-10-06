@@ -546,6 +546,31 @@ async function pastFronts(p) {
   check('...with its stats and special rules underneath', unitOpen.below, JSON.stringify(unitOpen));
   await shot(p, 'camp-unit.png');
 
+  /* A promotion the force cannot pay for: greyed out, but it says by how much on
+     its row, and a press says why rather than doing nothing */
+  console.log('\nA promotion out of reach');
+  const kucWas = await p.evaluate(() => {
+    const camp = window.PMC_CAMPAIGN.get(), was = camp.companies.A.kUC;
+    camp.companies.A.roster.forEach(e => { e.exp = 40; }); camp.companies.A.kUC = 0;
+    window.PMC_CAMPAIGN.set(camp); return was;
+  });
+  await p.waitForTimeout(250);
+  await p.evaluate(() => { const b = [...document.querySelectorAll('#camp-body button[data-promo]')].find(x => /Recruits|Enforcers|rifle/i.test(x.closest('.dcard').textContent)); if (b) b.click(); });
+  await p.waitForTimeout(250);
+  const broke = await p.evaluate(() => {
+    const b = [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) button[data-promote]')].find(x => x.getAttribute('aria-disabled') === 'true');
+    if (!b) return null;
+    const row = b.textContent, before = window.PMC_CAMPAIGN.get().companies.A.roster.length;
+    b.click();
+    const tip = document.querySelector('.tip.on');
+    return { row, disabled: b.disabled, tip: tip ? tip.textContent : '', same: window.PMC_CAMPAIGN.get().companies.A.roster.length === before && !!b.isConnected };
+  });
+  check('a promotion the force cannot afford says what it is short of, on its row', !!broke && /kUC short/.test(broke.row) && !broke.disabled, JSON.stringify(broke));
+  check('...and pressed, says why and does nothing else', !!broke && /Short of/.test(broke.tip) && broke.same, broke && broke.tip);
+  await p.evaluate(() => { window.PMCTips && window.PMCTips.hide(); const x = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodalclose"]'); if (x) x.click(); });
+  await p.evaluate((k) => { const camp = window.PMC_CAMPAIGN.get(); camp.companies.A.kUC = k; window.PMC_CAMPAIGN.set(camp); }, kucWas);
+  await p.waitForTimeout(250);
+
   /* Battle Honours (p. 88): the player puts three forward, the dice pick one */
   console.log('\nA Battle Honour');
   await p.evaluate(() => {
@@ -633,7 +658,7 @@ async function pastFronts(p) {
   await p.waitForTimeout(250);
   await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal[data-modal="promote"]'); if (m) m.hidden = false; });
   const opened = await p.evaluate(() => {
-    const b = document.querySelector('#camp-body .cmodal:not([hidden]) button[data-honour]:not([disabled])');
+    const b = document.querySelector('#camp-body .cmodal:not([hidden]) button[data-honour]:not([aria-disabled="true"])');
     if (!b) return false;
     b.click(); return true;
   });

@@ -1071,6 +1071,8 @@
       render(); return;
     }
     if (!t) return;
+    // greyed out but still pressable (aria-disabled): it says why, and does nothing more
+    if (t.getAttribute('aria-disabled') === 'true' && t.hasAttribute('data-tip')) { if (root.PMCTips) root.PMCTips.show(t); return; }
     if (view === 'found') keepFoundName();
     var co = hubCo();
     var go = t.getAttribute('data-go');
