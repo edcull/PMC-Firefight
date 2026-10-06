@@ -964,7 +964,9 @@ a.mcard { text-decoration: none; line-height: normal; }
 .hubbar .hubicon { flex: none; display: inline-grid; place-items: center; padding: 0 12px; }
 .hubbar .hubicon svg { width: 17px; height: 17px; display: block; }
 /* online: the company, its dossier and the campaign's window as tabs, 2 : 2 : 1 */
-.hubbar.hubtabs { display: grid; grid-template-columns: 2fr 2fr 1fr; }
+.hubbar.hubtabs { display: grid; grid-template-columns: 1fr 1fr; }
+/* the campaign's business on the company view, under the promotion */
+.hubmanage { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .hubbar.hubtabs .lnk { width: 100%; padding: 0 6px; }
 /* the tab it is on: lit as a tab (brighter, an amber line under it), not as a primary button */
 .hubbar.hubtabs .lnk:not(.hubicon) { color: var(--ink-dim); }
