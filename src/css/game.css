@@ -617,8 +617,8 @@ aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   background: none; border: 1px solid transparent; border-radius: 4px; padding: 4px 6px;
   color: var(--ink); text-align: left; cursor: pointer; font-family: var(--body); font-size: 12px;
 }
-.cu:hover:not(:disabled) { background: var(--panel-3); border-color: var(--line); }
-.cu:disabled { opacity: var(--off-opacity); cursor: not-allowed; }
+.cu:hover:not(:disabled):not([aria-disabled="true"]) { background: var(--panel-3); border-color: var(--line); }
+.cu:disabled, .cu[aria-disabled="true"] { opacity: var(--off-opacity); cursor: not-allowed; }
 .cu .t { font-family: var(--display); font-size: 11px; color: var(--alpha); }
 .cu .st { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
 /* marked on the dossier for the next contract: favoured stands out, unfavoured recedes (and can still be picked) */
@@ -966,9 +966,11 @@ a.mcard { text-decoration: none; line-height: normal; }
 /* online: the company, its dossier and the campaign's window as tabs, 2 : 2 : 1 */
 .hubbar.hubtabs { display: grid; grid-template-columns: 2fr 2fr 1fr; }
 .hubbar.hubtabs .lnk { width: 100%; padding: 0 6px; }
-/* the company view's way to the other forces: amber, as the tab it is on is */
-.cdos-foot [data-kind="rivals"], .hubbar.hubtabs .lnk.on { border-color: var(--alpha); color: var(--alpha); background: color-mix(in srgb, var(--alpha) 10%, transparent); }
-.hubbar.hubtabs .lnk.on { cursor: default; }
+/* the tab it is on: lit as a tab (brighter, an amber line under it), not as a primary button */
+.hubbar.hubtabs .lnk:not(.hubicon) { color: var(--ink-dim); }
+.hubbar.hubtabs .lnk.on { cursor: default; color: var(--ink); background: var(--panel-3); border-color: var(--line); box-shadow: inset 0 -2px 0 var(--alpha); }
+/* Take a contract, at the top of the hub */
+.hubtake .start { margin-top: 0; }
 .hubbar .start.hubgo { flex: 0 0 auto; width: auto; margin: 0 0 0 auto; padding: 0 12px; font-size: 11px; letter-spacing: .08em; }
 .hubnote { margin: 0 0 8px; }
 /* what a unit can spend its experience on, on its own card after its other actions */
@@ -1238,7 +1240,9 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 .lnk.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 .lnk.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
 .lnk.on { color: var(--ink); border-color: var(--alpha); background: var(--on-bg); }
-.lnk:disabled { opacity: var(--off-opacity); cursor: not-allowed; }
+.lnk:disabled, .lnk[aria-disabled="true"] { opacity: var(--off-opacity); cursor: not-allowed; }
+/* what a greyed-out promotion is short of, on its row */
+.lnk em.short { font-style: normal; color: var(--bad); margin-left: 4px; }
 
 .cpan { border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); padding: 11px; margin-bottom: 12px; }
 .cpan-A { border-left: 3px solid var(--alpha); }
@@ -1270,6 +1274,12 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 .cprom.ready { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); background: color-mix(in srgb, var(--good) 7%, transparent); }
 .cprom.done > .cprom-head { opacity: .75; }
 .cprom-head { display: flex; align-items: baseline; gap: 10px; }
+/* the checklist's line: its title, count and bar, one button that opens it */
+.cprom-toggle { display: block; width: 100%; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.cprom-toggle .cprom-bar { display: block; }
+.cprom.shut .cprom-bar { margin-bottom: 2px; }
+.cprom-ar { color: var(--ink-dim); margin-left: 4px; }
+#camp-body.hubfit > .cpan-own > .cprom.shut { flex: none; }
 .cprom-head b { font-family: var(--display); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
 .cprom-count { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-dim); }
 .cprom-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.08); margin: 7px 0 9px; overflow: hidden; }
@@ -1549,6 +1559,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .olob-ai { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; cursor: pointer; }
 .olob-army { color: var(--ink-faint); font-size: 12px; }
 .olob-bar { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex-wrap: nowrap; flex: none; }
+.olob-bar .lnk.olob-load { flex: none; margin: 0; white-space: nowrap; }
 .olob-bar .start { flex: 1 1 0; min-width: 0; margin: 0; padding-left: 8px; padding-right: 8px; white-space: normal; line-height: 1.2; }
 @media (max-width: 520px) { .olob-bar { gap: 8px; } .olob-bar .start { font-size: 12px; } }
 .olob-n, .olob-pub { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
@@ -2092,6 +2103,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 #camp-body .cacts { display: flex; gap: 8px; margin-top: 6px; }
 #camp-body .cacts .start { margin: 0; flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #camp-body .cacts + .camp-foot { margin: 0; }
+#camp-body .cacts .lnk.cdrop { flex: none; width: auto; margin: 0; padding: 0 12px; min-height: 0; font-size: 12px; color: var(--ink-dim); }
 /* the job on the contract screen: the offer card's own lines, without the rule that parted it from the force above */
 #camp-body .cpan-job .offer-job { border-top: 0; margin-top: 0; padding-top: 0; }
 .camp-dock .start:disabled { opacity: var(--off-opacity); }
@@ -2185,3 +2197,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 /* a Battle Honour's chevron, sized to the text it sits in */
 svg.chev { width: .8em; height: .65em; vertical-align: .05em; display: inline-block; }
 .mark-hon svg.chev + svg.chev { margin-left: 1px; }
+/* the campaign lobby's Leave and Ready, above the chat, as the skirmish room has them */
+.olob-acts { display: flex; gap: 8px; align-items: stretch; margin: 0 0 10px; flex: none; }
+.olob-acts .lnk { flex: none; white-space: nowrap; margin: 0; }
+.olob-acts .start { flex: 1 1 auto; margin: 0; }

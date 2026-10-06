@@ -68,7 +68,7 @@
         h += '<div class="olob-bar"><label class="olob-n">AI forces <select id="' + (hot ? 'camp-hotai' : 'camp-rivals') + '">' + (hot ? [0, 2, 4, 6, 8] : [1, 3, 5, 7, 9]).map(function (n) {
           return '<option value="' + n + '"' + (n === nr ? ' selected' : '') + '>' + n + '</option>';
         }).join('') + '</select></label>' +
-          '<button class="start" data-go="import">Load a save file</button>' +
+          '<button class="lnk olob-load" data-go="import">Load a save file</button>' +
           '<button class="start" data-go="newcamp">Raise the force</button></div>';
         h += cmodal('armynew', C.words(pa).side + ' \u2014 army rules', armyRules(pa));
         h += cmodal('armynewb', C.words(pb).side + ' \u2014 army rules', armyRules(pb));
@@ -86,7 +86,8 @@
       // in hotseat, the player whose force the hub shows and works on (HC-1)
       var hs = E.hubSide, cur = E.camp.companies[hs] || A;
       // online: who is waiting on whom, the code for the open seat, the battle when it is made
-      if (E.online) h += E.onlineNote();
+      var onote = E.online ? E.onlineNote() : '';
+      h += onote;
       /* A force that can no longer field an army, and cannot recruit back to one, ends
          the campaign (HC-14): said here, and the contract is closed. */
       var done = E.camp.over;
@@ -99,6 +100,11 @@
         var fco = E.camp.companies[finished];
         h += '<div class="cpan"><div class="cpstat"><b>' + esc(fco.name) + ' can no longer field an army</b>, and cannot recruit back to one. ' +
           'The campaign ends here.</div><button class="start" data-go="campend" data-side="' + finished + '">End the campaign</button></div>';
+      }
+      /* Taking a contract is what the screen is for (alone, or on a world): at the top,
+         where a contract or a battle under way says so instead */
+      if (!done && !finished && (E.online || E.camp.mode === 'solo') && !/data-go="(obattle|ocontract)"/.test(onote)) {
+        h += '<div class="cpan onote hubtake"><button class="start" data-go="fmodal" data-kind="rivals">Take a contract</button></div>';
       }
       h += companyPanel(cur, hs, hubBar());
       // what a unit can spend its experience on: an honour, an upgrade, or a promotion to another unit
@@ -130,7 +136,7 @@
         '</div>');
       // the fallen, opened from the campaign's window (Back returns to it)
       h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>');
-      h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'The other forces on this world',
+      h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'Take a contract',
         // the other player's force shown as a rival's is: its figures, its kind and creed, and their dossier to open
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? rivalPanel(hs === 'B' ? A : B, 0)
           // the other players first, then the AI forces (each keeps its own place for its dossier and its contract)
@@ -229,8 +235,8 @@
           pp0 = pp0.replace(/<\/div>$/, '<button class="start" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button></div>');
         }
         h += pp0;
-        // under it, at the foot of the screen: the other forces on the world (in hotseat, the other player)
-        if (bar) {
+        // under it, at the foot of the screen, in hotseat: the other player (alone or on a world, Take a contract is at the top)
+        if (bar && E.camp.mode === 'hotseat' && !E.online) {
           var hot = E.camp.mode === 'hotseat';
           h += '<div class="cdos-foot hubfoot"><button type="button" class="lnk" data-go="fmodal" data-kind="rivals">' +
             (hot ? (E.hubSide === 'B' ? 'Player 1' : 'Player 2') : 'Other forces') + '</button></div>';
@@ -315,11 +321,18 @@
           '<span class="mk">as high as a ' + kind + ' goes</span></div>' +
           '<div class="cprom-row">' + swap + quit + '</div></div>';
       }
-      var h = '<div class="cprom' + (pp.ok ? ' ready' : '') + '">';
-      h += '<div class="cprom-head"><b>Promotion to Tier ' + ROMAN[pp.next] + '</b>' +
-        '<span class="cprom-count">' + pp.done + ' of ' + pp.total + '</span></div>';
-      h += '<div class="cprom-bar"><i style="width:' +
-        Math.round(100 * pp.done / pp.total) + '%"></i></div>';
+      /* One line, folded: the next Tier and how far along; a tap opens what each
+         condition still needs (and the promote button, once they are all met, either way) */
+      var open = !!E.promoOpen;
+      var h = '<div class="cprom' + (pp.ok ? ' ready' : '') + (open ? '' : ' shut') + '">';
+      h += '<button type="button" class="cprom-toggle" data-go="promoopen" aria-expanded="' + open + '">' +
+        '<span class="cprom-head"><b>Promotion to Tier ' + ROMAN[pp.next] + '</b>' +
+        '<span class="cprom-count">' + pp.done + ' of ' + pp.total + ' <span class="cprom-ar" aria-hidden="true">' + (open ? '\u25be' : '\u25b8') + '</span></span></span>';
+      h += '<span class="cprom-bar"><i style="width:' +
+        Math.round(100 * pp.done / pp.total) + '%"></i></span></button>';
+      if (!open && !pp.ok) return h + '</div>';
+      if (!open) return h + '<div class="cprom-row"><button class="start cprom-go" data-go="promoteco" data-side="' + side + '">' +
+        'Promote to Tier ' + ROMAN[pp.next] + ' — ' + pp.cost + ' ' + C.money(co) + '</button>' + quit + '</div></div>';
       h += '<ul class="cprom-list">';
       pp.steps.forEach(function (st) {
         var pct = st.need > 1 ? Math.round(100 * st.have / st.need) : (st.done ? 100 : 0);

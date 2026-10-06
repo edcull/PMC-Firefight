@@ -323,6 +323,10 @@
         : '<span class="olob-pub">' + (L.listed ? 'Public' : 'Private') + '</span>';
       // everyone says they are ready, the host too; then the host has Start
       var allReady = (L.slots || []).every(function (x) { return x.kind !== 'human' || x.ready; });
+      h += '</div>';
+      /* as the skirmish room has it, above the chat: the way out a quiet link, and the
+         one thing to do next the full-width button (ready, then the host's Start) */
+      h += '<div class="lob-acts olob-acts"><button class="lnk" data-go="omulti">Leave</button>';
       if (host && allReady) h += '<button class="start" data-go="olobstart">Start the campaign</button>';
       else h += '<button class="start' + (mineSlot.ready ? ' on' : '') + '" data-go="olobready">' +
         (!mineSlot.ready ? 'I am ready' : host ? 'Ready \u2014 waiting for the players' : 'Ready \u2014 waiting for the host') + '</button>';
@@ -523,7 +527,7 @@
       h += '<div class="field plrow"><div><label for="oc-pl">Priority Level</label>' +
         '<select id="oc-pl"' + (lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2].map(function (n) {
           var can = lv.indexOf(n) >= 0;
-          return '<option value="' + n + '"' + (shownPl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + (n === 1 ? ' — skirmish' : ' — full battle') + '</option>';
+          return '<option value="' + n + '"' + (shownPl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + '</option>';
         }).join('') + '</select>' + (plNote ? '<p class="dnote">' + plNote + '</p>' : '') + '</div></div>';
 
       var pk = pickNow(k, me), units = entriesOf(co, pk), keys = units.map(function (e) { return R.entryPick(e); });
@@ -568,7 +572,7 @@
       h += K.forceBox({ co: co, fkey: 'A', chk: chk, units: units, limits: limits, drop: 'data-ocunpick', list: list, auto: 'ocauto', clear: 'occlear' });
       var why = chk.ok ? '' : esc((chk.faults || [])[0] || 'Not a legal force yet.');
       // backing out sits in line with going in, the same button
-      h += K.fightBar('ocdrop', ctx.ai ? 'Turn the contract down' : 'Call the contract off', 'ocready', ctx.ai ? 'Fight with this force' : 'Ready — fight with this force', chk.ok ? null : why);
+      h += K.fightBar('ocdrop', ctx.ai ? 'Turn down' : 'Call off', 'ocready', ctx.ai ? 'Fight with this force' : 'Ready — fight with this force', chk.ok ? null : why);
       return h + backFoot(null);
     }
     function backFoot(ctx) {
@@ -666,7 +670,7 @@
         var rp = E.profile(rk), cost = C.recruitCost(co, rk), word = C.money(co);
         E.ask({
           kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (drone ? ' (drone)' : riders ? ' (Riders)' : '') + '?',
-          text: cost ? 'It costs ' + cost + ' ' + word + '. You have ' + co.kUC + ' ' + word + ', leaving ' + (co.kUC - cost) + ' ' + word + '.' : 'It costs nothing.',
+          text: cost ? 'It costs ' + cost + ' ' + word + '. You have ' + co.kUC + ' ' + word + ', leaving ' + (co.kUC - cost) + ' ' + word + '.' + E.recruitWarn(co, rp) : 'It costs nothing.' + E.recruitWarn(co, rp),
           okLabel: C.words(co).recruit + (cost ? ' for ' + cost + ' ' + word : ''),
           onOk: function () { cmd('recruit', { key: rk, drone: drone, riders: riders }); }
         });
@@ -699,7 +703,11 @@
         return true;
       }
       if (attr('data-emount')) { cmd('mount', { rid: attr('data-emount'), mount: attr('data-m') }); return true; }
-      if (attr('data-promote')) { cmd('promote', { rid: attr('data-promote'), to: attr('data-to') }, function () { E.closeModal(); }); return true; }
+      if (attr('data-promote')) {
+        var pr = attr('data-promote'), pto = attr('data-to'), pe = C.byRid(co, pr);
+        if (pe) E.askPromote(co, pe, pto, function () { cmd('promote', { rid: pr, to: pto }, function () { E.closeModal(); }); });
+        return true;
+      }
       if (attr('data-fit')) { var up = E.upState; cmd('upgrade', { rid: up && up.rid, n: +attr('data-fit') }, function () { E.toDossier(); }); return true; }
       if (attr('data-take')) { cmd('takeDoctrine', { id: attr('data-take') }, function () { E.view = 'hub'; }); return true; }
       if (attr('data-swapin')) { cmd('swapDoctrine', { out: E.swapOut, in: attr('data-swapin') }, function () { E.clearSwap(); E.view = 'hub'; }); return true; }

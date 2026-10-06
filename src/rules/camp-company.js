@@ -12,6 +12,7 @@
         honourTable = E.honourTable, isBugKey = E.isBugKey, isLeaderP = E.isLeaderP, isTurretP = E.isTurretP,
         isXenoKey = E.isXenoKey, massOf = E.massOf, money = E.money, newEntry = E.newEntry,
         poolOf = E.poolOf, profile = E.profile, promotionCost = E.promotionCost,
+        ordinalName = E.ordinalName, isDefaultName = E.isDefaultName,
         promotionTargets = E.promotionTargets, upgradeTable = E.upgradeTable;
 
     /* ================= company legality and promotion ================= */
@@ -286,7 +287,7 @@
       var chk = canRecruit(co, key);
       if (!chk.ok) return chk;
       co.kUC -= chk.cost;
-      var e = newEntry(key, opts);
+      var e = newEntry(key, Object.assign({ co: co }, opts || {}));
       co.roster.push(e);
       return { ok: true, entry: e, cost: chk.cost };
     }
@@ -318,12 +319,12 @@
       var was = profile(entry.key).name;
       entry.exp -= cost.exp; co.kUC -= cost.kUC;
       // the rid, honours, traumas and history all stay; only the profile changes
-      var renamed = entry.name === was;
+      var renamed = isDefaultName(entry);
       var had = massOf(entry, co), hadPool = poolOf(profile(entry.key));
       entry.key = newKey;
       // a promotion to a smaller unit leaves the extra men behind
       addLoss(co, hadPool, 'departed', hadPool === poolOf(profile(newKey)) ? Math.max(0, had - massOf(entry, co)) : had);
-      if (renamed) entry.name = profile(newKey).name;
+      if (renamed) entry.name = ordinalName(co, newKey, entry);
       entry.history.push('Promoted from ' + was + ' to ' + profile(newKey).name + '.');
       return { ok: true, cost: cost };
     }

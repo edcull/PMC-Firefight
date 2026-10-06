@@ -138,7 +138,9 @@
       var p = profile(e.key);
       // marked on the dossier for this: favoured highlighted, unfavoured greyed (still to be picked, if wanted)
       var mk = e.mark === 'fav' ? ' fav' : e.mark === 'unfav' ? ' unfav' : '';
-      return U.unitRow('class="cu' + mk + '" ' + attr + barred(bad), p.tier, '<b>' + esc(e.name) + '</b>' + wear(e, true), esc(p.name) + (note || ''),
+      return U.unitRow('class="cu' + mk + '" ' + attr + barred(bad), p.tier, '<b>' + esc(e.name) + '</b>' + wear(e, true),
+        // the kind under the name only when the name does not already say it (1st Enforcers needs no "Enforcers")
+        (C.isDefaultName(e) ? '' : esc(p.name)) + (note || ''),
         p.cls !== 'infantry' ? esc(p.cls) : C.isLeaderP(p) ? 'command' : tpBadge(e));
     }
     // `kind`: with what kind of unit it is down the right
@@ -222,7 +224,8 @@
       return h.indexOf(hd) === 0 ? hd + '<div class="cscroll">' + h.slice(hd.length) + '</div>' : h;
     }
     function fightBar(dropGo, dropLabel, go, label, why) {
-      return '<div class="cacts">' + (dropGo ? '<button class="start cdrop" data-go="' + dropGo + '">' + dropLabel + '</button>' : '') +
+      // turning it down: a small cancel beside the main button, not a second main button
+      return '<div class="cacts">' + (dropGo ? '<button class="lnk cdrop" data-go="' + dropGo + '" title="' + dropLabel + '">' + dropLabel + '</button>' : '') +
         '<button class="start" data-go="' + go + '"' + (why == null ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') + '>' + label + '</button></div>';
     }
 
@@ -454,12 +457,11 @@
       }
       // only offer a Priority Level both forces could actually fill
       var lv = E.contract.levels || [1, 2];
-      var PLN = { 1: 'skirmish', 2: 'full battle' };
       h += '<div class="field plrow"><div><label for="camp-pl">Priority Level</label>' +
         '<select id="camp-pl"' + (E.contract.standard || second ? ' disabled' : '') + '>' + [1, 2].map(function (n) {
           var can = lv.indexOf(n) >= 0;
           return '<option value="' + n + '"' + (E.contract.pl === n ? ' selected' : '') +
-            (can ? '' : ' disabled') + '>' + n + ' — ' + PLN[n] +
+            (can ? '' : ' disabled') + '>' + n +
             (can ? '' : ' (neither force can fill it)') + '</option>';
         }).join('') + '</select></div></div>';   // the world was rolled with the job, and shown on the offer
 
@@ -518,7 +520,7 @@
       /* What still stands in the way is the button's tip, shown on a press while it
          is greyed out (aria-disabled, so the press arrives), not a line of its own. */
       // backing out sits in line with going in, the same button (Player 2 goes back to Player 1's list instead)
-      h += fightBar(second ? null : 'cdrop', 'Turn the contract down', 'fight', hotseat() && !second ? 'Hand over to Player 2' : 'Take the field', chk.ok ? null : why);
+      h += fightBar(second ? null : 'cdrop', 'Turn down', 'fight', hotseat() && !second ? 'Hand over to Player 2' : 'Take the field', chk.ok ? null : why);
       h += '<p class="camp-foot">' + (second ? '<button class="lnk" data-go="seatback">Back to ' + esc(B.name) + '\'s list</button>'
         : '<button class="lnk" data-go="hub">Back</button>') + '</p>';
       return h;

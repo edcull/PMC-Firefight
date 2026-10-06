@@ -44,7 +44,7 @@ async function clickText(p, re) {
 async function pastFronts(p) {
   for (let i = 0; i < 600; i++) {
     const at = await p.evaluate(() => {
-      const b = document.querySelector('#camp-body .camp-dock [data-go="roster"]');
+      const b = document.querySelector('#camp-body .camp-dock [data-go="afterhub"]');
       if (!b) return 'none';
       if (b.disabled) return 'fighting';
       return document.querySelectorAll('#camp-body .cpan.front').length ? 'reported' : 'none';
@@ -98,6 +98,9 @@ async function pastFronts(p) {
 
   txt = await body(p);
   check('the hub shows the new company', /Task Force Ironhold/.test(txt));
+  // each unit is named by its place among its kind: 1st Recruits; the command keeps its plain name
+  const named = await p.evaluate(() => { const co = window.PMC_CAMPAIGN.get().companies.A; return co.roster.map(e => (e.rid === co.cmdRid ? 'C:' : '') + e.name); });
+  check('new units are named by their place: 1st Recruits, 1st Enforcers…', named.filter(n => !/^C:/.test(n)).every(n => /^1st /.test(n)) && named.some(n => /^C:Field command/.test(n)), named.join(', '));
   check('...at Company Tier I', await p.evaluate(() => (document.querySelector('#camp-body .cpan-A .tierbadge') || {}).textContent === 'I'));
   check('...with nine units', await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length === 9));
   check('...win rate, honours and trauma in one row', await p.evaluate(() => document.querySelectorAll('#camp-body .cpan-A .cstats .cstat').length === 3));
@@ -175,6 +178,15 @@ async function pastFronts(p) {
   check('...and a tap elsewhere puts it away', await p.evaluate(() => !document.querySelector('#camp-body .dpop')));
   await p.evaluate(() => { const b = document.querySelector('#camp-body .hubtabs [data-go="roster"]:first-child'); if (b) b.click(); });
   await p.waitForTimeout(200);
+  // folded to one line (the next Tier and how far along), opened by a tap
+  const fold = await p.evaluate(() => {
+    const el = document.querySelector('#camp-body .cprom');
+    const shut = !!el && !el.querySelector('.cprom-list') && !!el.querySelector('.cprom-toggle .cprom-bar');
+    el.querySelector('.cprom-toggle').click();
+    const now = document.querySelector('#camp-body .cprom');
+    return { shut, opened: !!now.querySelector('.cprom-list li') };
+  });
+  check('the promotion checklist is one line, opening on a tap', fold.shut && fold.opened, JSON.stringify(fold));
   const prom = await p.evaluate(() => {
     const el = document.querySelector('#camp-body .cprom');
     if (!el) return { none: true };
@@ -514,7 +526,10 @@ async function pastFronts(p) {
   check('the next opponent is drawn and aliased', !!nextUp, nextUp);
 
   console.log('\nSpending the pay');
-  await clickText(p, '^(Dossier|DOSSIER)$');
+  // the aftermath goes back to the campaign, on the company; the dossier is the tab beside it
+  await click(p, '#camp-body .camp-dock [data-go="afterhub"]');
+  check('the aftermath returns to the hub, on the company', await p.evaluate(() => !!document.querySelector('#camp-body .cpan-A .cstats') && !document.querySelector('#camp-body .cdos')));
+  await click(p, '#camp-body .hubtabs [data-go="roster"]');
   await p.evaluate(() => document.querySelector('#camp-body [data-rtab="recruit"]').click()); await p.waitForTimeout(220);
   const before = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   const recruited = await click(p, '#camp-body button[data-recruit="recruits"]');
@@ -526,9 +541,24 @@ async function pastFronts(p) {
   check('a unit can be recruited from the dossier', recruited);
   const spent = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.kUC);
   check('...and it cost a kUC', spent === afterState.kUC - 1, spent + ' kUC left');
+  // a vehicle above the company's Tier: asked with a reminder it fights only at Priority Level 2 until the company catches up
+  const vehAsk = await p.evaluate(() => {
+    const c = window.PMC_CAMPAIGN.get().companies.A;
+    const b = [...document.querySelectorAll('#camp-body button[data-recruit]:not([data-asdrone])')].find(x => {
+      const pr = window.PMC.profile(x.getAttribute('data-recruit')); return pr && pr.cls === 'vehicle' && pr.tier > c.tier && x.getAttribute('aria-disabled') !== 'true';
+    });
+    if (!b) return null;
+    b.click();
+    const t = document.getElementById('camp-askbox').textContent;
+    document.querySelector('#camp-askbox [data-ask="close"]').click();
+    return t;
+  });
+  check('a vehicle above the company\u2019s Tier is asked with the Priority Level 1 reminder', !!vehAsk && /Priority Level 1/.test(vehAsk) && /Priority Level 2/.test(vehAsk), vehAsk && vehAsk.slice(0, 200));
   await toUnits(p);
   const now = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   check('the new unit is on the books', now === before + 1, now + ' units');
+  const second = await p.evaluate(() => { const r = window.PMC_CAMPAIGN.get().companies.A.roster; return r[r.length - 1].name; });
+  check('...a second of a kind is the 2nd', second === '2nd Recruits', second);
   await shot(p, 'camp-roster.png');
   // a unit opened on the roster: its facts on the left, its picture drawn on the right, its sheet below
   await p.evaluate(() => { const c = document.querySelector('#camp-body .dcard.dclick'); if (c) c.click(); });
@@ -545,6 +575,52 @@ async function pastFronts(p) {
   check('an opened unit shows its picture under its facts', unitOpen.ink > 200 && unitOpen.left, JSON.stringify(unitOpen));
   check('...with its stats and special rules underneath', unitOpen.below, JSON.stringify(unitOpen));
   await shot(p, 'camp-unit.png');
+
+  /* A promotion the force cannot pay for: greyed out, but it says by how much on
+     its row, and a press says why rather than doing nothing */
+  console.log('\nA promotion out of reach');
+  const kucWas = await p.evaluate(() => {
+    const camp = window.PMC_CAMPAIGN.get(), was = camp.companies.A.kUC;
+    camp.companies.A.roster.forEach(e => { e.exp = 40; }); camp.companies.A.kUC = 0;
+    window.PMC_CAMPAIGN.set(camp); return was;
+  });
+  await p.waitForTimeout(250);
+  await p.evaluate(() => { const b = [...document.querySelectorAll('#camp-body button[data-promo]')].find(x => /Recruits|Enforcers|rifle/i.test(x.closest('.dcard').textContent)); if (b) b.click(); });
+  await p.waitForTimeout(250);
+  const broke = await p.evaluate(() => {
+    const b = [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) button[data-promote]')].find(x => x.getAttribute('aria-disabled') === 'true');
+    if (!b) return null;
+    const row = b.textContent, before = window.PMC_CAMPAIGN.get().companies.A.roster.length;
+    b.click();
+    const tip = document.querySelector('.tip.on');
+    return { row, disabled: b.disabled, tip: tip ? tip.textContent : '', same: window.PMC_CAMPAIGN.get().companies.A.roster.length === before && !!b.isConnected };
+  });
+  check('a promotion the force cannot afford says what it is short of, on its row', !!broke && /kUC short/.test(broke.row) && !broke.disabled, JSON.stringify(broke));
+  check('...and pressed, says why and does nothing else', !!broke && /Short of/.test(broke.tip) && broke.same, broke && broke.tip);
+  await p.evaluate(() => { window.PMCTips && window.PMCTips.hide(); const x = document.querySelector('#camp-body .cmodal:not([hidden]) [data-go="fmodalclose"]'); if (x) x.click(); });
+  // one it can afford is asked first: cancelled, nothing changes; confirmed, the unit becomes the other kind
+  const beforePromo = await p.evaluate(() => { const camp = window.PMC_CAMPAIGN.get(), was = JSON.stringify(camp); camp.companies.A.kUC = 20; window.PMC_CAMPAIGN.set(camp); return was; });
+  await p.waitForTimeout(250);
+  await p.evaluate(() => { const b = [...document.querySelectorAll('#camp-body button[data-promo]')].find(x => /Recruits|Enforcers|rifle/i.test(x.closest('.dcard').textContent)); if (b) b.click(); });
+  await p.waitForTimeout(250);
+  const promoAsk = await p.evaluate(() => {
+    const b = [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) button[data-promote]')].find(x => x.getAttribute('aria-disabled') !== 'true');
+    if (!b) return null;
+    const rid = b.getAttribute('data-promote'), to = b.getAttribute('data-to'), keyOf = () => window.PMC_CAMPAIGN.get().companies.A.roster.find(e => String(e.rid) === rid).key;
+    const was = keyOf();
+    b.click();
+    const box = document.getElementById('camp-askbox'), title = box && !box.hidden ? box.textContent : '';
+    box.querySelector('[data-ask="close"]').click();
+    const kept = keyOf() === was;
+    const again = [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) button[data-promote]')].find(x => x.getAttribute('data-promote') === rid && x.getAttribute('data-to') === to);
+    if (again) { again.click(); document.querySelector('#camp-askbox [data-ask="ok"]').click(); }
+    return { title, kept, now: keyOf() === to };
+  });
+  check('promoting a unit to another kind asks first, with what it costs', !!promoAsk && /Promote .+ to .+\?/.test(promoAsk.title) && /costs \d+ EXP/.test(promoAsk.title), promoAsk && promoAsk.title.slice(0, 160));
+  check('...cancelled, nothing changes; confirmed, it is promoted', !!promoAsk && promoAsk.kept && promoAsk.now, JSON.stringify(promoAsk && { kept: promoAsk.kept, now: promoAsk.now }));
+  await p.evaluate((was) => { window.PMC_CAMPAIGN.set(JSON.parse(was)); }, beforePromo);
+  await p.evaluate((k) => { const camp = window.PMC_CAMPAIGN.get(); camp.companies.A.kUC = k; window.PMC_CAMPAIGN.set(camp); }, kucWas);
+  await p.waitForTimeout(250);
 
   /* Battle Honours (p. 88): the player puts three forward, the dice pick one */
   console.log('\nA Battle Honour');
@@ -633,7 +709,7 @@ async function pastFronts(p) {
   await p.waitForTimeout(250);
   await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal[data-modal="promote"]'); if (m) m.hidden = false; });
   const opened = await p.evaluate(() => {
-    const b = document.querySelector('#camp-body .cmodal:not([hidden]) button[data-honour]:not([disabled])');
+    const b = document.querySelector('#camp-body .cmodal:not([hidden]) button[data-honour]:not([aria-disabled="true"])');
     if (!b) return false;
     b.click(); return true;
   });

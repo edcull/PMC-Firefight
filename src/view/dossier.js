@@ -426,13 +426,16 @@
      (`gkey`) — each unit type (the command first), each Tier, each letter, each
      band of EXP, each TP — and the sort within each */
   var dgroup = true, gkey = 'type';
+  // the hub's promotion checklist: folded to one line until tapped open
+  var promoOpen = false;
   function groupOf(e) {
     var p = profile(e.key) || {};
     switch (gkey) {
       case 'name': { var c = (String(e.name).charAt(0) || '?').toUpperCase(); return { label: c, rank: c }; }
       case 'tier': return { label: 'Tier ' + ROMAN[p.tier], rank: -p.tier };
       case 'xp': { var x = Math.floor((e.exp || 0) / 5) * 5; return { label: x + '\u2013' + (x + 4) + ' EXP', rank: -x }; }
-      case 'tp': return { label: (e.tp || 0) + ' TP', rank: -(e.tp || 0) };
+      // 0, then in threes: 1–3, 4–6, 7–9…
+      case 'tp': { var tp = e.tp || 0, lo = tp ? Math.floor((tp - 1) / 3) * 3 + 1 : 0; return { label: tp ? lo + '\u2013' + (lo + 2) + ' TP' : '0 TP', rank: -lo }; }
       default: { var g = C.isLeaderP(p) ? 'Command' : p.group || 'Other'; return { label: g, rank: (g === 'Command' ? '0' : '1') + g }; }
     }
   }
@@ -482,6 +485,26 @@
         default: return byType || byTier || byName;
       }
     }
+  }
+  /* A promotion turns a unit into another kind, for good: asked first, with what it
+     costs and what it becomes (`onOk` does it, here or through the server) */
+  function askPromote(co, e, key, onOk) {
+    var q = profile(key), c = C.promotionCost(e, key), word = C.money(co);
+    ask({
+      kind: 'confirm', title: 'Promote ' + e.name + ' to ' + q.name + '?',
+      text: 'It costs ' + c.exp + ' EXP' + (c.kUC ? ' and ' + c.kUC + ' ' + word : '') + '. It becomes ' + q.name + ' (Tier ' + ROMAN[q.tier] +
+        (q.group ? ', ' + q.group : '') + ') and keeps its honours, traumas and history. This cannot be undone.',
+      okLabel: 'Promote',
+      onOk: onOk
+    });
+  }
+  /* A vehicle or aircraft above the company's Tier: at Priority Level 1 nothing above
+     the Battle Tier may be fielded, so until the company catches up it fights at PL2 only */
+  function recruitWarn(co, p) {
+    if (!p || (p.cls !== 'vehicle' && p.cls !== 'aircraft') || p.tier <= co.tier) return '';
+    return ' Tier ' + ROMAN[p.tier] + ' is above the ' + C.words(co).force + '\u2019s Tier ' + ROMAN[co.tier] + ': at Priority Level 1 ' +
+      (p.cls === 'aircraft' ? 'aircraft' : 'vehicles') + ' above the Battle Tier cannot be fielded, so until the ' + C.words(co).force +
+      ' reaches Tier ' + ROMAN[p.tier] + ' it can only take the field at Priority Level 2.';
   }
   function unitPasses(e, key) {
     var f = ufilter[key];
@@ -705,7 +728,7 @@
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses,
-      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get dgroup() { return dgroup; }, get rosterTab() { return rosterTab; }, get subPop() { return subPop; },
+      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get dgroup() { return dgroup; }, get promoOpen() { return promoOpen; }, get rosterTab() { return rosterTab; }, get subPop() { return subPop; },
       get online() { return online; }, onlineNote: function () { return online ? (KIT_ONLINE || kitOnline()).hubNote() : ''; }
     }));
   }
@@ -798,7 +821,7 @@
   var KIT_ONLINE = null;
   function kitOnline() {
     return KIT_ONLINE || (KIT_ONLINE = root.PMCDossierOnline({
-      C: C, R: R, ROMAN: ROMAN, esc: esc, note: note, ask: ask, tip: tip, profile: profile, root: root,
+      C: C, R: R, ROMAN: ROMAN, esc: esc, note: note, ask: ask, tip: tip, profile: profile, root: root, askPromote: askPromote, recruitWarn: recruitWarn,
       get camp() { return camp; }, set camp(v) { camp = v; }, get view() { return view; }, set view(v) { view = v; },
       get draft() { return draft; }, set draft(v) { draft = v; }, get online() { return online; }, set online(v) { online = v; },
       set hubSide(v) { hubSide = v === 'B' ? 'B' : 'A'; }, get drawState() { return drawState; }, get upState() { return upState; },
@@ -1071,6 +1094,8 @@
       render(); return;
     }
     if (!t) return;
+    // greyed out but still pressable (aria-disabled): it says why, and does nothing more
+    if (t.getAttribute('aria-disabled') === 'true' && t.hasAttribute('data-tip')) { if (root.PMCTips) root.PMCTips.show(t); return; }
     if (view === 'found') keepFoundName();
     var co = hubCo();
     var go = t.getAttribute('data-go');
@@ -1179,7 +1204,7 @@
       ask({
         kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (asDrone ? ' (drone)' : asRiders ? ' (Riders)' : '') + '?',
         text: (rcost ? 'It costs ' + rcost + ' ' + coinWord + '. You have ' + purse + ' ' + coinWord +
-          ', leaving ' + (purse - rcost) + ' ' + coinWord + '.' : 'It costs nothing. You have ' + purse + ' ' + coinWord + '.'),
+          ', leaving ' + (purse - rcost) + ' ' + coinWord + '.' : 'It costs nothing. You have ' + purse + ' ' + coinWord + '.') + recruitWarn(co, rp),
         okLabel: C.words(co).recruit + (rcost ? ' for ' + rcost + ' ' + coinWord : ''),
         onOk: function () { C.recruit(co, rk, { drone: asDrone, riders: asRiders }); save(); render(); }
       });
@@ -1239,8 +1264,10 @@
       me.mount = t.getAttribute('data-m'); save(); render(); return;
     }
     if (t.hasAttribute('data-promote')) {
-      var pe = findEntry(co, t.getAttribute('data-promote'));
-      C.promoteUnit(co, pe, t.getAttribute('data-to')); openModal = null; promoRid = null; save(); render(); return;
+      var pe = findEntry(co, t.getAttribute('data-promote')), pto = t.getAttribute('data-to');
+      if (!pe) return;
+      askPromote(co, pe, pto, function () { C.promoteUnit(co, pe, pto); openModal = null; promoRid = null; save(); render(); });
+      return;
     }
     if (t.hasAttribute('data-honour')) {
       var he = findEntry(co, t.getAttribute('data-honour'));
@@ -1375,6 +1402,7 @@
         render(); return;
       }
       case 'dgroup': dgroup = !dgroup; render(); return;
+      case 'promoopen': promoOpen = !promoOpen; render(); return;
       case 'dfiltclear': dfilt = { type: {}, tier: {} }; gkey = dsort; ufilter[camp && camp.mode === 'hotseat' ? hubSide : 'A'] = {}; render(); return;
       case 'ufilter': {
         var fk = t.getAttribute('data-fkey'), kind = t.getAttribute('data-kind');
@@ -1456,6 +1484,10 @@
         if (view === 'hub' && hubPane === 'dossier') hubPane = 'tier';
         else { hubPane = 'dossier'; if (view === 'hub') rosterTab = 'units'; }
         view = 'hub'; render(); return;
+      // from the aftermath: the hub, on the company (in hotseat, that of the player who just read it)
+      case 'afterhub':
+        if (camp.mode === 'hotseat') hubSide = (KIT_AFTER || kitAfter()).afterSide;
+        hubPane = 'tier'; view = 'hub'; render(); return;
       case 'intel': view = 'intel'; render(); return;
       case 'offers': if (camp.over) return; view = 'offers'; render(); return;
       case 'contract': if (camp.over) return; beginContract(); render(); return;

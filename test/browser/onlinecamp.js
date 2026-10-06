@@ -115,7 +115,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     for (let i = 0; i < 20 && !named; i++) { await wait(200); named = await p1.evaluate(() => document.getElementById('olob-name').value === 'The Long War' && !document.querySelector('#camp-ask:not([hidden])')); }
     ok('the host renames the campaign there', named);
     const lay = await p1.evaluate(() => { const bar = document.querySelector('#camp-body .olob-bar'); const b = document.getElementById('camp-body').getBoundingClientRect(), c = document.querySelector('#camp-body .olob-chat').getBoundingClientRect(), l = document.querySelector('#camp-body .olob-lines');
-      return { bar: !!(bar && bar.querySelector('#olob-n') && bar.querySelector('#olob-pub') && bar.querySelector('[data-go="olobready"]')), chatLow: b.bottom - c.bottom < 80, lines: l.getBoundingClientRect().height }; });
+      return { bar: !!(bar && bar.querySelector('#olob-n') && bar.querySelector('#olob-pub') && document.querySelector('#camp-body .olob-acts [data-go="olobready"]')), chatLow: b.bottom - c.bottom < 80, lines: l.getBoundingClientRect().height }; });
     ok('...forces, public and the host\u2019s Ready on one row; the chat at the foot, three lines at the least', lay.bar && lay.chatLow && lay.lines >= 50, JSON.stringify(lay));
     ok('...four slots: the host, one open, two AI forces', (await slotCount(p1)) === 4 && /Open — waiting for a player/.test(t1) && (t1.match(/AI force/g) || []).length >= 2);
     await choose(p1, '#olob-n', '6');
@@ -202,7 +202,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
     console.log('\nAgainst an AI force');
     ok('no Contract button on the hub: a contract is made from the other forces', await p1.evaluate(() => !document.querySelector('#camp-body .hubbar [data-go="offers"], #camp-body .hubbar [data-go="contract"]')));
-    await press(p1, '.cdos-foot [data-kind="rivals"]');
+    await press(p1, '.hubtake [data-kind="rivals"]');
     await p1.waitForTimeout(300);
     const order = await p1.evaluate(() => [...document.querySelectorAll('#camp-body .cmodal:not([hidden]) .cpan-B')].map((c) => c.querySelector('[data-ochallenge]') || /Challenge/.test(c.textContent) ? 'H' : 'AI').join(''));
     ok('the other forces: the other player first, then the AI forces, each with a contract beside their dossier', /^H(AI)+$/.test(order) && await p1.evaluate(() => !!document.querySelector('#camp-body .cmodal:not([hidden]) .rivacts [data-oaicontract]') && !!document.querySelector('#camp-body .cmodal:not([hidden]) .rivacts [data-ochallenge="1"]')), order);
@@ -223,7 +223,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p1.waitForTimeout(300);
 
     console.log('\nA duel');
-    await press(p1, '.cdos-foot [data-kind="rivals"]');
+    await press(p1, '.hubtake [data-kind="rivals"]');
     await p1.waitForTimeout(300);
     await press(p1, '.cmodal:not([hidden]) [data-ochallenge="1"]');
     s1 = await till(p1, 'the challenge made', (s) => s.challenges.length === 1);

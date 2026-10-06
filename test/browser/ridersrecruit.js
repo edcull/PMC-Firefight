@@ -20,7 +20,7 @@ const { ROOT } = require('../where.js');
     if (!cond) problems.push(name);
   }
   async function click(sel) {
-    const hit = await p.evaluate((s) => { const x = document.querySelector(s); if (!x || x.disabled) return false; x.click(); return true; }, sel);
+    const hit = await p.evaluate((s) => { const x = document.querySelector(s); if (!x || x.disabled || x.getAttribute('aria-disabled') === 'true') return false; x.click(); return true; }, sel);
     await p.waitForTimeout(220);
     return hit;
   }

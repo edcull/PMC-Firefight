@@ -304,7 +304,7 @@
             var cost = recruitCost(co, e.key);
             if (co.kUC < cost) { rec.reborn.push({ name: e.name, key: e.key, afford: false, cost: cost }); return; }
             co.kUC -= cost;
-            var ne = newEntry(e.key), mem = before[e.rid], r2 = d6();
+            var ne = newEntry(e.key, { co: co }), mem = before[e.rid], r2 = d6();
             if (mem && r2 >= 2) {
               ne.exp = mem.exp; ne.tp = mem.tp; ne.honours = mem.honours.slice(); ne.traumas = mem.traumas.slice();
               ne.name = mem.name;

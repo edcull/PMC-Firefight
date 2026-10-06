@@ -117,7 +117,15 @@ const { ROOT, SHOTS, seedDice } = require('../where.js');
   await p.evaluate(() => document.querySelector('#hot-sum [data-hotside="0"]').click()); await p.waitForTimeout(200);
   h = await hot();
   const d1 = await p.evaluate(() => ({ faction: document.getElementById('sel-faction').value, btn: document.getElementById('btn-start').textContent }));
-  check('...tapping one opens it to change', h.step === 1 && h.edit && /battlefield/i.test(d1.btn), JSON.stringify(d1));
+  check('...tapping one opens it to change', h.step === 1 && h.edit && /^Done$/.test(d1.btn), JSON.stringify(d1));
+  // its Done is greyed out (pressable, saying why) while the force is not a legal one
+  const doneOff = await p.evaluate(() => {
+    document.getElementById('btn-quick-clear').click();
+    const off = document.getElementById('btn-start').getAttribute('aria-disabled');
+    document.getElementById('btn-demo-roll').click();
+    return { off, on: document.getElementById('btn-start').getAttribute('aria-disabled') };
+  });
+  check('...its Done greyed out until the force is legal', doneOff.off === 'true' && doneOff.on === 'false', JSON.stringify(doneOff));
   await setVal('sel-faction', d1.faction === 'xeno' ? 'pmc' : 'xeno');
   await next();
   h = await hot();

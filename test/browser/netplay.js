@@ -78,7 +78,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
     const q = (s) => document.querySelector('#lobby ' + s), r = (s) => q(s).getBoundingClientRect();
     const seats = document.querySelectorAll('#lobby .lob-slots .olob-slot');
     const sc = q('.lob-scroll'), chat = q('.lob-chat');
-    return { order: r('.lob-acts').bottom <= r('.lob-scroll').top && r('.lob-scroll').bottom <= chat.getBoundingClientRect().top,
+    return { order: r('.lob-scroll').bottom <= r('.lob-acts').top + 1 && r('.lob-acts').bottom <= chat.getBoundingClientRect().top + 1,
       among: r('#term-tier').bottom <= r('.lob-slots').top && r('.lob-slots').bottom <= r('#term-scenario').top,
       lineEach: seats.length === 2 && seats[0].getBoundingClientRect().bottom <= seats[1].getBoundingClientRect().top,
       // your own force's colours and army to change, the other's to read
@@ -91,7 +91,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
       pub: !!q('#term-private[type=checkbox]') && q('#term-private').disabled };
   });
   await p2.screenshot({ path: require('path').join(SHOTS, 'lobby-room-phone.png') }).catch(() => {});
-  ok('the room on a phone: actions, then the terms, the forces a line each between the Tier and the scenario', rm.order && rm.among && rm.lineEach && !rm.wide, JSON.stringify(rm));
+  ok('the room on a phone: the terms, the forces, then the actions above the chat; a line each between the Tier and the scenario', rm.order && rm.among && rm.lineEach && !rm.wide, JSON.stringify(rm));
   ok('...your own force\'s colours and army to change, the other\'s to read', rm.own && rm.theirs, JSON.stringify(rm));
   ok('...the terms scroll and the talk keeps the foot, three lines tall', rm.scrolls && rm.foot < 40 && rm.lines < 90, JSON.stringify(rm));
   ok('...no helper text, and Public is a box only the host can tick', !rm.talk && rm.pub, JSON.stringify(rm));

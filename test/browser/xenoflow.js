@@ -45,7 +45,7 @@ async function drain(p) {
 async function pastFronts(p) {
   for (let i = 0; i < 600; i++) {
     const at = await p.evaluate(() => {
-      const b = document.querySelector('#camp-body .camp-dock [data-go="roster"]');
+      const b = document.querySelector('#camp-body .camp-dock [data-go="afterhub"]');
       if (!b) return 'none';
       if (b.disabled) return 'fighting';
       return document.querySelectorAll('#camp-body .cpan.front').length ? 'reported' : 'none';
