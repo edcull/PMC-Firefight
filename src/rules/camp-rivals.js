@@ -366,15 +366,17 @@
       return added.map(function (e) { return { what: 'recruit', text: 'took on ' + e.name }; });
     }
     /* Its field command goes up a grade with the force's Tier; the grade it left is
-       wanted back as a second command unit, for the smaller fights the new one is too
-       senior for. Tried after the promotion and each turn after — whenever the force
-       cannot field that Tier in full without it — until it is bought. */
+       wanted back as a second command unit (bought at the usual price), for the smaller
+       fights the new one is too senior for. A swarm cannot field a smaller fight at all
+       without a Leader Bug low enough, so it buys one first, before anything else; any
+       other force buys it first when the smaller fight is out of reach without it, and
+       otherwise two turns in three — useful to have, but the money has other calls. */
     function rehireCommand(co) {
       if (!co.wantCmdTier) return [];
       var key = commandKey(co, co.wantCmdTier);
       if (!key || co.roster.some(function (e) { return e.key === key; })) { co.wantCmdTier = null; return []; }
-      // (bought when the smaller fight is out of reach without it, not before: the money has other calls on it)
-      if (fillsArmy(co, co.wantCmdTier, 1) || !canRecruit(co, key).ok) return [];
+      if (!canRecruit(co, key).ok) return [];
+      if (co.faction !== 'bugs' && fillsArmy(co, co.wantCmdTier, 1) && Math.random() >= 2 / 3) return [];
       var r = recruit(co, key);
       if (!r.ok) return [];
       co.wantCmdTier = null;
@@ -384,7 +386,7 @@
     /* One campaign turn of development, in the archetype's own direction. */
     function developRival(co) {
       var a = archetype(co.archetype);
-      var did = [];
+      var did = rehireCommand(co);            // first call on the money, when it is due
       function wanted(p) { return a.groups.indexOf(p.group) >= 0; }
       // Penal troops are free for ever but four to an army: a fifth is no use to anyone
       function fullUp(p) { return p.key === 'penal' && co.roster.filter(function (e) { return e.key === 'penal'; }).length >= 4; }

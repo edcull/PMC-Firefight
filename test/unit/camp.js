@@ -886,12 +886,21 @@ head('Contracts at a Tier the AI force can field in full');
   camp2.turn++; roll();
   ok('...and still unable after that turn: broken up and gone from the campaign', camp2.rivals.indexOf(doomed) < 0 && (camp2.brokenUp || []).length === 1 && camp2.companies.B === camp2.rivals[camp2.facing], true);
 
-  // a promoted force wants back a command of the grade it left
-  var up = C.newCompany('Up', { faction: 'pmc' });
-  C.foundRival(up, 'elite', []); up.kUC = 200;
-  var guard = 0; while (up.tier < 2 && guard++ < 40) { up.kUC = 200; C.developRival(up); }
-  ok('after promotion it raises a second command at the Tier it left, when it cannot field that Tier in full without one', up.tier >= 2 && (up.roster.some(function (e) { return e.key === 'cmd4'; }) || C.fillsArmy(up, 1, 1)), true,
-    'tier ' + up.tier + ': ' + up.roster.filter(function (e) { return /^cmd/.test(e.key); }).map(function (e) { return e.key; }).join(','));
+  // a promoted force wants back a command of the grade it left: a swarm first of all, the others most turns
+  var sw = C.newCompany('Sw', { faction: 'bugs' });
+  C.foundRival(sw, null, []); sw.kUC = 30; sw.tier = 1;
+  sw.wantCmdTier = null;
+  var g0 = 0; while (sw.tier < 2 && g0++ < 40) { sw.kUC = Math.max(sw.kUC, 30); C.developRival(sw); }
+  ok('a promoted swarm spawns a Leader Bug of the grade it left', sw.tier >= 2 && sw.roster.some(function (e) { return e.key === 'bwatchlarva'; }), true,
+    'tier ' + sw.tier + ': ' + sw.roster.map(function (e) { return e.key; }).join(','));
+  var ups = [0, 1, 2, 3, 4, 5].map(function () {
+    var up = C.newCompany('Up', { faction: 'pmc' });
+    C.foundRival(up, 'elite', []);
+    var guard = 0; while (up.tier < 2 && guard++ < 40) { up.kUC = 200; C.developRival(up); }
+    up.kUC = 200; C.developRival(up); C.developRival(up);
+    return up.roster.some(function (e) { return e.key === 'cmd4'; });
+  });
+  ok('...and a company recruits its old field command grade too, within a turn or two', ups.filter(Boolean).length >= 4, true, ups.join(','));
 
   // the AI founds with units it paid for: the free ones come later
   var freeAtFounding = [];

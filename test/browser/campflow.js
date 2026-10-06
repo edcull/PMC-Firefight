@@ -847,6 +847,18 @@ async function pastFronts(p) {
   const rosterBack = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   check('...and the recruit still on the books', rosterBack === now, rosterBack + ' units');
 
+  /* ------------------------------------------- after a Company Tier promotion */
+  console.log('\nAfter a promotion');
+  const hint = await p.evaluate(() => {
+    const c = window.PMC_CAMPAIGN.get(); c.companies.A.tier = 2;
+    c.companies.A.roster = c.companies.A.roster.filter((e) => e.key !== 'cmd4');
+    window.PMC_CAMPAIGN.set(c);
+    const go = document.createElement('button'); go.setAttribute('data-go', 'doctrine');
+    document.getElementById('camp-body').appendChild(go); go.click();
+    const h = document.querySelector('#camp-body .cmdhint'); return h ? h.textContent : '';
+  });
+  check('the doctrine screen says the old command grade can be recruited again, at its price', /Field command 4th grade/.test(hint) && /for \d+ kUC/.test(hint) && !/free/i.test(hint), hint);
+
   console.log('\nproblems: ' + (problems.length ? problems.join('; ') : 'none'));
   console.log('page errors: ' + (errs.length ? errs.join(' | ') : 'none'));
   console.log('screens: ' + shots.join(', '));
