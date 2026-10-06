@@ -809,5 +809,24 @@ head('Pick a force for me: the dossier\'s marks');
   ok('...but taken when nothing else will do', R.checkArmy(C.pickForce(co, 1, 1, null).map(function (e) { return R.entryPick(e); }), 1, 1, co.doctrines || []).ok, true);
 })();
 
+/* ------------------------------------------------- nursing the wounded */
+head('Pick a force (and the AI forces): Trauma Points');
+(function () {
+  var co = C.newCompany('Worn', { faction: 'pmc' });
+  ['cmd4', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits', 'recruits'].forEach(function (k) { co.roster.push(C.newEntry(k)); });
+  var rec = co.roster.filter(function (e) { return e.key === 'recruits'; });
+  var first = C.pickForce(co, 1, 1, null).filter(function (e) { return e.key === 'recruits'; });
+  // the ones it would take first: one a battle from a Trauma, one getting close
+  first[0].tp = 8; first[1].tp = 5;
+  var picked = C.pickForce(co, 1, 1, null);
+  var spare = rec.length - picked.filter(function (e) { return e.key === 'recruits'; }).length;
+  ok('a unit at 7+ of 10 TP is left at home while others will do', picked.indexOf(first[0]) < 0, true);
+  ok('...and one at 4+ only after the fresher ones', picked.indexOf(first[1]) < 0 || spare < 2, true);
+  ok('...the force still legal', R.checkArmy(picked.map(function (e) { return R.entryPick(e); }), 1, 1, co.doctrines || []).ok, true);
+  // everyone worn: they go all the same, rather than no force at all
+  rec.forEach(function (e) { e.tp = 9; });
+  ok('...but sent when the army cannot be legal without them', R.checkArmy(C.pickForce(co, 1, 1, null).map(function (e) { return R.entryPick(e); }), 1, 1, co.doctrines || []).ok, true);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -1467,13 +1467,30 @@
      keeps the list legal, biggest first; and if that overshot, the one unit
      whose loss leaves the fewest hard faults dropped, and again. A swarm fields
      one Leader Bug of the Battle Tier or higher (p. 114). */
+  /* How near a unit is to its next Battle Trauma: 0 well clear, 1 getting close (4+
+     Trauma Points of 10), 2 one bad battle away (7+ of 10) — scaled to the force's own
+     threshold (Mental Training's 15). Machines take none. */
+  function traumaBand(co, e) {
+    var th = traumaThreshold(co) || 10, tp = e.tp || 0;
+    return tp >= th - 3 ? 2 : tp >= Math.ceil(th * 0.4) ? 1 : 0;
+  }
   function pickForce(co, tier, pl, tactic) {
+    /* Nursing the force: a unit one bad battle from a Battle Trauma is left at home
+       unless the army cannot be legal without it, and one getting close is taken only
+       after the rest — so the AI forces (and Pick a force for me) spread the wear. */
+    var fresh = pickFrom(co, tier, pl, tactic, true);
+    var docs0 = co.doctrines || [];
+    if (fresh.length && R.checkArmy(fresh.map(function (e) { return R.entryPick(e); }), tier, pl, docs0, tactic).ok) return fresh;
+    return pickFrom(co, tier, pl, tactic, false);
+  }
+  function pickFrom(co, tier, pl, tactic, spare) {
     /* The units marked on the dossier for the contract come into it that way: the
        favoured looked at first, the unfavoured only when nothing else will do —
-       each Tier's slots, and the points after, filled in that order. */
+       each Tier's slots, and the points after, filled in that order; within those,
+       the ones furthest from a Battle Trauma first. */
     var markRank = function (e) { return e.mark === 'fav' ? 0 : e.mark === 'unfav' ? 2 : 1; };
-    var avail = co.roster.filter(function (e) { return !(e.restUntil > 0); }).slice().sort(function (a, b) {
-      return markRank(a) - markRank(b) || profile(b.key).tier - profile(a.key).tier;
+    var avail = co.roster.filter(function (e) { return !(e.restUntil > 0) && !(spare && traumaBand(co, e) === 2); }).slice().sort(function (a, b) {
+      return markRank(a) - markRank(b) || traumaBand(co, a) - traumaBand(co, b) || profile(b.key).tier - profile(a.key).tier;
     });
     var docs = co.doctrines || [];
     var comp = R.compFor(co.faction, tier), out = [], used = {};
