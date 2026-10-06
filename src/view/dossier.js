@@ -496,6 +496,14 @@
       onOk: onOk
     });
   }
+  /* A vehicle or aircraft above the company's Tier: at Priority Level 1 nothing above
+     the Battle Tier may be fielded, so until the company catches up it fights at PL2 only */
+  function recruitWarn(co, p) {
+    if (!p || (p.cls !== 'vehicle' && p.cls !== 'aircraft') || p.tier <= co.tier) return '';
+    return ' Tier ' + ROMAN[p.tier] + ' is above the ' + C.words(co).force + '\u2019s Tier ' + ROMAN[co.tier] + ': at Priority Level 1 ' +
+      (p.cls === 'aircraft' ? 'aircraft' : 'vehicles') + ' above the Battle Tier cannot be fielded, so until the ' + C.words(co).force +
+      ' reaches Tier ' + ROMAN[p.tier] + ' it can only take the field at Priority Level 2.';
+  }
   function unitPasses(e, key) {
     var f = ufilter[key];
     if (!f || (!f.honour && !f.trauma)) return true;
@@ -811,7 +819,7 @@
   var KIT_ONLINE = null;
   function kitOnline() {
     return KIT_ONLINE || (KIT_ONLINE = root.PMCDossierOnline({
-      C: C, R: R, ROMAN: ROMAN, esc: esc, note: note, ask: ask, tip: tip, profile: profile, root: root, askPromote: askPromote,
+      C: C, R: R, ROMAN: ROMAN, esc: esc, note: note, ask: ask, tip: tip, profile: profile, root: root, askPromote: askPromote, recruitWarn: recruitWarn,
       get camp() { return camp; }, set camp(v) { camp = v; }, get view() { return view; }, set view(v) { view = v; },
       get draft() { return draft; }, set draft(v) { draft = v; }, get online() { return online; }, set online(v) { online = v; },
       set hubSide(v) { hubSide = v === 'B' ? 'B' : 'A'; }, get drawState() { return drawState; }, get upState() { return upState; },
@@ -1194,7 +1202,7 @@
       ask({
         kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (asDrone ? ' (drone)' : asRiders ? ' (Riders)' : '') + '?',
         text: (rcost ? 'It costs ' + rcost + ' ' + coinWord + '. You have ' + purse + ' ' + coinWord +
-          ', leaving ' + (purse - rcost) + ' ' + coinWord + '.' : 'It costs nothing. You have ' + purse + ' ' + coinWord + '.'),
+          ', leaving ' + (purse - rcost) + ' ' + coinWord + '.' : 'It costs nothing. You have ' + purse + ' ' + coinWord + '.') + recruitWarn(co, rp),
         okLabel: C.words(co).recruit + (rcost ? ' for ' + rcost + ' ' + coinWord : ''),
         onOk: function () { C.recruit(co, rk, { drone: asDrone, riders: asRiders }); save(); render(); }
       });
@@ -1473,6 +1481,10 @@
         if (view === 'hub' && hubPane === 'dossier') hubPane = 'tier';
         else { hubPane = 'dossier'; if (view === 'hub') rosterTab = 'units'; }
         view = 'hub'; render(); return;
+      // from the aftermath: the hub, on the company (in hotseat, that of the player who just read it)
+      case 'afterhub':
+        if (camp.mode === 'hotseat') hubSide = (KIT_AFTER || kitAfter()).afterSide;
+        hubPane = 'tier'; view = 'hub'; render(); return;
       case 'intel': view = 'intel'; render(); return;
       case 'offers': if (camp.over) return; view = 'offers'; render(); return;
       case 'contract': if (camp.over) return; beginContract(); render(); return;

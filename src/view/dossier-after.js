@@ -557,7 +557,7 @@
           gaps.map(function (t) { return ROMAN[t]; }).join(', ') +
           '. Recruit or promote from the lowest Tier up before the next contract.</div>';
       }
-      // on to the dossier, pinned at the foot; not until the other forces' battles are done
+      // back to the hub, pinned at the foot; not until the other forces' battles are done
       var busy = !!E.camp.fronts;
       /* Hotseat (HC-4, HC-5): Player 1 reads their aftermath, then the device goes
          to Player 2 for theirs — and only then on, to Player 2's own dossier. */
@@ -565,9 +565,9 @@
         var nx = E.camp.companies.B;
         return h + '<div class="camp-dock"><button class="start" data-go="afternext">Next: ' + esc(nx.name) + '\u2019s aftermath</button></div>';
       }
-      h += '<div class="camp-dock"><button class="start" data-go="roster"' + (busy ? ' disabled' : '') + '>' +
-        (busy ? 'The other forces are fighting…' : 'Dossier') + '</button></div>';
-      h += '<p class="camp-foot"><button class="lnk" data-go="hub">The campaign</button></p>';
+      // back to the campaign's hub, on the company (the dossier is a tab away)
+      h += '<div class="camp-dock"><button class="start" data-go="afterhub"' + (busy ? ' disabled' : '') + '>' +
+        (busy ? 'The other forces are fighting…' : 'Back to the campaign') + '</button></div>';
       return h;
     }
 

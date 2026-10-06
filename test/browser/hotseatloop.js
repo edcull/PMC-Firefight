@@ -131,7 +131,7 @@ const { ROOT } = require('../where.js');
     return { balances: l.balances, A: c.companies.A.kUC, B: c.companies.B.kUC };
   });
   check('both balances are kept on the battle\'s line', !!rolls.balances && rolls.balances.A === rolls.A && rolls.balances.B === rolls.B, JSON.stringify(rolls));
-  await click('#camp-body [data-go="roster"]');
+  await click('#camp-body [data-go="afterhub"]');
   const hub = await p.evaluate(() => ({ text: document.getElementById('camp-body').innerText, p2: !!document.querySelector('[data-go="hubside"][data-hs="B"].on') }));
   check('Dossier opens Player 2\'s own', hub.p2 && /The Red Dawn/.test(hub.text), hub.text.slice(0, 200));
 

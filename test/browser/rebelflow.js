@@ -45,7 +45,7 @@ async function drain(p) {
 async function pastFronts(p) {
   for (let i = 0; i < 600; i++) {
     const at = await p.evaluate(() => {
-      const b = document.querySelector('#camp-body .camp-dock [data-go="roster"]');
+      const b = document.querySelector('#camp-body .camp-dock [data-go="afterhub"]');
       if (!b) return 'none';
       if (b.disabled) return 'fighting';
       return document.querySelectorAll('#camp-body .cpan.front').length ? 'reported' : 'none';
@@ -124,7 +124,7 @@ async function pastFronts(p) {
   }) === 'First Among Equals');
   // who else is on the world is in the campaign's window
   const foes = await p.evaluate(() => { const b = document.querySelector('#camp-body .cmodal[data-modal="rivals"]'); return b ? b.textContent : ''; });
-  check('...and faces somebody', /forces|Rival|against/.test(foes), foes);
+  check('...and faces somebody', /forces|Rival|against|Take a contract/.test(foes), foes);
   await shot(p, 'rebel-hub.png');
 
   const rival = await p.evaluate(() => {

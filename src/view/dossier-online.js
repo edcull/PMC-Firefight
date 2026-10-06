@@ -666,7 +666,7 @@
         var rp = E.profile(rk), cost = C.recruitCost(co, rk), word = C.money(co);
         E.ask({
           kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (drone ? ' (drone)' : riders ? ' (Riders)' : '') + '?',
-          text: cost ? 'It costs ' + cost + ' ' + word + '. You have ' + co.kUC + ' ' + word + ', leaving ' + (co.kUC - cost) + ' ' + word + '.' : 'It costs nothing.',
+          text: cost ? 'It costs ' + cost + ' ' + word + '. You have ' + co.kUC + ' ' + word + ', leaving ' + (co.kUC - cost) + ' ' + word + '.' + E.recruitWarn(co, rp) : 'It costs nothing.' + E.recruitWarn(co, rp),
           okLabel: C.words(co).recruit + (cost ? ' for ' + cost + ' ' + word : ''),
           onOk: function () { cmd('recruit', { key: rk, drone: drone, riders: riders }); }
         });

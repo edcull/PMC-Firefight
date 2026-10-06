@@ -44,7 +44,7 @@ async function clickText(p, re) {
 async function pastFronts(p) {
   for (let i = 0; i < 600; i++) {
     const at = await p.evaluate(() => {
-      const b = document.querySelector('#camp-body .camp-dock [data-go="roster"]');
+      const b = document.querySelector('#camp-body .camp-dock [data-go="afterhub"]');
       if (!b) return 'none';
       if (b.disabled) return 'fighting';
       return document.querySelectorAll('#camp-body .cpan.front').length ? 'reported' : 'none';
@@ -514,7 +514,10 @@ async function pastFronts(p) {
   check('the next opponent is drawn and aliased', !!nextUp, nextUp);
 
   console.log('\nSpending the pay');
-  await clickText(p, '^(Dossier|DOSSIER)$');
+  // the aftermath goes back to the campaign, on the company; the dossier is the tab beside it
+  await click(p, '#camp-body .camp-dock [data-go="afterhub"]');
+  check('the aftermath returns to the hub, on the company', await p.evaluate(() => !!document.querySelector('#camp-body .cpan-A .cstats') && !document.querySelector('#camp-body .cdos')));
+  await click(p, '#camp-body .hubtabs [data-go="roster"]');
   await p.evaluate(() => document.querySelector('#camp-body [data-rtab="recruit"]').click()); await p.waitForTimeout(220);
   const before = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   const recruited = await click(p, '#camp-body button[data-recruit="recruits"]');
@@ -526,6 +529,19 @@ async function pastFronts(p) {
   check('a unit can be recruited from the dossier', recruited);
   const spent = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.kUC);
   check('...and it cost a kUC', spent === afterState.kUC - 1, spent + ' kUC left');
+  // a vehicle above the company's Tier: asked with a reminder it fights only at Priority Level 2 until the company catches up
+  const vehAsk = await p.evaluate(() => {
+    const c = window.PMC_CAMPAIGN.get().companies.A;
+    const b = [...document.querySelectorAll('#camp-body button[data-recruit]:not([data-asdrone])')].find(x => {
+      const pr = window.PMC.profile(x.getAttribute('data-recruit')); return pr && pr.cls === 'vehicle' && pr.tier > c.tier && x.getAttribute('aria-disabled') !== 'true';
+    });
+    if (!b) return null;
+    b.click();
+    const t = document.getElementById('camp-askbox').textContent;
+    document.querySelector('#camp-askbox [data-ask="close"]').click();
+    return t;
+  });
+  check('a vehicle above the company\u2019s Tier is asked with the Priority Level 1 reminder', !!vehAsk && /Priority Level 1/.test(vehAsk) && /Priority Level 2/.test(vehAsk), vehAsk && vehAsk.slice(0, 200));
   await toUnits(p);
   const now = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   check('the new unit is on the books', now === before + 1, now + ' units');
