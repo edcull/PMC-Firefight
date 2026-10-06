@@ -1004,9 +1004,11 @@ a.mcard { text-decoration: none; line-height: normal; }
   padding: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 10px 28px rgba(0,0,0,.5);
 }
 .dsortline .dpopwrap + .dpopwrap .dpop { left: auto; right: 0; }
-.dsortline > .lnk.dgrp { flex: none; }
-/* on: lit as a toggle (brighter, an amber line under it, as the hub's tabs), not as a primary button */
-.dsortline > .lnk.dgrp.on { color: var(--ink); background: var(--panel-3); border-color: var(--line); box-shadow: inset 0 -2px 0 var(--alpha); }
+/* the sort's tick box: group the list under headers */
+.dgrprow { justify-content: flex-start !important; border-top: 1px solid var(--line); padding-top: 8px; }
+.dgrpchk { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 2px 0; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.dgrpchk .box { width: 16px; height: 16px; border: 1px solid var(--ink-dim); border-radius: 3px; display: inline-grid; place-items: center; font-size: 12px; line-height: 1; color: var(--alpha); }
+.dgrpchk[aria-checked="true"] .box { border-color: var(--alpha); }
 .dgrouphead { margin: 8px 2px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
 .dgrouphead:first-child { margin-top: 0; }
 .dsortline .dpop .lnk { flex: none; min-height: 0; white-space: normal; overflow: visible; }

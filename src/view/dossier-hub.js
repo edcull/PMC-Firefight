@@ -10,7 +10,7 @@
     var C = E.C, ICON_ABANDON = E.ICON_ABANDON, ICON_BATTLES = E.ICON_BATTLES,
         ICON_LOAD = E.ICON_LOAD, ICON_MANAGE = E.ICON_MANAGE, memorialIcon = E.memorialIcon,
         ICON_SAVE = E.ICON_SAVE, ROMAN = E.ROMAN, Store = E.Store, cmodal = E.cmodal, coin = E.coin,
-        colourOf = E.colourOf, dossierPanel = E.dossierPanel,
+        colourOf = E.colourOf, dossierPanel = E.dossierPanel, recruitList = E.recruitList,
         entryCard = E.entryCard, esc = E.esc, memorialList = E.memorialList, profile = E.profile,
         root = E.root, spendActs = E.spendActs, U = root.PMCUi;
     /* ================= the hub ================= */
@@ -130,6 +130,8 @@
         '</div>' +
         '</div>';
       h += companyPanel(cur, hs, hubBar(), manageHtml);
+      // recruiting: a window over the dossier, drawn only while open
+      if (E.openModal === 'recruit') h += cmodal('recruit', C.words(cur).recruit + ' \u2014 ' + cur.kUC + ' ' + C.money(cur), '<div class="cmodal-scroll">' + recruitList(cur) + '</div>');
       // what a unit can spend its experience on: an honour, an upgrade, or a promotion to another unit
       var promoE = E.promoRid && C.byRid(cur, E.promoRid);
       if (promoE) {
@@ -291,7 +293,10 @@
       var h = '<div class="dsortline">' +
         pop('dsort', 'Sort: ' + by[1], false, SORTS.map(function (x) {
           return '<button type="button" class="lnk' + (x[0] === E.dsort ? ' on' : '') + '" data-go="dsort" data-by="' + x[0] + '" aria-pressed="' + (x[0] === E.dsort) + '">' + x[1] + '</button>';
-        }).join('')) +
+        }).join('') +
+          // headers over the list (by what was last sorted or filtered by): a tick box under the sorts
+          '<div class="dpop-acts dgrprow"><button type="button" class="dgrpchk" role="checkbox" data-go="dgroup" aria-checked="' + !!E.dgroup + '">' +
+          '<span class="box" aria-hidden="true">' + (E.dgroup ? '\u2713' : '') + '</span>Group under headers</button></div>') +
         pop('dfilter', 'Filter: ' + (picked.length ? esc(picked.length > 2 ? picked.length + ' chosen' : picked.join(', ')) : 'All'), picked.length > 0,
           '<h4>Type</h4>' + Object.keys(types).sort().map(function (g) { return chip('type', g, g || 'Other'); }).join('') +
           '<h4>Tier</h4>' + Object.keys(tiers).sort().map(function (t) { return chip('tier', t, 'Tier ' + ROMAN[t]); }).join('') +
@@ -299,8 +304,6 @@
             return '<button type="button" class="lnk' + (uf[k] ? ' on' : '') + '" data-go="ufilter" data-fkey="' + fkey + '" data-kind="' + k + '" aria-pressed="' + !!uf[k] + '">' + esc(W[k]) + '</button>';
           }).join('') +
           (picked.length ? '<div class="dpop-acts"><button type="button" class="lnk" data-go="dfiltclear">Clear</button></div>' : '')) +
-        // grouped: a header over each type, the sort within each
-        '<button type="button" class="lnk dgrp' + (E.dgroup ? ' on' : '') + '" data-go="dgroup" aria-pressed="' + !!E.dgroup + '" title="Group by type">Group</button>' +
         '</div>';
       return h;
     }
