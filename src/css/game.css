@@ -2214,3 +2214,6 @@ svg.chev { width: .8em; height: .65em; vertical-align: .05em; display: inline-bl
 .olob-acts { display: flex; gap: 8px; align-items: stretch; margin: 0 0 10px; flex: none; }
 .olob-acts .lnk { flex: none; white-space: nowrap; margin: 0; }
 .olob-acts .start { flex: 1 1 auto; margin: 0; }
+/* the recruiting window: as tall as the screen allows, its list scrolling inside it */
+.cmodal[data-modal="recruit"] .cmodal-box { height: min(92vh, 900px); }
+.cmodal[data-modal="recruit"] .cat, .cmodal[data-modal="recruit"] .cat.tall { max-height: none; overflow: visible; }
