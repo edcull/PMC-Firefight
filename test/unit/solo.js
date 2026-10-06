@@ -255,8 +255,9 @@ function table(fn, fmt) {
 function pc(v) { return Math.round(100 * v) + '%'; }
 function one(v) { return v.toFixed(1); }
 
-ok('every archetype keeps three units in four in its own groups',
-  C.ARCHETYPES.every(function (a) { return avg[a.id].inChar >= 0.75; }), true,
+// (seven in ten: the swarm used to pad its share with Penal troops, and an army fields only four of those)
+ok('every archetype keeps seven units in ten in its own groups',
+  C.ARCHETYPES.every(function (a) { return avg[a.id].inChar >= 0.7; }), true,
   table(function (v) { return v.inChar; }, pc) +
   ' — the elite trails because it founds with Basic troops that have to be promoted out');
 ok('every archetype reaches Company Tier II or better',

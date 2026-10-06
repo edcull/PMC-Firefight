@@ -134,7 +134,12 @@
       var caps = rivals.map(function (co) {
         var c = fullTier(co, 1);
         if (c < effectiveTier(co)) { topUpFree(co); c = fullTier(co, 1); }
-        if (!c) { developRival(co); c = fullTier(co, 1); }
+        /* Regrouping: a resource point scraped together (once a turn) and spent at
+           once on what it can buy towards a Tier I army. */
+        if (!c) {
+          if (co.regroupPaid !== campaign.turn) { co.kUC = (co.kUC || 0) + 1; co.regroupPaid = campaign.turn; }
+          topUpFree(co); developRival(co); c = fullTier(co, 1);
+        }
         if (!c && !co.regrouping) co.regroupTurn = campaign.turn;
         co.regrouping = !c;
         return c;
@@ -332,7 +337,11 @@
       var want = effectiveTier(co), was = fullTier(co, 1), added = [];
       if (was >= want) return [];
       function freeOne() {
-        return R.listFor(co.faction).filter(function (q) { return freeUnit(q.key) && recruitCost(co, q.key) === 0 && canRecruit(co, q.key).ok; })[0];
+        // (Penal troops never stop being free, but no more than four go in an army)
+        return R.listFor(co.faction).filter(function (q) {
+          return freeUnit(q.key) && recruitCost(co, q.key) === 0 && canRecruit(co, q.key).ok &&
+            co.roster.filter(function (e) { return e.key === q.key; }).length < 4;
+        })[0];
       }
       for (var n = 0; n < 8 && fullTier(co, 1) < want; n++) {
         var p = freeOne();
@@ -358,12 +367,14 @@
     }
     /* Its field command goes up a grade with the force's Tier; the grade it left is
        wanted back as a second command unit, for the smaller fights the new one is too
-       senior for. Tried after the promotion and each turn after until it is bought. */
+       senior for. Tried after the promotion and each turn after — whenever the force
+       cannot field that Tier in full without it — until it is bought. */
     function rehireCommand(co) {
       if (!co.wantCmdTier) return [];
       var key = commandKey(co, co.wantCmdTier);
       if (!key || co.roster.some(function (e) { return e.key === key; })) { co.wantCmdTier = null; return []; }
-      if (!canRecruit(co, key).ok) return [];
+      // (bought when the smaller fight is out of reach without it, not before: the money has other calls on it)
+      if (fillsArmy(co, co.wantCmdTier, 1) || !canRecruit(co, key).ok) return [];
       var r = recruit(co, key);
       if (!r.ok) return [];
       co.wantCmdTier = null;
@@ -375,6 +386,8 @@
       var a = archetype(co.archetype);
       var did = [];
       function wanted(p) { return a.groups.indexOf(p.group) >= 0; }
+      // Penal troops are free for ever but four to an army: a fifth is no use to anyone
+      function fullUp(p) { return p.key === 'penal' && co.roster.filter(function (e) { return e.key === 'penal'; }).length >= 4; }
 
       /* Close every legality gap, cheapest Tier first, until the money runs out.
          Run once before spending and once after, because promoting a Tier I unit
@@ -400,7 +413,7 @@
           var room = machineCount() < 3;
           var pool = R.listFor(co.faction).filter(function (p) {
             if (p.tier !== t || isLeaderP(p) || !canRecruit(co, p.key).ok) return false;
-            if (p.noSlot) return false;                          // a platform fills no slot, so it can close no gap
+            if (p.noSlot || fullUp(p)) return false;                          // a platform fills no slot, so it can close no gap
             if (p.cls !== 'infantry') return room && wanted(p);   // only a machine company buys a hull to fill a gap
             return true;
           });
@@ -418,7 +431,7 @@
         }
       }
       fillGaps();
-      did = did.concat(rehireCommand(co), topUpFree(co));
+      did = did.concat(rehireCommand(co));
 
       // spend experience, the units closest to a decision first
       co.roster.slice().sort(function (x, y) { return y.exp - x.exp; }).forEach(function (e) {
@@ -484,7 +497,7 @@
           var pool2 = R.listFor(co.faction).filter(function (p) {
             if (p.cls !== 'infantry' || isLeaderP(p) || p.tier > co.tier) return false;
             if (!wanted(p) && a.t1.indexOf(p.key) < 0 && a.t2.indexOf(p.key) < 0) return false;
-            if (!canRecruit(co, p.key).ok) return false;
+            if (!canRecruit(co, p.key).ok || fullUp(p)) return false;
             return p.key === 'penal' || RECRUIT_COST[p.tier] <= co.kUC / 2;
           });
           if (!pool2.length) break;

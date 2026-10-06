@@ -858,27 +858,39 @@ head('Contracts at a Tier the AI force can field in full');
   thin.roster.pop(); thin.roster.push(C.newEntry('rsecondary'));
   ok('...with a Tier II leader in their place, 6 of 6 — Tier I', C.fullTier(thin, 1), 1);
   var pen = C.newCompany('Pen', { faction: 'pmc' });
-  ok('Penal troops: free while fewer than four', [0, 1, 2, 3, 4].map(function (n) {
+  ok('Penal troops are always free (four to an army); Armed civilians while fewer than four', [0, 4, 6].map(function (n) {
     pen.roster = []; for (var i = 0; i < n; i++) pen.roster.push(C.newEntry('penal'));
     return C.recruitCost(pen, 'penal');
-  }).join(','), '0,0,0,0,1');
+  }).join(',') + ' / ' + [3, 4].map(function (n) {
+    thin.roster = []; for (var i = 0; i < n; i++) thin.roster.push(C.newEntry('rciv'));
+    return C.recruitCost(thin, 'rciv');
+  }).join(','), '0,0,0 / 0,1');
 
   // a force that can only regroup has its turn of recovery, then is broken up
   var camp2 = C.newCampaign({ mode: 'solo', nameA: 'Us', factionA: 'pmc' });
   C.found(camp2.companies.A, ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
   C.foundRivals(camp2, 2, { factions: ['pmc', 'xeno'], bugs: false });
-  var doomed = camp2.rivals[1]; doomed.kUC = 0; doomed.tier = 1;
+  var doomed = camp2.rivals[1]; doomed.kUC = 0; doomed.tier = 1; doomed.doctrines = [];   // (no Hermetic Society doubling the bill)
+  // the dice held steady, so nobody is caught up to the player's standing in the middle of it
+  var rnd = Math.random, roll = function () { Math.random = function () { return 0.3; }; try { C.clearOffers(camp2); C.rollOffers(camp2); } finally { Math.random = rnd; } };
   doomed.roster = ['xeps1', 'xeps1', 'xeps1', 'xeps1'].map(function (k) { return C.newEntry(k); }); doomed.cmdRid = null;
-  C.rollOffers(camp2);
+  roll();
   ok('nothing but its four free units: it regroups, and offers no contract', doomed.regrouping && camp2.offers.every(function (o) { return camp2.rivals[o.rival] !== doomed; }), true);
-  doomed.kUC = 0; camp2.turn++; C.clearOffers(camp2); C.rollOffers(camp2);
-  ok('...still unable after that turn: broken up and gone from the campaign', camp2.rivals.indexOf(doomed) < 0 && (camp2.brokenUp || []).length === 1 && camp2.companies.B === camp2.rivals[camp2.facing], true);
+  ok('...scraping a resource point together, spent on a fifth unit', doomed.roster.length, 5, doomed.roster.map(function (e) { return e.key; }).join(','));
+  camp2.turn++; roll();
+  ok('...another point the next turn, a sixth unit: back to a Tier I army', camp2.rivals.indexOf(doomed) >= 0 && !doomed.regrouping && C.fullTier(doomed, 1) === 1, true);
+  // one that cannot buy even with the point (deep in debt) is broken up after its turn of recovery
+  doomed.roster = ['xeps1', 'xeps1', 'xeps1', 'xeps1'].map(function (k) { return C.newEntry(k); }); doomed.kUC = -10;
+  camp2.turn++; roll();
+  ok('a force that cannot recover regroups first', doomed.regrouping && camp2.rivals.indexOf(doomed) >= 0, true);
+  camp2.turn++; roll();
+  ok('...and still unable after that turn: broken up and gone from the campaign', camp2.rivals.indexOf(doomed) < 0 && (camp2.brokenUp || []).length === 1 && camp2.companies.B === camp2.rivals[camp2.facing], true);
 
   // a promoted force wants back a command of the grade it left
   var up = C.newCompany('Up', { faction: 'pmc' });
   C.foundRival(up, 'elite', []); up.kUC = 200;
   var guard = 0; while (up.tier < 2 && guard++ < 40) { up.kUC = 200; C.developRival(up); }
-  ok('after promotion it raised a second command at the Tier it left', up.tier >= 2 && up.roster.some(function (e) { return e.key === 'cmd4'; }), true,
+  ok('after promotion it raises a second command at the Tier it left, when it cannot field that Tier in full without one', up.tier >= 2 && (up.roster.some(function (e) { return e.key === 'cmd4'; }) || C.fillsArmy(up, 1, 1)), true,
     'tier ' + up.tier + ': ' + up.roster.filter(function (e) { return /^cmd/.test(e.key); }).map(function (e) { return e.key; }).join(','));
 
   // the AI founds with units it paid for: the free ones come later

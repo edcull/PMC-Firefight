@@ -1485,15 +1485,18 @@
     return res.ok && res.spent >= res.budget;
   }
   /* The highest Battle Tier (up to `cap`) a force can field in full, or 0. With the
-     free units (four each of Penal troops, Armed civilians, Tiny bug swarms, Primitive
-     Epsilon troopers) any force can reach Tier I unless that is all it has. */
+     free units (four Penal troops to an army, four each of Armed civilians, Tiny bug
+     swarms, Primitive Epsilon troopers) any force can reach Tier I unless that is all it has. */
   function fullTier(co, pl, cap) {
     for (var t = Math.min(5, cap || effectiveTier(co)); t >= 1; t--) if (fillsArmy(co, t, pl || 1)) return t;
     return 0;
   }
-  // the units nobody pays to recruit while the force has fewer than four of them
-  var FREE_UNITS = { penal: 1, rciv: 1, btiny: 1, xeps1: 1 };
-  function freeUnit(key) { return FREE_UNITS[key] ? 'Free to recruit while the force has fewer than four' : null; }
+  // the units nobody pays to recruit: Penal troops always (four to an army), the others while the force has fewer than four
+  var FREE_UNITS = { penal: 'Always free to recruit \u2014 four to an army', rciv: 1, btiny: 1, xeps1: 1 };
+  function freeUnit(key) {
+    var f = FREE_UNITS[key];
+    return f ? (typeof f === 'string' ? f : 'Free to recruit while the force has fewer than four') : null;
+  }
   function pickForce(co, tier, pl, tactic) {
     /* Nursing the force: a unit one bad battle from a Battle Trauma is left at home
        unless the army cannot be legal without it, and one getting close is taken only

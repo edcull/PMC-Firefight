@@ -241,11 +241,13 @@
     function effectiveTier(co) { return co.tier + (co.aspiring ? 1 : 0); }
 
     /* ================= recruitment ================= */
-    /* Penal troops, Armed Civilians (p. 110), Tiny Bug Swarms (p. 124) and Primitive
-       Epsilons cost nothing while the force has fewer than four of them; the fifth is
-       paid for. Smuggler takes a point off everything else, down to a floor of one. */
+    /* Penal troops are always free (four to an army, p. 57). Armed Civilians (p. 110),
+       Tiny Bug Swarms (p. 124) and Primitive Epsilons cost nothing while the force has
+       fewer than four of them; the fifth is paid for. Smuggler takes a point off
+       everything else, down to a floor of one. */
     function recruitCost(co, key) {
-      if (key === 'penal' || key === 'rciv' || key === 'btiny' || key === 'xeps1') {
+      if (key === 'penal') return 0;
+      if (key === 'rciv' || key === 'btiny' || key === 'xeps1') {
         var civs = co.roster.filter(function (e) { return e.key === key; }).length;
         if (civs < 4) return 0;
       }
