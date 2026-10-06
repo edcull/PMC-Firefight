@@ -234,21 +234,31 @@
             C.creedOf(co).one + ' (' + open + ' free)</button> ';
         }
         var pp0 = promotionPanel(co, side, !!bar);
+        // an army it can no longer field at a Tier it holds: said at the foot of the promotion's box, opened
+        var gaps0 = C.rebuildNeeds(co);
+        if (gaps0.length) {
+          var warn = '<div class="cpwarn">Cannot field a legal army at Tier ' + gaps0.map(function (t) { return ROMAN[t]; }).join(', ') +
+            ' \u2014 recruit or promote from the lowest Tier up.</div>';
+          if (pp0.indexOf('cprom-list') >= 0 || pp0.indexOf('cprom-toggle') < 0) pp0 = pp0.replace(/<\/div>$/, warn + '</div>');
+        }
         // declaring an Aspiring Company is a step up as well: in the promotion's box, a button like its own
         if (!co.aspiring && C.canAspire(co)) {
           pp0 = pp0.replace(/<\/div>$/, '<button class="start" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button></div>');
         }
-        h += pp0;
-        // the campaign's own business, under the promotion (no window of its own any more)
-        if (bar && manage) h += manage;
+        /* the promotion and the campaign's own business under it scroll together in the
+           room left under the figures (on a phone the panel fits the screen) */
+        h += bar ? '<div class="hubscroll">' + pp0 + (manage || '') : pp0;
         // under it, at the foot of the screen, in hotseat: the other player (alone or on a world, Take a contract is at the top)
         if (bar && E.camp.mode === 'hotseat' && !E.online) {
           var hot = E.camp.mode === 'hotseat';
           h += '<div class="cdos-foot hubfoot"><button type="button" class="lnk" data-go="fmodal" data-kind="rivals">' +
             (hot ? (E.hubSide === 'B' ? 'Player 1' : 'Player 2') : 'Other forces') + '</button></div>';
         }
+        if (bar) h += '</div>';
       }
-      var gaps = C.rebuildNeeds(co);
+      // (on the company view it is in the promotion's box; on the dossier, at the foot)
+      var gaps = bar && E.hubPane === 'dossier' ? C.rebuildNeeds(co) : [];
+      if (!bar) gaps = C.rebuildNeeds(co);
       if (gaps.length) {
         h += '<div class="cpwarn">Cannot field a legal army at Tier ' +
           gaps.map(function (t) { return ROMAN[t]; }).join(', ') +
