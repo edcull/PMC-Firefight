@@ -504,11 +504,12 @@
           : u.aboardDowned && u.wiped ? 'lost with the aircraft'
             : u.wiped ? 'wiped out — struck off' : '';
         h += '<div class="dcard' + (u.wiped ? ' gone' : '') + '"><div class="dtop">' +
-          '<b class="dname">' + esc(u.name) + '</b>' +
-          (u.name === profile(u.key).name ? '' : '<span class="dprof">' + esc(profile(u.key).name) + '</span>') +
+          '<b class="dname" title="' + esc(u.name) + '">' + esc(u.name) + '</b>' +
           (tag ? '<span class="dtag bad">' + tag + '</span>' : '') +
           (u.fled && !u.wiped ? '<span class="dtag warn">fled the field</span>' : '') +
-          (u.rebuilt ? '<span class="dtag">reconstituted</span>' : '') + '</div>';
+          (u.rebuilt ? '<span class="dtag">reconstituted</span>' : '') + '</div>' +
+          // what kind it is, under its name, when the name does not say
+          (C.isDefaultName(u) ? '' : '<div class="dprof">' + esc(profile(u.key).name) + '</div>');
         /* A unit that is off the dossier has no use for the day's experience or
            trauma, and showing a ledger it can never spend only raises the question
            of why it was struck off in the first place. Say that instead. */

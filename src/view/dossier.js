@@ -634,6 +634,14 @@
   // the next mark round: none, favoured, unfavoured
   function nextMark(e) { return e.mark === 'fav' ? 'unfav' : e.mark === 'unfav' ? null : 'fav'; }
 
+  /* The force's own command — the free one it was founded with, which rises with the
+     force's Tier — marked by a crown beside its name */
+  var CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18l-1.6-10-4.9 4.2L12 5l-2.5 7.2L4.6 8z" fill="currentColor"/><rect x="3" y="19.5" width="18" height="2" rx="1" fill="currentColor"/></svg>';
+  function commanderMark(co, e) {
+    if (!co || !e || e.rid !== co.cmdRid) return '';
+    var w = C.words(co), what = 'The ' + w.force + '\u2019s own ' + w.cmd + ' \u2014 it rises with the ' + w.force + '\u2019s Tier';
+    return '<span class="dcmdr" title="' + esc(what) + '" aria-label="' + esc(what) + '">' + CROWN + '</span>';
+  }
   function entryCard(e, co, opts) {
     opts = opts || {};
     var p = profile(e.key), h = '';
@@ -641,14 +649,17 @@
     var threshold = C.traumaThreshold(co);
     h += '<div class="dcard' + (e.restUntil > 0 ? ' resting' : '') + (e.mark === 'fav' ? ' fav' : e.mark === 'unfav' ? ' unfav' : '') + (opts.expand ? ' dclick' + (opts.men ? ' open' : '') : '') + '" data-rid="' + e.rid + '"' +
       (opts.expand ? ' aria-expanded="' + !!opts.men + '"' : '') + '>';
-    h += '<div class="dtop">' + tierChip(p.tier) +
-      '<b class="dname">' + esc(e.name) + '</b>' +
-      (C.isDefaultName(e) ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
+    /* One line: its Tier, the crown on the force's own command, the name (cut short
+       with an ellipsis when it is long, whole on hover), and the mark; what kind of
+       unit it is, when the name does not say, on the line under it */
+    h += '<div class="dtop">' + tierChip(p.tier) + commanderMark(co, e) +
+      '<b class="dname" title="' + esc(e.name) + '">' + esc(e.name) + '</b>';
     if (e.restUntil > 0) h += '<span class="dtag warn">in the workshop</span>';
     /* Your own: favoured or unfavoured for the next contract, a press going round
        the three (the force picker highlights the one, greys the other) */
     if (opts.mark) h += markButton(e);
     h += '</div>';
+    if (!C.isDefaultName(e)) h += '<div class="dprof">' + esc(p.name) + '</div>';
     /* Opened, the card's own facts sit in a column on the left — experience and
        trauma, its honours and traumas, what can be done with it — and the unit
        as it stands on the table on the right; its full sheet follows below. */
@@ -787,7 +798,7 @@
       C: C, R: R, ROMAN: ROMAN, armyPill: armyPill, doctrineMarks: doctrineMarks, close: close, colourFlash: colourFlash,
       colourOf: colourOf, esc: esc, note: note, profile: profile, quietTip: quietTip, root: root, save: save,
       spellOut: spellOut, statRow: statRow, stripe: stripe, tip: tip, get camp() { return camp; },
-      cmodal: cmodal,
+      cmodal: cmodal, commanderMark: commanderMark,
       // the dossier's sort and filter, for the contract's add list
       sortLine: function (co, fkey) { return (KIT_HUB || kitHub()).sortLine(co, fkey, true); },
       dossierOrder: dossierOrder, unitPasses: unitPasses, groupHead: groupHead, groupOrder: groupOrder,
