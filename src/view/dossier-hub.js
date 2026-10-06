@@ -120,11 +120,14 @@
           '</small></span></button>' : '') +
         '<button type="button" class="archline" data-go="fmodal" data-kind="memorial">' + memorialIcon(cur) + '<span>' + esc(C.words(cur).memorial) + '<small>' +
         esc(C.words(cur).memorialSub) + '</small></span></button>' +
-        // online the server keeps the campaign: nothing to save to a file
-        (E.online ? (E.camp.over ? '' : '<button type="button" class="archline danger" data-go="oconcede">' + ICON_ABANDON + '<span>Give the campaign up<small>You leave the world; the others play on \u2014 it asks first</small></span></button>')
-          : '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
-        '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
-        '<button type="button" class="archline danger" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>') +
+        /* the campaign's file, and giving it up: one row of icon buttons, each saying what it
+           does (online the server keeps the campaign: only giving it up, said in words) */
+        '<div class="hubfile">' +
+        (E.online ? (E.camp.over ? '' : '<button type="button" class="lnk ico danger wide" data-go="oconcede" title="You leave the world; the others play on (it asks first)">' + ICON_ABANDON + '<span>Give the campaign up</span></button>')
+          : '<button type="button" class="lnk ico" data-go="export" title="Save to a file — the whole campaign, to keep or move to another device" aria-label="Save to a file">' + ICON_SAVE + '</button>' +
+        '<button type="button" class="lnk ico" data-go="import" title="Load a file — carry on a campaign saved before" aria-label="Load a file">' + ICON_LOAD + '</button>' +
+        '<button type="button" class="lnk ico danger" data-go="wipe" title="Abandon the campaign — every dossier goes (it asks first)" aria-label="Abandon the campaign">' + ICON_ABANDON + '</button>') +
+        '</div>' +
         '</div>';
       h += companyPanel(cur, hs, hubBar(), manageHtml);
       // what a unit can spend its experience on: an honour, an upgrade, or a promotion to another unit

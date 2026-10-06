@@ -967,6 +967,11 @@ a.mcard { text-decoration: none; line-height: normal; }
 .hubbar.hubtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border-bottom: 1px solid var(--line); min-height: 0; }
 /* the campaign's business on the company view, under the promotion */
 .hubmanage { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.hubfile { display: flex; gap: 6px; }
+.hubfile .lnk.ico { flex: 1 1 0; display: inline-grid; place-items: center; min-height: var(--row-h); padding: 0; margin: 0; }
+.hubfile .lnk.ico svg { width: 18px; height: 18px; }
+.hubfile .lnk.ico.wide { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.hubfile .lnk.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
 .hubbar.hubtabs .lnk { width: 100%; padding: 0 6px; }
 /* tabs as the unit viewer's (.vtabs): the one it is on lifted onto the line under them, in amber */
 .hubbar.hubtabs .lnk { background: none; border: 1px solid transparent; border-bottom: none; border-radius: 5px 5px 0 0; margin-bottom: -1px;
