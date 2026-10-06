@@ -992,7 +992,10 @@ a.mcard { text-decoration: none; line-height: normal; }
   position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; width: max-content; min-width: 100%; max-width: min(440px, calc(100vw - 32px));
   padding: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 10px 28px rgba(0,0,0,.5);
 }
-.dsortline .dpopwrap:last-child .dpop { left: auto; right: 0; }
+.dsortline .dpopwrap + .dpopwrap .dpop { left: auto; right: 0; }
+.dsortline > .lnk.dgrp { flex: none; }
+.dgrouphead { margin: 8px 2px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
+.dgrouphead:first-child { margin-top: 0; }
 .dsortline .dpop .lnk { flex: none; min-height: 0; white-space: normal; overflow: visible; }
 .dsortline .dpop .dpop-acts { flex: 0 0 100%; display: flex; justify-content: flex-end; margin-top: 4px; }
 .dpick-list { display: flex; flex-wrap: wrap; gap: 6px; }

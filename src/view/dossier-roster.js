@@ -31,7 +31,9 @@
           return lb - la || profile(b.key).tier - profile(a.key).tier || b.exp - a.exp;
         });
         if (shown.length && !ordered.length) h += '<p class="cpstat">No unit matches the filter.</p>';
+        var at = {};
         ordered.forEach(function (e) {
+          if (fk === 'A') h += E.groupHead(e, at);
           // on a phone each is its icon alone, so the three sit on one row
           var acts = '<button class="lnk dact" data-rename="' + e.rid + '" title="Rename" aria-label="Rename">' + ICON_RENAME + '<span>Rename</span></button>';
           var open = !!E.menOpen[e.rid];

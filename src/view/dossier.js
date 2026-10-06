@@ -421,40 +421,64 @@
   var ufilter = {};
   /* The dossier's own sort and filter (the line above its list): sorted by one
      thing, and narrowed to the types and Tiers ticked (none ticked, all shown). */
-  var dsort = 'type', dfilt = { type: {}, group: {}, tier: {} };
-  // a unit's type for the dossier's sort and filter: its Command, else its class
-  function unitKind(p) {
-    if (C.isLeaderP(p)) return 'Command';
-    var c = (p && p.cls) || 'other';
-    return c.charAt(0).toUpperCase() + c.slice(1);
+  var dsort = 'type', dfilt = { type: {}, tier: {} };
+  /* Grouped: a header over each group, by what was last sorted or filtered by
+     (`gkey`) — each unit type (the command first), each Tier, each letter, each
+     band of EXP, each TP — and the sort within each */
+  var dgroup = true, gkey = 'type';
+  function groupOf(e) {
+    var p = profile(e.key) || {};
+    switch (gkey) {
+      case 'name': { var c = (String(e.name).charAt(0) || '?').toUpperCase(); return { label: c, rank: c }; }
+      case 'tier': return { label: 'Tier ' + ROMAN[p.tier], rank: -p.tier };
+      case 'xp': { var x = Math.floor((e.exp || 0) / 5) * 5; return { label: x + '\u2013' + (x + 4) + ' EXP', rank: -x }; }
+      case 'tp': return { label: (e.tp || 0) + ' TP', rank: -(e.tp || 0) };
+      default: { var g = C.isLeaderP(p) ? 'Command' : p.group || 'Other'; return { label: g, rank: (g === 'Command' ? '0' : '1') + g }; }
+    }
   }
-  var KIND_RANK = { Command: 0, Infantry: 1, Vehicle: 2, Aircraft: 3 };
+  function groupLabel(e) { return groupOf(e).label; }
+  function byGroup(a, b) {
+    var x = groupOf(a).rank, y = groupOf(b).rank;
+    return x < y ? -1 : x > y ? 1 : 0;
+  }
+  // as the groups stand in a list already grouped (the contract's favoured-first reorders within them)
+  function groupOrder(list) {
+    var at = {};
+    list.forEach(function (e, i) { var g = groupLabel(e); if (!(g in at)) at[g] = i; });
+    return function (e) { return at[groupLabel(e)]; };
+  }
+  // a header before each group's first unit, while grouped (`last`: the group above, kept by the caller)
+  function groupHead(e, at) {
+    if (!dgroup) return '';
+    var g = groupLabel(e);
+    if (at.last === g) return '';
+    at.last = g;
+    return '<h4 class="dgrouphead">' + esc(g) + '</h4>';
+  }
   // the sort or filter popup open inside a window (the contract's add list), which stays open under it
   var subPop = null;
   function dossierOrder(list) {
     function p(e) { return profile(e.key) || {}; }
     function lead(e) { return C.isLeaderP(p(e)) ? 1 : 0; }
-    function any(kind) { return Object.keys(dfilt[kind]).some(function (k) { return dfilt[kind][k]; }); }
-    function rank(e) { var k = unitKind(p(e)); return k in KIND_RANK ? KIND_RANK[k] : 9; }
-    var anyType = any('type'), anyGroup = any('group'), anyTier = any('tier');
+    var anyType = Object.keys(dfilt.type).some(function (k) { return dfilt.type[k]; });
+    var anyTier = Object.keys(dfilt.tier).some(function (k) { return dfilt.tier[k]; });
     return list.filter(function (e) {
-      return (!anyType || dfilt.type[unitKind(p(e))]) && (!anyGroup || dfilt.group[p(e).group || '']) &&
-        (!anyTier || dfilt.tier[p(e).tier]);
+      return (!anyType || dfilt.type[p(e).group || '']) && (!anyTier || dfilt.tier[p(e).tier]);
     }).sort(function (a, b) {
-      var byGroup = String(p(a).group || '').localeCompare(String(p(b).group || ''));
+      return (dgroup && byGroup(a, b)) || within(a, b);
+    });
+    function within(a, b) {
       var byName = String(a.name).localeCompare(String(b.name));
       switch (dsort) {
         case 'name': return byName;
         case 'tier': return p(b).tier - p(a).tier || byName;
         case 'xp': return (b.exp || 0) - (a.exp || 0) || byName;
         case 'tp': return (b.tp || 0) - (a.tp || 0) || byName;
-        // by group: each group together, the higher Tier first
-        case 'group': return byGroup || p(b).tier - p(a).tier || byName;
-        // by type: the command first, then infantry, vehicles and aircraft, each group together
-        default: return lead(b) - lead(a) || rank(a) - rank(b) || byGroup ||
+        // by type: the command first, then each group together, the higher Tier first
+        default: return lead(b) - lead(a) || String(p(a).group || '').localeCompare(String(p(b).group || '')) ||
           p(b).tier - p(a).tier || (b.exp || 0) - (a.exp || 0);
       }
-    });
+    }
   }
   function unitPasses(e, key) {
     var f = ufilter[key];
@@ -678,7 +702,7 @@
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses,
-      get dsort() { return dsort; }, get dfilt() { return dfilt; }, unitKind: unitKind, get rosterTab() { return rosterTab; }, get subPop() { return subPop; },
+      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get dgroup() { return dgroup; }, get rosterTab() { return rosterTab; }, get subPop() { return subPop; },
       get online() { return online; }, onlineNote: function () { return online ? (KIT_ONLINE || kitOnline()).hubNote() : ''; }
     }));
   }
@@ -723,7 +747,7 @@
       root: root, save: save, statLine: statLine, get menOpen() { return menOpen; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rosterTab() { return rosterTab; }, get camp() { return camp; }, unitPasses: unitPasses,
-      dossierOrder: dossierOrder
+      dossierOrder: dossierOrder, groupHead: groupHead
     }));
   }
   function dossierPanel(co) { return (KIT_ROSTER || kitRoster()).dossierPanel(co); }
@@ -739,7 +763,8 @@
       cmodal: cmodal,
       // the dossier's sort and filter, for the contract's add list
       sortLine: function (co, fkey) { return (KIT_HUB || kitHub()).sortLine(co, fkey, true); },
-      dossierOrder: dossierOrder, unitPasses: unitPasses,
+      dossierOrder: dossierOrder, unitPasses: unitPasses, groupHead: groupHead, groupOrder: groupOrder,
+      get dgroup() { return dgroup; },
       get contract() { return contract; }, set contract(v) { contract = v; },
       get view() { return view; }, set view(v) { view = v; }
     }));
@@ -1338,13 +1363,16 @@
         else openModal = openModal === pk ? null : pk;
         render(); return;
       }
-      case 'dsort': dsort = t.getAttribute('data-by') || 'type'; if (subPop) subPop = null; else openModal = null; render(); return;
+      case 'dsort': dsort = gkey = t.getAttribute('data-by') || 'type'; if (subPop) subPop = null; else openModal = null; render(); return;
       case 'dfilt': {
         var dk = t.getAttribute('data-kind'), dv = t.getAttribute('data-val');
         dfilt[dk][dv] = !dfilt[dk][dv];
+        // grouped by what was just filtered; with none of it left, by the sort again
+        gkey = Object.keys(dfilt[dk]).some(function (k) { return dfilt[dk][k]; }) ? dk : dsort;
         render(); return;
       }
-      case 'dfiltclear': dfilt = { type: {}, group: {}, tier: {} }; ufilter[camp && camp.mode === 'hotseat' ? hubSide : 'A'] = {}; render(); return;
+      case 'dgroup': dgroup = !dgroup; render(); return;
+      case 'dfiltclear': dfilt = { type: {}, tier: {} }; gkey = dsort; ufilter[camp && camp.mode === 'hotseat' ? hubSide : 'A'] = {}; render(); return;
       case 'ufilter': {
         var fk = t.getAttribute('data-fkey'), kind = t.getAttribute('data-kind');
         var fl = ufilter[fk] || (ufilter[fk] = {});
