@@ -2233,3 +2233,7 @@ svg.chev { width: .8em; height: .65em; vertical-align: .05em; display: inline-bl
 .hubscroll > .cprom { margin-top: 10px; }
 .hubscroll .cprom-list { overflow: visible; max-height: none; }
 .cprom > .cpwarn { margin: 9px 0 0; }
+
+/* the free units' gift tag, next to the name where they are recruited */
+.freemark { display: inline-block; vertical-align: -2px; margin-right: 5px; color: var(--good); line-height: 0; }
+.freemark svg { width: 14px; height: 14px; display: block; }

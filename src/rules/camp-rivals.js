@@ -14,7 +14,7 @@
         creedOf = E.creedOf, d6 = E.d6, drawHonours = E.drawHonours, fieldReport = E.fieldReport,
         found = E.found, hasDoctrine = E.hasDoctrine, isLeaderP = E.isLeaderP, levelsFor = E.levelsFor,
         maxBattleTier = E.maxBattleTier, newCompany = E.newCompany, pick = E.pick, profile = E.profile,
-        fillsArmy = E.fillsArmy, fullTier = E.fullTier,
+        fillsArmy = E.fillsArmy, fullTier = E.fullTier, freeUnit = E.freeUnit, effectiveTier = E.effectiveTier,
         promoteCompany = E.promoteCompany, promoteUnit = E.promoteUnit, promotionCost = E.promotionCost,
         promotionTargets = E.promotionTargets, rebuildNeeds = E.rebuildNeeds, recruit = E.recruit,
         recruitCost = E.recruitCost, rollBattleTier = E.rollBattleTier, rollPayment = E.rollPayment,
@@ -127,11 +127,12 @@
       });
 
       /* What each force can really put on the table: the highest Tier at which it can
-         field an army near full strength. One that cannot even manage Tier I sits the
-         turn out to regroup — it hires what it can (the free Tier I units included)
-         and offers no contract until it is fit to fight again. */
+         field a legal army that spends the whole of the composition points, the free
+         Tier I units taken on first if they help. Tier I is always within reach; one
+         that somehow cannot field even that sits the turn out to regroup. */
       var caps = rivals.map(function (co) {
         var c = fullTier(co, 1);
+        if (c < effectiveTier(co)) { topUpFree(co); c = fullTier(co, 1); }
         if (!c) { developRival(co); c = fullTier(co, 1); }
         co.regrouping = !c;
         return c;
@@ -163,7 +164,7 @@
         var fs = foresight(A, co, true);
         var scen = fs.scenario || fs.fore.dice[0];
         var tier = rollBattleTier(A, co);
-        // no bigger a fight than the force can field near full strength
+        // no bigger a fight than the force can field in full
         if (caps[idx] && caps[idx] < tier.cap) {
           tier.cap = caps[idx]; tier.tier = Math.min(tier.roll, tier.cap);
           tier.thin = tier.cap < Math.min(tier.roll, tier.standing);
@@ -281,7 +282,10 @@
       var hulls = a.machines.slice(0, a.vehicles);
       var h1 = hulls.filter(function (k) { return profile(k).tier === 1; });
       var h2 = hulls.filter(function (k) { return profile(k).tier === 2; });
-      var keys = [], t1pool = a.t1.slice(), t2pool = a.t2.slice();
+      /* It starts with units it paid for: the free ones (Penal troops, Armed civilians,
+         Tiny bug swarms, Primitive Epsilon troopers) are taken on later, as it needs them. */
+      var paid = a.t1.filter(function (k) { return !freeUnit(k); });
+      var keys = [], t1pool = paid.length ? paid : a.t1.slice(), t2pool = a.t2.slice();
       for (var i = 0; i < 6 - h1.length; i++) keys.push(t1pool[i % t1pool.length]);
       h1.forEach(function (k) { keys.push(k); });
       for (var j = 0; j < 2 - h2.length; j++) keys.push(t2pool[j % t2pool.length]);
@@ -303,6 +307,29 @@
       }
       co.blurb = null;
       return co;
+    }
+
+    /* The free Tier I units taken on when they let a force field a bigger army in
+       full — its own Tier at most. Four of a kind at the most (the first four are the
+       free ones, and Penal troops are four to an army); kept only if they helped. */
+    function topUpFree(co) {
+      var want = effectiveTier(co), was = fullTier(co, 1), added = [];
+      if (was >= want) return [];
+      for (var n = 0; n < 8 && fullTier(co, 1) < want; n++) {
+        var p = R.listFor(co.faction).filter(function (q) {
+          return freeUnit(q.key) && recruitCost(co, q.key) === 0 && canRecruit(co, q.key).ok &&
+            co.roster.filter(function (e) { return e.key === q.key; }).length < 4;
+        })[0];
+        if (!p) break;
+        var r = recruit(co, p.key);
+        if (!r.ok) break;
+        added.push(r.entry);
+      }
+      if (added.length && fullTier(co, 1) <= was) {
+        co.roster = co.roster.filter(function (e) { return added.indexOf(e) < 0; });
+        return [];
+      }
+      return added.map(function (e) { return { what: 'recruit', text: 'took on ' + e.name }; });
     }
 
     /* One campaign turn of development, in the archetype's own direction. */
@@ -353,6 +380,7 @@
         }
       }
       fillGaps();
+      did = did.concat(topUpFree(co));
 
       // spend experience, the units closest to a decision first
       co.roster.slice().sort(function (x, y) { return y.exp - x.exp; }).forEach(function (e) {

@@ -145,12 +145,14 @@ C.ARCHETYPES.forEach(function (a) {
   var groups = {};
   B.roster.forEach(function (e) { var g = R.profile(e.key).group; groups[g] = (groups[g] || 0) + 1; });
   var own = B.roster.filter(function (e) { return a.groups.indexOf(R.profile(e.key).group) >= 0; }).length;
+  // the free Tier I units taken on out of character to fill an army out are not counted against it
+  var counted = B.roster.filter(function (e) { return !(C.freeUnit(e.key) && a.groups.indexOf(R.profile(e.key).group) < 0); }).length;
   var honours = B.roster.reduce(function (n, e) { return n + e.honours.length; }, 0);
   var upgrades = B.roster.reduce(function (n, e) { return n + e.upgrades.length; }, 0);
   var machines = B.roster.filter(function (e) { return R.profile(e.key).cls !== 'infantry'; }).length;
   var topTier = Math.max.apply(null, B.roster.map(function (e) { return R.profile(e.key).tier; }));
   report.push({
-    a: a, co: B, own: own, honours: honours, upgrades: upgrades, machines: machines,
+    a: a, co: B, own: own, counted: counted, honours: honours, upgrades: upgrades, machines: machines,
     topTier: topTier, trouble: trouble, groups: groups
   });
   ok(a.name + ' survives thirty turns', trouble.length, 0, trouble.slice(0, 2).join('; '));
@@ -158,7 +160,7 @@ C.ARCHETYPES.forEach(function (a) {
     for (var t = 1; t <= B.tier; t++) if (!C.canFieldArmy(B, t, 1)) return 'illegal at Tier ' + t;
     return 0;
   })(), 0);
-  ok('...and grew past Tier I', B.tier > 1, true, 'Tier ' + R.ROMAN[B.tier] +
+  ok('...and grew past Tier I', B.tier > 1, true, a.id + ': Tier ' + R.ROMAN[B.tier] +
     ', ' + B.roster.length + ' units, ' + B.kUC + ' kUC');
 });
 
@@ -179,8 +181,8 @@ head('Do they still look like themselves?');
 var byId = {};
 report.forEach(function (r) { byId[r.a.id] = r; });
 ok('every rival keeps most of its units in its own groups',
-  report.filter(function (r) { return r.own >= r.co.roster.length * 0.5; }).length, report.length,
-  report.map(function (r) { return r.a.id + ' ' + r.own + '/' + r.co.roster.length; }).join(', '));
+  report.filter(function (r) { return r.own >= r.counted * 0.5; }).length, report.length,
+  report.map(function (r) { return r.a.id + ' ' + r.own + '/' + r.counted; }).join(', '));
 ok('the armoured company fields the most machines',
   byId.armour.machines >= Math.max.apply(null, report.map(function (r) { return r.machines; })), true,
   report.map(function (r) { return r.a.id + ' ' + r.machines; }).join(', '));
@@ -222,8 +224,12 @@ function runOne(a, turns) {
     slots: slots,
     upgrades: B.roster.reduce(function (n, e) { return n + e.upgrades.length; }, 0),
     machines: B.roster.filter(function (e) { return R.profile(e.key).cls !== 'infantry'; }).length,
-    // the free field command is not a choice, so it is left out of the count
-    units: B.roster.filter(function (e) { return !R.profile(e.key).command; }).length,
+    // the free field command is not a choice, so it is left out of the count — nor are
+    // the free Tier I units it takes on to fill an army out, where they are out of character
+    units: B.roster.filter(function (e) {
+      var p = R.profile(e.key);
+      return !p.command && !(C.freeUnit(e.key) && a.groups.indexOf(p.group) < 0);
+    }).length,
     own: B.roster.filter(function (e) {
       var p = R.profile(e.key);
       return !p.command && a.groups.indexOf(p.group) >= 0;

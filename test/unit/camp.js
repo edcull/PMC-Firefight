@@ -829,12 +829,14 @@ head('Pick a force (and the AI forces): Trauma Points');
 })();
 
 /* ------------------------------------------------- a force a third short */
-head('Contracts at a Tier the AI force can field near full strength');
+head('Contracts at a Tier the AI force can field in full');
 (function () {
   // the Ivenbean Brood after a bad battle: legal at Tier III (2+ Tier III for a swarm) but 12 of 18 points
   var brood = C.newCompany('Ivenbean Brood', { faction: 'bugs' }); brood.tier = 3; brood.kUC = 0;
   ['bwatchers', 'bwatchlarva', 'bpathfinder', 'bsmallpath', 'bsmall', 'btiny', 'btiny'].forEach(function (k) { brood.roster.push(C.newEntry(k)); });
   brood.cmdRid = brood.roster[0].rid;
+  ok('a Tier fielded must fill every point, not most of them', C.fillsArmy(brood, 2, 1) === (function () {
+    var r = R.checkArmy(C.pickForce(brood, 2, 1).map(function (e) { return R.entryPick(e); }), 2, 1, []); return r.ok && r.spent === r.budget; })(), true);
   ok('legal at Tier III PL1 but short of the points', C.canFieldArmy(brood, 3, 1) && !C.fillsArmy(brood, 3, 1), true);
   ok('...the highest Tier it fields near full strength', C.fullTier(brood, 1) < 3, true);
   var camp = C.newCampaign({ mode: 'solo', nameA: 'Us', factionA: 'pmc' });
@@ -845,6 +847,24 @@ head('Contracts at a Tier the AI force can field near full strength');
   ok('an offer against it is no bigger than it can field', offers.length > 0 && offers.every(function (o) { return o.tier <= C.fullTier(brood, 1) && o.capTier <= C.fullTier(brood, 1); }), true,
     offers.map(function (o) { return 'T' + o.tier + '/cap' + o.capTier; }).join(' '));
   ok('...and not regrouping', !brood.regrouping, true);
+  ok('it took on free Tiny bug swarms only to four', brood.roster.filter(function (e) { return e.key === 'btiny'; }).length <= 4, true);
+
+  // a thin force short of Tier I's points still fields Tier I: the floor every army has
+  var thin = C.newCompany('Thin', { faction: 'rebel' }); thin.tier = 1;
+  ['rciv', 'rciv', 'rciv'].forEach(function (k) { thin.roster.push(C.newEntry(k)); });
+  ok('three Armed civilians: legal at Tier I, 3 of 6 points — still Tier I', !C.fillsArmy(thin, 1, 1) && C.fullTier(thin, 1) === 1, true);
+
+  // the AI founds with units it paid for: the free ones come later
+  var freeAtFounding = [];
+  C.ARCHETYPES.concat(C.archetypesFor('rebel'), C.archetypesFor('bugs'), C.archetypesFor('xeno')).forEach(function (a) {
+    for (var i = 0; i < 4; i++) {
+      var co = C.newCompany('R', { faction: a.faction || 'pmc' });
+      C.foundRival(co, a.id, []);
+      co.roster.forEach(function (e) { if (C.freeUnit(e.key)) freeAtFounding.push(a.id + ':' + e.key); });
+    }
+  });
+  ok('no AI force founds with Penal troops, Armed civilians, Tiny bug swarms or Primitive Epsilons', freeAtFounding.length, 0, freeAtFounding.slice(0, 5).join(' '));
+  ok('...and they are marked as the free ones', [C.freeUnit('penal'), C.freeUnit('rciv'), C.freeUnit('btiny'), C.freeUnit('xeps1')].every(Boolean) && !C.freeUnit('recruits'), true);
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

@@ -312,7 +312,7 @@
         h += '<h4>' + esc(g) + '</h4>';
         groups[g].forEach(function (p) {
           // its numbers and special rules, as the skirmish muster's list gives them
-          h += root.PMCUi.unitRow('class="cu" data-add="' + p.key + '"', p.tier, '<b>' + esc(p.name) + '</b>',
+          h += root.PMCUi.unitRow('class="cu" data-add="' + p.key + '"', p.tier, root.PMCUi.freeMark(p.key) + '<b>' + esc(p.name) + '</b>',
             esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')), null);
         });
       });

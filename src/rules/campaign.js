@@ -1427,7 +1427,7 @@
       creedById: creedById, creedOf: creedOf, d6: d6, drawHonours: drawHonours, fieldReport: fieldReport,
       found: found, hasDoctrine: hasDoctrine, isLeaderP: isLeaderP, levelsFor: levelsFor,
       maxBattleTier: maxBattleTier, newCompany: newCompany, pick: pick, profile: profile,
-      fillsArmy: fillsArmy, fullTier: fullTier,
+      fillsArmy: fillsArmy, fullTier: fullTier, freeUnit: freeUnit, effectiveTier: effectiveTier,
       promoteCompany: promoteCompany, promoteUnit: promoteUnit, promotionCost: promotionCost,
       promotionTargets: promotionTargets, rebuildNeeds: rebuildNeeds, recruit: recruit,
       recruitCost: recruitCost, rollBattleTier: rollBattleTier, rollPayment: rollPayment,
@@ -1476,19 +1476,26 @@
     return tp >= th - 3 ? 2 : tp >= Math.ceil(th * 0.4) ? 1 : 0;
   }
   /* Whether a force can put a real army on the table at this Tier and Level: a legal
-     list that fills at least four fifths of the composition points — what a contract
-     against an AI force is offered at, so it does not turn up a third short. */
+     list — every Tier's minimum met and none over its maximum — that also fills the
+     whole of the composition points. Short of either, it cannot field that Tier. */
   function fillsArmy(co, tier, pl) {
     var picks = pickForce(co, tier, pl || 1, null);
     if (!picks.length) return false;
     var res = R.checkArmy(picks.map(function (e) { return R.entryPick(e); }), tier, pl || 1, co.doctrines || [], null);
-    return res.ok && res.spent >= Math.ceil(0.8 * res.budget);
+    return res.ok && res.spent >= res.budget;
   }
-  // the highest Battle Tier (up to `cap`) at which it can, or 0
+  /* The highest Battle Tier (up to `cap`) a force can field in full. Tier I is the
+     floor: the free units (Penal troops, Armed civilians, Tiny bug swarms, Primitive
+     Epsilon troopers) mean any force can always field one, so a legal Tier I list
+     counts even short of points. 0 only when not even that is legal. */
   function fullTier(co, pl, cap) {
     for (var t = Math.min(5, cap || effectiveTier(co)); t >= 1; t--) if (fillsArmy(co, t, pl || 1)) return t;
-    return 0;
+    var t1 = pickForce(co, 1, pl || 1, null);
+    return t1.length && R.checkArmy(t1.map(function (e) { return R.entryPick(e); }), 1, pl || 1, co.doctrines || [], null).ok ? 1 : 0;
   }
+  // the units nobody pays to recruit: Penal troops always, the others while a force has fewer than four
+  var FREE_UNITS = { penal: 'Always free to recruit', rciv: 'The first four are free to recruit', btiny: 'The first four are free to recruit', xeps1: 'The first four are free to recruit' };
+  function freeUnit(key) { return FREE_UNITS[key] || null; }
   function pickForce(co, tier, pl, tactic) {
     /* Nursing the force: a unit one bad battle from a Battle Trauma is left at home
        unless the army cannot be legal without it, and one getting close is taken only
@@ -1596,7 +1603,7 @@
   }
 
   root.PMCCamp = {
-    VERSION: VERSION, migrate: migrate, fillsArmy: fillsArmy, fullTier: fullTier, ordinalName: ordinalName, isDefaultName: isDefaultName,
+    VERSION: VERSION, migrate: migrate, fillsArmy: fillsArmy, fullTier: fullTier, freeUnit: freeUnit, ordinalName: ordinalName, isDefaultName: isDefaultName,
     DOCTRINES: DOCTRINES, CATEGORIES: CATEGORIES,
     doctrine: function (id) { return BY_DOCTRINE[id] || BY_PATH[id] || BY_PATHWAY[id] || BY_ADVANCEMENT[id]; },
     PATHS: PATHS, PATH_GROUPS: PATH_GROUPS, BY_PATH: BY_PATH,

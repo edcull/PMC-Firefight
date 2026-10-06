@@ -83,6 +83,10 @@ async function pastFronts(p) {
   check('...and for its colours',
     await p.evaluate(() => { document.querySelector('[data-go="fcolour"]') && document.querySelector('[data-go="fcolour"]').getAttribute('aria-expanded') !== 'true' && document.querySelector('[data-go="fcolour"]').click(); return document.querySelectorAll('#camp-body [data-campcolour]').length > 1; }));
 
+  check('founding marks Penal troops as free with the gift tag', await p.evaluate(() => {
+    const pen = document.querySelector('#camp-body button[data-add="penal"]'), rec = document.querySelector('#camp-body button[data-add="recruits"]');
+    return !!pen && !!pen.querySelector('.freemark') && !!rec && !rec.querySelector('.freemark');
+  }));
   // six Tier I, two Tier II, one of them a vehicle
   const picks = ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'];
   for (const k of picks) {
@@ -538,6 +542,11 @@ async function pastFronts(p) {
   await click(p, '#camp-body .hubtabs [data-go="roster"]');
   await p.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="recruit"]').click()); await p.waitForTimeout(220);
   check('Recruit opens in a window, closed by its ✕', await p.evaluate(() => { const m = document.querySelector('#camp-body .cmodal:not([hidden])'); return !!m && !!m.querySelector('[data-recruit]') && !!m.querySelector('[data-go="fmodalclose"]'); }));
+  check('the free units carry the gift tag, the paid ones do not', await p.evaluate(() => {
+    const row = (k) => document.querySelector('#camp-body .cmodal:not([hidden]) [data-recruit="' + k + '"]:not([data-asdrone]):not([data-asriders])');
+    return !!row('penal') && !!row('penal').querySelector('.freemark') && !!row('recruits') && !row('recruits').querySelector('.freemark');
+  }));
+  if (process.env.SHOT) await p.screenshot({ path: 'build/ux/recruit-free.png' });
   const before = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   const recruited = await click(p, '#camp-body button[data-recruit="recruits"]');
   // it asks first, saying what it costs and what there is to spend
