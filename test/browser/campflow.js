@@ -155,6 +155,16 @@ async function pastFronts(p) {
   check('Filter by Tier narrows it to that Tier', filt.tiers.length > 0 && filt.tiers.every(t => t === filt.tier) && /Tier/.test(filt.label), JSON.stringify(filt));
   check('the filter stays open while ticked, under its button', await p.evaluate(() => { const w = document.querySelector('#camp-body .dsortline [data-kind="dfilter"]').parentNode; return !!w.querySelector('.dpop'); }));
   await p.evaluate(() => { document.querySelector('#camp-body .dpop [data-go="dfiltclear"]').click(); });
+  const grp = await p.evaluate(() => {
+    const heads = [...document.querySelectorAll('#camp-body .dpop h4')].map(h => h.textContent);
+    const b = document.querySelector('#camp-body .dpop [data-go="dfilt"][data-kind="group"]');
+    const g = b.getAttribute('data-val'); b.click();
+    const camp = window.PMC_CAMPAIGN.get(), rids = [...document.querySelectorAll('#camp-body .cdos .dcard[data-rid]')].map(x => x.getAttribute('data-rid'));
+    const groups = rids.map(r => window.PMC.profile(camp.companies.A.roster.find(e => String(e.rid) === r).key).group || '');
+    document.querySelector('#camp-body .dpop [data-go="dfiltclear"]').click();
+    return { heads, g, groups };
+  });
+  check('the filter has Type and Group, and Group narrows it to that group', grp.heads.join() === 'Type,Group,Tier,Has' && grp.groups.length > 0 && grp.groups.every(x => x === grp.g), JSON.stringify(grp));
   await p.evaluate(() => document.querySelector('#camp-body .cphead').click());   // a tap elsewhere puts it away
   await p.waitForTimeout(100);
   check('...and a tap elsewhere puts it away', await p.evaluate(() => !document.querySelector('#camp-body .dpop')));
