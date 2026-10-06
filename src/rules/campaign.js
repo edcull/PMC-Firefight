@@ -720,6 +720,35 @@
   var seq = 0;
   function rid() { return 'u' + (Date.now() % 1e7).toString(36) + (seq++).toString(36); }
 
+  /* A new unit is named by its place among the force's units of the same kind —
+     1st Enforcers, 2nd Enforcers — the lowest place no other one holds (`except`:
+     the unit being renamed). The command keeps the plain name: there is one. */
+  function ordinal(n) {
+    var t = n % 100, u = n % 10;
+    return n + (t >= 11 && t <= 13 ? 'th' : u === 1 ? 'st' : u === 2 ? 'nd' : u === 3 ? 'rd' : 'th');
+  }
+  var ORD_RE = /^(\d+)(?:st|nd|rd|th) (.+)$/;
+  function ordinalName(co, key, except) {
+    var p = profile(key);
+    if (!p) return key;
+    if (isLeaderP(p)) return p.name;
+    var held = {};
+    ((co && co.roster) || []).forEach(function (e) {
+      if (e === except || e.key !== key) return;
+      var m = ORD_RE.exec(e.name || '');
+      if (m && m[2] === p.name) held[+m[1]] = true;
+    });
+    var n = 1;
+    while (held[n]) n++;
+    return ordinal(n) + ' ' + p.name;
+  }
+  // a unit still going by the name it was given (its kind's name, plain or with its place)
+  function isDefaultName(e) {
+    var p = e && profile(e.key);
+    if (!p) return false;
+    var m = ORD_RE.exec(e.name || '');
+    return e.name === p.name || (!!m && m[2] === p.name);
+  }
   function newEntry(key, opts) {
     opts = opts || {};
     var p = profile(key);
@@ -729,7 +758,7 @@
       riders: !!opts.riders, mount: opts.mount || null,
       // a Drone unit, or a craft only ever flown as a drone, is one from the start (pp. 40, 82)
       drone: !!opts.drone || !!(p && (p.mustDrone || (p.rules || []).indexOf('Drone unit') >= 0)),
-      name: opts.name || p.name, exp: 0, tp: 0,
+      name: opts.name || (opts.co ? ordinalName(opts.co, key) : p.name), exp: 0, tp: 0,
       honours: [], traumas: [], upgrades: [],
       free: !!opts.free, restUntil: 0, lastBattle: 0, history: []
     };
@@ -985,7 +1014,7 @@
     co.cmdRid = cmd.rid;
     keys.forEach(function (k) {
       var s = R.splitPick(k);
-      co.roster.push(newEntry(s.key, { prop: s.prop, drone: s.drone, riders: s.riders, mount: s.mount }));
+      co.roster.push(newEntry(s.key, { prop: s.prop, drone: s.drone, riders: s.riders, mount: s.mount, co: co }));
     });
     co.doctrines = doctrineId ? [doctrineId] : [];
     return foundingCheck(co);
@@ -1049,7 +1078,7 @@
       fitCommand: fitCommand, rerankMen: rerankMen, hasDoctrine: hasDoctrine, honourTable: honourTable, isBugKey: isBugKey,
       isLeaderP: isLeaderP, isTurretP: isTurretP, isXenoKey: isXenoKey, massOf: massOf, money: money,
       newEntry: newEntry, poolOf: poolOf, profile: profile, promotionCost: promotionCost,
-      promotionTargets: promotionTargets, upgradeTable: upgradeTable
+      promotionTargets: promotionTargets, upgradeTable: upgradeTable, ordinalName: ordinalName, isDefaultName: isDefaultName
     }));
   }
   function fieldReport(co, battleTier, pl, available) { return (KIT_COMPANY || kitCompany()).fieldReport(co, battleTier, pl, available); }
@@ -1535,7 +1564,7 @@
   }
 
   root.PMCCamp = {
-    VERSION: VERSION, migrate: migrate,
+    VERSION: VERSION, migrate: migrate, ordinalName: ordinalName, isDefaultName: isDefaultName,
     DOCTRINES: DOCTRINES, CATEGORIES: CATEGORIES,
     doctrine: function (id) { return BY_DOCTRINE[id] || BY_PATH[id] || BY_PATHWAY[id] || BY_ADVANCEMENT[id]; },
     PATHS: PATHS, PATH_GROUPS: PATH_GROUPS, BY_PATH: BY_PATH,

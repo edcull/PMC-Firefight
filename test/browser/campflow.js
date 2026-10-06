@@ -98,6 +98,9 @@ async function pastFronts(p) {
 
   txt = await body(p);
   check('the hub shows the new company', /Task Force Ironhold/.test(txt));
+  // each unit is named by its place among its kind: 1st Recruits; the command keeps its plain name
+  const named = await p.evaluate(() => { const co = window.PMC_CAMPAIGN.get().companies.A; return co.roster.map(e => (e.rid === co.cmdRid ? 'C:' : '') + e.name); });
+  check('new units are named by their place: 1st Recruits, 1st Enforcers…', named.filter(n => !/^C:/.test(n)).every(n => /^1st /.test(n)) && named.some(n => /^C:Field command/.test(n)), named.join(', '));
   check('...at Company Tier I', await p.evaluate(() => (document.querySelector('#camp-body .cpan-A .tierbadge') || {}).textContent === 'I'));
   check('...with nine units', await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length === 9));
   check('...win rate, honours and trauma in one row', await p.evaluate(() => document.querySelectorAll('#camp-body .cpan-A .cstats .cstat').length === 3));
@@ -554,6 +557,8 @@ async function pastFronts(p) {
   await toUnits(p);
   const now = await p.evaluate(() => window.PMC_CAMPAIGN.get().companies.A.roster.length);
   check('the new unit is on the books', now === before + 1, now + ' units');
+  const second = await p.evaluate(() => { const r = window.PMC_CAMPAIGN.get().companies.A.roster; return r[r.length - 1].name; });
+  check('...a second of a kind is the 2nd', second === '2nd Recruits', second);
   await shot(p, 'camp-roster.png');
   // a unit opened on the roster: its facts on the left, its picture drawn on the right, its sheet below
   await p.evaluate(() => { const c = document.querySelector('#camp-body .dcard.dclick'); if (c) c.click(); });

@@ -375,7 +375,7 @@
       if (!offer || offer.done) return { ok: false, why: 'Already decided.' };
       if (co.kUC < offer.cost) return { ok: false, why: 'Costs ' + offer.cost + ' ' + money(co) + ' — the tribe has ' + co.kUC + '.' };
       co.kUC -= offer.cost;
-      var ne = newEntry(offer.key), mem = offer.mem, r2 = d6();
+      var ne = newEntry(offer.key, { co: co }), mem = offer.mem, r2 = d6();
       if (mem && r2 >= 2) {
         ne.exp = mem.exp; ne.tp = mem.tp; ne.honours = mem.honours.slice(); ne.traumas = mem.traumas.slice();
         ne.name = mem.name;

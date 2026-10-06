@@ -138,7 +138,9 @@
       var p = profile(e.key);
       // marked on the dossier for this: favoured highlighted, unfavoured greyed (still to be picked, if wanted)
       var mk = e.mark === 'fav' ? ' fav' : e.mark === 'unfav' ? ' unfav' : '';
-      return U.unitRow('class="cu' + mk + '" ' + attr + barred(bad), p.tier, '<b>' + esc(e.name) + '</b>' + wear(e, true), esc(p.name) + (note || ''),
+      return U.unitRow('class="cu' + mk + '" ' + attr + barred(bad), p.tier, '<b>' + esc(e.name) + '</b>' + wear(e, true),
+        // the kind under the name only when the name does not already say it (1st Enforcers needs no "Enforcers")
+        (C.isDefaultName(e) ? '' : esc(p.name)) + (note || ''),
         p.cls !== 'infantry' ? esc(p.cls) : C.isLeaderP(p) ? 'command' : tpBadge(e));
     }
     // `kind`: with what kind of unit it is down the right
