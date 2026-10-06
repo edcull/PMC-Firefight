@@ -106,22 +106,14 @@
       if (!done && !finished && (E.online || E.camp.mode === 'solo') && !/data-go="(obattle|ocontract)"/.test(onote)) {
         h += '<div class="cpan onote hubtake"><button class="start" data-go="fmodal" data-kind="rivals">Take a contract</button></div>';
       }
-      h += companyPanel(cur, hs, hubBar());
-      // what a unit can spend its experience on: an honour, an upgrade, or a promotion to another unit
-      var promoE = E.promoRid && C.byRid(cur, E.promoRid);
-      if (promoE) {
-        h += cmodal('promote', 'Promote ' + promoE.name + ' \u2014 ' + promoE.exp + ' EXP',
-          '<div class="cmodal-scroll promo-list">' + spendActs(promoE, cur) + '</div>');
-      }
-      /* The campaign's window: who else is on the world (in hotseat, the second
-         player's force), the battles fought, the fallen, and the campaign's
-         file: out to a file, back in from one, or given up. */
+      /* The campaign's own business, on the company view under the promotion: the
+         battles fought, the fallen, and the campaign's file (out to a file, back in
+         from one, or given up). */
       var last = E.camp.log.length ? E.camp.log[E.camp.log.length - 1] : null;
       // won or lost from where the hub's player stands (hotseat: either of them, HC-13)
       var result = function (l) { return !l.winner ? 'drawn' : l.winner === (hs || 'A') ? 'won' : 'lost'; };
       var vsOf = function (l) { return E.camp.mode === 'hotseat' ? (hs === 'B' ? A : B).name : l.against; };
-      // (the other forces are opened from the foot of the company view, not from here)
-      h += cmodal('manage', 'The campaign', '<div class="cmodal-scroll manage-list">' +
+      var manageHtml = '<div class="manage-list hubmanage">' +
         (last ? '<button type="button" class="archline" data-go="fmodal" data-kind="battles">' + ICON_BATTLES + '<span>Battles fought<small>' +
           (E.camp.log.length > 1 ? E.camp.log.length + ' battles \u2014 the last: ' : '') +
           esc(C.SCENARIO_NAMES[last.scenario] || last.scenario) + ', Tier ' + ROMAN[last.tier] + ' PL' + last.pl + ', ' + result(last) +
@@ -133,8 +125,15 @@
           : '<button type="button" class="archline" data-go="export">' + ICON_SAVE + '<span>Save to a file<small>Download the whole campaign, to keep or move to another device</small></span></button>' +
         '<button type="button" class="archline" data-go="import">' + ICON_LOAD + '<span>Load a file<small>Carry on a campaign saved to a file before</small></span></button>' +
         '<button type="button" class="archline danger" data-go="wipe">' + ICON_ABANDON + '<span>Abandon the campaign<small>Every dossier goes — it asks first</small></span></button>') +
-        '</div>');
-      // the fallen, opened from the campaign's window (Back returns to it)
+        '</div>';
+      h += companyPanel(cur, hs, hubBar(), manageHtml);
+      // what a unit can spend its experience on: an honour, an upgrade, or a promotion to another unit
+      var promoE = E.promoRid && C.byRid(cur, E.promoRid);
+      if (promoE) {
+        h += cmodal('promote', 'Promote ' + promoE.name + ' \u2014 ' + promoE.exp + ' EXP',
+          '<div class="cmodal-scroll promo-list">' + spendActs(promoE, cur) + '</div>');
+      }
+      // the fallen, opened from the company view
       h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>');
       h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'Take a contract',
         // the other player's force shown as a rival's is: its figures, its kind and creed, and their dossier to open
@@ -187,10 +186,10 @@
       // online, a contract is made with a force picked from the other forces (rivalPanel): no button here
       var go = E.online ? '' : E.camp.over ? '<button class="start hubgo" disabled title="The campaign is over">Contract</button>'
         : '<button class="start hubgo" data-go="' + (E.camp.mode === 'solo' ? 'offers' : 'contract') + '">Contract</button>';
-      // the other forces, the battles, the memorial, saving, loading and abandoning, together behind the one button
-      var manage = '<button class="lnk hubicon" data-go="fmodal" data-kind="manage" title="The campaign" aria-label="The campaign">' + ICON_MANAGE + '</button>';
-      /* Online and alone (no Contract here: it is made from the other forces) the row is three
-         tabs — the company, its dossier, and the campaign's window. */
+      // the battles, the memorial, saving, loading and abandoning are on the company view now
+      var manage = '';
+      /* Online and alone (no Contract here: it is made from the other forces) the row is two
+         tabs — the company and its dossier. */
       if (E.online || E.camp.mode === 'solo') {
         var dos = E.hubPane === 'dossier';
         var tab = function (on, label) {
@@ -208,7 +207,7 @@
         '<button class="lnk" data-go="roster">Dossier</button>' +
         manage + go + '</div>';
     }
-    function companyPanel(co, side, bar) {
+    function companyPanel(co, side, bar, manage) {
       // the force being managed (the one with the bar) fills the screen, whichever side it is
       var h = '<div class="cpan cpan-' + side + (bar ? ' cpan-own' : '') + '"' + stripe(co) + '>';
       // the colours are the ones the force was founded in: not changed here
@@ -235,6 +234,8 @@
           pp0 = pp0.replace(/<\/div>$/, '<button class="start" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button></div>');
         }
         h += pp0;
+        // the campaign's own business, under the promotion (no window of its own any more)
+        if (bar && manage) h += manage;
         // under it, at the foot of the screen, in hotseat: the other player (alone or on a world, Take a contract is at the top)
         if (bar && E.camp.mode === 'hotseat' && !E.online) {
           var hot = E.camp.mode === 'hotseat';

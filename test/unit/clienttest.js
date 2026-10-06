@@ -498,7 +498,7 @@ ok('the multiplayer button is wired up', ash.doc.getElementById('btn-multi').hid
 ok('...and greyed out on a page with no server behind it', app.doc.getElementById('btn-multi').disabled === true &&
   app.doc.getElementById('btn-multi').hidden === false);
 const ashBody = () => ash.doc.getElementById('lobby-body').innerHTML;
-ok('the lobby screen draws', /Start a game/.test(ashBody()) && (ash.doc.getElementById('lobby-title') || {}).textContent === 'Multiplayer');
+ok('the lobby screen draws', /Create a game/.test(ashBody()) && (ash.doc.getElementById('lobby-title') || {}).textContent === 'Multiplayer');
 ok('it says there are no games yet', /No games open/.test(ashBody()));
 
 /* Ash starts a game. */

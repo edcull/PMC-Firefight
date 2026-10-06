@@ -643,7 +643,7 @@
       (opts.expand ? ' aria-expanded="' + !!opts.men + '"' : '') + '>';
     h += '<div class="dtop">' + tierChip(p.tier) +
       '<b class="dname">' + esc(e.name) + '</b>' +
-      (e.name === p.name ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
+      (C.isDefaultName(e) ? '' : '<span class="dprof">' + esc(p.name) + '</span>');
     if (e.restUntil > 0) h += '<span class="dtag warn">in the workshop</span>';
     /* Your own: favoured or unfavoured for the next contract, a press going round
        the three (the force picker highlights the one, greys the other) */
