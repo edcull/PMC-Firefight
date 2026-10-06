@@ -996,6 +996,8 @@ a.mcard { text-decoration: none; line-height: normal; }
 }
 .dsortline .dpopwrap + .dpopwrap .dpop { left: auto; right: 0; }
 .dsortline > .lnk.dgrp { flex: none; }
+/* on: lit as a toggle (brighter, an amber line under it, as the hub's tabs), not as a primary button */
+.dsortline > .lnk.dgrp.on { color: var(--ink); background: var(--panel-3); border-color: var(--line); box-shadow: inset 0 -2px 0 var(--alpha); }
 .dgrouphead { margin: 8px 2px 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
 .dgrouphead:first-child { margin-top: 0; }
 .dsortline .dpop .lnk { flex: none; min-height: 0; white-space: normal; overflow: visible; }
