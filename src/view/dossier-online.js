@@ -523,7 +523,7 @@
       h += '<div class="field plrow"><div><label for="oc-pl">Priority Level</label>' +
         '<select id="oc-pl"' + (lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2].map(function (n) {
           var can = lv.indexOf(n) >= 0;
-          return '<option value="' + n + '"' + (shownPl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + (n === 1 ? ' — skirmish' : ' — full battle') + '</option>';
+          return '<option value="' + n + '"' + (shownPl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + '</option>';
         }).join('') + '</select>' + (plNote ? '<p class="dnote">' + plNote + '</p>' : '') + '</div></div>';
 
       var pk = pickNow(k, me), units = entriesOf(co, pk), keys = units.map(function (e) { return R.entryPick(e); });

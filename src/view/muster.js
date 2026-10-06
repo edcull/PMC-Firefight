@@ -78,18 +78,8 @@
     function tierLabels() {
       var sel = el('sel-tier');
       if (!sel || !sel.options) return;
-      var f = musterFaction();
-      Array.prototype.forEach.call(sel.options, function (o) {
-        var t = +o.value, txt;
-        if (muster.solo && SOLO.COMMANDO && SOLO.COMMANDO[t]) {
-          var cp = SOLO.COMMANDO[t].points;
-          txt = cp[0] + ' points (' + cp[1] + ' for Rebels)';
-        } else {
-          var comp = f === 'bugs' && R.COMPOSITION_BUGS ? R.COMPOSITION_BUGS[t] : R.COMPOSITION[t];
-          txt = (comp ? comp.points : t * 6) + ' points';
-        }
-        o.textContent = R.ROMAN[t] + ' \u2014 ' + txt;
-      });
+      // the Tier alone: what it is worth in points is on the muster's head
+      Array.prototype.forEach.call(sel.options, function (o) { o.textContent = R.ROMAN[+o.value]; });
     }
     function drawMuster() {
       tierLabels();

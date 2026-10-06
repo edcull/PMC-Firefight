@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=ffdbe0fc94">
-<link rel="stylesheet" href="src/css/game.css?v=b3f633ff9c">
+<link rel="stylesheet" href="src/css/game.css?v=5c48d53049">
 
 <div class="wrap">
   <header>
@@ -137,14 +137,14 @@
     </div>
     <div class="menu-pane" id="menu-single" hidden>
       <h2 class="menu-head">Single player</h2>
-      <button class="mcard" data-skirmish="ai">Skirmish<small>One battle: the OpFor behaviour table drives every enemy activation</small></button>
+      <button class="mcard" data-skirmish="ai">Skirmish<small>Single battle against the computer</small></button>
       <button class="mcard" data-skirmish="solo">Solitaire<small>Your commando against the OpFor</small></button>
       <button class="mcard" id="btn-campaign" data-camp="solo">Campaign<small id="menu-camp-sub">Raise a force and see it through a war</small></button>
       <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
     <div class="menu-pane" id="menu-hotseat" hidden>
       <h2 class="menu-head">Hotseat</h2>
-      <button class="mcard" data-skirmish="hotseat">Skirmish<small>One battle, two players, one screen</small></button>
+      <button class="mcard" data-skirmish="hotseat">Skirmish<small>Single battle against another player, on one screen</small></button>
       <button class="mcard" data-skirmish="coop">Cooperative<small>Two commandos, one each, against the OpFor</small></button>
       <button class="mcard" id="btn-camp-hotseat" data-camp="hotseat">Campaign<small id="menu-camphot-sub">Two dossiers, two players, one screen</small></button>
       <button class="mcard menu-back" data-menu="main">← Back</button>
@@ -158,7 +158,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.2.0.2610061149</p>
+    <p class="menu-ver" id="menu-ver">v0.2.0.2610061154</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -219,18 +219,18 @@
       <div>
         <label for="sel-tier">Battle Tier</label>
         <select id="sel-tier">
-          <option value="1">I — 6 points</option>
-          <option value="2">II — 12 points</option>
-          <option value="3" selected>III — 18 points</option>
-          <option value="4">IV — 24 points</option>
-          <option value="5">V — 30 points</option>
+          <option value="1">I</option>
+          <option value="2">II</option>
+          <option value="3" selected>III</option>
+          <option value="4">IV</option>
+          <option value="5">V</option>
         </select>
       </div>
       <div>
         <label for="sel-pl">Priority Level</label>
         <select id="sel-pl">
-          <option value="1" selected>1 — skirmish</option>
-          <option value="2">2 — full battle</option>
+          <option value="1" selected>1</option>
+          <option value="2">2</option>
         </select>
       </div>
     </div>
@@ -305,21 +305,20 @@
     <div class="field hot-field" id="terrain-field">
       <label for="sel-terrain">Terrain set-up</label>
       <select id="sel-terrain">
-        <option value="auto">Generate the table — the D6 for each area rolled and placed for you</option>
-        <option value="manual">Set it up by hand — roll for each area and tap the pieces down</option>
+        <option value="auto">Automatically place</option>
+        <option value="manual">Manually place</option>
       </select>
     </div>
     <div class="field std-only hot-field">
       <label for="sel-scen">Scenario</label>
       <select id="sel-scen">
-        <option value="roll" selected>Roll a D6 — any of the six</option>
-        <option value="rolld3">Roll a D3 — the first three only</option>
-        <option value="meeting">Meeting engagement — break the enemy</option>
-        <option value="secure">Secure and control — three objectives</option>
-        <option value="find">Find and secure — search for the prize</option>
-        <option value="invasion">Invasion — three landing zones</option>
-        <option value="demolish">Demolish — bring the objective down</option>
-        <option value="takeover">Hostile takeover — a prepared position</option>
+        <option value="roll" selected>Randomise the scenario</option>
+        <option value="meeting">Meeting engagement</option>
+        <option value="secure">Secure and control</option>
+        <option value="find">Find and secure</option>
+        <option value="invasion">Invasion</option>
+        <option value="demolish">Demolish</option>
+        <option value="takeover">Hostile takeover</option>
       </select>
     </div>
     <!-- a solitaire or co-op game's own scenario, under the planet and the table as a skirmish's is -->
@@ -339,13 +338,13 @@
       <div class="field hot-field">
         <label for="sel-solo-scen">Solitaire scenario</label>
         <select id="sel-solo-scen">
-          <option value="roll" selected>Roll for it — any of the six</option>
-          <option value="s_crush">Crushing the Resistance — drop in and wipe them out</option>
-          <option value="s_vip">Protecting the VIP — hold the evacuation point</option>
-          <option value="s_decap">Decapitation — kill the enemy leaders</option>
-          <option value="s_evac">Evacuation — get the civilians to safety</option>
-          <option value="s_sabotage">Sabotage — destroy every objective</option>
-          <option value="s_ambush">Ambush! — hit the column on the road</option>
+          <option value="roll" selected>Randomise the scenario</option>
+          <option value="s_crush">Crushing the Resistance</option>
+          <option value="s_vip">Protecting the VIP</option>
+          <option value="s_decap">Decapitation</option>
+          <option value="s_evac">Evacuation</option>
+          <option value="s_sabotage">Sabotage</option>
+          <option value="s_ambush">Ambush!</option>
         </select>
       </div>
     </div>
@@ -392,7 +391,7 @@
     <ul>
       <li><b>Terrain.</b> Movement penalty: area terrain costs 1″ (2″ for a vehicle) <i>once</i> in a move, however much of it is crossed, and a unit starting in it pays to move through it; each low wall crossed costs it again. Barbed wire costs a D6″ rolled before the move. Hills block sight across them; a unit on one gets +2 Firepower shooting down and sees over its own side below. A big hill may rise in two steps: its crown is a hill on the hill, blocking sight across it for everyone but a unit up on it, and a unit on the crown gets the +2 shooting down on the slope below as well as on the ground &mdash; +2 once, however many steps down. A low wall shelters only a unit with every model within 2″ of it, the wall between it and the shooter; rubble shelters the men in it and no one behind it. Trenches give cover and immunity to Crossfire. <i>House rule:</i> Protectors in hi-mobility armour jump over terrain — no penalties, and over walls, water and buildings — but must land on ground they could stand on.</li>
       <li><b>Buildings.</b> <i>Enter building</i> and <i>Exit building</i> are special actions, within 4″; one unit to a building (to a section, in a building of several wings, and <i>Next section</i> moves through to an empty one in contact). Inside: no Move, Advance or Assault; +2 Defence; no Crossfire; range measured from the wall both ways. A high building or a reinforced one gives +2 Firepower, a low one none — high buildings are drawn a storey taller. Charge a garrison and win, and you take the building while the defenders come out and fall back 2″. A building can also be garrisoned by tapping it during deployment.</li>
-      <li><b>Terrain set-up by hand.</b> Choose <i>Set it up by hand</i> and the game walks the table one 2′ × 2′ area at a time, starting from a random player and alternating: it rolls the area's D6, you pick between the options a result offers (hills <i>or</i> rocks), and every piece the result gives is shown drawn, together, the next one outlined; turn the next one a quarter at a time (<b>Turn it</b>, <kbd>R</kbd>, or a right click on the table), then tap each piece down — anywhere in that area, up to the number rolled. The OpFor lays its own areas. Either area, or everything left, can be auto-placed. In Meeting engagement, Secure and control and Find and secure the table edges are rolled only after the terrain is down, as the book has it, and the table is turned to match. Campaign battles use whichever set-up you last picked here.</li>
+      <li><b>Terrain set-up by hand.</b> Choose <i>Manually place</i> and the game walks the table one 2′ × 2′ area at a time, starting from a random player and alternating: it rolls the area's D6, you pick between the options a result offers (hills <i>or</i> rocks), and every piece the result gives is shown drawn, together, the next one outlined; turn the next one a quarter at a time (<b>Turn it</b>, <kbd>R</kbd>, or a right click on the table), then tap each piece down — anywhere in that area, up to the number rolled. The OpFor lays its own areas. Either area, or everything left, can be auto-placed. In Meeting engagement, Secure and control and Find and secure the table edges are rolled only after the terrain is down, as the book has it, and the table is turned to match. Campaign battles use whichever set-up you last picked here.</li>
       <li><b>Terrain generators.</b> Pick a planet — or randomise it — and the table is built the book's way: divided into 2′ × 2′ areas, with a D6 rolled for each and the rolled result placed in it. Every roll and what it produced is listed in the log and on the opening card.</li>
       <li>Where a result offers a choice ("1-4 hills or rocks") one branch is taken at random, and counts like "1-6 rocks" are rolled within their range. Small rocky areas count as rubble, as the book says; high rocks, deep canyons and volcanoes are rocks, and swamps are shallow water.</li>
       <li><b>Terrain effects</b> follow the summary table: woods and ruins give +2 Defence and block sight; rubble and low walls give +2; buildings give +2 Defence and +2 Firepower; reinforced buildings +4 Defence; hills give +2 Firepower shooting down; rocks, high walls, deep water and lava are impassable; shallow water costs movement and silences Cumbersome Weapons.</li>
@@ -574,7 +573,7 @@
 <script src="src/net/localworld.js?v=2d2b2e670e"></script>
 <script src="src/net/net.js?v=0302fffd1c"></script>
 <script src="src/net/account.js?v=5dcf13ef06"></script>
-<script src="src/net/lobby.js?v=33f6e247b6"></script>
+<script src="src/net/lobby.js?v=1c187c2d2c"></script>
 <script src="src/view/replay.js?v=2eedd500be"></script>
 <script src="src/view/hooks.js?v=10ee198650"></script>
 <script src="src/view/testhooks.js?v=fcc4880560"></script>
@@ -586,13 +585,13 @@
 <script src="src/view/draw.js?v=577a39b6e7"></script>
 <script src="src/view/view.js?v=8ce96bffa5"></script>
 <script src="src/view/panels.js?v=5ecdadb16b"></script>
-<script src="src/view/muster.js?v=342cec43b2"></script>
+<script src="src/view/muster.js?v=a6ed61a807"></script>
 <script src="src/view/game.js?v=2271617d95"></script>
-<script src="src/view/dossier-hub.js?v=9e87c9aeec"></script>
+<script src="src/view/dossier-hub.js?v=bb5257f46b"></script>
 <script src="src/view/dossier-found.js?v=7121a182cd"></script>
 <script src="src/view/dossier-roster.js?v=69f1d5413d"></script>
-<script src="src/view/dossier-contract.js?v=6e4214676f"></script>
+<script src="src/view/dossier-contract.js?v=f036c6c23e"></script>
 <script src="src/view/dossier-after.js?v=4527a54bb7"></script>
-<script src="src/view/dossier-online.js?v=439005b0b9"></script>
+<script src="src/view/dossier-online.js?v=df16939446"></script>
 <script src="src/view/dossier.js?v=92920629dc"></script>
 <script src="src/view/menu.js?v=db5495baa8"></script>

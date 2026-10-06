@@ -275,7 +275,7 @@
     // a campaign is kept by an account: a guest is told so
     var guest = !account || account.guest;
     if (guest && newKind === 'ocamp') newKind = 'skirmish';
-    var kinds = [card('skirmish', 'Skirmish', 'One battle, one against one'),
+    var kinds = [card('skirmish', 'Skirmish', 'Single battle against another player'),
       card('coop', 'Co-op', 'The two of you against the OpFor'),
       card('ocamp', 'Campaign', guest ? 'Sign in with an account to start one' : 'A world of forces, players and AI', guest)];
     return '<div class="lob-new">' +
@@ -454,14 +454,14 @@
         }).join('') + '</select></div>';
     }
     var tier = sel('term-tier', 'Battle Tier', P.TIERS.map(function (t) {
-      return { v: t, t: root.PMC.ROMAN[t] + ' — ' + root.PMC.COMPOSITION[t].points + ' points' };
+      return { v: t, t: root.PMC.ROMAN[t] };
     }), s.tier);
     var world = sel('term-planet', 'World', P.PLANET_CHOICES.map(function (x) {
       return { v: x, t: optionText('sel-planet', x, x) };
     }), s.planet) +
       sel('term-terrain', 'Terrain set-up', [
-        { v: 'auto', t: optionText('sel-terrain', 'auto', 'Generate the table') },
-        { v: 'manual', t: optionText('sel-terrain', 'manual', 'Set it up by hand') }
+        { v: 'auto', t: optionText('sel-terrain', 'auto', 'Automatically place') },
+        { v: 'manual', t: optionText('sel-terrain', 'manual', 'Manually place') }
       ], s.terrain || 'auto') +
       publicBox('term-private', !s.private, ' data-term="private"' + d);
     // a cooperative game: commandos (Priority Level 1 each) under a solitaire scenario, against the OpFor
@@ -470,7 +470,7 @@
       return '<div class="lob-terms">' + tier + '</div>' +
         forcesHTML(mine, isHost) +
         '<div class="lob-terms">' +
-        sel('term-soloScen', 'Scenario', [{ v: 'roll', t: optionText('sel-solo-scen', 'roll', 'Roll for it') }].concat((SOLO ? SOLO.ORDER : []).map(function (x) {
+        sel('term-soloScen', 'Scenario', [{ v: 'roll', t: optionText('sel-solo-scen', 'roll', 'Randomise the scenario') }].concat((SOLO ? SOLO.ORDER : []).map(function (x) {
           return { v: x, t: optionText('sel-solo-scen', x, (SOLO && SOLO.SCENARIOS[x] && SOLO.SCENARIOS[x].name) || x) };
         })), s.soloScen || 'roll') +
         world +
@@ -478,11 +478,11 @@
         '</div>';
     }
     return '<div class="lob-terms">' + tier +
-      sel('term-pl', 'Priority Level', [{ v: 1, t: '1 — skirmish' }, { v: 2, t: '2 — full battle' }], s.pl) +
+      sel('term-pl', 'Priority Level', [{ v: 1, t: '1' }, { v: 2, t: '2' }], s.pl) +
       '</div>' +
       forcesHTML(mine, isHost) +
       '<div class="lob-terms">' +
-      sel('term-scenario', 'Scenario', P.SCENARIOS.map(function (x) {
+      sel('term-scenario', 'Scenario', P.SCENARIOS.filter(function (x) { return x !== 'rolld3'; }).map(function (x) {
         return { v: x, t: optionText('sel-scen', x, x) };
       }), s.scenario) +
       world +

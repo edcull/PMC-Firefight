@@ -1553,6 +1553,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .olob-ai { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; cursor: pointer; }
 .olob-army { color: var(--ink-faint); font-size: 12px; }
 .olob-bar { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; flex-wrap: nowrap; flex: none; }
+.olob-bar .lnk.olob-load { flex: none; margin: 0; white-space: nowrap; }
 .olob-bar .start { flex: 1 1 0; min-width: 0; margin: 0; padding-left: 8px; padding-right: 8px; white-space: normal; line-height: 1.2; }
 @media (max-width: 520px) { .olob-bar { gap: 8px; } .olob-bar .start { font-size: 12px; } }
 .olob-n, .olob-pub { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }

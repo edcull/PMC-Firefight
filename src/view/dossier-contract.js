@@ -455,12 +455,11 @@
       }
       // only offer a Priority Level both forces could actually fill
       var lv = E.contract.levels || [1, 2];
-      var PLN = { 1: 'skirmish', 2: 'full battle' };
       h += '<div class="field plrow"><div><label for="camp-pl">Priority Level</label>' +
         '<select id="camp-pl"' + (E.contract.standard || second ? ' disabled' : '') + '>' + [1, 2].map(function (n) {
           var can = lv.indexOf(n) >= 0;
           return '<option value="' + n + '"' + (E.contract.pl === n ? ' selected' : '') +
-            (can ? '' : ' disabled') + '>' + n + ' — ' + PLN[n] +
+            (can ? '' : ' disabled') + '>' + n +
             (can ? '' : ' (neither force can fill it)') + '</option>';
         }).join('') + '</select></div></div>';   // the world was rolled with the job, and shown on the offer
 

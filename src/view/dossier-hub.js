@@ -68,7 +68,7 @@
         h += '<div class="olob-bar"><label class="olob-n">AI forces <select id="' + (hot ? 'camp-hotai' : 'camp-rivals') + '">' + (hot ? [0, 2, 4, 6, 8] : [1, 3, 5, 7, 9]).map(function (n) {
           return '<option value="' + n + '"' + (n === nr ? ' selected' : '') + '>' + n + '</option>';
         }).join('') + '</select></label>' +
-          '<button class="start" data-go="import">Load a save file</button>' +
+          '<button class="lnk olob-load" data-go="import">Load a save file</button>' +
           '<button class="start" data-go="newcamp">Raise the force</button></div>';
         h += cmodal('armynew', C.words(pa).side + ' \u2014 army rules', armyRules(pa));
         h += cmodal('armynewb', C.words(pb).side + ' \u2014 army rules', armyRules(pb));
