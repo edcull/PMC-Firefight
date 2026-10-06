@@ -1482,10 +1482,14 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .dcard { border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); padding: 9px 11px; }
 .dcard.resting { opacity: .62; }
 .dcard.gone { border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
-.dtop { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.dtop { display: flex; align-items: baseline; gap: 8px; flex-wrap: nowrap; min-width: 0; }
+/* a long name on one line, cut short with an ellipsis (whole on hover) */
+.dtop > .dname { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dtop > .dtag { flex: none; }
 .ct { font-family: var(--display); font-size: 11px; color: var(--alpha); min-width: 18px; }
 .dname { font-size: 13px; }
-.dprof { font-size: 11px; color: var(--ink-faint); }
+.dprof { font-size: 11px; color: var(--ink-faint); margin: 1px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dtop:has(.ct) + .dprof { margin-left: 26px; }
 .dtag { margin-left: auto; font-family: var(--mono); font-size: 10px; letter-spacing: .04em; color: var(--ink-faint); }
 .dtag.warn { color: var(--warn); }
 .dtag.bad { color: var(--bad); }
@@ -2221,9 +2225,5 @@ svg.chev { width: .8em; height: .65em; vertical-align: .05em; display: inline-bl
 .cmodal[data-modal="recruit"] .cat, .cmodal[data-modal="recruit"] .cat.tall { max-height: none; overflow: visible; }
 
 /* the force's own command: a crown beside its name */
-.dcmdr { display: inline-block; color: var(--alpha); margin-left: 4px; vertical-align: -2px; line-height: 0; }
+.dcmdr { display: inline-flex; align-self: center; color: var(--alpha); flex: none; line-height: 0; }
 .dcmdr svg { width: 14px; height: 14px; display: block; }
-.dnowrap { white-space: nowrap; }
-/* its name takes what room there is (and wraps in it) rather than pushing the row onto two lines */
-.dtop:has(.dcmdr) { flex-wrap: nowrap; gap: 6px; }
-.dtop:has(.dcmdr) > .dname { flex: 0 1 auto; min-width: 0; }
