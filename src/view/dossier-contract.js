@@ -222,7 +222,8 @@
       return h.indexOf(hd) === 0 ? hd + '<div class="cscroll">' + h.slice(hd.length) + '</div>' : h;
     }
     function fightBar(dropGo, dropLabel, go, label, why) {
-      return '<div class="cacts">' + (dropGo ? '<button class="start cdrop" data-go="' + dropGo + '">' + dropLabel + '</button>' : '') +
+      // turning it down: a small cancel beside the main button, not a second main button
+      return '<div class="cacts">' + (dropGo ? '<button class="lnk cdrop" data-go="' + dropGo + '" title="' + dropLabel + '">' + dropLabel + '</button>' : '') +
         '<button class="start" data-go="' + go + '"' + (why == null ? '' : ' aria-disabled="true" data-tip="' + why + '" data-tip-title="Not yet"') + '>' + label + '</button></div>';
     }
 
@@ -518,7 +519,7 @@
       /* What still stands in the way is the button's tip, shown on a press while it
          is greyed out (aria-disabled, so the press arrives), not a line of its own. */
       // backing out sits in line with going in, the same button (Player 2 goes back to Player 1's list instead)
-      h += fightBar(second ? null : 'cdrop', 'Turn the contract down', 'fight', hotseat() && !second ? 'Hand over to Player 2' : 'Take the field', chk.ok ? null : why);
+      h += fightBar(second ? null : 'cdrop', 'Turn down', 'fight', hotseat() && !second ? 'Hand over to Player 2' : 'Take the field', chk.ok ? null : why);
       h += '<p class="camp-foot">' + (second ? '<button class="lnk" data-go="seatback">Back to ' + esc(B.name) + '\'s list</button>'
         : '<button class="lnk" data-go="hub">Back</button>') + '</p>';
       return h;

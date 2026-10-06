@@ -568,7 +568,7 @@
       h += K.forceBox({ co: co, fkey: 'A', chk: chk, units: units, limits: limits, drop: 'data-ocunpick', list: list, auto: 'ocauto', clear: 'occlear' });
       var why = chk.ok ? '' : esc((chk.faults || [])[0] || 'Not a legal force yet.');
       // backing out sits in line with going in, the same button
-      h += K.fightBar('ocdrop', ctx.ai ? 'Turn the contract down' : 'Call the contract off', 'ocready', ctx.ai ? 'Fight with this force' : 'Ready — fight with this force', chk.ok ? null : why);
+      h += K.fightBar('ocdrop', ctx.ai ? 'Turn down' : 'Call off', 'ocready', ctx.ai ? 'Fight with this force' : 'Ready — fight with this force', chk.ok ? null : why);
       return h + backFoot(null);
     }
     function backFoot(ctx) {

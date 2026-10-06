@@ -790,8 +790,8 @@
 
   window.PMC_STATE = function () { return state; };
 
-  function openMenu() {
-    if (window.PMCMenu) window.PMCMenu.open();
+  function openMenu(pane) {
+    if (window.PMCMenu) window.PMCMenu.open(pane);
     else el('setup').hidden = false;
   }
   /* The menu's Skirmish choices all land on the muster sheet, set up for the

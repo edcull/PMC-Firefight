@@ -2096,6 +2096,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 #camp-body .cacts { display: flex; gap: 8px; margin-top: 6px; }
 #camp-body .cacts .start { margin: 0; flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #camp-body .cacts + .camp-foot { margin: 0; }
+#camp-body .cacts .lnk.cdrop { flex: none; width: auto; margin: 0; padding: 0 12px; min-height: 0; font-size: 12px; color: var(--ink-dim); }
 /* the job on the contract screen: the offer card's own lines, without the rule that parted it from the force above */
 #camp-body .cpan-job .offer-job { border-top: 0; margin-top: 0; padding-top: 0; }
 .camp-dock .start:disabled { opacity: var(--off-opacity); }

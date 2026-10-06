@@ -96,6 +96,14 @@
       var tier = musterTier(), pl = musterPL(), faction = musterFaction(), tactic = musterTactic();
       var c = musterCheck(muster.keys);
       var lims = musterLimits(tier, pl, c);
+      /* Changing a force from the battlefield: its button is Done, greyed out (still
+         pressable, saying why) until the force is a legal one */
+      var sb = el('btn-start'), hh = muster.hot;
+      if (sb && hh && hh.step < 3 && hh.edit && hh.kind !== 'net') {
+        sb.setAttribute('aria-disabled', String(!c.ok));
+        if (c.ok) sb.removeAttribute('data-tip'); else sb.setAttribute('data-tip', (c.faults || []).join(' ') || 'Pick some units.');
+        sb.setAttribute('data-tip-title', 'Not legal yet');
+      } else if (sb) { sb.removeAttribute('aria-disabled'); sb.removeAttribute('data-tip'); }
 
       var tf = el('tactic-field');
       // Rebels cannot use Tactics in a solitaire game; they get the extra points instead (p. 145)
@@ -921,7 +929,7 @@
       el('hot-intro').textContent = (step === 2 && kind !== 'hotseat' && kind !== 'coop' ? h.sides[0].name + intro[1] : intro[step - 1])
         .replace('{T}', R.ROMAN[musterTier()]).replace('{P}', musterPL());
       el('btn-start').textContent = kind === 'net' ? 'Back to the table'
-        : step < 3 && h.edit ? 'Back to the battlefield'
+        : step < 3 && h.edit ? 'Done'
         : step === 1 ? (kind === 'demo' ? 'Next: the second force' : kind === 'ai' ? 'Next: the opposition' : 'Next: Player 2\u2019s ' + force)
         : step === 2 ? 'Next: the battlefield' : kind === 'demo' ? 'Watch the battle' : 'Take the field';
       if (el('colour-hint')) el('colour-hint').textContent = step === 1 ? 'What ' + hotWho(1).replace(/^Your/, 'your') + '’s troops are painted in.'
@@ -1167,6 +1175,8 @@
     window.PMC_BACK_LABEL = backLabel;
     function setupGoesHome() {
       var h = muster.hot;
+      // a game picked from Single player or Hotseat goes back to that menu: Back, not home
+      if (h && /^(ai|solo|hotseat|coop)$/.test(h.kind || '')) return false;
       return !(h && h.edit) && !(h && h.step > 1 && !(h.step === 3 && h.from3));
     }
     function setupBack() {
@@ -1181,7 +1191,8 @@
       }
       if (h && h.edit) { h.edit = false; h.step = 3; hotPaint(); drawMuster(); return; }
       if (h && h.step > 1 && !(h.step === 3 && h.from3)) { hotBack(); return; }
-      openMenu();
+      // up one level: to the menu the game was picked from
+      openMenu(h && (h.kind === 'ai' || h.kind === 'solo') ? 'single' : h && (h.kind === 'hotseat' || h.kind === 'coop') ? 'hotseat' : null);
     }
 
     return {
