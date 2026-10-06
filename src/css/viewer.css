@@ -25,7 +25,9 @@ header .keys { margin-left: auto; font-family: var(--mono); font-size: 11px; col
 .vunits {
   align-self: center; flex: none; align-items: center; cursor: pointer; white-space: nowrap;
   font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--ink); border: 1px solid var(--alpha); border-radius: 5px; padding: 5px 10px; background: var(--panel-2);
+  /* the primary button's look (.start): the one way into the units on a phone */
+  color: var(--ink); border: 1px solid color-mix(in srgb, var(--alpha) 60%, transparent); border-radius: 5px; padding: 5px 10px;
+  background: color-mix(in srgb, var(--alpha) 16%, transparent);
 }
 .vclose { margin: -6px 0 -4px auto; }              /* the unit list's close (.xclose, base.css) */
 @media (pointer: coarse) { .vunits { padding: 9px 12px; font-size: 12px; } }

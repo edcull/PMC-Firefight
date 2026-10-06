@@ -100,6 +100,7 @@
       '#lobby input[type=text]:focus,#lobby input[type=password]:focus{outline:none;border-color:var(--alpha)}',
       '.lob-row{display:flex;gap:6px;align-items:stretch}',
       '.lob-row .lnk{flex:none;white-space:nowrap}',
+      '.lob-row .start.lob-create{flex:none;width:auto;margin:0;padding:0 14px;white-space:nowrap}',
       '.lob-list{display:flex;flex-direction:column;gap:8px;margin:10px 0 16px}',
       '.lob-game{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}',
       '.lob-game b{font-family:var(--display);font-size:13px}',
@@ -232,7 +233,7 @@
   function lobbyHTML() {
     var list = games.length ? games.map(gameRow).join('') :
       '<p class="lob-empty">No games open. Start one and read the code out to whoever you are playing.</p>';
-    return '<div class="lob-scroll"><p class="lede">Play somebody else over the network. Start a game and read its code out, or join one with the code you were given. ' +
+    return '<div class="lob-scroll"><p class="lede">Play somebody else over the network. Create a game and read its code out, or join one with the code you were given. ' +
       '<span class="lob-status">' + esc(status) + '</span></p>' +
       '<p class="lob-bad">' + esc(fault) + '</p>' +
 
@@ -240,7 +241,8 @@
       (creating ? kindsHTML() :
         '<div class="field"><label for="join-code">Games</label>' +
         '<div class="lob-row">' +
-        '<button class="lnk lob-go" data-lob="create">Start a game</button>' +
+        // making one is the thing to do here: the primary button
+        '<button class="start lob-create" data-lob="create">Create a game</button>' +
         '<input id="join-code" type="text" placeholder="Join a game or campaign with its code\u2026" maxlength="8" autocomplete="off">' +
         '<button class="lnk" data-lob="join">Join</button>' +
         '</div></div>' +

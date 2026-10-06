@@ -964,13 +964,15 @@ a.mcard { text-decoration: none; line-height: normal; }
 .hubbar .hubicon { flex: none; display: inline-grid; place-items: center; padding: 0 12px; }
 .hubbar .hubicon svg { width: 17px; height: 17px; display: block; }
 /* online: the company, its dossier and the campaign's window as tabs, 2 : 2 : 1 */
-.hubbar.hubtabs { display: grid; grid-template-columns: 1fr 1fr; }
+.hubbar.hubtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border-bottom: 1px solid var(--line); min-height: 0; }
 /* the campaign's business on the company view, under the promotion */
 .hubmanage { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .hubbar.hubtabs .lnk { width: 100%; padding: 0 6px; }
-/* the tab it is on: lit as a tab (brighter, an amber line under it), not as a primary button */
-.hubbar.hubtabs .lnk:not(.hubicon) { color: var(--ink-dim); }
-.hubbar.hubtabs .lnk.on { cursor: default; color: var(--ink); background: var(--panel-3); border-color: var(--line); box-shadow: inset 0 -2px 0 var(--alpha); }
+/* tabs as the unit viewer's (.vtabs): the one it is on lifted onto the line under them, in amber */
+.hubbar.hubtabs .lnk { background: none; border: 1px solid transparent; border-bottom: none; border-radius: 5px 5px 0 0; margin-bottom: -1px;
+  color: var(--ink-dim); padding: 8px 6px 7px; font-size: 11px; letter-spacing: .08em; }
+.hubbar.hubtabs .lnk:hover { color: var(--ink); }
+.hubbar.hubtabs .lnk.on { cursor: default; color: var(--alpha); background: var(--panel-2); border-color: var(--line); border-bottom: 1px solid var(--panel-2); }
 /* Take a contract, at the top of the hub */
 .hubtake .start { margin-top: 0; }
 .hubbar .start.hubgo { flex: 0 0 auto; width: auto; margin: 0 0 0 auto; padding: 0 12px; font-size: 11px; letter-spacing: .08em; }
