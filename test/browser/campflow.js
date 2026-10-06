@@ -132,7 +132,11 @@ async function pastFronts(p) {
   const dos = await p.evaluate(() => ({ cdos: !!document.querySelector('#camp-body .cdos'), stats: !!document.querySelector('#camp-body .cpan-A .cstats'),
     creed: !!document.querySelector('#camp-body .cpan-A .cpdoc'), line: [...document.querySelectorAll('#camp-body .dsortline button')].map(b => b.textContent) }));
   check('the dossier shows the units, without the figures, army and creed', dos.cdos && !dos.stats && !dos.creed, JSON.stringify(dos));
-  check('...under a line to sort and filter them', dos.line.length === 2 && /Sort: Type/.test(dos.line[0]) && /Filter: All/.test(dos.line[1]), dos.line.join(' | '));
+  check('...under a line to sort and filter them', dos.line.length === 3 && /Sort: Type/.test(dos.line[0]) && /Filter: All/.test(dos.line[1]) && dos.line[2] === 'Group', dos.line.join(' | '));
+  // grouped from the start: a header over each unit type, the command's first
+  const heads = await p.evaluate(() => ({ on: document.querySelector('#camp-body .dsortline .dgrp').getAttribute('aria-pressed'),
+    heads: [...document.querySelectorAll('#camp-body .cdos .dgrouphead')].map(h => h.textContent) }));
+  check('...grouped by type from the start, under headers, the command first', heads.on === 'true' && heads.heads.length > 2 && heads.heads[0] === 'Command', JSON.stringify(heads));
   await p.evaluate(() => { document.querySelector('#camp-body .dsortline [data-kind="dsort"]').click(); });
   await p.waitForTimeout(150);
   await p.evaluate(() => { document.querySelector('#camp-body .dpop [data-by="name"]').click(); });   // a pick puts the sort away
@@ -155,6 +159,17 @@ async function pastFronts(p) {
   check('Filter by Tier narrows it to that Tier', filt.tiers.length > 0 && filt.tiers.every(t => t === filt.tier) && /Tier/.test(filt.label), JSON.stringify(filt));
   check('the filter stays open while ticked, under its button', await p.evaluate(() => { const w = document.querySelector('#camp-body .dsortline [data-kind="dfilter"]').parentNode; return !!w.querySelector('.dpop'); }));
   await p.evaluate(() => { document.querySelector('#camp-body .dpop [data-go="dfiltclear"]').click(); });
+  // grouped, by what was last filtered: Tier headers over a Tier filter; then the toggle takes the headers away
+  const byTier = await p.evaluate(() => {
+    document.querySelector('#camp-body .dpop [data-go="dfilt"][data-kind="tier"]').click();
+    const heads = [...document.querySelectorAll('#camp-body .cdos .dgrouphead')].map(h => h.textContent);
+    document.querySelector('#camp-body .dpop [data-go="dfiltclear"]').click();
+    document.querySelector('#camp-body .dsortline .dgrp').click();
+    const off = document.querySelectorAll('#camp-body .cdos .dgrouphead').length;
+    document.querySelector('#camp-body .dsortline .dgrp').click();
+    return { heads, off };
+  });
+  check('a Tier filter, grouped, puts Tier headers over the list; the Group toggle takes them away', byTier.heads.length === 1 && /^Tier /.test(byTier.heads[0]) && byTier.off === 0, JSON.stringify(byTier));
   await p.evaluate(() => document.querySelector('#camp-body .cphead').click());   // a tap elsewhere puts it away
   await p.waitForTimeout(100);
   check('...and a tap elsewhere puts it away', await p.evaluate(() => !document.querySelector('#camp-body .dpop')));

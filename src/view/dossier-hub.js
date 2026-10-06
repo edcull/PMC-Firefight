@@ -249,7 +249,12 @@
        popup. Sorted by one thing at a time; filtered by as many types and
        Tiers as are ticked (none ticked, all of them). */
     var SORTS = [['type', 'Type'], ['name', 'Name'], ['tier', 'Tier'], ['xp', 'EXP'], ['tp', 'TP']];
-    function sortLine(co) {
+    /* `fkey`: whose Honours/Trauma filter (the hub's side by default); in a window
+       (the contract's add list) the popups are its own, so opening one leaves the
+       window open (E.subPop) */
+    function sortLine(co, fkey, inWindow) {
+      fkey = fkey || E.hubSide;
+      var isOpen = function (kind) { return inWindow ? E.subPop === kind : E.openModal === kind; };
       var by = SORTS.filter(function (x) { return x[0] === E.dsort; })[0] || SORTS[0];
       var types = {}, tiers = {};
       co.roster.forEach(function (e) {
@@ -259,13 +264,13 @@
       });
       var on = function (kind) { return Object.keys(E.dfilt[kind]).filter(function (k) { return E.dfilt[kind][k]; }); };
       // the company's Honours and Trauma figures narrow it too: said here, and undone here
-      var uf = E.ufilter[E.hubSide] || {}, W = { honour: C.experienceStats(co).word, trauma: C.traumaStats(co).word };
+      var uf = E.ufilter[fkey] || {}, W = { honour: C.experienceStats(co).word, trauma: C.traumaStats(co).word };
       var picked = on('type').concat(on('tier').map(function (t) { return 'Tier ' + ROMAN[t]; }))
         .concat(['honour', 'trauma'].filter(function (k) { return uf[k]; }).map(function (k) { return W[k]; }));
       /* Each drops down under its own button, over what is below (no title, no close:
          its button again, or a tap anywhere else, puts it away). */
       var pop = function (kind, label, on, inner) {
-        var open = E.openModal === kind;
+        var open = isOpen(kind);
         return '<span class="dpopwrap"><button type="button" class="lnk' + (on ? ' on' : '') + '" data-go="dpop" data-kind="' + kind + '" aria-expanded="' + open + '">' +
           label + ' \u25be</button>' + (open ? '<div class="dpop dpick-list">' + inner + '</div>' : '') + '</span>';
       };
@@ -281,9 +286,11 @@
           '<h4>Type</h4>' + Object.keys(types).sort().map(function (g) { return chip('type', g, g || 'Other'); }).join('') +
           '<h4>Tier</h4>' + Object.keys(tiers).sort().map(function (t) { return chip('tier', t, 'Tier ' + ROMAN[t]); }).join('') +
           '<h4>Has</h4>' + ['honour', 'trauma'].map(function (k) {
-            return '<button type="button" class="lnk' + (uf[k] ? ' on' : '') + '" data-go="ufilter" data-fkey="' + E.hubSide + '" data-kind="' + k + '" aria-pressed="' + !!uf[k] + '">' + esc(W[k]) + '</button>';
+            return '<button type="button" class="lnk' + (uf[k] ? ' on' : '') + '" data-go="ufilter" data-fkey="' + fkey + '" data-kind="' + k + '" aria-pressed="' + !!uf[k] + '">' + esc(W[k]) + '</button>';
           }).join('') +
           (picked.length ? '<div class="dpop-acts"><button type="button" class="lnk" data-go="dfiltclear">Clear</button></div>' : '')) +
+        // grouped: a header over each type, the sort within each
+        '<button type="button" class="lnk dgrp' + (E.dgroup ? ' on' : '') + '" data-go="dgroup" aria-pressed="' + !!E.dgroup + '" title="Group by type">Group</button>' +
         '</div>';
       return h;
     }
@@ -463,7 +470,7 @@
     }
 
     return {
-      hubView: hubView, stripe: stripe, armyPill: armyPill, doctrineMarks: doctrineMarks, armyRules: armyRules, statRow: statRow
+      hubView: hubView, sortLine: sortLine, stripe: stripe, armyPill: armyPill, doctrineMarks: doctrineMarks, armyRules: armyRules, statRow: statRow
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCDossierHub;

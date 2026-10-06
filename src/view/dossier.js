@@ -422,6 +422,41 @@
   /* The dossier's own sort and filter (the line above its list): sorted by one
      thing, and narrowed to the types and Tiers ticked (none ticked, all shown). */
   var dsort = 'type', dfilt = { type: {}, tier: {} };
+  /* Grouped: a header over each group, by what was last sorted or filtered by
+     (`gkey`) — each unit type (the command first), each Tier, each letter, each
+     band of EXP, each TP — and the sort within each */
+  var dgroup = true, gkey = 'type';
+  function groupOf(e) {
+    var p = profile(e.key) || {};
+    switch (gkey) {
+      case 'name': { var c = (String(e.name).charAt(0) || '?').toUpperCase(); return { label: c, rank: c }; }
+      case 'tier': return { label: 'Tier ' + ROMAN[p.tier], rank: -p.tier };
+      case 'xp': { var x = Math.floor((e.exp || 0) / 5) * 5; return { label: x + '\u2013' + (x + 4) + ' EXP', rank: -x }; }
+      case 'tp': return { label: (e.tp || 0) + ' TP', rank: -(e.tp || 0) };
+      default: { var g = C.isLeaderP(p) ? 'Command' : p.group || 'Other'; return { label: g, rank: (g === 'Command' ? '0' : '1') + g }; }
+    }
+  }
+  function groupLabel(e) { return groupOf(e).label; }
+  function byGroup(a, b) {
+    var x = groupOf(a).rank, y = groupOf(b).rank;
+    return x < y ? -1 : x > y ? 1 : 0;
+  }
+  // as the groups stand in a list already grouped (the contract's favoured-first reorders within them)
+  function groupOrder(list) {
+    var at = {};
+    list.forEach(function (e, i) { var g = groupLabel(e); if (!(g in at)) at[g] = i; });
+    return function (e) { return at[groupLabel(e)]; };
+  }
+  // a header before each group's first unit, while grouped (`last`: the group above, kept by the caller)
+  function groupHead(e, at) {
+    if (!dgroup) return '';
+    var g = groupLabel(e);
+    if (at.last === g) return '';
+    at.last = g;
+    return '<h4 class="dgrouphead">' + esc(g) + '</h4>';
+  }
+  // the sort or filter popup open inside a window (the contract's add list), which stays open under it
+  var subPop = null;
   function dossierOrder(list) {
     function p(e) { return profile(e.key) || {}; }
     function lead(e) { return C.isLeaderP(p(e)) ? 1 : 0; }
@@ -430,17 +465,23 @@
     return list.filter(function (e) {
       return (!anyType || dfilt.type[p(e).group || '']) && (!anyTier || dfilt.tier[p(e).tier]);
     }).sort(function (a, b) {
+      return (dgroup && byGroup(a, b)) || within(a, b);
+    });
+    function within(a, b) {
       var byName = String(a.name).localeCompare(String(b.name));
+      // by type: the command first, then each group together
+      var byType = lead(b) - lead(a) || String(p(a).group || '').localeCompare(String(p(b).group || ''));
+      var byTier = p(b).tier - p(a).tier;
       switch (dsort) {
         case 'name': return byName;
-        case 'tier': return p(b).tier - p(a).tier || byName;
+        // the higher Tier first, and within each Tier by type
+        case 'tier': return byTier || byType || byName;
         case 'xp': return (b.exp || 0) - (a.exp || 0) || byName;
         case 'tp': return (b.tp || 0) - (a.tp || 0) || byName;
-        // by type: the command first, then each group together, the higher Tier first
-        default: return lead(b) - lead(a) || String(p(a).group || '').localeCompare(String(p(b).group || '')) ||
-          p(b).tier - p(a).tier || (b.exp || 0) - (a.exp || 0);
+        // by type, and within each the higher Tier first
+        default: return byType || byTier || byName;
       }
-    });
+    }
   }
   function unitPasses(e, key) {
     var f = ufilter[key];
@@ -664,7 +705,7 @@
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rivalOpen() { return rivalOpen; }, get ufilter() { return ufilter; }, unitPasses: unitPasses,
-      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get rosterTab() { return rosterTab; },
+      get dsort() { return dsort; }, get dfilt() { return dfilt; }, get dgroup() { return dgroup; }, get rosterTab() { return rosterTab; }, get subPop() { return subPop; },
       get online() { return online; }, onlineNote: function () { return online ? (KIT_ONLINE || kitOnline()).hubNote() : ''; }
     }));
   }
@@ -709,7 +750,7 @@
       root: root, save: save, statLine: statLine, get menOpen() { return menOpen; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
       get rosterTab() { return rosterTab; }, get camp() { return camp; }, unitPasses: unitPasses,
-      dossierOrder: dossierOrder
+      dossierOrder: dossierOrder, groupHead: groupHead
     }));
   }
   function dossierPanel(co) { return (KIT_ROSTER || kitRoster()).dossierPanel(co); }
@@ -723,6 +764,10 @@
       colourOf: colourOf, esc: esc, note: note, profile: profile, quietTip: quietTip, root: root, save: save,
       spellOut: spellOut, statRow: statRow, stripe: stripe, tip: tip, get camp() { return camp; },
       cmodal: cmodal,
+      // the dossier's sort and filter, for the contract's add list
+      sortLine: function (co, fkey) { return (KIT_HUB || kitHub()).sortLine(co, fkey, true); },
+      dossierOrder: dossierOrder, unitPasses: unitPasses, groupHead: groupHead, groupOrder: groupOrder,
+      get dgroup() { return dgroup; },
       get contract() { return contract; }, set contract(v) { contract = v; },
       get view() { return view; }, set view(v) { view = v; }
     }));
@@ -1000,6 +1045,10 @@
     // the dossier's sort and filter, dropped down under their buttons: a tap anywhere else puts them away
     if ((openModal === 'dsort' || openModal === 'dfilter') && !ev.target.closest('.dpopwrap')) {
       openModal = null; render();
+      if (!t) return;
+    }
+    if (subPop && !ev.target.closest('.dpopwrap')) {
+      subPop = null; render();
       if (!t) return;
     }
     // a unit's drives, opened beside its icon: a tap anywhere else puts them away
@@ -1310,21 +1359,30 @@
       case 'fmodal': openModal = t.getAttribute('data-kind'); render(); return;
       // the dossier's sort (one at a time) and filter (as many as ticked), from their popups
       // the sort and filter pop-ups: their buttons open them, and close them again
-      case 'dpop': { var pk = t.getAttribute('data-kind'); openModal = openModal === pk ? null : pk; render(); return; }
-      case 'dsort': dsort = t.getAttribute('data-by') || 'type'; openModal = null; render(); return;
+      case 'dpop': {
+        var pk = t.getAttribute('data-kind');
+        // inside a window: a popup of the window's own, the window left open under it
+        if (t.closest('.cmodal')) subPop = subPop === pk ? null : pk;
+        else openModal = openModal === pk ? null : pk;
+        render(); return;
+      }
+      case 'dsort': dsort = gkey = t.getAttribute('data-by') || 'type'; if (subPop) subPop = null; else openModal = null; render(); return;
       case 'dfilt': {
         var dk = t.getAttribute('data-kind'), dv = t.getAttribute('data-val');
         dfilt[dk][dv] = !dfilt[dk][dv];
+        // grouped by what was just filtered; with none of it left, by the sort again
+        gkey = Object.keys(dfilt[dk]).some(function (k) { return dfilt[dk][k]; }) ? dk : dsort;
         render(); return;
       }
-      case 'dfiltclear': dfilt = { type: {}, tier: {} }; ufilter[camp && camp.mode === 'hotseat' ? hubSide : 'A'] = {}; render(); return;
+      case 'dgroup': dgroup = !dgroup; render(); return;
+      case 'dfiltclear': dfilt = { type: {}, tier: {} }; gkey = dsort; ufilter[camp && camp.mode === 'hotseat' ? hubSide : 'A'] = {}; render(); return;
       case 'ufilter': {
         var fk = t.getAttribute('data-fkey'), kind = t.getAttribute('data-kind');
         var fl = ufilter[fk] || (ufilter[fk] = {});
         fl[kind] = !fl[kind];
         // the list it narrows is opened to show it
         if (fk.charAt(0) === 'r') rivalOpen = +fk.slice(1);
-        else { hubPane = 'dossier'; rosterTab = 'units'; docSide = fk; }
+        else if (view === 'hub') { hubPane = 'dossier'; rosterTab = 'units'; docSide = fk; }
         render(); return;
       }
       case 'pastbattle': pastFromList = true; (KIT_AFTER || kitAfter()).showPast(+t.getAttribute('data-i')); openModal = null; view = 'aftermath'; render(); return;

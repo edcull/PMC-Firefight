@@ -120,10 +120,17 @@
        it out), and the buttons that back out of it or go in (`why`: what still
        stands in the way, already escaped; null when nothing does). */
     // the units marked favoured on the dossier first, those marked unfavoured last; otherwise as they stand
-    function byMark(list) {
+    /* The company's units for the add list: as the dossier sorts and filters them
+       (its own line above the list), the favoured still first and the unfavoured last. */
+    function pickOrder(list, fkey) {
+      return byMark(E.dossierOrder(list.filter(function (e) { return E.unitPasses(e, fkey); })), E.dgroup);
+    }
+    // `grouped`: the marks order each group, the groups kept as they stand
+    function byMark(list, grouped) {
       var rank = function (e) { return e.mark === 'fav' ? 0 : e.mark === 'unfav' ? 2 : 1; };
+      var g = grouped ? E.groupOrder(list) : function () { return 0; };
       return list.map(function (e, i) { return { e: e, i: i }; })
-        .sort(function (a, b) { return rank(a.e) - rank(b.e) || a.i - b.i; }).map(function (x) { return x.e; });
+        .sort(function (a, b) { return g(a.e) - g(b.e) || rank(a.e) - rank(b.e) || a.i - b.i; }).map(function (x) { return x.e; });
     }
     function barred(bad) { return bad.length ? ' disabled title="' + esc(bad[0]) + '"' : ''; }
     // down the right: the Trauma Points it carries, or what kind of machine it is (machines take none)
@@ -202,6 +209,8 @@
       h += E.cmodal('cpick', 'Muster your force', body, '<button class="start" data-go="fmodalclose">Done</button>');
       // the add list: back to the muster when done
       h += E.cmodal('cadd', 'Add units', '<div class="muster-head"><b>' + n + (n === 1 ? ' unit' : ' units') + '</b>' + pts + '</div>' + o.limits +
+        // the dossier's own sort and filter, over the company's units
+        (o.co ? E.sortLine(o.co, o.fkey) : '') +
         '<div class="cat cmodal-scroll">' + o.list + '</div>', '<button class="start" data-go="fmodal" data-kind="cpick">Done</button>');
       return h;
     }
@@ -458,9 +467,12 @@
       /* What each Tier asks for at this Battle Tier and Priority Level, and how
          many of each are in the list — the line the skirmish muster sheet shows. */
       var limits = '<p class="limits">' + U.limitsLine(R.compFor(A.faction || 'pmc', E.contract.tier).limits, chk.counts || {}, E.contract.pl) + '</p>';
-      var avail = byMark(contractPicks(A).filter(function (e) { return E.contract.picks.indexOf(e) < 0; }));
-      if (!avail.length) list += '<p class="dnote">Every unit on the books is already in the list.</p>';
+      var notIn = contractPicks(A).filter(function (e) { return E.contract.picks.indexOf(e) < 0; });
+      var avail = pickOrder(notIn, seat());
+      if (!avail.length) list += '<p class="dnote">' + (notIn.length ? 'No unit matches the filter.' : 'Every unit on the books is already in the list.') + '</p>';
+      var at = {};
       avail.forEach(function (e) {
+        list += E.groupHead(e, at);
         var trial = keys.concat([R.entryPick(e)]);
         var bad = blocking(R.checkArmy(trial, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
         list += rosterRow('data-pick="' + e.rid + '"', e, bad);
@@ -489,7 +501,7 @@
         });
       }
       h = scrollTop(h + ordersPanel(A));
-      h += forceBox({ co: A, chk: chk, units: E.contract.picks, limits: limits, drop: 'data-unpick', list: list, auto: 'autopick', clear: 'cclear' });
+      h += forceBox({ co: A, fkey: seat(), chk: chk, units: E.contract.picks, limits: limits, drop: 'data-unpick', list: list, auto: 'autopick', clear: 'cclear' });
       if (!chk.ok) {
         var why;
         if (blocking(chk.faults).length) {
@@ -630,7 +642,7 @@
 
     return {
       offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
-      forceBox: forceBox, scrollTop: scrollTop, byMark: byMark, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
+      forceBox: forceBox, scrollTop: scrollTop, byMark: byMark, pickOrder: pickOrder, groupHead: E.groupHead, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
       autoPick: autoPick, fight: fight, seatBack: seatBack
     };
   };

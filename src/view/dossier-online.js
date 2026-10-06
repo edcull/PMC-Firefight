@@ -537,7 +537,9 @@
       var K = E.contractKit(), list = '';
       // what each Tier asks for at this Battle Tier and Priority Level, and how many of each are in the list
       var limits = '<p class="limits">' + U.limitsLine(R.compFor(co.faction || 'pmc', k.tier).limits, chk.counts || {}, k.pl) + '</p>';
-      K.byMark(co.roster.filter(function (e) { return pk.rids.indexOf(e.rid) < 0; })).forEach(function (e) {
+      var at = {};
+      K.pickOrder(co.roster.filter(function (e) { return pk.rids.indexOf(e.rid) < 0; }), 'A').forEach(function (e) {
+        list += K.groupHead(e, at);
         var rest = e.restUntil > 0;
         var bad = rest ? ['in the workshop'] : blocking(R.checkArmy(keys.concat([R.entryPick(e)]), k.tier, k.pl, co.doctrines, pk.tactic || null, co.faction).faults);
         // what each unit is carrying, as the force screen at one table shows it: its EXP, honours and traumas, and its Trauma Points down the right
@@ -563,7 +565,7 @@
       }
       h = K.scrollTop(h);
       // the list as the contract screen at one table draws it (dossier-contract.js): the force on the page, the picker in a window over it
-      h += K.forceBox({ co: co, chk: chk, units: units, limits: limits, drop: 'data-ocunpick', list: list, auto: 'ocauto', clear: 'occlear' });
+      h += K.forceBox({ co: co, fkey: 'A', chk: chk, units: units, limits: limits, drop: 'data-ocunpick', list: list, auto: 'ocauto', clear: 'occlear' });
       var why = chk.ok ? '' : esc((chk.faults || [])[0] || 'Not a legal force yet.');
       // backing out sits in line with going in, the same button
       h += K.fightBar('ocdrop', ctx.ai ? 'Turn the contract down' : 'Call the contract off', 'ocready', ctx.ai ? 'Fight with this force' : 'Ready — fight with this force', chk.ok ? null : why);
