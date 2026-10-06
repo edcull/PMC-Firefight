@@ -323,6 +323,10 @@
         : '<span class="olob-pub">' + (L.listed ? 'Public' : 'Private') + '</span>';
       // everyone says they are ready, the host too; then the host has Start
       var allReady = (L.slots || []).every(function (x) { return x.kind !== 'human' || x.ready; });
+      h += '</div>';
+      /* as the skirmish room has it, above the chat: the way out a quiet link, and the
+         one thing to do next the full-width button (ready, then the host's Start) */
+      h += '<div class="lob-acts olob-acts"><button class="lnk" data-go="omulti">Leave</button>';
       if (host && allReady) h += '<button class="start" data-go="olobstart">Start the campaign</button>';
       else h += '<button class="start' + (mineSlot.ready ? ' on' : '') + '" data-go="olobready">' +
         (!mineSlot.ready ? 'I am ready' : host ? 'Ready \u2014 waiting for the players' : 'Ready \u2014 waiting for the host') + '</button>';

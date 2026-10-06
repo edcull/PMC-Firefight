@@ -407,8 +407,9 @@
       var sc = host && host.querySelector('.lob-scroll'); if (sc) sc.onscroll = placePop;
     }, 0);
     return '<p class="lob-bad">' + esc(fault) + '</p>' +
-      /* as every other screen has it: the way out a quiet link, the one thing to
-         do next the full-width button — say you are ready, then (the host) take the field */
+      '<div class="lob-scroll">' + termsHTML(host_, mine) + '</div>' +
+      /* under the terms and the forces, above the chat (where the campaign lobby has it too):
+         the way out a quiet link, the one thing to do next the full-width button */
       '<div class="lob-foot lob-acts">' +
       '<button class="lnk" data-lob="leave">Leave this game</button>' +
       (mine && ready ? '<button class="lnk" data-lob="ready">Not ready after all</button>' : '') +
@@ -421,7 +422,6 @@
       (room.watchers.length
         ? '<p class="small lob-watch">Watching: ' +
           room.watchers.map(function (w) { return esc(w.name); }).join(', ') + '</p>' : '') +
-      '<div class="lob-scroll">' + termsHTML(host_, mine) + '</div>' +
       popHTML(mine, host_) +
       chatHTML('room');
   }
@@ -986,14 +986,15 @@
     resumable: function () { return lastRoom(); },
     /* Back to a battle of the player's still being fought online, by its code (the
        main menu's Continue list): their seat is held for them, so joining it seats them. */
-    rejoin: function (code) {
+    rejoin: function (code, inRoom) {
       ensure();
       campBattle = null; campOver = false;
-      var go = function () { keepRoom(code); connect(); net.send('game.join', { id: code }); };
+      // a room not started yet is gone back to on the multiplayer screen (a battle, on the table)
+      var go = function () { keepRoom(code); connect(); if (inRoom) open('room'); net.send('game.join', { id: code }); };
       if (account) { go(); return; }
       whoAmI(function () {
         if (account) { me.name = account.name; go(); }
-        else askSignIn(function () { root.PMCLobby.rejoin(code); });
+        else askSignIn(function () { root.PMCLobby.rejoin(code, inRoom); });
       });
     }
   };

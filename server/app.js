@@ -71,7 +71,8 @@ function create(opts) {
       if (req.method !== 'GET') return send(405, { error: 'method not allowed' }), true;
       const me = auth.session(t);
       if (!me) return send(401, { error: 'sign in first' }), true;
-      return send(200, { games: opts.games ? opts.games.mine(me.id) : [] }), true;
+      // and the rooms still being set up that hold a seat of theirs
+      return send(200, { games: opts.games ? opts.games.mine(me.id) : [], rooms: lobby && lobby.roomsOf ? lobby.roomsOf(me.id) : [] }), true;
     }
     if (req.method !== 'POST') return send(405, { error: 'method not allowed' }), true;
     if (req.headers.origin && !allowOrigin(req.headers.origin, req)) return send(403, { error: 'not from here' }), true;

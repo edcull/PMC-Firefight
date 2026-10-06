@@ -2197,3 +2197,7 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 /* a Battle Honour's chevron, sized to the text it sits in */
 svg.chev { width: .8em; height: .65em; vertical-align: .05em; display: inline-block; }
 .mark-hon svg.chev + svg.chev { margin-left: 1px; }
+/* the campaign lobby's Leave and Ready, above the chat, as the skirmish room has them */
+.olob-acts { display: flex; gap: 8px; align-items: stretch; margin: 0 0 10px; flex: none; }
+.olob-acts .lnk { flex: none; white-space: nowrap; margin: 0; }
+.olob-acts .start { flex: 1 1 auto; margin: 0; }

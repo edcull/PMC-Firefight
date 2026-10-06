@@ -46,6 +46,8 @@
     // a demo is not kept to come back to: back at the menu, it is over
     if (root.PMC_DROP_DEMO) root.PMC_DROP_DEMO();
     m.hidden = false;
+    // back at the menu (a room left, a battle ended): what is under way is asked again
+    remoteAt = 0;
     show(pane || 'main');
     paint();
     Table.start();
@@ -78,7 +80,7 @@
      browser, and — signed in on a server — the account's campaigns not kept
      here, its online campaigns and its battles online still being fought. One
      tapped is picked up; one of this browser's can be put away (asked twice). */
-  var REMOTE = { battles: [], online: [], account: [] }, remoteAt = 0, remoteBusy = false;
+  var REMOTE = { battles: [], online: [], account: [], rooms: [] }, remoteAt = 0, remoteBusy = false;
   function fetchRemote(now) {
     if (remoteBusy || !root.fetch || !root.PMCLobby || !root.PMCLobby.available || !root.PMCLobby.available()) return;
     if (!now && Date.now() - remoteAt < 15000) return;
@@ -94,7 +96,9 @@
         // an online campaign's battle is gone back to through the campaign
         battles: (rs[0].games || []).filter(function (g) { return g.status === 'battle' && !g.campaign; }),
         online: rs[1].campaigns || [],
-        account: rs[2] || []
+        account: rs[2] || [],
+        // a game made over the network and not started yet: its room, held for them
+        rooms: rs[0].rooms || []
       };
       contCard();
       if (at === 'continue' && isOpen()) drawList();
@@ -145,7 +149,7 @@
     });
     // the server's games only for an account signed in (not a guest, and not one just signed out)
     var who = root.PMCAccount && root.PMCAccount.who && root.PMCAccount.who();
-    var remote = who && !who.guest ? REMOTE : { battles: [], online: [], account: [] };
+    var remote = who && !who.guest ? REMOTE : { battles: [], online: [], account: [], rooms: [] };
     remote.account.forEach(function (c) {
       out.push({ key: 'a:' + c.sid, where: 'account', kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : 'Campaign'), name: c.name,
         sub: ['campaign turn ' + (c.turn || 0), ago(c.updated)].filter(Boolean).join(' \u00b7 '), at: c.updated || 0 });
@@ -163,6 +167,11 @@
       if (g.code === liveCode) return;          // the one on the table: first, above
       out.push({ key: 'g:' + g.code, where: 'server', kind: 'Online skirmish', name: g.name,
         sub: [g.against ? 'against ' + g.against : '', ago(g.at)].filter(Boolean).join(' \u00b7 '), at: g.at || 0 });
+    });
+    (remote.rooms || []).forEach(function (r) {
+      if (r.code === liveCode || remote.battles.some(function (g) { return g.code === r.code; })) return;
+      out.push({ key: 'r:' + r.code, where: 'server', kind: r.kind === 'coop' ? 'Online co-op' : 'Online skirmish', name: r.name,
+        sub: ['in its room', r.against ? 'with ' + r.against : 'waiting for a player', 'code ' + r.code].join(' \u00b7 '), at: r.at || 0 });
     });
     // a campaign's battle on the table whose campaign is not in the list (none open): still first
     if (liveCamp && !out.some(function (g) { return g.live; })) {
@@ -232,10 +241,10 @@
     if (kind === 'o') { if (root.PMC_CAMPAIGN) { close(); root.PMC_CAMPAIGN.openOnline(+id); } return; }
     // a hotseat campaign with AI forces, kept on this device (net/localworld.js)
     if (kind === 'w') { if (root.PMC_CAMPAIGN) { close(); root.PMC_CAMPAIGN.openOnline(id); } return; }
-    if (kind === 'g') {
+    if (kind === 'g' || kind === 'r') {
       if (!freshOk()) return;
       close();
-      if (root.PMCLobby && root.PMCLobby.rejoin) root.PMCLobby.rejoin(id);
+      if (root.PMCLobby && root.PMCLobby.rejoin) root.PMCLobby.rejoin(id, kind === 'r');
     }
   }
   function drop(key) {

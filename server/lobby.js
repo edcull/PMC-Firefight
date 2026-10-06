@@ -320,6 +320,21 @@ class Lobby {
     this.settled(g.id);
     return true;
   }
+  /* The rooms still being set up that hold a seat of this account's — in it now, or
+     held for it after a refresh — for the main menu's Continue list. (A battle begun
+     is in the database, and an online campaign's room is gone back to through it.) */
+  roomsOf(id) {
+    const out = [];
+    if (id == null) return out;
+    this.rooms.forEach((room) => {
+      if (room.phase !== P.PHASE.SETUP || (room.settings && room.settings.onlineCampaign)) return;
+      const mine = P.SEATS.filter((s) => room.seats[s] && room.seats[s].id === id)[0];
+      if (!mine) return;
+      const other = room.seats[mine === 'A' ? 'B' : 'A'];
+      out.push({ code: room.id, name: room.name, kind: (room.settings && room.settings.kind) || 'skirmish', against: other ? other.name : null, at: room.at });
+    });
+    return out;
+  }
   /* Put this connection back in a seat being held for it (a refresh, a dropped
      connection, a restart): the room it is in now, or null. */
   rejoinHeld(p) {
