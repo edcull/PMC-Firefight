@@ -234,6 +234,13 @@
             C.creedOf(co).one + ' (' + open + ' free)</button> ';
         }
         var pp0 = promotionPanel(co, side, !!bar);
+        // an army it can no longer field at a Tier it holds: said in the promotion's box, under its line
+        var gaps0 = C.rebuildNeeds(co);
+        if (gaps0.length) {
+          var warn = '<div class="cpwarn">Cannot field a legal army at Tier ' + gaps0.map(function (t) { return ROMAN[t]; }).join(', ') +
+            ' \u2014 recruit or promote from the lowest Tier up.</div>';
+          pp0 = pp0.indexOf('</span></button>') >= 0 ? pp0.replace('</span></button>', '</span></button>' + warn) : pp0.replace(/<\/div>$/, warn + '</div>');
+        }
         // declaring an Aspiring Company is a step up as well: in the promotion's box, a button like its own
         if (!co.aspiring && C.canAspire(co)) {
           pp0 = pp0.replace(/<\/div>$/, '<button class="start" data-go="aspire" data-side="' + side + '">Declare an Aspiring Company</button></div>');
@@ -249,7 +256,9 @@
         }
         if (bar) h += '</div>';
       }
-      var gaps = C.rebuildNeeds(co);
+      // (on the company view it is in the promotion's box; on the dossier, at the foot)
+      var gaps = bar && E.hubPane === 'dossier' ? C.rebuildNeeds(co) : [];
+      if (!bar) gaps = C.rebuildNeeds(co);
       if (gaps.length) {
         h += '<div class="cpwarn">Cannot field a legal army at Tier ' +
           gaps.map(function (t) { return ROMAN[t]; }).join(', ') +
