@@ -1017,6 +1017,29 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
     plain += R.rollArmy(tt, 2, null, 'pmc', 'elite').filter(function (k) { return R.profile(keyOf(k)).cls !== 'infantry'; }).length;
   }
   ok('Cavalry fields more hulls than anyone', cav > 60 && cav > plain, true, cav + ' hulls in 60 forces');
+  var bigOdd = 0, lowCmd = 0, shockVeh = 0, shockN = 0, mortars = 0, cavH = 0, shockH = 0;
+  ['pmc', 'rebel'].forEach(function (f) {
+    C.archetypesFor(f).forEach(function (a) {
+      for (var t = 2; t <= 4; t++) for (var pl2 = 1; pl2 <= 3; pl2++) {
+        var ks2 = R.rollArmy(t, pl2, null, f, a.id);
+        ks2.forEach(function (k) {
+          var p = R.profile(keyOf(k));
+          var own2 = a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || [].concat(a.t1 || [], a.t2 || []).indexOf(p.key) >= 0 || p.command;
+          if (!own2 && p.tier > t) bigOdd++;
+          if (p.command && p.tier < t) lowCmd++;
+          if (a.id === 'shock' && (p.group === 'Transport vehicles' || p.group === 'Engineering and utility vehicles')) shockVeh++;
+          if (a.id === 'swarm' && p.group === 'Remote mortars' && pl2 === 1) mortars++;
+          if (p.cls !== 'infantry') { if (a.id === 'aircav') cavH++; if (a.id === 'shock') shockH++; }
+        });
+        if (a.id === 'shock') shockN++;
+      }
+    });
+  });
+  ok('no odd pick from outside a personality is above the battle\'s Tier', bigOdd, 0);
+  ok('a personality\'s force is led by a commander of the battle\'s Tier', lowCmd, 0);
+  ok('Shock rides to the fight: a transport or engineering vehicle in every force', shockVeh >= shockN, true, shockVeh + ' in ' + shockN);
+  ok('Mercenaries take one mortar unit at most at PL1', mortars <= 3, true, mortars + ' in 3 forces');
+  ok('Cavalry fields more hulls than Shock', cavH > shockH, true, cavH + ' vs ' + shockH);
   ok('...and a roll with no personality still works', R.checkArmy(R.rollArmy(3, 2, null, 'pmc', false), 3, 2).ok && !R.rollArmy(3, 2, null, 'pmc', false).style, true);
   ok('a temper for a skirmish force by its personality id', C.aiTemper({ archetype: 'partisans' }).mod, -1);
 })();

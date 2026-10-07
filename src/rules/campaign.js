@@ -1282,6 +1282,7 @@
       fixed: ['T4'],
       groups: ['Assault troops', 'Basic troops', 'Transport vehicles', 'Engineering and utility vehicles'],
       units: ['chem'],              // and Chem warriors
+      hullsFirst: ['Transport vehicles', 'Engineering and utility vehicles'],   // a ride to the fight and a way through, before anything else
       // Penal troops thrown in first to soak the fire: free, and kept up (one per Tier, four at most)
       signature: ['penal'],
       signatureMax: 4,

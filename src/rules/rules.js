@@ -479,15 +479,20 @@
     if (style) return all.filter(function (a) { return a.id === style; })[0] || null;
     return all.length ? all[Math.floor(Math.random() * all.length)] : null;
   }
-  function styleKit(a, rnd, pl) {
+  function styleKit(a, rnd, pl, bt) {
     var flat = function (l) { return [].concat.apply([], l || []); };
     var sigs = a.signature || [], sets = sigs.length ? (Array.isArray(sigs[0]) ? sigs : [sigs]) : [];
     var sigKeys = flat(sets), lim = a.limit || {}, mix = a.mix || {};
     var starters = flat([a.t1, a.t2, a.refill ? Object.keys(a.refill) : []]);
     var profile = function (k) { return BY_KEY[k]; };
     var groupOf = function (k) { var p = profile(k); return p ? p.group : null; };
-    // a limit set for a campaign roster, cut to a battle force: a third of it a Priority Level (0 stays 0)
-    function cut(n) { return n ? Math.max(1, Math.ceil(n * pl / 3)) : 0; }
+    // a limit set for a campaign roster, cut to a battle force: a quarter of it a Priority Level (0 stays 0)
+    function cut(n) { return n ? Math.max(1, Math.round(n * pl / 4)) : 0; }
+    // a group its mix weighs at under 1 (the Faithful's artillery) is kept to one for every two Priority Levels
+    function lightCap(g) { return mix[g] && mix[g] < 1 ? Math.ceil(pl / 2) : null; }
+    function hullFirst(p) {
+      return p.cls !== 'infantry' && (a.hullsFirst || []).some(function (h) { return h === p.group || h === p.key || (h === 'transports' && p.transport > 0); });
+    }
     var machineMinded = !!a.fieldsMachines || (a.machinesMax || 0) >= 5;
     function liked(p) { return (a.groups || []).indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || sigKeys.indexOf(p.key) >= 0; }
     function count(keys, f) { return keys.filter(function (k) { return f(splitPick(k).key); }).length; }
@@ -503,24 +508,30 @@
       allows: function (p, keys) {
         if (lim[p.key] != null && count(keys, function (x) { return x === p.key; }) >= cut(lim[p.key])) return false;
         if (lim[p.group] != null && count(keys, function (x) { return groupOf(x) === p.group; }) >= cut(lim[p.group])) return false;
+        var lc = lightCap(p.group);
+        if (lc != null && count(keys, function (x) { return groupOf(x) === p.group; }) >= lc) return false;
         if (p.cls !== 'infantry' && !p.leaderBug && !liked(p)) return false;
-        if (p.cls !== 'infantry' && a.machinesMax != null && a.machinesMax < 3 &&
-          count(keys, function (x) { var q = profile(x); return q && q.cls !== 'infantry'; }) >= a.machinesMax * pl) return false;
+        if (p.cls !== 'infantry' && !p.leaderBug) {
+          // half the hulls the rules allow (three a Priority Level), or fewer; all of them only for a machine company
+          var hullCap = machineMinded ? 3 * pl : Math.ceil(1.5 * pl);
+          if (a.machinesMax != null && a.machinesMax < 3) hullCap = Math.min(hullCap, a.machinesMax * pl);
+          if (count(keys, function (x) { var q = profile(x); return q && q.cls !== 'infantry'; }) >= hullCap) return false;
+        }
         return true;
       },
       /* its own groups (or, at the Tiers they do not reach, the units it is founded
-         with) most of the time, the group furthest behind its mix first, and its
-         favourite hulls ahead of the rest */
+         with) most of the time, and the group furthest behind its mix first (its
+         favourite hulls are taken before this, one a Priority Level) */
       favour: function (list, keys, wider) {
         var own = list.filter(function (p) { return liked(p) || starters.indexOf(p.key) >= 0; });
-        if (!own.length || rnd() > 0.85) return list;
+        if (!own.length || rnd() > 0.85) {
+          // an odd pick from outside its kind is never one of the battle's big guns (a Gauss cannon in a Shock force)
+          var odd = list.filter(function (p) { return liked(p) || starters.indexOf(p.key) >= 0 || p.tier <= bt; });
+          return odd.length ? odd : list;
+        }
         // a machine company (Cavalry) takes a hull whenever it has the choice, half the time
         var hulls = (wider || list).filter(function (p) { return p.cls !== 'infantry' && liked(p); });
         if (machineMinded && hulls.length && rnd() < 0.5) return hulls;
-        var hf = own.filter(function (p) {
-          return p.cls !== 'infantry' && (a.hullsFirst || []).some(function (h) { return h === p.group || h === p.key || (h === 'transports' && p.transport > 0); });
-        });
-        if (hf.length && rnd() < 0.6) return hf;
         var inMix = own.filter(function (p) { return mix[p.group]; });
         if (inMix.length && rnd() < 0.7) {
           var best = Math.max.apply(null, inMix.map(function (p) { return shortfall(p.group, keys); }));
@@ -529,6 +540,7 @@
         return own;
       },
       own: function (p) { return liked(p) || starters.indexOf(p.key) >= 0; },
+      hullFirst: function (p) { return liked(p) && hullFirst(p); },
       rides: function (p) { return (a.riders || []).indexOf(p.group) >= 0; }
     };
   }
@@ -539,7 +551,7 @@
     var a = styleFor(faction, style);
     if (a) {
       // a personality's force, rolled until it is legal; failing that, an ordinary one
-      var kit = styleKit(a, rnd, pl);
+      var kit = styleKit(a, rnd, pl, battleTier);
       for (var go = 0; go < 12; go++) {
         var ks = faction === 'bugs' ? rollSwarm(battleTier, pl, rnd, kit) : rollPlain(battleTier, pl, rnd, faction, kit);
         if (ks && checkArmy(ks, battleTier, pl, null, null, faction).ok) { ks.style = a.id; return ks; }
@@ -627,6 +639,11 @@
     }
     // a command unit first, at or below the battle tier
     var cmds = POOL.filter(function (p) { return (p.command || p.alpha) && p.tier <= battleTier && room(p); });
+    // (a personality's force is led by a commander of the battle's own Tier where it can be, or the nearest below)
+    if (st && cmds.length) {
+      var topC = Math.max.apply(null, cmds.map(function (p) { return p.tier; }));
+      cmds = cmds.filter(function (p) { return p.tier === topC; });
+    }
     if (cmds.length) take(pick(cmds));
     // then the minimum of the battle tier's own units
     var need = comp.limits[battleTier - 1][0] * pl;
@@ -647,6 +664,14 @@
         take(pick(can.filter(function (p) { return p.tier === hi; })));
       }
     });
+    /* ...and its favourite hulls (Bastion's hunters, Shock's transports and engineering
+       vehicles, Free Space's troop carriers): one a Priority Level, the biggest that fits */
+    if (st) for (var hn = 0; hn < pl; hn++) {
+      var hulls = POOL.filter(function (p) { return !p.command && st.hullFirst(p) && room(p); });
+      if (!hulls.length) break;
+      var hiH = Math.max.apply(null, hulls.map(function (p) { return p.tier; }));
+      take(pick(hulls.filter(function (p) { return p.tier === hiH; })));
+    }
     // then spend what is left on anything legal, favouring the bigger units
     guard = 0;
     while (guard++ < 400) {
