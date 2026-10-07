@@ -338,10 +338,9 @@ input[type=range] { width: 100%; accent-color: var(--alpha); }
     content: 'Options'; display: block; font-family: var(--display); font-size: 10px; letter-spacing: .09em;
     text-transform: uppercase; color: var(--ink-faint); margin-bottom: 7px;
   }
-  /* an admin's weapon editor, under the options (whose Fire it shares) */
+  /* an admin's weapon editor, under the options, with a Fire of its own to try a change */
   #vctl .vweaponbody { order: 2; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
   #vctl .vweaponbody::before { content: 'Weapon · admin'; color: var(--alpha); }
-  #vctl .vweaponbody [data-do="fire"] { display: none; }
   #vctl .voptsbody > .vacts:first-child { margin-top: 0; }
   #vlist .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
   #vlist .card.unit { width: auto; min-width: 0; padding: 4px 4px 5px; }
