@@ -1198,7 +1198,7 @@
       t1: ['enforcers', 'recruits'],
       t2: ['ecobats'],
       machines: [], vehicles: 0,
-      doctrines: ['T5', 'T2', 'T6', 'S4', 'S3', 'S2'],
+      doctrines: ['T5', 'T2', 'T6', 'S4', 'S3', 'S5'],
       groups: ['Heavy infantry', 'Heavy support', 'Hunters and destroyers', 'Support vehicles', 'Engineering and utility vehicles'],
       spend: 'promote'
     },
@@ -1210,7 +1210,7 @@
       t2: ['rookie', 'ecobats'],
       machines: [], vehicles: 0,
       // a handful of top-tier veterans make a legal army; then whatever keeps them fit, trained and paid
-      doctrines: ['O2', 'S3', 'S6', 'T1', 'T2', 'S5', 'S2'],
+      doctrines: ['O2', 'S3', 'S6', 'T1', 'T2', 'S5', 'T6'],
       fixed: ['O2'],
       groups: ['Rifle infantry', 'Heavy infantry', 'Assault troops'],
       units: ['gausscannon'],
@@ -1280,7 +1280,7 @@
       t1: ['recruits', 'enforcers'],
       t2: ['lighteng', 'rookie'],
       machines: ['lpv', 'unarmoured'], vehicles: 2,
-      doctrines: ['S1', 'O3', 'O6', 'O1', 'S4', 'S2'],
+      doctrines: ['S1', 'O3', 'O6', 'O1', 'T2', 'S2'],
       fixed: ['S1'],
       groups: ['Combat vehicles', 'Transport vehicles', 'Transport aircraft', 'Strike aircraft', 'Assault troops', 'Rifle infantry'],
       machinesMax: 6,               // as many hulls as a Priority Level 2 army can field
