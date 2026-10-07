@@ -1201,6 +1201,7 @@
       machines: [], vehicles: 0,
       doctrines: ['T5', 'T2', 'T6', 'S4', 'S3', 'S5'],
       groups: ['Heavy infantry', 'Heavy support', 'Light support', 'Remote mortars', 'Hunters and destroyers', 'Support vehicles', 'Engineering and utility vehicles'],
+      second: ['Rifle infantry'], // what it takes when its own run out (a skirmish roll)
       // mostly armour, with machine guns, anti-tank teams and mortars behind it (Recruits promote into all three),
       // the machine guns and the anti-tank teams half and half
       mix: { 'Heavy infantry': 3, 'Light support': 1, 'Heavy support': 1, 'Remote mortars': 1 },
@@ -1221,6 +1222,8 @@
       doctrines: ['O2', 'S3', 'S6', 'T1', 'S5', 'T6'],
       fixed: ['O2'],
       groups: ['Rifle infantry', 'Heavy infantry', 'Assault troops'],
+      second: ['Light infantry'], // what it takes when its own run out (a skirmish roll)
+      mix: { 'Heavy infantry': 2, 'Rifle infantry': 1, 'Assault troops': 1 },
       units: ['gausscannon'],
       lean: true,                   // few units, all of them good: no free troops to pad the list, no hiring with spare money
       honourFirst: true,            // and with Rapid Training Methods, each earns an honour before it is promoted
@@ -1239,6 +1242,7 @@
       // the business (paid, well thought of, the job at the size that pays, the army to fit it), and the guns it hires
       doctrines: ['S2', 'S5', 'S4', 'O6', 'O4', 'T3'],
       groups: ['Basic troops', 'Rifle infantry', 'Light support', 'Remote mortars', 'Transport vehicles'],
+      second: ['Heavy support', 'Assault troops'], // what it takes when its own run out (a skirmish roll)
       // two of the line (basic and rifle troops) to each machine gun and each mortar, the mortars four at most
       mix: { 'Basic troops': 1, 'Rifle infantry': 1, 'Light support': 1, 'Remote mortars': 1 },
       limit: { 'Remote mortars': 4, enforcers: 0 },   // (and no Enforcers: they grow only into battle armour)
@@ -1258,6 +1262,7 @@
       refill: { recruits: 2, irregulars: 1 },
       doctrines: ['O3', 'S6', 'T6', 'O6', 'T1', 'O1'],
       groups: ['Rifle infantry', 'Light infantry', 'Support teams', 'Drones', 'Remote mortars'],
+      second: ['Light support', 'Assault troops'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Rifle infantry': 2, 'Light infantry': 1 },   // two rifle teams to each scout or sniper team
       // the rare ones: LRRP, snipers, drones and EW — and a couple of mortars in support
       limit: { lrrp: 2, snipers: 2, 'Drones': 2, ew: 2, ewveh: 1, 'Remote mortars': 2 },
@@ -1281,7 +1286,10 @@
       doctrines: ['T4', 'T1', 'T2', 'S1', 'O3', 'O5'],
       fixed: ['T4'],
       groups: ['Assault troops', 'Basic troops', 'Transport vehicles', 'Engineering and utility vehicles'],
+      second: ['Heavy infantry', 'Rifle infantry'], // what it takes when its own run out (a skirmish roll)
+      mix: { 'Assault troops': 3, 'Basic troops': 1 },
       units: ['chem'],              // and Chem warriors
+      hullsFirst: ['Transport vehicles', 'Engineering and utility vehicles'],   // a ride to the fight and a way through, before anything else
       // Penal troops thrown in first to soak the fire: free, and kept up (one per Tier, four at most)
       signature: ['penal'],
       signatureMax: 4,
@@ -1299,6 +1307,7 @@
       doctrines: ['S1', 'O3', 'O6', 'O1', 'T2', 'S2'],
       fixed: ['S1'],
       groups: ['Combat vehicles', 'Transport vehicles', 'Transport aircraft', 'Strike aircraft', 'Assault troops', 'Rifle infantry'],
+      second: ['Light infantry', 'Heavy support'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Rifle infantry': 1, 'Assault troops': 1 },   // as many assault troops as riflemen in the back of its vehicles
       machinesMax: 6,               // as many hulls as a Priority Level 2 army can field
       fieldsMachines: true,         // and into battle in them first
@@ -1320,6 +1329,7 @@
       foundFree: true,
       machines: ['rtechnical', 'rltv'], vehicles: 2,
       groups: ['Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles', 'Rebel transport vehicles'],
+      second: ['Mounted Warriors', 'Holy Warriors'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Freedom Warriors': 3, 'Rebel support troops': 1, 'Rebel artillery': 1 },
       machinesMax: 3,
       // the cells and their commissars, the movement and its cry: Hero and Prophet, nothing criminal
@@ -1336,6 +1346,7 @@
       t2: ['rriderwar', 'rmilitia'],
       machines: ['rtechnical'], vehicles: 1,
       groups: ['Mounted Warriors', 'Holy Warriors', 'Freedom Warriors', 'Rebel transport vehicles', 'Rebel aviation', 'Rebel combat vehicles'],
+      second: ['Rebel support troops', 'Deserters and POWs'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Mounted Warriors': 3, 'Holy Warriors': 1, 'Freedom Warriors': 1 },
       limit: { 'Rebel artillery': 0 },
       riders: ['First Among Equals'],
@@ -1359,6 +1370,7 @@
       foundFree: true,
       machines: ['rtechnical'], vehicles: 1,
       groups: ['Holy Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles', 'Rebel transport vehicles'],
+      second: ['Mounted Warriors', 'Miners'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Holy Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
       machinesMax: 2,
       // Holy Fury first; then Stairs to Heaven or Martyrdom (two Prophet at most), and the Hero path: loyalty, victory and alms
@@ -1376,6 +1388,7 @@
       foundFree: true,
       machines: ['rtechnical', 'rlicv'], vehicles: 2,
       groups: ['Miners', 'Freedom Warriors', 'Rebel combat vehicles', 'Rebel artillery'],
+      second: ['Rebel support troops', 'Deserters and POWs'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Miners': 3, 'Freedom Warriors': 1, 'Rebel artillery': 0.5 },
       machinesMax: 4,
       hullsFirst: ['Rebel combat vehicles'],
@@ -1395,6 +1408,7 @@
       foundFree: true,
       machines: ['rtechnical'], vehicles: 1,
       groups: ['Chosen Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles'],
+      second: ['Miners', 'Deserters and POWs'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Chosen Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
       signature: ['rassaultcdo', 'rsabcdo', 'rsnipercdo'],
       signatureCap: 8,              // the commandos are the band: up to eight of them
@@ -1417,6 +1431,7 @@
       refill: { rdesconscript: 1 },
       machines: ['rtechnical'], vehicles: 1,
       groups: ['Deserters and POWs', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel aviation', 'Rebel combat vehicles', 'Rebel flak vehicles'],
+      second: ['Holy Warriors', 'Mounted Warriors'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Deserters and POWs': 2, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 1.5 },
       machinesMax: 3,
       hullsFirst: ['Rebel aviation'],
