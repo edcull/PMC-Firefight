@@ -122,8 +122,9 @@
         var added = take(function (p, e) {
           var trial = picked.concat([R.entryPick(e)]);
           var tr = R.checkArmy(trial, battleTier, pl, docs);
-          // within the points, and breaking nothing the list did not already break
-          return tr.spent <= comp.points * pl && tr.faults.length <= res.faults.length;
+          // within the points, breaking nothing the list did not already break, and over no cap
+          // it was not over (a second Command Unit swapped in for some other fault never comes out)
+          return tr.spent <= comp.points * pl && tr.faults.length <= res.faults.length && capFaults(trial) <= capFaults(picked);
         });
         if (!added) break;
       }
@@ -146,6 +147,13 @@
         if (!better) break;
         delete used[pickedE[better.pi].rid]; used[better.e.rid] = 1;
         pickedE[better.pi] = better.e; picked = better.pick; last = better.res;
+      }
+      /* ...and still breaking one: leave a unit at home, if the list without it is legal
+         (what the top-up put in over a cap, say). */
+      for (var drop = 0; drop < pickedE.length && !last.ok; drop++) {
+        var less = picked.filter(function (_, n) { return n !== drop; });
+        var lr = R.checkArmy(less, battleTier, pl, docs);
+        if (lr.ok) { picked = less; pickedE = pickedE.filter(function (_, n) { return n !== drop; }); last = lr; }
       }
       return { ok: last.ok, missing: [], fault: last.ok ? null : (last.faults[0] || 'No legal list.') };
     }

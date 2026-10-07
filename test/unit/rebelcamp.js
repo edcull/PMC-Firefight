@@ -345,7 +345,7 @@ head('A hundred campaign turns');
 })();
 
 head('Rebel groups a solo campaign fights');
-ok('five of them', C.REBEL_ARCHETYPES.length, 5);
+ok('six of them', C.REBEL_ARCHETYPES.length, 6);
 ok('every one is a Rebel force', C.REBEL_ARCHETYPES.every(function (a2) { return a2.faction === 'rebel'; }), true);
 ok('...founds a legal revolt', (function () {
   var bad = 0;

@@ -908,11 +908,75 @@ head('Contracts at a Tier the AI force can field in full');
     for (var i = 0; i < 4; i++) {
       var co = C.newCompany('R', { faction: a.faction || 'pmc' });
       C.foundRival(co, a.id, []);
-      co.roster.forEach(function (e) { if (C.freeUnit(e.key)) freeAtFounding.push(a.id + ':' + e.key); });
+      // (a revolt that starts as armed civilians founds with them on purpose: `foundFree`)
+      if (!a.foundFree) co.roster.forEach(function (e) { if (C.freeUnit(e.key)) freeAtFounding.push(a.id + ':' + e.key); });
     }
   });
   ok('no AI force founds with Penal troops, Armed civilians, Tiny bug swarms or Primitive Epsilons', freeAtFounding.length, 0, freeAtFounding.slice(0, 5).join(' '));
   ok('...and they are marked as the free ones', [C.freeUnit('penal'), C.freeUnit('rciv'), C.freeUnit('btiny'), C.freeUnit('xeps1')].every(Boolean) && !C.freeUnit('recruits'), true);
+})();
+
+head('Six personalities to every army');
+(function () {
+  ['pmc', 'rebel', 'bugs', 'xeno'].forEach(function (f) {
+    ok(f + ': six archetypes', C.archetypesFor(f).length, 6);
+  });
+  var bad = [];
+  ['aircav', 'turncoats', 'greyplague', 'velior', 'ulvar', 'shkar'].forEach(function (id) {
+    var a = C.archetype(id);
+    for (var i = 0; i < 3; i++) {
+      var co = C.newCompany('N', { faction: a.faction || 'pmc' });
+      C.foundRival(co, id, []);
+      if (co.archetype !== id || !C.canFieldArmy(co, 1, 1)) bad.push(id);
+    }
+  });
+  ok('each new one founds a legal force of its own kind', bad.join(','), '');
+  // a signature unit nothing else on its list would bring in, bought once it can be
+  var sky = C.newCompany('S', { faction: 'bugs' }); C.foundRival(sky, 'velior', []);
+  sky.tier = 2; sky.kUC = 40; C.developRival(sky);
+  ok('a sky swarm spawns its flyers', sky.roster.some(function (e) { return R.profile(e.key).group === 'Flying Bugs'; }), true);
+  var plague = C.newCompany('P', { faction: 'bugs' }); C.foundRival(plague, 'greyplague', []);
+  plague.tier = 2; plague.kUC = 40; C.developRival(plague);
+  ok('...and the Grey Plague its Infected', plague.roster.some(function (e) { return e.key === 'binfected'; }), true);
+})();
+
+head('Doctrines: fixed, a shortlist, or random');
+(function () {
+  var all = C.ARCHETYPES.concat(C.archetypesFor('rebel'), C.archetypesFor('bugs'), C.archetypesFor('xeno'));
+  ok('every archetype names doctrines of its own army only', all.filter(function (a) {
+    var ids = C.creedOf({ faction: a.faction || 'pmc' }).list.map(function (d) { return d.id; });
+    return (a.doctrines || []).concat(a.fixed || []).some(function (d) { return ids.indexOf(d) < 0; });
+  }).map(function (a) { return a.id; }).join(','), '');
+  ok('every PMC doctrine is on some company\'s list', C.creedOf({ faction: 'pmc' }).list.filter(function (d) {
+    return !C.ARCHETYPES.some(function (a) { return a.doctrines.indexOf(d.id) >= 0 || (a.fixed || []).indexOf(d.id) >= 0; });
+  }).map(function (d) { return d.name; }).join(', '), '');
+  // (the PMC companies and the revolts all have a creed: none of them is random)
+  ok('...and each army has forces of all three kinds', ['pmc', 'rebel', 'bugs', 'xeno'].every(function (f) {
+    var as = C.archetypesFor(f);
+    return (f === 'pmc' || f === 'rebel' || as.some(function (a) { return a.random; })) && as.some(function (a) { return (a.fixed || []).length; }) &&
+      as.some(function (a) { return !a.random && !(a.fixed || []).length; });
+  }), true);
+  function found(id) { var a = C.archetype(id), co = C.newCompany('D', { faction: a.faction || 'pmc' }); C.foundRival(co, id, []); return co; }
+  var plague = [0, 1, 2, 3, 4].map(function () { return found('greyplague'); });
+  ok('the Grey Plague always founds with Fungi Symbiosis', plague.every(function (co) { return co.doctrines[0] === 'BP4'; }), true);
+  var raid = found('shkar');
+  ok('the Sh\'kar raiders take the teleport network, then the cloaking, first', raid.docPlan.slice(0, 2).join(), 'XO1,XT4');
+  var tc = [0, 1, 2, 3, 4, 5].map(function () { return found('turncoats'); });
+  ok('the Turncoats take La Liberte, then their Villain doctrines, the Prophet ones last', tc.every(function (co) {
+    var pl = co.docPlan;
+    return pl[0] === 'H6' && ['V6', 'V5', 'V1'].indexOf(pl[1]) >= 0 && ['V6', 'V5', 'V1'].indexOf(pl[2]) >= 0 && ['P5', 'P6'].indexOf(pl[4]) >= 0 && ['P5', 'P6'].indexOf(pl[5]) >= 0;
+  }), true, tc.map(function (co) { return co.docPlan.slice(0, 6).join(''); }).join(' '));
+  var pit = [0, 1, 2, 3, 4, 5].map(function () { return found('pitheads'); });
+  ok('the Pitheads found with a pick from their list, and take Labour Leader at Tier II', pit.every(function (co) {
+    return co.doctrines.length === 1 && co.doctrines[0] !== 'H3' && C.archetype('pitheads').doctrines.indexOf(co.doctrines[0]) >= 0 && co.docPlan[1] === 'H3';
+  }), true, pit.map(function (co) { return co.docPlan.slice(0, 2).join('>'); }).join(' '));
+  var arm = [0, 1, 2, 3, 4, 5].map(function () { return found('armour'); }), short = C.archetype('armour').doctrines;
+  ok('a shortlist force takes its six first, in an order of its own', arm.every(function (co) {
+    return co.docPlan.slice(0, 6).every(function (d) { return short.indexOf(d) >= 0; });
+  }) && arm.some(function (co) { return co.docPlan.slice(0, 6).join() !== arm[0].docPlan.slice(0, 6).join(); }), true, arm.map(function (co) { return co.docPlan.slice(0, 6).join(''); }).join(' '));
+  var firsts = {};
+  for (var i = 0; i < 40; i++) firsts[found('hydra').docPlan[0]] = 1;
+  ok('a random force draws from the whole list', Object.keys(firsts).length > 8, true, Object.keys(firsts).length + ' different first doctrines in 40');
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

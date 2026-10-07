@@ -1184,21 +1184,30 @@
      Deliberately simple and legible: fix any legality gap first, then promote the
      unit closest to affording it, then bank toward the next Company Tier. */
   /* ================= rival companies (solo play) =================
-     A rival is not a random list: it is one of five archetypes, and the archetype
+     A rival is not a random list: it is one of six archetypes, and the archetype
      decides what it founds with, which doctrines it reaches for, what it recruits
      and how it spends experience. Over a dozen battles it grows into something
      recognisable, which is the whole point of fighting the same company twice. */
   var ARCHETYPES = [
     {
-      id: 'armour', name: 'Armoured',
+      // (id kept from when it was "Armoured", so a saved campaign still finds it)
+      id: 'armour', name: 'Bastion',
       blurb: 'Fights from behind armour plate and expects you to come to it.',
       names: ['Kessler Combine', 'Ironvein Holdings', 'Bastion Werke', 'Sable Armour Group'],
+      // armour before mobility: Enforcers on the way to battle armour, no transports, and the heavy guns
       t1: ['enforcers', 'recruits'],
-      t2: ['ecobats', 'rookie'],
-      machines: ['lpv', 'unarmoured'], vehicles: 2,
-      doctrines: ['O1', 'T4', 'S2', 'T2', 'S3', 'O6'],
-      groups: ['Combat vehicles', 'Transport vehicles', 'Heavy infantry', 'Hunters and destroyers'],
-      spend: 'machines'
+      t2: ['ecobats'],
+      machines: [], vehicles: 0,
+      doctrines: ['T5', 'T2', 'T6', 'S4', 'S3', 'S5'],
+      groups: ['Heavy infantry', 'Heavy support', 'Light support', 'Remote mortars', 'Hunters and destroyers', 'Support vehicles', 'Engineering and utility vehicles'],
+      // mostly armour, with machine guns, anti-tank teams and mortars behind it (Recruits promote into all three),
+      // the machine guns and the anti-tank teams half and half
+      mix: { 'Heavy infantry': 3, 'Light support': 1, 'Heavy support': 1, 'Remote mortars': 1 },
+      limit: { 'Remote mortars': 3 },
+      refill: { enforcers: 2, recruits: 1 },   // Tier I gaps later: Enforcers become battle armour, Recruits the gun crews
+      machinesMax: 4,               // its heavy guns are on hulls: tank hunters, destroyers, gun carriers
+      hullsFirst: ['Hunters and destroyers', 'Support vehicles'],   // the guns before the engineering vehicles
+      spend: 'promote'
     },
     {
       id: 'elite', name: 'Elite',
@@ -1206,43 +1215,90 @@
       names: ['Vantage Solutions', 'The Ashen Line', 'Praetor Associates', 'Halcyon Executive'],
       t1: ['enforcers', 'recruits'],
       t2: ['rookie', 'ecobats'],
-      machines: ['lpv'], vehicles: 1,
-      doctrines: ['S6', 'T4', 'S3', 'O2', 'T1', 'S2'],
+      machines: [], vehicles: 0,
+      // a handful of top-tier veterans make a legal army; then whatever keeps them fit, trained and paid
+      doctrines: ['O2', 'S3', 'S6', 'T1', 'S5', 'T6'],
+      fixed: ['O2'],
       groups: ['Rifle infantry', 'Heavy infantry', 'Assault troops'],
+      units: ['gausscannon'],
+      lean: true,                   // few units, all of them good: no free troops to pad the list, no hiring with spare money
+      honourFirst: true,            // and with Rapid Training Methods, each earns an honour before it is promoted
       spend: 'promote'
     },
     {
-      id: 'swarm', name: 'Swarm',
-      blurb: 'Buries a position under more bodies than it can shoot.',
+      // (id kept from when it was "Swarm", so a saved campaign still finds it)
+      id: 'swarm', name: 'Mercenary',
+      blurb: 'Fights for whoever pays, wherever they point, and sends the invoice before the smoke clears.',
       names: ['Corvid Contracting', 'The Tide Company', 'Grey Market Levies', 'Nineteen Hands'],
-      t1: ['recruits', 'irregulars', 'penal'],
-      t2: ['rookie', 'lighteng'],
+      // a little of everything and nothing specialised: hired wide rather than trained tall
+      // Recruits and Irregulars (Enforcers grow only into battle armour, which it does not hire)
+      t1: ['recruits', 'irregulars'],
+      t2: ['rookie', 'lmgsection'],
       machines: ['unarmoured'], vehicles: 1,
-      doctrines: ['O5', 'O2', 'T1', 'T2', 'S5', 'O6'],
-      groups: ['Basic troops', 'Rifle infantry', 'Assault troops'],
+      // the business (paid, well thought of, the job at the size that pays, the army to fit it), and the guns it hires
+      doctrines: ['S2', 'S5', 'S4', 'O6', 'O4', 'T3'],
+      groups: ['Basic troops', 'Rifle infantry', 'Light support', 'Remote mortars', 'Transport vehicles'],
+      // two of the line (basic and rifle troops) to each machine gun and each mortar, the mortars four at most
+      mix: { 'Basic troops': 1, 'Rifle infantry': 1, 'Light support': 1, 'Remote mortars': 1 },
+      limit: { 'Remote mortars': 4, enforcers: 0 },   // (and no Enforcers: they grow only into battle armour)
       spend: 'recruit'
     },
     {
-      id: 'marksmen', name: 'Marksmen',
-      blurb: 'Shoots from a long way off and moves before you can answer.',
+      // (id kept from when it was "Marksmen")
+      id: 'marksmen', name: 'Special Ops',
+      blurb: 'Never where you are looking: a sniper in the treeline, a drone overhead, and your radios full of static.',
       names: ['Meridian Security', 'Longsight Partners', 'The Quiet Trade', 'Orlov Group'],
-      t1: ['mortarsection', 'recruits'],
-      t2: ['observers', 'lmgsection', 'lightat'],
-      machines: ['lpv'], vehicles: 1,
-      doctrines: ['T6', 'T3', 'O4', 'S2', 'S3', 'O6'],
-      groups: ['Light infantry', 'Light support', 'Heavy support', 'Remote mortars'],
-      spend: 'honours'
+      // Irregulars and Recruits to promote, Forward observers, and a rifle team or nomads
+      t1: ['irregulars', 'recruits'],
+      t2: ['observers', ['rookie', 'nomads']],
+      machines: [], vehicles: 0,
+      // Tier I gaps later: Recruits (who become rifle teams) and Irregulars (who become scouts)
+      refill: { recruits: 2, irregulars: 1 },
+      doctrines: ['O3', 'S6', 'T6', 'O6', 'T1', 'O1'],
+      groups: ['Rifle infantry', 'Light infantry', 'Support teams', 'Drones', 'Remote mortars'],
+      mix: { 'Rifle infantry': 2, 'Light infantry': 1 },   // two rifle teams to each scout or sniper team
+      // the rare ones: LRRP, snipers, drones and EW — and a couple of mortars in support
+      limit: { lrrp: 2, snipers: 2, 'Drones': 2, ew: 2, ewveh: 1, 'Remote mortars': 2 },
+      // and the vehicles and aircraft it may take: patrol and recon cars, a command and an EW vehicle, transport and strike craft
+      units: ['nomads', 'lpv', 'hpv', 'recon', 'cmdveh', 'ewveh', 'adaptedcraft', 'lightcraft', 'heavycraft', 'fsc', 'tsc', 'gunboat', 'vtoldrone'],
+      // ...of which it keeps a couple on the books, and a drone or EW team or two — fewer machines than the Cavalry
+      signature: [['lpv', 'hpv', 'recon', 'cmdveh', 'adaptedcraft', 'lightcraft', 'fsc'], ['ew', 'drecon', 'dcombat']],
+      signatureMax: 2,
+      // promoted to Veterans, Forward observers and Sharpshooters, then trained with what is left
+      spend: 'promote'
     },
     {
       id: 'shock', name: 'Shock',
       blurb: 'Closes the distance and settles it with knives.',
       names: ['Black Harbour PMC', 'Redline Assault', 'The Hard Bargain', 'Kroeger Shock'],
-      t1: ['irregulars', 'penal', 'enforcers'],
-      t2: ['lighteng', 'rookie'],
-      machines: ['ltransport', 'unarmoured'], vehicles: 2,
-      doctrines: ['T4', 'T2', 'S5', 'T1', 'O6', 'S6'],
-      groups: ['Assault troops', 'Basic troops', 'Heavy infantry'],
+      // Irregulars (who promote into assault troops) and Enforcers, light engineers, and a truck to ride in
+      t1: ['irregulars', 'enforcers'],
+      t2: ['lighteng'],
+      machines: ['unarmoured'], vehicles: 1,
+      doctrines: ['T4', 'T1', 'T2', 'S1', 'O3', 'O5'],
+      fixed: ['T4'],
+      groups: ['Assault troops', 'Basic troops', 'Transport vehicles', 'Engineering and utility vehicles'],
+      units: ['chem'],              // and Chem warriors
+      // Penal troops thrown in first to soak the fire: free, and kept up (one per Tier, four at most)
+      signature: ['penal'],
+      signatureMax: 4,
       spend: 'promote'
+    },
+    {
+      // (id kept from when it was "Air Cavalry")
+      id: 'aircav', name: 'Cavalry',
+      blurb: 'Rolls up in armour, drops its troopers at the door, and is through the line before the guns turn.',
+      names: ['Talon Mobile Group', 'Outrider Security', 'The High Road Company', 'Skyhook Logistics'],
+      t1: ['recruits', 'irregulars'],   // who promote into rifle teams and assault troops (Enforcers only into heavy infantry)
+      t2: ['lighteng', 'rookie'],
+      machines: ['lpv', 'unarmoured'], vehicles: 2,
+      doctrines: ['S1', 'O3', 'O6', 'O1', 'T2', 'S2'],
+      fixed: ['S1'],
+      groups: ['Combat vehicles', 'Transport vehicles', 'Transport aircraft', 'Strike aircraft', 'Assault troops', 'Rifle infantry'],
+      mix: { 'Rifle infantry': 1, 'Assault troops': 1 },   // as many assault troops as riflemen in the back of its vehicles
+      machinesMax: 6,               // as many hulls as a Priority Level 2 army can field
+      fieldsMachines: true,         // and into battle in them first
+      spend: 'machines'
     }
   ];
 
@@ -1254,56 +1310,112 @@
       id: 'redfront', name: 'Red Revolutionary Front', faction: 'rebel',
       blurb: 'Two centuries underground, and organised down to the last cell.',
       names: ['Red Revolutionary Front', 'The Combine Committee', 'Ninth of Marzen', 'Union Irregulars'],
-      t1: ['rciv', 'rdesconscript'],
+      // the standard revolt: a core of Freedom Warriors, with support guns, artillery and vehicles around it
+      t1: ['rciv'],
       t2: ['rmilitia', 'rlmg'],
+      foundFree: true,
       machines: ['rtechnical', 'rltv'], vehicles: 2,
-      doctrines: ['H1', 'V1', 'H4', 'V6', 'H5', 'V2'],
-      groups: ['Freedom Warriors', 'Rebel support troops', 'Rebel combat vehicles', 'Rebel transport vehicles'],
-      spend: 'recruit'
+      groups: ['Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles', 'Rebel transport vehicles'],
+      mix: { 'Freedom Warriors': 3, 'Rebel support troops': 1, 'Rebel artillery': 1 },
+      machinesMax: 3,
+      // the cells and their commissars, the movement and its cry: Hero and Prophet, nothing criminal
+      doctrines: ['H6', 'H1', 'H2', 'P6', 'P2', 'P5'],
+      spend: 'promote'
     },
     {
       id: 'freespace', name: 'Free Space Freedom Fighters', faction: 'rebel',
       blurb: 'Pirates with a manifesto. Fast in, loaded up, gone.',
       names: ['Free Space Freedom Fighters', 'The Long Haul', 'Kestrel Run', 'Salvage Rights'],
-      t1: ['rridergang', 'rciv'],
+      // riders above all, its leaders mounted too; its hulls carry the infantry that does not ride; no artillery
+      t1: ['rridergang'],
       t2: ['rriderwar', 'rmilitia'],
       machines: ['rtechnical'], vehicles: 1,
-      doctrines: ['V2', 'V6', 'V1', 'H3', 'V3', 'H2'],
-      groups: ['Mounted Warriors', 'Freedom Warriors', 'Rebel combat vehicles'],
-      spend: 'machines'
+      groups: ['Mounted Warriors', 'Holy Warriors', 'Freedom Warriors', 'Rebel transport vehicles', 'Rebel aviation', 'Rebel combat vehicles'],
+      mix: { 'Mounted Warriors': 3, 'Holy Warriors': 1, 'Freedom Warriors': 1 },
+      limit: { 'Rebel artillery': 0 },
+      riders: ['First Among Equals'],
+      machinesMax: 4,
+      hullsFirst: ['transports'],   // trucks, lifters and shuttles for whoever is not on a mount
+      // the haul first; then the smuggling, the hard crew, the hulls and the mounted faithful's fury
+      fixed: ['V2'],
+      doctrines: ['V2', 'V1', 'V5', 'H3', 'H5', 'P4'],
+      stages: [['V1', 'V5', 'H3', 'H5'], ['P4']],   // Holy Fury last: at Tier V, once the rest is held
+      spend: 'promote'
     },
     {
       id: 'faithful', name: 'The Faithful', faction: 'rebel',
       blurb: 'They are not fighting for the colony. They are fighting for what comes after it.',
       names: ['The New Chosen', 'Pilgrims of the Seventh Gate', 'The Ashfall Congregation', 'Sons of the Furnace'],
-      t1: ['rciv', 'rdesconscript'],
-      t2: ['racolytes', 'rmilitia'],
+      // the standard revolt heavy on Holy Warriors, and a little lighter on the guns that stay put
+      t1: ['rciv'],
+      t2: ['racolytes', 'racolytes'],
+      foundFree: true,
       machines: ['rtechnical'], vehicles: 1,
-      doctrines: ['P5', 'P2', 'P4', 'P3', 'P1', 'H1'],
-      groups: ['Holy Warriors', 'Freedom Warriors'],
+      groups: ['Holy Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles', 'Rebel transport vehicles'],
+      mix: { 'Holy Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
+      machinesMax: 2,
+      // Holy Fury first; then Stairs to Heaven or Martyrdom (two Prophet at most), and the Hero path: loyalty, victory and alms
+      fixed: ['P4'],
+      doctrines: ['P4', 'P3', 'P1', 'H4', 'H1', 'H5'],
       spend: 'promote'
     },
     {
       id: 'pitheads', name: 'The Pitheads', faction: 'rebel',
       blurb: 'Miners who worked out that a cutting charge does the same job above ground.',
       names: ['The Pitheads', 'Shaft Fourteen', 'The Deep Seam Council', 'Hollowmen'],
-      t1: ['rciv', 'rdesconscript'],
-      t2: ['rminers', 'rlmg'],
-      machines: ['rltv', 'rtechnical'], vehicles: 2,
-      doctrines: ['V1', 'H4', 'H5', 'V5', 'H1', 'V6'],
-      groups: ['Miners', 'Freedom Warriors', 'Rebel artillery'],
+      // heavy on Miners and on improvised combat vehicles
+      t1: ['rciv'],
+      t2: ['rminers'],
+      foundFree: true,
+      machines: ['rtechnical', 'rlicv'], vehicles: 2,
+      groups: ['Miners', 'Freedom Warriors', 'Rebel combat vehicles', 'Rebel artillery'],
+      mix: { 'Miners': 3, 'Freedom Warriors': 1, 'Rebel artillery': 0.5 },
+      machinesMax: 4,
+      hullsFirst: ['Rebel combat vehicles'],
+      // a pick from its list first, then Labour Leader at Tier II, when there are vehicles enough to want it
+      fixedAt: { 2: 'H3' },
+      doctrines: ['H2', 'H3', 'V4', 'H4', 'V5', 'V1'],
       spend: 'promote'
     },
     {
       id: 'partisans', name: 'The Partisans', faction: 'rebel',
       blurb: 'Out of the tunnels, into the dark, and never where you left them.',
       names: ['The Partisans', 'Night Wire', 'The Quiet Column', 'Cell Sixteen'],
-      t1: ['rciv', 'rridergang'],
-      t2: ['rmilitia', 'rminers'],
+      // the standard revolt heavy on its Partisans (the Chosen Warriors' commandos) once it can field them
+      t1: ['rciv'],
+      t2: ['rmilitia', 'rlmg'],
+      foundFree: true,
       machines: ['rtechnical'], vehicles: 1,
-      doctrines: ['V3', 'H2', 'V4', 'V1', 'H4', 'V5'],
-      groups: ['Chosen Warriors', 'Freedom Warriors', 'Rebel support troops'],
-      spend: 'honours'
+      groups: ['Chosen Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles'],
+      mix: { 'Chosen Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
+      signature: ['rassaultcdo', 'rsabcdo', 'rsnipercdo'],
+      signatureCap: 8,              // the commandos are the band: up to eight of them
+      machinesMax: 2,
+      lean: true,                   // a small band: no free troops to pad it, no hiring with spare money
+      // the mined bridge first; then leaders who will not break, and the locals on side
+      fixed: ['V3'],
+      doctrines: ['V3', 'P2', 'H2', 'H4', 'V4', 'H5'],
+      spend: 'promote'
+    },
+    {
+      id: 'turncoats', name: 'The Turncoat Battalion', faction: 'rebel',
+      blurb: 'A garrison that changed sides, and kept its rifles, its drill and its grudges.',
+      names: ['The Turncoat Battalion', 'The 41st Reborn', 'Garrison Free Corps', 'The Broken Oath'],
+      // the standard revolt with Deserters in place of its first-rung Freedom Warriors, more aircraft,
+      // and a little more of the garrison's artillery
+      t1: ['rdesconscript'],
+      t2: ['rdesrookie', 'rmilitia'],
+      refill: { rdesconscript: 1 },
+      machines: ['rtechnical'], vehicles: 1,
+      groups: ['Deserters and POWs', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel aviation', 'Rebel combat vehicles', 'Rebel flak vehicles'],
+      mix: { 'Deserters and POWs': 2, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 1.5 },
+      machinesMax: 3,
+      hullsFirst: ['Rebel aviation'],
+      // its officers still command (the garrison's military past); then who pays, the discipline, and a chaplain's sermon
+      fixed: ['H6'],
+      doctrines: ['H6', 'V6', 'V5', 'V1', 'P5', 'P6'],
+      stages: [['V6', 'V5', 'V1'], ['P5', 'P6']],   // two of the Villain doctrines first, the Prophet ones last
+      spend: 'promote'
     }
   ];
   /* Swarms a campaign may meet, from the book's own write-ups (pp. 125-127). */
@@ -1315,6 +1427,7 @@
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB4', 'BP6', 'BP5', 'BC1', 'BB5', 'BP2'],
+      fixed: ['BB4'],
       groups: ['Lesser Bugs', 'Flying Bugs', 'Pioneer Bugs'],
       spend: 'promote'
     },
@@ -1325,6 +1438,7 @@
       t1: ['btiny', 'btiny', 'bspitlarva'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
       doctrines: ['BP1', 'BP2', 'BB1', 'BP3', 'BC1', 'BP5'],
+      fixed: ['BP1'],
       groups: ['Lesser Bugs', 'Underground Bugs', 'Spore Bugs'],
       spend: 'recruit'
     },
@@ -1335,6 +1449,7 @@
       t1: ['bspitlarva', 'btiny'], t2: ['bimmspit', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB3', 'BC3', 'BC2', 'BC6', 'BB6', 'BC4'],
+      fixed: ['BB3'],
       groups: ['Spore Bugs', 'Leader Bugs', 'Pioneer Bugs', 'Flying Bugs'],
       spend: 'honours'
     },
@@ -1345,8 +1460,32 @@
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB2', 'BP5', 'BP2', 'BP6', 'BB1', 'BP1'],
+      random: true,                 // no creed to speak of: the whole list, shuffled
       groups: ['Underground Bugs', 'Lesser Bugs', 'Pioneer Bugs'],
       spend: 'promote'
+    },
+    {
+      id: 'greyplague', name: 'The Grey Plague', faction: 'bugs',
+      blurb: 'It ate a colony, and now the colonists march in its front rank.',
+      names: ['The Grey Plague', 'The Harrow Infestation', 'Colony Nine Swarm'],
+      t1: ['bspitlarva', 'btiny'], t2: ['bsmall', 'bimmspit'],
+      machines: [], vehicles: 0,
+      doctrines: ['BP4', 'BB5', 'BC1', 'BP3', 'BB1', 'BC4'],
+      fixed: ['BP4'],               // Fungi Symbiosis first: the humans it kills in an assault rise again as its Infected
+      groups: ['Infected Humans', 'Lesser Bugs', 'Spore Bugs'],
+      signature: ['binfected'],
+      spend: 'recruit'
+    },
+    {
+      id: 'velior', name: 'Skyswarm of Velior', faction: 'bugs',
+      blurb: 'Nests in the cliffs of Velior, and comes down out of the sun.',
+      names: ['Skyswarm of Velior', 'The Cliff Nest', 'Sunfall Swarm'],
+      t1: ['bspitlarva', 'btiny'], t2: ['bimmspit'],
+      machines: [], vehicles: 0,
+      doctrines: ['BP2', 'BB4', 'BC5', 'BB6', 'BC2', 'BP5'],
+      groups: ['Flying Bugs', 'Spore Bugs', 'Lesser Bugs'],
+      signature: ['bsmallwing', 'blargewing'],
+      spend: 'recruit'
     }
   ];
   /* Tribes a campaign may meet, from the book's own write-ups (pp. 144-145). */
@@ -1358,6 +1497,7 @@
       t1: ['xeps1', 'xdelta1'], t2: ['xeps2', 'xbeta2'],
       machines: ['xdturret1'], vehicles: 1,
       doctrines: ['XO2', 'XT4', 'XO1', 'XS3', 'XO5', 'XT2'],
+      fixed: ['XO2'],
       groups: ['Epsilon Squads', 'Defensive Turrets', 'Teleport Turrets', 'Beta Squads'],
       spend: 'promote'
     },
@@ -1378,6 +1518,7 @@
       t1: ['xeps1', 'xeps1', 'xdelta1'], t2: ['xeps2', 'xdelta2'],
       machines: [], vehicles: 0,
       doctrines: ['XS1', 'XS5', 'XO2', 'XT2', 'XS3', 'XO6'],
+      fixed: ['XS1'],
       groups: ['Epsilon Squads', 'Delta Squads'],
       spend: 'recruit'
     },
@@ -1388,8 +1529,31 @@
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xeps2'],
       machines: ['xstrike2'], vehicles: 1,
       doctrines: ['XO6', 'XO5', 'XS4', 'XT3', 'XO3', 'XS6'],
+      random: true,                 // no creed to speak of: the whole list, shuffled
       groups: ['Delta Squads', 'Epsilon Squads', 'Strike Aviation', 'Gamma Squads'],
       spend: 'promote'
+    },
+    {
+      id: 'ulvar', name: 'Ulvar fortress tribe', faction: 'xeno',
+      blurb: 'Never leaves its walls without taking the walls along: shields, guns and patience.',
+      names: ['Ulvar Fortress Tribe', 'The Shieldwall of Ulvar', 'The Bastion Host'],
+      t1: ['xdelta1', 'xeps1'], t2: ['xbeta2', 'xdelta2'],
+      machines: ['xdturret1'], vehicles: 1,
+      doctrines: ['XO5', 'XS2', 'XO4', 'XT6', 'XS5', 'XO1'],
+      fixed: ['XO5'],
+      groups: ['Shield Turrets', 'Defensive Turrets', 'Gamma Squads', 'Beta Squads', 'Delta Squads'],
+      spend: 'honours'
+    },
+    {
+      id: 'shkar', name: 'Sh\'kar raiders', faction: 'xeno',
+      blurb: 'A raiding tribe that steps out of the air behind you, takes what it came for, and steps back.',
+      names: ['The Sh\'kar Raiders', 'The Blink Host', 'Shadow of Sh\'kar'],
+      t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xbeta2'],
+      machines: ['xstrike2'], vehicles: 1,
+      doctrines: ['XO1', 'XT4', 'XO6', 'XT1', 'XO2', 'XT3'],
+      fixed: ['XO1', 'XT4'],
+      groups: ['Teleport Turrets', 'Strike Aviation', 'Delta Squads', 'Beta Squads'],
+      spend: 'machines'
     }
   ];
   function archetypesFor(faction) {
@@ -1512,8 +1676,11 @@
        each Tier's slots, and the points after, filled in that order; within those,
        the ones furthest from a Battle Trauma first. */
     var markRank = function (e) { return e.mark === 'fav' ? 0 : e.mark === 'unfav' ? 2 : 1; };
+    // an AI force with a liking for machines (the Cavalry) takes its hulls first
+    var arch = co.archetype && !co.human ? archetype(co.archetype) : null;
+    var hullFirst = function (e) { return arch && arch.fieldsMachines && profile(e.key).cls !== 'infantry' ? 0 : 1; };
     var avail = co.roster.filter(function (e) { return !(e.restUntil > 0) && !(spare && traumaBand(co, e) === 2); }).slice().sort(function (a, b) {
-      return markRank(a) - markRank(b) || traumaBand(co, a) - traumaBand(co, b) || profile(b.key).tier - profile(a.key).tier;
+      return markRank(a) - markRank(b) || traumaBand(co, a) - traumaBand(co, b) || hullFirst(a) - hullFirst(b) || profile(b.key).tier - profile(a.key).tier;
     });
     var docs = co.doctrines || [];
     var comp = R.compFor(co.faction, tier), out = [], used = {};

@@ -164,7 +164,7 @@ head('The aftermath');
 })();
 
 head('Rival swarms (pp. 125-127)');
-ok('four swarms to meet', C.BUG_ARCHETYPES.length, 4);
+ok('six swarms to meet', C.BUG_ARCHETYPES.length, 6);
 var seen = {};
 for (var r = 0; r < 60; r++) {
   var cm = C.newCampaign({ factionA: 'pmc' });

@@ -159,7 +159,7 @@ head('The aftermath');
 })();
 
 head('Rival tribes (pp. 144-145)');
-ok('four tribes to meet', C.XENO_ARCHETYPES.length, 4);
+ok('six tribes to meet', C.XENO_ARCHETYPES.length, 6);
 var seen = {};
 for (var r = 0; r < 80; r++) {
   var cm = C.newCampaign({ factionA: 'pmc' });
@@ -181,7 +181,7 @@ head('A hundred campaign turns: a player tribe against a rival tribe');
   var camp = C.newCampaign({ factionA: 'xeno', factionB: 'xeno', mode: 'solo' });
   var a = camp.companies.A, b = camp.companies.B;
   C.found(a, ['xeps1', 'xeps1', 'xeps1', 'xeps1', 'xdelta1', 'xdelta1', 'xbeta2', 'xeps2'], 'XS1');
-  C.foundRival(b, 'ghadon');
+  C.foundRival(b, 'mithdu');            // (a tribe with a creed: Ghadon draws its Advancements at random, and a bad draw can stall it)
   var bad = [], topTier = 0;
   for (var n = 0; n < 100; n++) {
     var tier = Math.max(1, Math.min(C.fieldableTier(a) || 1, C.fieldableTier(b) || 1));
