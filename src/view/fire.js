@@ -35,8 +35,10 @@
          rounds in it, but still recognisably single shots rather than a stream. */
       smg:      { n: function (h) { return clampN(h * 2 + 4, 5, 12); }, gap: 68, tracer: { spread: 0.5, short: true }, land: 300, muzzle: 460 },
       /* A machine gun, rattling in a double burst: the rounds split into two
-         long bursts with a breath between them (`bursts`, `pause` ms). */
-      burst:    { n: function (h) { return clampN(h * 4 + 8, 12, 24); }, gap: 38, bursts: 2, pause: 220, tracer: { spread: 0.55 }, land: 300, muzzle: 460 },
+         long bursts with a breath between them (`bursts`, `pause` ms). Always
+         the full two long bursts, however many hit — a machine gun does not fire
+         a shorter burst for missing. */
+      burst:    { n: function () { return 24; }, gap: 38, bursts: 2, pause: 220, tracer: { spread: 0.55 }, land: 300, muzzle: 460 },
       // an autocannon: heavier, slower, countable
       chain:    { n: function (h) { return clampN(h * 2 + 3, 5, 10); }, gap: 92, tracer: { spread: 0.3, fat: true }, land: 330, muzzle: 92, perShot: true },
       // a bug's volley of chitin spines: a quick dry spray, bone-pale, no flash

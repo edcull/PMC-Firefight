@@ -286,6 +286,9 @@ async function fireAndWatch(p, code, ms) {
   ok('...and they run slowest to fastest in that order',
     ladder.every((k, i) => i === 0 || cadence[k].gap > cadence[ladder[i - 1]].gap));
   ok('a machine gun fires a double burst', cadence.burst.bursts === 2, cadence.burst.bursts + ' bursts');
+  // ...always two long bursts, never two short ones however few hit
+  ok('...of the same full length whatever the hits', cadence.burst.min === cadence.burst.max && cadence.burst.min / cadence.burst.bursts >= 12,
+    cadence.burst.min + ' rounds with no hits, ' + cadence.burst.max + ' with many');
   ok('a machine gun\'s rounds come closer together than a rifle line\'s',
     cadence.burst.gap < cadence.small.gap,
     'MG every ' + cadence.burst.gap + 'ms, rifle every ' + cadence.small.gap + 'ms');
