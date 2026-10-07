@@ -624,14 +624,22 @@
                 /* A missile box each side, laid up at the angle the missiles
                    leave at, hung on a trunnion arm off the turret's flank. The
                    far one is drawn before the turret, the near one after. */
-                var pod = function (sd) {
-                  var a0 = S3(TF(0, sd * TR * 0.3), tz + 3), a1 = S3(TF(0, sd * TR * 0.38), tz + 3);
-                  line(a0, a1, 2.6, '#0c0f13'); line(a0, a1, 1.8, STEEL);
-                  launcher(TF, -TR * 0.1, TR * 0.42, sd * TR * 0.37, sd * TR * 0.64, tz + 1, 6, 2, 2, 'missile', { pitch: 0.95, warheads: '#b8b0a0' });
+                var PA0 = -TR * 0.1, PA1 = TR * 0.42, PZ = tz + 1, PH = 6, PITCH = 0.95;
+                var pod = function (sd, far) {
+                  /* the arm runs out of the turret wall to the box's inner side,
+                     low and to the back, where it pivots. On the near side it is
+                     behind the box; on the far side, in front of it. */
+                  var zk = K * 0.9, d = (PA1 - PA0) * 0.28, e = PH / 2;
+                  var ca = PA0 + d * Math.cos(PITCH) - e / zk * Math.sin(PITCH), cz = PZ + d * zk * Math.sin(PITCH) + e * Math.cos(PITCH);
+                  var w0 = S3(TF(ca, sd * TR * 0.33), cz), w1 = S3(TF(ca, sd * TR * 0.4), cz);
+                  var arm = function () { line(w0, w1, 3.2, '#0c0f13'); line(w0, w1, 2.2, STEEL); };
+                  if (!far) arm();
+                  launcher(TF, PA0, PA1, sd * TR * 0.4, sd * TR * 0.66, PZ, PH, 2, 2, 'missile', { pitch: PITCH, warheads: '#b8b0a0' });
+                  if (far) arm();
                 };
                 var near = function (sd) { var q = TF(0, sd * TR); return q.x + q.y; };
                 var sides = st.noMissiles ? [] : near(1) > near(-1) ? [-1, 1] : [1, -1];
-                if (sides.length) pod(sides[0]);
+                if (sides.length) pod(sides[0], true);
                 slabF(TF, -TR * 0.45, TR * 0.4, -TR * 0.36, TR * 0.36, tz, 9, TB, TR * 0.12, 0, TR * 0.04);
                 if (sides.length) pod(sides[1]);
                 // a tracking radar on the back of the turret
@@ -640,7 +648,7 @@
                 sEllipse(rt[0], rt[1], 4.6, 2.2, '#b9c2cc'); sEllipse(rt[0], rt[1] + 0.4, 3, 1.3, '#5d6775');
               };
               gun = function () {
-                [-0.18, 0.18].forEach(function (b) { barrel(TF, TR * 0.25, TR * 1.3, TR * b, tz + 6, 1.4, 'auto', { up: 18, brake: true }); });
+                [-0.18, 0.18].forEach(function (b) { barrel(TF, TR * 0.25, TR * 1.3, TR * b, tz + 6, 1.4, 'auto', { up: 5, brake: true }); });
               };
               break;
             case 'dish':
