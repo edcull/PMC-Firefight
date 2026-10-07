@@ -143,8 +143,7 @@ async function foundingLoadList(p) {
   }
   const d1 = await device('register');
   ok('signed up on the first device', d1.got === 200);
-  const where = await d1.p.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('main'); document.querySelector('[data-menu="builder"]').click(); return document.getElementById('menu-builder-where').textContent; });
-  ok('the force builder says forces are kept on the account', /on your account/.test(where), where);
+  await d1.p.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('main'); document.querySelector('[data-menu="builder"]').click(); });
   const s1 = await buildSkirmish(d1.p, 'Account Line');
   await d1.p.evaluate(() => document.getElementById('btn-setup-back').click());
   const s2 = await buildStart(d1.p, 'Account Hills');

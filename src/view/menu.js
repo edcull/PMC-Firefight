@@ -290,12 +290,6 @@
       var go = b.getAttribute('data-menu');
       if (go) {
         delAsked = null;
-        // the force builder says where what is built will be kept
-        if (go === 'builder' && el('menu-builder-where')) {
-          el('menu-builder-where').textContent = root.PMCForces && root.PMCForces.signedIn()
-            ? 'Forces you save are kept on your account, ready on any device you sign in on.'
-            : 'Forces you save are kept in this browser. Sign in to a game server to keep them on your account.';
-        }
         show(go); return;
       }
       /* the force builder: a skirmish force on the muster sheet, a campaign's
