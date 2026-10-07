@@ -1326,17 +1326,16 @@
       id: 'freespace', name: 'Free Space Freedom Fighters', faction: 'rebel',
       blurb: 'Pirates with a manifesto. Fast in, loaded up, gone.',
       names: ['Free Space Freedom Fighters', 'The Long Haul', 'Kestrel Run', 'Salvage Rights'],
-      // heavy on aircraft and riders, Holy Warriors and leaders recruited mounted, and next to no artillery
+      // riders above all, its leaders mounted too; its hulls carry the infantry that does not ride; no artillery
       t1: ['rridergang'],
       t2: ['rriderwar', 'rmilitia'],
       machines: ['rtechnical'], vehicles: 1,
-      groups: ['Mounted Warriors', 'Holy Warriors', 'Freedom Warriors', 'Rebel aviation', 'Rebel combat vehicles'],
+      groups: ['Mounted Warriors', 'Holy Warriors', 'Freedom Warriors', 'Rebel transport vehicles', 'Rebel aviation', 'Rebel combat vehicles'],
       mix: { 'Mounted Warriors': 3, 'Holy Warriors': 1, 'Freedom Warriors': 1 },
       limit: { 'Rebel artillery': 0 },
-      riders: ['Holy Warriors', 'First Among Equals'],
-      signature: ['rfanatics', 'renlightened'],
+      riders: ['First Among Equals'],
       machinesMax: 4,
-      hullsFirst: ['Rebel aviation'],
+      hullsFirst: ['transports'],   // trucks, lifters and shuttles for whoever is not on a mount
       // the haul first; then the smuggling, the hard crew, the hulls and the mounted faithful's fury
       fixed: ['V2'],
       doctrines: ['V2', 'V1', 'V5', 'H3', 'H5', 'P4'],
