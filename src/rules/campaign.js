@@ -1213,7 +1213,8 @@
          (0 never, 10 the backbone), and [weight, limit] where it is kept rare, the
          limit a Priority Level (a group's limit counts the whole group). A unit's
          own entry beats its group's; anything unlisted is 0. */
-      hullsPerPL: 1,                // a skirmish force fields a hull a Priority Level
+      tier: 0,                      // keeps to the battle's own Tier: solid armour, not a horde, not a handful
+      hulls: { min: 1, max: 2 },    // hulls a Priority Level in a skirmish force (three the rules' most)
       weights: {
         // heavy on battle armour
         ecobats: 8, bats: 10, protectors: 10, protectorshm: 8,
@@ -1223,7 +1224,7 @@
         'Light support': [2, 2], gausscannon: [1, 1],
         'Heavy support': [2, 2], sam: [1, 1],
         'Remote mortars': [1, 1],
-        // a few hulls (hullsPerPL): gun carriers, tank hunters and destroyers, engineering vehicles
+        // a few hulls (hulls): gun carriers, tank hunters and destroyers, engineering vehicles
         'Hunters and destroyers': [3, 1], 'Support vehicles': [3, 1], impsupport: 2,
         'Engineering and utility vehicles': [2, 1], aaveh: 1, medveh: 1, ewveh: 0,
         // the founding troops at the low Tiers

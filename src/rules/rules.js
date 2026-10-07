@@ -508,9 +508,15 @@
     var W = a.weights || null;
     function entry(k) { var e = W[k]; return e == null ? null : Array.isArray(e) ? { w: e[0], lim: e[1] } : { w: e, lim: null }; }
     function baseWeight(p) { var e = entry(p.key) || entry(p.group); return e ? e.w : 0; }
-    // halved for each copy it already has, and for a unit above the battle's Tier (it keeps to its own weight)
+    /* How elite it is (`tier`): −1 fills up on the Tier below the battle's, 0 keeps to
+       the battle's own, +1 reaches for the Tier above. A unit's weight is scaled once
+       for each Tier it is off the battle's, below or above. */
+    var TIER_LEAN = { '-1': { below: 1.5, above: 0.25 }, '0': { below: 0.35, above: 0.5 }, '1': { below: 0.2, above: 2.5 } };
+    var lean = TIER_LEAN[String(a.tier || 0)] || TIER_LEAN['0'];
+    function tierFactor(p) { var d = p.tier - bt; return d === 0 ? 1 : Math.pow(d < 0 ? lean.below : lean.above, Math.abs(d)); }
+    // halved for each copy it already has (more kinds, fewer repeats), and scaled by its Tier
     function weightOf(p, keys) {
-      return baseWeight(p) * Math.pow(0.5, count(keys, function (x) { return x === p.key; })) * (p.tier > bt ? 0.5 : 1);
+      return baseWeight(p) * Math.pow(0.5, count(keys, function (x) { return x === p.key; })) * tierFactor(p);
     }
     function liked(p) {
       if (W) return baseWeight(p) > 0;
@@ -540,7 +546,8 @@
         if (p.cls !== 'infantry' && !p.leaderBug) {
           // half the hulls the rules allow (three a Priority Level), or fewer; all of them only for a machine company
           var hullCap = machineMinded ? 3 * pl : Math.ceil(1.5 * pl);
-          if (a.hullsPerPL != null) hullCap = Math.min(hullCap, Math.round(a.hullsPerPL * pl));   // its own: Bastion's few
+          // its own range (`hulls`: so many a Priority Level), never past the rules' three
+          if (a.hulls && a.hulls.max != null) hullCap = Math.min(3 * pl, Math.round(a.hulls.max * pl));
           if (a.machinesMax != null && a.machinesMax < 3) hullCap = Math.min(hullCap, a.machinesMax * pl);
           if (count(keys, function (x) { var q = profile(x); return q && q.cls !== 'infantry'; }) >= hullCap) return false;
         }
@@ -725,7 +732,8 @@
     /* ...and its favourite hulls (Bastion's hunters, Shock's transports and engineering
        vehicles, Free Space's troop carriers): one a Priority Level, the biggest at or
        below the battle's Tier, a different one each time where it can */
-    if (st) for (var hn = 0; hn < pl; hn++) {
+    var hullsFirstN = st ? (st.a.hulls && st.a.hulls.min != null ? Math.round(st.a.hulls.min * pl) : pl) : 0;
+    if (st) for (var hn = 0; hn < hullsFirstN; hn++) {
       var hulls = POOL.filter(function (p) { return !p.command && st.hullFirst(p) && room(p); });
       if (!hulls.length) break;
       // one of the battle's own weight where there is one (not three super-heavies at Tier II), and not one it has
