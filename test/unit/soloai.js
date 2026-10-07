@@ -401,7 +401,7 @@ console.log('\nA campaign AI plays the whole behaviour table, tempered by its pe
 (function () {
   // outside solitaire a special action comes before the roll: a Psychic Wave is sent with no behaviour rolled for it
   let waves = 0, rolledFirst = 0;
-  for (let n = 0; n < 3; n++) {
+  for (let n = 0; n < 8 && waves < 3; n++) {      // battles until some waves have gone out
     const e = Engine.create();
     // a swarm with something that sends a Psychic Wave in it
     let bugs = null;

@@ -536,7 +536,10 @@
         if (!own.length || rnd() > 0.85) {
           // an odd pick from outside its kind is never one of the battle's big guns (a Gauss cannon in a Shock force)
           var odd = list.filter(function (p) { return liked(p) || starters.indexOf(p.key) >= 0 || p.tier <= bt; });
-          return odd.length ? odd : list;
+          if (!odd.length) odd = list;
+          // ...and is from its second choices, most of the time (Shock: Protectors and Veterans)
+          var sec = odd.filter(function (p) { return (a.second || []).indexOf(p.group) >= 0; });
+          return sec.length && rnd() < 0.8 ? sec : odd;
         }
         // a machine company (Cavalry) takes a hull whenever it has the choice, half the time
         var hulls = (wider || list).filter(function (p) { return p.cls !== 'infantry' && liked(p); });

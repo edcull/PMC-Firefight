@@ -1040,6 +1040,14 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
   ok('Shock rides to the fight: a transport or engineering vehicle in every force', shockVeh >= shockN, true, shockVeh + ' in ' + shockN);
   ok('Mercenaries take one mortar unit at most at PL1', mortars <= 3, true, mortars + ' in 3 forces');
   ok('Cavalry fields more hulls than Shock', cavH > shockH, true, cavH + ' vs ' + shockH);
+  // its second choices when its own run out: Shock's outside picks are mostly Protectors and Veterans
+  var shockA = C.archetypesFor('pmc').filter(function (x) { return x.id === 'shock'; })[0], outside = 0, second = 0;
+  for (var q = 0; q < 60; q++) R.rollArmy(2 + (q % 4), 3, null, 'pmc', 'shock').forEach(function (k) {
+    var p = R.profile(keyOf(k));
+    if (shockA.groups.indexOf(p.group) >= 0 || (shockA.units || []).indexOf(p.key) >= 0 || p.command || [].concat(shockA.t1, shockA.t2).indexOf(p.key) >= 0) return;
+    outside++; if (shockA.second.indexOf(p.group) >= 0) second++;
+  });
+  ok('Shock\'s picks from outside its kind are mostly its second choices', outside > 0 && second / outside > 0.7, true, second + ' of ' + outside);
   ok('...and a roll with no personality still works', R.checkArmy(R.rollArmy(3, 2, null, 'pmc', false), 3, 2).ok && !R.rollArmy(3, 2, null, 'pmc', false).style, true);
   ok('a temper for a skirmish force by its personality id', C.aiTemper({ archetype: 'partisans' }).mod, -1);
 })();
