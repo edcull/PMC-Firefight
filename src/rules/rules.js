@@ -680,10 +680,16 @@
       }
     });
     /* ...and its favourite hulls (Bastion's hunters, Shock's transports and engineering
-       vehicles, Free Space's troop carriers): one a Priority Level, the biggest that fits */
+       vehicles, Free Space's troop carriers): one a Priority Level, the biggest at or
+       below the battle's Tier, a different one each time where it can */
     if (st) for (var hn = 0; hn < pl; hn++) {
       var hulls = POOL.filter(function (p) { return !p.command && st.hullFirst(p) && room(p); });
       if (!hulls.length) break;
+      // one of the battle's own weight where there is one (not three super-heavies at Tier II), and not one it has
+      var fit = hulls.filter(function (p) { return p.tier <= battleTier; });
+      if (fit.length) hulls = fit;
+      var newH = hulls.filter(function (p) { return !keys.some(function (k) { return splitPick(k).key === p.key; }); });
+      if (newH.length) hulls = newH;
       var hiH = Math.max.apply(null, hulls.map(function (p) { return p.tier; }));
       take(pick(hulls.filter(function (p) { return p.tier === hiH; })));
     }
