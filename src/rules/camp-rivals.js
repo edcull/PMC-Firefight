@@ -246,6 +246,15 @@
       var best = Math.max.apply(null, list.map(function (p) { return mixShortfall(co, a, p.group); }));
       return pick(list.filter(function (p) { return mixShortfall(co, a, p.group) === best; }));
     }
+    /* A force that rides (`riders`: Free Space's Holy Warriors and leaders) recruits a
+       unit of those groups mounted wherever the unit may take the Riders upgrade —
+       which is decided when it is recruited (p. 97), so only a recruit rides. */
+    var recruitBase = recruit;
+    recruit = function (co, key, opts) {
+      var a0 = co && co.archetype ? archetype(co.archetype) : null, p0 = profile(key);
+      if (!opts && a0 && a0.riders && p0 && a0.riders.indexOf(p0.group) >= 0 && R.canRide(p0)) opts = { riders: true };
+      return recruitBase(co, key, opts);
+    };
     function flat(list) { return [].concat.apply([], list || []); }
     /* A force that keeps some units rare (`limit`: Special Ops' one LRRP team, one of
        snipers, two mortar units) neither recruits nor promotes past it. A key limits

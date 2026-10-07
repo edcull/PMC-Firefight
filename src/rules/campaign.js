@@ -1310,74 +1310,102 @@
       id: 'redfront', name: 'Red Revolutionary Front', faction: 'rebel',
       blurb: 'Two centuries underground, and organised down to the last cell.',
       names: ['Red Revolutionary Front', 'The Combine Committee', 'Ninth of Marzen', 'Union Irregulars'],
-      // a revolt that starts as armed civilians (free or not), with militia and an LMG team behind them
+      // the standard revolt: a core of Freedom Warriors, with support guns, artillery and vehicles around it
       t1: ['rciv'],
       t2: ['rmilitia', 'rlmg'],
       foundFree: true,
       machines: ['rtechnical', 'rltv'], vehicles: 2,
+      groups: ['Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles', 'Rebel transport vehicles'],
+      mix: { 'Freedom Warriors': 3, 'Rebel support troops': 1, 'Rebel artillery': 1 },
+      machinesMax: 3,
       // the cells and their commissars, the movement and its cry: Hero and Prophet, nothing criminal
       doctrines: ['H6', 'H1', 'H2', 'P6', 'P2', 'P5'],
-      groups: ['Freedom Warriors', 'Rebel support troops', 'Rebel combat vehicles', 'Rebel transport vehicles'],
-      mix: { 'Freedom Warriors': 2, 'Rebel support troops': 1 },   // two cells of fighters to each support gun
-      spend: 'recruit'
+      spend: 'promote'
     },
     {
       id: 'freespace', name: 'Free Space Freedom Fighters', faction: 'rebel',
       blurb: 'Pirates with a manifesto. Fast in, loaded up, gone.',
       names: ['Free Space Freedom Fighters', 'The Long Haul', 'Kestrel Run', 'Salvage Rights'],
-      t1: ['rridergang', 'rciv'],
+      // heavy on aircraft and riders, Holy Warriors and leaders recruited mounted, and next to no artillery
+      t1: ['rridergang'],
       t2: ['rriderwar', 'rmilitia'],
       machines: ['rtechnical'], vehicles: 1,
+      groups: ['Mounted Warriors', 'Holy Warriors', 'Freedom Warriors', 'Rebel aviation', 'Rebel combat vehicles'],
+      mix: { 'Mounted Warriors': 3, 'Holy Warriors': 1, 'Freedom Warriors': 1 },
+      limit: { 'Rebel artillery': 0 },
+      riders: ['Holy Warriors', 'First Among Equals'],
+      signature: ['rfanatics', 'renlightened'],
+      machinesMax: 4,
+      hullsFirst: ['Rebel aviation'],
       fixed: ['V2'],
       doctrines: ['V2', 'V1', 'V6', 'H3', 'H2', 'H5'],
-      groups: ['Mounted Warriors', 'Freedom Warriors', 'Rebel combat vehicles'],
-      spend: 'machines'
+      spend: 'promote'
     },
     {
       id: 'faithful', name: 'The Faithful', faction: 'rebel',
       blurb: 'They are not fighting for the colony. They are fighting for what comes after it.',
       names: ['The New Chosen', 'Pilgrims of the Seventh Gate', 'The Ashfall Congregation', 'Sons of the Furnace'],
-      t1: ['rciv', 'rdesconscript'],
+      // the standard revolt heavy on Holy Warriors, and a little lighter on the guns that stay put
+      t1: ['rciv'],
       t2: ['racolytes', 'rmilitia'],
+      foundFree: true,
       machines: ['rtechnical'], vehicles: 1,
+      groups: ['Holy Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles', 'Rebel transport vehicles'],
+      mix: { 'Holy Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
+      machinesMax: 2,
       fixed: ['P5'],
       doctrines: ['P5', 'P4', 'P1', 'P6', 'H4', 'H1'],
-      groups: ['Holy Warriors', 'Freedom Warriors'],
       spend: 'promote'
     },
     {
       id: 'pitheads', name: 'The Pitheads', faction: 'rebel',
       blurb: 'Miners who worked out that a cutting charge does the same job above ground.',
       names: ['The Pitheads', 'Shaft Fourteen', 'The Deep Seam Council', 'Hollowmen'],
-      t1: ['rciv', 'rdesconscript'],
-      t2: ['rminers', 'rlmg'],
-      machines: ['rltv', 'rtechnical'], vehicles: 2,
+      // heavy on Miners and on improvised combat vehicles
+      t1: ['rciv'],
+      t2: ['rminers'],
+      foundFree: true,
+      machines: ['rtechnical', 'rlicv'], vehicles: 2,
+      groups: ['Miners', 'Freedom Warriors', 'Rebel combat vehicles', 'Rebel artillery'],
+      mix: { 'Miners': 3, 'Freedom Warriors': 1, 'Rebel artillery': 0.5 },
+      machinesMax: 4,
+      hullsFirst: ['Rebel combat vehicles'],
       fixed: ['V3'],
       doctrines: ['V3', 'V5', 'V1', 'H3', 'H4', 'H5'],
-      groups: ['Miners', 'Freedom Warriors', 'Rebel artillery'],
       spend: 'promote'
     },
     {
       id: 'partisans', name: 'The Partisans', faction: 'rebel',
       blurb: 'Out of the tunnels, into the dark, and never where you left them.',
       names: ['The Partisans', 'Night Wire', 'The Quiet Column', 'Cell Sixteen'],
-      t1: ['rciv', 'rridergang'],
-      t2: ['rmilitia', 'rminers'],
+      // the standard revolt heavy on its Partisans (the Chosen Warriors' commandos) once it can field them
+      t1: ['rciv'],
+      t2: ['rmilitia', 'rlmg'],
+      foundFree: true,
       machines: ['rtechnical'], vehicles: 1,
+      groups: ['Chosen Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles'],
+      mix: { 'Chosen Warriors': 3, 'Freedom Warriors': 3, 'Rebel support troops': 1, 'Rebel artillery': 1 },
+      signature: ['rassaultcdo', 'rsabcdo', 'rsnipercdo'],
+      machinesMax: 2,
       doctrines: ['H2', 'H4', 'H5', 'V3', 'V4', 'V5'],
-      groups: ['Chosen Warriors', 'Freedom Warriors', 'Rebel support troops'],
-      spend: 'honours'
+      spend: 'promote'
     },
     {
       id: 'turncoats', name: 'The Turncoat Battalion', faction: 'rebel',
       blurb: 'A garrison that changed sides, and kept its rifles, its drill and its grudges.',
       names: ['The Turncoat Battalion', 'The 41st Reborn', 'Garrison Free Corps', 'The Broken Oath'],
-      t1: ['rdesconscript', 'rridergang'],
+      // the standard revolt with Deserters in place of its first-rung Freedom Warriors, more aircraft,
+      // and a little more of the garrison's artillery
+      t1: ['rdesconscript'],
       t2: ['rdesrookie', 'rmilitia'],
+      refill: { rdesconscript: 1 },
       machines: ['rtechnical'], vehicles: 1,
+      groups: ['Deserters and POWs', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel aviation', 'Rebel combat vehicles', 'Rebel flak vehicles'],
+      mix: { 'Deserters and POWs': 2, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 1.5 },
+      machinesMax: 3,
+      hullsFirst: ['Rebel aviation'],
       doctrines: ['H6', 'H2', 'V5', 'H3', 'V6', 'H4'],
       random: true,                 // no creed to speak of: the whole list, shuffled
-      groups: ['Deserters and POWs', 'Freedom Warriors', 'Rebel support troops', 'Rebel flak vehicles'],
       spend: 'promote'
     }
   ];
