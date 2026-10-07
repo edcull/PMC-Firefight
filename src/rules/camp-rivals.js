@@ -228,6 +228,34 @@
        the money a season's work elsewhere would have paid and spends it the way a
        rival does; the target is the player's own Tier give or take one, and it is
        never allowed to outstrip them by more than a Tier. */
+    /* A force with a mix to keep (`mix`: Special Ops' two light infantry to each rifle
+       team) leans each choice towards whichever of its groups is furthest below its
+       share; groups outside the mix sit in the middle. */
+    function mixShortfall(co, a, g) {
+      var m = (a && a.mix) || {}, w = m[g];
+      if (!w) return 0;
+      var tot = 0, wsum = 0;
+      for (var k in m) { wsum += m[k]; tot += co.roster.filter(function (e) { return profile(e.key).group === k; }).length; }
+      var have = co.roster.filter(function (e) { return profile(e.key).group === g; }).length;
+      return w / wsum - (tot ? have / tot : 0);
+    }
+    function leanTo(co, a, list) {
+      if (!a || !a.mix || list.length < 2) return pick(list);
+      var best = Math.max.apply(null, list.map(function (p) { return mixShortfall(co, a, p.group); }));
+      return pick(list.filter(function (p) { return mixShortfall(co, a, p.group) === best; }));
+    }
+    function flat(list) { return [].concat.apply([], list || []); }
+    /* A force that keeps some units rare (`limit`: Special Ops' one LRRP team, one of
+       snipers, two mortar units) neither recruits nor promotes past it. A key limits
+       that unit, a group name the whole group. */
+    function atLimit(co, a, p) {
+      var lim = (a && a.limit) || {};
+      if (lim[p.key] != null && co.roster.filter(function (e) { return e.key === p.key; }).length >= lim[p.key]) return true;
+      if (lim[p.group] != null && co.roster.filter(function (e) { return profile(e.key).group === p.group; }).length >= lim[p.group]) return true;
+      return false;
+    }
+    // { irregulars: 11, recruits: 1 } as a list naming each as often as its weight
+    function weighted(w) { var out = []; for (var k in w) for (var i = 0; i < w[k]; i++) out.push(k); return out; }
     function catchUpTarget(playerTier) {
       var swing = pick([-1, 0, 0, 0, 1]);
       return Math.max(1, Math.min(5, Math.min(playerTier + 1, playerTier + swing)));
@@ -321,7 +349,8 @@
       var keys = [], t1pool = paid.length ? paid : a.t1.slice(), t2pool = a.t2.slice();
       for (var i = 0; i < 6 - h1.length; i++) keys.push(t1pool[i % t1pool.length]);
       h1.forEach(function (k) { keys.push(k); });
-      for (var j = 0; j < 2 - h2.length; j++) keys.push(t2pool[j % t2pool.length]);
+      // (an entry that is itself a list is one of those, picked: Special Ops' observers or nomads)
+      for (var j = 0; j < 2 - h2.length; j++) { var k2 = t2pool[j % t2pool.length]; keys.push(Array.isArray(k2) ? pick(k2) : k2); }
       h2.forEach(function (k) { keys.push(k); });
       co.docPlan = docPlanFor(co, a);
       var res = found(co, keys, co.docPlan[0]);
@@ -399,6 +428,9 @@
       var a = archetype(co.archetype);
       var did = rehireCommand(co);            // first call on the money, when it is due
       function wanted(p) { return a.groups.indexOf(p.group) >= 0; }
+      function shortfall(g) { return mixShortfall(co, a, g); }
+      function capped(p) { return atLimit(co, a, p); }
+      function leaning(list) { return leanTo(co, a, list); }
       // Penal troops are free for ever but four to an army: a fifth is no use to anyone
       function fullUp(p) { return p.key === 'penal' && co.roster.filter(function (e) { return e.key === 'penal'; }).length >= 4; }
 
@@ -426,7 +458,7 @@
           var room = machineCount() < 3;
           var pool = R.listFor(co.faction).filter(function (p) {
             if (p.tier !== t || isLeaderP(p) || !canRecruit(co, p.key).ok) return false;
-            if (p.noSlot || fullUp(p)) return false;                          // a platform fills no slot, so it can close no gap
+            if (p.noSlot || fullUp(p) || capped(p)) return false;                          // a platform fills no slot, so it can close no gap
             if (p.cls !== 'infantry') return room && wanted(p);   // only a machine company buys a hull to fill a gap
             return true;
           });
@@ -435,10 +467,12 @@
           // is what keeps a company in character at the Tiers its groups do not reach
           var liked = pool.filter(wanted);
           if (!liked.length) {
-            var own = t === 1 ? a.t1 : t === 2 ? a.t2 : [];
-            liked = pool.filter(function (p) { return own.indexOf(p.key) >= 0; });
+            var own = t === 1 ? (a.refill ? weighted(a.refill) : a.t1) : t === 2 ? flat(a.t2) : [];
+            // as often as the founding list names them (Special Ops: two Irregulars to each Recruit)
+            liked = [];
+            own.forEach(function (k) { pool.forEach(function (p) { if (p.key === k) liked.push(p); }); });
           }
-          var r = recruit(co, pick(liked.length ? liked : pool).key);
+          var r = recruit(co, leaning(liked.length ? liked : pool).key);
           if (!r.ok) return;
           did.push({ what: 'recruit', text: 'recruited ' + r.entry.name });
         }
@@ -484,7 +518,7 @@
           return;
         }
         // a sideways step inside its own group (recruits to irregulars) gains a simulated company nothing
-        var all = promotionTargets(e, co).filter(function (q) { return q.tier > p.tier || q.group !== p.group; });
+        var all = promotionTargets(e, co).filter(function (q) { return (q.tier > p.tier || q.group !== p.group) && !capped(q); });
         var affordable = all.filter(function (q) { return rivalCanAfford(co, e, q.key); });
         /* If this unit could ever promote into one of the company's own groups, it
            waits until it can afford that rather than taking the first cheap step
@@ -494,7 +528,7 @@
         /* ...and a promoting company's unit with nowhere it wants to go keeps its
            experience for an honour rather than stepping out of character, which is
            what lets its veterans pick up the odd honour from mid-campaign. */
-        if (a.spend === 'promote' && !likedAll.length) targets = [];
+        if ((a.spend === 'promote' || a.spend === 'honours') && !likedAll.length) targets = [];
         function honour() {
           if (!canTakeHonour(e, co).ok) return false;
           var h = chooseHonour(drawHonours(e));
@@ -502,11 +536,13 @@
           did.push({ what: 'honour', text: e.name + ' earned ' + h.name });
           return true;
         }
-        // an honours company trains a unit to its cap before it promotes it at all,
-        // which is what makes a Marksmen company read as veterans rather than as rank
-        if (a.spend === 'honours') { for (var g = 0; g < 6 && honour(); g++) { } }
+        /* An honours company trains a unit to its cap before it promotes it at all,
+           which is what makes it read as veterans rather than as rank — once the unit
+           is one of its own: a recruit with a way into its groups is promoted there first. */
+        var stepIn = !wanted(p) && targets.length;
+        if (a.spend === 'honours' && !stepIn) { for (var g = 0; g < 6 && honour(); g++) { } }
         if (targets.length) {
-          var best = targets.sort(function (x, y) { return y.tier - x.tier; })[0];
+          var best = targets.sort(function (x, y) { return y.tier - x.tier || shortfall(y.group) - shortfall(x.group); })[0];
           if (promoteUnit(co, e, best.key).ok) {
             did.push({ what: 'promote', text: was + ' promoted to ' + e.name });
           }
@@ -523,12 +559,13 @@
         for (var n = 0; n < 3; n++) {
           var pool2 = R.listFor(co.faction).filter(function (p) {
             if (p.cls !== 'infantry' || isLeaderP(p) || p.tier > co.tier) return false;
-            if (!wanted(p) && a.t1.indexOf(p.key) < 0 && a.t2.indexOf(p.key) < 0) return false;
+            if (!wanted(p) && a.t1.indexOf(p.key) < 0 && flat(a.t2).indexOf(p.key) < 0) return false;
+            if (capped(p)) return false;
             if (!canRecruit(co, p.key).ok || fullUp(p)) return false;
             return p.key === 'penal' || RECRUIT_COST[p.tier] <= co.kUC / 2;
           });
           if (!pool2.length) break;
-          var r2 = recruit(co, pick(pool2).key);
+          var r2 = recruit(co, leaning(pool2).key);
           if (!r2.ok) break;
           did.push({ what: 'recruit', text: 'recruited ' + r2.entry.name });
         }
