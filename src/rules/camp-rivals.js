@@ -427,7 +427,8 @@
     function developRival(co) {
       var a = archetype(co.archetype);
       var did = rehireCommand(co);            // first call on the money, when it is due
-      function wanted(p) { return a.groups.indexOf(p.group) >= 0; }
+      // its own groups, and the odd unit it favours from a group it otherwise does not (`units`)
+      function wanted(p) { return a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0; }
       function shortfall(g) { return mixShortfall(co, a, g); }
       function capped(p) { return atLimit(co, a, p); }
       function leaning(list) { return leanTo(co, a, list); }

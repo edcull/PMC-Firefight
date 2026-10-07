@@ -144,7 +144,7 @@ C.ARCHETYPES.forEach(function (a) {
   var B = camp.companies.B;
   var groups = {};
   B.roster.forEach(function (e) { var g = R.profile(e.key).group; groups[g] = (groups[g] || 0) + 1; });
-  var own = B.roster.filter(function (e) { return a.groups.indexOf(R.profile(e.key).group) >= 0; }).length;
+  var own = B.roster.filter(function (e) { return a.groups.indexOf(R.profile(e.key).group) >= 0 || (a.units || []).indexOf(e.key) >= 0; }).length;
   // the free Tier I units taken on out of character to fill an army out are not counted against it, nor its command units
   var counted = B.roster.filter(function (e) { var p = R.profile(e.key); return !p.command && !(C.freeUnit(e.key) && a.groups.indexOf(p.group) < 0); }).length;
   var honours = B.roster.reduce(function (n, e) { return n + e.honours.length; }, 0);
@@ -232,7 +232,7 @@ function runOne(a, turns) {
     }).length,
     own: B.roster.filter(function (e) {
       var p = R.profile(e.key);
-      return !p.command && a.groups.indexOf(p.group) >= 0;
+      return !p.command && (a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(e.key) >= 0);
     }).length,
     tier: B.tier
   };
