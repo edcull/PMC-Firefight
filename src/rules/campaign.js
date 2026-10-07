@@ -1208,11 +1208,13 @@
       names: ['Vantage Solutions', 'The Ashen Line', 'Praetor Associates', 'Halcyon Executive'],
       t1: ['enforcers', 'recruits'],
       t2: ['rookie', 'ecobats'],
-      machines: ['lpv'], vehicles: 1,
+      machines: [], vehicles: 0,
       // a handful of top-tier veterans make a legal army; then whatever keeps them fit, trained and paid
       doctrines: ['O2', 'S3', 'S6', 'T1', 'T2', 'S5', 'S2'],
       fixed: ['O2'],
       groups: ['Rifle infantry', 'Heavy infantry', 'Assault troops'],
+      units: ['gausscannon'],
+      lean: true,                   // few units, all of them good: no free troops to pad the list, no hiring with spare money
       spend: 'promote'
     },
     {
@@ -1274,6 +1276,8 @@
       doctrines: ['S1', 'O3', 'O6', 'O1', 'S4', 'S2'],
       fixed: ['S1'],
       groups: ['Combat vehicles', 'Transport vehicles', 'Transport aircraft', 'Strike aircraft', 'Assault troops', 'Rifle infantry'],
+      machinesMax: 6,               // as many hulls as a Priority Level 2 army can field
+      fieldsMachines: true,         // and into battle in them first
       spend: 'machines'
     }
   ];
@@ -1611,8 +1615,11 @@
        each Tier's slots, and the points after, filled in that order; within those,
        the ones furthest from a Battle Trauma first. */
     var markRank = function (e) { return e.mark === 'fav' ? 0 : e.mark === 'unfav' ? 2 : 1; };
+    // an AI force with a liking for machines (the Cavalry) takes its hulls first
+    var arch = co.archetype && !co.human ? archetype(co.archetype) : null;
+    var hullFirst = function (e) { return arch && arch.fieldsMachines && profile(e.key).cls !== 'infantry' ? 0 : 1; };
     var avail = co.roster.filter(function (e) { return !(e.restUntil > 0) && !(spare && traumaBand(co, e) === 2); }).slice().sort(function (a, b) {
-      return markRank(a) - markRank(b) || traumaBand(co, a) - traumaBand(co, b) || profile(b.key).tier - profile(a.key).tier;
+      return markRank(a) - markRank(b) || traumaBand(co, a) - traumaBand(co, b) || hullFirst(a) - hullFirst(b) || profile(b.key).tier - profile(a.key).tier;
     });
     var docs = co.doctrines || [];
     var comp = R.compFor(co.faction, tier), out = [], used = {};

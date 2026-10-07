@@ -133,7 +133,9 @@
          unable after that turn of recovery is broken up and leaves the campaign. */
       var caps = rivals.map(function (co) {
         var c = fullTier(co, 1);
-        if (c < effectiveTier(co)) { topUpFree(co); c = fullTier(co, 1); }
+        // (a force that will not pad its army with them — the Elite — takes them only to regroup)
+        var arch0 = co.archetype ? archetype(co.archetype) : null;
+        if (c < effectiveTier(co) && !(arch0 && arch0.lean)) { topUpFree(co); c = fullTier(co, 1); }
         /* Regrouping: a resource point scraped together (once a turn) and spent at
            once on what it can buy towards a Tier I army. */
         if (!c) {
@@ -456,7 +458,7 @@
             did.push({ what: 'recruit', text: 'spawned ' + rl.entry.name });
             continue;
           }
-          var room = machineCount() < 3;
+          var room = machineCount() < (a.machinesMax || 3);
           var pool = R.listFor(co.faction).filter(function (p) {
             if (p.tier !== t || isLeaderP(p) || !canRecruit(co, p.key).ok) return false;
             if (p.noSlot || fullUp(p) || capped(p)) return false;                          // a platform fills no slot, so it can close no gap
@@ -575,14 +577,23 @@
         }
       }
       // and a machine company buys a hull the moment it can
-      if (a.spend === 'machines' && co.kUC >= 16 &&
-        co.roster.filter(function (e) { return profile(e.key).cls !== 'infantry'; }).length < 3) {
-        var hulls = R.listFor(co.faction).filter(function (p) {
-          return p.cls !== 'infantry' && !p.noSlot && wanted(p) && canRecruit(co, p.key).ok;
-        }).sort(function (x, y) { return y.tier - x.tier; });
-        if (hulls.length) {
-          var rv = recruit(co, hulls[0].key);
-          if (rv.ok) did.push({ what: 'recruit', text: 'took delivery of a ' + rv.entry.name });
+      /* A machine company buys a hull the moment it can. The Cavalry keeps buying
+         until it has a Priority Level 2 army's worth (`machinesMax`), whatever it can
+         field at its own Tier, the next one the moment the money is there. */
+      if (a.spend === 'machines') {
+        var cap = a.machinesMax || 3, bought = 0;
+        while (bought < 2 && co.roster.filter(function (e) { return profile(e.key).cls !== 'infantry'; }).length < cap) {
+          if (!a.machinesMax && co.kUC < 16) break;
+          var hulls = R.listFor(co.faction).filter(function (p) {
+            return p.cls !== 'infantry' && !p.noSlot && wanted(p) && canRecruit(co, p.key).ok && (!a.machinesMax || p.tier <= co.tier);
+          }).sort(function (x, y) { return y.tier - x.tier; });
+          if (!hulls.length) break;
+          var top = hulls[0].tier, pickH = a.machinesMax ? pick(hulls.filter(function (p) { return p.tier === top; })) : hulls[0];
+          var rv = recruit(co, pickH.key);
+          if (!rv.ok) break;
+          did.push({ what: 'recruit', text: 'took delivery of a ' + rv.entry.name });
+          bought++;
+          if (!a.machinesMax) break;
         }
       }
 
@@ -590,7 +601,8 @@
          toward a Company Tier is left alone — that promotion is worth more. */
       var next = COMPANY_COST[co.tier + 1];
       var savingFor = next && canPromoteCompany(co).faults.every(function (f) { return /costs/.test(f); });
-      if (!savingFor || co.kUC > next * 2) {
+      // (a lean force — the Elite — keeps the money for promotions and its next Tier instead)
+      if (!a.lean && (!savingFor || co.kUC > next * 2)) {
         for (var w = 0; w < 4 && co.kUC >= 24; w++) {
           var want = R.listFor(co.faction).filter(function (p) {
             return p.cls === 'infantry' && !isLeaderP(p) && wanted(p) &&
