@@ -1313,8 +1313,8 @@
       t1: ['rciv', 'rdesconscript'],
       t2: ['rmilitia', 'rlmg'],
       machines: ['rtechnical', 'rltv'], vehicles: 2,
-      fixed: ['H6'],
-      doctrines: ['H6', 'H3', 'H1', 'V1', 'V6', 'P6'],
+      // the cells and their commissars, the movement and its cry: Hero and Prophet, nothing criminal
+      doctrines: ['H6', 'H1', 'H2', 'P6', 'P2', 'P5'],
       groups: ['Freedom Warriors', 'Rebel support troops', 'Rebel combat vehicles', 'Rebel transport vehicles'],
       spend: 'recruit'
     },
