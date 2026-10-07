@@ -100,7 +100,7 @@
       if (tf) tf.hidden = true;
       var mh = document.querySelector('.muster-head b');
       if (mh) mh.textContent = muster.hot && muster.hot.step < 3
-        ? (muster.hot.kind === 'ai' || muster.hot.kind === 'solo' || muster.hot.kind === 'net' ? hotWho(muster.hot.step) : hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force'))
+        ? (muster.hot.kind === 'ai' || muster.hot.kind === 'solo' || muster.hot.kind === 'net' || muster.hot.kind === 'build' ? hotWho(muster.hot.step) : hotWho(muster.hot.step) + '\u2019s ' + (muster.solo ? 'commando' : 'force'))
         : muster.solo
         ? 'Your commando'
         : musterFaction() === 'bugs' ? 'Your swarm' : musterFaction() === 'xeno' ? 'Your tribe' : musterFaction() === 'rebel' ? 'Your group' : 'Your company';
@@ -296,18 +296,30 @@
       n.className = 'forcenote' + (tone ? ' ' + tone : '');
     }
 
+    /* Every saved force to load: this browser's (by their index, as they always
+       were) and, for a player signed in to the game server, their account's
+       (the force builder's too: src/net/forces.js). */
+    function accountForces() { return root.PMCForces ? root.PMCForces.list('skirmish').filter(function (e) { return e.where === 'account'; }) : []; }
+    function savedForce(v) {
+      if (/^s:/.test(v || '')) { var e = root.PMCForces && root.PMCForces.find('skirmish', v); return e ? e.force : null; }
+      return loadForces()[parseInt(v, 10)];
+    }
     function drawForceList() {
       var sel = el('sel-force');
       if (!sel) return;
-      var list = loadForces();
+      var list = loadForces(), acct = accountForces();
       var cur = sel.value;
+      function opt(f, v) {
+        var sub = R.ROMAN[f.tier] + '/' + f.pl + ' · ' + f.keys.length + ' units';
+        return '<option value="' + v + '">' + esc(f.name) + ' — ' + sub + '</option>';
+      }
       sel.innerHTML = '<option value="">' +
-        (list.length ? 'Saved forces…' : 'No saved forces yet') + '</option>' +
-        list.map(function (f, i) {
-          var sub = R.ROMAN[f.tier] + '/' + f.pl + ' · ' + f.keys.length + ' units';
-          return '<option value="' + i + '">' + esc(f.name) + ' — ' + sub + '</option>';
-        }).join('');
-      if (cur && list[cur]) sel.value = cur;
+        (list.length || acct.length ? 'Saved forces…' : 'No saved forces yet') + '</option>' +
+        (acct.length && list.length ? '<optgroup label="In this browser">' : '') +
+        list.map(function (f, i) { return opt(f, i); }).join('') +
+        (acct.length && list.length ? '</optgroup>' : '') +
+        (acct.length ? '<optgroup label="On your account">' + acct.map(function (e) { return opt(e.force, e.ref); }).join('') + '</optgroup>' : '');
+      if (cur && savedForce(cur)) sel.value = cur;
       var del = document.querySelector('[data-force="del"]');
       if (del) del.disabled = !sel.value;
     }
@@ -319,6 +331,21 @@
       if (!name) {
         forceNote('Give the force a name first.', 'bad');
         if (input) input.focus();
+        return;
+      }
+      // signed in to the game server: kept on the account, where the force builder keeps them too
+      if (root.PMCForces && root.PMCForces.signedIn()) {
+        var fa = currentForce(name);
+        root.PMCForces.save('skirmish', fa, function (r) {
+          if (!r.ok) { forceNote(r.why, 'bad'); return; }
+          muster.name = name;
+          drawForceList();
+          if (el('sel-force')) el('sel-force').value = r.ref;
+          var del0 = document.querySelector('[data-force="del"]');
+          if (del0) del0.disabled = false;
+          forceNote((r.replaced ? 'Replaced' : 'Saved') + ' "' + name + '" on your account — ' + fa.keys.length +
+            ' units at Battle Tier ' + R.ROMAN[fa.tier] + ', Priority Level ' + fa.pl + '.', 'ok');
+        });
         return;
       }
       var list = loadForces();
@@ -342,6 +369,15 @@
     function deleteForce() {
       var sel = el('sel-force');
       if (!sel || !sel.value) return;
+      if (/^s:/.test(sel.value)) {
+        var fs = savedForce(sel.value);
+        root.PMCForces.remove('skirmish', sel.value, function (r) {
+          sel.value = '';
+          drawForceList();
+          forceNote(r.ok ? 'Deleted "' + (fs ? fs.name : 'the force') + '" from your account.' : 'The server would not delete it.', r.ok ? '' : 'bad');
+        });
+        return;
+      }
       var list = loadForces();
       var f = list[parseInt(sel.value, 10)];
       if (!f) return;
@@ -528,7 +564,7 @@
           var sel = el('sel-force');
           document.querySelector('[data-force="del"]').disabled = !sel.value;
           if (!sel.value) { forceNote(''); return; }
-          var f = loadForces()[parseInt(sel.value, 10)];
+          var f = savedForce(sel.value);
           var r = applyForce(f);
           if (!r.ok) { forceNote(r.why, 'bad'); return; }
           // applyForce redraws, which rebuilds nothing here — put the pick back
@@ -664,7 +700,7 @@
       var k = muster.hot.kind;
       if (k === 'ai') return step === 1 ? 'Your force' : 'The opposition';
       if (k === 'solo') return 'Your commando';
-      if (k === 'net') return 'Your force';
+      if (k === 'net' || k === 'build') return 'Your force';
       return k === 'demo' ? 'Force ' + step : 'Player ' + step;
     }
     // does this step's force start rolled, and roll again when its kind changes?
@@ -675,12 +711,16 @@
     // every skirmish opens on the battlefield, a card for each force (a solitaire game has just the one)
     function hotQuick(kind) { return kind === 'demo' || kind === 'ai' || kind === 'hotseat' || kind === 'coop' || kind === 'solo'; }
     // a player's own force or commando, rather than one rolled for the AI
-    function hotOwn(kind) { return kind === 'ai' || kind === 'hotseat' || kind === 'coop' || kind === 'solo' || kind === 'net'; }
+    function hotOwn(kind) { return kind === 'ai' || kind === 'hotseat' || kind === 'coop' || kind === 'solo' || kind === 'net' || kind === 'build'; }
+    /* 'build': the force builder's skirmish force (from the main menu): one
+       force, at the Battle Tier and Priority Level the player sets, saved under
+       its name to their account (or this browser) to be loaded into a battle
+       later, from this screen's saved forces. Nothing is fought. */
     /* 'net': a network game's own force, built on the same sheet as a skirmish's
        but on its own — the other player builds theirs on their own screen, and
        the Tier and Priority Level are the host's. */
     function hotBegin(kind) {
-      muster.hot = { kind: kind, step: 1, sides: kind === 'solo' || kind === 'net' ? [null] : [null, null] };
+      muster.hot = { kind: kind, step: 1, sides: kind === 'solo' || kind === 'net' || kind === 'build' ? [null] : [null, null] };
       muster.keys = []; muster.name = '';
       if (el('hot-name')) el('hot-name').value = '';
       if (kind === 'demo') hotRandomise(0);
@@ -691,7 +731,8 @@
         drawColourPick();
         if (el('sel-tactic')) el('sel-tactic').value = '';
         muster.name = kind === 'hotseat' ? 'Player 1 Force' : kind === 'coop' ? 'Player 1' : kind === 'solo' ? 'Your commando'
-          : kind === 'net' ? (muster.forLobby && muster.forLobby.seat === 'B' ? 'Player 2 Force' : 'Player 1 Force') : 'Your Force';
+          : kind === 'net' ? (muster.forLobby && muster.forLobby.seat === 'B' ? 'Player 2 Force' : 'Player 1 Force')
+          : kind === 'build' ? '' : 'Your Force';
         if (el('hot-name')) el('hot-name').value = muster.name;
       }
       hotPaint();
@@ -888,6 +929,7 @@
       el('setup-title').textContent = step === 3 ? 'The battlefield'
         : kind === 'solo' ? 'Muster your commando'
         : kind === 'net' ? 'Muster your force'
+        : kind === 'build' ? 'Force builder \u2014 a skirmish force'
         : kind === 'ai' ? (step === 1 ? 'Muster your force' : 'The opposition \u2014 the AI\u2019s force')
         : hotWho(step) + ' \u2014 ' + (kind === 'demo' ? 'a force for the AI' : 'muster your ' + force);
       var intro = {
@@ -906,7 +948,10 @@
           ' is ready. Now the force it will face.',
           'Both forces are ready. Choose the scenario, the world and how the table is laid, then watch.'],
         net: ['A game over the network: your force for ' + ((muster.forLobby && muster.forLobby.room) || 'the game') +
-          ', at Battle Tier {T}, Priority Level {P}, as the host has set them. Name it, paint it and pick its units, then take it back to the table.', '', '']
+          ', at Battle Tier {T}, Priority Level {P}, as the host has set them. Name it, paint it and pick its units, then take it back to the table.', '', ''],
+        build: ['A force to keep: pick its kind, the Battle Tier and Priority Level it is built for, and its units, then name it and save it ' +
+          (root.PMCForces ? root.PMCForces.whereWords() : 'in this browser') +
+          '. It is there to load from the saved forces whenever you muster a skirmish.', '', '']
       }[kind];
       /* Hotseat and co-op open on the battlefield with both forces rolled; a force is
          only ever opened from there, to change it (hotseat review HB-10). */
@@ -918,7 +963,7 @@
       }
       el('hot-intro').textContent = (step === 2 && kind !== 'hotseat' && kind !== 'coop' ? h.sides[0].name + intro[1] : intro[step - 1])
         .replace('{T}', R.ROMAN[musterTier()]).replace('{P}', musterPL());
-      el('btn-start').textContent = kind === 'net' ? 'Back to the table'
+      el('btn-start').textContent = kind === 'net' ? 'Back to the table' : kind === 'build' ? 'Save force'
         : step < 3 && h.edit ? 'Done'
         : step === 1 ? (kind === 'demo' ? 'Next: the second force' : kind === 'ai' ? 'Next: the opposition' : 'Next: Player 2\u2019s ' + force)
         : step === 2 ? 'Next: the battlefield' : kind === 'demo' ? 'Watch the battle' : 'Take the field';
@@ -1055,15 +1100,31 @@
         var name = ((el('hot-name') && el('hot-name').value) || '').trim() || muster.name;
         if (!name) {
           if (el('hot-name')) el('hot-name').focus();
-          return hotRefuse(h.kind === 'ai' ? 'Give ' + who.toLowerCase() + ' a name.' : 'Give ' + who + '\u2019s ' + (h.kind === 'coop' ? 'commando' : 'force') + ' a name.');
+          return hotRefuse(h.kind === 'ai' || h.kind === 'build' ? 'Give ' + who.toLowerCase() + ' a name.' : 'Give ' + who + '\u2019s ' + (h.kind === 'coop' ? 'commando' : 'force') + ' a name.');
         }
         var chk = musterCheck(muster.keys);
-        if (!chk.ok) return hotRefuse((h.kind === 'ai' ? who : who + '\u2019s ' + (h.kind === 'coop' ? 'commando' : 'force')) + ' is not legal yet: ' + (chk.faults.join(' ') || 'pick some units.'));
+        if (!chk.ok) return hotRefuse((h.kind === 'ai' ? who : h.kind === 'build' ? 'This force' : who + '\u2019s ' + (h.kind === 'coop' ? 'commando' : 'force')) + ' is not legal yet: ' + (chk.faults.join(' ') || 'pick some units.'));
         var other = h.step === 2 ? h.sides[0] : h.edit ? h.sides[1] : null;
         if (other && name === other.name) return hotRefuse('The two need different names.');
         if (other && muster.colour === other.colour) return hotRefuse(who + ' needs a colour of ' + (h.kind === 'ai' ? 'its' : 'their') + ' own.');
         if (el('hot-name')) el('hot-name').value = name;
         hotSaveSide();
+        // the force builder's: kept, under its name, and the builder stays open to make another
+        if (h.kind === 'build') {
+          var bf = currentForce(name);
+          var told = function (r) {
+            var fl = el('faults');
+            if (!fl) return;
+            fl.textContent = r.ok ? (r.replaced ? 'Replaced' : 'Saved') + ' \u201c' + name + '\u201d ' + (r.where === 'account' ? 'on your account' : 'in this browser') +
+              ' \u2014 ' + bf.keys.length + ' units at Battle Tier ' + R.ROMAN[bf.tier] + ', Priority Level ' + bf.pl +
+              '. Load it from the saved forces when you muster a skirmish.' : r.why;
+            fl.className = 'faults' + (r.ok ? ' ok' : '');
+            drawForceList();
+          };
+          if (root.PMCForces) root.PMCForces.save('skirmish', bf, told);
+          else told({ ok: false, why: 'Saving is not available here.' });
+          return;
+        }
         // a network game's force goes back to the room it was built for
         if (h.kind === 'net') {
           var want = muster.forLobby, sd0 = h.sides[0];
@@ -1165,8 +1226,8 @@
     window.PMC_BACK_LABEL = backLabel;
     function setupGoesHome() {
       var h = muster.hot;
-      // a game picked from Single player or Hotseat goes back to that menu: Back, not home
-      if (h && /^(ai|solo|hotseat|coop)$/.test(h.kind || '')) return false;
+      // a game picked from Single player or Hotseat goes back to that menu: Back, not home (the builder's to its own)
+      if (h && /^(ai|solo|hotseat|coop|build)$/.test(h.kind || '')) return false;
       return !(h && h.edit) && !(h && h.step > 1 && !(h.step === 3 && h.from3));
     }
     function setupBack() {
@@ -1182,7 +1243,7 @@
       if (h && h.edit) { h.edit = false; h.step = 3; hotPaint(); drawMuster(); return; }
       if (h && h.step > 1 && !(h.step === 3 && h.from3)) { hotBack(); return; }
       // up one level: to the menu the game was picked from
-      openMenu(h && (h.kind === 'ai' || h.kind === 'solo') ? 'single' : h && (h.kind === 'hotseat' || h.kind === 'coop') ? 'hotseat' : null);
+      openMenu(h && (h.kind === 'ai' || h.kind === 'solo') ? 'single' : h && (h.kind === 'hotseat' || h.kind === 'coop') ? 'hotseat' : h && h.kind === 'build' ? 'builder' : null);
     }
 
     return {

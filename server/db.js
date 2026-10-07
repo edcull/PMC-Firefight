@@ -108,7 +108,20 @@ const MIGRATIONS = [
   `ALTER TABLE users ADD COLUMN notify INTEGER NOT NULL DEFAULT 0;`,
   /* 7: an online campaign listed in the lobby for anyone to join (its second seat
      taken by whoever comes first), or found by its code only. */
-  `ALTER TABLE campaigns ADD COLUMN listed INTEGER NOT NULL DEFAULT 0;`
+  `ALTER TABLE campaigns ADD COLUMN listed INTEGER NOT NULL DEFAULT 0;`,
+  /* 8: a player's saved forces, from the force builder: a skirmish force (an army
+     list for a Tier and Priority Level) or a campaign's starting company (its
+     units and doctrine), kept whole as JSON, one name per kind. */
+  `CREATE TABLE forces (
+     id      INTEGER PRIMARY KEY,
+     owner   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     kind    TEXT NOT NULL,
+     name    TEXT NOT NULL,
+     data    TEXT NOT NULL,
+     created INTEGER NOT NULL,
+     updated INTEGER NOT NULL
+   );
+   CREATE UNIQUE INDEX forces_name ON forces(owner, kind, name COLLATE NOCASE);`
 ];
 
 function open(file) {
@@ -188,6 +201,11 @@ function wrap(db) {
     campaignsOf: db.prepare('SELECT id, kind, name, turn, version, created, updated FROM campaigns WHERE owner = ? ORDER BY updated DESC'),
     saveCampaign: db.prepare('UPDATE campaigns SET state = ?, name = ?, turn = ?, kind = ?, version = version + 1, updated = ? WHERE id = ? AND owner = ? AND version = ?'),
     dropCampaign: db.prepare('DELETE FROM campaigns WHERE id = ? AND owner = ?'),
+    forcesOf: db.prepare('SELECT id, kind, name, data, updated FROM forces WHERE owner = ? ORDER BY kind, name COLLATE NOCASE'),
+    forceNamed: db.prepare('SELECT id FROM forces WHERE owner = ? AND kind = ? AND name = ? COLLATE NOCASE'),
+    addForce: db.prepare('INSERT INTO forces (owner, kind, name, data, created, updated) VALUES (?, ?, ?, ?, ?, ?)'),
+    saveForce: db.prepare('UPDATE forces SET name = ?, data = ?, updated = ? WHERE id = ? AND owner = ?'),
+    dropForce: db.prepare('DELETE FROM forces WHERE id = ? AND owner = ?'),
     setInvite: db.prepare('UPDATE campaigns SET invite = ? WHERE id = ?'),
     byInvite: db.prepare('SELECT * FROM campaigns WHERE invite = ?'),
     setListed: db.prepare('UPDATE campaigns SET listed = ? WHERE id = ?'),
@@ -280,6 +298,16 @@ function wrap(db) {
     // saved only over the version it was read at: false if someone has saved it since (or it is not theirs)
     saveCampaign: (c) => q.saveCampaign.run(JSON.stringify(c.state), c.name, c.turn || 0, c.kind, c.at, c.id, c.owner, c.version).changes > 0,
     dropCampaign: (id, owner) => q.dropCampaign.run(id, owner).changes > 0,
+    // ---- saved forces (the force builder) ----
+    forcesOf: (owner) => q.forcesOf.all(owner).map((f) => Object.assign({}, f, { data: JSON.parse(f.data) })),
+    /* saved under its name: one of that name and kind already kept is replaced,
+       otherwise it is added. Its id either way. */
+    putForce: (f) => {
+      const was = q.forceNamed.get(f.owner, f.kind, f.name);
+      if (was) { q.saveForce.run(f.name, JSON.stringify(f.data), f.at, was.id, f.owner); return was.id; }
+      return q.addForce.run(f.owner, f.kind, f.name, JSON.stringify(f.data), f.at, f.at).lastInsertRowid;
+    },
+    dropForce: (id, owner) => q.dropForce.run(id, owner).changes > 0,
     // ---- online campaigns (phase 3b) ----
     setInvite: (id, code) => q.setInvite.run(code, id),
     setListed: (id, on) => q.setListed.run(on ? 1 : 0, id).changes > 0,

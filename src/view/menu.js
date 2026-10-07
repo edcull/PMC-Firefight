@@ -24,9 +24,9 @@
   function el(id) { return document.getElementById(id); }
 
   /* ================= navigation ================= */
-  var PANES = ['main', 'single', 'hotseat', 'continue'];
+  var PANES = ['main', 'single', 'hotseat', 'continue', 'builder'];
   // where Back (and Escape) goes from each list
-  var UP = { single: 'main', hotseat: 'main', continue: 'main' };
+  var UP = { single: 'main', hotseat: 'main', continue: 'main', builder: 'main' };
   var at = 'main';
 
   function show(pane) {
@@ -288,7 +288,21 @@
       if (!b) return;
       if (root.SFX && root.SFX.click) { try { root.SFX.click(); } catch (e) { } }
       var go = b.getAttribute('data-menu');
-      if (go) { delAsked = null; show(go); return; }
+      if (go) {
+        delAsked = null;
+        // the force builder says where what is built will be kept
+        if (go === 'builder' && el('menu-builder-where')) {
+          el('menu-builder-where').textContent = root.PMCForces && root.PMCForces.signedIn()
+            ? 'Forces you save are kept on your account, ready on any device you sign in on.'
+            : 'Forces you save are kept in this browser. Sign in to a game server to keep them on your account.';
+        }
+        show(go); return;
+      }
+      /* the force builder: a skirmish force on the muster sheet, a campaign's
+         starting company on the founding sheet — each saving rather than playing */
+      var bk = b.getAttribute('data-build');
+      if (bk === 'skirmish') { close(); if (root.PMC_SKIRMISH) root.PMC_SKIRMISH('build'); return; }
+      if (bk === 'start') { if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.buildStart) root.PMC_CAMPAIGN.buildStart(); return; }
       var ck = b.getAttribute('data-cont');
       if (ck) { delAsked = null; pick(ck); return; }
       var cd = b.getAttribute('data-contdel');

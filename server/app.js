@@ -143,6 +143,51 @@ function create(opts) {
     return json(res, 405, { error: 'method not allowed' }), true;
   }
 
+  /* A signed-in player's saved forces, from the force builder: a skirmish force
+     (kind 'skirmish': an army list for a Tier and Priority Level) or a campaign's
+     starting company (kind 'start': its units and its doctrine). Kept under a
+     name, one of each name and kind: saving again under the same name replaces
+     it. Accounts only, as campaigns are.
+       GET    api/forces       -> { forces: [{ id, kind, name, data, updated }] }
+       POST   api/forces       { kind, name, data } -> { id }
+       DELETE api/forces/:id   -> { ok } */
+  const FORCE_KINDS = ['skirmish', 'start'];
+  function forcesApi(req, res, url) {
+    const m = /^\/api\/forces(?:\/(\d+))?$/.exec(url);
+    if (!m) return false;
+    const send = (code, body) => {
+      res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(JSON.stringify(body));
+    };
+    const me = auth && auth.session(Auth.tokenFrom(req));
+    if (!me || me.guest) return send(401, { error: 'sign in to keep forces on the server' }), true;
+    if (req.method !== 'GET' && req.headers.origin && !allowOrigin(req.headers.origin, req)) return send(403, { error: 'not from here' }), true;
+    const db = auth.db;
+    if (m[1]) {
+      if (req.method !== 'DELETE') return send(405, { error: 'method not allowed' }), true;
+      return send(200, { ok: db.dropForce(+m[1], me.userId) }), true;
+    }
+    if (req.method === 'GET') return send(200, { forces: db.forcesOf(me.userId) }), true;
+    if (req.method !== 'POST') return send(405, { error: 'method not allowed' }), true;
+    readBody(req, (body) => {
+      if (body === null) return send(413, { error: 'too large' });
+      let b;
+      try { b = JSON.parse(body); } catch (e) { return send(400, { error: 'that is not JSON' }); }
+      const kind = FORCE_KINDS.indexOf(b.kind) >= 0 ? b.kind : null;
+      const name = String(b.name || '').trim().slice(0, 60);
+      const d = b.data;
+      if (!kind || !name) return send(400, { error: 'a force needs a kind and a name' });
+      if (!d || typeof d !== 'object' || !Array.isArray(d.keys) || d.keys.length > 200 ||
+        !d.keys.every((k) => typeof k === 'string' && k.length < 80)) return send(400, { error: 'that is not a force' });
+      if (JSON.stringify(d).length > 20000) return send(413, { error: 'too large' });
+      const mine = db.forcesOf(me.userId);
+      const same = mine.some((f) => f.kind === kind && f.name.toLowerCase() === name.toLowerCase());
+      if (!same && mine.length >= 200) return send(400, { error: 'that is as many forces as one account keeps \u2014 delete one first' });
+      send(200, { id: db.putForce({ owner: me.userId, kind: kind, name: name, data: d, at: Date.now() }) });
+    });
+    return true;
+  }
+
   /* A signed-in player's own campaigns (phase 3a, decision 7), kept whole, each
      with a version: a save carries the version it was read at, and one made from
      an older copy is refused (409) with the newer one, so two devices never
@@ -288,6 +333,7 @@ function create(opts) {
     if (api(req, res, url)) return;
     if (adminApi(req, res, url)) return;
     if (campaignsApi(req, res, url)) return;
+    if (forcesApi(req, res, url)) return;
     if (onlineApi(req, res, url)) return;
     if (url === '/campaigns') return json(res, 200, { campaigns: campaigns.list() });
     if (campaignRoute(req, res, url)) return;
