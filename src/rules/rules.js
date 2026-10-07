@@ -485,15 +485,24 @@
     var sigKeys = flat(sets), lim = a.limit || {}, mix = a.mix || {};
     var starters = flat([a.t1, a.t2, a.refill ? Object.keys(a.refill) : []]);
     var profile = function (k) { return BY_KEY[k]; };
+    var machineMinded = !!a.fieldsMachines || (a.machinesMax || 0) >= 5;
     var groupOf = function (k) { var p = profile(k); return p ? p.group : null; };
     // a limit set for a campaign roster, cut to a battle force: a quarter of it a Priority Level (0 stays 0)
     function cut(n) { return n ? Math.max(1, Math.round(n * pl / 4)) : 0; }
     // a group its mix weighs at under 1 (the Faithful's artillery) is kept to one for every two Priority Levels
     function lightCap(g) { return mix[g] && mix[g] < 1 ? Math.ceil(pl / 2) : null; }
     function hullFirst(p) {
-      return p.cls !== 'infantry' && (a.hullsFirst || []).some(function (h) { return h === p.group || h === p.key || (h === 'transports' && p.transport > 0); });
+      if (p.cls === 'infantry') return false;
+      if (machineMinded && !(a.hullsFirst || []).length) return true;      // a machine company: any hull of its own
+      return (a.hullsFirst || []).some(function (h) { return h === p.group || h === p.key || (h === 'transports' && p.transport > 0); });
     }
-    var machineMinded = !!a.fieldsMachines || (a.machinesMax || 0) >= 5;
+    // more kinds rather than more of one: the units it has fewest of, more often than not
+    function spread(list, keys) {
+      if (list.length < 2 || rnd() > 0.6) return list;
+      var n = function (p) { return count(keys, function (x) { return x === p.key; }); };
+      var lo = Math.min.apply(null, list.map(n));
+      return list.filter(function (p) { return n(p) === lo; });
+    }
     function liked(p) { return (a.groups || []).indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || sigKeys.indexOf(p.key) >= 0; }
     function count(keys, f) { return keys.filter(function (k) { return f(splitPick(k).key); }).length; }
     function shortfall(g, keys) {
@@ -535,10 +544,13 @@
         var inMix = own.filter(function (p) { return mix[p.group]; });
         if (inMix.length && rnd() < 0.7) {
           var best = Math.max.apply(null, inMix.map(function (p) { return shortfall(p.group, keys); }));
-          return inMix.filter(function (p) { return shortfall(p.group, keys) === best; });
+          return spread(inMix.filter(function (p) { return shortfall(p.group, keys) === best; }), keys);
         }
-        return own;
+        return spread(own, keys);
       },
+      /* past the battle's minimum, no more than a Priority Level and one of any one
+         unit (Tier V is not fifteen Revolutionary Guard and nothing else) */
+      tooMany: function (p, keys) { return count(keys, function (x) { return x === p.key; }) >= pl + 1; },
       own: function (p) { return liked(p) || starters.indexOf(p.key) >= 0; },
       hullFirst: function (p) { return liked(p) && hullFirst(p); },
       rides: function (p) { return (a.riders || []).indexOf(p.group) >= 0; }
@@ -660,6 +672,9 @@
       for (var n = 0; n < most; n++) {
         var can = sig.map(function (k) { return BY_KEY[k]; }).filter(function (p) { return p && room(p); });
         if (!can.length) return;
+        // one it has not got yet, where there is one: a car and a craft, not two cars
+        var fresh = can.filter(function (p) { return keys.indexOf(p.key) < 0 && !keys.some(function (k) { return splitPick(k).key === p.key; }); });
+        if (fresh.length) can = fresh;
         var hi = Math.max.apply(null, can.map(function (p) { return p.tier; }));
         take(pick(can.filter(function (p) { return p.tier === hi; })));
       }
@@ -675,7 +690,7 @@
     // then spend what is left on anything legal, favouring the bigger units
     guard = 0;
     while (guard++ < 400) {
-      var any = POOL.filter(function (p) { return !p.command && room(p); });
+      var any = POOL.filter(function (p) { return !p.command && room(p) && !(st && st.tooMany(p, keys)); });
       if (!any.length) break;
       any.sort(function (a, b) { return b.tier - a.tier; });
       var top = any.filter(function (p) { return p.tier === any[0].tier; });
