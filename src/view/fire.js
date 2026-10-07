@@ -221,6 +221,17 @@
       };
     }
 
+    /* A surface-to-air missile leaves as the SAM team's do: pushed cold up the
+       line the tubes are laid on, climbing, then lighting and running at the
+       aircraft. The team's launcher is laid the way the team faces; the
+       anti-aircraft vehicle's turret turns onto the target, so its tubes point
+       at it, and it fires up a little steeper. Any other missile flies flat. */
+    function samLaunch(shooter, to) {
+      if (shooter.art === 'samlauncher') return { aim: shooter.facing || 0, elev: 0.8 };
+      if (shooter.art === 'aatank') return { aim: Math.atan2(to.y - shooter.y, to.x - shooter.x), elev: 0.95 };
+      return null;
+    }
+
     /* The primary weapon, played out. `o` carries the hits it scored, the range
        (how long anything lobbed is in the air), and `land(extra)`, called as
        the rounds arrive. Returns how long it takes, in ms, before any
@@ -351,7 +362,7 @@
                 if (SFX) SFX.missile(0, mflight / 1000, mflight / 1000 * 0.52);
                 // no flash at the tube: it is ejected cold and lights further out
                 add({ kind: 'missile', from: F, to: to, seed: j, dur: mflight, curve: curve, blocking: true,
-                  sam: shooter.art === 'samlauncher' ? { aim: shooter.facing || 0, elev: 0.8 } : null });
+                  sam: samLaunch(shooter, to) });
                 setTimeout(function () { land(3); }, mflight);
                 redraw();
               }, j * birdGap);
