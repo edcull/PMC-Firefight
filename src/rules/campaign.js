@@ -1340,6 +1340,7 @@
       fixed: ['V2'],
       doctrines: ['V2', 'V1', 'V5', 'H3', 'H5', 'P4'],
       stages: [['V1', 'V5', 'H3', 'H5'], ['P4']],   // Holy Fury last: at Tier V, once the rest is held
+      tactics: { open: 'wave', attack: 'wave', defend: 'wave' },                              // pirates never dig in (and riders take nothing from Guerillas)
       spend: 'promote'
     },
     {
@@ -1395,6 +1396,7 @@
       // the mined bridge first; then leaders who will not break, and the locals on side
       fixed: ['V3'],
       doctrines: ['V3', 'P2', 'H2', 'H4', 'V4', 'H5'],
+      tactics: { open: 'guerillas', attack: 'guerillas', defend: ['guerillas', 'laststand'] },   // out of the tunnels; on defence, half the time behind barricades
       spend: 'promote'
     },
     {
@@ -1415,6 +1417,7 @@
       fixed: ['H6'],
       doctrines: ['H6', 'V6', 'V5', 'V1', 'P5', 'P6'],
       stages: [['V6', 'V5', 'V1'], ['P5', 'P6']],   // two of the Villain doctrines first, the Prophet ones last
+      tactics: { open: 'laststand', attack: ['wave', 'guerillas'], defend: 'laststand' },     // a garrison digs in; it attacks in a rush or by infiltration
       spend: 'promote'
     }
   ];
@@ -1770,8 +1773,28 @@
     return co;
   }
 
+  /* The Rebel Tactic an AI revolt takes for a battle (p. 95), by whether it attacks,
+     defends or meets the enemy in the open (`roles`: the contract's, `side`: its own).
+     Most revolts rush in numbers and dig in when held; a personality says otherwise
+     (`tactics`, a list where it is a coin toss). One time in seven or so it surprises,
+     with one of the others — never Guerillas for a force that rides (Free Space). */
+  var TACTIC_DEFAULT = { open: 'wave', attack: 'wave', defend: 'laststand' };
+  function aiTactic(co, roles, side) {
+    if (!co || co.faction !== 'rebel') return null;
+    var a = co.archetype ? archetype(co.archetype) : null;
+    var role = !roles || !roles.attacker ? 'open' : roles.attacker === side ? 'attack' : 'defend';
+    var want = ((a && a.tactics) || TACTIC_DEFAULT)[role] || TACTIC_DEFAULT[role];
+    var pickT = Array.isArray(want) ? want[Math.floor(Math.random() * want.length)] : want;
+    if (Math.random() < 0.15) {
+      var rides = !!(a && a.riders);
+      var others = ['laststand', 'wave', 'guerillas'].filter(function (t) { return t !== pickT && !(rides && t === 'guerillas'); });
+      if (others.length) pickT = others[Math.floor(Math.random() * others.length)];
+    }
+    return pickT;
+  }
+
   root.PMCCamp = {
-    VERSION: VERSION, migrate: migrate, fillsArmy: fillsArmy, fullTier: fullTier, freeUnit: freeUnit, ordinalName: ordinalName, isDefaultName: isDefaultName,
+    VERSION: VERSION, migrate: migrate, aiTactic: aiTactic, fillsArmy: fillsArmy, fullTier: fullTier, freeUnit: freeUnit, ordinalName: ordinalName, isDefaultName: isDefaultName,
     DOCTRINES: DOCTRINES, CATEGORIES: CATEGORIES,
     doctrine: function (id) { return BY_DOCTRINE[id] || BY_PATH[id] || BY_PATHWAY[id] || BY_ADVANCEMENT[id]; },
     PATHS: PATHS, PATH_GROUPS: PATH_GROUPS, BY_PATH: BY_PATH,

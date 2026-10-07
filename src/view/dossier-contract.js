@@ -584,8 +584,8 @@
         theirs = E.contract.picks; theirTactic = E.contract.tactic || null; theirDrugs = E.contract.drugs || [];
         if (B.faction !== 'rebel') theirTactic = null;
       } else {
-        // a rebel rival picks a tactic of its own, the way a player would (p. 95)
-        theirTactic = B.faction === 'rebel' ? [null, 'laststand', 'wave', 'guerillas'][Math.floor(Math.random() * 4)] : null;
+        // a rebel rival picks a tactic (p. 95) by its personality and its part in the scenario
+        theirTactic = C.aiTactic(B, E.contract.roles, 'B');
         theirs = autoPick(B, E.contract.tier, E.contract.pl, theirTactic);
         if (!R.checkArmy(theirs.map(function (e) { return R.entryPick(e); }),
           E.contract.tier, E.contract.pl, B.doctrines, theirTactic).ok) {
