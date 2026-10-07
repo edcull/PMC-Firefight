@@ -550,9 +550,10 @@
       },
       /* past the battle's minimum, no more than a Priority Level and one of any one
          unit (Tier V is not fifteen Revolutionary Guard and nothing else) */
-      // (Tier I is the rank and file, as many as it likes: a rising is mostly Armed civilians)
-      tooMany: function (p, keys) { return p.tier > 1 && count(keys, function (x) { return x === p.key; }) >= pl + 1; },
+      // (Tier I is the rank and file, and may run to twice that: a rising is mostly Armed civilians)
+      tooMany: function (p, keys) { return count(keys, function (x) { return x === p.key; }) >= (p.tier === 1 ? 2 * pl + 1 : pl + 1); },
       own: function (p) { return liked(p) || starters.indexOf(p.key) >= 0; },
+      machineMinded: machineMinded,
       hullFirst: function (p) { return liked(p) && hullFirst(p); },
       rides: function (p) { return (a.riders || []).indexOf(p.group) >= 0; }
     };
@@ -664,6 +665,10 @@
     while (counts[battleTier] < need && guard++ < 200) {
       var core = POOL.filter(function (p) { return p.tier === battleTier && !p.command && p.cls === 'infantry' && room(p); });
       if (!core.length) break;
+      /* no more of one unit than it would take past the minimum: once its own are used up
+         it takes another of the Tier (Mujahideen beside the Revolutionary Guard), and
+         repeats only when there is nothing else */
+      if (st) { var fresh = core.filter(function (p) { return !st.tooMany(p, keys); }); if (fresh.length) core = fresh; }
       take(pick(st ? st.favour(core, keys) : core));
     }
     /* a personality's signature units next (Special Ops' cars and its drones, the
@@ -703,6 +708,12 @@
       var top = any.filter(function (p) { return p.tier === any[0].tier; });
       var from = rnd() > 0.35 ? top : any;
       if (st && !from.some(st.own)) from = any;     // none of its own among the biggest: its own, smaller
+      /* a force that is not out to field machines fills its last points with men rather
+         than cheap hulls (not a Technical for every Armed civilian it could not take) */
+      if (st && !st.machineMinded) {
+        var men = from.filter(function (p) { return p.cls === 'infantry'; });
+        if (men.length && !men.some(st.own) && from.some(function (p) { return p.cls !== 'infantry' && st.own(p); }) && rnd() < 0.75) from = men;
+      }
       take(pick(st ? st.favour(from, keys, any) : from));
       if (spent >= budget) break;
     }
