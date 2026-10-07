@@ -1230,9 +1230,9 @@
       id: 'marksmen', name: 'Special Ops',
       blurb: 'Never where you are looking: a sniper in the treeline, a drone overhead, and your radios full of static.',
       names: ['Meridian Security', 'Longsight Partners', 'The Quiet Trade', 'Orlov Group'],
-      // rifle teams for the range, Irregulars to promote, and Forward observers or nomads
-      t1: ['irregulars'],
-      t2: ['rookie', ['observers', 'nomads']],
+      // Irregulars and Recruits to promote, Forward observers, and a rifle team or nomads
+      t1: ['irregulars', 'recruits'],
+      t2: ['observers', ['rookie', 'nomads']],
       machines: [], vehicles: 0,
       // Tier I gaps later: Recruits (who become rifle teams) and Irregulars (who become scouts)
       refill: { recruits: 2, irregulars: 1 },
