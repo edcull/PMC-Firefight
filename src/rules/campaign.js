@@ -1242,7 +1242,7 @@
       machines: [], vehicles: 0,
       // Tier I gaps later: Recruits (who become rifle teams) and Irregulars (who become scouts)
       refill: { recruits: 2, irregulars: 1 },
-      doctrines: ['O3', 'S6', 'T6', 'O6', 'T1', 'O2'],
+      doctrines: ['O3', 'S6', 'T6', 'O6', 'T1', 'O1'],
       groups: ['Rifle infantry', 'Light infantry', 'Support teams', 'Drones', 'Remote mortars'],
       mix: { 'Rifle infantry': 2, 'Light infantry': 1 },   // two rifle teams to each scout or sniper team
       // the rare ones: LRRP, snipers, drones and EW — and a couple of mortars in support
