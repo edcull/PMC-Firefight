@@ -1230,12 +1230,16 @@
       blurb: 'Fights for whoever pays, wherever they point, and sends the invoice before the smoke clears.',
       names: ['Corvid Contracting', 'The Tide Company', 'Grey Market Levies', 'Nineteen Hands'],
       // a little of everything and nothing specialised: hired wide rather than trained tall
-      t1: ['recruits', 'enforcers', 'irregulars'],
+      // Recruits and Irregulars (Enforcers grow only into battle armour, which it does not hire)
+      t1: ['recruits', 'irregulars'],
       t2: ['rookie', 'lmgsection'],
       machines: ['unarmoured'], vehicles: 1,
       // the business (paid, well thought of, the job at the size that pays, the army to fit it), and the guns it hires
       doctrines: ['S2', 'S5', 'S4', 'O6', 'O4', 'T3'],
       groups: ['Basic troops', 'Rifle infantry', 'Light support', 'Remote mortars', 'Transport vehicles'],
+      // two of the line (basic and rifle troops) to each machine gun and each mortar, the mortars four at most
+      mix: { 'Basic troops': 1, 'Rifle infantry': 1, 'Light support': 1, 'Remote mortars': 1 },
+      limit: { 'Remote mortars': 4, enforcers: 0 },   // (and no Enforcers: they grow only into battle armour)
       spend: 'recruit'
     },
     {
@@ -1290,6 +1294,7 @@
       doctrines: ['S1', 'O3', 'O6', 'O1', 'T2', 'S2'],
       fixed: ['S1'],
       groups: ['Combat vehicles', 'Transport vehicles', 'Transport aircraft', 'Strike aircraft', 'Assault troops', 'Rifle infantry'],
+      mix: { 'Rifle infantry': 1, 'Assault troops': 1 },   // as many assault troops as riflemen in the back of its vehicles
       machinesMax: 6,               // as many hulls as a Priority Level 2 army can field
       fieldsMachines: true,         // and into battle in them first
       spend: 'machines'

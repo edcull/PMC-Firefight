@@ -531,10 +531,11 @@
            out of character — which is how an Elite company ended up full of mortars. */
         var likedAll = all.filter(wanted);
         var targets = likedAll.length ? affordable.filter(wanted) : affordable;
-        /* ...and a promoting company's unit with nowhere it wants to go keeps its
-           experience for an honour rather than stepping out of character, which is
-           what lets its veterans pick up the odd honour from mid-campaign. */
-        if ((a.spend === 'promote' || a.spend === 'honours') && !likedAll.length) targets = [];
+        /* ...and a unit with nowhere it wants to go keeps its experience for an honour
+           rather than stepping out of character, which is what lets its veterans pick
+           up the odd honour from mid-campaign (a Mercenary's machine gunners stay on the
+           guns rather than becoming anti-tank teams it does not hire). */
+        if (!likedAll.length) targets = [];
         /* A force keeping a mix holds a unit to its own line unless the line it would
            cross to is the shorter of its share (the Bastion's machine guns stay machine
            guns, half and half with its anti-tank teams), waiting for the step up instead. */
