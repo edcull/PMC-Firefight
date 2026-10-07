@@ -1348,7 +1348,7 @@
       names: ['The New Chosen', 'Pilgrims of the Seventh Gate', 'The Ashfall Congregation', 'Sons of the Furnace'],
       // the standard revolt heavy on Holy Warriors, and a little lighter on the guns that stay put
       t1: ['rciv'],
-      t2: ['racolytes', 'rmilitia'],
+      t2: ['racolytes', 'racolytes'],
       foundFree: true,
       machines: ['rtechnical'], vehicles: 1,
       groups: ['Holy Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles', 'Rebel transport vehicles'],
