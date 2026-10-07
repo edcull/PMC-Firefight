@@ -489,7 +489,7 @@
       (Array.isArray(sigs[0]) ? sigs : [sigs]).forEach(function (sig) {
         if (!sig.length) return;
         var have = co.roster.filter(function (e) { return sig.indexOf(e.key) >= 0; }).length;
-        if (have >= Math.min(3, co.tier)) return;
+        if (have >= Math.min(a.signatureMax || 3, co.tier)) return;
         var can = sig.map(profile).filter(function (p) { return p.tier <= co.tier + 1 && canRecruit(co, p.key).ok && !capped(p); });
         var top = Math.max.apply(null, can.map(function (p) { return p.tier; }).concat([0]));
         var buy = can.length ? pick(can.filter(function (p) { return p.tier === top; })) : null;

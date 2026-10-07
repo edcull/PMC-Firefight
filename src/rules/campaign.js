@@ -1243,8 +1243,9 @@
       limit: { lrrp: 2, snipers: 2, 'Drones': 2, ew: 2, ewveh: 1, 'Remote mortars': 2 },
       // and the vehicles and aircraft it may take: patrol and recon cars, a command and an EW vehicle, transport and strike craft
       units: ['lpv', 'hpv', 'recon', 'cmdveh', 'ewveh', 'adaptedcraft', 'lightcraft', 'heavycraft', 'fsc', 'tsc', 'gunboat', 'vtoldrone'],
-      // ...of which it keeps a few on the books (one for each Tier it holds, up to three), and a drone or EW team or two
-      signature: [['lpv', 'hpv', 'recon', 'cmdveh', 'adaptedcraft', 'lightcraft', 'fsc'], ['ew', 'drecon', 'dcombat', 'ewveh']],
+      // ...of which it keeps a couple on the books, and a drone or EW team or two — fewer machines than the Cavalry
+      signature: [['lpv', 'hpv', 'recon', 'cmdveh', 'adaptedcraft', 'lightcraft', 'fsc'], ['ew', 'drecon', 'dcombat']],
+      signatureMax: 2,
       // promoted to Veterans, Forward observers and Sharpshooters, then trained with what is left
       spend: 'promote'
     },
