@@ -1239,7 +1239,7 @@
       doctrines: ['O3', 'S6', 'T6', 'O6', 'T1', 'O2'],
       groups: ['Rifle infantry', 'Light infantry', 'Support teams', 'Drones', 'Unclassified', 'Remote mortars'],
       mix: { 'Rifle infantry': 2, 'Light infantry': 1 },   // two rifle teams to each scout or sniper team
-      limit: { lrrp: 1, snipers: 1, 'Remote mortars': 2 }, // the rare ones, and a couple of mortars in support
+      limit: { lrrp: 2, snipers: 2, 'Remote mortars': 2 }, // the rare ones, and a couple of mortars in support
       // promoted to Veterans, Forward observers and Sharpshooters, then trained with what is left
       spend: 'promote'
     },
