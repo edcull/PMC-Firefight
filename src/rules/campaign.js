@@ -1241,12 +1241,12 @@
       // Tier I gaps later: Recruits (who become rifle teams) and Irregulars (who become scouts)
       refill: { recruits: 2, irregulars: 1 },
       doctrines: ['O3', 'S6', 'T6', 'O6', 'T1', 'O2'],
-      groups: ['Rifle infantry', 'Light infantry', 'Support teams', 'Drones', 'Unclassified', 'Remote mortars'],
+      groups: ['Rifle infantry', 'Light infantry', 'Support teams', 'Drones', 'Remote mortars'],
       mix: { 'Rifle infantry': 2, 'Light infantry': 1 },   // two rifle teams to each scout or sniper team
       // the rare ones: LRRP, snipers, drones and EW — and a couple of mortars in support
       limit: { lrrp: 2, snipers: 2, 'Drones': 2, ew: 2, ewveh: 1, 'Remote mortars': 2 },
       // and the vehicles and aircraft it may take: patrol and recon cars, a command and an EW vehicle, transport and strike craft
-      units: ['lpv', 'hpv', 'recon', 'cmdveh', 'ewveh', 'adaptedcraft', 'lightcraft', 'heavycraft', 'fsc', 'tsc', 'gunboat', 'vtoldrone'],
+      units: ['nomads', 'lpv', 'hpv', 'recon', 'cmdveh', 'ewveh', 'adaptedcraft', 'lightcraft', 'heavycraft', 'fsc', 'tsc', 'gunboat', 'vtoldrone'],
       // ...of which it keeps a couple on the books, and a drone or EW team or two — fewer machines than the Cavalry
       signature: [['lpv', 'hpv', 'recon', 'cmdveh', 'adaptedcraft', 'lightcraft', 'fsc'], ['ew', 'drecon', 'dcombat']],
       signatureMax: 2,
@@ -1264,6 +1264,7 @@
       doctrines: ['T4', 'T1', 'T2', 'S1', 'O3', 'O5'],
       fixed: ['T4'],
       groups: ['Assault troops', 'Basic troops', 'Transport vehicles', 'Engineering and utility vehicles'],
+      units: ['chem'],              // and Chem warriors
       // Penal troops thrown in first to soak the fire: free, and kept up (one per Tier, four at most)
       signature: ['penal'],
       signatureMax: 4,
