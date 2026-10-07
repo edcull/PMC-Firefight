@@ -1313,7 +1313,8 @@
       t1: ['rciv', 'rdesconscript'],
       t2: ['rmilitia', 'rlmg'],
       machines: ['rtechnical', 'rltv'], vehicles: 2,
-      doctrines: ['H1', 'V1', 'H4', 'V6', 'H5', 'V2'],
+      fixed: ['H6'],
+      doctrines: ['H6', 'H3', 'H1', 'V1', 'V6', 'P6'],
       groups: ['Freedom Warriors', 'Rebel support troops', 'Rebel combat vehicles', 'Rebel transport vehicles'],
       spend: 'recruit'
     },
@@ -1324,8 +1325,8 @@
       t1: ['rridergang', 'rciv'],
       t2: ['rriderwar', 'rmilitia'],
       machines: ['rtechnical'], vehicles: 1,
-      doctrines: ['V2', 'V6', 'V1', 'H3', 'V3', 'H2'],
       fixed: ['V2'],
+      doctrines: ['V2', 'V1', 'V6', 'H3', 'H2', 'H5'],
       groups: ['Mounted Warriors', 'Freedom Warriors', 'Rebel combat vehicles'],
       spend: 'machines'
     },
@@ -1336,8 +1337,8 @@
       t1: ['rciv', 'rdesconscript'],
       t2: ['racolytes', 'rmilitia'],
       machines: ['rtechnical'], vehicles: 1,
-      doctrines: ['P5', 'P2', 'P4', 'P3', 'P1', 'H1'],
       fixed: ['P5'],
+      doctrines: ['P5', 'P4', 'P1', 'P6', 'H4', 'H1'],
       groups: ['Holy Warriors', 'Freedom Warriors'],
       spend: 'promote'
     },
@@ -1348,7 +1349,8 @@
       t1: ['rciv', 'rdesconscript'],
       t2: ['rminers', 'rlmg'],
       machines: ['rltv', 'rtechnical'], vehicles: 2,
-      doctrines: ['V1', 'H4', 'H5', 'V5', 'H1', 'V6'],
+      fixed: ['V3'],
+      doctrines: ['V3', 'V5', 'V1', 'H3', 'H4', 'H5'],
       groups: ['Miners', 'Freedom Warriors', 'Rebel artillery'],
       spend: 'promote'
     },
@@ -1359,8 +1361,7 @@
       t1: ['rciv', 'rridergang'],
       t2: ['rmilitia', 'rminers'],
       machines: ['rtechnical'], vehicles: 1,
-      doctrines: ['V3', 'H2', 'V4', 'V1', 'H4', 'V5'],
-      fixed: ['V3'],
+      doctrines: ['H2', 'H4', 'H5', 'V3', 'V4', 'V5'],
       groups: ['Chosen Warriors', 'Freedom Warriors', 'Rebel support troops'],
       spend: 'honours'
     },
