@@ -340,6 +340,14 @@
       var all = creedOf(co).list.map(function (d) { return d.id; });
       var fixed = a.random ? [] : (a.fixed || []).filter(function (d) { return all.indexOf(d) >= 0; });
       var short = a.random ? [] : shuffle((a.doctrines || []).filter(function (d) { return all.indexOf(d) >= 0 && fixed.indexOf(d) < 0; }));
+      /* A shortlist taken in stages (`stages`: the Turncoats' Villain doctrines before their
+         Prophet ones) is shuffled within each stage, the stages kept in their order. */
+      if (!a.random && a.stages) {
+        short = [];
+        a.stages.forEach(function (st) {
+          short = short.concat(shuffle(st.filter(function (d) { return all.indexOf(d) >= 0 && fixed.indexOf(d) < 0 && short.indexOf(d) < 0; })));
+        });
+      }
       var rest = shuffle(all.filter(function (d) { return fixed.indexOf(d) < 0 && short.indexOf(d) < 0; }));
       var plan = fixed.concat(short, rest);
       /* ...and one fixed for a later Tier (`fixedAt`: the Pitheads' Labour Leader at Tier II,

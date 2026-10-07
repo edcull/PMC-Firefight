@@ -1412,6 +1412,7 @@
       // its officers still command (the garrison's military past); then who pays, the discipline, and a chaplain's sermon
       fixed: ['H6'],
       doctrines: ['H6', 'V6', 'V5', 'V1', 'P5', 'P6'],
+      stages: [['V6', 'V5', 'V1'], ['P5', 'P6']],   // two of the Villain doctrines first, the Prophet ones last
       spend: 'promote'
     }
   ];
