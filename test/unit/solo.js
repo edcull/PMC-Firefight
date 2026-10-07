@@ -266,9 +266,9 @@ ok('every archetype reaches Company Tier II or better',
 ok('the cavalry fields the most machines',
   C.ARCHETYPES.every(function (a) { return a.id === 'aircav' || avg.aircav.machines > avg[a.id].machines; }), true,
   table(function (v) { return v.machines; }, one));
-// (Special Ops keeps a couple of cars and craft of its own, and upgrades them too)
+// (Special Ops keeps a couple of cars and craft of its own, and the Bastion its gun hulls, and upgrades them too)
 ok('...and fits more Upgrades than the infantry companies',
-  avg.aircav.upgrades > 0 && C.ARCHETYPES.every(function (a) { return a.id === 'aircav' || a.id === 'marksmen' || avg[a.id].upgrades < avg.aircav.upgrades; }), true,
+  avg.aircav.upgrades > 0 && C.ARCHETYPES.every(function (a) { return ['aircav', 'marksmen', 'armour'].indexOf(a.id) >= 0 || avg[a.id].upgrades < avg.aircav.upgrades; }), true,
   table(function (v) { return v.upgrades; }, one));
 ok('the mercenaries field the most units (they hire wide)',
   C.ARCHETYPES.every(function (a) { return a.id === 'swarm' || avg.swarm.units > avg[a.id].units; }), true,

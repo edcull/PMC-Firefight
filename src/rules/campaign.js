@@ -1200,6 +1200,8 @@
       machines: [], vehicles: 0,
       doctrines: ['T5', 'T2', 'T6', 'S4', 'S3', 'S5'],
       groups: ['Heavy infantry', 'Heavy support', 'Hunters and destroyers', 'Support vehicles', 'Engineering and utility vehicles'],
+      machinesMax: 4,               // its heavy guns are on hulls: tank hunters, destroyers, gun carriers
+      hullsFirst: ['Hunters and destroyers', 'Support vehicles'],   // the guns before the engineering vehicles
       spend: 'promote'
     },
     {
@@ -1277,7 +1279,7 @@
       id: 'aircav', name: 'Cavalry',
       blurb: 'Rolls up in armour, drops its troopers at the door, and is through the line before the guns turn.',
       names: ['Talon Mobile Group', 'Outrider Security', 'The High Road Company', 'Skyhook Logistics'],
-      t1: ['recruits', 'enforcers'],
+      t1: ['recruits', 'irregulars'],   // who promote into rifle teams and assault troops (Enforcers only into heavy infantry)
       t2: ['lighteng', 'rookie'],
       machines: ['lpv', 'unarmoured'], vehicles: 2,
       doctrines: ['S1', 'O3', 'O6', 'O1', 'T2', 'S2'],

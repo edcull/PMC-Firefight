@@ -579,8 +579,10 @@
       // and a machine company buys a hull the moment it can
       /* A machine company buys a hull the moment it can. The Cavalry keeps buying
          until it has a Priority Level 2 army's worth (`machinesMax`), whatever it can
-         field at its own Tier, the next one the moment the money is there. */
-      if (a.spend === 'machines') {
+         field at its own Tier, the next one the moment the money is there; the Bastion
+         keeps four, its tank hunters, destroyers and gun carriers. */
+      // (and a force with hulls of its own to keep — the Bastion's guns — buys them however else it spends)
+      if (a.spend === 'machines' || a.machinesMax) {
         var cap = a.machinesMax || 3, bought = 0;
         while (bought < 2 && co.roster.filter(function (e) { return profile(e.key).cls !== 'infantry'; }).length < cap) {
           if (!a.machinesMax && co.kUC < 16) break;
@@ -588,12 +590,35 @@
             return p.cls !== 'infantry' && !p.noSlot && wanted(p) && canRecruit(co, p.key).ok && (!a.machinesMax || p.tier <= co.tier);
           }).sort(function (x, y) { return y.tier - x.tier; });
           if (!hulls.length) break;
+          // (the hulls it is known for first, where it has a preference: the Bastion's guns)
+          var firstH = hulls.filter(function (p) { return (a.hullsFirst || []).indexOf(p.group) >= 0; });
+          if (firstH.length) hulls = firstH;
           var top = hulls[0].tier, pickH = a.machinesMax ? pick(hulls.filter(function (p) { return p.tier === top; })) : hulls[0];
           var rv = recruit(co, pickH.key);
           if (!rv.ok) break;
           did.push({ what: 'recruit', text: 'took delivery of a ' + rv.entry.name });
           bought++;
           if (!a.machinesMax) break;
+        }
+        /* ...and once it has all it means to keep, the smallest goes for a bigger one
+           when the money is there: the guns grow with the force. */
+        if (a.machinesMax) {
+          var owned = co.roster.filter(function (e) { var q = profile(e.key); return q.cls !== 'infantry' && !q.noSlot && wanted(q); });
+          if (owned.length >= cap) {
+            var small = owned.slice().sort(function (x, y) { return profile(x.key).tier - profile(y.key).tier; })[0];
+            var bigger = R.listFor(co.faction).filter(function (p) {
+              return p.cls !== 'infantry' && !p.noSlot && wanted(p) && p.tier <= co.tier && p.tier >= profile(small.key).tier + 1 && canRecruit(co, p.key).ok;
+            });
+            var firstB = bigger.filter(function (p) { return (a.hullsFirst || []).indexOf(p.group) >= 0; });
+            if (firstB.length) bigger = firstB;
+            if (bigger.length && small.rid !== co.cmdRid) {
+              var nb = recruit(co, pick(bigger).key);
+              if (nb.ok) {
+                co.roster = co.roster.filter(function (e) { return e !== small; });
+                did.push({ what: 'recruit', text: 'traded the ' + small.name + ' for a ' + nb.entry.name });
+              }
+            }
+          }
         }
       }
 
