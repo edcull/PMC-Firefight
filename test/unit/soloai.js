@@ -403,7 +403,13 @@ console.log('\nA campaign AI plays the whole behaviour table, tempered by its pe
   let waves = 0, rolledFirst = 0;
   for (let n = 0; n < 3; n++) {
     const e = Engine.create();
-    e.start({ tier: 4, pl: 1, scenario: 'meeting', armyA: R.rollArmy(4, 1, null, 'bugs'), armyB: R.rollArmy(4, 1, null, 'pmc'),
+    // a swarm with something that sends a Psychic Wave in it
+    let bugs = null;
+    for (let r = 0; r < 50 && !bugs; r++) {
+      const ks = R.rollArmy(4, 1, null, 'bugs', false);
+      if (ks.some((k) => R.has(R.profile(R.splitPick(k).key), 'Psychic Wave'))) bugs = ks;
+    }
+    e.start({ tier: 4, pl: 1, scenario: 'meeting', armyA: bugs, armyB: R.rollArmy(4, 1, null, 'pmc', false),
       nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', campaign: true });
     for (let g = 0; g < 4 && e.state() && e.state().swapAsk; g++) e.intent(e.state().swapAsk.side, { k: 'swapdone' });
     steps(e, 4000);
