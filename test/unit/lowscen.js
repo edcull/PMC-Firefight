@@ -244,5 +244,24 @@ console.log('\nSCN-2 Wiping the enemy out on the last turn wins, even with the o
   ok('...but with B wiped out in that End phase, A wins', r && r.winner === 'A', r && r.text);
 })();
 
+console.log('\nInvasion: the first wave gone and every landing zone held, the landing has failed');
+(function () {
+  const e = game('invasion', ['regular', 'regular', 'regular'], ['regular', 'regular', 'regular', 'regular'], 'B');
+  const st = e.state();
+  st.phase = 'battle'; st.turn = 6; st.sc.lzPending = false;
+  st.objectives = [{ x: 12, y: 12, r: 4, lz: true }, { x: 24, y: 30, r: 4, lz: true }, { x: 36, y: 12, r: 4, lz: true }];
+  const defs = st.units.filter((u) => u.side === 'A'), atks = st.units.filter((u) => u.side === 'B');
+  defs.forEach((u, i) => { u.reserve = false; u.aboard = null; u.x = st.objectives[i].x; u.y = st.objectives[i].y; });
+  // the first wave wiped out on the table; the second still waiting to come down
+  atks.forEach((u, i) => { if (i < 2) { u.alive = false; u.reserve = false; u.x = 20; u.y = 20; } else { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; } });
+  const r = SC.check(st);
+  ok('with nothing of the attacker\'s on the table and all three zones held, the defender wins', r && r.winner === 'A', r && r.text);
+  defs[2].x = 2; defs[2].y = 40;                                  // one zone left open
+  ok('...but not while a zone is open for the second wave', !SC.check(st));
+  defs[2].x = st.objectives[2].x; defs[2].y = st.objectives[2].y;
+  const s2 = atks[2]; s2.reserve = false; s2.x = 44; s2.y = 44;       // one of the attacker's still standing
+  ok('...nor while the attacker has a unit on the table', !SC.check(st));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
