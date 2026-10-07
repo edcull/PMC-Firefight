@@ -22,7 +22,7 @@
         playAssault = E.playAssault, pushRes = E.pushRes, relocCap = E.relocCap, relocSpotOK = E.relocSpotOK,
         repaintTerrain = E.repaintTerrain, repairCard = E.repairCard, resolveShot = E.resolveShot,
         samCheck = E.samCheck, scatterInsertion = E.scatterInsertion, sideName = E.sideName,
-        snapshotAlive = E.snapshotAlive, soloAfterMove = E.soloAfterMove, soundFor = E.soundFor,
+        snapshotAlive = E.snapshotAlive, isAI = E.isAI, soloAfterMove = E.soloAfterMove, soundFor = E.soundFor,
         stepOff = E.stepOff, ui = E.ui, whenIdle = E.whenIdle;
     /* The OpFor, having seen the other side go down: each unit standing in the
        open looks for cover somewhere else in its ground, the ones closest to the
@@ -135,8 +135,8 @@
         u.activated = true; endActivation(u); return;
       }
 
-      // a solitaire OpFor hull rolls on the behaviour table like everything else (p. 147)
-      var soloB = !!E.state.solo && u.side === 'B';
+      // an AI hull rolls on the behaviour table like everything else (p. 147)
+      var soloB = tableAI(u);
       /* ...and it rolls first: its special actions (self-repair, a transport's
          loading and unloading) are taken on a 1-6, not on Run for Your Lives! or
          Kill Them All! (a reading: the book does not place them on the table). */
@@ -470,6 +470,10 @@
       return best ? { unit: best, dist: bd } : null;
     }
 
+    /* Who plays the behaviour table in full (p. 147): the solitaire OpFor, and any
+       side the computer runs in a campaign, contract or skirmish. */
+    function tableAI(u) { return (!!E.state.solo && u.side === 'B') || isAI(u.side); }
+
     /* The behaviour table (p. 147), rolled for every unit as it activates —
        a hull or an aircraft as much as a squad. */
     function rollBehaviour(u) {
@@ -484,6 +488,9 @@
         var bm = E.state.scen.behaviour(E.state, u) || {};
         if (bm.mod) { mods += bm.mod; why.push(bm.why || ((bm.mod > 0 ? '+' : '') + bm.mod)); }
       }
+      // an AI company's personality: some hold back, some go in (campaign.js aiTemper)
+      var tp = tableAI(u) && E.state.cfg.temper && E.state.cfg.temper[u.side];
+      if (tp && tp.mod) { mods += tp.mod; why.push(tp.why); }
       var total = roll + mods;
       var behaviour = total <= 0 ? 'flee' : total <= 2 ? 'defensive' : total <= 4 ? 'neutral' : total <= 6 ? 'offensive' : 'assault';
       // units with Cumbersome Weapons count 4-7 as Reasonably Neutral (p. 147)
@@ -556,7 +563,7 @@
          from what a Suppressed unit may do (p. 34) — a Move into cover or out of sight,
          a Fire! with its Auxiliary weapons, or Pass/Regroup — the one that answers the
          roll (the owner's ruling, rules review a119ac2 SOL-8). */
-      if (R.status(u) === 'suppressed' && E.state.solo && u.side === 'B') { pinnedOpFor(u); return; }
+      if (R.status(u) === 'suppressed' && tableAI(u)) { pinnedOpFor(u); return; }
       // a pinned squad beside an empty building gets inside it
       if (R.status(u) === 'suppressed' && !alreadySafe(u)) {
         var sin = R.enterTargets(E.state, u);
@@ -586,7 +593,7 @@
          anything else; its special actions are taken on a 1-6 — not on Run for
          Your Lives! or Kill Them All! (a reading: the book does not place them on
          the table). Everyone else keeps the AI's own order. */
-      var soloI = !!E.state.solo && u.side === 'B';
+      var soloI = tableAI(u);
       var preB = soloI ? rollBehaviour(u) : null;
       var specials = !soloI || ['defensive', 'neutral', 'offensive'].indexOf(preB) >= 0;
 
@@ -659,7 +666,7 @@
       /* Kill Them All! (p. 147): "The unit makes an Assault action, charging at the
          closest enemy unit. If there are no valid targets, it makes a Move towards
          the closest enemy" — a Move, so it does not shoot as well. */
-      var killAll = !!E.state.solo && u.side === 'B' && behaviour === 'assault';
+      var killAll = soloI && behaviour === 'assault';
 
       /* A garrison (p. 41) shoots from where it is, charges only an enemy in the
          next section, and comes out when it wants to press on and has nothing to
@@ -724,7 +731,7 @@
          cover for a better shot. So: a spot within Movement with better cover than
          here, from which its best shot is at least as good as the one it has; else
          it fires from where it is, or holds. */
-      if (E.state.solo && u.side === 'B' && behaviour === 'neutral') { neutralHold(u, shot); return; }
+      if (soloI && behaviour === 'neutral') { neutralHold(u, shot); return; }
       if ((behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4) {
         fire(u, shot.t, 'fire'); return;
       }

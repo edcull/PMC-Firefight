@@ -634,6 +634,8 @@
           },
           doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
           tactics: { A: A.faction === 'rebel' ? tacticA : null, B: theirTactic },
+          // a rival's personality tempers its behaviour rolls (a second player's side is not the AI's)
+          temper: { B: E.contract.first ? null : C.aiTemper(B) },
           campaign: true,
           // which of this browser's campaigns it is for: the result goes to that one
           campLid: root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.lid ? root.PMC_CAMPAIGN.lid() : null,

@@ -1192,6 +1192,7 @@
     {
       // (id kept from when it was "Armoured", so a saved campaign still finds it)
       id: 'armour', name: 'Bastion',
+      temper: -1, // the behaviour roll in battle (p. 147): dug in behind its guns
       blurb: 'Fights from behind armour plate and expects you to come to it.',
       names: ['Kessler Combine', 'Ironvein Holdings', 'Bastion Werke', 'Sable Armour Group'],
       // armour before mobility: Enforcers on the way to battle armour, no transports, and the heavy guns
@@ -1246,6 +1247,7 @@
     {
       // (id kept from when it was "Marksmen")
       id: 'marksmen', name: 'Special Ops',
+      temper: -1, // the behaviour roll in battle (p. 147): shoots from cover, never closes
       blurb: 'Never where you are looking: a sniper in the treeline, a drone overhead, and your radios full of static.',
       names: ['Meridian Security', 'Longsight Partners', 'The Quiet Trade', 'Orlov Group'],
       // Irregulars and Recruits to promote, Forward observers, and a rifle team or nomads
@@ -1269,6 +1271,7 @@
     },
     {
       id: 'shock', name: 'Shock',
+      temper: 1, // the behaviour roll in battle (p. 147): goes in hard
       blurb: 'Closes the distance and settles it with knives.',
       names: ['Black Harbour PMC', 'Redline Assault', 'The Hard Bargain', 'Kroeger Shock'],
       // Irregulars (who promote into assault troops) and Enforcers, light engineers, and a truck to ride in
@@ -1287,6 +1290,7 @@
     {
       // (id kept from when it was "Air Cavalry")
       id: 'aircav', name: 'Cavalry',
+      temper: 1, // the behaviour roll in battle (p. 147): rides at them
       blurb: 'Rolls up in armour, drops its troopers at the door, and is through the line before the guns turn.',
       names: ['Talon Mobile Group', 'Outrider Security', 'The High Road Company', 'Skyhook Logistics'],
       t1: ['recruits', 'irregulars'],   // who promote into rifle teams and assault troops (Enforcers only into heavy infantry)
@@ -1324,6 +1328,7 @@
     },
     {
       id: 'freespace', name: 'Free Space Freedom Fighters', faction: 'rebel',
+      temper: 1, // the behaviour roll in battle (p. 147): raiders, always on the move
       blurb: 'Pirates with a manifesto. Fast in, loaded up, gone.',
       names: ['Free Space Freedom Fighters', 'The Long Haul', 'Kestrel Run', 'Salvage Rights'],
       // riders above all, its leaders mounted too; its hulls carry the infantry that does not ride; no artillery
@@ -1345,6 +1350,7 @@
     },
     {
       id: 'faithful', name: 'The Faithful', faction: 'rebel',
+      temper: 1, // the behaviour roll in battle (p. 147): zealots
       blurb: 'They are not fighting for the colony. They are fighting for what comes after it.',
       names: ['The New Chosen', 'Pilgrims of the Seventh Gate', 'The Ashfall Congregation', 'Sons of the Furnace'],
       // the standard revolt heavy on Holy Warriors, and a little lighter on the guns that stay put
@@ -1380,6 +1386,7 @@
     },
     {
       id: 'partisans', name: 'The Partisans', faction: 'rebel',
+      temper: -1, // the behaviour roll in battle (p. 147): strike from hiding
       blurb: 'Out of the tunnels, into the dark, and never where you left them.',
       names: ['The Partisans', 'Night Wire', 'The Quiet Column', 'Cell Sixteen'],
       // the standard revolt heavy on its Partisans (the Chosen Warriors' commandos) once it can field them
@@ -1793,8 +1800,15 @@
     return pickT;
   }
 
+  /* An AI company's temper in battle: a modifier its units add to the behaviour
+     roll (p. 147), from its personality — Bastion holds, Shock goes in. */
+  function aiTemper(co) {
+    var a = co && co.archetype ? archetype(co.archetype) : null;
+    return a && a.temper ? { mod: a.temper, why: a.name + ' ' + (a.temper > 0 ? '+' : '−') + Math.abs(a.temper) } : null;
+  }
+
   root.PMCCamp = {
-    VERSION: VERSION, migrate: migrate, aiTactic: aiTactic, fillsArmy: fillsArmy, fullTier: fullTier, freeUnit: freeUnit, ordinalName: ordinalName, isDefaultName: isDefaultName,
+    VERSION: VERSION, migrate: migrate, aiTactic: aiTactic, aiTemper: aiTemper, fillsArmy: fillsArmy, fullTier: fullTier, freeUnit: freeUnit, ordinalName: ordinalName, isDefaultName: isDefaultName,
     DOCTRINES: DOCTRINES, CATEGORIES: CATEGORIES,
     doctrine: function (id) { return BY_DOCTRINE[id] || BY_PATH[id] || BY_PATHWAY[id] || BY_ADVANCEMENT[id]; },
     PATHS: PATHS, PATH_GROUPS: PATH_GROUPS, BY_PATH: BY_PATH,
