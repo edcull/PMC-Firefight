@@ -535,6 +535,14 @@
            experience for an honour rather than stepping out of character, which is
            what lets its veterans pick up the odd honour from mid-campaign. */
         if ((a.spend === 'promote' || a.spend === 'honours') && !likedAll.length) targets = [];
+        /* A force keeping a mix holds a unit to its own line unless the line it would
+           cross to is the shorter of its share (the Bastion's machine guns stay machine
+           guns, half and half with its anti-tank teams), waiting for the step up instead. */
+        if (a.mix && a.mix[p.group]) {
+          var inLine = likedAll.filter(function (q) { return q.group === p.group; });
+          // (it crosses only into a line shorter of its share than its own)
+          if (inLine.length) targets = targets.filter(function (q) { return q.group === p.group || shortfall(q.group) > shortfall(p.group); });
+        }
         function honour() {
           if (!canTakeHonour(e, co).ok) return false;
           var h = chooseHonour(drawHonours(e));
