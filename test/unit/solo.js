@@ -64,7 +64,7 @@ ok('...and a Tier I over its ceiling takes the free place before a Tier II', cap
 
 /* ------------------------------------------------------------- the archetypes */
 head('Founding a rival');
-ok('five archetypes', C.ARCHETYPES.length, 5);
+ok('six archetypes', C.ARCHETYPES.length, 6);
 ok('each has a name pool, a doctrine order and preferred groups',
   C.ARCHETYPES.every(function (a) { return a.names.length && a.doctrines.length >= 6 && a.groups.length; }), true);
 var names = {};

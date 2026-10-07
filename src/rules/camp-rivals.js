@@ -434,6 +434,20 @@
       }
       fillGaps();
       did = did.concat(rehireCommand(co));
+      /* Its signature units — what the force is known for, which nothing else on its
+         shopping list would bring in (a sky swarm's flyers, a plague's Infected): one
+         for each Tier it holds, the best it can afford, before the money goes elsewhere. */
+      (function () {
+        var sig = a.signature || [];
+        if (!sig.length) return;
+        var have = co.roster.filter(function (e) { return sig.indexOf(e.key) >= 0; }).length;
+        if (have >= Math.min(3, co.tier)) return;
+        var buy = sig.map(profile).filter(function (p) { return p.tier <= co.tier + 1 && canRecruit(co, p.key).ok; })
+          .sort(function (x, y) { return y.tier - x.tier; })[0];
+        if (!buy) return;
+        var rs = recruit(co, buy.key);
+        if (rs.ok) did.push({ what: 'recruit', text: words(co).recruited + ' ' + rs.entry.name });
+      })();
 
       // spend experience, the units closest to a decision first
       co.roster.slice().sort(function (x, y) { return y.exp - x.exp; }).forEach(function (e) {

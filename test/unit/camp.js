@@ -915,5 +915,29 @@ head('Contracts at a Tier the AI force can field in full');
   ok('...and they are marked as the free ones', [C.freeUnit('penal'), C.freeUnit('rciv'), C.freeUnit('btiny'), C.freeUnit('xeps1')].every(Boolean) && !C.freeUnit('recruits'), true);
 })();
 
+head('Six personalities to every army');
+(function () {
+  ['pmc', 'rebel', 'bugs', 'xeno'].forEach(function (f) {
+    ok(f + ': six archetypes', C.archetypesFor(f).length, 6);
+  });
+  var bad = [];
+  ['aircav', 'turncoats', 'greyplague', 'velior', 'ulvar', 'shkar'].forEach(function (id) {
+    var a = C.archetype(id);
+    for (var i = 0; i < 3; i++) {
+      var co = C.newCompany('N', { faction: a.faction || 'pmc' });
+      C.foundRival(co, id, []);
+      if (co.archetype !== id || !C.canFieldArmy(co, 1, 1)) bad.push(id);
+    }
+  });
+  ok('each new one founds a legal force of its own kind', bad.join(','), '');
+  // a signature unit nothing else on its list would bring in, bought once it can be
+  var sky = C.newCompany('S', { faction: 'bugs' }); C.foundRival(sky, 'velior', []);
+  sky.tier = 2; sky.kUC = 40; C.developRival(sky);
+  ok('a sky swarm spawns its flyers', sky.roster.some(function (e) { return R.profile(e.key).group === 'Flying Bugs'; }), true);
+  var plague = C.newCompany('P', { faction: 'bugs' }); C.foundRival(plague, 'greyplague', []);
+  plague.tier = 2; plague.kUC = 40; C.developRival(plague);
+  ok('...and the Grey Plague its Infected, with Fungi Symbiosis first on its plan', plague.roster.some(function (e) { return e.key === 'binfected'; }) && plague.docPlan.length > 0 && C.archetype('greyplague').doctrines[0] === 'BP4', true);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

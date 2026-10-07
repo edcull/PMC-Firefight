@@ -159,7 +159,7 @@ head('The aftermath');
 })();
 
 head('Rival tribes (pp. 144-145)');
-ok('four tribes to meet', C.XENO_ARCHETYPES.length, 4);
+ok('six tribes to meet', C.XENO_ARCHETYPES.length, 6);
 var seen = {};
 for (var r = 0; r < 80; r++) {
   var cm = C.newCampaign({ factionA: 'pmc' });

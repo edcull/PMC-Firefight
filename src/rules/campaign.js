@@ -1184,7 +1184,7 @@
      Deliberately simple and legible: fix any legality gap first, then promote the
      unit closest to affording it, then bank toward the next Company Tier. */
   /* ================= rival companies (solo play) =================
-     A rival is not a random list: it is one of five archetypes, and the archetype
+     A rival is not a random list: it is one of six archetypes, and the archetype
      decides what it founds with, which doctrines it reaches for, what it recruits
      and how it spends experience. Over a dozen battles it grows into something
      recognisable, which is the whole point of fighting the same company twice. */
@@ -1242,6 +1242,17 @@
       machines: ['ltransport', 'unarmoured'], vehicles: 2,
       doctrines: ['T4', 'T2', 'S5', 'T1', 'O6', 'S6'],
       groups: ['Assault troops', 'Basic troops', 'Heavy infantry'],
+      spend: 'promote'
+    },
+    {
+      id: 'aircav', name: 'Air Cavalry',
+      blurb: 'Comes in over the treeline, takes the ground, and is gone before the guns turn.',
+      names: ['Skyhook Logistics', 'Talon Air Assault', 'The High Road Company', 'Vireo Rotary Group'],
+      t1: ['recruits', 'enforcers'],
+      t2: ['rookie', 'observers'],
+      machines: ['adaptedcraft'], vehicles: 1,
+      doctrines: ['O1', 'O3', 'T3', 'O6', 'S2', 'T2'],
+      groups: ['Transport aircraft', 'Strike aircraft', 'Rifle infantry', 'Light infantry'],
       spend: 'promote'
     }
   ];
@@ -1304,6 +1315,17 @@
       doctrines: ['V3', 'H2', 'V4', 'V1', 'H4', 'V5'],
       groups: ['Chosen Warriors', 'Freedom Warriors', 'Rebel support troops'],
       spend: 'honours'
+    },
+    {
+      id: 'turncoats', name: 'The Turncoat Battalion', faction: 'rebel',
+      blurb: 'A garrison that changed sides, and kept its rifles, its drill and its grudges.',
+      names: ['The Turncoat Battalion', 'The 41st Reborn', 'Garrison Free Corps', 'The Broken Oath'],
+      t1: ['rdesconscript', 'rridergang'],
+      t2: ['rdesrookie', 'rmilitia'],
+      machines: ['rtechnical'], vehicles: 1,
+      doctrines: ['H6', 'H2', 'V5', 'H3', 'V6', 'H4'],
+      groups: ['Deserters and POWs', 'Freedom Warriors', 'Rebel support troops', 'Rebel flak vehicles'],
+      spend: 'promote'
     }
   ];
   /* Swarms a campaign may meet, from the book's own write-ups (pp. 125-127). */
@@ -1347,6 +1369,29 @@
       doctrines: ['BB2', 'BP5', 'BP2', 'BP6', 'BB1', 'BP1'],
       groups: ['Underground Bugs', 'Lesser Bugs', 'Pioneer Bugs'],
       spend: 'promote'
+    },
+    {
+      id: 'greyplague', name: 'The Grey Plague', faction: 'bugs',
+      blurb: 'It ate a colony, and now the colonists march in its front rank.',
+      names: ['The Grey Plague', 'The Harrow Infestation', 'Colony Nine Swarm'],
+      t1: ['bspitlarva', 'btiny'], t2: ['bsmall', 'bimmspit'],
+      machines: [], vehicles: 0,
+      // Fungi Symbiosis first: the humans it kills in an assault rise again as its own Infected
+      doctrines: ['BP4', 'BB5', 'BC1', 'BP3', 'BB1', 'BC4'],
+      groups: ['Infected Humans', 'Lesser Bugs', 'Spore Bugs'],
+      signature: ['binfected'],
+      spend: 'recruit'
+    },
+    {
+      id: 'velior', name: 'Skyswarm of Velior', faction: 'bugs',
+      blurb: 'Nests in the cliffs of Velior, and comes down out of the sun.',
+      names: ['Skyswarm of Velior', 'The Cliff Nest', 'Sunfall Swarm'],
+      t1: ['bspitlarva', 'btiny'], t2: ['bimmspit'],
+      machines: [], vehicles: 0,
+      doctrines: ['BP2', 'BB4', 'BC5', 'BB6', 'BC2', 'BP5'],
+      groups: ['Flying Bugs', 'Spore Bugs', 'Lesser Bugs'],
+      signature: ['bsmallwing', 'blargewing'],
+      spend: 'recruit'
     }
   ];
   /* Tribes a campaign may meet, from the book's own write-ups (pp. 144-145). */
@@ -1390,6 +1435,26 @@
       doctrines: ['XO6', 'XO5', 'XS4', 'XT3', 'XO3', 'XS6'],
       groups: ['Delta Squads', 'Epsilon Squads', 'Strike Aviation', 'Gamma Squads'],
       spend: 'promote'
+    },
+    {
+      id: 'ulvar', name: 'Ulvar fortress tribe', faction: 'xeno',
+      blurb: 'Never leaves its walls without taking the walls along: shields, guns and patience.',
+      names: ['Ulvar Fortress Tribe', 'The Shieldwall of Ulvar', 'The Bastion Host'],
+      t1: ['xdelta1', 'xeps1'], t2: ['xbeta2', 'xdelta2'],
+      machines: ['xdturret1'], vehicles: 1,
+      doctrines: ['XO5', 'XS2', 'XO4', 'XT6', 'XS5', 'XO1'],
+      groups: ['Shield Turrets', 'Defensive Turrets', 'Gamma Squads', 'Beta Squads', 'Delta Squads'],
+      spend: 'honours'
+    },
+    {
+      id: 'shkar', name: 'Sh\'kar raiders', faction: 'xeno',
+      blurb: 'A raiding tribe that steps out of the air behind you, takes what it came for, and steps back.',
+      names: ['The Sh\'kar Raiders', 'The Blink Host', 'Shadow of Sh\'kar'],
+      t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xbeta2'],
+      machines: ['xstrike2'], vehicles: 1,
+      doctrines: ['XO1', 'XT4', 'XO6', 'XT1', 'XO2', 'XT3'],
+      groups: ['Teleport Turrets', 'Strike Aviation', 'Delta Squads', 'Beta Squads'],
+      spend: 'machines'
     }
   ];
   function archetypesFor(faction) {

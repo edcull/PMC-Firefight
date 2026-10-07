@@ -1603,7 +1603,7 @@
     }
   }
 
-  /* The rival is one of five archetypes, founded to the book's starting rules in
+  /* The rival is one of six archetypes, founded to the book's starting rules in
      its own style, and it develops in that direction battle by battle. */
   /* The opposition: three forces, a mix of mercenary companies and revolts. If
      the player named one they want to meet, it is raised first and the other two
