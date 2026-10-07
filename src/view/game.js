@@ -987,7 +987,7 @@
     get pace() { return pace; }, get playShooting() { return playShooting; },
     get previewMove() { return previewMove; }, get render() { return render; },
     get saveCurrentForce() { return saveCurrentForce; }, get setHome() { return setHome; },
-    get setMTab() { return setMTab; }, get setSoloMode() { return setSoloMode; },
+    get setMTab() { return setMTab; }, get setSoloMode() { return setSoloMode; }, get closeRes() { return closeRes; },
     get snapReach() { return snapReach; }, get viewRect() { return viewRect; },
     get zoomLabel() { return zoomLabel; }, actionState: actionState, arrivalLegal: arrivalLegal,
     arrivalSpots: arrivalSpots, autoDeployMine: autoDeployMine, begin: begin, busy: busy, byId: byId,

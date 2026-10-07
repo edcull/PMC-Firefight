@@ -1189,9 +1189,16 @@
         armyA: a.keys, armyB: b.keys, nameA: a.name, nameB: b.name,
         colourA: a.colour, colourB: b.colour,
         tactics: { A: a.tactic, B: b.tactic },
+        // the personality each force was rolled to (R.rollArmy), for the AI's tactic and its temper in battle
+        styles: { A: (a.keys && a.keys.style) || null, B: (b.keys && b.keys.style) || null },
+        temper: { A: hotTemper(a), B: hotTemper(b) },
         mode: mode, planet: planet, terrainSetup: terrainSetup,
         secretSwaps: mode === 'hotseat'           // two players at one screen swap in turn, unseen
       });
+    }
+    function hotTemper(sd) {
+      var C = root.PMCCamp, st = sd.keys && sd.keys.style;
+      return st && C && C.aiTemper ? C.aiTemper({ archetype: st }) : null;
     }
     function hotBack() {
       var h = muster.hot;

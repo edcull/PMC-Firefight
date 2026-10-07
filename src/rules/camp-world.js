@@ -167,6 +167,7 @@
           doctrines: { A: A.doctrines.slice(), B: B.doctrines.slice() },
           // the player's tactic is chosen at the table (askTactics); the AI's is settled here
           tactics: { A: null, B: tacticB }, askTactics: true,
+          temper: { B: C.aiTemper(B) },
           campaign: true, mode: 'ai',
           planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto'
         }

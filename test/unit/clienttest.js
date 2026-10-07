@@ -378,6 +378,8 @@ if (begun) {
     for (let i = 0; i < 60; i++) {
       app.drain(20);
       if (!W.__showQueue() && !W.__busy()) return true;
+      // a card that waits for Continue (a unit fleeing the field): a player reads it and goes on
+      if (W.__continue) W.__continue();
     }
     return false;
   }

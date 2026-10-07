@@ -979,6 +979,48 @@ head('Doctrines: fixed, a shortlist, or random');
   ok('a random force draws from the whole list', Object.keys(firsts).length > 8, true, Object.keys(firsts).length + ' different first doctrines in 40');
 })();
 
+head('Skirmish forces rolled to a personality, at every Tier and Priority Level');
+(function () {
+  function keyOf(k) { return R.splitPick(k).key; }
+  ['pmc', 'rebel', 'xeno', 'bugs'].forEach(function (f) {
+    C.archetypesFor(f).forEach(function (a) {
+      var legal = 0, n = 0, own = 0, tot = 0, styled = 0;
+      for (var t = 1; t <= 5; t++) for (var pl = 1; pl <= 3; pl++) for (var i = 0; i < 3; i++) {
+        var ks = R.rollArmy(t, pl, null, f, a.id); n++;
+        if (ks.style === a.id) styled++;
+        if (R.checkArmy(ks, t, pl, null, null, f).ok) legal++;
+        ks.forEach(function (k) {
+          var p = R.profile(keyOf(k)); tot++;
+          if (a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || [].concat(a.t1 || [], a.t2 || []).indexOf(p.key) >= 0) own++;
+        });
+      }
+      ok(a.name + ': legal at every Tier and PL, and mostly its own kind', legal === n && styled === n && own / tot > 0.6, true,
+        legal + '/' + n + ' legal, ' + Math.round(100 * own / tot) + '% its own');
+    });
+  });
+  var elite = 0, merc = 0, fs = 0, fsLead = 0, fsArt = 0;
+  for (var i = 0; i < 40; i++) {
+    var t = 1 + (i % 5), pl = 1 + (i % 3);
+    elite += R.rollArmy(t, pl, null, 'pmc', 'elite').filter(function (k) { return R.profile(keyOf(k)).cls !== 'infantry'; }).length;
+    merc += R.rollArmy(t, pl, null, 'pmc', 'swarm').filter(function (k) { return keyOf(k) === 'enforcers'; }).length;
+    var f = R.rollArmy(t, pl, null, 'rebel', 'freespace');
+    fsArt += f.filter(function (k) { return R.profile(keyOf(k)).group === 'Rebel artillery'; }).length;
+    var lead = f.filter(function (k) { var p = R.profile(keyOf(k)); return p.group === 'First Among Equals' && p.ridersUpgrade; });
+    fs += lead.length; fsLead += lead.filter(function (k) { return R.splitPick(k).riders; }).length;
+  }
+  ok('the Elite fields no hulls, Mercenaries no Enforcers, Free Space no artillery', [elite, merc, fsArt], [0, 0, 0]);
+  ok('Free Space leaders ride wherever they may', fs > 0 && fsLead === fs, true, fsLead + ' of ' + fs);
+  var cav = 0, plain = 0;
+  for (var j = 0; j < 60; j++) {
+    var tt = 2 + (j % 4);
+    cav += R.rollArmy(tt, 2, null, 'pmc', 'aircav').filter(function (k) { return R.profile(keyOf(k)).cls !== 'infantry'; }).length;
+    plain += R.rollArmy(tt, 2, null, 'pmc', 'elite').filter(function (k) { return R.profile(keyOf(k)).cls !== 'infantry'; }).length;
+  }
+  ok('Cavalry fields more hulls than anyone', cav > 60 && cav > plain, true, cav + ' hulls in 60 forces');
+  ok('...and a roll with no personality still works', R.checkArmy(R.rollArmy(3, 2, null, 'pmc', false), 3, 2).ok && !R.rollArmy(3, 2, null, 'pmc', false).style, true);
+  ok('a temper for a skirmish force by its personality id', C.aiTemper({ archetype: 'partisans' }).mod, -1);
+})();
+
 head('Rebel Tactics by personality and part in the scenario');
 (function () {
   function tally(id, roles) {

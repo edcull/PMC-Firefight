@@ -3,7 +3,7 @@
    OpFor unit holds its position, moving only into better cover (p. 147); and
    in Decapitation every OpFor Command Unit is a leader to be killed (p. 152). */
 'use strict';
-const { R, Engine, SOLO } = require('../../server/rules.js');
+const { R, Engine, SOLO, C } = require('../../server/rules.js');
 let seed = 21;
 Math.random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
 
@@ -372,6 +372,54 @@ console.log('\nSOL-8 A Suppressed OpFor unit rolls its behaviour, and takes from
   e.query.aiAct(lead);
   const txt = st.log.slice(n0, n0 + 4).map((l) => l.text || '').join(' | ');
   ok('a Suppressed Decapitation leader fires its Auxiliary weapons', /\(auxiliary weapons\) fires/.test(txt), txt.slice(0, 140));
+})();
+
+console.log('\nA campaign AI plays the whole behaviour table, tempered by its personality (p. 147)');
+(function () {
+  let hullRolls = 0, tempered = 0, rolls = 0;
+  for (let n = 0; n < 3; n++) {
+    const e = Engine.create();
+    e.start({ tier: 4, pl: 1, scenario: 'meeting', armyA: R.rollArmy(4, 1, null, 'pmc'), armyB: R.rollArmy(4, 1, null, 'rebel'),
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', campaign: true,
+      temper: { A: { mod: -1, why: 'Bastion −1' }, B: { mod: 1, why: 'Shock +1' } } });
+    for (let g = 0; g < 4 && e.state() && e.state().swapAsk; g++) e.intent(e.state().swapAsk.side, { k: 'swapdone' });
+    steps(e, 4000);
+    const st = e.state(), label = {};
+    st.units.forEach((u) => { label[u.label] = u; });
+    st.log.forEach((l) => {
+      const m = /^(.*) — behaviour D6/.exec(l.text || '');
+      if (!m) return;
+      rolls++;
+      const u = label[m[1]];
+      if (u && R.isMachine(u)) hullRolls++;
+      if (u && (u.side === 'A' ? /Bastion −1/ : /Shock \+1/).test(l.text)) tempered++;
+    });
+  }
+  ok('hulls roll on the table outside solitaire too', hullRolls > 0, hullRolls + ' of ' + rolls + ' rolls');
+  ok('every roll carries its side\'s temper', rolls > 0 && tempered === rolls, tempered + ' of ' + rolls);
+})();
+(function () {
+  // outside solitaire a special action comes before the roll: a Psychic Wave is sent with no behaviour rolled for it
+  let waves = 0, rolledFirst = 0;
+  for (let n = 0; n < 3; n++) {
+    const e = Engine.create();
+    e.start({ tier: 4, pl: 1, scenario: 'meeting', armyA: R.rollArmy(4, 1, null, 'bugs'), armyB: R.rollArmy(4, 1, null, 'pmc'),
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', campaign: true });
+    for (let g = 0; g < 4 && e.state() && e.state().swapAsk; g++) e.intent(e.state().swapAsk.side, { k: 'swapdone' });
+    steps(e, 4000);
+    const L = e.state().log;
+    L.forEach((l, j) => {
+      const m = /^(.*) sends out a Psychic Wave/.exec(l.text || '');
+      if (!m) return;
+      waves++;
+      if (j && L[j - 1].text.indexOf(m[1] + ' — behaviour D6') === 0) rolledFirst++;
+    });
+  }
+  ok('a campaign AI sends its Psychic Wave before any behaviour roll', waves > 0 && rolledFirst === 0, waves + ' waves, ' + rolledFirst + ' after a roll');
+})();
+(function () {
+  const co = { archetype: 'armour' }, sh = { archetype: 'shock' }, el = { archetype: 'elite' };
+  ok('Bastion holds back (−1), Shock goes in (+1), the Elite rolls plain', C.aiTemper(co).mod === -1 && C.aiTemper(sh).mod === 1 && C.aiTemper(el) === null);
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
