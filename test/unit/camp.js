@@ -1021,6 +1021,20 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
   ok('a temper for a skirmish force by its personality id', C.aiTemper({ archetype: 'partisans' }).mod, -1);
 })();
 
+head('A skirmish force rolled to a personality goes by one of its names');
+(function () {
+  global.window = global;                       // ui-parts.js is written for the page
+  require('../../src/view/ui-parts.js');
+  var U = global.PMCUi, a = C.archetypesFor('pmc').filter(function (x) { return x.id === 'shock'; })[0];
+  var ks = R.rollArmy(2, 1, null, 'pmc', 'shock');
+  var n1 = U.personaName(ks);
+  ok('a Shock force is named from the Shock list', a.names.indexOf(n1) >= 0, true, n1);
+  ok('...keeps the name it has', U.personaName(ks, n1), n1);
+  ok('...takes another when the other side has it', U.personaName(ks, n1, n1) !== n1 && a.names.indexOf(U.personaName(ks, n1, n1)) >= 0, true);
+  ok('...and the name counts as made up, so it follows the force', U.isForceName(n1) && U.isPersonaName('The Partisans') && !U.isPersonaName('Task Force Ironhold'), true);
+  ok('a force with no personality goes by its colours', U.forceName('jade', 'pmc', R.rollArmy(2, 1, null, 'pmc', false)), U.forceName('jade', 'pmc'));
+})();
+
 head('Rebel Tactics by personality and part in the scenario');
 (function () {
   function tally(id, roles) {
