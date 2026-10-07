@@ -1339,6 +1339,7 @@
       // the haul first; then the smuggling, the hard crew, the hulls and the mounted faithful's fury
       fixed: ['V2'],
       doctrines: ['V2', 'V1', 'V5', 'H3', 'H5', 'P4'],
+      stages: [['V1', 'V5', 'H3', 'H5'], ['P4']],   // Holy Fury last: at Tier V, once the rest is held
       spend: 'promote'
     },
     {
@@ -1386,9 +1387,11 @@
       foundFree: true,
       machines: ['rtechnical'], vehicles: 1,
       groups: ['Chosen Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles'],
-      mix: { 'Chosen Warriors': 3, 'Freedom Warriors': 3, 'Rebel support troops': 1, 'Rebel artillery': 1 },
+      mix: { 'Chosen Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
       signature: ['rassaultcdo', 'rsabcdo', 'rsnipercdo'],
+      signatureCap: 8,              // the commandos are the band: up to eight of them
       machinesMax: 2,
+      lean: true,                   // a small band: no free troops to pad it, no hiring with spare money
       // the mined bridge first; then leaders who will not break, and the locals on side
       fixed: ['V3'],
       doctrines: ['V3', 'P2', 'H2', 'H4', 'V4', 'H5'],

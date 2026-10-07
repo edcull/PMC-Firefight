@@ -526,7 +526,8 @@
       (Array.isArray(sigs[0]) ? sigs : [sigs]).forEach(function (sig) {
         if (!sig.length) return;
         var have = co.roster.filter(function (e) { return sig.indexOf(e.key) >= 0; }).length;
-        if (have >= Math.min(a.signatureMax || 3, co.tier)) return;
+        // (`signatureCap`: as many as that, whatever the Tier — the Partisans' commandos)
+        if (have >= (a.signatureCap != null ? a.signatureCap : Math.min(a.signatureMax || 3, co.tier))) return;
         var can = sig.map(profile).filter(function (p) { return p.tier <= co.tier + 1 && canRecruit(co, p.key).ok && !capped(p); });
         var top = Math.max.apply(null, can.map(function (p) { return p.tier; }).concat([0]));
         var buy = can.length ? pick(can.filter(function (p) { return p.tier === top; })) : null;
@@ -571,6 +572,13 @@
            up the odd honour from mid-campaign (a Mercenary's machine gunners stay on the
            guns rather than becoming anti-tank teams it does not hire). */
         if (!likedAll.length) targets = [];
+        /* A lean force (the Elite, the Partisans), once it is the size it means to be, does
+           not promote a unit out of a Tier it holds that would leave that Tier short of the
+           three an army of it needs: the unit takes honours and stays, rather than leaving a
+           gap to be filled with a new hire. */
+        if (a.lean && co.roster.length >= (a.leanSize || 24) && p.tier <= co.tier && co.roster.filter(function (o) {
+          var q = profile(o.key); return q.tier === p.tier && !isLeaderP(q) && q.cls === 'infantry';
+        }).length <= 3) targets = [];
         /* A force keeping a mix holds a unit to its own line unless the line it would
            cross to is the shorter of its share (the Bastion's machine guns stay machine
            guns, half and half with its anti-tank teams), waiting for the step up instead. */
