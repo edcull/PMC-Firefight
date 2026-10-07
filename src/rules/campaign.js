@@ -1210,7 +1210,7 @@
       t2: ['rookie', 'ecobats'],
       machines: [], vehicles: 0,
       // a handful of top-tier veterans make a legal army; then whatever keeps them fit, trained and paid
-      doctrines: ['O2', 'S3', 'S6', 'T1', 'T2', 'S5', 'T6'],
+      doctrines: ['O2', 'S3', 'S6', 'T1', 'S5', 'T6'],
       fixed: ['O2'],
       groups: ['Rifle infantry', 'Heavy infantry', 'Assault troops'],
       units: ['gausscannon'],
