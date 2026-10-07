@@ -979,5 +979,24 @@ head('Doctrines: fixed, a shortlist, or random');
   ok('a random force draws from the whole list', Object.keys(firsts).length > 8, true, Object.keys(firsts).length + ' different first doctrines in 40');
 })();
 
+head('Rebel Tactics by personality and part in the scenario');
+(function () {
+  function tally(id, roles) {
+    var co = C.newCompany('T', { faction: 'rebel' }); C.foundRival(co, id, []);
+    var n = {}; for (var i = 0; i < 400; i++) { var t = C.aiTactic(co, roles, 'B'); n[t] = (n[t] || 0) + 1; }
+    return n;
+  }
+  var open = null, atk = { attacker: 'B' }, def = { attacker: 'A' };
+  var rf = tally('redfront', atk), rd = tally('redfront', def);
+  ok('the Red Front attacks in waves and digs in when held, most of the time', rf.wave > 300 && rd.laststand > 300, true, JSON.stringify(rf) + ' / ' + JSON.stringify(rd));
+  var pg = tally('partisans', open), pd = tally('partisans', def);
+  ok('the Partisans come out of the tunnels, and on defence split Guerillas and Last Stand', pg.guerillas > 300 && pd.guerillas > 120 && pd.laststand > 120, true, JSON.stringify(pg) + ' / ' + JSON.stringify(pd));
+  var ta = tally('turncoats', atk), to = tally('turncoats', open);
+  ok('the Turncoats dig in in the open, and attack in waves or by infiltration', to.laststand > 300 && ta.wave > 120 && ta.guerillas > 120, true, JSON.stringify(to) + ' / ' + JSON.stringify(ta));
+  var fd = tally('freespace', def);
+  ok('Free Space rushes even on defence, and never goes Guerilla (its riders take nothing from it)', fd.wave > 300 && !fd.guerillas, true, JSON.stringify(fd));
+  ok('...and a PMC company takes no Rebel Tactic', C.aiTactic(C.newCompany('P', {}), atk, 'B'), null);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

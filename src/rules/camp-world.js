@@ -148,7 +148,8 @@
       const A = W.forces[i], B = W.forces[k.vs];
       const pA = Cmds.pickEntries(A, k.picks.A);
       drugged(A, pA, k.picks.A.drugs);
-      const tacticB = B.faction === 'rebel' ? pickOne([null, 'laststand', 'wave', 'guerillas']) : null;
+      // its tactic by its personality and its part in the scenario (the AI force is side B here)
+      const tacticB = C.aiTactic(B, k.roles, 'B');
       let pB = C.pickForce(B, k.tier, k.pl, tacticB) || [];
       if (!R.checkArmy(pB.map((e) => R.entryPick(e)), k.tier, k.pl, B.doctrines, tacticB).ok) {
         C.developRival(B);                                      // it hires in for this battle
