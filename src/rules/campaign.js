@@ -1195,9 +1195,9 @@
       blurb: 'Fights from behind armour plate and expects you to come to it.',
       names: ['Kessler Combine', 'Ironvein Holdings', 'Bastion Werke', 'Sable Armour Group'],
       // armour before mobility: Enforcers on the way to battle armour, no transports, and the heavy guns
-      t1: ['enforcers'],
-      t2: ['ecobats', 'lightat'],
-      machines: ['lhunter'], vehicles: 1,
+      t1: ['enforcers', 'recruits'],
+      t2: ['ecobats'],
+      machines: [], vehicles: 0,
       doctrines: ['T5', 'T2', 'T6', 'S4', 'S3', 'S2'],
       groups: ['Heavy infantry', 'Heavy support', 'Hunters and destroyers', 'Support vehicles', 'Engineering and utility vehicles'],
       spend: 'promote'

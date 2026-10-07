@@ -315,9 +315,9 @@ ok('Rapid Training Methods halves a rival\'s first honour', (function () {
 var armour = spendOn('armour', 'enforcers', 12);
 ok('the bastion promotes toward heavy infantry',
   R.profile(armour.key).group, 'Heavy infantry', 'became a ' + R.profile(armour.key).name);
-ok('...and fits an Upgrade on a hull that has the experience for one', (function () {
+ok('the cavalry fits an Upgrade on a hull that has the experience for one', (function () {
   var co = C.newCompany('x');
-  C.foundRival(co, 'armour');
+  C.foundRival(co, 'aircav');
   co.kUC = 0;
   var v = co.roster.filter(function (x) { return R.profile(x.key).cls !== 'infantry'; })[0];
   v.exp = 10;
