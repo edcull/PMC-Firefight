@@ -1218,15 +1218,16 @@
       spend: 'promote'
     },
     {
-      id: 'swarm', name: 'Swarm',
-      blurb: 'Buries a position under more bodies than it can shoot.',
+      // (id kept from when it was "Swarm", so a saved campaign still finds it)
+      id: 'swarm', name: 'Mercenary',
+      blurb: 'Fights for whoever pays, wherever they point, and sends the invoice before the smoke clears.',
       names: ['Corvid Contracting', 'The Tide Company', 'Grey Market Levies', 'Nineteen Hands'],
-      t1: ['recruits', 'irregulars', 'penal'],
-      t2: ['rookie', 'lighteng'],
+      // a little of everything and nothing specialised: hired wide rather than trained tall
+      t1: ['recruits', 'enforcers', 'irregulars'],
+      t2: ['rookie', 'lmgsection'],
       machines: ['unarmoured'], vehicles: 1,
-      doctrines: ['O5', 'O2', 'T1', 'T2', 'S5', 'O6'],
-      random: true,                 // no creed to speak of: the whole list, shuffled
-      groups: ['Basic troops', 'Rifle infantry', 'Assault troops'],
+      doctrines: ['S2', 'S5', 'S4', 'O6', 'S6', 'T2'],
+      groups: ['Basic troops', 'Rifle infantry', 'Light support', 'Remote mortars', 'Transport vehicles'],
       spend: 'recruit'
     },
     {

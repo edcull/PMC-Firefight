@@ -946,9 +946,10 @@ head('Doctrines: fixed, a shortlist, or random');
     var ids = C.creedOf({ faction: a.faction || 'pmc' }).list.map(function (d) { return d.id; });
     return (a.doctrines || []).concat(a.fixed || []).some(function (d) { return ids.indexOf(d) < 0; });
   }).map(function (a) { return a.id; }).join(','), '');
+  // (the PMC companies all have a creed: none of them is random)
   ok('...and each army has forces of all three kinds', ['pmc', 'rebel', 'bugs', 'xeno'].every(function (f) {
     var as = C.archetypesFor(f);
-    return as.some(function (a) { return a.random; }) && as.some(function (a) { return (a.fixed || []).length; }) &&
+    return (f === 'pmc' || as.some(function (a) { return a.random; })) && as.some(function (a) { return (a.fixed || []).length; }) &&
       as.some(function (a) { return !a.random && !(a.fixed || []).length; });
   }), true);
   function found(id) { var a = C.archetype(id), co = C.newCompany('D', { faction: a.faction || 'pmc' }); C.foundRival(co, id, []); return co; }
@@ -961,7 +962,7 @@ head('Doctrines: fixed, a shortlist, or random');
     return co.docPlan.slice(0, 6).every(function (d) { return short.indexOf(d) >= 0; });
   }) && arm.some(function (co) { return co.docPlan.slice(0, 6).join() !== arm[0].docPlan.slice(0, 6).join(); }), true, arm.map(function (co) { return co.docPlan.slice(0, 6).join(''); }).join(' '));
   var firsts = {};
-  for (var i = 0; i < 40; i++) firsts[found('swarm').docPlan[0]] = 1;
+  for (var i = 0; i < 40; i++) firsts[found('turncoats').docPlan[0]] = 1;
   ok('a random force draws from the whole list', Object.keys(firsts).length > 8, true, Object.keys(firsts).length + ' different first doctrines in 40');
 })();
 

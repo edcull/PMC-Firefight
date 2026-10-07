@@ -191,7 +191,7 @@ ok('...and keeps replacing the hulls it loses', byId.aircav.machines >= 2, true,
   report.map(function (r) { return r.a.id + ' ' + r.upgrades + ' fitted'; }).join(', '));
 /* How full each company's honour slots are, which is the fair comparison: the cap
    is Unit Tier + 1, so a company of Tier I units cannot hold many however hard it
-   trains. The swarm tops this because its cheap units have nowhere to promote to
+   trains. The mercenaries top this because their cheap units have nowhere to promote to
    and so spend everything on honours; the elite is close behind because Rapid
    Training Methods halves the first honour for every infantry unit it owns. */
 report.forEach(function (r) {
@@ -255,7 +255,7 @@ function table(fn, fmt) {
 function pc(v) { return Math.round(100 * v) + '%'; }
 function one(v) { return v.toFixed(1); }
 
-// (seven in ten: the swarm used to pad its share with Penal troops, and an army fields only four of those)
+// (seven in ten: the old Swarm used to pad its share with Penal troops, and an army fields only four of those)
 ok('every archetype keeps seven units in ten in its own groups',
   C.ARCHETYPES.every(function (a) { return avg[a.id].inChar >= 0.7; }), true,
   table(function (v) { return v.inChar; }, pc) +
@@ -270,7 +270,7 @@ ok('the cavalry fields the most machines',
 ok('...and fits more Upgrades than the infantry companies',
   avg.aircav.upgrades > 0 && C.ARCHETYPES.every(function (a) { return a.id === 'aircav' || a.id === 'marksmen' || avg[a.id].upgrades < avg.aircav.upgrades; }), true,
   table(function (v) { return v.upgrades; }, one));
-ok('the swarm fields the most units',
+ok('the mercenaries field the most units (they hire wide)',
   C.ARCHETYPES.every(function (a) { return a.id === 'swarm' || avg.swarm.units > avg[a.id].units; }), true,
   table(function (v) { return v.units; }, one));
 
