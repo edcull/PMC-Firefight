@@ -550,7 +550,8 @@
       },
       /* past the battle's minimum, no more than a Priority Level and one of any one
          unit (Tier V is not fifteen Revolutionary Guard and nothing else) */
-      tooMany: function (p, keys) { return count(keys, function (x) { return x === p.key; }) >= pl + 1; },
+      // (Tier I is the rank and file, as many as it likes: a rising is mostly Armed civilians)
+      tooMany: function (p, keys) { return p.tier > 1 && count(keys, function (x) { return x === p.key; }) >= pl + 1; },
       own: function (p) { return liked(p) || starters.indexOf(p.key) >= 0; },
       hullFirst: function (p) { return liked(p) && hullFirst(p); },
       rides: function (p) { return (a.riders || []).indexOf(p.group) >= 0; }
