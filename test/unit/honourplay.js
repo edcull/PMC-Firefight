@@ -17,7 +17,7 @@ function battle() {
   const e = Engine.create();
   e.start({
     tier: 3, pl: 1, scenario: 'meeting', mode: 'hotseat', planet: 'barren',
-    armyA: R.rollArmy(3, 1, null, 'pmc'), armyB: R.rollArmy(3, 1, null, 'pmc'),
+    armyA: R.rollArmy(3, 1, null, 'pmc', false), armyB: R.rollArmy(3, 1, null, 'pmc', false),
     nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel'
   });
   ['A', 'B'].forEach((sd) => { e.intent(sd, { k: 'autosplit' }); e.intent(sd, { k: 'autodeploy' }); });

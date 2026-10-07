@@ -168,9 +168,9 @@ console.log('\nThe VIP draws the OpFor\u2019s attack, Kill Them All! or not (p. 
     st.units.forEach((x) => { x.reserve = false; x.aboard = null; x.activated = false; x.wave = 0; x.sp = 0; x.x = 44; x.y = 44; });
     const u = b[0], vip = st.scen.mustTarget(st, u);
     if (!vip) continue;
-    // the VIP 14" off, in range but beyond a charge; another squad 4" off, easily charged
-    u.x = 20; u.y = 24; vip.x = 34; vip.y = 24;
-    const near = a.find((x) => x !== vip); near.x = 20; near.y = 30;
+    // the VIP 17" off, in range but well beyond a charge; another squad 6" off, easily charged
+    u.x = 20; u.y = 24; vip.x = 37; vip.y = 24;
+    const near = a.find((x) => x.id !== vip.id && !x.soloLeader && x.name !== vip.name) || a.find((x) => x.id !== vip.id); near.x = 20; near.y = 30;
     b[1].x = 2; b[1].y = 2;
     st.scen.behaviour = () => ({ mod: 9, why: 'test' });          // Kill Them All!
     const n0 = st.log.length;

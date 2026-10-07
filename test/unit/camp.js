@@ -1024,7 +1024,13 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
         var ks2 = R.rollArmy(t, pl2, null, f, a.id);
         ks2.forEach(function (k) {
           var p = R.profile(keyOf(k));
-          var own2 = a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || [].concat(a.t1 || [], a.t2 || []).indexOf(p.key) >= 0 || p.command;
+          // (with a weighted list, its own is whatever it weighs above 0)
+          var wE = a.weights ? (a.weights[p.key] != null ? a.weights[p.key] : a.weights[p.group]) : null;
+          var own2 = a.weights ? !!(wE && (Array.isArray(wE) ? wE[0] : wE)) || p.command
+            : a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || [].concat(a.t1 || [], a.t2 || []).indexOf(p.key) >= 0 || p.command;
+          // a weighted list may take its own above the battle's Tier, at half weight: only an unweighted pick counts here
+          if (a.weights && !own2 && p.tier > t) { bigOdd++; return; }
+          if (a.weights) own2 = true;
           if (!own2 && p.tier > t) bigOdd++;
           if (p.command && p.tier < t) lowCmd++;
           if (a.id === 'shock' && (p.group === 'Transport vehicles' || p.group === 'Engineering and utility vehicles')) shockVeh++;

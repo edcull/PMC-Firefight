@@ -1213,22 +1213,23 @@
          (0 never, 10 the backbone), and [weight, limit] where it is kept rare, the
          limit a Priority Level (a group's limit counts the whole group). A unit's
          own entry beats its group's; anything unlisted is 0. */
+      hullsPerPL: 1,                // a skirmish force fields a hull a Priority Level
       weights: {
-        // armour first
-        ecobats: 6, bats: 8, protectors: 8, protectorshm: 6,
-        // anti-armour guns, not anti-air
-        'Heavy support': [5, 2], sam: [1, 1],
-        // machine guns behind the armour; the Gauss cannon now and then
-        'Light support': [4, 2], hmgteam: 5, gausscannon: [3, 1],
-        'Remote mortars': [3, 1],
-        // its heavy guns are on hulls
-        'Hunters and destroyers': 6,
-        'Support vehicles': 5, impsupport: 3,
-        'Engineering and utility vehicles': [1, 1], hengveh: 2, lengveh: 2, ewveh: 0,
+        // heavy on battle armour
+        ecobats: 8, bats: 10, protectors: 10, protectorshm: 8,
+        // some rifle infantry, a little assault
+        'Rifle infantry': [3, 2], 'Assault troops': [1, 1],
+        // some support infantry: machine guns, anti-armour guns, mortars (the Gauss cannon and SAM now and then)
+        'Light support': [2, 2], gausscannon: [1, 1],
+        'Heavy support': [2, 2], sam: [1, 1],
+        'Remote mortars': [1, 1],
+        // a few hulls (hullsPerPL): gun carriers, tank hunters and destroyers, engineering vehicles
+        'Hunters and destroyers': [3, 1], 'Support vehicles': [3, 1], impsupport: 2,
+        'Engineering and utility vehicles': [2, 1], aaveh: 1, medveh: 1, ewveh: 0,
         // the founding troops at the low Tiers
         enforcers: 5, recruits: 3,
-        // rare fillers
-        'Rifle infantry': [1, 1], observers: [1, 1], medics: [1, 1]
+        // rare extras
+        observers: [1, 1], medics: [1, 1]
       },
       spend: 'promote'
     },

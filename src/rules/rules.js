@@ -540,6 +540,7 @@
         if (p.cls !== 'infantry' && !p.leaderBug) {
           // half the hulls the rules allow (three a Priority Level), or fewer; all of them only for a machine company
           var hullCap = machineMinded ? 3 * pl : Math.ceil(1.5 * pl);
+          if (a.hullsPerPL != null) hullCap = Math.min(hullCap, Math.round(a.hullsPerPL * pl));   // its own: Bastion's few
           if (a.machinesMax != null && a.machinesMax < 3) hullCap = Math.min(hullCap, a.machinesMax * pl);
           if (count(keys, function (x) { var q = profile(x); return q && q.cls !== 'infantry'; }) >= hullCap) return false;
         }
