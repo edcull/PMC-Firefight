@@ -347,7 +347,8 @@
       var h2 = hulls.filter(function (k) { return profile(k).tier === 2; });
       /* It starts with units it paid for: the free ones (Penal troops, Armed civilians,
          Tiny bug swarms, Primitive Epsilon troopers) are taken on later, as it needs them. */
-      var paid = a.t1.filter(function (k) { return !freeUnit(k); });
+      // (a revolt starts as Armed civilians, free or not: `foundFree` lets it found with them)
+      var paid = a.foundFree ? a.t1.slice() : a.t1.filter(function (k) { return !freeUnit(k); });
       var keys = [], t1pool = paid.length ? paid : a.t1.slice(), t2pool = a.t2.slice();
       for (var i = 0; i < 6 - h1.length; i++) keys.push(t1pool[i % t1pool.length]);
       h1.forEach(function (k) { keys.push(k); });
@@ -540,9 +541,8 @@
            cross to is the shorter of its share (the Bastion's machine guns stay machine
            guns, half and half with its anti-tank teams), waiting for the step up instead. */
         if (a.mix && a.mix[p.group]) {
-          var inLine = likedAll.filter(function (q) { return q.group === p.group; });
-          // (it crosses only into a line shorter of its share than its own)
-          if (inLine.length) targets = targets.filter(function (q) { return q.group === p.group || shortfall(q.group) > shortfall(p.group); });
+          // (it crosses only into a line shorter of its share than its own; with no step up its own line, it waits)
+          targets = targets.filter(function (q) { return q.group === p.group || shortfall(q.group) > shortfall(p.group); });
         }
         function honour() {
           if (!canTakeHonour(e, co).ok) return false;

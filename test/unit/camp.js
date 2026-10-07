@@ -908,7 +908,8 @@ head('Contracts at a Tier the AI force can field in full');
     for (var i = 0; i < 4; i++) {
       var co = C.newCompany('R', { faction: a.faction || 'pmc' });
       C.foundRival(co, a.id, []);
-      co.roster.forEach(function (e) { if (C.freeUnit(e.key)) freeAtFounding.push(a.id + ':' + e.key); });
+      // (a revolt that starts as armed civilians founds with them on purpose: `foundFree`)
+      if (!a.foundFree) co.roster.forEach(function (e) { if (C.freeUnit(e.key)) freeAtFounding.push(a.id + ':' + e.key); });
     }
   });
   ok('no AI force founds with Penal troops, Armed civilians, Tiny bug swarms or Primitive Epsilons', freeAtFounding.length, 0, freeAtFounding.slice(0, 5).join(' '));

@@ -1200,9 +1200,9 @@
       machines: [], vehicles: 0,
       doctrines: ['T5', 'T2', 'T6', 'S4', 'S3', 'S5'],
       groups: ['Heavy infantry', 'Heavy support', 'Light support', 'Remote mortars', 'Hunters and destroyers', 'Support vehicles', 'Engineering and utility vehicles'],
-      // mostly armour, with machine guns, anti-tank teams and mortars behind it (Recruits promote into all three);
-      // the machine guns weighted double, since some climb into missile teams: they settle near half and half
-      mix: { 'Heavy infantry': 3, 'Light support': 2, 'Heavy support': 1, 'Remote mortars': 1 },
+      // mostly armour, with machine guns, anti-tank teams and mortars behind it (Recruits promote into all three),
+      // the machine guns and the anti-tank teams half and half
+      mix: { 'Heavy infantry': 3, 'Light support': 1, 'Heavy support': 1, 'Remote mortars': 1 },
       limit: { 'Remote mortars': 3 },
       refill: { enforcers: 2, recruits: 1 },   // Tier I gaps later: Enforcers become battle armour, Recruits the gun crews
       machinesMax: 4,               // its heavy guns are on hulls: tank hunters, destroyers, gun carriers
@@ -1310,12 +1310,15 @@
       id: 'redfront', name: 'Red Revolutionary Front', faction: 'rebel',
       blurb: 'Two centuries underground, and organised down to the last cell.',
       names: ['Red Revolutionary Front', 'The Combine Committee', 'Ninth of Marzen', 'Union Irregulars'],
-      t1: ['rciv', 'rdesconscript'],
+      // a revolt that starts as armed civilians (free or not), with militia and an LMG team behind them
+      t1: ['rciv'],
       t2: ['rmilitia', 'rlmg'],
+      foundFree: true,
       machines: ['rtechnical', 'rltv'], vehicles: 2,
       // the cells and their commissars, the movement and its cry: Hero and Prophet, nothing criminal
       doctrines: ['H6', 'H1', 'H2', 'P6', 'P2', 'P5'],
       groups: ['Freedom Warriors', 'Rebel support troops', 'Rebel combat vehicles', 'Rebel transport vehicles'],
+      mix: { 'Freedom Warriors': 2, 'Rebel support troops': 1 },   // two cells of fighters to each support gun
       spend: 'recruit'
     },
     {
