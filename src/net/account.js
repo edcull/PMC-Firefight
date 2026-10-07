@@ -44,6 +44,14 @@
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, code: r.status, j: j }; }, function () { return { ok: r.ok, code: r.status, j: {} }; }); });
   }
 
+  /* The personalities as this server's admin has changed them (server/archetypes.js),
+     laid over the ones this page carries, so its skirmish rolls and campaigns follow
+     them. A server that cannot be reached leaves the defaults. */
+  function personalities() {
+    var C = root.PMCCamp;
+    if (!C || !C.applyArchetypeChanges) return;
+    get('api/archetypes').then(function (r) { if (r.ok && r.j && r.j.changes) C.applyArchetypeChanges(r.j.changes); }, function () { });
+  }
   // ask the server who this browser is (a server that cannot be reached changes nothing)
   function refresh(then) {
     if (!online() || !root.fetch) { who = null; label(); if (then) then(); return; }
@@ -497,6 +505,7 @@
           serverUp = true;
           refresh();
           fromLink();
+          personalities();
         })
         .catch(function () { });
     }
