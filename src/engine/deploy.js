@@ -553,6 +553,25 @@
       });
     }
 
+    /* The AI's reserves ride in with its reserve hulls (p. 36: troops in reserve may
+       enter aboard their transport): a hull and everyone aboard come on with one roll,
+       so the waiting squads load into the transports waiting with them, wave by wave,
+       the line squads first and the colonel last. A drop pod has its own squad and an
+       emplaced gun stays off the hook (it is held to its own rule, SC.gunRule). */
+    function aiLoadReserves(side) {
+      var hulls = E.state.units.filter(function (v) {
+        return v.side === side && v.alive && v.reserve && v.transport > 0 && !v.aboard && !R.has(v, 'Immobile') && !R.has(v, 'Lifter');
+      });
+      hulls.forEach(function (v) {
+        var riders = boardableFor(v).filter(function (u) {
+          return u.reserve && (u.wave || 1) === (v.wave || 1) && !R.has(u, 'Stationary Artillery');
+        }).sort(function (a, b2) { return ((a.command ? 4 : 0) + a.tier * 0.1) - ((b2.command ? 4 : 0) + b2.tier * 0.1); });
+        riders.forEach(function (u) {
+          if ((v.cargo || []).length < v.transport && loadBefore(v, u, true)) logLine('note', u.label + ' waits aboard ' + v.name + ' to come on with it.');
+        });
+      });
+    }
+
     /* ---- the scenario's split, the player's to change ----
        A scenario that holds part of a force back (Find and secure, Invasion,
        Demolish, Hostile takeover) splits it for them; before the battle the
@@ -760,7 +779,7 @@
       garrisonAt: garrisonAt, garrisonable: garrisonable, garrisonSpots: garrisonSpots,
       zoneCentre: zoneCentre, placingSide: placingSide, deployRoster: deployRoster, deployNext: deployNext, deployOwner: deployOwner, entering: entering,
       pickToDeploy: pickToDeploy, nearestDeploySpot: nearestDeploySpot, emptyPlatforms: emptyPlatforms,
-      seatPlatforms: seatPlatforms, splitFor: splitFor, baselineSplits: baselineSplits,
+      seatPlatforms: seatPlatforms, aiLoadReserves: aiLoadReserves, splitFor: splitFor, baselineSplits: baselineSplits,
       toggleHold: toggleHold, deploymentDone: deploymentDone, sideDone: sideDone, startBattle: startBattle,
       clearSplits: clearSplits, autoSplit: autoSplit, faces: faces, faceDefault: faceDefault, faceInward: faceInward, faceOnArrival: faceOnArrival,
       askFacing: askFacing, answerFacing: answerFacing, splitsOK: splitsOK, insertionFor: insertionFor, toggleInsertion: toggleInsertion

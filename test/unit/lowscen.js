@@ -263,5 +263,17 @@ console.log('\nInvasion: the first wave gone and every landing zone held, the la
   ok('...nor while the attacker has a unit on the table', !SC.check(st));
 })();
 
+console.log('\nThe AI loads its waiting squads into its waiting transports (p. 36): one roll brings them all');
+(function () {
+  const e = Engine.create({});
+  e.start({ tier: 3, pl: 2, scenario: 'invasion', attacker: 'B', armyA: ['regular', 'regular', 'regular', 'regular'],
+    armyB: ['cmd2', 'lapc:wheeled', 'lapc:tracked', 'regular', 'regular', 'regular', 'veterans', 'engineers', 'regular', 'hmgteam'],
+    nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'ai', planet: 'sparse', terrainSetup: 'auto' });
+  const st = e.state(), hulls = st.units.filter((u) => u.side === 'B' && u.key === 'lapc');
+  ok('each waiting transport is filled', hulls.every((h) => (h.cargo || []).length === h.transport), hulls.map((h) => (h.cargo || []).length + '/' + h.transport).join(' '));
+  ok('...with squads of its own wave, who no longer roll on their own', hulls.every((h) => h.cargo.every((c) => c.wave === h.wave && !c.reserve && c.aboard === h.id)));
+  ok('...and not the commander while a line squad is waiting', !hulls.some((h) => h.cargo.some((c) => c.command)));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
