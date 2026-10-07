@@ -493,7 +493,8 @@
     function lightCap(g) { return mix[g] && mix[g] < 1 ? Math.ceil(pl / 2) : null; }
     function hullFirst(p) {
       if (p.cls === 'infantry') return false;
-      if (machineMinded && !(a.hullsFirst || []).length) return true;      // a machine company: any hull of its own
+      // a machine company, or a weighted list with hulls to field and no favourites named: any hull of its own
+      if ((machineMinded || (W && a.hulls)) && !(a.hullsFirst || []).length) return true;
       return (a.hullsFirst || []).some(function (h) { return h === p.group || h === p.key || (h === 'transports' && p.transport > 0); });
     }
     // more kinds rather than more of one: the units it has fewest of, more often than not
@@ -741,6 +742,8 @@
       if (fit.length) hulls = fit;
       var newH = hulls.filter(function (p) { return !keys.some(function (k) { return splitPick(k).key === p.key; }); });
       if (newH.length) hulls = newH;
+      // (a weighted list takes one by its weights; otherwise the biggest)
+      if (st.weighted) { take(pick(st.favour(hulls, keys))); continue; }
       var hiH = Math.max.apply(null, hulls.map(function (p) { return p.tier; }));
       take(pick(hulls.filter(function (p) { return p.tier === hiH; })));
     }

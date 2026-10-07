@@ -1250,6 +1250,17 @@
       units: ['gausscannon'],
       lean: true,                   // few units, all of them good: no free troops to pad the list, no hiring with spare money
       honourFirst: true,            // and with Rapid Training Methods, each earns an honour before it is promoted
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 1,                      // fewer, better: reaches for the Tier above
+      hulls: { min: 0, max: 0 },    // no hulls at all
+      weights: {
+        'Heavy infantry': 6, protectors: 8, protectorshm: 8,
+        'Rifle infantry': 5, rookie: 2, veterans: 7, rangers: 8,
+        'Assault troops': 4, lighteng: 2, shock: 6, commandos: 7,
+        'Light infantry': [2, 1], snipers: [3, 1],
+        gausscannon: [3, 1], hmgteam: 2, missile: 2, medics: [1, 1],
+        enforcers: 3, recruits: 2
+      },
       spend: 'promote'
     },
     {
@@ -1269,6 +1280,16 @@
       // two of the line (basic and rifle troops) to each machine gun and each mortar, the mortars four at most
       mix: { 'Basic troops': 1, 'Rifle infantry': 1, 'Light support': 1, 'Remote mortars': 1 },
       limit: { 'Remote mortars': 4, enforcers: 0 },   // (and no Enforcers: they grow only into battle armour)
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: -1,                     // numbers: fills up on the Tier below
+      hulls: { min: 0, max: 1 },    // a truck now and then
+      weights: {
+        'Basic troops': 5, enforcers: 0, penal: [3, 1],
+        'Rifle infantry': 6, 'Light support': 5, 'Remote mortars': [3, 1],
+        'Heavy support': [3, 2], sam: [1, 1],
+        'Assault troops': [2, 1], 'Light infantry': [1, 1], nomads: [2, 1],
+        'Transport vehicles': [2, 1], unarmoured: 3, insertplat: 0
+      },
       spend: 'recruit'
     },
     {
@@ -1295,6 +1316,15 @@
       signature: [['lpv', 'hpv', 'recon', 'cmdveh', 'adaptedcraft', 'lightcraft', 'fsc'], ['ew', 'drecon', 'dcombat']],
       signatureMax: 2,
       // promoted to Veterans, Forward observers and Sharpshooters, then trained with what is left
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 1,                      // a few good teams
+      hulls: { min: 1, max: 1.5 },  // its cars and craft
+      weights: {
+        'Rifle infantry': 6, 'Light infantry': 6, observers: 5, lrrp: [4, 1], snipers: [4, 1],
+        'Support teams': [2, 1], 'Remote mortars': [2, 1], 'Light support': [2, 1], 'Assault troops': [1, 1],
+        nomads: 3, irregulars: 4, recruits: 3,
+        lpv: 3, hpv: 3, recon: 4, cmdveh: 2, adaptedcraft: 3, lightcraft: 3, fsc: 2, ewveh: [1, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1316,6 +1346,16 @@
       // Penal troops thrown in first to soak the fire: free, and kept up (one per Tier, four at most)
       signature: ['penal'],
       signatureMax: 4,
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 1, max: 1.5 },  // a ride to the fight and a way through
+      weights: {
+        'Assault troops': 8, commandos: 6,
+        'Basic troops': 3, irregulars: 4, enforcers: 4, penal: [4, 2],
+        'Heavy infantry': [2, 1], 'Rifle infantry': [2, 1], chem: [4, 1], 'Light support': [1, 1],
+        'Transport vehicles': 4, insertplat: [2, 1],
+        'Engineering and utility vehicles': [2, 1], hengveh: 4, lengveh: 3, aaveh: 0, ewveh: 1, medveh: 1
+      },
       spend: 'promote'
     },
     {
@@ -1334,6 +1374,15 @@
       mix: { 'Rifle infantry': 1, 'Assault troops': 1 },   // as many assault troops as riflemen in the back of its vehicles
       machinesMax: 6,               // as many hulls as a Priority Level 2 army can field
       fieldsMachines: true,         // and into battle in them first
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 2, max: 3 },    // as many hulls as the rules allow
+      weights: {
+        'Combat vehicles': 6, 'Transport vehicles': 5, insertplat: 2,
+        'Transport aircraft': 4, 'Strike aircraft': 4, vtoldrone: 1,
+        'Assault troops': 5, 'Rifle infantry': 5, 'Light infantry': [1, 1], 'Heavy support': [1, 1],
+        recruits: 3, irregulars: 3
+      },
       spend: 'machines'
     }
   ];
@@ -1357,6 +1406,14 @@
       machinesMax: 3,
       // the cells and their commissars, the movement and its cry: Hero and Prophet, nothing criminal
       doctrines: ['H6', 'H1', 'H2', 'P6', 'P2', 'P5'],
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: -1,                     // the masses: fills up on the Tier below
+      hulls: { min: 0, max: 1 },
+      weights: {
+        'Freedom Warriors': 8, rciv: 6, 'Rebel support troops': 4, 'Rebel artillery': [3, 1],
+        'Deserters and POWs': [1, 1], 'Mounted Warriors': [1, 1], 'Holy Warriors': [1, 1],
+        'Rebel combat vehicles': [2, 1], 'Rebel transport vehicles': [2, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1380,6 +1437,14 @@
       doctrines: ['V2', 'V1', 'V5', 'H3', 'H5', 'P4'],
       stages: [['V1', 'V5', 'H3', 'H5'], ['P4']],   // Holy Fury last: at Tier V, once the rest is held
       tactics: { open: 'wave', attack: 'wave', defend: 'wave' },                              // pirates never dig in (and riders take nothing from Guerillas)
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 1, max: 2 },    // troop carriers and shuttles
+      weights: {
+        'Mounted Warriors': 8, 'Holy Warriors': 3, 'Freedom Warriors': 3,
+        'Rebel transport vehicles': 4, 'Rebel aviation': 3, rlifter: 1, 'Rebel combat vehicles': 2,
+        'Rebel support troops': [1, 1], 'Deserters and POWs': [1, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1399,6 +1464,14 @@
       // Holy Fury first; then Stairs to Heaven or Martyrdom (two Prophet at most), and the Hero path: loyalty, victory and alms
       fixed: ['P4'],
       doctrines: ['P4', 'P3', 'P1', 'H4', 'H1', 'H5'],
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 0, max: 1 },
+      weights: {
+        'Holy Warriors': 8, 'Freedom Warriors': 4, 'Rebel support troops': [2, 2], 'Rebel artillery': [2, 1],
+        'Mounted Warriors': [1, 1], Miners: [1, 1],
+        'Rebel combat vehicles': [2, 1], 'Rebel transport vehicles': [1, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1418,6 +1491,13 @@
       // a pick from its list first, then Labour Leader at Tier II, when there are vehicles enough to want it
       fixedAt: { 2: 'H3' },
       doctrines: ['H2', 'H3', 'V4', 'H4', 'V5', 'V1'],
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 1, max: 1.5 },  // their improvised hulls
+      weights: {
+        Miners: 8, 'Freedom Warriors': 4, 'Rebel combat vehicles': 4,
+        'Rebel artillery': [2, 1], 'Rebel support troops': [2, 1], 'Deserters and POWs': [1, 1], 'Mounted Warriors': [1, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1441,6 +1521,13 @@
       fixed: ['V3'],
       doctrines: ['V3', 'P2', 'H2', 'H4', 'V4', 'H5'],
       tactics: { open: 'guerillas', attack: 'guerillas', defend: ['guerillas', 'laststand'] },   // out of the tunnels; on defence, half the time behind barricades
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 0, max: 0.5 },  // lean: a hull rarely
+      weights: {
+        'Chosen Warriors': 6, 'Freedom Warriors': 5, 'Rebel support troops': 3, 'Rebel artillery': [2, 1],
+        Miners: [1, 1], 'Deserters and POWs': [1, 1], 'Rebel combat vehicles': [1, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1463,6 +1550,14 @@
       doctrines: ['H6', 'V6', 'V5', 'V1', 'P5', 'P6'],
       stages: [['V6', 'V5', 'V1'], ['P5', 'P6']],   // two of the Villain doctrines first, the Prophet ones last
       tactics: { open: 'laststand', attack: ['wave', 'guerillas'], defend: 'laststand' },     // a garrison digs in; it attacks in a rush or by infiltration
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 1, max: 1.5 },  // shuttles and FlaK first
+      weights: {
+        'Deserters and POWs': 7, 'Freedom Warriors': 5, 'Rebel support troops': 3, 'Rebel artillery': [3, 1],
+        'Rebel aviation': 3, rlifter: 1, 'Rebel combat vehicles': 2, 'Rebel flak vehicles': [2, 1],
+        'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1]
+      },
       spend: 'promote'
     }
   ];
