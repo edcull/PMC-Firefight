@@ -961,6 +961,10 @@ head('Doctrines: fixed, a shortlist, or random');
   ok('the Grey Plague always founds with Fungi Symbiosis', plague.every(function (co) { return co.doctrines[0] === 'BP4'; }), true);
   var raid = found('shkar');
   ok('the Sh\'kar raiders take the teleport network, then the cloaking, first', raid.docPlan.slice(0, 2).join(), 'XO1,XT4');
+  var pit = [0, 1, 2, 3, 4, 5].map(function () { return found('pitheads'); });
+  ok('the Pitheads found with a pick from their list, and take Labour Leader at Tier II', pit.every(function (co) {
+    return co.doctrines.length === 1 && co.doctrines[0] !== 'H3' && C.archetype('pitheads').doctrines.indexOf(co.doctrines[0]) >= 0 && co.docPlan[1] === 'H3';
+  }), true, pit.map(function (co) { return co.docPlan.slice(0, 2).join('>'); }).join(' '));
   var arm = [0, 1, 2, 3, 4, 5].map(function () { return found('armour'); }), short = C.archetype('armour').doctrines;
   ok('a shortlist force takes its six first, in an order of its own', arm.every(function (co) {
     return co.docPlan.slice(0, 6).every(function (d) { return short.indexOf(d) >= 0; });

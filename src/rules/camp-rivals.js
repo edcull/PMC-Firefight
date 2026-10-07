@@ -341,7 +341,17 @@
       var fixed = a.random ? [] : (a.fixed || []).filter(function (d) { return all.indexOf(d) >= 0; });
       var short = a.random ? [] : shuffle((a.doctrines || []).filter(function (d) { return all.indexOf(d) >= 0 && fixed.indexOf(d) < 0; }));
       var rest = shuffle(all.filter(function (d) { return fixed.indexOf(d) < 0 && short.indexOf(d) < 0; }));
-      return fixed.concat(short, rest);
+      var plan = fixed.concat(short, rest);
+      /* ...and one fixed for a later Tier (`fixedAt`: the Pitheads' Labour Leader at Tier II,
+         once there are vehicles enough to want it) goes in at that place in the order. */
+      var at = a.random ? {} : (a.fixedAt || {});
+      Object.keys(at).sort().forEach(function (t) {
+        var d = at[t];
+        if (all.indexOf(d) < 0) return;
+        plan = plan.filter(function (x) { return x !== d; });
+        plan.splice(Math.max(0, Math.min(plan.length, (+t) - 1)), 0, d);
+      });
+      return plan;
     }
     function foundRival(co, archId, usedNames) {
       var a = archId ? archetype(archId) : pick(archetypesFor(co.faction));

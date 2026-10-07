@@ -1372,8 +1372,8 @@
       mix: { 'Miners': 3, 'Freedom Warriors': 1, 'Rebel artillery': 0.5 },
       machinesMax: 4,
       hullsFirst: ['Rebel combat vehicles'],
-      // the town talks first (Labour Leader waits for the vehicles to make it worth having)
-      fixed: ['H2'],
+      // a pick from its list first, then Labour Leader at Tier II, when there are vehicles enough to want it
+      fixedAt: { 2: 'H3' },
       doctrines: ['H2', 'H3', 'V4', 'H4', 'V5', 'V1'],
       spend: 'promote'
     },
