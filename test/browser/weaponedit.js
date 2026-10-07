@@ -15,6 +15,7 @@ function ok(name, cond, note) {
   cond ? pass++ : fail++;
   console.log('  ' + (cond ? '✓' : '✗') + ' ' + name + (note ? '  — ' + note : ''));
 }
+const window_RED = '255,110,90';
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const tabs = (p) => p.evaluate(() => [...document.querySelectorAll('#vctl .vtabs [data-tab]')].map((b) => b.getAttribute('data-tab')));
 
@@ -36,7 +37,8 @@ const tabs = (p) => p.evaluate(() => [...document.querySelectorAll('#vctl .vtabs
     await p.waitForTimeout(200);
     ok('as an admin, a Weapon tab', (await tabs(p)).indexOf('weapon') >= 0);
     const before = await p.evaluate(() => ({ spec: window.__viewer.spec(), src: document.querySelector('.vesrc').textContent }));
-    ok('...showing the unit’s entry as the table writes it', /^aaveh: \{ p: 'missile', n: 2, s: 'chain' \}$/.test(before.src), before.src);
+    ok('...showing the unit’s entry as the table writes it', /^aaveh: \{ p: 'missile', n: 2, s: 'chain', launch: 'samturret' \}$/.test(before.src), before.src);
+    ok('...with its missiles’ surface-to-air launch, chosen from the table', await p.evaluate(() => document.querySelector('[data-w="launch"]').value === 'samturret' && window.__viewer.spec().launch === 'samturret'));
 
     await p.selectOption('[data-w="p"]', 'rail');
     await p.selectOption('[data-w="n"]', '4');
@@ -44,7 +46,7 @@ const tabs = (p) => p.evaluate(() => [...document.querySelectorAll('#vctl .vtabs
     const after = await p.evaluate(() => ({ spec: window.__viewer.spec(), edits: window.__viewer.edits(), src: document.querySelector('.vesrc').textContent,
       changed: !!document.querySelector('.vedited') }));
     ok('changing the primary changes what the unit fires', after.spec.p === 'rail' && after.spec.n === 4 && after.spec.s === 'chain', JSON.stringify(after.spec));
-    ok('...marked as changed, and its line written out', after.changed && /^aaveh: \{ p: 'rail', n: 4, s: 'chain' \}$/.test(after.src), after.src);
+    ok('...marked as changed, and its line written out', after.changed && /^aaveh: \{ p: 'rail', n: 4, s: 'chain', launch: 'samturret' \}$/.test(after.src), after.src);
 
     await p.evaluate(() => { window.__viewer.range(8); document.querySelector('.vweaponbody [data-do="fire"]').click(); });
     let seen = [];
@@ -52,7 +54,7 @@ const tabs = (p) => p.evaluate(() => [...document.querySelectorAll('#vctl .vtabs
     ok('Fire on the tab fires it as changed', seen.indexOf('rail') >= 0, [...new Set(seen)].join(','));
 
     const lines = await p.evaluate(() => window.__viewer.exportEdits());
-    ok('Copy changes gives the lines to paste into the table', /aaveh: \{ p: 'rail', n: 4, s: 'chain' \},\s+\/\/ Anti-aircraft vehicle/.test(lines), lines);
+    ok('Copy changes gives the lines to paste into the table', /aaveh: \{ p: 'rail', n: 4, s: 'chain', launch: 'samturret' \},\s+\/\/ Anti-aircraft vehicle/.test(lines), lines);
 
     await p.reload(); await p.waitForTimeout(800);
     ok('the change is kept in the browser, but not drawn for anyone not an admin', await p.evaluate(() => {
@@ -65,7 +67,7 @@ const tabs = (p) => p.evaluate(() => [...document.querySelectorAll('#vctl .vtabs
     await p.click('[data-w="splash"]');
     await p.waitForTimeout(100);
     const s2 = await p.evaluate(() => document.querySelector('.vesrc').textContent);
-    ok('the secondary can be taken off, and splash set', /^aaveh: \{ p: 'rail', n: 4, splash: true \}$/.test(s2), s2);
+    ok('the secondary can be taken off, and splash set', /^aaveh: \{ p: 'rail', n: 4, splash: true, launch: 'samturret' \}$/.test(s2), s2);
 
     await p.click('[data-do="wrevert"]');
     await p.waitForTimeout(100);
@@ -75,6 +77,34 @@ const tabs = (p) => p.evaluate(() => [...document.querySelectorAll('#vctl .vtabs
     await p.selectOption('[data-w="p"]', 'missile');
     await p.waitForTimeout(100);
     ok('choosing what the table already says is no change', await p.evaluate(() => !Object.keys(window.__viewer.edits()).length));
+
+    // the rest of how it is drawn: the launch, the shots' colour, an orb's flight
+    await p.selectOption('[data-w="launch"]', '');
+    await p.waitForTimeout(100);
+    ok('its missiles can be made to fly flat', await p.evaluate(() => window.__viewer.spec().launch === undefined &&
+      document.querySelector('.vesrc').textContent === "aaveh: { p: 'missile', n: 2, s: 'chain' }"));
+    await p.click('[data-do="wrevert"]');
+    await p.evaluate(() => { window.__viewer.pick('regular'); });
+    await p.waitForTimeout(100);
+    ok('a rifle team has no missile launch or orbs to choose, but a shot colour', await p.evaluate(() =>
+      !document.querySelector('[data-w="launch"]') && !document.querySelector('[data-w="orb"]') && !!document.querySelector('[data-w="glow"]')));
+    await p.selectOption('[data-w="glow"]', 'red');
+    await p.waitForTimeout(100);
+    const red = await p.evaluate(() => ({ spec: window.__viewer.spec(), src: document.querySelector('.vesrc').textContent }));
+    ok('...and given red tracers', red.spec.glow === 'red' && /glow: 'red'/.test(red.src), red.src);
+    await p.evaluate(() => { window.__viewer.range(8); document.querySelector('.vweaponbody [data-do="fire"]').click(); });
+    let rgbs = [];
+    for (let i = 0; i < 20 && !rgbs.length; i++) { await p.waitForTimeout(80); rgbs = await p.evaluate(() => window.__viewer.fxRGB()); }
+    ok('...which fire red', rgbs.indexOf(window_RED) >= 0, rgbs.join(' | '));
+    await p.click('[data-do="wrevert"]');
+    await p.evaluate(() => { window.__viewer.pick('xgamma3'); });
+    await p.waitForTimeout(100);
+    const orb = await p.evaluate(() => ({ has: !!document.querySelector('[data-w="orb"]'), now: (document.querySelector('[data-w="orb"]') || {}).value }));
+    ok('an orb launcher team has its orbs’ flight to choose, teleported by default', orb.has && orb.now === '', JSON.stringify(orb));
+    await p.selectOption('[data-w="orb"]', 'lob');
+    await p.waitForTimeout(100);
+    ok('...and they can be lobbed', await p.evaluate(() => window.__viewer.spec().orb === 'lob'));
+    await p.click('[data-do="wrevert"]');
     await ctx.close();
   }
 

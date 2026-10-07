@@ -338,7 +338,19 @@
                (the advanced support vehicle's energy howitzer)
        plasmabolt a big blue bolt of plasma, flat and fast, landing in the same
                splash of blue fire (the heavy engineering vehicle's breaching gun)
-       none    it has no gun at all */
+       none    it has no gun at all
+
+     And three more a unit may carry, each with a default for when it does not:
+       launch  how its missiles leave: flat out of the tube (the default), or
+               a surface-to-air climb then a turn onto the aircraft — 'sam'
+               up the line the launcher is laid (the way the unit faces),
+               'samturret' up a turret's line onto the target
+       glow    the colour its shots burn: 'blue', 'green', 'red', 'violet',
+               'amber' or 'white', or 'none' for plain rounds; by default
+               a Xenotripod's are blue and anyone else's plain
+       orb     how its orbs reach the target: 'tele' (out of a portal by the
+               target) or 'lob' (thrown across); by default an infantry
+               launcher teleports them and anything else lobs them */
   var WEAPONS = {
     /* ---- PMC infantry ---- */
     recruits: { p: 'small' },
@@ -370,7 +382,7 @@
     hmgteam: { p: 'chain' }, gausscannon: { p: 'rail', n: 3 },
     lightat: { p: 'shell' }, atteam: { p: 'shell' },
     // an ATGM team and a SAM team both put a pair of guided missiles in the air
-    missile: { p: 'missile', n: 2 }, sam: { p: 'missile', n: 2 },
+    missile: { p: 'missile', n: 2 }, sam: { p: 'missile', n: 2, launch: 'sam' },
     mortarsection: { p: 'arc', n: 1 }, mortarteam: { p: 'arc', n: 2 }, mortarbattery: { p: 'arc', n: 3 },
     /* Command, medics and signallers all carry Firepower 1 at 12": a sidearm,
        not a rifle line. They are defending themselves, not putting fire down. */
@@ -415,7 +427,7 @@
     // an energy howitzer: three heavy orbs lobbed over, bursting blue
     asupport: { p: 'orbbig', n: 3 },
     // air defence: the gun first, then the missiles off the rails
-    aaveh: { p: 'missile', n: 2, s: 'chain' },
+    aaveh: { p: 'missile', n: 2, s: 'chain', launch: 'samturret' },
     // signals and ambulance hulls: a pintle gun and the crew, nothing more
     ewveh: { p: 'small' }, medveh: { p: 'small' },
     /* Transport aircraft: a door gun and whoever is leaning out of it, inside a

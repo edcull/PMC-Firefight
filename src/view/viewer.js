@@ -1089,8 +1089,7 @@
   function hasOwn(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
   // what the table holds for a unit now, in full
   function entry(key) {
-    var w = R.WEAPONS[key] || R.weaponSpec(R.profile(key) || {}) || {};
-    return { p: w.p || 'small', n: w.n || 1, s: w.s || null, sn: w.sn || 1, splash: !!w.splash };
+    return entry0(R.WEAPONS[key] || R.weaponSpec(R.profile(key) || {}));
   }
   // written as data.js writes it: only what differs from the defaults
   function tidy(w) {
@@ -1098,10 +1097,18 @@
     if (w.n > 1) out.n = w.n;
     if (w.s) { out.s = w.s; if (w.sn > 1) out.sn = w.sn; }
     if (w.splash) out.splash = true;
+    // a missile's launch, the shots' colour and an orb's flight, where they are not the default
+    if (w.launch) out.launch = w.launch;
+    if (w.glow) out.glow = w.glow;
+    if (w.orb) out.orb = w.orb;
     return out;
   }
   function same(a, b) { return JSON.stringify(tidy(entry0(a))) === JSON.stringify(tidy(entry0(b))); }
-  function entry0(w) { w = w || {}; return { p: w.p || 'small', n: w.n || 1, s: w.s || null, sn: w.sn || 1, splash: !!w.splash }; }
+  function entry0(w) {
+    w = w || {};
+    return { p: w.p || 'small', n: w.n || 1, s: w.s || null, sn: w.sn || 1, splash: !!w.splash,
+      launch: w.launch || null, glow: w.glow || null, orb: w.orb || null };
+  }
   function saveEdits() { try { localStorage.setItem(EDITS, JSON.stringify(edits)); } catch (e) { } }
   function loadEdits() {
     try { edits = JSON.parse(localStorage.getItem(EDITS) || '{}') || {}; } catch (e) { edits = {}; }
@@ -1135,6 +1142,7 @@
     if (w.n) bits.push('n: ' + w.n);
     if (w.s) { bits.push("s: '" + w.s + "'"); if (w.sn) bits.push('sn: ' + w.sn); }
     if (w.splash) bits.push('splash: true');
+    ['launch', 'glow', 'orb'].forEach(function (f) { if (w[f]) bits.push(f + ": '" + w[f] + "'"); });
     return key + ': { ' + bits.join(', ') + ' }';
   }
   // every unit changed, ready to paste over its line in data.js
@@ -1160,12 +1168,20 @@
     } catch (e) { }
     said('No clipboard here: ' + what + ' is in the console.');
   }
+  // `blank`: the words for no value (the default), when there may be none; an option is a value or [value, words]
   function wpick(name, now, opts, blank) {
+    if (blank === true) blank = '— none —';
     return '<select class="vselect" data-w="' + name + '">' +
-      (blank ? '<option value=""' + (now ? '' : ' selected') + '>— none —</option>' : '') +
-      opts.map(function (o) { return '<option value="' + o + '"' + (String(o) === String(now) ? ' selected' : '') + '>' + o + '</option>'; }).join('') +
+      (blank ? '<option value=""' + (now ? '' : ' selected') + '>' + esc(blank) + '</option>' : '') +
+      opts.map(function (o) {
+        var v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o;
+        return '<option value="' + v + '"' + (String(v) === String(now) ? ' selected' : '') + '>' + esc(t) + '</option>';
+      }).join('') +
       '</select>';
   }
+  var LAUNCHES = [['sam', 'Surface-to-air, up the line it faces'], ['samturret', 'Surface-to-air, turret onto the target']];
+  var GLOW_NAMES = ['blue', 'green', 'red', 'violet', 'amber', 'white'];
+  var ORBS = [['tele', 'Teleported, out of a portal by the target'], ['lob', 'Lobbed across']];
   function editorHtml() {
     var key = view.key, w = entry(key), changed = hasOwn(edits, key), n = Object.keys(edits).length;
     var h = '<div class="vgrp"><label>Primary' + (changed ? ' <em class="vedited">· changed</em>' : '') + '</label>' +
@@ -1175,6 +1191,12 @@
       '<span>×</span>' + wpick('sn', w.sn, [1, 2, 3, 4, 5, 6]) + '</div></div>';
     h += '<div class="vgrp"><label class="vecheck"><input type="checkbox" data-w="splash"' + (w.splash ? ' checked' : '') +
       '> Every round lands in its own burst (splash)</label></div>';
+    // what else it is drawn with: the launch, where it fires missiles; the colour; the orbs' flight, where it fires orbs
+    if (w.p === 'missile' || w.launch) h += '<div class="vgrp"><label>Missile launch</label>' + wpick('launch', w.launch || '', LAUNCHES, 'Flat, out of the tube') + '</div>';
+    h += '<div class="vgrp"><label>Shot colour</label>' + wpick('glow', w.glow || '',
+      GLOW_NAMES.concat([['none', 'none (plain rounds)']]), R.isXeno(profile()) ? 'Army’s own (blue)' : 'Army’s own (plain)') + '</div>';
+    if (w.p === 'orb' || w.orb) h += '<div class="vgrp"><label>Orbs</label>' + wpick('orb', w.orb || '', ORBS,
+      R.isMachine(profile()) ? 'As a machine’s: lobbed' : 'As a launcher team’s: teleported') + '</div>';
     h += '<code class="vesrc">' + esc(asSource(key)) + '</code>';
     h += '<div class="vacts">' +
       '<button class="vbtn primary" data-do="fire"' + fireBlock() + '>Fire</button>' +
@@ -1850,6 +1872,7 @@
     burrow: function () { return view.burrow ? Object.assign({}, view.burrow) : null; },
     arriving: arriving,
     fx: function () { return FX.kinds(); },
+    fxRGB: function () { return FX.rgbs(); },
     state: function () { return Object.assign({}, view); },
     spec: function () { return R.weaponSpec(unit()); },
     // the weapon editor: as an admin (or not), what is changed, and the lines to paste back

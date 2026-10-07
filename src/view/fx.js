@@ -41,6 +41,8 @@
         return false;
       },
       kinds: function () { return list.map(function (f) { return f.kind; }); },
+      // the colours they burn, where they have one (the test hooks)
+      rgbs: function () { return list.map(function (f) { return f.rgb; }).filter(Boolean); },
       draw: function (g) { paint(g, list, lift); },
       // what lies on the ground itself, drawn before the units stand on it
       drawGround: function (g) { paint(g, list, lift, 'ground'); }

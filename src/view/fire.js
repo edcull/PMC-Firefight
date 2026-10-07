@@ -107,8 +107,12 @@
     /* Xenotripod energy — their shots, the orbs and the blasts — burns blue,
        whatever the army's colour; the colour stays on the models. */
     var XENO_BLUE = '110,190,255';
-    function glowRGB(u) { return XENO_BLUE; }
-    function shotRGB(u) { return R.isXeno(u) ? XENO_BLUE : null; }
+    /* A unit's own colour, where its weapon entry names one (`glow`): 'none'
+       for plain rounds. Otherwise a Xenotripod's shots burn blue and anyone
+       else's are plain; an orb or a pulse always glows, blue if nothing else. */
+    function glowOf(u) { var g = u ? R.weaponSpec(u).glow : null; return g ? (g === 'none' ? 'none' : GLOWS[g] || null) : null; }
+    function glowRGB(u) { var g = glowOf(u); return g && g !== 'none' ? g : XENO_BLUE; }
+    function shotRGB(u) { var g = glowOf(u); return g ? (g === 'none' ? null : g) : R.isXeno(u) ? XENO_BLUE : null; }
     function playEnergy(shooter, from, to, count, land, gap) {
       var rgb = glowRGB(shooter), n = count || 1;
       for (var q = 0; q < n; q++) {
@@ -221,14 +225,15 @@
       };
     }
 
-    /* A surface-to-air missile leaves as the SAM team's do: pushed cold up the
-       line the tubes are laid on, climbing, then lighting and running at the
-       aircraft. The team's launcher is laid the way the team faces; the
-       anti-aircraft vehicle's turret turns onto the target, so its tubes point
-       at it, and it fires up a little steeper. Any other missile flies flat. */
-    function samLaunch(shooter, to) {
-      if (shooter.art === 'samlauncher') return { aim: shooter.facing || 0, elev: 0.8 };
-      if (shooter.art === 'aatank') return { aim: Math.atan2(to.y - shooter.y, to.x - shooter.x), elev: 0.95 };
+    /* A surface-to-air missile (`launch` in its weapon entry) leaves as the SAM
+       team's do: pushed cold up the line the tubes are laid on, climbing, then
+       lighting and running at the aircraft. 'sam' is laid the way the unit
+       faces (the team's launcher); 'samturret' turns onto the target, as the
+       anti-aircraft vehicle's turret does, and fires up a little steeper. Any
+       other missile flies flat. */
+    function samLaunch(spec, shooter, to) {
+      if (spec.launch === 'sam') return { aim: shooter.facing || 0, elev: 0.8 };
+      if (spec.launch === 'samturret') return { aim: Math.atan2(to.y - shooter.y, to.x - shooter.x), elev: 0.95 };
       return null;
     }
 
@@ -248,9 +253,9 @@
         case 'energy': {
           return playEnergy(shooter, from, to, spec.n, land, R.isMachine(shooter) ? 150 : 110);
         }
-        // plasma orbs: lobbed from craft and turrets, teleported from a Gamma's launcher
+        // plasma orbs: lobbed from craft and turrets, teleported from a Gamma's launcher (or as `orb` says)
         case 'orb': {
-          return playOrbs(shooter, from, to, spec.n, land, !R.isMachine(shooter));
+          return playOrbs(shooter, from, to, spec.n, land, spec.orb ? spec.orb === 'tele' : !R.isMachine(shooter));
         }
         // an energy howitzer: heavier orbs, lobbed, bursting blue on the ground
         case 'orbbig': {
@@ -362,7 +367,7 @@
                 if (SFX) SFX.missile(0, mflight / 1000, mflight / 1000 * 0.52);
                 // no flash at the tube: it is ejected cold and lights further out
                 add({ kind: 'missile', from: F, to: to, seed: j, dur: mflight, curve: curve, blocking: true,
-                  sam: samLaunch(shooter, to) });
+                  sam: samLaunch(spec, shooter, to) });
                 setTimeout(function () { land(3); }, mflight);
                 redraw();
               }, j * birdGap);
@@ -660,5 +665,7 @@
     return from;
   }
 
-  root.PMCFire = { make: make, troop: troop, XENO_BLUE: '110,190,255', BUG_GREEN: '150,220,80' };
+  // the colours a weapon entry's `glow` may name
+  var GLOWS = { blue: '110,190,255', green: '150,220,80', red: '255,110,90', violet: '190,140,255', amber: '255,190,90', white: '235,240,255' };
+  root.PMCFire = { GLOWS: GLOWS, make: make, troop: troop, XENO_BLUE: '110,190,255', BUG_GREEN: '150,220,80' };
 })(typeof window !== 'undefined' ? window : globalThis);
