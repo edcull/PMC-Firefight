@@ -1337,8 +1337,9 @@
       signature: ['rfanatics', 'renlightened'],
       machinesMax: 4,
       hullsFirst: ['Rebel aviation'],
+      // the haul first; then the smuggling, the hard crew, the hulls and the mounted faithful's fury
       fixed: ['V2'],
-      doctrines: ['V2', 'V1', 'V6', 'H3', 'H2', 'H5'],
+      doctrines: ['V2', 'V1', 'V5', 'H3', 'H5', 'P4'],
       spend: 'promote'
     },
     {
@@ -1353,8 +1354,9 @@
       groups: ['Holy Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles', 'Rebel transport vehicles'],
       mix: { 'Holy Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
       machinesMax: 2,
-      fixed: ['P5'],
-      doctrines: ['P5', 'P4', 'P1', 'P6', 'H4', 'H1'],
+      // Holy Fury first; then Stairs to Heaven or Martyrdom (two Prophet at most), and a Hero or two
+      fixed: ['P4'],
+      doctrines: ['P4', 'P3', 'P1', 'H4', 'H1', 'P5'],
       spend: 'promote'
     },
     {
@@ -1370,8 +1372,9 @@
       mix: { 'Miners': 3, 'Freedom Warriors': 1, 'Rebel artillery': 0.5 },
       machinesMax: 4,
       hullsFirst: ['Rebel combat vehicles'],
-      fixed: ['V3'],
-      doctrines: ['V3', 'V5', 'V1', 'H3', 'H4', 'H5'],
+      // the town talks first (Labour Leader waits for the vehicles to make it worth having)
+      fixed: ['H2'],
+      doctrines: ['H2', 'H3', 'V4', 'H4', 'V5', 'V1'],
       spend: 'promote'
     },
     {
@@ -1387,7 +1390,9 @@
       mix: { 'Chosen Warriors': 3, 'Freedom Warriors': 3, 'Rebel support troops': 1, 'Rebel artillery': 1 },
       signature: ['rassaultcdo', 'rsabcdo', 'rsnipercdo'],
       machinesMax: 2,
-      doctrines: ['H2', 'H4', 'H5', 'V3', 'V4', 'V5'],
+      // the mined bridge first; then leaders who will not break, and the locals on side
+      fixed: ['V3'],
+      doctrines: ['V3', 'P2', 'H2', 'H4', 'V4', 'H5'],
       spend: 'promote'
     },
     {
@@ -1404,8 +1409,9 @@
       mix: { 'Deserters and POWs': 2, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 1.5 },
       machinesMax: 3,
       hullsFirst: ['Rebel aviation'],
-      doctrines: ['H6', 'H2', 'V5', 'H3', 'V6', 'H4'],
-      random: true,                 // no creed to speak of: the whole list, shuffled
+      // someone in the establishment is paying; then the garrison's discipline and its officers
+      fixed: ['V6'],
+      doctrines: ['V6', 'V5', 'H6', 'H4', 'V1', 'H2'],
       spend: 'promote'
     }
   ];
