@@ -961,7 +961,7 @@ head('Doctrines: fixed, a shortlist, or random');
     return co.docPlan.slice(0, 6).every(function (d) { return short.indexOf(d) >= 0; });
   }) && arm.some(function (co) { return co.docPlan.slice(0, 6).join() !== arm[0].docPlan.slice(0, 6).join(); }), true, arm.map(function (co) { return co.docPlan.slice(0, 6).join(''); }).join(' '));
   var firsts = {};
-  for (var i = 0; i < 40; i++) firsts[found('elite').docPlan[0]] = 1;
+  for (var i = 0; i < 40; i++) firsts[found('swarm').docPlan[0]] = 1;
   ok('a random force draws from the whole list', Object.keys(firsts).length > 8, true, Object.keys(firsts).length + ' different first doctrines in 40');
 })();
 

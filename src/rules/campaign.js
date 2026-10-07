@@ -1209,8 +1209,9 @@
       t1: ['enforcers', 'recruits'],
       t2: ['rookie', 'ecobats'],
       machines: ['lpv'], vehicles: 1,
-      doctrines: ['S6', 'T4', 'S3', 'O2', 'T1', 'S2'],
-      random: true,                 // no creed to speak of: the whole list, shuffled
+      // a handful of top-tier veterans make a legal army; then whatever keeps them fit, trained and paid
+      doctrines: ['O2', 'S3', 'S6', 'T1', 'T2', 'S5', 'S2'],
+      fixed: ['O2'],
       groups: ['Rifle infantry', 'Heavy infantry', 'Assault troops'],
       spend: 'promote'
     },
@@ -1222,6 +1223,7 @@
       t2: ['rookie', 'lighteng'],
       machines: ['unarmoured'], vehicles: 1,
       doctrines: ['O5', 'O2', 'T1', 'T2', 'S5', 'O6'],
+      random: true,                 // no creed to speak of: the whole list, shuffled
       groups: ['Basic troops', 'Rifle infantry', 'Assault troops'],
       spend: 'recruit'
     },
