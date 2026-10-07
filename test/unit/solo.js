@@ -183,10 +183,10 @@ report.forEach(function (r) { byId[r.a.id] = r; });
 ok('every rival keeps most of its units in its own groups',
   report.filter(function (r) { return r.own >= r.counted * 0.5; }).length, report.length,
   report.map(function (r) { return r.a.id + ' ' + r.own + '/' + r.counted; }).join(', '));
-ok('the armoured company fields the most machines',
-  byId.armour.machines >= Math.max.apply(null, report.map(function (r) { return r.machines; })), true,
+ok('the cavalry fields the most machines',
+  byId.aircav.machines >= Math.max.apply(null, report.map(function (r) { return r.machines; })), true,
   report.map(function (r) { return r.a.id + ' ' + r.machines; }).join(', '));
-ok('...and keeps replacing the hulls it loses', byId.armour.machines >= 2, true,
+ok('...and keeps replacing the hulls it loses', byId.aircav.machines >= 2, true,
   'hulls are struck off often enough that Upgrades rarely survive with them: ' +
   report.map(function (r) { return r.a.id + ' ' + r.upgrades + ' fitted'; }).join(', '));
 /* How full each company's honour slots are, which is the fair comparison: the cap
@@ -263,11 +263,11 @@ ok('every archetype keeps seven units in ten in its own groups',
 ok('every archetype reaches Company Tier II or better',
   C.ARCHETYPES.every(function (a) { return avg[a.id].tier >= 2; }), true,
   table(function (v) { return v.tier; }, one));
-ok('the armoured company fields the most machines',
-  C.ARCHETYPES.every(function (a) { return a.id === 'armour' || avg.armour.machines > avg[a.id].machines; }), true,
+ok('the cavalry fields the most machines',
+  C.ARCHETYPES.every(function (a) { return a.id === 'aircav' || avg.aircav.machines > avg[a.id].machines; }), true,
   table(function (v) { return v.machines; }, one));
 ok('...and is the only one fitting Upgrades',
-  avg.armour.upgrades > 0 && C.ARCHETYPES.every(function (a) { return a.id === 'armour' || avg[a.id].upgrades < avg.armour.upgrades; }), true,
+  avg.aircav.upgrades > 0 && C.ARCHETYPES.every(function (a) { return a.id === 'aircav' || avg[a.id].upgrades < avg.aircav.upgrades; }), true,
   table(function (v) { return v.upgrades; }, one));
 ok('the swarm fields the most units',
   C.ARCHETYPES.every(function (a) { return a.id === 'swarm' || avg.swarm.units > avg[a.id].units; }), true,
@@ -291,11 +291,11 @@ function spendOn(archId, key, exp) {
       .map(function (d) { return d.what; })
   };
 }
-var marks = spendOn('marksmen', 'mortarsection', 12);
+var marks = spendOn('marksmen', 'observers', 12);
 /* The Marksmen train a unit to its honours cap before they promote it; what
    experience is left after that depends on which honours were drawn, so it may
    or may not stretch to a promotion too. What is certain is the order. */
-ok('the marksmen train the unit before they would promote it',
+ok('special ops train the unit before they would promote it',
   marks.honours > 0 && marks.did[0] === 'honour', true,
   marks.did.join(' then ') + ' \u2014 ' + marks.honours + ' honour(s), now a ' + R.profile(marks.key).name);
 var shock = spendOn('shock', 'irregulars', 12);
@@ -313,7 +313,7 @@ ok('Rapid Training Methods halves a rival\'s first honour', (function () {
   return C.honourCost(e, co);
 })(), 5);
 var armour = spendOn('armour', 'enforcers', 12);
-ok('the armoured company promotes toward heavy infantry',
+ok('the bastion promotes toward heavy infantry',
   R.profile(armour.key).group, 'Heavy infantry', 'became a ' + R.profile(armour.key).name);
 ok('...and fits an Upgrade on a hull that has the experience for one', (function () {
   var co = C.newCompany('x');

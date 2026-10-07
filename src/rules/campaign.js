@@ -1190,15 +1190,17 @@
      recognisable, which is the whole point of fighting the same company twice. */
   var ARCHETYPES = [
     {
-      id: 'armour', name: 'Armoured',
+      // (id kept from when it was "Armoured", so a saved campaign still finds it)
+      id: 'armour', name: 'Bastion',
       blurb: 'Fights from behind armour plate and expects you to come to it.',
       names: ['Kessler Combine', 'Ironvein Holdings', 'Bastion Werke', 'Sable Armour Group'],
-      t1: ['enforcers', 'recruits'],
-      t2: ['ecobats', 'rookie'],
-      machines: ['lpv', 'unarmoured'], vehicles: 2,
-      doctrines: ['O1', 'T4', 'S2', 'T2', 'S3', 'O6'],
-      groups: ['Combat vehicles', 'Transport vehicles', 'Heavy infantry', 'Hunters and destroyers'],
-      spend: 'machines'
+      // armour before mobility: Enforcers on the way to battle armour, no transports, and the heavy guns
+      t1: ['enforcers'],
+      t2: ['ecobats', 'lightat'],
+      machines: ['lhunter'], vehicles: 1,
+      doctrines: ['T5', 'T2', 'T6', 'S4', 'S3', 'S2'],
+      groups: ['Heavy infantry', 'Heavy support', 'Hunters and destroyers', 'Support vehicles', 'Engineering and utility vehicles'],
+      spend: 'promote'
     },
     {
       id: 'elite', name: 'Elite',
@@ -1220,21 +1222,21 @@
       t2: ['rookie', 'lighteng'],
       machines: ['unarmoured'], vehicles: 1,
       doctrines: ['O5', 'O2', 'T1', 'T2', 'S5', 'O6'],
-      fixed: ['O5'],
       groups: ['Basic troops', 'Rifle infantry', 'Assault troops'],
       spend: 'recruit'
     },
     {
-      id: 'marksmen', name: 'Marksmen',
-      blurb: 'Shoots from a long way off and moves before you can answer.',
+      // (id kept from when it was "Marksmen")
+      id: 'marksmen', name: 'Special Ops',
+      blurb: 'Never where you are looking: a sniper in the treeline, a drone overhead, and your radios full of static.',
       names: ['Meridian Security', 'Longsight Partners', 'The Quiet Trade', 'Orlov Group'],
-      t1: ['mortarsection', 'recruits'],
-      t2: ['observers', 'lmgsection', 'lightat'],
-      machines: ['lpv'], vehicles: 1,
-      doctrines: ['T6', 'T3', 'O4', 'S2', 'S3', 'O6'],
-      fixed: ['T6'],
-      groups: ['Light infantry', 'Light support', 'Heavy support', 'Remote mortars'],
-      spend: 'honours'
+      t1: ['irregulars'],            // the one Basic troop with a way out into Light infantry
+      t2: ['observers', 'nomads'],
+      machines: [], vehicles: 0,
+      doctrines: ['O3', 'S6', 'T6', 'O6', 'T1', 'S3'],
+      fixed: ['O3'],
+      groups: ['Light infantry', 'Support teams', 'Drones', 'Unclassified'],
+      spend: 'promote'
     },
     {
       id: 'shock', name: 'Shock',
@@ -1249,16 +1251,17 @@
       spend: 'promote'
     },
     {
-      id: 'aircav', name: 'Air Cavalry',
-      blurb: 'Comes in over the treeline, takes the ground, and is gone before the guns turn.',
-      names: ['Skyhook Logistics', 'Talon Air Assault', 'The High Road Company', 'Vireo Rotary Group'],
+      // (id kept from when it was "Air Cavalry")
+      id: 'aircav', name: 'Cavalry',
+      blurb: 'Rolls up in armour, drops its troopers at the door, and is through the line before the guns turn.',
+      names: ['Talon Mobile Group', 'Outrider Security', 'The High Road Company', 'Skyhook Logistics'],
       t1: ['recruits', 'enforcers'],
-      t2: ['rookie', 'observers'],
-      machines: ['adaptedcraft'], vehicles: 1,
-      doctrines: ['O1', 'O3', 'T3', 'O6', 'S2', 'T2'],
-      fixed: ['O1'],
-      groups: ['Transport aircraft', 'Strike aircraft', 'Rifle infantry', 'Light infantry'],
-      spend: 'promote'
+      t2: ['lighteng', 'rookie'],
+      machines: ['lpv', 'unarmoured'], vehicles: 2,
+      doctrines: ['S1', 'O3', 'O6', 'O1', 'S4', 'S2'],
+      fixed: ['S1'],
+      groups: ['Combat vehicles', 'Transport vehicles', 'Transport aircraft', 'Strike aircraft', 'Assault troops', 'Rifle infantry'],
+      spend: 'machines'
     }
   ];
 
