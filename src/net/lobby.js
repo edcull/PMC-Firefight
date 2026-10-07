@@ -568,7 +568,7 @@
   }
   // a name made up from a force's colours and kind, which follows them when either changes
   function madeUpName(n) { return !n || U.isForceName(n); }
-  function nameFor(colour, faction) { return U.forceName(colour, faction); }
+  function nameFor(colour, faction, keys, current) { return U.forceName(colour, faction, keys, current); }
   /* Your own force, changed from its line and sent to the room as the muster
      sends it (game.force): new colours, or a new army — which rolls the force
      afresh for that army, as a commando in a cooperative game. */
@@ -582,7 +582,7 @@
       f.keys = s.kind === 'coop' ? (SOLO ? SOLO.rollCommando(s.tier, 1, f.faction) : [])
         : (R && R.rollArmy ? R.rollArmy(s.tier, s.pl, null, f.faction) : []);
     }
-    if (madeUpName(f.name)) f.name = nameFor(f.colour, f.faction || 'pmc');
+    if (madeUpName(f.name)) f.name = nameFor(f.colour, f.faction || 'pmc', change.faction ? f.keys : null, f.name);
     myForce = f;
     net.send('game.force', { force: f });
   }

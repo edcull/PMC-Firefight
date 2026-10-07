@@ -68,11 +68,41 @@
      whether a name is one of those — such a name follows them when either
      changes; one the player typed stays. */
   var FORCE_NOUN = { pmc: 'company', rebel: 'insurgents', bugs: 'swarm', xeno: 'tribe' };
-  function forceName(colour, faction) {
+  function forceName(colour, faction, keys, current, avoid) {
+    // a force rolled to a personality (R.rollArmy) goes by one of its names instead: Kessler Combine
+    var pn = personaName(keys, current, avoid);
+    if (pn) return pn;
     var c = colours()[colour];
     return (c ? c.name + ' ' : '') + FORCE_NOUN[faction];
   }
+  /* The names a personality's companies go by (campaign.js ARCHETYPES `names`):
+     the one it has kept if it is one of them, else one of them not taken by the
+     other side. Null for a force rolled to no personality. */
+  function personaNames(keys) {
+    var C = root.PMCCamp, st = keys && keys.style;
+    if (!st || !C || !C.archetypesFor) return null;
+    var a = ['pmc', 'rebel', 'bugs', 'xeno'].map(function (f) {
+      return C.archetypesFor(f).filter(function (x) { return x.id === st; })[0];
+    }).filter(Boolean)[0];
+    return a && a.names && a.names.length ? a.names : null;
+  }
+  function personaName(keys, current, avoid) {
+    var names = personaNames(keys);
+    if (!names) return null;
+    if (current && names.indexOf(current) >= 0 && current !== avoid) return current;
+    var free = names.filter(function (n) { return n !== avoid; });
+    return (free.length ? free : names)[Math.floor(Math.random() * (free.length || names.length))];
+  }
+  // one of any personality's names: made up, not typed, so it follows the force
+  function isPersonaName(n) {
+    var C = root.PMCCamp;
+    if (!n || !C || !C.archetypesFor) return false;
+    return ['pmc', 'rebel', 'bugs', 'xeno'].some(function (f) {
+      return C.archetypesFor(f).some(function (a) { return (a.names || []).indexOf(n) >= 0; });
+    });
+  }
   function isForceName(n) {
+    if (isPersonaName(n)) return true;
     var CO = colours();
     return Object.keys(CO).some(function (k) {
       return ARMIES.some(function (f) { return n === CO[k].name + ' ' + FORCE_NOUN[f]; });
@@ -134,7 +164,7 @@
   root.PMCUi = {
     fill: fill, face: face, swatch: swatch, chip: chip, chipButton: chipButton, chipStill: chipStill, colourPop: colourPop,
     ARMIES: ARMIES, ARMY_NAMES: ARMY_NAMES, armySelect: armySelect, armyStill: armyStill,
-    FORCE_NOUN: FORCE_NOUN, forceName: forceName, isForceName: isForceName,
+    FORCE_NOUN: FORCE_NOUN, forceName: forceName, isForceName: isForceName, personaName: personaName, isPersonaName: isPersonaName,
     tip: tip, mark: mark, ruleMarks: ruleMarks, unitRow: unitRow, freeMark: freeMark, limitsLine: limitsLine, backButton: backButton
   };
 })(window);

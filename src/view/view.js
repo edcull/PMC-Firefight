@@ -449,7 +449,7 @@
           // a made-up name follows the colour
           if (B.muster.hot && B.muster.hot.kind !== 'demo' && !(B.muster.hot.kind === 'ai' && B.muster.hot.step === 2)) {
             var hn = el('hot-name'), nm = ((hn && hn.value) || '').trim();
-            if (!nm || isMadeUpName(nm)) { B.muster.name = window.PMCUi.forceName(B.muster.colour, musterFaction()); if (hn) hn.value = B.muster.name; }
+            if (!nm || isMadeUpName(nm)) { B.muster.name = window.PMCUi.forceName(B.muster.colour, musterFaction(), B.muster.keys, nm); if (hn) hn.value = B.muster.name; }
           }
           colourPop(false);                  // the pick shuts the pop-up
           drawColourPick();

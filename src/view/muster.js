@@ -537,16 +537,23 @@
             el('sel-faction').value = rf;
             if (el('sel-tactic')) el('sel-tactic').value = '';
             muster.keys = muster.solo ? SOLO.rollCommando(musterTier(), musterPL(), rf) : R.rollArmy(musterTier(), musterPL(), null, rf);
-            muster.name = '';
+            muster.name = U.personaName(muster.keys) || '';
           }
         } else if (b.getAttribute('data-army') === 'roll' && muster.solo) {
           muster.keys = SOLO.rollCommando(musterTier(), musterPL(), musterFaction());
           muster.name = 'Commando';
         } else if (b.getAttribute('data-army') === 'roll') {
           muster.keys = R.rollArmy(musterTier(), musterPL(), null, musterFaction());
-          muster.name = 'Battle Tier ' + R.ROMAN[musterTier()] +
+          muster.name = U.personaName(muster.keys) || 'Battle Tier ' + R.ROMAN[musterTier()] +
             (musterFaction() === 'rebel' ? ' insurgent group' : musterFaction() === 'bugs' ? ' swarm' : musterFaction() === 'xeno' ? ' tribe' : ' company');
         } else { muster.keys = []; muster.name = ''; }
+        // in a stepped muster a rolled force takes its personality's name, unless the player has typed one
+        // (online, a force keeps the name of its seat: it is how the players tell each other apart)
+        var hn = el('hot-name'), pn = muster.hot && muster.hot.kind !== 'net' && hn && U.personaName(muster.keys, hn.value.trim(), otherName());
+        if (pn) {
+          var cur = hn.value.trim();
+          if (!cur || isMadeUpName(cur) || isDemoName(cur) || /^(Player [12]( Force)?|Your Force)$/.test(cur)) { muster.name = pn; hn.value = pn; }
+        }
         drawMuster();
       });
       var bar = document.querySelector('.forcebar');
@@ -767,6 +774,9 @@
       return 'The ' + colour.charAt(0).toUpperCase() + colour.slice(1) + ' ' + noun;
     }
     function demoRename() {
+      // a force rolled to a personality goes by one of its names, whatever its colours
+      var pn = U.personaName(muster.keys, muster.name, otherName());
+      if (pn) { muster.name = pn; if (el('hot-name')) el('hot-name').value = pn; return; }
       var f = musterFaction(), list = DEMO_NOUNS[f] || DEMO_NOUNS.pmc;
       if (list.indexOf(muster.demoNoun) < 0) muster.demoNoun = list[Math.floor(Math.random() * list.length)];
       muster.name = demoName(muster.colour || 'ochre', muster.demoNoun);
@@ -794,19 +804,29 @@
       // a name the player gave it stays; one made up from its colour and kind follows them
       var typed = ((el('hot-name') && el('hot-name').value) || '').trim();
       if (typed && !isMadeUpName(typed)) { muster.name = typed; return; }
-      muster.name = U.forceName(muster.colour, f);
+      muster.name = U.forceName(muster.colour, f, muster.keys, null, otherName());
       if (el('hot-name')) el('hot-name').value = muster.name;
+    }
+    // the other force's name, in a stepped muster: two of the same personality are not both Kessler Combine
+    function otherName() {
+      var h = muster.hot;
+      if (!h || !h.sides) return null;
+      var o = h.sides[2 - (h.step || 1)];
+      return (o && o.name) || null;
     }
     // "The Jade Brood": a name made up from a colour, the way a demo force is named
     function isDemoName(n) {
+      if (U.isPersonaName(n)) return true;
       return ISO.COLOUR_KEYS.some(function (k) { return n.indexOf(demoName(k, '')) === 0; });
     }
     // "Jade swarm": a name made up from a force's colours and kind (ui-parts.js)
     function isMadeUpName(n) { return U.isForceName(n); }
+    // a force's list, copied with the personality it was rolled to (R.rollArmy keys.style)
+    function copyKeys(keys) { var c = keys.slice(); if (keys.style) c.style = keys.style; return c; }
     function hotSaveSide() {
       var i = muster.hot.step - 1;
       muster.hot.sides[i] = {
-        keys: muster.keys.slice(), faction: musterFaction(), tactic: muster.solo ? null : musterTactic(),
+        keys: copyKeys(muster.keys), faction: musterFaction(), tactic: muster.solo ? null : musterTactic(),
         name: ((el('hot-name') && el('hot-name').value) || '').trim() || muster.name || '',
         colour: muster.colour || 'ochre', noun: muster.demoNoun || null
       };
@@ -814,7 +834,7 @@
     function hotLoadSide(i) {
       var sd = muster.hot.sides[i];
       if (sd) {
-        muster.keys = sd.keys.slice(); muster.name = sd.name; muster.colour = sd.colour; muster.demoNoun = sd.noun || null;
+        muster.keys = copyKeys(sd.keys); muster.name = sd.name; muster.colour = sd.colour; muster.demoNoun = sd.noun || null;
         el('sel-faction').value = sd.faction;
         if (el('sel-tactic')) el('sel-tactic').value = sd.tactic || '';
         if (el('hot-name')) el('hot-name').value = sd.name;
@@ -1059,11 +1079,15 @@
       var nm = sd.name || '';
       if (hotRolled(i + 1)) {
         if (nm && !isDemoName(nm) && !isMadeUpName(nm)) return;
+        var other = muster.hot && muster.hot.sides && muster.hot.sides[1 - i];
+        var pn = U.personaName(sd.keys, nm, other && other.name);
+        if (pn) { sd.name = pn; return; }
         var list = DEMO_NOUNS[sd.faction] || DEMO_NOUNS.pmc;
         if (list.indexOf(sd.noun) < 0) sd.noun = list[Math.floor(Math.random() * list.length)];
         sd.name = demoName(sd.colour || 'ochre', sd.noun);
       } else if (isMadeUpName(nm)) {
-        sd.name = U.forceName(sd.colour, sd.faction);
+        var other2 = muster.hot && muster.hot.sides && muster.hot.sides[1 - i];
+        sd.name = U.forceName(sd.colour, sd.faction, sd.keys, nm, other2 && other2.name);
       }
     }
     function hotColour(i, k) {
