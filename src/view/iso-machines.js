@@ -957,16 +957,31 @@
         return p2;
       }
       /* A box of launch tubes: a slab with its front face drilled with rows of
-         tube mouths. Each mouth is a mount. `up` tilts the box toward the sky. */
+         tube mouths. Each mouth is a mount. `up` tilts the box toward the sky
+         by raising its front (a slanted prism); `pitch` instead turns the whole
+         box up by that angle about its back bottom edge, staying square. */
       function launcher(fr, a0, a1, b0, b1, z, h, rows, cols, kind, o) {
         o = o || {};
         var tilt = o.up || 0;
         var tn = o.tone || TS;
-        // the box, with its front raised by tilt: done as a slanted prism
         var pts = rectPts(a0, a1, b0, b1);
         var base = pts.map(function (q) { return fr(q[0], q[1]); });
-        var Bs = base.map(function (q, i) { return S3(q, z + (i < 2 ? tilt : 0)); });
-        var Ts = base.map(function (q, i) { return S3(q, z + h + (i < 2 ? tilt : 0)); });
+        var Bs, Ts;
+        if (o.pitch) {
+          // each corner turned about the back bottom edge (a0, z): along the
+          // box is inches, up it pixels, K * 0.9 pixels to the inch of height
+          var pc = Math.cos(o.pitch), ps = Math.sin(o.pitch), ZK = K * 0.9;
+          var turned = function (q, e) {
+            var d = q[0] - a0;
+            return S3(fr(a0 + d * pc - e / ZK * ps, q[1]), z + d * ZK * ps + e * pc);
+          };
+          Bs = pts.map(function (q) { return turned(q, 0); });
+          Ts = pts.map(function (q) { return turned(q, h); });
+        } else {
+          // the box, with its front raised by tilt: done as a slanted prism
+          Bs = base.map(function (q, i) { return S3(q, z + (i < 2 ? tilt : 0)); });
+          Ts = base.map(function (q, i) { return S3(q, z + h + (i < 2 ? tilt : 0)); });
+        }
         var cx = 0, cy = 0; base.forEach(function (q) { cx += q.x; cy += q.y; }); cx /= 4; cy /= 4;
         var faces = [];
         for (var i = 0; i < 4; i++) {
@@ -980,8 +995,9 @@
         var frontVisible = false;
         // a face is seen when it winds toward the viewer on the screen: this
         // holds for a box tilted up at the front as well as for a level one
-        var rs = 0;
-        for (var ri = 0; ri < 4; ri++) { var ra = Bs[ri], rb = Bs[(ri + 1) % 4]; rs += ra[0] * rb[1] - rb[0] * ra[1]; }
+        // (a pitched box's own bottom can turn over: the level footprint's is the one to go by)
+        var Rs = o.pitch ? base.map(function (q) { return S3(q, z); }) : Bs, rs = 0;
+        for (var ri = 0; ri < 4; ri++) { var ra = Rs[ri], rb = Rs[(ri + 1) % 4]; rs += ra[0] * rb[1] - rb[0] * ra[1]; }
         var ringSign = rs < 0 ? RING_VIS : -RING_VIS;
         faces.forEach(function (fc) {
           var fq = [Bs[fc.i], Bs[fc.j], Ts[fc.j], Ts[fc.i]], ar = 0;
@@ -994,9 +1010,19 @@
           edge(g, Ts[fc.i], Ts[fc.j], 'rgba(255,240,214,.3)', 0.6);
           if (fc.front) frontVisible = true;
         });
-        poly(g, Ts, tn.top);
-        if (CAMO && (tn === TB || tn === TT)) camoOn(Ts, tn.top, z + h, true);
-        edge(g, Ts[0], Ts[1], 'rgba(255,240,214,.45)', 0.6);
+        /* A box turned up far enough shows its top only from behind: seen
+           from the front, the top faces away and the front face (and its
+           tubes) is all there is. A level box's top is always seen. */
+        var topSeen = true;
+        if (o.pitch) {
+          var ring = function (r) { var a = 0; for (var qi = 0; qi < 4; qi++) { var qa = r[qi], qb = r[(qi + 1) % 4]; a += qa[0] * qb[1] - qb[0] * qa[1]; } return a; };
+          topSeen = ring(Ts) * ring(Rs) > 0;
+        }
+        if (topSeen) {
+          poly(g, Ts, tn.top);
+          if (CAMO && (tn === TB || tn === TT)) camoOn(Ts, tn.top, z + h, true);
+          edge(g, Ts[0], Ts[1], 'rgba(255,240,214,.45)', 0.6);
+        }
         // the tube mouths on the front face (corners 0,1 at the front)
         for (var r = 0; r < rows; r++) {
           for (var c = 0; c < cols; c++) {

@@ -621,17 +621,26 @@
               break;
             case 'aa':
               body = function () {
+                /* A missile box each side, laid up at the angle the missiles
+                   leave at, hung on a trunnion arm off the turret's flank. The
+                   far one is drawn before the turret, the near one after. */
+                var pod = function (sd) {
+                  var a0 = S3(TF(0, sd * TR * 0.3), tz + 3), a1 = S3(TF(0, sd * TR * 0.38), tz + 3);
+                  line(a0, a1, 2.6, '#0c0f13'); line(a0, a1, 1.8, STEEL);
+                  launcher(TF, -TR * 0.1, TR * 0.42, sd * TR * 0.37, sd * TR * 0.64, tz + 1, 6, 2, 2, 'missile', { pitch: 0.95, warheads: '#b8b0a0' });
+                };
+                var near = function (sd) { var q = TF(0, sd * TR); return q.x + q.y; };
+                var sides = st.noMissiles ? [] : near(1) > near(-1) ? [-1, 1] : [1, -1];
+                if (sides.length) pod(sides[0]);
                 slabF(TF, -TR * 0.45, TR * 0.4, -TR * 0.36, TR * 0.36, tz, 9, TB, TR * 0.12, 0, TR * 0.04);
-                if (!st.noMissiles) [-1, 1].forEach(function (sd) {
-                  launcher(TF, -TR * 0.3, TR * 0.3, sd * TR * 0.5, sd * TR * 0.78, tz + 4, 6, 2, 2, 'missile', { up: 3, warheads: '#b8b0a0' });
-                });
+                if (sides.length) pod(sides[1]);
                 // a tracking radar on the back of the turret
                 var rm = S3(TF(-TR * 0.4, 0), tz + 9), rt = S3(TF(-TR * 0.4, 0), tz + 16);
                 line(rm, rt, 1.2, STEEL);
                 sEllipse(rt[0], rt[1], 4.6, 2.2, '#b9c2cc'); sEllipse(rt[0], rt[1] + 0.4, 3, 1.3, '#5d6775');
               };
               gun = function () {
-                [-0.18, 0.18].forEach(function (b) { barrel(TF, TR * 0.25, TR * 1.3, TR * b, tz + 6, 1.4, 'auto', { up: 5, brake: true }); });
+                [-0.18, 0.18].forEach(function (b) { barrel(TF, TR * 0.25, TR * 1.3, TR * b, tz + 6, 1.4, 'auto', { up: 18, brake: true }); });
               };
               break;
             case 'dish':
