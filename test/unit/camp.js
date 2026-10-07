@@ -1048,6 +1048,19 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
     outside++; if (shockA.second.indexOf(p.group) >= 0) second++;
   });
   ok('Shock\'s picks from outside its kind are mostly its second choices', outside > 0 && second / outside > 0.7, true, second + ' of ' + outside);
+  // a weighted shopping list (Bastion): its limits a Priority Level each, and nothing it weighs 0
+  var bast = C.archetypesFor('pmc').filter(function (x) { return x.id === 'armour'; })[0], overLim = 0, zero = 0;
+  function wOf(p) { var e = bast.weights[p.key] != null ? bast.weights[p.key] : bast.weights[p.group]; return e == null ? 0 : Array.isArray(e) ? e[0] : e; }
+  for (var b2 = 0; b2 < 90; b2++) {
+    var bt2 = 1 + (b2 % 5), bpl = 1 + (b2 % 3), bk = R.rollArmy(bt2, bpl, null, 'pmc', 'armour');
+    var cnt = function (f) { return bk.filter(function (k) { return f(R.profile(keyOf(k))); }).length; };
+    if (cnt(function (p) { return p.key === 'sam'; }) > bpl || cnt(function (p) { return p.key === 'gausscannon'; }) > bpl ||
+      cnt(function (p) { return p.group === 'Remote mortars'; }) > bpl || cnt(function (p) { return p.group === 'Engineering and utility vehicles'; }) > bpl ||
+      cnt(function (p) { return p.group === 'Heavy support'; }) > 2 * bpl) overLim++;
+    zero += cnt(function (p) { return !p.command && wOf(p) === 0; });
+  }
+  ok('Bastion keeps to its limits, a Priority Level each', overLim, 0);
+  ok('...and takes nothing it weighs 0 while anything else is legal', zero, 0);
   ok('...and a roll with no personality still works', R.checkArmy(R.rollArmy(3, 2, null, 'pmc', false), 3, 2).ok && !R.rollArmy(3, 2, null, 'pmc', false).style, true);
   ok('a temper for a skirmish force by its personality id', C.aiTemper({ archetype: 'partisans' }).mod, -1);
 })();

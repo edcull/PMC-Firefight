@@ -1209,6 +1209,27 @@
       refill: { enforcers: 2, recruits: 1 },   // Tier I gaps later: Enforcers become battle armour, Recruits the gun crews
       machinesMax: 4,               // its heavy guns are on hulls: tank hunters, destroyers, gun carriers
       hullsFirst: ['Hunters and destroyers', 'Support vehicles'],   // the guns before the engineering vehicles
+      /* A skirmish force's shopping list (R.rollArmy): a weight for each unit or group
+         (0 never, 10 the backbone), and [weight, limit] where it is kept rare, the
+         limit a Priority Level (a group's limit counts the whole group). A unit's
+         own entry beats its group's; anything unlisted is 0. */
+      weights: {
+        // armour first
+        ecobats: 6, bats: 8, protectors: 8, protectorshm: 6,
+        // anti-armour guns, not anti-air
+        'Heavy support': [5, 2], sam: [1, 1],
+        // machine guns behind the armour; the Gauss cannon now and then
+        'Light support': [4, 2], hmgteam: 5, gausscannon: [3, 1],
+        'Remote mortars': [3, 1],
+        // its heavy guns are on hulls
+        'Hunters and destroyers': 6,
+        'Support vehicles': 5, impsupport: 3,
+        'Engineering and utility vehicles': [1, 1], hengveh: 2, lengveh: 2, ewveh: 0,
+        // the founding troops at the low Tiers
+        enforcers: 5, recruits: 3,
+        // rare fillers
+        'Rifle infantry': [1, 1], observers: [1, 1], medics: [1, 1]
+      },
       spend: 'promote'
     },
     {
