@@ -23,24 +23,28 @@
        cadence, its own effect on the table and its own sound, and the whole thing
        is timed so the hits land when the rounds arrive rather than on a fixed
        beat. Every one of them ends by calling `done`, once. */
+    /* How many rounds each style puts out (`n`) is fixed: the weapon fires its
+       full volley whatever was rolled, and the hits only decide how many of
+       those rounds land on the target. (It used to scale with the hits, so a
+       poor roll looked like a shorter burst.) */
     var FIRE = {
       /* A rifle line: aimed shots, not a stream. Eight men firing deliberately put
          fewer rounds down per second than an autocannon does — what makes it read
          as a volley is that it runs on for a second, not that it is fast. */
-      small:    { n: function (h) { return clampN(h * 2 + 3, 5, 11); }, gap: 112, tracer: { spread: 0.42 }, land: 330, muzzle: 520, perShot: true },
+      small:    { n: function () { return 11; }, gap: 112, tracer: { spread: 0.42 }, land: 330, muzzle: 520, perShot: true },
       /* A sidearm: a few deliberate shots with a long gap between them, at close
          range. Fewer rounds than anything else fires, and you can count them. */
-      pistol:   { n: function (h) { return clampN(h + 2, 3, 6); }, gap: 185, tracer: { spread: 0.34, short: true }, land: 300, muzzle: 150, perShot: true },
+      pistol:   { n: function () { return 6; }, gap: 185, tracer: { spread: 0.34, short: true }, land: 300, muzzle: 150, perShot: true },
       /* A carbine at close range: quicker than an aimed rifle line and with more
          rounds in it, but still recognisably single shots rather than a stream. */
-      smg:      { n: function (h) { return clampN(h * 2 + 4, 5, 12); }, gap: 68, tracer: { spread: 0.5, short: true }, land: 300, muzzle: 460 },
+      smg:      { n: function () { return 12; }, gap: 68, tracer: { spread: 0.5, short: true }, land: 300, muzzle: 460 },
       /* A machine gun, rattling in a double burst: the rounds split into two
          long bursts with a breath between them (`bursts`, `pause` ms). */
-      burst:    { n: function (h) { return clampN(h * 4 + 8, 12, 24); }, gap: 38, bursts: 2, pause: 220, tracer: { spread: 0.55 }, land: 300, muzzle: 460 },
+      burst:    { n: function () { return 24; }, gap: 38, bursts: 2, pause: 220, tracer: { spread: 0.55 }, land: 300, muzzle: 460 },
       // an autocannon: heavier, slower, countable
-      chain:    { n: function (h) { return clampN(h * 2 + 3, 5, 10); }, gap: 92, tracer: { spread: 0.3, fat: true }, land: 330, muzzle: 92, perShot: true },
+      chain:    { n: function () { return 10; }, gap: 92, tracer: { spread: 0.3, fat: true }, land: 330, muzzle: 92, perShot: true },
       // a bug's volley of chitin spines: a quick dry spray, bone-pale, no flash
-      spine:    { n: function (h) { return clampN(h * 2 + 4, 6, 12); }, gap: 45, tracer: { spread: 0.6, short: true, bio: true }, land: 320, muzzle: 0, noFlash: true }
+      spine:    { n: function () { return 12; }, gap: 45, tracer: { spread: 0.6, short: true, bio: true }, land: 320, muzzle: 0, noFlash: true }
     };
     function clampN(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
     /* How a stream of n rounds is clumped: a fixed clump, or split evenly into
@@ -373,7 +377,7 @@
 
         /* Unguided rockets, off the rails in a ripple. */
         case 'rocket': {
-          var rn = clampN(hits + 2, 3, 6);
+          var rn = 6;                                   // the full ripple, whatever hit
           var rflight = 420;
           if (SFX) SFX.rocket(hits);
           for (var r = 0; r < rn; r++) {
