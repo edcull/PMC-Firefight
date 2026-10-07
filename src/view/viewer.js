@@ -1071,6 +1071,140 @@
      unit on the stage. */
   var picker = null, pickerShown;
   function pickerFaction() { return el('vsearch').value.trim() ? null : (view.pickFac || 'pmc'); }
+  /* ---------- the weapon editor (an admin's) ----------
+     The weapon table (rules/data.js WEAPONS) is the one place that decides what a
+     unit looks and sounds like when it fires, and it is a plain object, so the
+     bench can change it in place and the change is seen and heard at once.
+     Nothing here touches the rules: Firepower, Range and the dice are untouched.
+     An edit lives in this browser until it is copied back into data.js. It is
+     offered only to an admin of the game server the viewer is served from. */
+  var STYLES = ['small', 'pistol', 'smg', 'burst', 'chain', 'shell', 'shellbig', 'arc', 'arcbig',
+    'missile', 'rocket', 'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'orbbig', 'plasmabolt', 'none'];
+  var EDITS = 'pmc-weapon-edits';
+  var admin = false, edits = {}, editNote = '';
+  // the table as data.js wrote it, so any change can always be put back
+  var BASE = {};
+  Object.keys(R.WEAPONS).forEach(function (k) { BASE[k] = R.WEAPONS[k]; });
+
+  function hasOwn(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  // what the table holds for a unit now, in full
+  function entry(key) {
+    var w = R.WEAPONS[key] || R.weaponSpec(R.profile(key) || {}) || {};
+    return { p: w.p || 'small', n: w.n || 1, s: w.s || null, sn: w.sn || 1, splash: !!w.splash };
+  }
+  // written as data.js writes it: only what differs from the defaults
+  function tidy(w) {
+    var out = { p: w.p };
+    if (w.n > 1) out.n = w.n;
+    if (w.s) { out.s = w.s; if (w.sn > 1) out.sn = w.sn; }
+    if (w.splash) out.splash = true;
+    return out;
+  }
+  function same(a, b) { return JSON.stringify(tidy(entry0(a))) === JSON.stringify(tidy(entry0(b))); }
+  function entry0(w) { w = w || {}; return { p: w.p || 'small', n: w.n || 1, s: w.s || null, sn: w.sn || 1, splash: !!w.splash }; }
+  function saveEdits() { try { localStorage.setItem(EDITS, JSON.stringify(edits)); } catch (e) { } }
+  function loadEdits() {
+    try { edits = JSON.parse(localStorage.getItem(EDITS) || '{}') || {}; } catch (e) { edits = {}; }
+    // an edit the table has since caught up with is no longer an edit
+    Object.keys(edits).forEach(function (k) {
+      if (!R.profile(k) || same(BASE[k], edits[k])) delete edits[k];
+      else R.WEAPONS[k] = edits[k];
+    });
+    saveEdits();
+  }
+  function edited() { FX.clear(); drawControls(); frame(); }
+  function setEntry(key, w) {
+    var out = tidy(w);
+    if (same(BASE[key], out)) { revert(key); return; }
+    R.WEAPONS[key] = out; edits[key] = out; saveEdits();
+    editNote = ''; edited();
+  }
+  function revert(key) {
+    if (BASE[key]) R.WEAPONS[key] = BASE[key]; else delete R.WEAPONS[key];
+    delete edits[key]; saveEdits();
+    editNote = ''; edited();
+  }
+  function revertAll() {
+    Object.keys(edits).forEach(function (k) { if (BASE[k]) R.WEAPONS[k] = BASE[k]; else delete R.WEAPONS[k]; });
+    edits = {}; saveEdits();
+    editNote = 'Every change put back.'; edited();
+  }
+  // one line of the table, as data.js writes it
+  function asSource(key) {
+    var w = tidy(entry(key)), bits = ["p: '" + w.p + "'"];
+    if (w.n) bits.push('n: ' + w.n);
+    if (w.s) { bits.push("s: '" + w.s + "'"); if (w.sn) bits.push('sn: ' + w.sn); }
+    if (w.splash) bits.push('splash: true');
+    return key + ': { ' + bits.join(', ') + ' }';
+  }
+  // every unit changed, ready to paste over its line in data.js
+  function exportEdits() {
+    var keys = Object.keys(edits).sort();
+    if (!keys.length) return '// nothing changed yet';
+    return keys.map(function (k) { return '    ' + asSource(k) + ',   // ' + R.profile(k).name; }).join('\n');
+  }
+  // the whole table, in catalogue order
+  function exportAll() {
+    return R.CATALOGUE.map(function (pr) { return '    ' + asSource(pr.key) + ','; }).join('\n');
+  }
+  // on the clipboard, and in the console either way
+  function copyOut(text, what) {
+    function said(t) { editNote = t; drawControls(); }
+    if (root.console) console.log(text);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { said('Copied ' + what + ' to the clipboard.'); },
+          function () { said('The clipboard would not take it: ' + what + ' is in the console.'); });
+        return;
+      }
+    } catch (e) { }
+    said('No clipboard here: ' + what + ' is in the console.');
+  }
+  function wpick(name, now, opts, blank) {
+    return '<select class="vselect" data-w="' + name + '">' +
+      (blank ? '<option value=""' + (now ? '' : ' selected') + '>— none —</option>' : '') +
+      opts.map(function (o) { return '<option value="' + o + '"' + (String(o) === String(now) ? ' selected' : '') + '>' + o + '</option>'; }).join('') +
+      '</select>';
+  }
+  function editorHtml() {
+    var key = view.key, w = entry(key), changed = hasOwn(edits, key), n = Object.keys(edits).length;
+    var h = '<div class="vgrp"><label>Primary' + (changed ? ' <em class="vedited">· changed</em>' : '') + '</label>' +
+      '<div class="veline">' + wpick('p', w.p, STYLES) + '<span>×</span>' + wpick('n', w.n, [1, 2, 3, 4, 5, 6]) + '</div></div>';
+    h += '<div class="vgrp"><label>Secondary, alongside it</label>' +
+      '<div class="veline">' + wpick('s', w.s || '', STYLES.filter(function (x) { return x !== 'none'; }), true) +
+      '<span>×</span>' + wpick('sn', w.sn, [1, 2, 3, 4, 5, 6]) + '</div></div>';
+    h += '<div class="vgrp"><label class="vecheck"><input type="checkbox" data-w="splash"' + (w.splash ? ' checked' : '') +
+      '> Every round lands in its own burst (splash)</label></div>';
+    h += '<code class="vesrc">' + esc(asSource(key)) + '</code>';
+    h += '<div class="vacts">' +
+      '<button class="vbtn primary" data-do="fire"' + fireBlock() + '>Fire</button>' +
+      '<button class="vbtn" data-do="wrevert"' + (changed ? '' : ' disabled') + '>Revert</button>' +
+      '<button class="vbtn" data-do="wexport"' + (n ? '' : ' disabled') + '>Copy changes</button>' +
+      '<button class="vbtn" data-do="wexportall">Copy table</button>' +
+      (n ? '<button class="vbtn" data-do="wrevertall">Revert all ' + n + '</button>' : '') + '</div>';
+    h += '<p class="vtgtline">' + esc(editNote || (n ? n + ' unit' + (n === 1 ? '' : 's') + ' changed in this browser: copy them into WEAPONS in src/rules/data.js to keep them.'
+      : 'Changes are kept in this browser until copied into WEAPONS in src/rules/data.js.')) + '</p>';
+    return h;
+  }
+  // an admin of the server this page came from (opened as a file, or on a static site, there is none)
+  function askAdmin() {
+    if (!root.fetch || location.protocol === 'file:') return;
+    root.fetch('api/me', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
+      return r.ok ? r.json() : null;
+    }).then(function (j) { if (j && j.who && j.who.admin) becomeAdmin(true); }, function () { });
+  }
+  function becomeAdmin(on) {
+    if (on === admin) return;
+    admin = !!on;
+    if (admin) loadEdits();
+    else {
+      Object.keys(edits).forEach(function (k) { if (BASE[k]) R.WEAPONS[k] = BASE[k]; else delete R.WEAPONS[k]; });
+      edits = {};
+      if (view.tab === 'weapon') view.tab = 'stats';
+    }
+    drawControls(); frame();
+  }
+
   function drawPicker() {
     if (!view.pickFac) view.pickFac = profile().faction || 'pmc';
     el('vfacs').innerHTML = FAC_TABS.map(function (t) {
@@ -1182,15 +1316,16 @@
     view.range = Math.max(RANGE_MIN, Math.min(RANGE_MAX, Math.round(+r) || 12));
     placeTarget(); freshTarget();
     setZoom(ZOOMS[0]);
-    var lab = el('vrangelab'), fb = el('vctl').querySelector('[data-do="fire"]');
+    var lab = el('vrangelab');
     if (lab) lab.textContent = 'Range — ' + view.range + '"';
     if (el('vfpline')) el('vfpline').textContent = fpLine();
     if (el('vtgtline')) el('vtgtline').textContent = targetLine();
-    if (fb) {
-      var why = fireBarred();
+    // every Fire button: the options' and the weapon editor's
+    var why = fireBarred();
+    el('vctl').querySelectorAll('[data-do="fire"]').forEach(function (fb) {
       fb.disabled = !!why;
       if (why) fb.title = why; else fb.removeAttribute('title');
-    }
+    });
     var fc = el('vfpcell');
     if (fc) fc.outerHTML = fpCell(profile());
     frame();
@@ -1206,10 +1341,13 @@
       '<div class="vrow vrow-army">' + armyPill(p.faction || 'pmc') + '</div>';
     // two tabs under the name: what to do with the unit, and what the book says of it
     // the profile first: the options are a tab away
-    var tab = view.tab === 'opts' ? 'opts' : 'stats';
-    h += '<div class="vtabs" role="tablist">' +
-      '<button type="button" role="tab" data-tab="stats" aria-selected="' + (tab === 'stats') + '"' + (tab === 'stats' ? ' class="on"' : '') + '>Stats</button>' +
-      '<button type="button" role="tab" data-tab="opts" aria-selected="' + (tab === 'opts') + '"' + (tab === 'opts' ? ' class="on"' : '') + '>Options</button></div>';
+    // and, for an admin, a third: the weapon the unit is drawn firing
+    var tab = view.tab === 'opts' ? 'opts' : view.tab === 'weapon' && admin ? 'weapon' : 'stats';
+    var tabBtn = function (k, label) {
+      return '<button type="button" role="tab" data-tab="' + k + '" aria-selected="' + (tab === k) + '"' + (tab === k ? ' class="on"' : '') + '>' + label + '</button>';
+    };
+    h += '<div class="vtabs" role="tablist">' + tabBtn('stats', 'Stats') + tabBtn('opts', 'Options') +
+      (admin ? tabBtn('weapon', 'Weapon') : '') + '</div>';
     h += '<div class="vtabbody vstatsbody" role="tabpanel"' + (tab === 'stats' ? '' : ' hidden') + '>' + rulesHtml(p) + '</div>';
     h += '<div class="vtabbody voptsbody" role="tabpanel"' + (tab === 'opts' ? '' : ' hidden') + '>';
     h += '<div class="vacts">' +
@@ -1273,6 +1411,7 @@
         '<input type="range" id="vmodels" min="1" max="' + maxModels + '" value="' + n + '"></div>';
     }
     h += '</div>';
+    if (admin) h += '<div class="vtabbody vweaponbody" role="tabpanel"' + (tab === 'weapon' ? '' : ' hidden') + '>' + editorHtml() + '</div>';
     var was = el('vctl').querySelector('.vtabbody:not([hidden])'), top = was ? was.scrollTop : 0, all = el('vctl').scrollTop;
     el('vctl').innerHTML = h;
     var now = el('vctl').querySelector('.vtabbody:not([hidden])');
@@ -1436,6 +1575,7 @@
   function mount() {
     cv = el('vboard');
     if (!cv) return;
+    askAdmin();
     g = cv.getContext('2d');
     FX = root.PMCFx.create({ lift: function () { return 0; } });
     STANDING = root.PMCFx.create({ lift: function () { return 0; } });
@@ -1552,6 +1692,10 @@
       else if (act === 'insert') insert();
       else if (act === 'strafe') strafe();
       else if (act === 'ability') ability(+d.getAttribute('data-ab') || 0);
+      else if (act === 'wrevert') revert(view.key);
+      else if (act === 'wrevertall') revertAll();
+      else if (act === 'wexport') copyOut(exportEdits(), 'the changes');
+      else if (act === 'wexportall') copyOut(exportAll(), 'the whole table');
       else if (act === 'sound') {
         view.sound = !view.sound;
         if (SFX) SFX.setEnabled(view.sound);
@@ -1569,6 +1713,16 @@
     });
     // the Target list: a different unit to shoot at, fresh
     el('vctl').addEventListener('change', function (e) {
+      // the weapon editor: one field of the unit's entry changed
+      var wf = e.target.getAttribute && e.target.getAttribute('data-w');
+      if (wf && admin) {
+        var w = entry(view.key);
+        if (wf === 'splash') w.splash = e.target.checked;
+        else if (wf === 'n' || wf === 'sn') w[wf] = +e.target.value;
+        else w[wf] = e.target.value || null;
+        setEntry(view.key, w);
+        return;
+      }
       if (e.target.id !== 'vtarget') return;
       view.target = e.target.value; freshTarget();
       drawControls(); frame();
@@ -1698,6 +1852,10 @@
     fx: function () { return FX.kinds(); },
     state: function () { return Object.assign({}, view); },
     spec: function () { return R.weaponSpec(unit()); },
+    // the weapon editor: as an admin (or not), what is changed, and the lines to paste back
+    admin: function (on) { if (on !== undefined) becomeAdmin(on); return admin; },
+    edits: function () { return JSON.parse(JSON.stringify(edits)); },
+    exportEdits: function () { return exportEdits(); },
     unit: unit
   };
 
