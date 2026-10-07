@@ -399,6 +399,25 @@ console.log('\nA campaign AI plays the whole behaviour table, tempered by its pe
   ok('every roll carries its side\'s temper', rolls > 0 && tempered === rolls, tempered + ' of ' + rolls);
 })();
 (function () {
+  // outside solitaire a special action comes before the roll: a Psychic Wave is sent with no behaviour rolled for it
+  let waves = 0, rolledFirst = 0;
+  for (let n = 0; n < 3; n++) {
+    const e = Engine.create();
+    e.start({ tier: 4, pl: 1, scenario: 'meeting', armyA: R.rollArmy(4, 1, null, 'bugs'), armyB: R.rollArmy(4, 1, null, 'pmc'),
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', campaign: true });
+    for (let g = 0; g < 4 && e.state() && e.state().swapAsk; g++) e.intent(e.state().swapAsk.side, { k: 'swapdone' });
+    steps(e, 4000);
+    const L = e.state().log;
+    L.forEach((l, j) => {
+      const m = /^(.*) sends out a Psychic Wave/.exec(l.text || '');
+      if (!m) return;
+      waves++;
+      if (j && L[j - 1].text.indexOf(m[1] + ' — behaviour D6') === 0) rolledFirst++;
+    });
+  }
+  ok('a campaign AI sends its Psychic Wave before any behaviour roll', waves > 0 && rolledFirst === 0, waves + ' waves, ' + rolledFirst + ' after a roll');
+})();
+(function () {
   const co = { archetype: 'armour' }, sh = { archetype: 'shock' }, el = { archetype: 'elite' };
   ok('Bastion holds back (−1), Shock goes in (+1), the Elite rolls plain', C.aiTemper(co).mod === -1 && C.aiTemper(sh).mod === 1 && C.aiTemper(el) === null);
 })();

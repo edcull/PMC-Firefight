@@ -136,19 +136,21 @@
       }
 
       // an AI hull rolls on the behaviour table like everything else (p. 147)
-      var soloB = tableAI(u);
-      /* ...and it rolls first: its special actions (self-repair, a transport's
-         loading and unloading) are taken on a 1-6, not on Run for Your Lives! or
-         Kill Them All! (a reading: the book does not place them on the table). */
-      var bhV = soloB ? rollBehaviour(u) : null;
-      var specialsV = !soloB || ['defensive', 'neutral', 'offensive'].indexOf(bhV) >= 0;
-      if (soloB && (bhV === 'defensive' || bhV === 'neutral')) shot = threatTarget(u, 'fire');   // the biggest threat (SOL-6)
+      var soloB = tableAI(u), opFor = soloOpFor(u);
+      /* The solitaire OpFor rolls first: its special actions (self-repair, a
+         transport's loading and unloading) are taken on a 1-6, not on Run for Your
+         Lives! or Kill Them All! (a reading: the book does not place them on the
+         table). Any other AI side looks at its special actions first, and rolls
+         only when it takes none of them. */
+      var bhV = opFor ? rollBehaviour(u) : null;
+      var specialsV = !opFor || ['defensive', 'neutral', 'offensive'].indexOf(bhV) >= 0;
+      if (opFor && (bhV === 'defensive' || bhV === 'neutral')) shot = threatTarget(u, 'fire');   // the biggest threat (SOL-6)
       if (specialsV && R.has(u, 'Molecular Reconstruction') && u.damage && (u.damage >= u.str - 1 || !shot.t)) {
         doSelfRepair(u); return;
       }
       /* An Overgrown bug is a beast, not a hull: the Queen sends out her wave when
          it catches two or more, and anything with more bite than spit charges. */
-      if (R.isOvergrown(u) && R.status(u) !== 'broken' && !soloB) {
+      if (R.isOvergrown(u) && R.status(u) !== 'broken' && !opFor) {
         if (R.has(u, 'Psychic Wave') && R.status(u) === 'ready') {
           var wq = bestWaveSpot(u);
           if (wq && wq.n >= 2) { doWave(u, wq.pt); return; }
@@ -188,7 +190,7 @@
         }
         /* An OpFor hull told to hold — Reasonably Defensive or Neutral (p. 147) — keeps
            its troops aboard where it stands, rather than driving them in. */
-        if (!(soloB && (bhV === 'defensive' || bhV === 'neutral'))) return aiRoll(u, obj || nearestEnemy(u), true);
+        if (!(opFor && (bhV === 'defensive' || bhV === 'neutral'))) return aiRoll(u, obj || nearestEnemy(u), true);
       }
 
       // an empty transport picks up the nearest squad that will fit
@@ -206,6 +208,8 @@
       }
 
       if (soloB) {
+        // (the roll, for a side that has only now found no special action to take)
+        if (!opFor) { bhV = rollBehaviour(u); if (bhV === 'defensive' || bhV === 'neutral') shot = threatTarget(u, 'fire'); }
         var bh = bhV;
         // Run for Your Lives!: a Move as far as it can get from the player's units, no shot
         if (bh === 'flee') return aiRoll(u, nearestEnemy(u), false, { flee: true, noShoot: true });
@@ -473,6 +477,7 @@
     /* Who plays the behaviour table in full (p. 147): the solitaire OpFor, and any
        side the computer runs in a campaign, contract or skirmish. */
     function tableAI(u) { return (!!E.state.solo && u.side === 'B') || isAI(u.side); }
+    function soloOpFor(u) { return !!E.state.solo && u.side === 'B'; }
 
     /* The behaviour table (p. 147), rolled for every unit as it activates —
        a hull or an aircraft as much as a squad. */
@@ -592,10 +597,12 @@
       /* A solitaire OpFor unit rolls its behaviour as it activates (p. 147), before
          anything else; its special actions are taken on a 1-6 — not on Run for
          Your Lives! or Kill Them All! (a reading: the book does not place them on
-         the table). Everyone else keeps the AI's own order. */
+         the table). Any other AI side takes a special action worth taking first
+         (a Psychic Wave, a steadying burst, a search, a marker), and rolls only
+         when there is none — below, as it comes to move or shoot. */
       var soloI = tableAI(u);
-      var preB = soloI ? rollBehaviour(u) : null;
-      var specials = !soloI || ['defensive', 'neutral', 'offensive'].indexOf(preB) >= 0;
+      var preB = soloOpFor(u) ? rollBehaviour(u) : null;
+      var specials = !preB || ['defensive', 'neutral', 'offensive'].indexOf(preB) >= 0;
 
       // a Crock steadies its Esh-Aven when enough of them are shaken
       if (specials && R.has(u, 'Dominant Species') && R.status(u) === 'ready') {
