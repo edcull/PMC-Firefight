@@ -1199,7 +1199,11 @@
       t2: ['ecobats'],
       machines: [], vehicles: 0,
       doctrines: ['T5', 'T2', 'T6', 'S4', 'S3', 'S5'],
-      groups: ['Heavy infantry', 'Heavy support', 'Hunters and destroyers', 'Support vehicles', 'Engineering and utility vehicles'],
+      groups: ['Heavy infantry', 'Heavy support', 'Light support', 'Remote mortars', 'Hunters and destroyers', 'Support vehicles', 'Engineering and utility vehicles'],
+      // mostly armour, with machine guns, anti-tank teams and mortars behind it (Recruits promote into all three)
+      mix: { 'Heavy infantry': 3, 'Light support': 1, 'Heavy support': 1, 'Remote mortars': 1 },
+      limit: { 'Remote mortars': 3 },
+      refill: { enforcers: 2, recruits: 1 },   // Tier I gaps later: Enforcers become battle armour, Recruits the gun crews
       machinesMax: 4,               // its heavy guns are on hulls: tank hunters, destroyers, gun carriers
       hullsFirst: ['Hunters and destroyers', 'Support vehicles'],   // the guns before the engineering vehicles
       spend: 'promote'
