@@ -291,6 +291,19 @@
     }
 
     /* Found a rival to the book's starting rules, in its archetype's own style. */
+    /* The order it will take its doctrines in, one per Tier, written when it is
+       founded. A force known for one thing takes it first (`fixed`: the Grey Plague's
+       Fungi Symbiosis, the raiders' teleport network); most then reach for their own
+       shortlist (`doctrines`, in a random order of their own); and a force with no
+       creed to speak of (`random`) draws from the whole list. Whatever is left comes
+       after, shuffled — a force that has spent its shortlist still has somewhere to go. */
+    function docPlanFor(co, a) {
+      var all = creedOf(co).list.map(function (d) { return d.id; });
+      var fixed = a.random ? [] : (a.fixed || []).filter(function (d) { return all.indexOf(d) >= 0; });
+      var short = a.random ? [] : shuffle((a.doctrines || []).filter(function (d) { return all.indexOf(d) >= 0 && fixed.indexOf(d) < 0; }));
+      var rest = shuffle(all.filter(function (d) { return fixed.indexOf(d) < 0 && short.indexOf(d) < 0; }));
+      return fixed.concat(short, rest);
+    }
     function foundRival(co, archId, usedNames) {
       var a = archId ? archetype(archId) : pick(archetypesFor(co.faction));
       co.faction = a.faction || 'pmc';
@@ -310,9 +323,7 @@
       h1.forEach(function (k) { keys.push(k); });
       for (var j = 0; j < 2 - h2.length; j++) keys.push(t2pool[j % t2pool.length]);
       h2.forEach(function (k) { keys.push(k); });
-      /* No fixed theme: the doctrines it will grow into are drawn at random, in
-         the order it will take them, and its character is read from them. */
-      co.docPlan = shuffle(creedOf(co).list.map(function (d) { return d.id; }));
+      co.docPlan = docPlanFor(co, a);
       var res = found(co, keys, co.docPlan[0]);
       // a starting list that breaks a per-army cap gets the offender swapped out
       for (var g = 0; g < 8 && !res.ok; g++) {

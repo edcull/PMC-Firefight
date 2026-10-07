@@ -1208,6 +1208,7 @@
       t2: ['rookie', 'ecobats'],
       machines: ['lpv'], vehicles: 1,
       doctrines: ['S6', 'T4', 'S3', 'O2', 'T1', 'S2'],
+      random: true,                 // no creed to speak of: the whole list, shuffled
       groups: ['Rifle infantry', 'Heavy infantry', 'Assault troops'],
       spend: 'promote'
     },
@@ -1219,6 +1220,7 @@
       t2: ['rookie', 'lighteng'],
       machines: ['unarmoured'], vehicles: 1,
       doctrines: ['O5', 'O2', 'T1', 'T2', 'S5', 'O6'],
+      fixed: ['O5'],
       groups: ['Basic troops', 'Rifle infantry', 'Assault troops'],
       spend: 'recruit'
     },
@@ -1230,6 +1232,7 @@
       t2: ['observers', 'lmgsection', 'lightat'],
       machines: ['lpv'], vehicles: 1,
       doctrines: ['T6', 'T3', 'O4', 'S2', 'S3', 'O6'],
+      fixed: ['T6'],
       groups: ['Light infantry', 'Light support', 'Heavy support', 'Remote mortars'],
       spend: 'honours'
     },
@@ -1241,6 +1244,7 @@
       t2: ['lighteng', 'rookie'],
       machines: ['ltransport', 'unarmoured'], vehicles: 2,
       doctrines: ['T4', 'T2', 'S5', 'T1', 'O6', 'S6'],
+      fixed: ['T4'],
       groups: ['Assault troops', 'Basic troops', 'Heavy infantry'],
       spend: 'promote'
     },
@@ -1252,6 +1256,7 @@
       t2: ['rookie', 'observers'],
       machines: ['adaptedcraft'], vehicles: 1,
       doctrines: ['O1', 'O3', 'T3', 'O6', 'S2', 'T2'],
+      fixed: ['O1'],
       groups: ['Transport aircraft', 'Strike aircraft', 'Rifle infantry', 'Light infantry'],
       spend: 'promote'
     }
@@ -1280,6 +1285,7 @@
       t2: ['rriderwar', 'rmilitia'],
       machines: ['rtechnical'], vehicles: 1,
       doctrines: ['V2', 'V6', 'V1', 'H3', 'V3', 'H2'],
+      fixed: ['V2'],
       groups: ['Mounted Warriors', 'Freedom Warriors', 'Rebel combat vehicles'],
       spend: 'machines'
     },
@@ -1291,6 +1297,7 @@
       t2: ['racolytes', 'rmilitia'],
       machines: ['rtechnical'], vehicles: 1,
       doctrines: ['P5', 'P2', 'P4', 'P3', 'P1', 'H1'],
+      fixed: ['P5'],
       groups: ['Holy Warriors', 'Freedom Warriors'],
       spend: 'promote'
     },
@@ -1313,6 +1320,7 @@
       t2: ['rmilitia', 'rminers'],
       machines: ['rtechnical'], vehicles: 1,
       doctrines: ['V3', 'H2', 'V4', 'V1', 'H4', 'V5'],
+      fixed: ['V3'],
       groups: ['Chosen Warriors', 'Freedom Warriors', 'Rebel support troops'],
       spend: 'honours'
     },
@@ -1324,6 +1332,7 @@
       t2: ['rdesrookie', 'rmilitia'],
       machines: ['rtechnical'], vehicles: 1,
       doctrines: ['H6', 'H2', 'V5', 'H3', 'V6', 'H4'],
+      random: true,                 // no creed to speak of: the whole list, shuffled
       groups: ['Deserters and POWs', 'Freedom Warriors', 'Rebel support troops', 'Rebel flak vehicles'],
       spend: 'promote'
     }
@@ -1337,6 +1346,7 @@
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB4', 'BP6', 'BP5', 'BC1', 'BB5', 'BP2'],
+      fixed: ['BB4'],
       groups: ['Lesser Bugs', 'Flying Bugs', 'Pioneer Bugs'],
       spend: 'promote'
     },
@@ -1347,6 +1357,7 @@
       t1: ['btiny', 'btiny', 'bspitlarva'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
       doctrines: ['BP1', 'BP2', 'BB1', 'BP3', 'BC1', 'BP5'],
+      fixed: ['BP1'],
       groups: ['Lesser Bugs', 'Underground Bugs', 'Spore Bugs'],
       spend: 'recruit'
     },
@@ -1357,6 +1368,7 @@
       t1: ['bspitlarva', 'btiny'], t2: ['bimmspit', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB3', 'BC3', 'BC2', 'BC6', 'BB6', 'BC4'],
+      fixed: ['BB3'],
       groups: ['Spore Bugs', 'Leader Bugs', 'Pioneer Bugs', 'Flying Bugs'],
       spend: 'honours'
     },
@@ -1367,6 +1379,7 @@
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB2', 'BP5', 'BP2', 'BP6', 'BB1', 'BP1'],
+      random: true,                 // no creed to speak of: the whole list, shuffled
       groups: ['Underground Bugs', 'Lesser Bugs', 'Pioneer Bugs'],
       spend: 'promote'
     },
@@ -1376,8 +1389,8 @@
       names: ['The Grey Plague', 'The Harrow Infestation', 'Colony Nine Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
-      // Fungi Symbiosis first: the humans it kills in an assault rise again as its own Infected
       doctrines: ['BP4', 'BB5', 'BC1', 'BP3', 'BB1', 'BC4'],
+      fixed: ['BP4'],               // Fungi Symbiosis first: the humans it kills in an assault rise again as its Infected
       groups: ['Infected Humans', 'Lesser Bugs', 'Spore Bugs'],
       signature: ['binfected'],
       spend: 'recruit'
@@ -1403,6 +1416,7 @@
       t1: ['xeps1', 'xdelta1'], t2: ['xeps2', 'xbeta2'],
       machines: ['xdturret1'], vehicles: 1,
       doctrines: ['XO2', 'XT4', 'XO1', 'XS3', 'XO5', 'XT2'],
+      fixed: ['XO2'],
       groups: ['Epsilon Squads', 'Defensive Turrets', 'Teleport Turrets', 'Beta Squads'],
       spend: 'promote'
     },
@@ -1423,6 +1437,7 @@
       t1: ['xeps1', 'xeps1', 'xdelta1'], t2: ['xeps2', 'xdelta2'],
       machines: [], vehicles: 0,
       doctrines: ['XS1', 'XS5', 'XO2', 'XT2', 'XS3', 'XO6'],
+      fixed: ['XS1'],
       groups: ['Epsilon Squads', 'Delta Squads'],
       spend: 'recruit'
     },
@@ -1433,6 +1448,7 @@
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xeps2'],
       machines: ['xstrike2'], vehicles: 1,
       doctrines: ['XO6', 'XO5', 'XS4', 'XT3', 'XO3', 'XS6'],
+      random: true,                 // no creed to speak of: the whole list, shuffled
       groups: ['Delta Squads', 'Epsilon Squads', 'Strike Aviation', 'Gamma Squads'],
       spend: 'promote'
     },
@@ -1443,6 +1459,7 @@
       t1: ['xdelta1', 'xeps1'], t2: ['xbeta2', 'xdelta2'],
       machines: ['xdturret1'], vehicles: 1,
       doctrines: ['XO5', 'XS2', 'XO4', 'XT6', 'XS5', 'XO1'],
+      fixed: ['XO5'],
       groups: ['Shield Turrets', 'Defensive Turrets', 'Gamma Squads', 'Beta Squads', 'Delta Squads'],
       spend: 'honours'
     },
@@ -1453,6 +1470,7 @@
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xbeta2'],
       machines: ['xstrike2'], vehicles: 1,
       doctrines: ['XO1', 'XT4', 'XO6', 'XT1', 'XO2', 'XT3'],
+      fixed: ['XO1', 'XT4'],
       groups: ['Teleport Turrets', 'Strike Aviation', 'Delta Squads', 'Beta Squads'],
       spend: 'machines'
     }

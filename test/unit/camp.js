@@ -936,7 +936,33 @@ head('Six personalities to every army');
   ok('a sky swarm spawns its flyers', sky.roster.some(function (e) { return R.profile(e.key).group === 'Flying Bugs'; }), true);
   var plague = C.newCompany('P', { faction: 'bugs' }); C.foundRival(plague, 'greyplague', []);
   plague.tier = 2; plague.kUC = 40; C.developRival(plague);
-  ok('...and the Grey Plague its Infected, with Fungi Symbiosis first on its plan', plague.roster.some(function (e) { return e.key === 'binfected'; }) && plague.docPlan.length > 0 && C.archetype('greyplague').doctrines[0] === 'BP4', true);
+  ok('...and the Grey Plague its Infected', plague.roster.some(function (e) { return e.key === 'binfected'; }), true);
+})();
+
+head('Doctrines: fixed, a shortlist, or random');
+(function () {
+  var all = C.ARCHETYPES.concat(C.archetypesFor('rebel'), C.archetypesFor('bugs'), C.archetypesFor('xeno'));
+  ok('every archetype names doctrines of its own army only', all.filter(function (a) {
+    var ids = C.creedOf({ faction: a.faction || 'pmc' }).list.map(function (d) { return d.id; });
+    return (a.doctrines || []).concat(a.fixed || []).some(function (d) { return ids.indexOf(d) < 0; });
+  }).map(function (a) { return a.id; }).join(','), '');
+  ok('...and each army has forces of all three kinds', ['pmc', 'rebel', 'bugs', 'xeno'].every(function (f) {
+    var as = C.archetypesFor(f);
+    return as.some(function (a) { return a.random; }) && as.some(function (a) { return (a.fixed || []).length; }) &&
+      as.some(function (a) { return !a.random && !(a.fixed || []).length; });
+  }), true);
+  function found(id) { var a = C.archetype(id), co = C.newCompany('D', { faction: a.faction || 'pmc' }); C.foundRival(co, id, []); return co; }
+  var plague = [0, 1, 2, 3, 4].map(function () { return found('greyplague'); });
+  ok('the Grey Plague always founds with Fungi Symbiosis', plague.every(function (co) { return co.doctrines[0] === 'BP4'; }), true);
+  var raid = found('shkar');
+  ok('the Sh\'kar raiders take the teleport network, then the cloaking, first', raid.docPlan.slice(0, 2).join(), 'XO1,XT4');
+  var arm = [0, 1, 2, 3, 4, 5].map(function () { return found('armour'); }), short = C.archetype('armour').doctrines;
+  ok('a shortlist force takes its six first, in an order of its own', arm.every(function (co) {
+    return co.docPlan.slice(0, 6).every(function (d) { return short.indexOf(d) >= 0; });
+  }) && arm.some(function (co) { return co.docPlan.slice(0, 6).join() !== arm[0].docPlan.slice(0, 6).join(); }), true, arm.map(function (co) { return co.docPlan.slice(0, 6).join(''); }).join(' '));
+  var firsts = {};
+  for (var i = 0; i < 40; i++) firsts[found('elite').docPlan[0]] = 1;
+  ok('a random force draws from the whole list', Object.keys(firsts).length > 8, true, Object.keys(firsts).length + ' different first doctrines in 40');
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
