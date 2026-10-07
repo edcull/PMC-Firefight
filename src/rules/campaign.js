@@ -1226,7 +1226,8 @@
       t1: ['recruits', 'enforcers', 'irregulars'],
       t2: ['rookie', 'lmgsection'],
       machines: ['unarmoured'], vehicles: 1,
-      doctrines: ['S2', 'S5', 'S4', 'O6', 'S6', 'T2'],
+      // the business (paid, well thought of, the job at the size that pays, the army to fit it), and the guns it hires
+      doctrines: ['S2', 'S5', 'S4', 'O6', 'O4', 'T3'],
       groups: ['Basic troops', 'Rifle infantry', 'Light support', 'Remote mortars', 'Transport vehicles'],
       spend: 'recruit'
     },

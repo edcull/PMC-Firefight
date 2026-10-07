@@ -946,6 +946,9 @@ head('Doctrines: fixed, a shortlist, or random');
     var ids = C.creedOf({ faction: a.faction || 'pmc' }).list.map(function (d) { return d.id; });
     return (a.doctrines || []).concat(a.fixed || []).some(function (d) { return ids.indexOf(d) < 0; });
   }).map(function (a) { return a.id; }).join(','), '');
+  ok('every PMC doctrine is on some company\'s list', C.creedOf({ faction: 'pmc' }).list.filter(function (d) {
+    return !C.ARCHETYPES.some(function (a) { return a.doctrines.indexOf(d.id) >= 0 || (a.fixed || []).indexOf(d.id) >= 0; });
+  }).map(function (d) { return d.name; }).join(', '), '');
   // (the PMC companies all have a creed: none of them is random)
   ok('...and each army has forces of all three kinds', ['pmc', 'rebel', 'bugs', 'xeno'].every(function (f) {
     var as = C.archetypesFor(f);
