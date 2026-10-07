@@ -102,6 +102,8 @@
       return false;
     };
     window.__showQueue = function () { return show.queue.length; };
+    // the card up over the table, Continue pressed (a unit fleeing the field waits for it)
+    window.__continue = function () { if (!ui.resOpen) return false; B.closeRes(); return true; };
     window.__held = function () { return Object.keys(B.held).length; };
     // a unit whose arrival is queued but not yet drawn (the table leaves it off until then)
     window.__arrivalQueued = function (id) { var u = byId(id); return !!(u && B.arrivalQueued(u)); };

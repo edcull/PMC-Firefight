@@ -422,7 +422,7 @@
   /* A swarm: its Leader Bug first (of the Battle Tier or higher), the Battle
      Tier's own bugs up to the minimum, then whatever fits — checked against the
      swarm's table and rolled again until it is legal. */
-  function rollSwarm(bt, pl, rnd) {
+  function rollSwarm(bt, pl, rnd, st) {
     var POOL = listFor('bugs'), comp = COMPOSITION_BUGS[bt], budget = comp.points * pl;
     var pick = function (arr) { return arr[Math.floor(rnd() * arr.length)]; };
     var best = null;
@@ -454,24 +454,100 @@
       while (counts[bt] < need && g++ < 100) {
         var core = POOL.filter(function (p) { return p.tier === bt && room(p); });
         if (!core.length) break;
-        take(pick(core));
+        take(pick(st ? st.favour(core, keys) : core));
       }
       g = 0;
       while (g++ < 200) {
-        var any = POOL.filter(room);
+        var any = POOL.filter(function (p) { return room(p) && (!st || st.allows(p, keys)); });
         if (!any.length) break;
-        take(pick(any));
+        take(pick(st ? st.favour(any, keys) : any));
       }
       if (checkArmy(keys, bt, pl).ok) return keys;
       best = keys;
     }
     return best;
   }
-  function rollArmy(battleTier, pl, rnd, faction) {
+  /* A personality for a rolled force (campaign.js ARCHETYPES): the same groups,
+     mix, limits, signature units and hulls a rival company of that kind recruits,
+     so a skirmish force at any Tier and Priority Level looks like one of them.
+     `style` is an archetype, its id, null for one at random, or false for none. */
+  function styleFor(faction, style) {
+    var C = root.PMCCamp;
+    if (style === false || !C || !C.archetypesFor) return null;
+    if (style && typeof style === 'object') return style;
+    var all = C.archetypesFor(faction).filter(function (a) { return a.faction === faction || (!a.faction && faction === 'pmc'); });
+    if (style) return all.filter(function (a) { return a.id === style; })[0] || null;
+    return all.length ? all[Math.floor(Math.random() * all.length)] : null;
+  }
+  function styleKit(a, rnd, pl) {
+    var flat = function (l) { return [].concat.apply([], l || []); };
+    var sigs = a.signature || [], sets = sigs.length ? (Array.isArray(sigs[0]) ? sigs : [sigs]) : [];
+    var sigKeys = flat(sets), lim = a.limit || {}, mix = a.mix || {};
+    var starters = flat([a.t1, a.t2, a.refill ? Object.keys(a.refill) : []]);
+    var profile = function (k) { return BY_KEY[k]; };
+    var groupOf = function (k) { var p = profile(k); return p ? p.group : null; };
+    // a limit set for a campaign roster, cut to a battle force: a third of it a Priority Level (0 stays 0)
+    function cut(n) { return n ? Math.max(1, Math.ceil(n * pl / 3)) : 0; }
+    var machineMinded = !!a.fieldsMachines || (a.machinesMax || 0) >= 5;
+    function liked(p) { return (a.groups || []).indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || sigKeys.indexOf(p.key) >= 0; }
+    function count(keys, f) { return keys.filter(function (k) { return f(splitPick(k).key); }).length; }
+    function shortfall(g, keys) {
+      var w = mix[g]; if (!w) return 0;
+      var tot = 0, wsum = 0;
+      for (var k in mix) { wsum += mix[k]; tot += count(keys, function (x) { return groupOf(x) === k; }); }
+      return w / wsum - (tot ? count(keys, function (x) { return groupOf(x) === g; }) / tot : 0);
+    }
+    return {
+      a: a, sets: sets,
+      // what it would never take: past a limit (0 for none at all), or a hull it does not run
+      allows: function (p, keys) {
+        if (lim[p.key] != null && count(keys, function (x) { return x === p.key; }) >= cut(lim[p.key])) return false;
+        if (lim[p.group] != null && count(keys, function (x) { return groupOf(x) === p.group; }) >= cut(lim[p.group])) return false;
+        if (p.cls !== 'infantry' && !p.leaderBug && !liked(p)) return false;
+        if (p.cls !== 'infantry' && a.machinesMax != null && a.machinesMax < 3 &&
+          count(keys, function (x) { var q = profile(x); return q && q.cls !== 'infantry'; }) >= a.machinesMax * pl) return false;
+        return true;
+      },
+      /* its own groups (or, at the Tiers they do not reach, the units it is founded
+         with) most of the time, the group furthest behind its mix first, and its
+         favourite hulls ahead of the rest */
+      favour: function (list, keys, wider) {
+        var own = list.filter(function (p) { return liked(p) || starters.indexOf(p.key) >= 0; });
+        if (!own.length || rnd() > 0.85) return list;
+        // a machine company (Cavalry) takes a hull whenever it has the choice, half the time
+        var hulls = (wider || list).filter(function (p) { return p.cls !== 'infantry' && liked(p); });
+        if (machineMinded && hulls.length && rnd() < 0.5) return hulls;
+        var hf = own.filter(function (p) {
+          return p.cls !== 'infantry' && (a.hullsFirst || []).some(function (h) { return h === p.group || h === p.key || (h === 'transports' && p.transport > 0); });
+        });
+        if (hf.length && rnd() < 0.6) return hf;
+        var inMix = own.filter(function (p) { return mix[p.group]; });
+        if (inMix.length && rnd() < 0.7) {
+          var best = Math.max.apply(null, inMix.map(function (p) { return shortfall(p.group, keys); }));
+          return inMix.filter(function (p) { return shortfall(p.group, keys) === best; });
+        }
+        return own;
+      },
+      own: function (p) { return liked(p) || starters.indexOf(p.key) >= 0; },
+      rides: function (p) { return (a.riders || []).indexOf(p.group) >= 0; }
+    };
+  }
+  function rollArmy(battleTier, pl, rnd, faction, style) {
     pl = pl || 1;
     rnd = rnd || Math.random;
     faction = faction || 'pmc';
-    if (faction === 'bugs') return rollSwarm(battleTier, pl, rnd);
+    var a = styleFor(faction, style);
+    if (a) {
+      // a personality's force, rolled until it is legal; failing that, an ordinary one
+      var kit = styleKit(a, rnd, pl);
+      for (var go = 0; go < 12; go++) {
+        var ks = faction === 'bugs' ? rollSwarm(battleTier, pl, rnd, kit) : rollPlain(battleTier, pl, rnd, faction, kit);
+        if (ks && checkArmy(ks, battleTier, pl, null, null, faction).ok) { ks.style = a.id; return ks; }
+      }
+    }
+    return faction === 'bugs' ? rollSwarm(battleTier, pl, rnd) : rollPlain(battleTier, pl, rnd, faction, null);
+  }
+  function rollPlain(battleTier, pl, rnd, faction, st) {
     var POOL = listFor(faction), rebel = faction === 'rebel';
     var comp = COMPOSITION[battleTier], budget = comp.points * pl;
     var pick = function (arr) { return arr[Math.floor(rnd() * arr.length)]; };
@@ -500,6 +576,7 @@
       if (p.groupCapPL && (perGroup[p.group] || 0) + 1 > p.groupCapPL * pl) return false;
       // a platform need not carry anyone, but a rolled list only takes one it can fill
       if (p.mustLoad && plats + 1 > riders) return false;
+      if (st && !st.allows(p, keys)) return false;
       if (p.cls !== 'infantry') {
         if (machines + 1 > 3 * pl) return false;
         if (pl === 1 && p.tier > battleTier) return false;
@@ -534,7 +611,7 @@
         keys.push(p.key);
       } else if (p.cls === 'vehicle') {
         keys.push(joinPick(p.key, pick(DRIVES[p.art] || PROP_ORDER)));
-      } else if (p.ridersUpgrade && rnd() < 0.3) {
+      } else if (p.ridersUpgrade && (st ? st.rides(p) : rnd() < 0.3)) {
         keys.push(joinPick(p.key, null, false, true));      // mounted, now and then
       } else keys.push(p.key);
       if (isDrone(p)) drones++;
@@ -557,8 +634,19 @@
     while (counts[battleTier] < need && guard++ < 200) {
       var core = POOL.filter(function (p) { return p.tier === battleTier && !p.command && p.cls === 'infantry' && room(p); });
       if (!core.length) break;
-      take(pick(core));
+      take(pick(st ? st.favour(core, keys) : core));
     }
+    /* a personality's signature units next (Special Ops' cars and its drones, the
+       Partisans' commandos): one a Priority Level from each set, the biggest that fits */
+    if (st) st.sets.forEach(function (sig) {
+      var most = Math.min(st.a.signatureCap != null ? st.a.signatureCap : (st.a.signatureMax || 3), pl);
+      for (var n = 0; n < most; n++) {
+        var can = sig.map(function (k) { return BY_KEY[k]; }).filter(function (p) { return p && room(p); });
+        if (!can.length) return;
+        var hi = Math.max.apply(null, can.map(function (p) { return p.tier; }));
+        take(pick(can.filter(function (p) { return p.tier === hi; })));
+      }
+    });
     // then spend what is left on anything legal, favouring the bigger units
     guard = 0;
     while (guard++ < 400) {
@@ -566,7 +654,9 @@
       if (!any.length) break;
       any.sort(function (a, b) { return b.tier - a.tier; });
       var top = any.filter(function (p) { return p.tier === any[0].tier; });
-      take(pick(rnd() > 0.35 ? top : any));
+      var from = rnd() > 0.35 ? top : any;
+      if (st && !from.some(st.own)) from = any;     // none of its own among the biggest: its own, smaller
+      take(pick(st ? st.favour(from, keys, any) : from));
       if (spent >= budget) break;
     }
     return keys;

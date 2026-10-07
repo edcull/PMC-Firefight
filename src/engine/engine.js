@@ -527,7 +527,10 @@
     // one set for it in the game's settings stands (a scripted battle's); otherwise it chooses
     if (state.tactics[sd]) { if (state.tactics[sd] === 'wave') autoWave(sd, waveRoom(sd)); return; }
     var legal = legalTactics(sd), role = rolledRole(sd), want;
-    if (state.cfg.mode === 'demo' || !role) want = TACTIC_IDS[1 + Math.floor(Math.random() * 3)];
+    // a force rolled to a personality fights to its tactics (campaign.js aiTactic): the Partisans out of the tunnels
+    var style = state.cfg.styles && state.cfg.styles[sd];
+    if (style && C && C.aiTactic) want = C.aiTactic({ faction: 'rebel', archetype: style }, state.cfg.roles, sd);
+    else if (state.cfg.mode === 'demo' || !role) want = TACTIC_IDS[1 + Math.floor(Math.random() * 3)];
     else want = role === 'defender' ? 'laststand' : 'wave';
     if (legal.indexOf(want) < 0) want = state.tactics[sd] || null;
     setTactic(sd, want);
