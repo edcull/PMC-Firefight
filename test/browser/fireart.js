@@ -289,6 +289,9 @@ async function fireAndWatch(p, code, ms) {
   // ...always two long bursts, never two short ones however few hit
   ok('...of the same full length whatever the hits', cadence.burst.min === cadence.burst.max && cadence.burst.min / cadence.burst.bursts >= 12,
     cadence.burst.min + ' rounds with no hits, ' + cadence.burst.max + ' with many');
+  // every weapon fires its full volley whatever was rolled: the hits only decide how many land
+  ok('every style fires the same number of rounds however many hit',
+    ladder.every(k => cadence[k].min === cadence[k].max), ladder.map(k => k + ' ' + cadence[k].min).join(', '));
   ok('a machine gun\'s rounds come closer together than a rifle line\'s',
     cadence.burst.gap < cadence.small.gap,
     'MG every ' + cadence.burst.gap + 'ms, rifle every ' + cadence.small.gap + 'ms');
