@@ -556,6 +556,8 @@
            is one of its own: a recruit with a way into its groups is promoted there first. */
         var stepIn = !wanted(p) && targets.length;
         if (a.spend === 'honours' && !stepIn) { for (var g = 0; g < 6 && honour(); g++) { } }
+        // (a force that decorates its people on the way up — the Elite — gives a unit an honour before its first promotion)
+        if (a.honourFirst && !(e.honours || []).length && !stepIn) honour();
         if (targets.length) {
           var best = targets.sort(function (x, y) { return y.tier - x.tier || shortfall(y.group) - shortfall(x.group); })[0];
           if (promoteUnit(co, e, best.key).ok) {

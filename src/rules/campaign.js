@@ -1222,6 +1222,7 @@
       groups: ['Rifle infantry', 'Heavy infantry', 'Assault troops'],
       units: ['gausscannon'],
       lean: true,                   // few units, all of them good: no free troops to pad the list, no hiring with spare money
+      honourFirst: true,            // and each earns an honour before it is promoted
       spend: 'promote'
     },
     {
