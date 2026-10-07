@@ -1409,9 +1409,9 @@
       mix: { 'Deserters and POWs': 2, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 1.5 },
       machinesMax: 3,
       hullsFirst: ['Rebel aviation'],
-      // someone in the establishment is paying; then the garrison's discipline, its officers, and a chaplain's sermon
-      fixed: ['V6'],
-      doctrines: ['V6', 'V5', 'H6', 'V1', 'P5', 'P6'],
+      // its officers still command (the garrison's military past); then who pays, the discipline, and a chaplain's sermon
+      fixed: ['H6'],
+      doctrines: ['H6', 'V6', 'V5', 'V1', 'P5', 'P6'],
       spend: 'promote'
     }
   ];
