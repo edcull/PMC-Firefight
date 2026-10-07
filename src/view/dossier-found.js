@@ -105,6 +105,23 @@
     // what this campaign calls its money, and what its creed is called
     function coin() { return C.money(E.camp && E.camp.companies ? E.camp.companies.A : null); }
 
+    /* The start forces saved in the force builder (src/net/forces.js), to load
+       onto the founding sheet: those of this kind of force, and in the builder,
+       which can change kind, the others as well. */
+    function loadList(co, build) {
+      var all = root.PMCForces ? root.PMCForces.list('start') : [];
+      if (!all.length) return '<p class="dnote">No start forces saved yet. Build one from the main menu: Force builder, Campaign start force.</p>';
+      var FN = R.FACTIONS || {};
+      return '<div class="cmodal-scroll"><div class="docpick">' + all.map(function (e) {
+        var f = e.force, same = !f.faction || f.faction === co.faction, d = f.doctrine && C.doctrine(f.doctrine);
+        var off = !same && !build;
+        return '<button class="doc"' + (off ? ' disabled' : '') + ' data-fload="' + esc(e.ref) + '"><b>' + esc(f.name) + '</b><span>' +
+          esc((FN[f.faction] ? FN[f.faction].name : f.faction || '') + ' \u00b7 ' + f.keys.length + ' units' + (d ? ' \u00b7 ' + d.name : '') +
+            (e.where === 'account' ? ' \u00b7 on your account' : '')) +
+          (off ? ' \u2014 another kind of force' : '') + '</span></button>';
+      }).join('') + '</div></div>';
+    }
+
     function foundView() {
       var side = E.draft.side || 'A', co = E.camp.companies[side];
       var hot = E.camp.mode === 'hotseat';
@@ -118,10 +135,20 @@
       function say(pmc, rebel, bugs, xeno) { return xen ? (xeno || bugs) : bug ? bugs : reb ? rebel : pmc; }
       // a hotseat campaign kept as a world on this device: whose force it is, by the player at the screen
       var lw = E.online && E.online.local && root.PMCLocalWorld ? root.PMCLocalWorld.playerName(root.PMCLocalWorld.seat(E.online.id)) + ' \u2014 ' : '';
-      var h = '<h2>' + lw + (hot ? 'Player ' + (side === 'A' ? 1 : 2) + ' \u2014 ' : '') +
-        say('Found a company', 'Raise a revolt', 'Awaken a swarm', 'Claim a territory') + '</h2>';
+      var build = !!E.draft.build;
+      var h = '<h2>' + (build ? 'Force builder \u2014 a campaign start force' : lw + (hot ? 'Player ' + (side === 'A' ? 1 : 2) + ' \u2014 ' : '') +
+        say('Found a company', 'Raise a revolt', 'Awaken a swarm', 'Claim a territory')) + '</h2>';
       // online, the army and the colours were picked in the campaign's lobby: nothing to choose here
-      if (E.online) {
+      if (build) {
+        /* The force builder: its kind of force chosen here, as there is no
+           campaign to have chosen it; kept to be loaded when one is founded. */
+        h += '<p class="lede">A starting company to keep: the units a new campaign begins with and its first ' + C.creedOf(co).one +
+          '. Save it, then load it on this sheet whenever you found a campaign of this kind of force.</p>' +
+          '<div class="field"><label>Kind of force</label><div class="docpick facpick">' +
+          FACTION_CHOICES.map(function (f) {
+            return '<button class="doc' + (co.faction === f[0] ? ' on' : '') + '" data-buildfaction="' + f[0] + '"><b>' + esc(f[1]) + '</b></button>';
+          }).join('') + '</div></div>';
+      } else if (E.online) {
         h += '';
       } else if (hot && side === 'B') {
         /* The second player picks their own kind of force: the first player's
@@ -188,7 +215,11 @@
         '<div class="found-row">' +
         '<button type="button" class="lnk" data-go="fmodal" data-kind="units">+ Add units</button>' +
         '<button type="button" class="lnk' + (doc ? ' on' : '') + '" data-go="fmodal" data-kind="doctrine" title="Starting ' + cr.one + '">' +
-        (doc ? esc(doc.name) : 'Choose ' + (bug ? 'an ' : 'a ') + cr.one) + '</button></div></div>';
+        (doc ? esc(doc.name) : 'Choose ' + (bug ? 'an ' : 'a ') + cr.one) + '</button>' +
+        // a start force saved in the force builder, to found this one from
+        (E.online ? '' : '<button type="button" class="lnk" data-go="fmodal" data-kind="fload">Load a start force</button>') +
+        '</div></div>';
+      if (!E.online) h += cmodal('fload', 'Load a start force', loadList(co, build));
 
       // the three pickers, each a modal over the page
       // the army's rules, from its pill
@@ -220,6 +251,7 @@
         : bug ? 'Ready. The Leader Bug joins free, at the Swarm Tier, and grows with it.'
         : reb ? 'Ready. The First Among Equals who started it joins free, at the Revolt Tier.'
         : 'Ready. The field command is added free, at the Company Tier.';
+      if (build) readyTxt = 'Ready to save. A campaign founded from it adds its free command unit then.';
       var nameTxt = say('The company needs a name.', 'The revolt needs a name.', 'The swarm needs a name.', 'The tribe needs a name.');
       /* No line of help under it: what the charter still wants is on the
          button, in the game's own tip — on a hover, and on a press while it is
@@ -231,7 +263,7 @@
       h += '<button class="start" id="found-sign" data-rest="' + (rest ? 1 : 0) + '" data-go="dofound"' +
         ' data-tip="' + esc(why) + '" data-tip-title="' + (chk.ok ? 'Ready' : 'Still needed') + '"' +
         ' data-ready="' + esc(readyTxt) + '" data-noname="' + esc(nameTxt) + '" aria-disabled="' + !chk.ok + '">' +
-        say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground') + '</button>';
+        (build ? 'Save start force' : say('Sign the charter', 'Raise the banner', 'Wake the hive', 'Claim the ground')) + '</button>';
       // the second player cannot step back out: the campaign needs their force
       // back to choosing what to run: the force is not founded yet, so there is nothing to keep
       if (!(hot && side === 'B') || E.online) h += '<p class="camp-foot"><button class="lnk" data-go="foundback">Back</button></p>';

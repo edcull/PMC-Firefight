@@ -968,8 +968,8 @@
     if (view.status === 'destroyed' || onTow() || outOfArc() || outOfRange()) return;
     showWide();
     var u = unit(), spec = R.weaponSpec(u);
-    // a flier shoots from its airframe, not from the grass under it
-    var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y };
+    // a flier shoots from its airframe, not from the grass under it, and is shot at there
+    var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y, up: I.flyLift(mark()) };
     // troopers turn to the mark, and every round leaves one of their own barrels
     /* A piece lays its weapon on the mark, traversed like a turret; its mount
        turns to the nearest facing first — unless it is dug in, which cannot be

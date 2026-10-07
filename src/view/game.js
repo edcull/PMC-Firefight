@@ -821,11 +821,15 @@
     el('setup').classList.toggle('solo-mode', solo);
     el('setup-title').textContent = {
       ai: 'Muster your force', hotseat: 'Muster your force — hotseat', demo: 'Muster a force to watch',
-      solo: 'Muster your commando', coop: 'Muster your commandos'
+      solo: 'Muster your commando', coop: 'Muster your commandos', build: 'Force builder \u2014 a skirmish force'
     }[kind] || 'Muster your force';
     // hotseat, co-op and demo build both forces, one step each, before the battlefield
     // a demo, and a battle against the AI, open on the battlefield with both forces rolled
-    if (hotQuick(kind)) demoBegin(kind); else hotEnd();
+    if (hotQuick(kind)) demoBegin(kind);
+    else if (kind === 'build') hotBegin('build');      // the force builder's skirmish force
+    else hotEnd();
+    // the account's saved forces, fetched afresh for the list
+    if (window.PMCForces) window.PMCForces.refresh(drawForceList);
     backLabel(el('btn-setup-back'), setupGoesHome());
     el('setup').hidden = false;
   };

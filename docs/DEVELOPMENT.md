@@ -332,6 +332,7 @@ continuelist.js    several campaigns at once, the main menu's Continue list, a r
 netplay.js         two browsers at a real game server: both press Begin, whose turn, the camera following the opponent, a drop, abandoning
 subpath.js         the server behind a reverse proxy on a sub-path (/pmc/), as nginx serves it
 modaltop.js        a question asked from a side column (Empty transports) is in front of the board
+forcebuilder.js    the force builder: a skirmish force and a campaign start force built, saved (browser and account), and loaded into a skirmish and a new campaign
 ```
 
 **What the table shows**

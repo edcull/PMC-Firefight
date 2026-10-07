@@ -26,6 +26,7 @@ Two packages, `better-sqlite3` for the database and `nodemailer` for email (`npm
 | `POST /api/register`, `/api/login`, `/api/guest`, `/api/logout`, `/api/password`; `GET /api/me`, `/api/games` | accounts, and a guest's name for a battle |
 | `POST /api/activate`, `/api/resend`, `/api/forgot`, `/api/reset`, `/api/rename`, `/api/email`, `/api/confirm-email` | the emailed links (activation, a password reset, a new address), and a new name |
 | `GET/POST /api/campaigns`, `GET/PUT/DELETE /api/campaigns/<id>`, `POST /api/campaigns/import` | a signed-in player's own campaigns, each save over the version it was read at |
+| `GET/POST /api/forces`, `DELETE /api/forces/<id>` | a signed-in player's saved forces from the force builder: skirmish forces and campaign start forces, one of each name and kind (saving again under a name replaces it) |
 | `ws:// /ws` | the lobby, and every battle in progress (signed in, or as a guest) |
 | `GET /health` | up or not: rooms, players, seconds up, the last backup, whether mail goes out |
 

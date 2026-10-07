@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=ffdbe0fc94">
-<link rel="stylesheet" href="src/css/game.css?v=c72a0a7f27">
+<link rel="stylesheet" href="src/css/game.css?v=8dc18c0a38">
 
 <div class="wrap">
   <header>
@@ -128,11 +128,20 @@
       <!-- only offered when the page came from a game server: a game opened
            from a file has nobody to play against -->
       <button class="mcard" id="btn-multi" disabled>Multiplayer<small id="menu-multi-sub">Online multiplayer unavailable</small></button>
+      <!-- forces built ahead of a battle or a campaign, and kept to load into one -->
+      <button class="mcard" data-menu="builder">Force builder<small>Build and save a skirmish force or a campaign's starting company</small></button>
       <a class="mcard" href="viewer.html" id="lnk-viewer">Unit viewer<small>Every profile in all four armies, walking and firing</small></a>
     </div>
     <div class="menu-pane" id="menu-continue" hidden>
       <h2 class="menu-head">Continue</h2>
       <div class="cont-list" id="cont-list"></div>
+      <button class="mcard menu-back" data-menu="main">← Back</button>
+    </div>
+    <div class="menu-pane" id="menu-builder" hidden>
+      <h2 class="menu-head">Force builder</h2>
+      <button class="mcard" data-build="skirmish">Skirmish force<small>An army list for a Battle Tier and Priority Level, to load when you muster a skirmish</small></button>
+      <button class="mcard" data-build="start">Campaign start force<small>A starting company and its doctrine, to load when you found a campaign</small></button>
+      <p class="menu-note-inline" id="menu-builder-where"></p>
       <button class="mcard menu-back" data-menu="main">← Back</button>
     </div>
     <div class="menu-pane" id="menu-single" hidden>
@@ -158,7 +167,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.2.0.2610071628</p>
+    <p class="menu-ver" id="menu-ver">v0.2.0.2610071630</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -534,10 +543,10 @@
 <script src="src/view/iso-troops.js?v=cbbaf456e8"></script>
 <script src="src/view/iso-aliens.js?v=6b21e2b0f3"></script>
 <script src="src/view/iso-guns.js?v=77635ac6e1"></script>
-<script src="src/view/iso-machines.js?v=3eba68ead1"></script>
+<script src="src/view/iso-machines.js?v=77ade78caa"></script>
 <script src="src/view/iso-craft.js?v=4dea2fce24"></script>
 <script src="src/view/iso-mechs.js?v=f854f52505"></script>
-<script src="src/view/iso-hulls.js?v=b460682fe7"></script>
+<script src="src/view/iso-hulls.js?v=5be171a816"></script>
 <script src="src/view/iso-gear.js?v=589734968d"></script>
 <script src="src/view/iso-rotors.js?v=fe08795141"></script>
 <script src="src/view/iso-plainhull.js?v=528b5f10d7"></script>
@@ -548,7 +557,7 @@
 <script src="src/view/iso-xenomachines.js?v=46a06a96cc"></script>
 <script src="src/view/iso.js?v=19027e9c5a"></script>
 <script src="src/view/fx.js?v=180accc1fb"></script>
-<script src="src/view/fire.js?v=365f6f43cf"></script>
+<script src="src/view/fire.js?v=1e7d68f546"></script>
 <script src="src/view/motion.js?v=823a5c18f7"></script>
 <script src="src/view/tips.js?v=d9ad8fa292"></script>
 <script src="src/view/ui-parts.js?v=e04e6217da"></script>
@@ -572,7 +581,8 @@
 <script src="src/rules/camp-world.js?v=9698971826"></script>
 <script src="src/net/localworld.js?v=2d2b2e670e"></script>
 <script src="src/net/net.js?v=0302fffd1c"></script>
-<script src="src/net/account.js?v=5dcf13ef06"></script>
+<script src="src/net/account.js?v=07f394ee30"></script>
+<script src="src/net/forces.js?v=26417cca9a"></script>
 <script src="src/net/lobby.js?v=19eb4f1db4"></script>
 <script src="src/view/replay.js?v=2eedd500be"></script>
 <script src="src/view/hooks.js?v=10ee198650"></script>
@@ -585,13 +595,13 @@
 <script src="src/view/draw.js?v=577a39b6e7"></script>
 <script src="src/view/view.js?v=8ce96bffa5"></script>
 <script src="src/view/panels.js?v=5ecdadb16b"></script>
-<script src="src/view/muster.js?v=a6ed61a807"></script>
-<script src="src/view/game.js?v=2271617d95"></script>
+<script src="src/view/muster.js?v=e095cbf529"></script>
+<script src="src/view/game.js?v=60c98e8cd2"></script>
 <script src="src/view/dossier-hub.js?v=fc35bb6a92"></script>
-<script src="src/view/dossier-found.js?v=6bf54cf53e"></script>
+<script src="src/view/dossier-found.js?v=8b61367726"></script>
 <script src="src/view/dossier-roster.js?v=0043b92b0f"></script>
 <script src="src/view/dossier-contract.js?v=da83b62048"></script>
 <script src="src/view/dossier-after.js?v=314be42605"></script>
 <script src="src/view/dossier-online.js?v=f23d60e660"></script>
-<script src="src/view/dossier.js?v=6837735e19"></script>
-<script src="src/view/menu.js?v=873b5eea57"></script>
+<script src="src/view/dossier.js?v=9b3d76f1a7"></script>
+<script src="src/view/menu.js?v=feb7b1643e"></script>
