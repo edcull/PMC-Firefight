@@ -1354,9 +1354,9 @@
       groups: ['Holy Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles', 'Rebel transport vehicles'],
       mix: { 'Holy Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
       machinesMax: 2,
-      // Holy Fury first; then Stairs to Heaven or Martyrdom (two Prophet at most), and a Hero or two
+      // Holy Fury first; then Stairs to Heaven or Martyrdom (two Prophet at most), and the Hero path: loyalty, victory and alms
       fixed: ['P4'],
-      doctrines: ['P4', 'P3', 'P1', 'H4', 'H1', 'P5'],
+      doctrines: ['P4', 'P3', 'P1', 'H4', 'H1', 'H5'],
       spend: 'promote'
     },
     {
