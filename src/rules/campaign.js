@@ -1615,6 +1615,105 @@
     return ARCHETYPES[0];
   }
 
+  /* ================= a personality as one object =================
+     The definitions above are flat, with a comment beside each field. Read as one
+     object they fall into what a force fields, how it fights, the doctrines it
+     reaches for and what a campaign rival does besides — the shape the server keeps
+     an admin's changes in and the editor works on. FIELD_MAP is the one place the
+     two meet: a flat field and where it sits in the nested shape. */
+  var FIELD_MAP = {
+    names: 'names', blurb: 'blurb',
+    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls', hullsFirst: 'force.favourites',
+    fieldsMachines: 'force.machineMinded', machinesMax: 'force.machinesMax', riders: 'force.riders',
+    groups: 'force.groups', units: 'force.units', mix: 'force.mix', limit: 'force.limit', second: 'force.second',
+    signature: 'force.signature.units', signatureMax: 'force.signature.max', signatureCap: 'force.signature.cap',
+    temper: 'battle.temper', tactics: 'battle.tactics',
+    doctrines: 'doctrines.shortlist', fixed: 'doctrines.fixed', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',
+    t1: 'campaign.found.t1', t2: 'campaign.found.t2', machines: 'campaign.found.hulls', vehicles: 'campaign.found.hullCount',
+    foundFree: 'campaign.found.free', refill: 'campaign.refill', spend: 'campaign.spend', honourFirst: 'campaign.honourFirst', lean: 'campaign.lean'
+  };
+  // these are replaced whole by a change, not merged key by key (a list of weights is edited as one)
+  var WHOLE = ['force.weights', 'force.mix', 'force.limit', 'force.tactics', 'battle.tactics', 'campaign.refill', 'doctrines.fixedAt'];
+  function clone(o) { return o == null ? o : JSON.parse(JSON.stringify(o)); }
+  function getPath(o, path) { return path.split('.').reduce(function (x, k) { return x == null ? undefined : x[k]; }, o); }
+  function setPath(o, path, v) {
+    var ks = path.split('.'), last = ks.pop();
+    ks.forEach(function (k) { if (o[k] == null || typeof o[k] !== 'object') o[k] = {}; o = o[k]; });
+    o[last] = v;
+  }
+  function nestedOf(flat) {
+    var u = { id: flat.id, name: flat.name, faction: flat.faction || 'pmc' };
+    Object.keys(FIELD_MAP).forEach(function (k) { if (flat[k] !== undefined) setPath(u, FIELD_MAP[k], clone(flat[k])); });
+    return u;
+  }
+  function flatOf(u) {
+    var flat = { id: u.id, name: u.name };
+    if (u.faction && u.faction !== 'pmc') flat.faction = u.faction;
+    Object.keys(FIELD_MAP).forEach(function (k) { var v = getPath(u, FIELD_MAP[k]); if (v !== undefined && v !== null) flat[k] = clone(v); });
+    return flat;
+  }
+  // a change laid over the nested shape: objects merged, lists and the WHOLE fields replaced, null removing
+  function mergeInto(base, change, at) {
+    Object.keys(change || {}).forEach(function (k) {
+      var path = at ? at + '.' + k : k, v = change[k];
+      if (v === null) { delete base[k]; return; }
+      if (v && typeof v === 'object' && !Array.isArray(v) && WHOLE.indexOf(path) < 0 && base[k] && typeof base[k] === 'object' && !Array.isArray(base[k])) mergeInto(base[k], v, path);
+      else base[k] = clone(v);
+    });
+    return base;
+  }
+  // what differs from the default: the part worth keeping as a change
+  function diffFrom(base, now, at) {
+    var out = {};
+    Object.keys(now || {}).forEach(function (k) {
+      var path = at ? at + '.' + k : k, a = base ? base[k] : undefined, b = now[k];
+      if (b && typeof b === 'object' && !Array.isArray(b) && WHOLE.indexOf(path) < 0 && a && typeof a === 'object' && !Array.isArray(a)) {
+        var d = diffFrom(a, b, path);
+        if (Object.keys(d).length) out[k] = d;
+      } else if (JSON.stringify(a) !== JSON.stringify(b)) out[k] = clone(b);
+    });
+    Object.keys(base || {}).forEach(function (k) { if (now && !(k in now)) out[k] = null; });
+    return out;
+  }
+  var ARCH_DEFAULTS = null, ARCH_CHANGES = {}, archVersion = 0;
+  function allArchetypes() { return ARCHETYPES.concat(REBEL_ARCHETYPES).concat(BUG_ARCHETYPES).concat(XENO_ARCHETYPES); }
+  function defaultsNow() {
+    if (!ARCH_DEFAULTS) { ARCH_DEFAULTS = {}; allArchetypes().forEach(function (a) { ARCH_DEFAULTS[a.id] = clone(a); }); }
+    return ARCH_DEFAULTS;
+  }
+  /* An admin's changes, { id: nested change }, laid over the defaults: each personality
+     named is rebuilt from its default and its change, in place, so everything holding
+     it (a rival's archetype lookups, a roll in progress) sees the new one; one not
+     named goes back to its default. */
+  function applyArchetypeChanges(changes) {
+    var defs = defaultsNow();
+    ARCH_CHANGES = clone(changes || {});
+    allArchetypes().forEach(function (a) {
+      var base = defs[a.id], ch = ARCH_CHANGES[a.id];
+      var flat = ch ? flatOf(mergeInto(nestedOf(base), ch)) : clone(base);
+      flat.id = base.id; if (base.faction) flat.faction = base.faction;     // who it is never changes
+      Object.keys(a).forEach(function (k) { delete a[k]; });
+      Object.keys(flat).forEach(function (k) { a[k] = flat[k]; });
+    });
+    archVersion++;
+    return archVersion;
+  }
+  function unifiedArchetype(id, fromDefault) {
+    var defs = defaultsNow(), a = fromDefault ? defs[id] : allArchetypes().filter(function (x) { return x.id === id; })[0];
+    return a ? nestedOf(a) : null;
+  }
+  // the change that turns the default into this nested personality (what the server stores)
+  function archetypeChange(id, nested) {
+    var defs = defaultsNow();
+    return defs[id] ? diffFrom(nestedOf(defs[id]), nested) : null;
+  }
+  // run fn with these personalities in force for a moment (the editor's preview), then put things back
+  function withArchetypeChanges(changes, fn) {
+    var was = clone(ARCH_CHANGES);
+    applyArchetypeChanges(changes);
+    try { return fn(); } finally { applyArchetypeChanges(was); }
+  }
+
 
   /* ================= the other forces on the world =================
      A campaign is fought against three of them rather than one, in whatever mix
@@ -1896,6 +1995,9 @@
     salvage: salvage, aftermath: aftermath, developRival: developRival,
     pickForce: pickForce, evenWorld: evenWorld, battleElsewhere: battleElsewhere, elsewherePairs: elsewherePairs,
     ARCHETYPES: ARCHETYPES, archetype: archetype, foundRival: foundRival,
+    FIELD_MAP: FIELD_MAP, unifiedArchetype: unifiedArchetype, archetypeChange: archetypeChange,
+    applyArchetypeChanges: applyArchetypeChanges, withArchetypeChanges: withArchetypeChanges,
+    archetypeChanges: function () { return clone(ARCH_CHANGES); }, archetypeVersion: function () { return archVersion; },
     d6: d6, d3: d3, d10: d10
   };
 })(typeof window !== 'undefined' ? window : global);

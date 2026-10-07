@@ -1085,6 +1085,26 @@ head('A skirmish force rolled to a personality goes by one of its names');
   ok('a force with no personality goes by its colours', U.forceName('jade', 'pmc', R.rollArmy(2, 1, null, 'pmc', false)), U.forceName('jade', 'pmc'));
 })();
 
+head('A personality as one object, and an admin\'s changes laid over it');
+(function () {
+  var u = C.unifiedArchetype('armour');
+  ok('Bastion read as one object: what it fields, how it fights, its doctrines, its campaign', !!(u.force && u.force.weights && u.battle && u.doctrines && u.campaign && u.campaign.found), true);
+  ok('...and an unchanged one makes no change', JSON.stringify(C.archetypeChange('armour', u)), '{}');
+  var before = JSON.stringify(C.archetype('armour'));
+  u.force.tier = -1; u.battle.temper = -2; u.force.weights = { bats: 10, protectors: 10 };
+  var ch = C.archetypeChange('armour', u);
+  ok('a change keeps only what differs', Object.keys(ch).sort().join(','), 'battle,force');
+  C.applyArchetypeChanges({ armour: ch });
+  var a = C.archetype('armour');
+  ok('...applied in place: the tier, the temper and the whole list of weights', [a.tier, a.temper, Object.keys(a.weights).length], [-1, -2, 2]);
+  ok('...rolls follow it', R.rollArmy(3, 1, null, 'pmc', 'armour').every(function (k) { var p = R.profile(R.splitPick(k).key); return p.command || ['bats', 'protectors'].indexOf(p.key) >= 0 || p.cls !== 'infantry' || p.tier !== 3; }), true);
+  ok('...and who it is never changes', a.id, 'armour');
+  C.applyArchetypeChanges({});
+  ok('cleared, it is the default again', JSON.stringify(C.archetype('armour')) === before, true);
+  var seen = C.withArchetypeChanges({ armour: { battle: { temper: 3 } } }, function () { return C.archetype('armour').temper; });
+  ok('a preview runs with the change and puts it back', [seen, C.archetype('armour').temper], [3, -1]);
+})();
+
 head('Rebel Tactics by personality and part in the scenario');
 (function () {
   function tally(id, roles) {
