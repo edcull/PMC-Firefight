@@ -518,6 +518,26 @@ async function main() {
   const g = await req('POST', '/api/guest', json, JSON.stringify({ name: 'Passer By' }));
   const guestCamp = await req('POST', '/api/campaigns', withC(String(g.headers['set-cookie']).split(';')[0]), JSON.stringify({ state: camp1 }));
   ok('...nobody else\'s to read; nobody signed out, nor a guest, keeps one', peek.code === 404 && anonList.code === 401 && guestCamp.code === 401, peek.code + ' ' + anonList.code + ' ' + guestCamp.code);
+
+  // the force builder's saved forces: a player's own, one of each name and kind
+  const sk = { faction: 'pmc', tier: 3, pl: 1, colour: 'ochre', keys: ['cmd2', 'regular', 'regular'] };
+  const f1 = await req('POST', '/api/forces', withC(owner), JSON.stringify({ kind: 'skirmish', name: 'Iron Line', data: sk }));
+  const f2 = await req('POST', '/api/forces', withC(owner), JSON.stringify({ kind: 'start', name: 'Iron Line', data: { faction: 'pmc', doctrine: 'x', keys: ['regular'] } }));
+  const f3 = await req('POST', '/api/forces', withC(owner), JSON.stringify({ kind: 'skirmish', name: 'iron line', data: Object.assign({}, sk, { tier: 4 }) }));
+  const fl = JSON.parse((await req('GET', '/api/forces', { cookie: owner })).body).forces;
+  const fsk = fl.filter((f) => f.kind === 'skirmish');
+  ok('a signed-in player keeps forces on the server, a skirmish force and a start force under one name',
+    f1.code === 200 && f2.code === 200 && fl.length === 2 && fl.some((f) => f.kind === 'start'), f1.code + ' ' + f2.code + ' ' + JSON.stringify(fl));
+  ok('...saving again under the same name (any case) replaces it', f3.code === 200 && fsk.length === 1 && fsk[0].data.tier === 4 && JSON.parse(f3.body).id === JSON.parse(f1.body).id);
+  const otherF = JSON.parse((await req('GET', '/api/forces', { cookie: other })).body).forces;
+  const snoopDel = await req('DELETE', '/api/forces/' + JSON.parse(f1.body).id, withC(other));
+  const anonF = await req('GET', '/api/forces', {});
+  const badF = await req('POST', '/api/forces', withC(owner), JSON.stringify({ kind: 'skirmish', name: 'Junk', data: { keys: 'nope' } }));
+  ok('...nobody else\'s to see or delete; signed out, none; a force with no list is refused',
+    otherF.length === 0 && JSON.parse(snoopDel.body).ok === false && anonF.code === 401 && badF.code === 400, otherF.length + ' ' + snoopDel.body + ' ' + anonF.code + ' ' + badF.code);
+  const delF = await req('DELETE', '/api/forces/' + JSON.parse(f1.body).id, withC(owner));
+  const left = JSON.parse((await req('GET', '/api/forces', { cookie: owner })).body).forces;
+  ok('...and deleted by its owner', JSON.parse(delF.body).ok === true && left.length === 1 && left[0].kind === 'start');
   // an old campaign file, taken into the account by whoever holds its key
   const legacyName = 'old' + Date.now().toString(36);
   const legacy = await req('PUT', '/campaign/' + legacyName, json, JSON.stringify(camp1));

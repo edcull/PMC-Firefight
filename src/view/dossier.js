@@ -355,6 +355,11 @@
   var online = null;
   var view = 'hub';
   var draft = null;             // the company being founded
+  /* The force builder's campaign start force (from the main menu): the founding
+     sheet over a company of no campaign at all, saving a starting company and
+     its doctrine (src/net/forces.js) rather than founding one. Whatever the
+     dossier had open is put aside here, untouched, and put back after. */
+  var building = null;
   var contract = null;          // the battle being set up
   var after = null;             // the aftermath being worked through
   // what each screen has open, kept here so the screens can live in their own files
@@ -1367,6 +1372,12 @@
       }
       save(); render(); return;
     }
+    if (t.hasAttribute('data-buildfaction')) {
+      keepFoundName();
+      buildStart(t.getAttribute('data-buildfaction'), draft && draft.name, draft && draft.colourChosen ? draft.colour : null);
+      return;
+    }
+    if (t.hasAttribute('data-fload')) { keepFoundName(); loadStart(t.getAttribute('data-fload')); return; }
     if (t.hasAttribute('data-bfaction')) {
       keepFoundName();
       var keepName = draft.name, keepColour = draft.colour, chosen = draft.colourChosen;
@@ -1467,6 +1478,17 @@
         if (fs === 'B' && nm === camp.companies.A.name) { note('That name is taken', 'The two forces need different names.'); return; }
         var res = C.found(fco, draft.keys, draft.doctrine);
         if (!res.ok) { note('Not a legal starting company', res.faults.join(' ')); return; }
+        // the force builder's: kept to be loaded when a campaign is founded, and nothing founded
+        if (draft.build) {
+          var sf = { v: 1, faction: fco.faction, doctrine: draft.doctrine, colour: draft.colour || 'ochre', keys: draft.keys.slice(), name: nm };
+          if (!root.PMCForces) { note('Not saved', 'Saving is not available here.'); return; }
+          root.PMCForces.save('start', sf, function (r) {
+            if (!r.ok) { note('Not saved', r.why); return; }
+            note(r.replaced ? 'Start force replaced' : 'Start force saved', '\u201c' + nm + '\u201d is kept ' + (r.where === 'account' ? 'on your account' : 'in this browser') +
+              '. Load it on the founding sheet when you begin a new campaign.');
+          });
+          return;
+        }
         fco.name = nm;
         fco.colour = draft.colour || 'ochre';
         if (fs === 'A') {
@@ -1578,6 +1600,7 @@
       /* Back from founding the first force: the campaign it was for goes (nothing
          in it yet), and the choice of what to run comes back as it was picked. */
       case 'foundback':
+        if (draft && draft.build) { endBuild(); return; }
         if (camp) { wantFaction = camp.companies.A.faction || 'pmc'; wantMode = camp.mode || 'solo'; }
         if (secondFaction) wantB = secondFaction;
         draft = null; openModal = null;
@@ -1842,6 +1865,55 @@
   }
   var enterFresh = null, enterResume = null;
 
+  function buildStart(faction, name, colour) {
+    if (online) kitOnline().leave();
+    if (!building) building = { camp: camp, view: view, draft: draft };
+    var su = el('setup');
+    if (su) su.hidden = true;
+    beginFounding(name || '', 'solo', faction || 'pmc');
+    draft.build = true;
+    if (colour) { draft.colour = colour; draft.colourChosen = true; }
+    openModal = null;
+    if (root.PMCForces) root.PMCForces.refresh(function () { if (view === 'found' && draft && draft.build) render(); });
+    open('found');
+  }
+  function endBuild() {
+    var was = building;
+    building = null;
+    camp = was ? was.camp : null; view = was ? was.view : 'hub'; draft = was ? was.draft : null; openModal = null;
+    el('camp').hidden = true;
+    if (root.PMCMenu) root.PMCMenu.open('builder');
+  }
+  /* A saved start force taken onto the founding sheet: its units (those still in
+     the army list, and fit for a new force), its doctrine (if this kind of force
+     has it), its name and its colours. In the builder a force of another kind
+     brings its kind with it; founding a campaign, the kind was chosen already. */
+  function loadStart(ref) {
+    var e = root.PMCForces && root.PMCForces.find('start', ref);
+    if (!e || !draft) return;
+    var f = e.force, co = camp.companies[draft.side || 'A'];
+    if (f.faction && f.faction !== co.faction) {
+      if (!draft.build) { note('Another kind of force', '\u201c' + f.name + '\u201d is ' + (R.FACTIONS[f.faction] ? R.FACTIONS[f.faction].name : f.faction) + '; this force is ' + (R.FACTIONS[co.faction] ? R.FACTIONS[co.faction].name : co.faction) + '.'); return; }
+      buildStart(f.faction);
+      co = camp.companies.A;
+    }
+    var lost = 0;
+    var keys = (f.keys || []).filter(function (k) {
+      var p = R.profile(R.splitPick(k).key);
+      var ok = !!p && (p.tier === 1 || (p.tier === 2 && p.cls === 'infantry')) && !p.leaderBug && !p.alpha;
+      if (!ok) lost++;
+      return ok;
+    });
+    draft.keys = keys;
+    var docs = C.creedOf(co).list.map(function (d) { return d.id; });
+    draft.doctrine = docs.indexOf(f.doctrine) >= 0 ? f.doctrine : null;
+    draft.name = f.name;
+    if (f.colour) { draft.colour = f.colour; draft.colourChosen = true; }
+    openModal = null;
+    render();
+    if (lost) note('Loaded, with changes', lost + ' unit' + (lost > 1 ? 's are' : ' is') + ' no longer in the army list, or not fit for a new force, and ' + (lost > 1 ? 'were' : 'was') + ' left out.');
+  }
+
   // the tests' hooks into the dossier (testhooks.js, not in the published builds)
   if (root.PMCTestHooks) root.PMCTestHooks.dossier({
     get camp() { return camp; }, get contract() { return contract; }, autoPick: autoPick, render: render, C: C
@@ -1851,6 +1923,8 @@
     enter: function (mode) { if (enterCampaign) enterCampaign(mode); },
     // a new campaign begun from the menu's cards, and one gone back to from its Continue list
     fresh: function (mode) { if (enterFresh) enterFresh(mode); },
+    // the force builder's campaign start force (menu.js)
+    buildStart: function () { buildStart('pmc'); },
     resume: function (lid) { return enterResume ? enterResume(lid) : null; },
     adopt: function (sid) { return enterResume ? enterResume(null, sid) : null; },
     newLocalWorld: function (how) { var su = el('setup'); if (su) su.hidden = true; return kitOnline().newLocal(how); },

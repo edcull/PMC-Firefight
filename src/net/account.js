@@ -283,6 +283,8 @@
     label();
     if (root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.accountChanged) root.PMC_CAMPAIGN.accountChanged();
     if (root.PMCLobby && root.PMCLobby.accountChanged) root.PMCLobby.accountChanged();
+    // saved forces: the account's, fetched for whoever signed in (none for nobody)
+    if (root.PMCForces) root.PMCForces.refresh();
     // the Continue list: the server's games are the account's, so asked for afresh
     if (root.PMCMenu && root.PMCMenu.refresh) root.PMCMenu.refresh();
   }
