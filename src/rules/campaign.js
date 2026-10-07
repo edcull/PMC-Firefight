@@ -1257,12 +1257,16 @@
       id: 'shock', name: 'Shock',
       blurb: 'Closes the distance and settles it with knives.',
       names: ['Black Harbour PMC', 'Redline Assault', 'The Hard Bargain', 'Kroeger Shock'],
-      t1: ['irregulars', 'penal', 'enforcers'],
-      t2: ['lighteng', 'rookie'],
-      machines: ['ltransport', 'unarmoured'], vehicles: 2,
-      doctrines: ['T4', 'T2', 'S5', 'T1', 'O6', 'S6'],
+      // Irregulars (who promote into assault troops) and Enforcers, light engineers, and a truck to ride in
+      t1: ['irregulars', 'enforcers'],
+      t2: ['lighteng'],
+      machines: ['unarmoured'], vehicles: 1,
+      doctrines: ['T4', 'T1', 'T2', 'S1', 'O3', 'O5'],
       fixed: ['T4'],
-      groups: ['Assault troops', 'Basic troops', 'Heavy infantry'],
+      groups: ['Assault troops', 'Basic troops', 'Transport vehicles', 'Engineering and utility vehicles'],
+      // Penal troops thrown in first to soak the fire: free, and kept up (one per Tier, four at most)
+      signature: ['penal'],
+      signatureMax: 4,
       spend: 'promote'
     },
     {
