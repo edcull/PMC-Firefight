@@ -1239,9 +1239,12 @@
       doctrines: ['O3', 'S6', 'T6', 'O6', 'T1', 'O2'],
       groups: ['Rifle infantry', 'Light infantry', 'Support teams', 'Drones', 'Unclassified', 'Remote mortars'],
       mix: { 'Rifle infantry': 2, 'Light infantry': 1 },   // two rifle teams to each scout or sniper team
-      limit: { lrrp: 2, snipers: 2, 'Remote mortars': 2 }, // the rare ones, and a couple of mortars in support
+      // the rare ones: LRRP, snipers, drones and EW — and a couple of mortars in support
+      limit: { lrrp: 2, snipers: 2, 'Drones': 2, ew: 2, ewveh: 1, 'Remote mortars': 2 },
       // and the vehicles and aircraft it may take: patrol and recon cars, a command and an EW vehicle, transport and strike craft
       units: ['lpv', 'hpv', 'recon', 'cmdveh', 'ewveh', 'adaptedcraft', 'lightcraft', 'heavycraft', 'fsc', 'tsc', 'gunboat', 'vtoldrone'],
+      // ...of which it keeps a few on the books (one for each Tier it holds, up to three), and a drone or EW team or two
+      signature: [['lpv', 'hpv', 'recon', 'cmdveh', 'adaptedcraft', 'lightcraft', 'fsc'], ['ew', 'drecon', 'dcombat', 'ewveh']],
       // promoted to Veterans, Forward observers and Sharpshooters, then trained with what is left
       spend: 'promote'
     },
