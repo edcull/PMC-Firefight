@@ -1195,7 +1195,7 @@
       temper: -1, // the behaviour roll in battle (p. 147): dug in behind its guns
       blurb: 'Fights from behind armour plate and expects you to come to it.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'An armoured line. At T3 PL2 expect about 12 units: battle armour and heavy infantry the biggest share (2-4), 3-4 hulls that are hunters, destroyers and support guns, a mortar or support weapon or two, a rifle team. Red flags: light infantry or assault troops in numbers, transports, under 2 hulls.',
+      notes: 'An armoured line. At T3 PL2 expect about 12 units: battle armour and heavy infantry the biggest share (2-4), 3-4 hulls that are hunters, destroyers and support guns, a mortar or support weapon or two, a rifle team. Red flags: light infantry or assault troops in numbers, transports, under 2 hulls. A support or medical drone in about 1 force in 5.',
       names: ['Kessler Combine', 'Ironvein Holdings', 'Bastion Werke', 'Sable Armour Group'],
       // armour before mobility: Enforcers on the way to battle armour, no transports, and the heavy guns
       t1: ['enforcers', 'recruits'],
@@ -1225,7 +1225,9 @@
         // the founding troops at the low Tiers
         enforcers: 5, recruits: 3,
         // rare extras
-        observers: [1, 1], medics: [1, 1]
+        observers: [1, 1], medics: [1, 1],
+        // (a drone unit, low)
+        dsupport: [1, 1], dmedic: [1, 1]
       },
       spend: 'promote'
     },
@@ -1259,7 +1261,7 @@
       id: 'swarm', name: 'Mercenary',
       blurb: 'Fights for whoever pays, wherever they point, and sends the invoice before the smoke clears.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Hired guns, cheap and many. 14-15 units at T3 PL2, leaning a Tier below: rifle teams and basic troops, machine guns, mortars and anti-tank teams, a truck or two. Red flags: battle armour or elite teams, more than 2 hulls, fewer than 13 units.',
+      notes: 'Hired guns, cheap and many. 14-15 units at T3 PL2, leaning a Tier below: rifle teams and basic troops, machine guns, mortars and anti-tank teams, a truck or two. Red flags: battle armour or elite teams, more than 2 hulls, fewer than 13 units. A combat drone in about 1 force in 5.',
       names: ['Corvid Contracting', 'The Tide Company', 'Grey Market Levies', 'Nineteen Hands'],
       // a little of everything and nothing specialised: hired wide rather than trained tall
       // Recruits and Irregulars (Enforcers grow only into battle armour, which it does not hire)
@@ -1275,7 +1277,9 @@
         'Basic troops': 5, enforcers: 0, penal: [3, 1], 'Rifle infantry': 6, 'Assault troops': [2, 1],
         'Light infantry': [1, 1], 'Light support': 5, 'Heavy support': [3, 2], sam: [1, 1],
         'Remote mortars': [3, 1], nomads: [1, 2], 'Combat vehicles': [2, 1], 'Transport vehicles': [1, 1],
-        insertplat: 0
+        insertplat: 0,
+        // (a drone unit, low)
+        dcombat: [1, 1]
       },
       spend: 'recruit'
     },
@@ -1285,7 +1289,7 @@
       temper: -1, // the behaviour roll in battle (p. 147): shoots from cover, never closes
       blurb: 'Never where you are looking: a sniper in the treeline, a drone overhead, and your radios full of static.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Recon and precision. About 11 units at T3 PL2: rifle teams and light infantry (sharpshooters, snipers, LRRP, observers), 2-3 cars or light craft, an EW team or drone now and then. Red flags: heavy infantry or assault troops in numbers, tanks or destroyers, more than one LRRP or sniper team at PL2.',
+      notes: 'Recon and precision. About 11 units at T3 PL2: rifle teams and light infantry (sharpshooters, snipers, LRRP, observers), 2-3 cars or light craft, an EW team or drone now and then. Red flags: heavy infantry or assault troops in numbers, tanks or destroyers, more than one LRRP or sniper team at PL2. A recon drone in about 1 force in 8.',
       names: ['Meridian Security', 'Longsight Partners', 'The Quiet Trade', 'Orlov Group'],
       // Irregulars and Recruits to promote, Forward observers, and a rifle team or nomads
       t1: ['irregulars', 'recruits'],
@@ -1302,7 +1306,9 @@
         recruits: 3, irregulars: 4, 'Rifle infantry': 6, 'Assault troops': [1, 1], 'Light infantry': 6,
         observers: 5, lrrp: [4, 1], snipers: [4, 1], 'Light support': [2, 1], 'Remote mortars': [2, 1],
         'Support teams': [2, 1], ew: [3, 1], nomads: 4, lpv: 4, hpv: 4, recon: 5, cmdveh: 2, ewveh: [1, 1],
-        adaptedcraft: 4, lightcraft: 4, fsc: 3
+        adaptedcraft: 4, lightcraft: 4, fsc: 3,
+        // (a drone unit, low)
+        drecon: [1, 1]
       },
       spend: 'promote'
     },
@@ -1311,7 +1317,7 @@
       temper: 1, // the behaviour roll in battle (p. 147): goes in hard
       blurb: 'Closes the distance and settles it with knives.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Closes the distance. About 12 units at T3 PL2: assault troops the largest share (3-4: assault engineers, shock troopers), chem warriors, a commando team now and then, 2-3 hulls that are transports and engineering vehicles. Red flags: artillery or support weapons in numbers, Penal troops (weighted 0), combat vehicles.',
+      notes: 'Closes the distance. About 12 units at T3 PL2: assault troops the largest share (3-4: assault engineers, shock troopers), chem warriors, a commando team now and then, 2-3 hulls that are transports and engineering vehicles. Red flags: artillery or support weapons in numbers, Penal troops (weighted 0), combat vehicles. An assault drone in about 1 force in 5.',
       names: ['Black Harbour PMC', 'Redline Assault', 'The Hard Bargain', 'Kroeger Shock'],
       // Irregulars (who promote into assault troops) and Enforcers, light engineers, and a truck to ride in
       t1: ['irregulars', 'enforcers'],
@@ -1326,7 +1332,9 @@
         'Basic troops': 3, enforcers: 4, irregulars: 4, penal: 0, 'Rifle infantry': [2, 1],
         'Assault troops': 8, commandos: 6, 'Heavy infantry': [2, 1], 'Light support': [1, 1], chem: [4, 1],
         lpv: 2, hpv: 2, recon: 3, lhunter: 2, hunter: 2, 'Transport vehicles': 6, insertplat: [2, 1],
-        'Engineering and utility vehicles': [2, 1], lengveh: 3, aaveh: 0, ewveh: 0, medveh: 1, hengveh: 4
+        'Engineering and utility vehicles': [2, 1], lengveh: 3, aaveh: 0, ewveh: 0, medveh: 1, hengveh: 4,
+        // (a drone unit, low)
+        dassault: [1, 1]
       },
       spend: 'promote'
     },
@@ -1336,7 +1344,7 @@
       temper: 1, // the behaviour roll in battle (p. 147): rides at them
       blurb: 'Rolls up in armour, drops its troopers at the door, and is through the line before the guns turn.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Mounted and fast. Always the full 6 hulls at T3 PL2, about 4 of them transports (ground and air), the rest combat vehicles or a strike craft; rifle and assault teams about evenly, most of them with a seat. Red flags: under 5 hulls, 3+ infantry on foot, slow support weapons.',
+      notes: 'Mounted and fast. Always the full 6 hulls at T3 PL2, about 4 of them transports (ground and air), the rest combat vehicles or a strike craft; rifle and assault teams about evenly, most of them with a seat. Red flags: under 5 hulls, 3+ infantry on foot, slow support weapons. An assault or combat drone in about 1 force in 4.',
       names: ['Talon Mobile Group', 'Outrider Security', 'The High Road Company', 'Skyhook Logistics'],
       t1: ['recruits', 'irregulars'],   // who promote into rifle teams and assault troops (Enforcers only into heavy infantry)
       t2: ['lighteng', 'rookie'],
@@ -1351,7 +1359,9 @@
       weights: {
         recruits: 3, irregulars: 3, 'Rifle infantry': 5, 'Assault troops': 6, 'Heavy infantry': [1, 1],
         'Light infantry': [1, 1], 'Heavy support': [1, 1], 'Transport vehicles': 7, insertplat: 2,
-        'Transport aircraft': 4, 'Strike aircraft': 3, vtoldrone: 1
+        'Transport aircraft': 4, 'Strike aircraft': 3, vtoldrone: 1,
+        // (a drone unit, low)
+        dassault: [1, 1], dcombat: [1, 1]
       },
       spend: 'machines'
     }

@@ -601,14 +601,13 @@
     var machines = 0, aircraft = 0, plats = 0, riders = 0, drones = 0;
     var isDrone = function (p) { return (p.rules || []).indexOf('Drone unit') >= 0; };
     /* A rolled force is kept to a sensible mix, not a list of specialists: at
-       most one anti-air unit, one electronic-warfare unit and one medic unit,
-       and no PMC drone units at all. */
+       most one anti-air unit, one electronic-warfare unit and one medic unit
+       (PMC drone units only where a personality weights them). */
     var ROLE_CAP = { 'Anti-aircraft': 1, 'Jammers': 1, 'Field Medics': 1 }, roles = {};
     var rolesOf = function (p) { return (p.rules || []).filter(function (r) { return ROLE_CAP[r]; }); };
 
     function room(p) {
       if (spent + p.tier > budget) return false;
-      if (faction === 'pmc' && isDrone(p)) return false;
       if (rolesOf(p).some(function (r) { return (roles[r] || 0) + 1 > ROLE_CAP[r]; })) return false;
       // never more Drone units than other units (p. 40)
       if (isDrone(p) && drones + 1 > keys.length - drones) return false;
