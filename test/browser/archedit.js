@@ -102,7 +102,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       return out;
     });
     ok('all 24 personalities read back from the form unchanged', !drift.length, drift.slice(0, 3).join(' | '));
-    ok('the campaign, signature, hull and doctrine fields have their own controls (no JSON)', await p.evaluate(() =>
+    ok('the campaign, hull and doctrine fields have their own controls (no JSON)', await p.evaluate(() =>
       !document.querySelector('#arch-edit [data-ae-f="advanced"]') && !!document.querySelector('#arch-edit [data-ae-v="campaign.spend"]') &&
       !!document.querySelector('#arch-edit [data-ae-row="campaign.found.t1"]') && !!document.querySelector('#arch-edit [data-ae-f="hmin"]') &&
       !!document.querySelector('#arch-edit [data-ae="addstage"]')));
@@ -123,17 +123,18 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.selectOption('#arch-edit [data-ae-v="campaign.spend"]', 'honours');
     await p.fill('#arch-edit [data-ae-v="campaign.leanSize"]', '20');
     await p.evaluate(() => document.querySelector('#arch-edit [data-ae-v="campaign.leanSize"]').dispatchEvent(new Event('change', { bubbles: true })));
-    await click('#arch-edit [data-ae="add"][data-path="force.signature.units"]');
-    await p.selectOption('#arch-edit [data-ae-row="force.signature.units"][data-r="0"][data-m="0"]', 'commandos');
+    const nT1 = await p.evaluate(() => document.querySelectorAll('#arch-edit [data-ae-row="campaign.found.t1"]').length);
+    await click('#arch-edit [data-ae="add"][data-path="campaign.found.t1"]');
+    await p.selectOption('#arch-edit [data-ae-row="campaign.found.t1"][data-r="' + nT1 + '"][data-m="0"]', 'commandos');
     await click('#arch-edit [data-ae="addstage"]');
     await p.fill('#arch-edit [data-ae-stage="0"]', 'T5, T2');
     await p.evaluate(() => document.querySelector('#arch-edit [data-ae-stage="0"]').dispatchEvent(new Event('change', { bubbles: true })));
     ok('...and the tier preference typed above survives adding rows', await p.evaluate(() => document.querySelector('#arch-edit [data-ae-f="tier"]').value === '-1'));
     await click('#arch-edit [data-ae="save"]');
     await till(() => /Saved/.test(document.querySelector('#arch-edit').innerText) && window.PMCCamp.archetype('armour').spend === 'honours', 'the save of the new fields');
-    const got = await p.evaluate(() => { const a = window.PMCCamp.archetype('armour'); return { spend: a.spend, lean: a.leanSize, sig: a.signature, stages: a.stages }; });
-    ok('...saved and in force: spending, lean size, a signature set, a stage',
-      got.spend === 'honours' && got.lean === 20 && JSON.stringify(got.sig) === '["commandos"]' && JSON.stringify(got.stages) === '[["T5","T2"]]', JSON.stringify(got));
+    const got = await p.evaluate(() => { const a = window.PMCCamp.archetype('armour'); return { spend: a.spend, lean: a.leanSize, t1: a.t1, stages: a.stages }; });
+    ok('...saved and in force: spending, lean size, a founding unit, a stage',
+      got.spend === 'honours' && got.lean === 20 && got.t1[got.t1.length - 1] === 'commandos' && JSON.stringify(got.stages) === '[["T5","T2"]]', JSON.stringify(got));
 
     console.log('\nA bad one refused');
     await p.fill('#arch-edit input[data-ae-w="bats"]', '15');

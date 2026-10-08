@@ -484,7 +484,7 @@
     return best;
   }
   /* A personality for a rolled force (campaign.js ARCHETYPES): the same groups,
-     mix, limits, signature units and hulls a rival company of that kind recruits,
+     mix, limits and hulls a rival company of that kind recruits,
      so a skirmish force at any Tier and Priority Level looks like one of them.
      `style` is an archetype, its id, null for one at random, or false for none. */
   function styleFor(faction, style) {
@@ -497,8 +497,7 @@
   }
   function styleKit(a, rnd, pl, bt) {
     var flat = function (l) { return [].concat.apply([], l || []); };
-    var sigs = a.signature || [], sets = sigs.length ? (Array.isArray(sigs[0]) ? sigs : [sigs]) : [];
-    var sigKeys = flat(sets), lim = a.limit || {}, mix = a.mix || {};
+    var lim = a.limit || {}, mix = a.mix || {};
     var starters = flat([a.t1, a.t2, a.refill ? Object.keys(a.refill) : []]);
     var profile = function (k) { return BY_KEY[k]; };
     var machineMinded = !!a.fieldsMachines || (a.machinesMax || 0) >= 5;
@@ -534,7 +533,7 @@
     }
     function liked(p) {
       if (W) return baseWeight(p) > 0;
-      return (a.groups || []).indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || sigKeys.indexOf(p.key) >= 0;
+      return (a.groups || []).indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0;
     }
     function count(keys, f) { return keys.filter(function (k) { return f(splitPick(k).key); }).length; }
     function shortfall(g, keys) {
@@ -544,7 +543,7 @@
       return w / wsum - (tot ? count(keys, function (x) { return groupOf(x) === g; }) / tot : 0);
     }
     return {
-      a: a, sets: sets,
+      a: a,
       // what it would never take: past a limit (0 for none at all), or a hull it does not run
       allows: function (p, keys) {
         if (W) {
@@ -739,20 +738,6 @@
       if (st) { var fresh = core.filter(function (p) { return !st.tooMany(p, keys); }); if (fresh.length) core = fresh; }
       take(pick(st ? st.favour(core, keys) : core));
     }
-    /* a personality's signature units next (Special Ops' cars and its drones, the
-       Partisans' commandos): one a Priority Level from each set, the biggest that fits */
-    if (st) st.sets.forEach(function (sig) {
-      var most = Math.min(st.a.signatureCap != null ? st.a.signatureCap : (st.a.signatureMax || 3), pl);
-      for (var n = 0; n < most; n++) {
-        var can = sig.map(function (k) { return BY_KEY[k]; }).filter(function (p) { return p && room(p); });
-        if (!can.length) return;
-        // one it has not got yet, where there is one: a car and a craft, not two cars
-        var fresh = can.filter(function (p) { return keys.indexOf(p.key) < 0 && !keys.some(function (k) { return splitPick(k).key === p.key; }); });
-        if (fresh.length) can = fresh;
-        var hi = Math.max.apply(null, can.map(function (p) { return p.tier; }));
-        take(pick(can.filter(function (p) { return p.tier === hi; })));
-      }
-    });
     /* ...and its hulls, up to its vehicle min (one a Priority Level if it has none set),
        before anything else: by its weights where it has a list, otherwise the biggest at
        or below the battle's Tier, a different one each time where it can */

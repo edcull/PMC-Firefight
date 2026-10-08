@@ -39,7 +39,6 @@
     (f.groups || []).forEach(function (g) { w[g] = mix[g] ? Math.min(10, Math.round(mix[g] * 2) + 2) : 3; });
     (f.second || []).forEach(function (g) { if (w[g] == null) w[g] = 1; });
     (f.units || []).forEach(function (k) { w[k] = 4; });
-    ((f.signature && f.signature.units) || []).forEach(function (s) { (Array.isArray(s) ? s : [s]).forEach(function (k) { if (w[k] == null) w[k] = 3; }); });
     Object.keys(lim).forEach(function (k) { var p = parts(w[k]); w[k] = lim[k] === 0 ? 0 : [p.w === '' ? 3 : p.w, Math.max(1, Math.round(lim[k] / 3))]; });
     return w;
   }
@@ -53,14 +52,13 @@
   }
   /* Lists of units, kept as rows of one or more units: the founding Tier I units and
      hulls (one each), the founding Tier II units (one, or two to pick between), the
-     signature sets (several each), the favoured units of the older rules. */
+     the favoured units of the older rules. */
   var ROWS = {
     'campaign.found.t1': 'one', 'campaign.found.hulls': 'one', 'force.units': 'one',
-    'campaign.found.t2': 'pick', 'force.signature.units': 'set'
+    'campaign.found.t2': 'pick'
   };
   function rowsOf(path) {
     var v = getP(draft(), path) || [];
-    if (ROWS[path] === 'set') return v.length && Array.isArray(v[0]) ? clone(v) : v.length ? [clone(v)] : [];
     return v.map(function (x) { return Array.isArray(x) ? clone(x) : [x]; });
   }
   function putRows(path, rows) {
@@ -68,8 +66,7 @@
     var kind = ROWS[path], v;
     if (!rows.length) v = Array.isArray(getP(draft(), path)) ? [] : undefined;   // (an empty list it had stays an empty list)
     else if (kind === 'one') v = rows.map(function (r) { return r[0]; });
-    else if (kind === 'pick') v = rows.map(function (r) { return r.length === 1 ? r[0] : r; });
-    else v = rows.length === 1 ? rows[0] : rows;          // one signature set is kept as a plain list
+    else v = rows.map(function (r) { return r.length === 1 ? r[0] : r; });
     setP(draft(), path, v);
   }
   function unitOpts(sel, test) {
@@ -115,15 +112,9 @@
     var del = function (i, m) { return '<button type="button" class="lnk" data-ae="delm" data-path="' + path + '" data-r="' + i + '" data-m="' + m + '" title="Take this one out">×</button>'; };
     var drop = function (i, what) { return '<button type="button" class="lnk acct-danger" data-ae="del" data-path="' + path + '" data-r="' + i + '">' + what + '</button>'; };
     return '<div class="ae-rows"><span>' + label + tip(help) + '</span>' + rows.map(function (r, i) {
-      // a signature set: a box of its own, a unit a line
-      if (more === 'set') {
-        return '<div class="ae-set"><small class="ae-dim">Set ' + (i + 1) + '</small>' + r.map(function (k, m) {
-          return '<div class="ae-row">' + sel(k, i, m) + (r.length > 1 ? del(i, m) : '') + '</div>';
-        }).join('') + '<div class="ae-row"><button type="button" class="lnk" data-ae="addm" data-path="' + path + '" data-r="' + i + '">+ unit</button>' + drop(i, 'Remove set') + '</div></div>';
-      }
       return '<div class="ae-row">' + r.map(function (k, m) { return (m ? '<em>or</em>' : '') + sel(k, i, m) + (m ? del(i, m) : ''); }).join('') +
         (more === 'or' && r.length < 2 ? '<button type="button" class="lnk" data-ae="addm" data-path="' + path + '" data-r="' + i + '">+ or</button>' : '') + drop(i, 'Remove') + '</div>';
-    }).join('') + '<div class="ae-row"><button type="button" class="lnk" data-ae="add" data-path="' + path + '">' + (more === 'set' ? '+ Add a set' : '+ Add') + '</button></div></div>';
+    }).join('') + '<div class="ae-row"><button type="button" class="lnk" data-ae="add" data-path="' + path + '">' + '+ Add' + '</button></div></div>';
   }
   /* rows of { key: number } bound to a path (the Tier I refill, the older rules' mix and
      limits); `keys` the choices for a key */
@@ -153,13 +144,6 @@
         tip('Per Priority Level, rounded (1.5 = 2 at PL1, 3 at PL2, 5 at PL3). Never more than 3. The min are rolled first, by the weights.') + '</div></div>' +
       (groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }).length ? ticks('Groups that ride', 'force.riders', groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }),
         'In a campaign, units of these groups (and its leader, if of one) are recruited mounted wherever the rules let them ride.') : '') + '</div>';
-    // signature units
-    S.sig = sec('sig', 'Signature units', 'Signature') + '<small class="ae-dim">What it is known for: kept up from each set (one a Priority Level in a skirmish roll; one a Company Tier in a campaign, up to the most).</small>' +
-      unitRows('Sets', 'force.signature.units', null, 'set', 'A set of two or more: any one of them counts.') +
-      '<div class="ae-grid">' + field('Most kept from a set (campaign)', 'force.signature.max', 'num', ' min="0" max="9" placeholder="3"',
-        'A campaign company keeps one from each set a Company Tier, up to this many. Blank: 3.') +
-      field('Or a flat number (campaign)', 'force.signature.cap', 'num', ' min="0" max="20"',
-        'Set this and the company keeps exactly this many from each set at every Tier, in place of the line before (the Partisans’ commandos).') + '</div></div>';
     // doctrines taken in stages, in place of the shortlist
     S.stages = sec('stages', 'Doctrine stages', 'Stages') +
       '<div class="ae-rows"><span>Stages' + tip('In place of the shortlist: it takes all of stage 1 in a random order, then all of stage 2, and so on, then the rest at random. Doctrine codes separated by commas; the codes are listed under Doctrines above.') + '</span>' + (d.stages || []).map(function (st, i) {
@@ -275,7 +259,7 @@
     }
     h += '</div>';
     // in the order an admin thinks of it: what it fields, then how it fights, then its campaign
-    h += more.hulls + more.sig + docs + more.stages + more.camp + more.older;
+    h += more.hulls + docs + more.stages + more.camp + more.older;
     // preview
     h += sec('preview', 'Preview') + '<small class="ae-dim">Rolls forces with the edits in force, as they stand in the form, without saving them.</small>' +
       '<div class="ae-prev"><label>Tier <select class="tin" data-ae-p="t">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (n === state.pt ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label>' +
@@ -561,7 +545,7 @@
   // (a new, still empty row is kept in the draft until a unit is chosen in it)
   function putRowsKeep(path, rows) {
     var kind = ROWS[path];
-    setP(draft(), path, kind === 'set' ? rows : rows.map(function (r) { return kind === 'one' ? r[0] : r.length === 1 ? r[0] : r; }));
+    setP(draft(), path, rows.map(function (r) { return kind === 'one' ? r[0] : r.length === 1 ? r[0] : r; }));
   }
   function onChange(ev) {
     var t = ev.target;

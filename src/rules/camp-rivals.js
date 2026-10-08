@@ -502,7 +502,7 @@
       }
       /* Banking for its next Company Tier: the promotion affordable now, or short only of
          the money (canPromoteCompany). Then nothing else is bought — no new hulls or trading
-         up, no hires on its own account, no more signature units past its first — so the
+         up, no hires on its own account — so the
          money goes on the promotion. */
       function banking() {
         if (co.tier >= 5) return false;
@@ -564,26 +564,6 @@
       }
       fillGaps();
       did = did.concat(rehireCommand(co));
-      /* Its signature units — what the force is known for, which nothing else on its
-         shopping list would bring in (a sky swarm's flyers, a plague's Infected): one
-         for each Tier it holds (three at most), the best it can afford, before the money
-         goes elsewhere. A list of lists is several such sets, each kept up on its own
-         (Special Ops: its cars and craft, and its drones and EW). */
-      var sigs = a.signature || [];
-      (Array.isArray(sigs[0]) ? sigs : [sigs]).forEach(function (sig) {
-        if (!sig.length) return;
-        var have = co.roster.filter(function (e) { return sig.indexOf(e.key) >= 0; }).length;
-        // (`signatureCap`: as many as that, whatever the Tier — the Partisans' commandos)
-        if (have >= (a.signatureCap != null ? a.signatureCap : Math.min(a.signatureMax || 3, co.tier))) return;
-        if (have >= 1 && banking()) return;          // (its first, always; the rest wait on the promotion)
-        var can = sig.map(profile).filter(function (p) { return p.tier <= co.tier + 1 && canRecruit(co, p.key).ok && !capped(p); });
-        var top = Math.max.apply(null, can.map(function (p) { return p.tier; }).concat([0]));
-        var buy = can.length ? pick(can.filter(function (p) { return p.tier === top; })) : null;
-        if (!buy) return;
-        var rs = recruit(co, buy.key);
-        if (rs.ok) did.push({ what: 'recruit', text: words(co).recruited + ' ' + rs.entry.name });
-      });
-
       // spend experience, the units closest to a decision first
       co.roster.slice().sort(function (x, y) { return y.exp - x.exp; }).forEach(function (e) {
         var p = profile(e.key), was = e.name;

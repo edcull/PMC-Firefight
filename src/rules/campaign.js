@@ -1312,18 +1312,16 @@
       limit: { lrrp: 2, snipers: 2, 'Drones': 2, ew: 2, ewveh: 1, 'Remote mortars': 2 },
       // and the vehicles and aircraft it may take: patrol and recon cars, a command and an EW vehicle, transport and strike craft
       units: ['nomads', 'lpv', 'hpv', 'recon', 'cmdveh', 'ewveh', 'adaptedcraft', 'lightcraft', 'heavycraft', 'fsc', 'tsc', 'gunboat', 'vtoldrone'],
-      // ...of which it keeps a couple on the books, and a drone or EW team or two — fewer machines than the Cavalry
-      signature: [['lpv', 'hpv', 'recon', 'cmdveh', 'adaptedcraft', 'lightcraft', 'fsc'], ['ew', 'drecon', 'dcombat']],
-      signatureMax: 2,
       // promoted to Veterans, Forward observers and Sharpshooters, then trained with what is left
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 1,                      // a few good teams
       hulls: { min: 1, max: 1.5 },  // its cars and craft
       weights: {
         'Rifle infantry': 6, 'Light infantry': 6, observers: 5, lrrp: [4, 1], snipers: [4, 1],
-        'Support teams': [2, 1], 'Remote mortars': [2, 1], 'Light support': [2, 1], 'Assault troops': [1, 1],
+        // (its cars and craft, and a drone or EW team or two: what it is known for)
+        'Support teams': [2, 1], ew: [3, 1], 'Drones': [3, 1], 'Remote mortars': [2, 1], 'Light support': [2, 1], 'Assault troops': [1, 1],
         nomads: 3, irregulars: 4, recruits: 3,
-        lpv: 3, hpv: 3, recon: 4, cmdveh: 2, adaptedcraft: 3, lightcraft: 3, fsc: 2, ewveh: [1, 1]
+        lpv: 4, hpv: 4, recon: 5, cmdveh: 2, adaptedcraft: 4, lightcraft: 4, fsc: 3, ewveh: [1, 1]
       },
       spend: 'promote'
     },
@@ -1342,15 +1340,12 @@
       second: ['Heavy infantry', 'Rifle infantry'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Assault troops': 3, 'Basic troops': 1 },
       units: ['chem'],              // and Chem warriors
-      // Penal troops thrown in first to soak the fire: free, and kept up (one per Tier, four at most)
-      signature: ['penal'],
-      signatureMax: 4,
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 0,
       hulls: { min: 1, max: 1.5 },  // a ride to the fight and a way through
       weights: {
         'Assault troops': 8, commandos: 6,
-        'Basic troops': 3, irregulars: 4, enforcers: 4, penal: [4, 2],
+        'Basic troops': 3, irregulars: 4, enforcers: 4, penal: [6, 2],   // Penal troops thrown in first to soak the fire
         'Heavy infantry': [2, 1], 'Rifle infantry': [2, 1], chem: [4, 1], 'Light support': [1, 1],
         // (a ride to the fight and a way through, before anything else)
         'Transport vehicles': 6, insertplat: [2, 1],
@@ -1513,8 +1508,6 @@
       groups: ['Chosen Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles'],
       second: ['Miners', 'Deserters and POWs'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Chosen Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
-      signature: ['rassaultcdo', 'rsabcdo', 'rsnipercdo'],
-      signatureCap: 8,              // the commandos are the band: up to eight of them
       machinesMax: 2,
       lean: true,                   // a small band: no free troops to pad it, no hiring with spare money
       // the mined bridge first; then leaders who will not break, and the locals on side
@@ -1525,7 +1518,7 @@
       tier: 0,
       hulls: { min: 0, max: 0.5 },  // lean: a hull rarely
       weights: {
-        'Chosen Warriors': 6, 'Freedom Warriors': 5, 'Rebel support troops': 3, 'Rebel artillery': [2, 1],
+        'Chosen Warriors': 6, rassaultcdo: 8, rsabcdo: 8, rsnipercdo: 8, 'Freedom Warriors': 5,   // (the commandos are the band) 'Rebel support troops': 3, 'Rebel artillery': [2, 1],
         Miners: [1, 1], 'Deserters and POWs': [1, 1], 'Rebel combat vehicles': [1, 1]
       },
       spend: 'promote'
@@ -1615,7 +1608,7 @@
       doctrines: ['BP4', 'BB5', 'BC1', 'BP3', 'BB1', 'BC4'],
       fixedAt: { 1: 'BP4' },               // Fungi Symbiosis first: the humans it kills in an assault rise again as its Infected
       groups: ['Infected Humans', 'Lesser Bugs', 'Spore Bugs'],
-      signature: ['binfected'],
+      mix: { 'Infected Humans': 3, 'Lesser Bugs': 2, 'Spore Bugs': 1 },   // its Infected most of all
       spend: 'recruit'
     },
     {
@@ -1626,7 +1619,7 @@
       machines: [], vehicles: 0,
       doctrines: ['BP2', 'BB4', 'BC5', 'BB6', 'BC2', 'BP5'],
       groups: ['Flying Bugs', 'Spore Bugs', 'Lesser Bugs'],
-      signature: ['bsmallwing', 'blargewing'],
+      mix: { 'Flying Bugs': 3, 'Spore Bugs': 1, 'Lesser Bugs': 2 },   // its flyers most of all
       spend: 'recruit'
     }
   ];
@@ -1720,7 +1713,6 @@
     weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls',
     fieldsMachines: 'force.machineMinded', machinesMax: 'force.machinesMax', riders: 'force.riders',
     groups: 'force.groups', units: 'force.units', mix: 'force.mix', limit: 'force.limit', second: 'force.second',
-    signature: 'force.signature.units', signatureMax: 'force.signature.max', signatureCap: 'force.signature.cap',
     temper: 'battle.temper', tactics: 'battle.tactics',
     doctrines: 'doctrines.shortlist', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',
     t1: 'campaign.found.t1', t2: 'campaign.found.t2', machines: 'campaign.found.hulls', vehicles: 'campaign.found.hullCount',
