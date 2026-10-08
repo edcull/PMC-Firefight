@@ -24,7 +24,6 @@
   /* An admin's tools (server/adminapi.js), opened from their account: what the
      server holds, as last fetched, and the removal waiting on their password. */
   var adminOpen = false, adminData = null, adminAsk = null;
-  var adminView = '';            // '' the server tools; 'arch' the personality editor (archedit.js)
   var fault = '', notice = '', busy = false;
   var linkToken = null;          // a reset link's token, while its new password is being chosen
   var lastName = '';             // the name last tried (to send an activation link again)
@@ -143,10 +142,6 @@
   }
   function when(t) { if (!t) return '-'; var d = new Date(t); return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + d.toTimeString().slice(0, 5); }
   function adminHTML() {
-    if (adminView === 'arch') {
-      return msgs() + '<div class="acct-line"><span>Admin</span><b>Personalities</b><button type="button" class="lnk acct-signout" data-acct="admin-tools">Server tools</button></div>' +
-        '<div id="arch-edit"></div>';
-    }
     var h = msgs() + '<div class="acct-line"><span>Admin</span><b>Server tools</b><button type="button" class="lnk acct-signout" data-acct="admin-close">Done</button></div>';
     if (!adminData) return h + '<p class="acct-lede">Looking at the server\u2026</p>';
     var d = adminData, st = d.stats || {}, he = d.health || {};
@@ -293,8 +288,6 @@
     var body = el('acct-body');
     if (!body || !host || host.hidden) return;
     body.innerHTML = who ? signedInHTML() : signedOutHTML();
-    // the personality editor keeps its own form, drawn into the pane once it is there
-    if (adminOpen && adminView === 'arch' && el('arch-edit') && root.PMCArchEdit) root.PMCArchEdit.mount(el('arch-edit'), { get: get, post: post });
   }
 
   // signed in or out: the campaign screen and the lobby follow
@@ -453,9 +446,9 @@
         });
       }
       else if (a === 'admin-open') { adminOpen = true; adminData = null; adminAsk = null; fault = ''; notice = ''; draw(); adminLoad(); }
-      else if (a === 'admin-close') { adminOpen = false; adminView = ''; adminAsk = null; fault = ''; notice = ''; draw(); }
-      else if (a === 'admin-arch') { adminView = 'arch'; fault = ''; notice = ''; draw(); }
-      else if (a === 'admin-tools') { adminView = ''; fault = ''; notice = ''; draw(); adminLoad(); }
+      else if (a === 'admin-close') { adminOpen = false; adminAsk = null; fault = ''; notice = ''; draw(); }
+      // the personality editor: a window of its own over this one (archedit.js)
+      else if (a === 'admin-arch') { if (root.PMCArchEdit) root.PMCArchEdit.open({ get: get, post: post }); }
       else if (a === 'adm') {
         var act = b.getAttribute('data-act'), key = b.getAttribute('data-key');
         fault = ''; notice = '';
