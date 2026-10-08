@@ -117,6 +117,10 @@
     function glowOf(u) { var g = u ? R.weaponSpec(u).glow : null; return g ? (g === 'none' ? 'none' : GLOWS[g] || null) : null; }
     function glowRGB(u) { var g = glowOf(u); return g && g !== 'none' ? g : XENO_BLUE; }
     function shotRGB(u) { var g = glowOf(u); return g ? (g === 'none' ? null : g) : R.isXeno(u) ? XENO_BLUE : null; }
+    /* What a splashing round (`splash`) bursts in when its shots are plain: the
+       army's own — a Xenotripod's blue, a bug's acid green, and amber for the
+       mercenaries and the revolt. */
+    function splashRGB(u) { return R.isXeno(u) ? XENO_BLUE : (u && u.faction === 'bugs') ? '150,220,80' : '255,190,90'; }
     function playEnergy(shooter, from, to, count, land, gap) {
       var rgb = glowRGB(shooter), n = count || 1;
       for (var q = 0; q < n; q++) {
@@ -726,7 +730,7 @@
         });
         if (splash) {
           add({
-            kind: 'impact', n: 2, rgb: shotRGB(shooter) || XENO_BLUE, delay: at + 240, dur: 520 + at, blocking: true,
+            kind: 'impact', n: 2, rgb: shotRGB(shooter) || splashRGB(shooter), delay: at + 240, dur: 520 + at, blocking: true,
             x: to.x + (Math.random() - 0.5) * 1.6, y: to.y + (Math.random() - 0.5) * 1.6, up: to.up
           });
         }
