@@ -1116,6 +1116,7 @@
     if (w.launch) spec.launch = w.launch;
     if (w.glow) spec.glow = w.glow;
     if (w.orb) spec.orb = w.orb;
+    if (w.blast) spec.blast = w.blast;
     return spec;
   }
   /* Auxiliary fire is a sidearm, whatever the unit's main weapon: a pistol

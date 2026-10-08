@@ -269,8 +269,8 @@ async function pickAndFire(p, key, ms) {
   ok('enforcers fire an SMG', smg.spec.p === 'smg' && !!smg.seen.tracer, smg.kinds.join(' '));
 
   const assault = await pickAndFire(p, 'shock', 2000);
-  ok('shock troopers go in behind a pair of charges', assault.spec.p === 'arc' && assault.spec.n === 2 &&
-    !!assault.seen.lob, assault.spec.n + ' charges, ' + assault.kinds.join(' '));
+  ok('shock troopers go in behind a pair of grenades, thrown and going off', assault.spec.p === 'frag' && assault.spec.n === 2 &&
+    !!assault.seen.frag && !!assault.seen.fragburst, assault.spec.n + ' grenades, ' + assault.kinds.join(' '));
   ok('...with their carbines after them', assault.spec.s === 'smg' && !!assault.seen.tracer);
 
   const rifle = await pickAndFire(p, 'regular', 1600);
