@@ -160,10 +160,23 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   for (let i = 0; i < 50 && mortar.indexOf('fragburst') < 0; i++) { await p.waitForTimeout(80); mortar = mortar.concat(await p.evaluate(() => window.__viewer.fx())); }
   ok('...and its rounds made to go off as fragmentation blasts', mortar.indexOf('lob') >= 0 && mortar.indexOf('fragburst') >= 0, [...new Set(mortar)].join(','));
 
+  // missiles and rockets: a missile team's birds, and a support vehicle's ripple, set to burst as frag
+  for (const [key, style, kind] of [['missile', 'missile', 'missile'], ['impsupport', 'rocket', 'missile']]) {
+    await p.evaluate((k) => { window.__viewer.pick(k); }, key);
+    await p.waitForTimeout(100);
+    const has = await p.evaluate(() => !!document.querySelector('[data-w="blast"]'));
+    await pickW(p, 'blast', 'frag');
+    await p.evaluate(() => { window.__viewer.range(14); document.querySelector('.vweaponbody [data-do="fire"]').click(); });
+    let got = [];
+    for (let i = 0; i < 60 && got.filter((x) => x === 'fragburst').length < 2; i++) { await p.waitForTimeout(80); got = got.concat(await p.evaluate(() => window.__viewer.fx())); }
+    ok('a ' + style + ' unit has where it lands to choose, and set to frag goes off in fragmentation blasts',
+      has && got.indexOf(kind) >= 0 && got.indexOf('fragburst') >= 0, [...new Set(got)].join(','));
+  }
+
   const n = Object.keys((await fetch(URL + 'api/weapons').then((r) => r.json())).weapons).length;
   await p.click('.vweaponbody [data-do="wrevertall"]'); await p.waitForTimeout(300);
   const none = (await fetch(URL + 'api/weapons').then((r) => r.json())).weapons;
-  ok('Revert all puts every changed unit back, once asked', n === 5 && !Object.keys(none).length &&
+  ok('Revert all puts every changed unit back, once asked', n === 7 && !Object.keys(none).length &&
     await p.evaluate(() => { window.__viewer.pick('regular'); return !window.__viewer.spec().glow; }), n + ' ' + JSON.stringify(none));
 
   // a save the server will not take is taken back on the bench
