@@ -1053,6 +1053,18 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
   };
   var cmdGot = [cmdAt('armour', 'pmc', 0, 2), cmdAt('armour', 'pmc', 0.5, 2), cmdAt('armour', 'pmc', 1, 3), cmdAt('ghadon', 'xeno', 0, 2), cmdAt('ghadon', 'xeno', 1, 2)];
   ok('command units follow the personality: 0, 0.5 and 1 a Priority Level, all legal', JSON.stringify(cmdGot), '[0,1,3,0,2]');
+  // ...the first of the Tier the command level names, each after it a Tier below; and never by the weights
+  var lvAt = function (id, f, lv) {
+    var u = C.unifiedArchetype(id); u.force.command = 1; u.force.commandTier = lv; var ch = {}; ch[id] = C.archetypeChange(id, u), seen = {};
+    C.withArchetypeChanges(ch, function () {
+      for (var i = 0; i < 20; i++) seen[R.rollArmy(3, 3, null, f, id).map(function (k) { return R.profile(keyOf(k)); }).filter(function (p) { return p.command || p.alpha; }).map(function (p) { return p.tier; }).sort().reverse().join('/')] = 1;
+    });
+    return Object.keys(seen).join(',');
+  };
+  ok('the command level sets the highest command unit\'s Tier, the rest a Tier below', [lvAt('armour', 'pmc', -1), lvAt('armour', 'pmc', 1), lvAt('ghadon', 'xeno', 0)].join(' '), '2/1/1 4/3/3 3/2/2');
+  var plainAlphas = 0;
+  for (var pa = 0; pa < 30; pa++) plainAlphas += R.rollArmy(3, 2, null, 'xeno', 'ghadon').filter(function (k) { return R.profile(keyOf(k)).alpha; }).length;
+  ok('...and with nothing set, one command unit a force, Alphas included', plainAlphas, 30);
   var cav4 = 0;
   for (var c4 = 0; c4 < 80; c4++) cav4 += R.rollArmy(3, 2, null, 'pmc', 'aircav').filter(function (k) { var p = R.profile(keyOf(k)); return p.cls !== 'infantry' && p.tier > 3; }).length;
   ok('...and a Cavalry at Tier III takes a Tier IV hull now and then', cav4 > 20 && cav4 < 160, true, cav4 + ' in 80 forces');

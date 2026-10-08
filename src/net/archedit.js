@@ -181,6 +181,8 @@
       // (a swarm has one Leader Bug, as the rules have it: nothing to choose)
       (faction() === 'bugs' ? '' : field('Command units a Priority Level', 'force.command', 'num', ' min="0" max="1" step="0.25" placeholder="one a force"',
         'On average, in a skirmish roll: 0 none, 0.5 one for every two Priority Levels, 1 one each (the most the rules allow). Blank: one, whatever the Priority Level.')) +
+      field('Command level', 'force.commandTier', 'sel', faction() === 'bugs' ? [['', '0 the battle’s Tier'], ['1', '+1 a Tier above']] : [['-1', '−1 a Tier below'], ['', '0 the battle’s Tier'], ['1', '+1 a Tier above']],
+        faction() === 'bugs' ? 'The Tier of its Leader Bug: the battle’s, or one above (never below, as the rules have it).' : 'The Tier of its highest command unit, against the battle’s; each one after it is a Tier below that.') +
       '</div>';
     var more = moreHTML(u), battle = '';
     // tactics: a Rebel's
@@ -213,7 +215,8 @@
     w = w || {};
     {
       var groups = {};
-      list.forEach(function (p) { (groups[p.group] = groups[p.group] || []).push(p); });
+      // (its command units are not weighted: the command settings above choose them)
+      list.forEach(function (p) { if (!(p.command || p.alpha || p.leaderBug)) (groups[p.group] = groups[p.group] || []).push(p); });
       h += '<table class="ae-w"><tr><th></th><th>Weight</th><th>Limit</th></tr>' + Object.keys(groups).map(function (g) {
         var gp = parts(w[g]);
         var row = '<tr class="ae-g"><td>' + esc(g) + '</td><td><input class="tin" type="number" min="0" max="100" data-ae-w="' + esc(g) + '" value="' + gp.w + '"></td><td><input class="tin" type="number" min="0" max="9" data-ae-l="' + esc(g) + '" value="' + gp.l + '"></td></tr>';
@@ -435,7 +438,7 @@
       var kind = t.getAttribute('data-ae-k'), v;
       if (kind === 'bool') v = t.checked ? true : undefined;
       else if (kind === 'num') v = t.value === '' || isNaN(+t.value) ? undefined : +t.value;
-      else v = t.value.trim() === '' ? undefined : t.value;
+      else v = t.value.trim() === '' ? undefined : /^-?\d+$/.test(t.value) ? +t.value : t.value;   // (a choice of number, the command level, kept a number)
       setP(u, path, v);
       return true;
     }

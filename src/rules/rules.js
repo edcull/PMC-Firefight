@@ -438,6 +438,13 @@
   /* A swarm: its Leader Bug first (of the Battle Tier or higher), the Battle
      Tier's own bugs up to the minimum, then whatever fits — checked against the
      swarm's table and rolled again until it is legal. */
+  // those of the Tier `t`, or failing that the nearest Tier to it there is (the lower, on a tie)
+  function nearestTier(list, t) {
+    var d = Math.min.apply(null, list.map(function (p) { return Math.abs(p.tier - t); }));
+    var at = list.filter(function (p) { return Math.abs(p.tier - t) === d; });
+    var lo = Math.min.apply(null, at.map(function (p) { return p.tier; }));
+    return at.filter(function (p) { return p.tier === lo; });
+  }
   function rollSwarm(bt, pl, rnd, st) {
     var POOL = listFor('bugs'), comp = COMPOSITION_BUGS[bt], budget = comp.points * pl;
     var pick = function (arr) { return arr[Math.floor(rnd() * arr.length)]; };
@@ -465,6 +472,8 @@
         return p.leaderBug && p.tier >= bt && lim[1] > 0 && p.tier <= bt + 1;
       });
       if (!leaders.length) leaders = POOL.filter(function (p) { return p.leaderBug && p.tier >= bt; });
+      // (a personality's `commandTier`: its Leader Bug of the battle's Tier, or the one above; never below, as the rules have it)
+      if (st && st.a.commandTier != null && leaders.length) leaders = nearestTier(leaders, bt + Math.max(0, st.a.commandTier));
       take(pick(leaders));
       var need = comp.limits[bt - 1][0] * pl, g = 0;
       while (counts[bt] < need && g++ < 100) {
@@ -508,7 +517,8 @@
        else its group's, else 0. */
     var W = a.weights || {};
     function entry(k) { var e = W[k]; return e == null ? null : Array.isArray(e) ? { w: e[0], lim: e[1] } : { w: e, lim: null }; }
-    function baseWeight(p) { var e = entry(p.key) || entry(p.group); return e ? e.w : 0; }
+    // (its command units are its `command` setting's business, never its weights')
+    function baseWeight(p) { if (p.command || p.alpha || p.leaderBug) return 0; var e = entry(p.key) || entry(p.group); return e ? e.w : 0; }
     /* How elite it is (`tier`): −1 fills up on the Tier below the battle's, 0 keeps to
        the battle's own, +1 reaches for the Tier above. A unit's weight is scaled once
        for each Tier it is off the battle's, below or above. */
@@ -606,8 +616,8 @@
       var hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (!p.noSlot && counts[p.tier] + 1 > hi) return false;
       if (p.command && commands + 1 > pl) return false;
-      // (a personality's `command` is the whole count of them, Alphas included: none come in later)
-      if (st && st.a.command != null && (p.command || p.alpha) && !cmdPhase) return false;
+      // (a personality's command units, Alphas included, are taken first and only then: none come in later)
+      if (st && (p.command || p.alpha) && !cmdPhase) return false;
       if (p.cap && (perKey[p.key] || 0) + 1 > p.cap) return false;
       if (p.capPL && (perKey[p.key] || 0) + 1 > p.capPL * pl) return false;
       if (p.groupCap && (perGroup[p.group] || 0) + 1 > p.groupCap) return false;
@@ -670,15 +680,16 @@
       var wantC = st.a.command * pl;
       cmdN = Math.floor(wantC) + (rnd() < wantC - Math.floor(wantC) ? 1 : 0);
     }
+    /* the first of the Tier its `commandTier` names (a Tier below the battle's, its own, or
+       above), the nearest there is; each one after it a Tier below that */
+    var aimC = battleTier + (st && st.a.commandTier ? st.a.commandTier : 0), firstC = null;
     for (var cn = 0; cn < cmdN; cn++) {
-      var cmds = POOL.filter(function (p) { return (p.command || p.alpha) && p.tier <= battleTier && room(p); });
+      var cmds = POOL.filter(function (p) { return (p.command || p.alpha) && (st || p.tier <= battleTier) && room(p); });
       if (!cmds.length) break;
-      // (a personality's force is led by a commander of the battle's own Tier where it can be, or the nearest below)
-      if (st) {
-        var topC = Math.max.apply(null, cmds.map(function (p) { return p.tier; }));
-        cmds = cmds.filter(function (p) { return p.tier === topC; });
-      }
-      take(pick(cmds));
+      if (st) cmds = nearestTier(cmds, firstC == null ? aimC : Math.max(1, firstC - 1));
+      var cp = pick(cmds);
+      take(cp);
+      if (firstC == null) firstC = cp.tier;
     }
     cmdPhase = false;
     // then the minimum of the battle tier's own units
