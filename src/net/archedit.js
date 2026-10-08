@@ -91,7 +91,10 @@
     var creed = C().creedOf({ faction: faction() }).list;
     h += '<div class="ae-sec"><h4>Doctrines</h4><div class="ae-grid">' +
       '<label>Fixed (taken first)<input class="tin" data-ae-f="fixed" value="' + esc((d.fixed || []).join(', ')) + '" placeholder="e.g. T4"></label>' +
-      '<label class="ae-wide">Shortlist (in order)<input class="tin" data-ae-f="shortlist" value="' + esc((d.shortlist || []).join(', ')) + '"></label></div>' +
+      '<label class="ae-wide">Shortlist (taken next, in a random order)<input class="tin" data-ae-f="shortlist" value="' + esc((d.shortlist || []).join(', ')) + '"></label></div>' +
+      '<small class="ae-dim">One a Company Tier: the fixed ones first, then the shortlist shuffled, then the rest shuffled.' +
+      (d.stages ? ' <b>This one takes its shortlist in stages (Advanced: doctrines.stages), each shuffled and in turn — the shortlist above is not used.</b>' : '') +
+      (d.fixedAt ? ' One is fixed at a Tier of its own (Advanced: doctrines.fixedAt).' : '') + '</small><br>' +
       '<small class="ae-dim">' + creed.map(function (x) { return x.id + ' ' + esc(x.name); }).join(' · ') + '</small></div>';
     // the weighted list
     var w = f.weights || null;
