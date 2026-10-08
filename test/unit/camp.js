@@ -1017,6 +1017,21 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
     plain += R.rollArmy(tt, 2, null, 'pmc', 'elite').filter(function (k) { return R.profile(keyOf(k)).cls !== 'infantry'; }).length;
   }
   ok('Cavalry fields more hulls than anyone', cav > 60 && cav > plain, true, cav + ' hulls in 60 forces');
+  /* The tier preference sets the mix whatever the battle's Tier: a Tier counts by how much
+     the list likes what it has, scaled by the preference, not by how many kinds of unit it
+     has (at Tier II there are three Tier III hulls for every Tier II one). And the hulls it
+     takes first follow it too: a Cavalry at Tier III reaches a Tier IV hull now and then. */
+  var mixOf = function (id, f, t) {
+    var m = [0, 0, 0];
+    for (var i = 0; i < 80; i++) R.rollArmy(t, 2, null, f, id).forEach(function (k) { var p = R.profile(keyOf(k)); if (!p.command) m[p.tier < t ? 0 : p.tier > t ? 2 : 1]++; });
+    return m;
+  };
+  var t2a = mixOf('armour', 'pmc', 2), t4a = mixOf('armour', 'pmc', 4), t2r = mixOf('redfront', 'rebel', 2);
+  ok('a force of its own Tier is mostly its own Tier, at Tier II as at Tier IV', t2a[1] > 2 * t2a[2] && t4a[1] > 2 * t4a[2], true, JSON.stringify([t2a, t4a]));
+  ok('...and one set to fill up a Tier below takes more below than above', t2r[0] > 2 * t2r[2], true, JSON.stringify(t2r));
+  var cav4 = 0;
+  for (var c4 = 0; c4 < 80; c4++) cav4 += R.rollArmy(3, 2, null, 'pmc', 'aircav').filter(function (k) { var p = R.profile(keyOf(k)); return p.cls !== 'infantry' && p.tier > 3; }).length;
+  ok('...and a Cavalry at Tier III takes a Tier IV hull now and then', cav4 > 20 && cav4 < 160, true, cav4 + ' in 80 forces');
   var bigOdd = 0, lowCmd = 0, shockVeh = 0, shockN = 0, mortars = 0, cavH = 0, shockH = 0;
   ['pmc', 'rebel'].forEach(function (f) {
     C.archetypesFor(f).forEach(function (a) {
