@@ -1704,7 +1704,7 @@
      an admin's changes in and the editor works on. FIELD_MAP is the one place the
      two meet: a flat field and where it sits in the nested shape. */
   var FIELD_MAP = {
-    names: 'names', blurb: 'blurb',
+    names: 'names', blurb: 'blurb', notes: 'notes',
     weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls', command: 'force.command', commandTier: 'force.commandTier',
     fieldsMachines: 'force.machineMinded', machinesMax: 'force.machinesMax', riders: 'force.riders',
     temper: 'battle.temper', tactics: 'battle.tactics',

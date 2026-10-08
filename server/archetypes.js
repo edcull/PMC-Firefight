@@ -57,6 +57,7 @@ function check(id, u) {
   const isKey = (k) => keys.has(k), isGroup = (g) => groups.has(g), bool = (v) => v == null || typeof v === 'boolean';
   const keyList = (v, nested) => v == null || (Array.isArray(v) && v.every((k) => (nested && Array.isArray(k)) ? k.every(isKey) : isKey(k)));
   if (u.blurb != null && (typeof u.blurb !== 'string' || u.blurb.length > 300)) return 'the blurb is up to 300 characters';
+  if (u.notes != null && (typeof u.notes !== 'string' || u.notes.length > 4000)) return 'the validation notes are up to 4000 characters';
   if (doc.fixedAt != null && (typeof doc.fixedAt !== 'object' || Object.keys(doc.fixedAt).some((t) => !/^[1-5]$/.test(t) || !C.doctrine(doc.fixedAt[t])))) return 'doctrines.fixedAt is { Tier: doctrine }';
   if (doc.stages != null && (!Array.isArray(doc.stages) || doc.stages.some((st) => !Array.isArray(st) || st.some((d) => !C.doctrine(d))))) return 'doctrines.stages is a list of lists of doctrines';
   if (!bool(doc.random)) return 'doctrines.random is true or false';
