@@ -77,6 +77,22 @@
     5: { points: 30, limits: [[0, 0], [0, 0], [0, 4], [0, 4], [3, 99]] }
   };
   var ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+  /* How elite a personality is (its tier preference, −1, 0 or +1): what a unit's weight
+     is multiplied by for being `d` Tiers off the battle's (or, in a campaign, the
+     company's). The way it leans peaks one Tier off and falls away after that: a force
+     that fills up a Tier below takes more of the Tier below than of the Tier below that,
+     and one that reaches up reaches one Tier, not two. Past two Tiers, each one more is
+     a third as likely again. */
+  var TIER_LEAN = {
+    '-1': { '-2': 0.5, '-1': 1.5, '1': 0.25, '2': 0.06 },
+    '0': { '-2': 0.12, '-1': 0.35, '1': 0.5, '2': 0.25 },
+    '1': { '-2': 0.04, '-1': 0.2, '1': 2.5, '2': 0.8 }
+  };
+  function tierLean(pref, d) {
+    if (!d) return 1;
+    var t = TIER_LEAN[String(pref || 0)] || TIER_LEAN['0'], two = d < 0 ? -2 : 2;
+    return Math.abs(d) === 1 ? t[String(d)] : t[String(two)] * Math.pow(1 / 3, Math.abs(d) - 2);
+  }
   // the Space Bugs' own table (p. 114)
   var COMPOSITION_BUGS = {
     1: { points: 6, limits: [[3, 99], [0, 1], [0, 0], [0, 0], [0, 0]] },
@@ -512,9 +528,7 @@
     /* How elite it is (`tier`): −1 fills up on the Tier below the battle's, 0 keeps to
        the battle's own, +1 reaches for the Tier above. A unit's weight is scaled once
        for each Tier it is off the battle's, below or above. */
-    var TIER_LEAN = { '-1': { below: 1.5, above: 0.25 }, '0': { below: 0.35, above: 0.5 }, '1': { below: 0.2, above: 2.5 } };
-    var lean = TIER_LEAN[String(a.tier || 0)] || TIER_LEAN['0'];
-    function tierFactor(p) { var d = p.tier - bt; return d === 0 ? 1 : Math.pow(d < 0 ? lean.below : lean.above, Math.abs(d)); }
+    function tierFactor(p) { return tierLean(a.tier, p.tier - bt); }
     // halved for each copy it already has (more kinds, fewer repeats), and scaled by its Tier
     function weightOf(p, keys) {
       return baseWeight(p) * Math.pow(0.5, count(keys, function (x) { return x === p.key; })) * tierFactor(p);
@@ -567,9 +581,19 @@
             var none = list.filter(function (p) { return p.tier <= bt; });
             return none.length ? none : list;
           }
-          var r = rnd() * tot;
-          for (var wi = 0; wi < list.length; wi++) { r -= ws[wi]; if (r <= 0) return [list[wi]]; }
-          return [list[list.length - 1]];
+          /* First a Tier, then a unit of it. A Tier counts by the average weight of what it
+             has here (scaled by the tier preference), not by how many kinds of unit it has:
+             otherwise the Tier with the most entries in the list wins on numbers (at Tier II
+             there are three Tier III hulls for every Tier II one, and a force set to fill up a
+             Tier below came out mostly a Tier above). */
+          var byT = {};
+          list.forEach(function (p, i) { if (ws[i] > 0) (byT[p.tier] = byT[p.tier] || []).push(i); });
+          var ts = Object.keys(byT), mass = ts.map(function (t) { return byT[t].reduce(function (s2, i) { return s2 + ws[i]; }, 0) / byT[t].length; });
+          var mt = mass.reduce(function (s2, m) { return s2 + m; }, 0), r = rnd() * mt, at = ts.length - 1;
+          for (var ti = 0; ti < ts.length; ti++) { r -= mass[ti]; if (r <= 0) { at = ti; break; } }
+          var idx = byT[ts[at]], sub = idx.reduce(function (s2, i) { return s2 + ws[i]; }, 0), r2 = rnd() * sub;
+          for (var wi = 0; wi < idx.length; wi++) { r2 -= ws[idx[wi]]; if (r2 <= 0) return [list[idx[wi]]]; }
+          return [list[idx[idx.length - 1]]];
         }
         var own = list.filter(function (p) { return liked(p) || starters.indexOf(p.key) >= 0; });
         if (!own.length || rnd() > 0.85) {
@@ -737,11 +761,14 @@
     if (st) for (var hn = 0; hn < hullsFirstN; hn++) {
       var hulls = POOL.filter(function (p) { return !p.command && st.hullFirst(p) && room(p); });
       if (!hulls.length) break;
-      // one of the battle's own weight where there is one (not three super-heavies at Tier II), and not one it has
+      /* one of the battle's own weight where there is one (not three super-heavies at Tier II), and not one it has;
+         a weighted list leaves that to its tier preference, which scales each hull by how far it is off the
+         battle's Tier, as everywhere else (a Cavalry at Tier III reaches a Heavy APC now and then) */
       var fit = hulls.filter(function (p) { return p.tier <= battleTier; });
-      if (fit.length) hulls = fit;
+      if (fit.length && !st.weighted) hulls = fit;
+      // (a weighted list's weights already halve for each copy it has: they keep it varied without ruling a hull out)
       var newH = hulls.filter(function (p) { return !keys.some(function (k) { return splitPick(k).key === p.key; }); });
-      if (newH.length) hulls = newH;
+      if (newH.length && !st.weighted) hulls = newH;
       // (a weighted list takes one by its weights; otherwise the biggest)
       if (st.weighted) { take(pick(st.favour(hulls, keys))); continue; }
       var hiH = Math.max.apply(null, hulls.map(function (p) { return p.tier; }));
@@ -2332,7 +2359,7 @@
   root.PMC = {
     BOARD: BOARD, UNIT_R: UNIT_R, STEP: STEP, SP_MAX: SP_MAX,
     CATALOGUE: CATALOGUE, PRESETS: PRESETS, PRESETS_REBEL: PRESETS_REBEL,
-    COMPOSITION: COMPOSITION, COMPOSITION_BUGS: COMPOSITION_BUGS, compFor: compFor, isOvergrown: isOvergrown, ROMAN: ROMAN, FACTIONS: FACTIONS, TACTICS: TACTICS,
+    COMPOSITION: COMPOSITION, COMPOSITION_BUGS: COMPOSITION_BUGS, compFor: compFor, isOvergrown: isOvergrown, ROMAN: ROMAN, tierLean: tierLean, FACTIONS: FACTIONS, TACTICS: TACTICS,
     presetsFor: presetsFor, listFor: listFor, factionOf: factionOf, tacticById: tacticById,
     applyRiders: applyRiders, canRide: canRide, entryPick: entryPick, freedomDice: freedomDice,
     undisciplined: undisciplined, freeLosses: freeLosses, deathOrGlory: deathOrGlory,

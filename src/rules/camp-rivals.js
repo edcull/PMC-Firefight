@@ -248,12 +248,10 @@
     function wEntry(a, k) { var e = a.weights[k]; return e == null ? null : Array.isArray(e) ? { w: e[0], lim: e[1] } : { w: e, lim: null }; }
     function weightIn(a, p) { var e = wEntry(a, p.key) || wEntry(a, p.group); return e ? e.w : 0; }
     // how elite it is (`tier`): a unit off the company's own Tier counts for less, or more, as a skirmish roll has it
-    var TIER_LEAN = { '-1': { below: 1.5, above: 0.25 }, '0': { below: 0.35, above: 0.5 }, '1': { below: 0.2, above: 2.5 } };
     function weighFor(co, a, p) {
       var have = co.roster.filter(function (e) { return e.key === p.key; }).length;
-      var lean = TIER_LEAN[String(a.tier || 0)] || TIER_LEAN['0'], d = p.tier - co.tier;
       // (a company keeps many of a kind, so each one it has counts for a little less, not half)
-      return weightIn(a, p) / (1 + have) * (d === 0 ? 1 : Math.pow(d < 0 ? lean.below : lean.above, Math.abs(d)));
+      return weightIn(a, p) / (1 + have) * R.tierLean(a.tier, p.tier - co.tier);
     }
     function leanTo(co, a, list) {
       if (a && a.weights && list.length) {
