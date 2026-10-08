@@ -144,14 +144,15 @@
     var f = u.force || {}, d = u.doctrines || {};
     var hullGroups = groupsOf(function (p) { return p.cls !== 'infantry'; });
     var S = { older: '' };
-    // its hulls and riders
-    S.hulls = sec('hulls', 'Hulls and riders') +
+    // its vehicles: how many, which first, and who rides
+    S.hulls = sec('hulls', 'Vehicle composition') + '<div class="ae-grid">' +
+      // (one control for both ends: vehicles a Priority Level, at least and at most)
+      '<div class="ae-pair"><span>Vehicles a Priority Level (min / max)</span><div class="ae-pairin">' +
+        '<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmin" aria-label="Vehicles a Priority Level, min" value="' + (f.hulls && f.hulls.min != null ? f.hulls.min : '') + '" placeholder="1"><em>to</em>' +
+        '<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmax" aria-label="Vehicles a Priority Level, max" value="' + (f.hulls && f.hulls.max != null ? f.hulls.max : '') + '" placeholder="1.5"></div>' +
+        tip('Per Priority Level, rounded (1.5 = 2 at PL1, 3 at PL2, 5 at PL3). Never more than 3.') + '</div></div>' +
       ticks('Favourite hulls (taken first)', 'force.favourites', hullGroups.concat([['transports', 'anything that carries troops']]),
-        'A force rolls these before any other hull: as many as “Hulls a Priority Level, fewest” (one a Priority Level if blank), the biggest at or below the battle’s Tier, a different one each time. In a campaign it buys and upgrades to these first. None ticked: any hull it weights.') +
-      '<div class="ae-grid">' + field('Hulls kept in a campaign', 'force.machinesMax', 'num', ' min="0" max="9"',
-        'How many hulls a campaign company buys and keeps, trading its smallest for a bigger one as it grows. Blank: twice “Hulls a Priority Level, most”, or none if that is blank too (three for a company that spends on hulls). Under 3 also caps a skirmish roll at this many a Priority Level; 5 or more makes it a machine company.') +
-      field('A machine company', 'force.machineMinded', 'bool', null,
-        'May field the full three hulls a Priority Level (otherwise half that, unless “most” says otherwise), counts any hull it weights as a favourite, and rolls hulls half the time when it has the choice.') + '</div>' +
+        'Rolled before any other hull: as many as the vehicle min (one a Priority Level if blank), chosen by their weights and the tier preference. In a campaign it buys and upgrades to these first. None ticked: any hull it weights.') +
       (groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }).length ? ticks('Groups that ride', 'force.riders', groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }),
         'In a campaign, units of these groups (and its leader, if of one) are recruited mounted wherever the rules let them ride.') : '') + '</div>';
     // signature units
@@ -176,7 +177,7 @@
       field('No creed to speak of', 'doctrines.random', 'bool', null, 'Ignores the fixed ones, the shortlist and the stages: every doctrine is drawn from the whole list at random.') + '</div>';
     // the campaign rival's own
     S.camp = sec('camp', 'Campaign') +
-      '<small class="ae-dim">How an AI rival company starts and grows in a campaign. None of this changes a skirmish roll.</small>' +
+      '<small class="ae-dim">How an AI rival company starts, grows and fields its forces in a campaign.</small>' +
       unitRows('Founded with, Tier I', 'campaign.found.t1', function (p) { return p.cls === 'infantry' && !p.command; }, null,
         'The Tier I units it is founded with, one each (a unit twice: two). It also fills later Tier I gaps from these unless the next list says otherwise.') +
       unitRows('Founded with, Tier II', 'campaign.found.t2', function (p) { return p.cls === 'infantry' && !p.command; }, 'or',
@@ -188,7 +189,11 @@
         'Units that cost nothing to recruit (Armed civilians) are normally left out of the founding list and come in later to fill gaps. Ticked: it is founded with them (a revolt that starts as civilians).') + '</div>' +
       mapRows('Tier I gaps filled with', 'campaign.refill', unitKeys().filter(function (o) { return R().profile(o[0]).tier === 1; }),
         'In place of the Tier I founders when it fills a gap: each unit chosen as often as its weight compared with the others.') +
-      '<div class="ae-grid">' + field('Spends its money and experience on', 'campaign.spend', 'sel', [['promote', 'promoting its units'], ['honours', 'honours before promotion'], ['recruit', 'recruiting widely'], ['machines', 'hulls']],
+      '<div class="ae-grid">' + field('Hulls kept', 'force.machinesMax', 'num', ' min="0" max="9"',
+        'How many hulls it buys and keeps, trading the smallest for a bigger one as it grows. Blank: twice the vehicle max.') +
+      field('Fields its hulls first', 'force.machineMinded', 'bool', null,
+        'In battle it puts its hulls in the field before its infantry, and spends spare points on hulls rather than men.') +
+      field('Spends its money and experience on', 'campaign.spend', 'sel', [['promote', 'promoting its units'], ['honours', 'honours before promotion'], ['recruit', 'recruiting widely'], ['machines', 'hulls']],
         'Promoting: experience goes on promotions, money on growing a Tier at a time (the usual). Honours: a unit is trained to its full honours before it is promoted (veterans, not rank). Recruiting: it also hires up to three more units a turn at its own Tier and the next while it is not saving for a Company Tier. Hulls: it buys a hull whenever it can and fits armour and guns first.') +
       field('Lean', 'campaign.lean', 'bool', null,
         'Keeps to the size below: it does not hire with spare money, does not top up with free units, and at full size will not promote a unit out of a Tier that would leave it under three. Not ticked: it keeps hiring up to 12 + 7 a Company Tier units.') +
@@ -225,16 +230,12 @@
     h += sec('who', 'Who it is') + '<div class="ae-grid">' +
       '<label>Name<input class="tin" data-ae-f="name" value="' + esc(u.name || '') + '" maxlength="60"></label>' +
       '<label class="ae-wide">Company names (one per line)<textarea class="tin" data-ae-f="names" rows="3">' + esc((u.names || []).join('\n')) + '</textarea></label>' +
-      field('Blurb', 'blurb', 'text', null, 'What it is, in a line: shown with the personality in the game.') + '</div></div>';
+      field('Description', 'blurb', 'text') + '</div></div>';
     // the shape of its forces
     h += sec('shape', 'Force shape') + '<div class="ae-grid">' +
       '<label>Tier preference<select class="tin" data-ae-f="tier">' + [[-1, '−1 fills up a Tier below'], [0, '0 its own Tier'], [1, '+1 reaches a Tier above']].map(function (o) {
         return '<option value="' + o[0] + '"' + ((f.tier || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
-        tip('How elite it is: each Tier off the battle’s scales a unit’s weight, and two Tiers off always counts for less than one. −1: units a Tier below come up more often (two below less), above rarely. 0: mostly the battle’s own Tier. +1: units a Tier above come up far more often (two above less), below rarely. In a campaign −1 also hires a Tier lower.') + '</label>' +
-      '<label>Hulls a Priority Level, fewest<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmin" value="' + (f.hulls && f.hulls.min != null ? f.hulls.min : '') + '" placeholder="1">' +
-        tip('Favourite hulls rolled before anything else, times the Priority Level, rounded (1.5: 2 at PL1, 3 at PL2, 5 at PL3).') + '</label>' +
-      '<label>Hulls a Priority Level, most<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmax" value="' + (f.hulls && f.hulls.max != null ? f.hulls.max : '') + '" placeholder="1.5">' +
-        tip('The most hulls, times the Priority Level, rounded; never past the rules’ three a Priority Level. Blank: half of three, or all three for a machine company.') + '</label></div></div>';
+        tip('How elite the force is. −1 to prefer Tiers below, +1 to prefer Tiers above the battle Tier.') + '</label></div></div>';
     var more = moreHTML(u), battle = '';
     // how it fights
     battle += sec('battle', 'In battle') + '<div class="ae-grid">' +
@@ -266,9 +267,6 @@
     h += sec('weights', 'Weighted list');
     if (!w) h += '<p class="ae-dim">This one still rolls by its groups and mix (the older rules). <button type="button" class="lnk" data-ae="convert">Start a weighted list from them</button></p>';
     else {
-      h += '<small class="ae-dim">Weight 0–10: how often a unit is picked compared with the others; a unit twice the weight comes up twice as often. A unit with no weight of its own takes its group’s (shown faded); 0 or blank: never. ' +
-        'Limit: the most of that unit a Priority Level (for a group, of the whole group together); blank: the rules’ own limits. A unit’s own entry beats its group’s. ' +
-        'In a campaign the limits count as Priority Level 3, and each copy it already has makes the next one less likely (in a skirmish roll too: half as likely a copy).</small>';
       var groups = {};
       list.forEach(function (p) { (groups[p.group] = groups[p.group] || []).push(p); });
       h += '<table class="ae-w"><tr><th></th><th>Weight</th><th>Limit</th></tr>' + Object.keys(groups).map(function (g) {

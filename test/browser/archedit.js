@@ -52,7 +52,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     }));
     ok('...with its sections listed to jump to', await p.evaluate(() => {
       const b = [...document.querySelectorAll('#arch-edit .ae-nav button')].map((x) => x.textContent);
-      return ['Who it is', 'Force shape', 'Weighted list', 'Hulls and riders', 'In battle', 'Doctrines', 'Campaign', 'Preview'].every((t) => b.indexOf(t) >= 0);
+      return ['Who it is', 'Force shape', 'Weighted list', 'Vehicle composition', 'In battle', 'Doctrines', 'Campaign', 'Preview'].every((t) => b.indexOf(t) >= 0);
     }));
     await click('#arch-edit .ae-nav [data-k="ae-s-camp"]'); await wait(150);
     ok('...a section in the list scrolls the form to it, and is lit', await p.evaluate(() => {
@@ -112,9 +112,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       document.querySelectorAll('#arch-edit .ae-sec').forEach((sec) => {
         const name = (sec.querySelector('h4') || {}).textContent;
         if (name === 'Preview') return;
-        if (!sec.querySelector('.ae-help, .ae-dim')) out.push(name);
         sec.querySelectorAll('.ae-grid > label, .ae-ticks, .ae-rows').forEach((c) => {
-          if (!c.querySelector('.ae-help') && !/^(Name|Company names|How many founding hulls|Tier|PL)/.test(c.textContent.trim())) out.push(name + ': ' + c.textContent.trim().slice(0, 40));
+          if (!c.querySelector('.ae-help') && !/^(Name|Company names|Description|How many founding hulls|Tier|PL)/.test(c.textContent.trim())) out.push(name + ': ' + c.textContent.trim().slice(0, 40));
         });
       });
       return out;

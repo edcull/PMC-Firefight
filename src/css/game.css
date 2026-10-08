@@ -2350,3 +2350,8 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .ae-rows:has(.ae-set) { align-items: flex-start; }
 .ae-set .ae-row { flex-wrap: nowrap; }
 .ae-set .ae-row select { flex: 1 1 0 !important; min-width: 0; }
+/* a pair of numbers under one label (vehicles a Priority Level, min to max) */
+.ae-pair { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-dim); }
+.ae-pairin { display: flex; align-items: center; gap: 8px; }
+.ae-pairin .tin { flex: 1 1 0; min-width: 0; }
+.ae-pairin em { font-style: normal; color: var(--ink-faint); }
