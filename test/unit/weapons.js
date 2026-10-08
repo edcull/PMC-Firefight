@@ -267,6 +267,14 @@ ok('a support vehicle flown as a drone still lobs',
 ok('a combat vehicle flown as a drone still hammers',
   R.weaponStyle(R.applyDrone(build('hpv'), true)) === 'chain');
 
+/* Dug in, the rebel guns are laid level and fire over open sights, and their
+   heavy shells go off in fragmentation blasts. */
+head('A dug-in rebel gun fires its shells level');
+['rmedart', 'rheavyart'].forEach(function (k) {
+  var w = R.weaponSpec(Object.assign({}, R.profile(k), { dugIn: true }));
+  ok(R.profile(k).name + ', dug in', w.p === 'shellbig' && w.blast === 'frag', fmt(w) + (w.blast ? ' ' + w.blast : ''));
+});
+
 /* A profile the table has never heard of still has to fire like something. */
 head('An unlisted profile is read from the rules it carries');
 function guess(rules, extra) {
