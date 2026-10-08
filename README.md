@@ -103,6 +103,12 @@ or a swipe. <kbd>F</kbd> fires, <kbd>W</kbd> walks, <kbd>I</kbd> inserts,
 <kbd>S</kbd> steps through the unit's states, <kbd>A</kbd> through its abilities,
 <kbd>D</kbd> toggles a drone crew and <kbd>P</kbd> changes its propulsion.
 
+Signed in to the game server as an admin, the viewer has a third tab, **Weapon**:
+what the unit is drawn firing (its primary and secondary styles, how many go at
+once, a missile's launch, the shots' colour and how orbs reach the target). A change is seen and heard at once, kept in that browser, and **Copy
+changes** gives the lines to paste into `WEAPONS` in `src/rules/data.js`. Make an
+account an admin with `node server/admin.js admin <name> on`.
+
 ## Development
 
 ```
