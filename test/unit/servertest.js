@@ -538,6 +538,32 @@ async function main() {
   const delF = await req('DELETE', '/api/forces/' + JSON.parse(f1.body).id, withC(owner));
   const left = JSON.parse((await req('GET', '/api/forces', { cookie: owner })).body).forces;
   ok('...and deleted by its owner', JSON.parse(delF.body).ok === true && left.length === 1 && left[0].kind === 'start');
+  // an admin's changes to how units are drawn firing: anyone reads them, only an admin changes them
+  await auth.createUser('Armourer', 'armourer password', true, 'armourer@example.com');
+  const adm = String(((await req('POST', '/api/login', json, JSON.stringify({ name: 'Armourer', password: 'armourer password' }))).headers || {})['set-cookie'] || '').split(';')[0];
+  const wGet = async () => JSON.parse((await req('GET', '/api/weapons', {})).body).weapons;
+  ok('nobody has changed the weapon table yet, and anyone may read it', JSON.stringify(await wGet()) === '{}');
+  const wPlayer = await req('POST', '/api/weapons', withC(owner), JSON.stringify({ key: 'aaveh', data: { p: 'rail' } }));
+  const wAnon = await req('POST', '/api/weapons', json, JSON.stringify({ key: 'aaveh', data: { p: 'rail' } }));
+  ok('...a player who is not an admin, or nobody, may not change it', wPlayer.code === 403 && wAnon.code === 403, wPlayer.code + ' ' + wAnon.code);
+  const wSet = await req('POST', '/api/weapons', withC(adm), JSON.stringify({ key: 'aaveh', data: { p: 'rail', n: 3, s: null, sn: 1, splash: false, glow: 'red' } }));
+  await req('POST', '/api/weapons', withC(adm), JSON.stringify({ key: 'regular', data: { p: 'burst' } }));
+  const w1 = await wGet();
+  ok('an admin changes a unit\'s entry, kept tidy as the table writes it, and every page reads it',
+    wSet.code === 200 && JSON.stringify(w1.aaveh) === '{"p":"rail","n":3,"glow":"red"}' && w1.regular.p === 'burst', wSet.code + ' ' + JSON.stringify(w1));
+  const wBadKey = await req('POST', '/api/weapons', withC(adm), JSON.stringify({ key: 'nosuchunit', data: { p: 'rail' } }));
+  const wBadStyle = await req('POST', '/api/weapons', withC(adm), JSON.stringify({ key: 'aaveh', data: { p: 'laser' } }));
+  const wBadField = await req('POST', '/api/weapons', withC(adm), JSON.stringify({ key: 'aaveh', data: { p: 'rail', fp: 99 } }));
+  const wOffsite = await req('POST', '/api/weapons', Object.assign({ origin: 'http://evil.example' }, withC(adm)), JSON.stringify({ key: 'aaveh', data: { p: 'rail' } }));
+  ok('...not for a unit that is not in the catalogue, a style that is not one, a field the table has not got, or from another site',
+    wBadKey.code === 400 && wBadStyle.code === 400 && wBadField.code === 400 && wOffsite.code === 403, [wBadKey.code, wBadStyle.code, wBadField.code, wOffsite.code].join(' '));
+  const wRev = await req('DELETE', '/api/weapons/aaveh', withC(adm));
+  const wRevP = await req('DELETE', '/api/weapons/regular', withC(owner));
+  const w2 = await wGet();
+  ok('a unit is put back as the table has it by an admin only', JSON.parse(wRev.body).ok === true && wRevP.code === 403 && !w2.aaveh && !!w2.regular, wRev.body + ' ' + wRevP.code);
+  await req('DELETE', '/api/weapons', withC(adm));
+  ok('...and every unit at once', JSON.stringify(await wGet()) === '{}');
+
   // an old campaign file, taken into the account by whoever holds its key
   const legacyName = 'old' + Date.now().toString(36);
   const legacy = await req('PUT', '/campaign/' + legacyName, json, JSON.stringify(camp1));

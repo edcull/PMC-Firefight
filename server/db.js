@@ -129,6 +129,15 @@ const MIGRATIONS = [
      data    TEXT NOT NULL,
      updated INTEGER NOT NULL,
      by      TEXT
+   );`,
+  /* 10: an admin's changes to how units are drawn firing (the weapon table in
+     src/rules/data.js), one entry per unit, laid over the table for every game
+     this server serves. A unit with none fires as the table says. */
+  `CREATE TABLE weapons (
+     key     TEXT PRIMARY KEY,
+     data    TEXT NOT NULL,
+     updated INTEGER NOT NULL,
+     by_user INTEGER REFERENCES users(id) ON DELETE SET NULL
    );`
 ];
 
@@ -217,6 +226,10 @@ function wrap(db) {
     addForce: db.prepare('INSERT INTO forces (owner, kind, name, data, created, updated) VALUES (?, ?, ?, ?, ?, ?)'),
     saveForce: db.prepare('UPDATE forces SET name = ?, data = ?, updated = ? WHERE id = ? AND owner = ?'),
     dropForce: db.prepare('DELETE FROM forces WHERE id = ? AND owner = ?'),
+    weapons: db.prepare('SELECT key, data FROM weapons ORDER BY key'),
+    putWeapon: db.prepare('INSERT INTO weapons (key, data, updated, by_user) VALUES (?, ?, ?, ?) ON CONFLICT(key) DO UPDATE SET data = excluded.data, updated = excluded.updated, by_user = excluded.by_user'),
+    dropWeapon: db.prepare('DELETE FROM weapons WHERE key = ?'),
+    dropWeapons: db.prepare('DELETE FROM weapons'),
     setInvite: db.prepare('UPDATE campaigns SET invite = ? WHERE id = ?'),
     byInvite: db.prepare('SELECT * FROM campaigns WHERE invite = ?'),
     setListed: db.prepare('UPDATE campaigns SET listed = ? WHERE id = ?'),
@@ -323,6 +336,11 @@ function wrap(db) {
     archetypes: () => q.archetypes.all().map((r) => ({ id: r.id, data: JSON.parse(r.data), updated: r.updated, by: r.by })),
     putArchetype: (id, data, at, by) => q.putArchetype.run(id, JSON.stringify(data), at, by || null),
     dropArchetype: (id) => q.dropArchetype.run(id).changes > 0,
+    // ---- an admin's weapon table changes ----
+    weapons: () => { const out = {}; q.weapons.all().forEach((w) => { out[w.key] = JSON.parse(w.data); }); return out; },
+    putWeapon: (key, data, at, by) => q.putWeapon.run(key, JSON.stringify(data), at, by || null),
+    dropWeapon: (key) => q.dropWeapon.run(key).changes > 0,
+    dropWeapons: () => q.dropWeapons.run().changes,
     // ---- online campaigns (phase 3b) ----
     setInvite: (id, code) => q.setInvite.run(code, id),
     setListed: (id, on) => q.setListed.run(on ? 1 : 0, id).changes > 0,

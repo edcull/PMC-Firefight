@@ -541,6 +541,38 @@
     xsturret3: { p: 'none' }, xsturret4: { p: 'none' }, xsturret5: { p: 'none' }
   };
 
-  root.PMCData = { CATALOGUE: CATALOGUE, WEAPONS: WEAPONS };
+  /* What an entry may say, for the weapon editor and for the game server that
+     keeps an admin's changes to this table (server/app.js weaponsApi) */
+  var WEAPON_FIELDS = {
+    styles: ['small', 'pistol', 'smg', 'burst', 'chain', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket',
+      'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'orbbig', 'plasmabolt', 'none'],
+    launch: ['sam', 'samturret'],
+    glow: ['blue', 'green', 'red', 'violet', 'amber', 'white', 'none'],
+    orb: ['tele', 'lob'],
+    most: 6                                  // how many of a style may go at once
+  };
+  /* An entry as the table writes it, or null if it is not one: a known style,
+     a count from 1 to `most`, and only the fields above. */
+  function weaponEntry(w) {
+    var F = WEAPON_FIELDS;
+    if (!w || typeof w !== 'object' || F.styles.indexOf(w.p) < 0) return null;
+    var count = function (v) { return v === undefined || (v === (v | 0) && v >= 1 && v <= F.most); };
+    if (!count(w.n) || !count(w.sn)) return null;
+    if (w.s !== undefined && w.s !== null && (F.styles.indexOf(w.s) < 0 || w.s === 'none')) return null;
+    if (w.splash !== undefined && typeof w.splash !== 'boolean') return null;
+    var known = ['p', 'n', 's', 'sn', 'splash', 'launch', 'glow', 'orb'];
+    if (Object.keys(w).some(function (k) { return known.indexOf(k) < 0; })) return null;
+    var ok = true;
+    ['launch', 'glow', 'orb'].forEach(function (f) { if (w[f] !== undefined && w[f] !== null && F[f].indexOf(w[f]) < 0) ok = false; });
+    if (!ok) return null;
+    var out = { p: w.p };
+    if (w.n > 1) out.n = w.n;
+    if (w.s) { out.s = w.s; if (w.sn > 1) out.sn = w.sn; }
+    if (w.splash) out.splash = true;
+    ['launch', 'glow', 'orb'].forEach(function (f) { if (w[f]) out[f] = w[f]; });
+    return out;
+  }
+
+  root.PMCData = { CATALOGUE: CATALOGUE, WEAPONS: WEAPONS, WEAPON_FIELDS: WEAPON_FIELDS, weaponEntry: weaponEntry };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCData;
 })(typeof window !== 'undefined' ? window : global);
