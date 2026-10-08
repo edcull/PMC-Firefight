@@ -178,6 +178,11 @@
       '<label>Temper (behaviour roll)<select class="tin" data-ae-f="temper">' + [-3, -2, -1, 0, 1, 2, 3].map(function (n) {
         return '<option value="' + n + '"' + ((b.temper || 0) === n ? ' selected' : '') + '>' + (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + '</option>'; }).join('') + '</select>' +
         tip('Added to its units’ behaviour roll in battle (p. 147). +: presses in and charges. −: holds back and shoots from cover.') + '</label>' +
+      // (a swarm has one Leader Bug, as the rules have it: nothing to choose)
+      (faction() === 'bugs' ? '' : field('Command units a Priority Level', 'force.command', 'num', ' min="0" max="1" step="0.25" placeholder="one a force"',
+        'On average, in a skirmish roll: 0 none, 0.5 one for every two Priority Levels, 1 one each (the most the rules allow). Blank: one, whatever the Priority Level.')) +
+      field('Command level', 'force.commandTier', 'sel', faction() === 'bugs' ? [['', '0 the battle’s Tier'], ['1', '+1 a Tier above']] : [['-1', '−1 a Tier below'], ['', '0 the battle’s Tier'], ['1', '+1 a Tier above']],
+        faction() === 'bugs' ? 'The Tier of its Leader Bug: the battle’s, or one above (never below, as the rules have it).' : 'The Tier of its highest command unit, against the battle’s; each one after it is a Tier below that.') +
       '</div>';
     var more = moreHTML(u), battle = '';
     // tactics: a Rebel's
@@ -210,13 +215,14 @@
     w = w || {};
     {
       var groups = {};
-      list.forEach(function (p) { (groups[p.group] = groups[p.group] || []).push(p); });
+      // (its command units are not weighted: the command settings above choose them)
+      list.forEach(function (p) { if (!(p.command || p.alpha || p.leaderBug)) (groups[p.group] = groups[p.group] || []).push(p); });
       h += '<table class="ae-w"><tr><th></th><th>Weight</th><th>Limit</th></tr>' + Object.keys(groups).map(function (g) {
         var gp = parts(w[g]);
-        var row = '<tr class="ae-g"><td>' + esc(g) + '</td><td><input class="tin" type="number" min="0" max="10" data-ae-w="' + esc(g) + '" value="' + gp.w + '"></td><td><input class="tin" type="number" min="0" max="9" data-ae-l="' + esc(g) + '" value="' + gp.l + '"></td></tr>';
+        var row = '<tr class="ae-g"><td>' + esc(g) + '</td><td><input class="tin" type="number" min="0" max="100" data-ae-w="' + esc(g) + '" value="' + gp.w + '"></td><td><input class="tin" type="number" min="0" max="9" data-ae-l="' + esc(g) + '" value="' + gp.l + '"></td></tr>';
         return row + groups[g].sort(function (a, b2) { return a.tier - b2.tier; }).map(function (p) {
           var pp = parts(w[p.key]);
-          return '<tr class="ae-u"><td>' + esc(p.name) + ' <small>' + R().ROMAN[p.tier] + (p.cls !== 'infantry' ? ' · ' + p.cls : '') + '</small></td><td><input class="tin" type="number" min="0" max="10" data-ae-w="' + p.key + '" value="' + pp.w + '" placeholder="' + gp.w + '"></td><td><input class="tin" type="number" min="0" max="9" data-ae-l="' + p.key + '" value="' + pp.l + '" placeholder="' + gp.l + '"></td></tr>';
+          return '<tr class="ae-u"><td>' + esc(p.name) + ' <small>' + R().ROMAN[p.tier] + (p.cls !== 'infantry' ? ' · ' + p.cls : '') + '</small></td><td><input class="tin" type="number" min="0" max="100" data-ae-w="' + p.key + '" value="' + pp.w + '" placeholder="' + gp.w + '"></td><td><input class="tin" type="number" min="0" max="9" data-ae-l="' + p.key + '" value="' + pp.l + '" placeholder="' + gp.l + '"></td></tr>';
         }).join('');
       }).join('') + '</table>';
     }
@@ -432,7 +438,7 @@
       var kind = t.getAttribute('data-ae-k'), v;
       if (kind === 'bool') v = t.checked ? true : undefined;
       else if (kind === 'num') v = t.value === '' || isNaN(+t.value) ? undefined : +t.value;
-      else v = t.value.trim() === '' ? undefined : t.value;
+      else v = t.value.trim() === '' ? undefined : /^-?\d+$/.test(t.value) ? +t.value : t.value;   // (a choice of number, the command level, kept a number)
       setP(u, path, v);
       return true;
     }

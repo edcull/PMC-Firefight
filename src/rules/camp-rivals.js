@@ -235,7 +235,8 @@
        company's roster — a Priority Level 3 army's worth and more — counts three times. */
     var ROSTER_PL = 3;
     function wEntry(a, k) { var e = (a.weights || {})[k]; return e == null ? null : Array.isArray(e) ? { w: e[0], lim: e[1] } : { w: e, lim: null }; }
-    function weightIn(a, p) { var e = wEntry(a, p.key) || wEntry(a, p.group); return e ? e.w : 0; }
+    // (its command units come by their own rules, rehireCommand: never by its weights)
+    function weightIn(a, p) { if (isLeaderP(p)) return 0; var e = wEntry(a, p.key) || wEntry(a, p.group); return e ? e.w : 0; }
     // how elite it is (`tier`): a unit off the company's own Tier counts for less, or more, as a skirmish roll has it
     function weighFor(co, a, p) {
       var have = co.roster.filter(function (e) { return e.key === p.key; }).length;

@@ -1607,7 +1607,7 @@
       tier: -1,
       hulls: { min: 1, max: 1.5 },
       weights: {   // tunnels under everything: Epsilons, turrets to hold the ground and to come up through
-        'Epsilon Squads': 6, 'Beta Squads': 4, 'Defensive Turrets': 4, 'Teleport Turrets': 3, 'Alpha Squads': 2, 'Delta Squads': 2
+        'Epsilon Squads': 6, 'Beta Squads': 4, 'Defensive Turrets': 4, 'Teleport Turrets': 3, 'Delta Squads': 2
       },
       spend: 'promote'
     },
@@ -1621,7 +1621,7 @@
       tier: 1,
       hulls: { min: 1, max: 2 },
       weights: {   // precise: Gammas and aviation
-        'Gamma Squads': 6, 'Beta Squads': 4, 'Strike Aviation': 4, 'Support Aviation': 4, 'Alpha Squads': 2, 'Epsilon Squads': 1
+        'Gamma Squads': 6, 'Beta Squads': 4, 'Strike Aviation': 4, 'Support Aviation': 4, 'Epsilon Squads': 1
       },
       spend: 'honours'
     },
@@ -1636,7 +1636,7 @@
       tier: -1,
       hulls: { min: 0, max: 0.5 },
       weights: {   // nine million Esh-Aven, and hardly a machine
-        'Epsilon Squads': 7, 'Delta Squads': 5, 'Alpha Squads': 1, 'Defensive Turrets': [1, 1]
+        'Epsilon Squads': 7, 'Delta Squads': 5, 'Defensive Turrets': [1, 1]
       },
       spend: 'recruit'
     },
@@ -1651,7 +1651,7 @@
       tier: 0,
       hulls: { min: 1, max: 1.5 },
       weights: {   // fights everyone, with whatever it has
-        'Delta Squads': 6, 'Epsilon Squads': 5, 'Strike Aviation': 4, 'Gamma Squads': 4, 'Alpha Squads': 2, 'Beta Squads': 2
+        'Delta Squads': 6, 'Epsilon Squads': 5, 'Strike Aviation': 4, 'Gamma Squads': 4, 'Beta Squads': 2
       },
       spend: 'promote'
     },
@@ -1681,7 +1681,7 @@
       tier: 0,
       hulls: { min: 1, max: 2 },
       weights: {   // steps out of the air behind you
-        'Teleport Turrets': 5, 'Strike Aviation': 5, 'Delta Squads': 5, 'Beta Squads': 4, xtelecraft: 4, 'Alpha Squads': 1
+        'Teleport Turrets': 5, 'Strike Aviation': 5, 'Delta Squads': 5, 'Beta Squads': 4, xtelecraft: 4
       },
       spend: 'machines'
     }
@@ -1705,7 +1705,7 @@
      two meet: a flat field and where it sits in the nested shape. */
   var FIELD_MAP = {
     names: 'names', blurb: 'blurb',
-    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls',
+    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls', command: 'force.command', commandTier: 'force.commandTier',
     fieldsMachines: 'force.machineMinded', machinesMax: 'force.machinesMax', riders: 'force.riders',
     temper: 'battle.temper', tactics: 'battle.tactics',
     doctrines: 'doctrines.shortlist', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',

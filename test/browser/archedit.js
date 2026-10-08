@@ -137,10 +137,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       got.spend === 'honours' && got.lean === 20 && got.t1[got.t1.length - 1] === 'commandos' && JSON.stringify(got.stages) === '[["T5","T2"]]', JSON.stringify(got));
 
     console.log('\nA bad one refused');
-    await p.fill('#arch-edit input[data-ae-w="bats"]', '15');
+    await p.fill('#arch-edit input[data-ae-w="bats"]', '150');
     await click('#arch-edit [data-ae="save"]');
     await till(() => !!document.querySelector('#arch-edit .faults'), 'the refusal');
-    ok('a weight over 10 is refused, with the reason', await p.evaluate(() => /weight is 0-10/.test(document.querySelector('#arch-edit .faults').textContent)));
+    ok('a weight over 100 is refused, with the reason', await p.evaluate(() => /weight is 0-100/.test(document.querySelector('#arch-edit .faults').textContent)));
     await click('#arch-edit [data-ae="revert"]');
 
     console.log('\nReset');
