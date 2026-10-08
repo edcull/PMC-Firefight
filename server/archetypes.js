@@ -61,7 +61,6 @@ function check(id, u) {
   if (!bool(doc.random)) return 'doctrines.random is true or false';
   if (!keyList(force.units)) return 'force.units names a unit this army does not have';
   for (const k of ['groups', 'second', 'riders']) if (force[k] != null && (!Array.isArray(force[k]) || !force[k].every(isGroup))) return 'force.' + k + ' names a group this army does not have';
-  if (force.favourites != null && (!Array.isArray(force.favourites) || !force.favourites.every((h) => isGroup(h) || isKey(h) || h === 'transports'))) return 'force.favourites names a hull group or unit, or "transports"';
   if (!numMap(force.mix, isGroup, 10)) return 'force.mix is { group: weight 0-10 }';
   if (!numMap(force.limit, (k) => isKey(k) || isGroup(k), 20)) return 'force.limit is { unit or group: 0-20 }';
   if (!bool(force.machineMinded)) return 'force.machineMinded is true or false';

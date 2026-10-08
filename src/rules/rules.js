@@ -509,9 +509,8 @@
     function lightCap(g) { return mix[g] && mix[g] < 1 ? Math.ceil(pl / 2) : null; }
     function hullFirst(p) {
       if (p.cls === 'infantry') return false;
-      // a machine company, or a weighted list with hulls to field and no favourites named: any hull of its own
-      if ((machineMinded || (W && a.hulls)) && !(a.hullsFirst || []).length) return true;
-      return (a.hullsFirst || []).some(function (h) { return h === p.group || h === p.key || (h === 'transports' && p.transport > 0); });
+      // a machine company, or a weighted list with hulls to field: any hull of its own (its weights choose which)
+      return !!(machineMinded || (W && a.hulls));
     }
     // more kinds rather than more of one: the units it has fewest of, more often than not
     function spread(list, keys) {
@@ -570,7 +569,7 @@
       },
       /* its own groups (or, at the Tiers they do not reach, the units it is founded
          with) most of the time, and the group furthest behind its mix first (its
-         favourite hulls are taken before this, one a Priority Level) */
+         hulls up to its vehicle min are taken before this) */
       favour: function (list, keys, wider) {
         if (W) {
           // one of them by weight, each copy it already has halving a unit's (more kinds, fewer repeats)
@@ -754,9 +753,9 @@
         take(pick(can.filter(function (p) { return p.tier === hi; })));
       }
     });
-    /* ...and its favourite hulls (Bastion's hunters, Shock's transports and engineering
-       vehicles, Free Space's troop carriers): one a Priority Level, the biggest at or
-       below the battle's Tier, a different one each time where it can */
+    /* ...and its hulls, up to its vehicle min (one a Priority Level if it has none set),
+       before anything else: by its weights where it has a list, otherwise the biggest at
+       or below the battle's Tier, a different one each time where it can */
     var hullsFirstN = st ? (st.a.hulls && st.a.hulls.min != null ? Math.round(st.a.hulls.min * pl) : pl) : 0;
     if (st) for (var hn = 0; hn < hullsFirstN; hn++) {
       var hulls = POOL.filter(function (p) { return !p.command && st.hullFirst(p) && room(p); });

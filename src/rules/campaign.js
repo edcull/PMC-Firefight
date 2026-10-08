@@ -1208,7 +1208,6 @@
       limit: { 'Remote mortars': 3 },
       refill: { enforcers: 2, recruits: 1 },   // Tier I gaps later: Enforcers become battle armour, Recruits the gun crews
       machinesMax: 4,               // its heavy guns are on hulls: tank hunters, destroyers, gun carriers
-      hullsFirst: ['Hunters and destroyers', 'Support vehicles'],   // the guns before the engineering vehicles
       /* A skirmish force's shopping list (R.rollArmy): a weight for each unit or group
          (0 never, 10 the backbone), and [weight, limit] where it is kept rare, the
          limit a Priority Level (a group's limit counts the whole group). A unit's
@@ -1225,8 +1224,9 @@
         'Heavy support': [2, 2], sam: [1, 1],
         'Remote mortars': [1, 1],
         // a few hulls (hulls): gun carriers, tank hunters and destroyers, engineering vehicles
-        'Hunters and destroyers': [3, 1], 'Support vehicles': [3, 1], impsupport: 2,
-        'Engineering and utility vehicles': [2, 1], aaveh: 1, medveh: 1, ewveh: 0,
+        // (its guns before its engineering vehicles)
+        'Hunters and destroyers': [5, 1], 'Support vehicles': [5, 1], impsupport: 2,
+        'Engineering and utility vehicles': [1, 1], aaveh: 1, medveh: 1, ewveh: 0,
         // the founding troops at the low Tiers
         enforcers: 5, recruits: 3,
         // rare extras
@@ -1342,7 +1342,6 @@
       second: ['Heavy infantry', 'Rifle infantry'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Assault troops': 3, 'Basic troops': 1 },
       units: ['chem'],              // and Chem warriors
-      hullsFirst: ['Transport vehicles', 'Engineering and utility vehicles'],   // a ride to the fight and a way through, before anything else
       // Penal troops thrown in first to soak the fire: free, and kept up (one per Tier, four at most)
       signature: ['penal'],
       signatureMax: 4,
@@ -1353,7 +1352,8 @@
         'Assault troops': 8, commandos: 6,
         'Basic troops': 3, irregulars: 4, enforcers: 4, penal: [4, 2],
         'Heavy infantry': [2, 1], 'Rifle infantry': [2, 1], chem: [4, 1], 'Light support': [1, 1],
-        'Transport vehicles': 4, insertplat: [2, 1],
+        // (a ride to the fight and a way through, before anything else)
+        'Transport vehicles': 6, insertplat: [2, 1],
         'Engineering and utility vehicles': [2, 1], hengveh: 4, lengveh: 3, aaveh: 0, ewveh: 1, medveh: 1
       },
       spend: 'promote'
@@ -1432,7 +1432,6 @@
       limit: { 'Rebel artillery': 0 },
       riders: ['First Among Equals'],
       machinesMax: 4,
-      hullsFirst: ['transports'],   // trucks, lifters and shuttles for whoever is not on a mount
       // the haul first; then the smuggling, the hard crew, the hulls and the mounted faithful's fury
       fixed: ['V2'],
       doctrines: ['V2', 'V1', 'V5', 'H3', 'H5', 'P4'],
@@ -1443,7 +1442,8 @@
       hulls: { min: 1, max: 2 },    // troop carriers and shuttles
       weights: {
         'Mounted Warriors': 8, 'Holy Warriors': 3, 'Freedom Warriors': 3,
-        'Rebel transport vehicles': 4, 'Rebel aviation': 3, rlifter: 1, 'Rebel combat vehicles': 2,
+        // (trucks, lifters and shuttles for whoever is not on a mount)
+        'Rebel transport vehicles': 6, 'Rebel aviation': 3, rlifter: 1, 'Rebel combat vehicles': 1,
         'Rebel support troops': [1, 1], 'Deserters and POWs': [1, 1]
       },
       spend: 'promote'
@@ -1488,7 +1488,6 @@
       second: ['Rebel support troops', 'Deserters and POWs'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Miners': 3, 'Freedom Warriors': 1, 'Rebel artillery': 0.5 },
       machinesMax: 4,
-      hullsFirst: ['Rebel combat vehicles'],
       // a pick from its list first, then Labour Leader at Tier II, when there are vehicles enough to want it
       fixedAt: { 2: 'H3' },
       doctrines: ['H2', 'H3', 'V4', 'H4', 'V5', 'V1'],
@@ -1545,7 +1544,6 @@
       second: ['Holy Warriors', 'Mounted Warriors'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Deserters and POWs': 2, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 1.5 },
       machinesMax: 3,
-      hullsFirst: ['Rebel aviation'],
       // its officers still command (the garrison's military past); then who pays, the discipline, and a chaplain's sermon
       fixed: ['H6'],
       doctrines: ['H6', 'V6', 'V5', 'V1', 'P5', 'P6'],
@@ -1556,7 +1554,7 @@
       hulls: { min: 1, max: 1.5 },  // shuttles and FlaK first
       weights: {
         'Deserters and POWs': 7, 'Freedom Warriors': 5, 'Rebel support troops': 3, 'Rebel artillery': [3, 1],
-        'Rebel aviation': 3, rlifter: 1, 'Rebel combat vehicles': 2, 'Rebel flak vehicles': [2, 1],
+        'Rebel aviation': 5, rlifter: 1, 'Rebel combat vehicles': 1, 'Rebel flak vehicles': [2, 1],
         'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1]
       },
       spend: 'promote'
@@ -1719,7 +1717,7 @@
      two meet: a flat field and where it sits in the nested shape. */
   var FIELD_MAP = {
     names: 'names', blurb: 'blurb',
-    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls', hullsFirst: 'force.favourites',
+    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls',
     fieldsMachines: 'force.machineMinded', machinesMax: 'force.machinesMax', riders: 'force.riders',
     groups: 'force.groups', units: 'force.units', mix: 'force.mix', limit: 'force.limit', second: 'force.second',
     signature: 'force.signature.units', signatureMax: 'force.signature.max', signatureCap: 'force.signature.cap',

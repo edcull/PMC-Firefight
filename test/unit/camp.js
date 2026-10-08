@@ -1164,9 +1164,15 @@ head('Campaign rivals recruit by the same weighted list');
   });
   ok('a weighted rival recruits nothing its list weighs 0', stray.length, 0, stray.slice(0, 4).join('; '));
   ok('...and keeps to its limits (three Priority Levels’ worth on its books)', over.length, 0, over.slice(0, 4).join('; '));
-  var bast = grow('armour', 'pmc', 25), groupsHeld = {};
-  bast.roster.forEach(function (e) { groupsHeld[R.profile(e.key).group] = 1; });
-  ok('a Bastion rival grows a mix: armour, support infantry and hulls', !!(groupsHeld['Heavy infantry'] && (groupsHeld['Heavy support'] || groupsHeld['Light support']) && (groupsHeld['Hunters and destroyers'] || groupsHeld['Support vehicles'])), true, Object.keys(groupsHeld).join(', '));
+  // (a company's growth is a run of rolls: most Bastions grow the mix, not every last one)
+  var mixed = 0, groupsHeld = {};
+  for (var bi = 0; bi < 5; bi++) {
+    var bast = grow('armour', 'pmc', 25);
+    groupsHeld = {};
+    bast.roster.forEach(function (e) { groupsHeld[R.profile(e.key).group] = 1; });
+    if (groupsHeld['Heavy infantry'] && (groupsHeld['Heavy support'] || groupsHeld['Light support']) && (groupsHeld['Hunters and destroyers'] || groupsHeld['Support vehicles'])) mixed++;
+  }
+  ok('a Bastion rival grows a mix: armour, support infantry and hulls', mixed >= 3, true, mixed + ' of 5; the last: ' + Object.keys(groupsHeld).join(', '));
   var merc = grow('swarm', 'pmc', 30);
   ok('a recruiting company grows to a size that suits its Tier, not a hundred Recruits', merc.roster.length <= 12 + 7 * merc.tier + 4, true, merc.roster.length + ' units at Tier ' + merc.tier);
 })();

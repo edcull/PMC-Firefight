@@ -101,7 +101,7 @@
     if (kind === 'sel') return '<label>' + label + '<select class="tin"' + at + '>' + extra.map(function (o) { return '<option value="' + o[0] + '"' + (String(v || '') === String(o[0]) ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' + tip(help) + '</label>';
     return '<label>' + label + '<input class="tin" type="number"' + (extra || '') + at + ' value="' + (v == null ? '' : v) + '">' + tip(help) + '</label>';
   }
-  // ticks for a list of groups bound to a path (favourite hulls, riders, the older rules' groups)
+  // ticks for a list of groups bound to a path (riders, the older rules' groups)
   function ticks(label, path, options, help) {
     var have = getP(draft(), path) || [];
     return '<div class="ae-ticks"><span>' + label + tip(help) + '</span>' + options.map(function (o) {
@@ -144,15 +144,13 @@
     var f = u.force || {}, d = u.doctrines || {};
     var hullGroups = groupsOf(function (p) { return p.cls !== 'infantry'; });
     var S = { older: '' };
-    // its vehicles: how many, which first, and who rides
+    // its vehicles: how many, and who rides
     S.hulls = sec('hulls', 'Vehicle composition') + '<div class="ae-grid">' +
       // (one control for both ends: vehicles a Priority Level, at least and at most)
       '<div class="ae-pair"><span>Vehicles a Priority Level (min / max)</span><div class="ae-pairin">' +
         '<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmin" aria-label="Vehicles a Priority Level, min" value="' + (f.hulls && f.hulls.min != null ? f.hulls.min : '') + '" placeholder="1"><em>to</em>' +
         '<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmax" aria-label="Vehicles a Priority Level, max" value="' + (f.hulls && f.hulls.max != null ? f.hulls.max : '') + '" placeholder="1.5"></div>' +
-        tip('Per Priority Level, rounded (1.5 = 2 at PL1, 3 at PL2, 5 at PL3). Never more than 3.') + '</div></div>' +
-      ticks('Favourite hulls (taken first)', 'force.favourites', hullGroups.concat([['transports', 'anything that carries troops']]),
-        'Rolled before any other hull: as many as the vehicle min (one a Priority Level if blank), chosen by their weights and the tier preference. In a campaign it buys and upgrades to these first. None ticked: any hull it weights.') +
+        tip('Per Priority Level, rounded (1.5 = 2 at PL1, 3 at PL2, 5 at PL3). Never more than 3. The min are rolled first, by the weights.') + '</div></div>' +
       (groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }).length ? ticks('Groups that ride', 'force.riders', groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }),
         'In a campaign, units of these groups (and its leader, if of one) are recruited mounted wherever the rules let them ride.') : '') + '</div>';
     // signature units

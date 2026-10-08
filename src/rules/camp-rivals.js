@@ -274,10 +274,6 @@
       if (!opts && a0 && a0.riders && p0 && a0.riders.indexOf(p0.group) >= 0 && R.canRide(p0)) opts = { riders: true };
       return recruitBase(co, key, opts);
     };
-    // the hulls a force reaches for first: a group, a unit, or 'transports' (anything that carries troops)
-    function hullFirst(a, p) {
-      return (a.hullsFirst || []).some(function (h) { return h === p.group || h === p.key || (h === 'transports' && p.transport > 0); });
-    }
     function flat(list) { return [].concat.apply([], list || []); }
     /* A force that keeps some units rare (`limit`: Special Ops' one LRRP team, one of
        snipers, two mortar units) neither recruits nor promotes past it. A key limits
@@ -725,9 +721,6 @@
             return p.cls !== 'infantry' && !p.noSlot && wanted(p) && !capped(p) && canRecruit(co, p.key).ok && (!hullsKept || p.tier <= co.tier);
           }).sort(function (x, y) { return y.tier - x.tier; });
           if (!hulls.length) break;
-          // (the hulls it is known for first, where it has a preference: the Bastion's guns)
-          var firstH = hulls.filter(function (p) { return hullFirst(a, p); });
-          if (firstH.length) hulls = firstH;
           var top = hulls[0].tier, pickH = a.weights ? leaning(hulls.filter(function (p) { return p.tier === top; }))
             : hullsKept ? pick(hulls.filter(function (p) { return p.tier === top; })) : hulls[0];
           var rv = recruit(co, pickH.key);
@@ -745,8 +738,6 @@
             var bigger = R.listFor(co.faction).filter(function (p) {
               return p.cls !== 'infantry' && !p.noSlot && wanted(p) && p.tier <= co.tier && p.tier >= profile(small.key).tier + 1 && canRecruit(co, p.key).ok;
             });
-            var firstB = bigger.filter(function (p) { return hullFirst(a, p); });
-            if (firstB.length) bigger = firstB;
             if (bigger.length && small.rid !== co.cmdRid) {
               var nb = recruit(co, (a.weights ? leaning(bigger) : pick(bigger)).key);
               if (nb.ok) {
