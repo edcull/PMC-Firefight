@@ -160,19 +160,13 @@
         'A campaign company keeps one from each set a Company Tier, up to this many. Blank: 3.') +
       field('Or a flat number (campaign)', 'force.signature.cap', 'num', ' min="0" max="20"',
         'Set this and the company keeps exactly this many from each set at every Tier, in place of the line before (the Partisans’ commandos).') + '</div></div>';
-    // doctrines beyond the fixed and the shortlist
-    var fa = d.fixedAt || {};
-    S.stages = sec('stages', 'Doctrine stages and set Tiers', 'Stages') +
-      '<div class="ae-rows"><span>Stages' + tip('In place of the shortlist: after the fixed ones it takes all of stage 1 in a random order, then all of stage 2, and so on, then the rest at random. Doctrine codes separated by commas; the codes are listed under Doctrines above.') + '</span>' + (d.stages || []).map(function (st, i) {
+    // doctrines taken in stages, in place of the shortlist
+    S.stages = sec('stages', 'Doctrine stages', 'Stages') +
+      '<div class="ae-rows"><span>Stages' + tip('In place of the shortlist: it takes all of stage 1 in a random order, then all of stage 2, and so on, then the rest at random. Doctrine codes separated by commas; the codes are listed under Doctrines above.') + '</span>' + (d.stages || []).map(function (st, i) {
         return '<div class="ae-row"><input class="tin" data-ae-stage="' + i + '" value="' + esc(st.join(', ')) + '" placeholder="e.g. V6, V5, V1">' +
           '<button type="button" class="lnk acct-danger" data-ae="delstage" data-r="' + i + '">Remove</button></div>';
       }).join('') + '<button type="button" class="lnk" data-ae="addstage">+ Add a stage</button></div>' +
-      '<div class="ae-rows"><span>Fixed at a Tier' + tip('That doctrine is the one it takes on reaching that Company Tier, whatever the order would have given; the rest move along one.') + '</span>' + Object.keys(fa).sort().map(function (t) {
-        return '<div class="ae-row">Tier <select class="tin ae-n" data-ae-fat="' + t + '">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (String(n) === t ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>' +
-          '<select class="tin" data-ae-fad="' + t + '">' + docOpts(fa[t]) + '</select>' +
-          '<button type="button" class="lnk acct-danger" data-ae="delfat" data-k="' + t + '">Remove</button></div>';
-      }).join('') + '<button type="button" class="lnk" data-ae="addfat">+ Add</button></div>' +
-      field('No creed to speak of', 'doctrines.random', 'bool', null, 'Ignores the fixed ones, the shortlist and the stages: every doctrine is drawn from the whole list at random.') + '</div>';
+      field('No creed to speak of', 'doctrines.random', 'bool', null, 'Ignores the fixed Tiers, the shortlist and the stages: every doctrine is drawn from the whole list at random.') + '</div>';
     // the campaign rival's own
     S.camp = sec('camp', 'Campaign') +
       '<small class="ae-dim">How an AI rival company starts, grows and fields its forces in a campaign.</small>' +
@@ -252,13 +246,16 @@
     // (in the force's shape, under its temper)
     h += battle + '</div>';
     // doctrines
-    var creed = C().creedOf({ faction: faction() }).list, docs = '';
+    var creed = C().creedOf({ faction: faction() }).list, docs = '', fa = d.fixedAt || {};
     docs += sec('docs', 'Doctrines') + '<div class="ae-grid">' +
-      '<label>Fixed (taken first)<input class="tin" data-ae-f="fixed" value="' + esc((d.fixed || []).join(', ')) + '" placeholder="e.g. T4">' + tip('In this order, from its first Company Tier.') + '</label>' +
       '<label class="ae-wide">Shortlist (taken next, in a random order)<input class="tin" data-ae-f="shortlist" value="' + esc((d.shortlist || []).join(', ')) + '">' + tip('Shuffled anew for each company, so two companies of it differ.') + '</label></div>' +
-      '<small class="ae-dim">A campaign company takes one doctrine a Company Tier: the fixed ones first, then the shortlist shuffled, then the rest shuffled. Codes separated by commas.' +
-      (d.stages ? ' <b>This one takes its shortlist in stages (Doctrine stages, below): the shortlist here is not used.</b>' : '') +
-      (d.fixedAt ? ' One is fixed at a Tier of its own (below).' : '') + '</small>' +
+      '<div class="ae-rows"><span>Fixed at a Tier' + tip('The doctrine it takes on reaching that Company Tier (Tier I: what it is known for, from the start); the rest move along one.') + '</span>' + Object.keys(fa).sort().map(function (t) {
+        return '<div class="ae-row">Tier <select class="tin ae-n" data-ae-fat="' + t + '">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (String(n) === t ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>' +
+          '<select class="tin" data-ae-fad="' + t + '">' + docOpts(fa[t]) + '</select>' +
+          '<button type="button" class="lnk acct-danger" data-ae="delfat" data-k="' + t + '">Remove</button></div>';
+      }).join('') + '<button type="button" class="lnk" data-ae="addfat">+ Add</button></div>' +
+      '<small class="ae-dim">A campaign company takes one doctrine a Company Tier: the one fixed at that Tier, otherwise the next of the shortlist (shuffled), then the rest shuffled. Codes separated by commas.' +
+      (d.stages ? ' <b>This one takes its shortlist in stages (Doctrine stages, below): the shortlist here is not used.</b>' : '') + '</small>' +
       '<details class="ae-codes"><summary class="ae-dim">The doctrine codes</summary><ul>' + creed.map(function (x) { return '<li><b>' + x.id + '</b> ' + esc(x.name) + '</li>'; }).join('') + '</ul></details></div>';
     // the weighted list
     var w = f.weights || null;
@@ -324,8 +321,7 @@
       if (Object.keys(t).length) u.battle.tactics = t; else delete u.battle.tactics;
     }
     var ids = function (s) { return (s || '').split(/[\s,]+/).map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean); };
-    var fx = ids(val('fixed')), sl = ids(val('shortlist'));
-    if (fx.length) u.doctrines.fixed = fx; else delete u.doctrines.fixed;
+    var sl = ids(val('shortlist'));
     if (sl.length) u.doctrines.shortlist = sl;
     if (u.force.weights) {
       var w = {}, lims = {};
@@ -556,7 +552,7 @@
     else if (a === 'delstage') { var st = (u.doctrines.stages || []).slice(); st.splice(r, 1); if (st.length) u.doctrines.stages = st; else delete u.doctrines.stages; }
     else if (a === 'addfat') {
       u.doctrines = u.doctrines || {};
-      var fa = clone(u.doctrines.fixedAt || {}), t = [2, 3, 4, 5, 1].filter(function (n) { return !(n in fa); })[0];
+      var fa = clone(u.doctrines.fixedAt || {}), t = [1, 2, 3, 4, 5].filter(function (n) { return !(n in fa); })[0];
       if (t) { fa[t] = C().creedOf({ faction: faction() }).list[0].id; u.doctrines.fixedAt = fa; }
     }
     else if (a === 'delfat') { var fd = clone(u.doctrines.fixedAt || {}); delete fd[k]; if (Object.keys(fd).length) u.doctrines.fixedAt = fd; else delete u.doctrines.fixedAt; }

@@ -1243,7 +1243,7 @@
       machines: [], vehicles: 0,
       // a handful of top-tier veterans make a legal army; then whatever keeps them fit, trained and paid
       doctrines: ['O2', 'S3', 'S6', 'T1', 'S5', 'T6'],
-      fixed: ['O2'],
+      fixedAt: { 1: 'O2' },
       groups: ['Rifle infantry', 'Heavy infantry', 'Assault troops'],
       second: ['Light infantry'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Heavy infantry': 2, 'Rifle infantry': 1, 'Assault troops': 1 },
@@ -1337,7 +1337,7 @@
       t2: ['lighteng'],
       machines: ['unarmoured'], vehicles: 1,
       doctrines: ['T4', 'T1', 'T2', 'S1', 'O3', 'O5'],
-      fixed: ['T4'],
+      fixedAt: { 1: 'T4' },
       groups: ['Assault troops', 'Basic troops', 'Transport vehicles', 'Engineering and utility vehicles'],
       second: ['Heavy infantry', 'Rifle infantry'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Assault troops': 3, 'Basic troops': 1 },
@@ -1368,7 +1368,7 @@
       t2: ['lighteng', 'rookie'],
       machines: ['lpv', 'unarmoured'], vehicles: 2,
       doctrines: ['S1', 'O3', 'O6', 'O1', 'T2', 'S2'],
-      fixed: ['S1'],
+      fixedAt: { 1: 'S1' },
       groups: ['Combat vehicles', 'Transport vehicles', 'Transport aircraft', 'Strike aircraft', 'Assault troops', 'Rifle infantry'],
       second: ['Light infantry', 'Heavy support'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Rifle infantry': 1, 'Assault troops': 1 },   // as many assault troops as riflemen in the back of its vehicles
@@ -1433,7 +1433,7 @@
       riders: ['First Among Equals'],
       machinesMax: 4,
       // the haul first; then the smuggling, the hard crew, the hulls and the mounted faithful's fury
-      fixed: ['V2'],
+      fixedAt: { 1: 'V2' },
       doctrines: ['V2', 'V1', 'V5', 'H3', 'H5', 'P4'],
       stages: [['V1', 'V5', 'H3', 'H5'], ['P4']],   // Holy Fury last: at Tier V, once the rest is held
       tactics: { open: 'wave', attack: 'wave', defend: 'wave' },                              // pirates never dig in (and riders take nothing from Guerillas)
@@ -1463,7 +1463,7 @@
       mix: { 'Holy Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
       machinesMax: 2,
       // Holy Fury first; then Stairs to Heaven or Martyrdom (two Prophet at most), and the Hero path: loyalty, victory and alms
-      fixed: ['P4'],
+      fixedAt: { 1: 'P4' },
       doctrines: ['P4', 'P3', 'P1', 'H4', 'H1', 'H5'],
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 0,
@@ -1518,7 +1518,7 @@
       machinesMax: 2,
       lean: true,                   // a small band: no free troops to pad it, no hiring with spare money
       // the mined bridge first; then leaders who will not break, and the locals on side
-      fixed: ['V3'],
+      fixedAt: { 1: 'V3' },
       doctrines: ['V3', 'P2', 'H2', 'H4', 'V4', 'H5'],
       tactics: { open: 'guerillas', attack: 'guerillas', defend: ['guerillas', 'laststand'] },   // out of the tunnels; on defence, half the time behind barricades
       /* a skirmish force's shopping list (see Bastion's) */
@@ -1545,7 +1545,7 @@
       mix: { 'Deserters and POWs': 2, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 1.5 },
       machinesMax: 3,
       // its officers still command (the garrison's military past); then who pays, the discipline, and a chaplain's sermon
-      fixed: ['H6'],
+      fixedAt: { 1: 'H6' },
       doctrines: ['H6', 'V6', 'V5', 'V1', 'P5', 'P6'],
       stages: [['V6', 'V5', 'V1'], ['P5', 'P6']],   // two of the Villain doctrines first, the Prophet ones last
       tactics: { open: 'laststand', attack: ['wave', 'guerillas'], defend: 'laststand' },     // a garrison digs in; it attacks in a rush or by infiltration
@@ -1569,7 +1569,7 @@
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB4', 'BP6', 'BP5', 'BC1', 'BB5', 'BP2'],
-      fixed: ['BB4'],
+      fixedAt: { 1: 'BB4' },
       groups: ['Lesser Bugs', 'Flying Bugs', 'Pioneer Bugs'],
       spend: 'promote'
     },
@@ -1580,7 +1580,7 @@
       t1: ['btiny', 'btiny', 'bspitlarva'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
       doctrines: ['BP1', 'BP2', 'BB1', 'BP3', 'BC1', 'BP5'],
-      fixed: ['BP1'],
+      fixedAt: { 1: 'BP1' },
       groups: ['Lesser Bugs', 'Underground Bugs', 'Spore Bugs'],
       spend: 'recruit'
     },
@@ -1591,7 +1591,7 @@
       t1: ['bspitlarva', 'btiny'], t2: ['bimmspit', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB3', 'BC3', 'BC2', 'BC6', 'BB6', 'BC4'],
-      fixed: ['BB3'],
+      fixedAt: { 1: 'BB3' },
       groups: ['Spore Bugs', 'Leader Bugs', 'Pioneer Bugs', 'Flying Bugs'],
       spend: 'honours'
     },
@@ -1613,7 +1613,7 @@
       t1: ['bspitlarva', 'btiny'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
       doctrines: ['BP4', 'BB5', 'BC1', 'BP3', 'BB1', 'BC4'],
-      fixed: ['BP4'],               // Fungi Symbiosis first: the humans it kills in an assault rise again as its Infected
+      fixedAt: { 1: 'BP4' },               // Fungi Symbiosis first: the humans it kills in an assault rise again as its Infected
       groups: ['Infected Humans', 'Lesser Bugs', 'Spore Bugs'],
       signature: ['binfected'],
       spend: 'recruit'
@@ -1639,7 +1639,7 @@
       t1: ['xeps1', 'xdelta1'], t2: ['xeps2', 'xbeta2'],
       machines: ['xdturret1'], vehicles: 1,
       doctrines: ['XO2', 'XT4', 'XO1', 'XS3', 'XO5', 'XT2'],
-      fixed: ['XO2'],
+      fixedAt: { 1: 'XO2' },
       groups: ['Epsilon Squads', 'Defensive Turrets', 'Teleport Turrets', 'Beta Squads'],
       spend: 'promote'
     },
@@ -1660,7 +1660,7 @@
       t1: ['xeps1', 'xeps1', 'xdelta1'], t2: ['xeps2', 'xdelta2'],
       machines: [], vehicles: 0,
       doctrines: ['XS1', 'XS5', 'XO2', 'XT2', 'XS3', 'XO6'],
-      fixed: ['XS1'],
+      fixedAt: { 1: 'XS1' },
       groups: ['Epsilon Squads', 'Delta Squads'],
       spend: 'recruit'
     },
@@ -1682,7 +1682,7 @@
       t1: ['xdelta1', 'xeps1'], t2: ['xbeta2', 'xdelta2'],
       machines: ['xdturret1'], vehicles: 1,
       doctrines: ['XO5', 'XS2', 'XO4', 'XT6', 'XS5', 'XO1'],
-      fixed: ['XO5'],
+      fixedAt: { 1: 'XO5' },
       groups: ['Shield Turrets', 'Defensive Turrets', 'Gamma Squads', 'Beta Squads', 'Delta Squads'],
       spend: 'honours'
     },
@@ -1693,7 +1693,7 @@
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xbeta2'],
       machines: ['xstrike2'], vehicles: 1,
       doctrines: ['XO1', 'XT4', 'XO6', 'XT1', 'XO2', 'XT3'],
-      fixed: ['XO1', 'XT4'],
+      fixedAt: { 1: 'XO1', 2: 'XT4' },
       groups: ['Teleport Turrets', 'Strike Aviation', 'Delta Squads', 'Beta Squads'],
       spend: 'machines'
     }
@@ -1722,7 +1722,7 @@
     groups: 'force.groups', units: 'force.units', mix: 'force.mix', limit: 'force.limit', second: 'force.second',
     signature: 'force.signature.units', signatureMax: 'force.signature.max', signatureCap: 'force.signature.cap',
     temper: 'battle.temper', tactics: 'battle.tactics',
-    doctrines: 'doctrines.shortlist', fixed: 'doctrines.fixed', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',
+    doctrines: 'doctrines.shortlist', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',
     t1: 'campaign.found.t1', t2: 'campaign.found.t2', machines: 'campaign.found.hulls', vehicles: 'campaign.found.hullCount',
     foundFree: 'campaign.found.free', refill: 'campaign.refill', spend: 'campaign.spend', honourFirst: 'campaign.honourFirst', lean: 'campaign.lean',
     leanSize: 'campaign.leanSize'
@@ -1788,9 +1788,21 @@
      named is rebuilt from its default and its change, in place, so everything holding
      it (a rival's archetype lookups, a roll in progress) sees the new one; one not
      named goes back to its default. */
+  /* A change saved before "fixed" was folded into "fixed at a Tier": its fixed doctrines
+     are the ones at Tiers I, II... */
+  function legacyChange(ch, base) {
+    var d = ch && ch.doctrines;
+    if (!d || !('fixed' in d)) return ch;
+    var fa = clone(d.fixedAt || (base && base.fixedAt) || {});
+    (d.fixed || []).forEach(function (x, i) { fa[i + 1] = x; });
+    delete d.fixed;
+    if (Object.keys(fa).length) d.fixedAt = fa;
+    return ch;
+  }
   function applyArchetypeChanges(changes) {
     var defs = defaultsNow();
     ARCH_CHANGES = clone(changes || {});
+    Object.keys(ARCH_CHANGES).forEach(function (id) { if (defs[id]) legacyChange(ARCH_CHANGES[id], defs[id]); });
     allArchetypes().forEach(function (a) {
       var base = defs[a.id], ch = ARCH_CHANGES[a.id];
       var flat = ch ? flatOf(mergeInto(nestedOf(base), ch)) : clone(base);

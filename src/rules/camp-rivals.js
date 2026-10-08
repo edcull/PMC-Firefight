@@ -365,14 +365,15 @@
 
     /* Found a rival to the book's starting rules, in its archetype's own style. */
     /* The order it will take its doctrines in, one per Tier, written when it is
-       founded. A force known for one thing takes it first (`fixed`: the Grey Plague's
-       Fungi Symbiosis, the raiders' teleport network); most then reach for their own
+       founded. A force known for one thing takes it first (`fixedAt` Tier I: the Grey
+       Plague's Fungi Symbiosis, the raiders' teleport network); most then reach for their own
        shortlist (`doctrines`, in a random order of their own); and a force with no
        creed to speak of (`random`) draws from the whole list. Whatever is left comes
        after, shuffled — a force that has spent its shortlist still has somewhere to go. */
     function docPlanFor(co, a) {
       var all = creedOf(co).list.map(function (d) { return d.id; });
-      var fixed = a.random ? [] : (a.fixed || []).filter(function (d) { return all.indexOf(d) >= 0; });
+      // (the doctrines fixed at a Tier are left out here and put in their places below)
+      var fixed = a.random ? [] : Object.keys(a.fixedAt || {}).map(function (t) { return a.fixedAt[t]; });
       var short = a.random ? [] : shuffle((a.doctrines || []).filter(function (d) { return all.indexOf(d) >= 0 && fixed.indexOf(d) < 0; }));
       /* A shortlist taken in stages (`stages`: the Turncoats' Villain doctrines before their
          Prophet ones) is shuffled within each stage, the stages kept in their order. */
@@ -383,9 +384,9 @@
         });
       }
       var rest = shuffle(all.filter(function (d) { return fixed.indexOf(d) < 0 && short.indexOf(d) < 0; }));
-      var plan = fixed.concat(short, rest);
-      /* ...and one fixed for a later Tier (`fixedAt`: the Pitheads' Labour Leader at Tier II,
-         once there are vehicles enough to want it) goes in at that place in the order. */
+      var plan = short.concat(rest);
+      /* ...and each one fixed at a Tier (Tier I: what it is known for; the Pitheads' Labour
+         Leader at Tier II, once there are vehicles enough to want it) goes in at that place. */
       var at = a.random ? {} : (a.fixedAt || {});
       Object.keys(at).sort().forEach(function (t) {
         var d = at[t];

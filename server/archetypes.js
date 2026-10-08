@@ -48,7 +48,7 @@ function check(id, u) {
     }
   }
   const doc = u.doctrines || {};
-  for (const k of ['shortlist', 'fixed']) {
+  for (const k of ['shortlist']) {
     if (doc[k] != null && (!Array.isArray(doc[k]) || doc[k].some((d) => !C.doctrine(d)))) return 'the ' + k + ' names a doctrine there is not';
   }
   // ---- the Advanced fields ----

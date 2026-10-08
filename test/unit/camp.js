@@ -943,20 +943,25 @@ head('Six personalities to every army');
 head('Doctrines: fixed, a shortlist, or random');
 (function () {
   var all = C.ARCHETYPES.concat(C.archetypesFor('rebel'), C.archetypesFor('bugs'), C.archetypesFor('xeno'));
+  function fixedOf(a) { return Object.keys(a.fixedAt || {}).map(function (t) { return a.fixedAt[t]; }); }
   ok('every archetype names doctrines of its own army only', all.filter(function (a) {
     var ids = C.creedOf({ faction: a.faction || 'pmc' }).list.map(function (d) { return d.id; });
-    return (a.doctrines || []).concat(a.fixed || []).some(function (d) { return ids.indexOf(d) < 0; });
+    return (a.doctrines || []).concat(fixedOf(a)).some(function (d) { return ids.indexOf(d) < 0; });
   }).map(function (a) { return a.id; }).join(','), '');
   ok('every PMC doctrine is on some company\'s list', C.creedOf({ faction: 'pmc' }).list.filter(function (d) {
-    return !C.ARCHETYPES.some(function (a) { return a.doctrines.indexOf(d.id) >= 0 || (a.fixed || []).indexOf(d.id) >= 0; });
+    return !C.ARCHETYPES.some(function (a) { return a.doctrines.indexOf(d.id) >= 0 || fixedOf(a).indexOf(d.id) >= 0; });
   }).map(function (d) { return d.name; }).join(', '), '');
   // (the PMC companies and the revolts all have a creed: none of them is random)
   ok('...and each army has forces of all three kinds', ['pmc', 'rebel', 'bugs', 'xeno'].every(function (f) {
     var as = C.archetypesFor(f);
-    return (f === 'pmc' || f === 'rebel' || as.some(function (a) { return a.random; })) && as.some(function (a) { return (a.fixed || []).length; }) &&
-      as.some(function (a) { return !a.random && !(a.fixed || []).length; });
+    return (f === 'pmc' || f === 'rebel' || as.some(function (a) { return a.random; })) && as.some(function (a) { return !!(a.fixedAt || {})[1]; }) &&
+      as.some(function (a) { return !a.random && !(a.fixedAt || {})[1]; });
   }), true);
   function found(id) { var a = C.archetype(id), co = C.newCompany('D', { faction: a.faction || 'pmc' }); C.foundRival(co, id, []); return co; }
+  // (a change an admin saved while "fixed" was its own field still means fixed at Tier I, II...)
+  C.applyArchetypeChanges({ shock: { doctrines: { fixed: ['T1'] } } });
+  ok('an old saved change with "fixed" becomes fixed at Tier I', JSON.stringify(C.archetype('shock').fixedAt) + ' ' + ('fixed' in C.archetype('shock')), '{"1":"T1"} false');
+  C.applyArchetypeChanges({});
   var plague = [0, 1, 2, 3, 4].map(function () { return found('greyplague'); });
   ok('the Grey Plague always founds with Fungi Symbiosis', plague.every(function (co) { return co.doctrines[0] === 'BP4'; }), true);
   var raid = found('shkar');
