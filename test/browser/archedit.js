@@ -68,17 +68,40 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p2.goto(URL); await wait(1500);
     ok('a page loaded afresh lays it over its own', await p2.evaluate(() => window.PMCCamp.archetype('armour').tier === -1));
 
-    console.log('\nThe Advanced fields');
-    ok('the rest of the personality is in an Advanced section, as JSON', await p.evaluate(() => { const t = document.querySelector('#arch-edit [data-ae-f="advanced"]'); const j = JSON.parse(t.value); return !!(j.campaign && j.campaign.found && j.campaign.spend); }));
-    await p.evaluate(() => { const t = document.querySelector('#arch-edit [data-ae-f="advanced"]'); const j = JSON.parse(t.value); j.campaign.spend = 'honours'; j.campaign.leanSize = 20; t.value = JSON.stringify(j); });
+    console.log('\nEvery field in the form');
+    // each personality read back from its form, untouched, is no change at all
+    const drift = await p.evaluate(() => {
+      const out = [];
+      ['pmc', 'rebel', 'bugs', 'xeno'].forEach((f) => window.PMCCamp.archetypesFor(f).forEach((a) => {
+        window.PMCArchEdit.pick(a.id);
+        // (against what it is now: one already changed by an admin stays as changed as it was)
+        const ch = JSON.stringify(window.PMCCamp.archetypeChange(a.id, window.PMCArchEdit.read()));
+        const was = JSON.stringify(window.PMCCamp.archetypeChange(a.id, window.PMCCamp.unifiedArchetype(a.id)));
+        if (ch !== was) out.push(a.id + ': ' + ch.slice(0, 80));
+      }));
+      window.PMCArchEdit.pick('armour');
+      return out;
+    });
+    ok('all 24 personalities read back from the form unchanged', !drift.length, drift.slice(0, 3).join(' | '));
+    ok('the campaign, signature, hull and doctrine fields have their own controls (no JSON)', await p.evaluate(() =>
+      !document.querySelector('#arch-edit [data-ae-f="advanced"]') && !!document.querySelector('#arch-edit [data-ae-v="campaign.spend"]') &&
+      !!document.querySelector('#arch-edit [data-ae-row="campaign.found.t1"]') && !!document.querySelector('#arch-edit [data-ae-cb="force.favourites"]') &&
+      !!document.querySelector('#arch-edit [data-ae="addstage"]')));
+    await p.selectOption('#arch-edit [data-ae-v="campaign.spend"]', 'honours');
+    await p.fill('#arch-edit [data-ae-v="campaign.leanSize"]', '20');
+    await p.evaluate(() => document.querySelector('#arch-edit [data-ae-v="campaign.leanSize"]').dispatchEvent(new Event('change', { bubbles: true })));
+    await click('#arch-edit [data-ae="add"][data-path="force.signature.units"]');
+    await p.selectOption('#arch-edit [data-ae-row="force.signature.units"][data-r="0"][data-m="0"]', 'commandos');
+    await p.evaluate(() => { const b = document.querySelector('#arch-edit [data-ae-cb="force.favourites"][value="Engineering and utility vehicles"]'); b.checked = true; b.dispatchEvent(new Event('change', { bubbles: true })); });
+    await click('#arch-edit [data-ae="addstage"]');
+    await p.fill('#arch-edit [data-ae-stage="0"]', 'T5, T2');
+    await p.evaluate(() => document.querySelector('#arch-edit [data-ae-stage="0"]').dispatchEvent(new Event('change', { bubbles: true })));
+    ok('...and the tier preference typed above survives adding rows', await p.evaluate(() => document.querySelector('#arch-edit [data-ae-f="tier"]').value === '-1'));
     await click('#arch-edit [data-ae="save"]');
-    await till(() => /Saved/.test(document.querySelector('#arch-edit').innerText) && window.PMCCamp.archetype('armour').spend === 'honours', 'the advanced save');
-    ok('...and an edit there is saved and in force', await p.evaluate(() => window.PMCCamp.archetype('armour').spend === 'honours' && window.PMCCamp.archetype('armour').leanSize === 20));
-    await p.evaluate(() => { document.querySelector('#arch-edit [data-ae-f="advanced"]').value = '{ not json'; });
-    await click('#arch-edit [data-ae="save"]');
-    await till(() => !!document.querySelector('#arch-edit .faults'), 'the JSON refusal');
-    ok('...JSON that does not parse is refused in the page, with the reason', await p.evaluate(() => /not valid JSON/.test(document.querySelector('#arch-edit .faults').textContent)));
-    await click('#arch-edit [data-ae="revert"]');
+    await till(() => /Saved/.test(document.querySelector('#arch-edit').innerText) && window.PMCCamp.archetype('armour').spend === 'honours', 'the save of the new fields');
+    const got = await p.evaluate(() => { const a = window.PMCCamp.archetype('armour'); return { spend: a.spend, lean: a.leanSize, sig: a.signature, fav: a.hullsFirst, stages: a.stages }; });
+    ok('...saved and in force: spending, lean size, a signature set, a favourite hull, a stage',
+      got.spend === 'honours' && got.lean === 20 && JSON.stringify(got.sig) === '["commandos"]' && got.fav.indexOf('Engineering and utility vehicles') >= 0 && JSON.stringify(got.stages) === '[["T5","T2"]]', JSON.stringify(got));
 
     console.log('\nA bad one refused');
     await p.fill('#arch-edit input[data-ae-w="bats"]', '15');

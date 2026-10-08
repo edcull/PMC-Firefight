@@ -1758,15 +1758,23 @@
     });
     return base;
   }
+  // the same whatever order its keys were written in (a list of weights rebuilt by the editor)
+  function canon(v) {
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ':' + canon(v[k]); }).join(',') + '}';
+    return JSON.stringify(v);
+  }
   // what differs from the default: the part worth keeping as a change
   function diffFrom(base, now, at) {
     var out = {};
     Object.keys(now || {}).forEach(function (k) {
       var path = at ? at + '.' + k : k, a = base ? base[k] : undefined, b = now[k];
+      // (an empty section and none at all are the same)
+      if (a == null && b && typeof b === 'object' && !Array.isArray(b) && !Object.keys(b).length) return;
       if (b && typeof b === 'object' && !Array.isArray(b) && WHOLE.indexOf(path) < 0 && a && typeof a === 'object' && !Array.isArray(a)) {
         var d = diffFrom(a, b, path);
         if (Object.keys(d).length) out[k] = d;
-      } else if (JSON.stringify(a) !== JSON.stringify(b)) out[k] = clone(b);
+      } else if (canon(a) !== canon(b)) out[k] = clone(b);
     });
     Object.keys(base || {}).forEach(function (k) { if (now && !(k in now)) out[k] = null; });
     return out;

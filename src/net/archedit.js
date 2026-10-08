@@ -43,17 +43,150 @@
     return w;
   }
 
-  // the fields the form above does not show, in the nested shape
-  var SHOWN = { force: ['weights', 'tier', 'hulls'], battle: ['temper', 'tactics'], doctrines: ['fixed', 'shortlist'] };
-  function advancedOf(u) {
-    var out = { blurb: u.blurb };
-    ['force', 'battle', 'doctrines'].forEach(function (sec) {
-      var rest = {};
-      Object.keys(u[sec] || {}).forEach(function (k) { if (SHOWN[sec].indexOf(k) < 0) rest[k] = u[sec][k]; });
-      if (Object.keys(rest).length) out[sec] = rest;
-    });
-    if (u.campaign) out.campaign = u.campaign;
-    return out;
+  // ---- reading and writing the draft by path ('campaign.found.t1') ----
+  function getP(o, path) { return path.split('.').reduce(function (x, k) { return x == null ? undefined : x[k]; }, o); }
+  function setP(o, path, v) {
+    var ks = path.split('.'), last = ks.pop();
+    ks.forEach(function (k) { if (o[k] == null || typeof o[k] !== 'object' || Array.isArray(o[k])) o[k] = {}; o = o[k]; });
+    if (v === undefined) delete o[last]; else o[last] = v;
+  }
+  /* Lists of units, kept as rows of one or more units: the founding Tier I units and
+     hulls (one each), the founding Tier II units (one, or two to pick between), the
+     signature sets (several each), the favoured units of the older rules. */
+  var ROWS = {
+    'campaign.found.t1': 'one', 'campaign.found.hulls': 'one', 'force.units': 'one',
+    'campaign.found.t2': 'pick', 'force.signature.units': 'set'
+  };
+  function rowsOf(path) {
+    var v = getP(draft(), path) || [];
+    if (ROWS[path] === 'set') return v.length && Array.isArray(v[0]) ? clone(v) : v.length ? [clone(v)] : [];
+    return v.map(function (x) { return Array.isArray(x) ? clone(x) : [x]; });
+  }
+  function putRows(path, rows) {
+    rows = rows.map(function (r) { return r.filter(Boolean); }).filter(function (r) { return r.length; });
+    var kind = ROWS[path], v;
+    if (!rows.length) v = Array.isArray(getP(draft(), path)) ? [] : undefined;   // (an empty list it had stays an empty list)
+    else if (kind === 'one') v = rows.map(function (r) { return r[0]; });
+    else if (kind === 'pick') v = rows.map(function (r) { return r.length === 1 ? r[0] : r; });
+    else v = rows.length === 1 ? rows[0] : rows;          // one signature set is kept as a plain list
+    setP(draft(), path, v);
+  }
+  function unitOpts(sel, test) {
+    var groups = {};
+    R().listFor(faction()).filter(test || function () { return true; }).forEach(function (p) { (groups[p.group] = groups[p.group] || []).push(p); });
+    return '<option value="">— choose —</option>' + Object.keys(groups).map(function (g) {
+      return '<optgroup label="' + esc(g) + '">' + groups[g].sort(function (a, b2) { return a.tier - b2.tier; }).map(function (p) {
+        return '<option value="' + p.key + '"' + (p.key === sel ? ' selected' : '') + '>' + esc(p.name) + ' (' + R().ROMAN[p.tier] + ')</option>';
+      }).join('') + '</optgroup>';
+    }).join('');
+  }
+  function groupsOf(test) {
+    var seen = [];
+    R().listFor(faction()).forEach(function (p) { if ((!test || test(p)) && seen.indexOf(p.group) < 0) seen.push(p.group); });
+    return seen;
+  }
+  function docOpts(sel) {
+    return '<option value="">—</option>' + C().creedOf({ faction: faction() }).list.map(function (x) {
+      return '<option value="' + x.id + '"' + (x.id === sel ? ' selected' : '') + '>' + x.id + ' ' + esc(x.name) + '</option>';
+    }).join('');
+  }
+  // one control bound to a path: text, a number, a tick, or a choice
+  function field(label, path, kind, extra) {
+    var v = getP(draft(), path), at = ' data-ae-v="' + path + '" data-ae-k="' + kind + '"';
+    if (kind === 'bool') return '<label class="ae-tick"><input type="checkbox"' + at + (v ? ' checked' : '') + '> ' + label + '</label>';
+    if (kind === 'text') return '<label class="ae-wide">' + label + '<textarea class="tin" rows="2"' + at + '>' + esc(v || '') + '</textarea></label>';
+    if (kind === 'sel') return '<label>' + label + '<select class="tin"' + at + '>' + extra.map(function (o) { return '<option value="' + o[0] + '"' + (String(v || '') === String(o[0]) ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>';
+    return '<label>' + label + '<input class="tin" type="number"' + (extra || '') + at + ' value="' + (v == null ? '' : v) + '"></label>';
+  }
+  // ticks for a list of groups bound to a path (favourite hulls, riders, the older rules' groups)
+  function ticks(label, path, options) {
+    var have = getP(draft(), path) || [];
+    return '<div class="ae-ticks"><span>' + label + '</span>' + options.map(function (o) {
+      var val = Array.isArray(o) ? o[0] : o, name = Array.isArray(o) ? o[1] : o;
+      return '<label><input type="checkbox" data-ae-cb="' + path + '" value="' + esc(val) + '"' + (have.indexOf(val) >= 0 ? ' checked' : '') + '> ' + esc(name) + '</label>';
+    }).join('') + '</div>';
+  }
+  // rows of units bound to a path; `more` names what a second unit in a row means ('or' / '+')
+  function unitRows(label, path, test, more) {
+    var rows = rowsOf(path), sel = function (k, i, m) { return '<select class="tin" data-ae-row="' + path + '" data-r="' + i + '" data-m="' + m + '">' + unitOpts(k, test) + '</select>'; };
+    var del = function (i, m) { return '<button type="button" class="lnk" data-ae="delm" data-path="' + path + '" data-r="' + i + '" data-m="' + m + '" title="Take this one out">×</button>'; };
+    var drop = function (i, what) { return '<button type="button" class="lnk acct-danger" data-ae="del" data-path="' + path + '" data-r="' + i + '">' + what + '</button>'; };
+    return '<div class="ae-rows"><span>' + label + '</span>' + rows.map(function (r, i) {
+      // a signature set: a box of its own, a unit a line
+      if (more === 'set') {
+        return '<div class="ae-set"><small class="ae-dim">Set ' + (i + 1) + '</small>' + r.map(function (k, m) {
+          return '<div class="ae-row">' + sel(k, i, m) + (r.length > 1 ? del(i, m) : '') + '</div>';
+        }).join('') + '<div class="ae-row"><button type="button" class="lnk" data-ae="addm" data-path="' + path + '" data-r="' + i + '">+ unit</button>' + drop(i, 'Remove set') + '</div></div>';
+      }
+      return '<div class="ae-row">' + r.map(function (k, m) { return (m ? '<em>or</em>' : '') + sel(k, i, m) + (m ? del(i, m) : ''); }).join('') +
+        (more === 'or' && r.length < 2 ? '<button type="button" class="lnk" data-ae="addm" data-path="' + path + '" data-r="' + i + '">+ or</button>' : '') + drop(i, 'Remove') + '</div>';
+    }).join('') + '<button type="button" class="lnk" data-ae="add" data-path="' + path + '">' + (more === 'set' ? '+ Add a set' : '+ Add') + '</button></div>';
+  }
+  /* rows of { key: number } bound to a path (the Tier I refill, the older rules' mix and
+     limits); `keys` the choices for a key */
+  function mapRows(label, path, keys, hint) {
+    var m = getP(draft(), path) || {};
+    return '<div class="ae-rows"><span>' + label + (hint ? ' <small class="ae-dim">' + hint + '</small>' : '') + '</span>' + Object.keys(m).map(function (k) {
+      return '<div class="ae-row"><select class="tin" data-ae-mapk="' + path + '" data-k="' + esc(k) + '">' + keys.map(function (o) {
+        return '<option value="' + esc(o[0]) + '"' + (o[0] === k ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>' +
+        '<input class="tin ae-n" type="number" min="0" max="20" step="0.5" data-ae-mapv="' + path + '" data-k="' + esc(k) + '" value="' + m[k] + '">' +
+        '<button type="button" class="lnk acct-danger" data-ae="delk" data-path="' + path + '" data-k="' + esc(k) + '">Remove</button></div>';
+    }).join('') + '<button type="button" class="lnk" data-ae="addk" data-path="' + path + '">+ Add</button></div>';
+  }
+  function unitKeys() { return R().listFor(faction()).map(function (p) { return [p.key, p.name + ' (' + R().ROMAN[p.tier] + ')']; }); }
+  function groupKeys() { return groupsOf().map(function (g) { return [g, g]; }); }
+
+  // the sections beyond the weighted list: everything else a personality has
+  function moreHTML(u) {
+    var f = u.force || {}, d = u.doctrines || {};
+    var hullGroups = groupsOf(function (p) { return p.cls !== 'infantry'; });
+    var h = '';
+    // its hulls and riders
+    h += '<div class="ae-sec"><h4>Hulls and riders</h4>' +
+      ticks('Favourite hulls (taken first)', 'force.favourites', hullGroups.concat([['transports', 'anything that carries troops']])) +
+      '<div class="ae-grid">' + field('Hulls kept in a campaign (blank: twice the skirmish most)', 'force.machinesMax', 'num', ' min="0" max="9"') +
+      field('A machine company (any hull of its own counts as a favourite)', 'force.machineMinded', 'bool') + '</div>' +
+      (groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }).length ? ticks('Groups that ride (recruited mounted where they may)', 'force.riders', groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; })) : '') + '</div>';
+    // signature units
+    h += '<div class="ae-sec"><h4>Signature units</h4><small class="ae-dim">What it is known for: kept up from each set (one a Priority Level in a skirmish roll; one a Company Tier in a campaign, up to the most).</small>' +
+      unitRows('Sets', 'force.signature.units', null, 'set') +
+      '<div class="ae-grid">' + field('Most kept from a set (campaign)', 'force.signature.max', 'num', ' min="0" max="9"') +
+      field('Or as many as this, whatever the Tier', 'force.signature.cap', 'num', ' min="0" max="20"') + '</div></div>';
+    // doctrines beyond the fixed and the shortlist
+    var fa = d.fixedAt || {};
+    h += '<div class="ae-sec"><h4>Doctrine stages and set Tiers</h4>' +
+      '<div class="ae-rows"><span>Stages (in turn, each shuffled; used in place of the shortlist)</span>' + (d.stages || []).map(function (st, i) {
+        return '<div class="ae-row"><input class="tin" data-ae-stage="' + i + '" value="' + esc(st.join(', ')) + '" placeholder="e.g. V6, V5, V1">' +
+          '<button type="button" class="lnk acct-danger" data-ae="delstage" data-r="' + i + '">Remove</button></div>';
+      }).join('') + '<button type="button" class="lnk" data-ae="addstage">+ Add a stage</button></div>' +
+      '<div class="ae-rows"><span>Fixed at a Tier (that doctrine goes in at that place in the order)</span>' + Object.keys(fa).sort().map(function (t) {
+        return '<div class="ae-row">Tier <select class="tin ae-n" data-ae-fat="' + t + '">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (String(n) === t ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>' +
+          '<select class="tin" data-ae-fad="' + t + '">' + docOpts(fa[t]) + '</select>' +
+          '<button type="button" class="lnk acct-danger" data-ae="delfat" data-k="' + t + '">Remove</button></div>';
+      }).join('') + '<button type="button" class="lnk" data-ae="addfat">+ Add</button></div>' +
+      field('No creed to speak of: draws from the whole list at random', 'doctrines.random', 'bool') + '</div>';
+    // the campaign rival's own
+    h += '<div class="ae-sec"><h4>Campaign</h4>' +
+      unitRows('Founded with, Tier I', 'campaign.found.t1', function (p) { return p.cls === 'infantry' && !p.command; }) +
+      unitRows('Founded with, Tier II (two in a row: one of them, at random)', 'campaign.found.t2', function (p) { return p.cls === 'infantry' && !p.command; }, 'or') +
+      unitRows('Founding hulls', 'campaign.found.hulls', function (p) { return p.cls !== 'infantry'; }) +
+      '<div class="ae-grid">' + field('How many founding hulls it takes', 'campaign.found.hullCount', 'num', ' min="0" max="6"') +
+      field('Its free founders are founded with too (not left to take on later)', 'campaign.found.free', 'bool') + '</div>' +
+      mapRows('Tier I gaps filled with', 'campaign.refill', unitKeys().filter(function (o) { return R().profile(o[0]).tier === 1; }), 'as often as its weight') +
+      '<div class="ae-grid">' + field('Spends its money and experience on', 'campaign.spend', 'sel', [['promote', 'promoting its units'], ['honours', 'honours before promotion'], ['recruit', 'recruiting widely'], ['machines', 'hulls']]) +
+      field('Lean: keeps to the size it means to be', 'campaign.lean', 'bool') +
+      field('Lean size (units)', 'campaign.leanSize', 'num', ' min="6" max="60" placeholder="24"') +
+      field('Honours before its first promotion, once it has Rapid Training Methods', 'campaign.honourFirst', 'bool') + '</div></div>';
+    // the older rules, for a personality with no weighted list yet
+    if (!f.weights) {
+      h += '<div class="ae-sec"><h4>Older rules (until it has a weighted list)</h4>' +
+        ticks('Its own groups', 'force.groups', groupsOf()) +
+        ticks('Second choices', 'force.second', groupsOf()) +
+        unitRows('Favoured units from other groups', 'force.units') +
+        mapRows('Mix (its groups’ shares)', 'force.mix', groupKeys()) +
+        mapRows('Limits (most on its books; 0 none)', 'force.limit', groupKeys().concat(unitKeys())) + '</div>';
+    }
+    return h;
   }
   function html() {
     var u = draft(), f = u.force || {}, b = u.battle || {}, d = u.doctrines || {}, list = R().listFor(faction());
@@ -70,6 +203,7 @@
     h += '<div class="ae-grid">' +
       '<label>Name<input class="tin" data-ae-f="name" value="' + esc(u.name || '') + '" maxlength="60"></label>' +
       '<label class="ae-wide">Company names (one per line)<textarea class="tin" data-ae-f="names" rows="3">' + esc((u.names || []).join('\n')) + '</textarea></label>' +
+      field('Blurb (what it is, in a line)', 'blurb', 'text') +
       '<label>Tier preference<select class="tin" data-ae-f="tier">' + [[-1, '−1 fills up a Tier below'], [0, '0 its own Tier'], [1, '+1 reaches a Tier above']].map(function (o) {
         return '<option value="' + o[0] + '"' + ((f.tier || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
       '<label>Hulls a Priority Level, fewest<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmin" value="' + (f.hulls && f.hulls.min != null ? f.hulls.min : '') + '" placeholder="1"></label>' +
@@ -114,11 +248,7 @@
       }).join('') + '</table>';
     }
     h += '</div>';
-    /* everything else, as it is kept: the campaign's founding and spending, the signature
-       units and favourite hulls, the staged doctrines, and the older group rules */
-    var adv = advancedOf(u);
-    h += '<div class="ae-sec"><h4>Advanced</h4><details' + (state.advOpen ? ' open' : '') + ' data-ae="adv"><summary class="ae-dim">Campaign founding and spending, signature units, favourite hulls, riders, staged doctrines, the older group rules (JSON)</summary>' +
-      '<textarea class="tin ae-json" data-ae-f="advanced" rows="14" spellcheck="false">' + esc(JSON.stringify(adv, null, 2)) + '</textarea></details></div>';
+    h += moreHTML(u);
     // preview and save
     h += '<div class="ae-sec"><h4>Preview</h4><div class="ae-prev">Tier <select class="tin" data-ae-p="t">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (n === state.pt ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>' +
       ' PL <select class="tin" data-ae-p="pl">' + [1, 2, 3].map(function (n) { return '<option' + (n === state.ppl ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>' +
@@ -137,18 +267,24 @@
     var names = (val('names') || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
     if (names.length) u.names = names;
     u.force = u.force || {}; u.battle = u.battle || {}; u.doctrines = u.doctrines || {};
-    u.force.tier = +val('tier') || 0;
+    // (0 is what an unset one means: one not set stays unset)
+    var tier0 = +val('tier') || 0;
+    if (tier0 || u.force.tier != null) u.force.tier = tier0;
     var hmin = val('hmin'), hmax = val('hmax');
     if (hmin !== '' || hmax !== '') {
       u.force.hulls = {};
       if (hmin !== '') u.force.hulls.min = +hmin;
       if (hmax !== '') u.force.hulls.max = +hmax;
     } else delete u.force.hulls;
-    u.battle.temper = +val('temper') || 0;
+    var temper0 = +val('temper') || 0;
+    if (temper0 || u.battle.temper != null) u.battle.temper = temper0;
     if (faction() === 'rebel') {
       var t = {};
       ['open', 'attack', 'defend'].forEach(function (role) {
         var on = Array.prototype.filter.call(host.querySelectorAll('[data-ae-tac="' + role + '"]'), function (x) { return x.checked; }).map(function (x) { return x.value; });
+        // (a coin toss has no order: the same two ticked keep the order they had)
+        var had = [].concat((u.battle.tactics || {})[role] || []);
+        if (on.length > 1 && had.length === on.length && had.every(function (x) { return on.indexOf(x) >= 0; })) on = had;
         if (on.length) t[role] = on.length === 1 ? on[0] : on;
       });
       if (Object.keys(t).length) u.battle.tactics = t; else delete u.battle.tactics;
@@ -157,18 +293,6 @@
     var fx = ids(val('fixed')), sl = ids(val('shortlist'));
     if (fx.length) u.doctrines.fixed = fx; else delete u.doctrines.fixed;
     if (sl.length) u.doctrines.shortlist = sl;
-    var advEl = host.querySelector('[data-ae-f="advanced"]');
-    if (advEl) {
-      var adv;
-      try { adv = JSON.parse(advEl.value || '{}'); } catch (e) { throw new Error('The Advanced section is not valid JSON: ' + e.message); }
-      if (adv.blurb != null) u.blurb = adv.blurb;
-      ['force', 'battle', 'doctrines'].forEach(function (sec) {
-        // what the form above does not show is replaced by what the Advanced section says
-        Object.keys(u[sec] || {}).forEach(function (k) { if (SHOWN[sec].indexOf(k) < 0) delete u[sec][k]; });
-        Object.keys((adv && adv[sec]) || {}).forEach(function (k) { if (SHOWN[sec].indexOf(k) < 0) u[sec][k] = adv[sec][k]; });
-      });
-      if (adv.campaign) u.campaign = adv.campaign; else delete u.campaign;
-    }
     if (u.force.weights) {
       var w = {}, lims = {};
       Array.prototype.forEach.call(host.querySelectorAll('[data-ae-l]'), function (e) { lims[e.getAttribute('data-ae-l')] = e.value; });
@@ -178,6 +302,9 @@
       });
       u.force.weights = w;
     }
+    // rows left empty, and empty stages, are dropped before it goes anywhere
+    Object.keys(ROWS).forEach(function (path) { if (getP(u, path) !== undefined) putRows(path, rowsOf(path)); });
+    if (u.doctrines.stages) { u.doctrines.stages = u.doctrines.stages.filter(function (st) { return st && st.length; }); if (!u.doctrines.stages.length) delete u.doctrines.stages; }
     return u;
   }
 
@@ -233,6 +360,7 @@
     if (!b) return;
     var a = b.getAttribute('data-ae');
     state.fault = ''; state.note = '';
+    if (['add', 'del', 'addm', 'delm', 'addk', 'delk', 'addstage', 'delstage', 'addfat', 'delfat'].indexOf(a) >= 0) { rowAction(a, b); return; }
     if (a === 'convert') { try { readForm(); } catch (e) { state.fault = e.message; draw(); return; } draft().force.weights = fromOlder(draft()); state.note = 'A starting list from its groups and mix: tune it, preview, then save.'; draw(); }
     else if (a === 'preview') { try { preview(); } catch (e) { state.fault = e.message; } draw(); }
     else if (a === 'revert') { state.draft = null; state.preview = null; draw(); }
@@ -255,9 +383,93 @@
       }, function () { state.fault = 'The server could not be reached.'; draw(); });
     }
   }
+  // a change to one of the bound controls goes straight into the draft
+  function bound(t) {
+    var u = draft(), path = t.getAttribute('data-ae-v');
+    if (path) {
+      var kind = t.getAttribute('data-ae-k'), v;
+      if (kind === 'bool') v = t.checked ? true : undefined;
+      else if (kind === 'num') v = t.value === '' || isNaN(+t.value) ? undefined : +t.value;
+      else v = t.value.trim() === '' ? undefined : t.value;
+      setP(u, path, v);
+      return true;
+    }
+    var cb = t.getAttribute('data-ae-cb');
+    if (cb) {
+      var on = Array.prototype.filter.call(host.querySelectorAll('[data-ae-cb="' + cb + '"]'), function (x) { return x.checked; }).map(function (x) { return x.value; });
+      setP(u, cb, on.length ? on : undefined);
+      return true;
+    }
+    var rp = t.getAttribute('data-ae-row');
+    if (rp) {
+      var rows = rowsOf(rp), r = +t.getAttribute('data-r'), m = +t.getAttribute('data-m');
+      if (rows[r]) { rows[r][m] = t.value; putRows(rp, rows); }
+      return true;
+    }
+    var mk = t.getAttribute('data-ae-mapk'), mv = t.getAttribute('data-ae-mapv');
+    if (mk || mv) {
+      var mp = mk || mv, old = t.getAttribute('data-k'), map = clone(getP(u, mp) || {}), out = {};
+      Object.keys(map).forEach(function (k) {
+        if (k !== old) { out[k] = map[k]; return; }
+        if (mk) out[t.value] = map[k]; else out[k] = t.value === '' ? 0 : +t.value;
+      });
+      setP(u, mp, Object.keys(out).length ? out : undefined);
+      if (mk) draw();                      // the row's key changed: its controls are named by it
+      return true;
+    }
+    if (t.hasAttribute('data-ae-stage')) {
+      u.doctrines = u.doctrines || {};
+      var st = clone(u.doctrines.stages || []), i = +t.getAttribute('data-ae-stage');
+      st[i] = t.value.split(/[\s,]+/).map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean);
+      u.doctrines.stages = st;
+      return true;
+    }
+    var fat = t.getAttribute('data-ae-fat'), fad = t.getAttribute('data-ae-fad');
+    if (fat || fad) {
+      u.doctrines = u.doctrines || {};
+      var fa = clone(u.doctrines.fixedAt || {});
+      if (fad) { if (t.value) fa[fad] = t.value; else delete fa[fad]; }
+      else { var dd = fa[fat]; delete fa[fat]; fa[t.value] = dd; }
+      u.doctrines.fixedAt = Object.keys(fa).length ? fa : undefined;
+      if (!u.doctrines.fixedAt) delete u.doctrines.fixedAt;
+      if (fat) draw();
+      return true;
+    }
+    return false;
+  }
+  // a row added or taken out: what is typed above is kept first, then the draft changed and drawn again
+  function rowAction(a, b) {
+    readForm();
+    var u = draft(), path = b.getAttribute('data-path'), r = +b.getAttribute('data-r'), m = +b.getAttribute('data-m'), k = b.getAttribute('data-k');
+    if (a === 'add') { var rows = rowsOf(path); rows.push(['']); putRowsKeep(path, rows); }
+    else if (a === 'del') { var rd = rowsOf(path); rd.splice(r, 1); putRows(path, rd); }
+    else if (a === 'addm') { var ra = rowsOf(path); if (ra[r]) ra[r].push(''); putRowsKeep(path, ra); }
+    else if (a === 'delm') { var rm = rowsOf(path); if (rm[r]) rm[r].splice(m, 1); putRows(path, rm); }
+    else if (a === 'addk') {
+      var map = clone(getP(u, path) || {});
+      var choices = path === 'campaign.refill' ? unitKeys().filter(function (o) { return R().profile(o[0]).tier === 1; }) : path === 'force.mix' ? groupKeys() : groupKeys().concat(unitKeys());
+      var free = choices.filter(function (o) { return !(o[0] in map); })[0];
+      if (free) { map[free[0]] = 1; setP(u, path, map); }
+    }
+    else if (a === 'delk') { var mp = clone(getP(u, path) || {}); delete mp[k]; setP(u, path, Object.keys(mp).length ? mp : undefined); }
+    else if (a === 'addstage') { u.doctrines = u.doctrines || {}; u.doctrines.stages = (u.doctrines.stages || []).concat([[]]); }
+    else if (a === 'delstage') { var st = (u.doctrines.stages || []).slice(); st.splice(r, 1); if (st.length) u.doctrines.stages = st; else delete u.doctrines.stages; }
+    else if (a === 'addfat') {
+      u.doctrines = u.doctrines || {};
+      var fa = clone(u.doctrines.fixedAt || {}), t = [2, 3, 4, 5, 1].filter(function (n) { return !(n in fa); })[0];
+      if (t) { fa[t] = C().creedOf({ faction: faction() }).list[0].id; u.doctrines.fixedAt = fa; }
+    }
+    else if (a === 'delfat') { var fd = clone(u.doctrines.fixedAt || {}); delete fd[k]; if (Object.keys(fd).length) u.doctrines.fixedAt = fd; else delete u.doctrines.fixedAt; }
+    draw();
+  }
+  // (a new, still empty row is kept in the draft until a unit is chosen in it)
+  function putRowsKeep(path, rows) {
+    var kind = ROWS[path];
+    setP(draft(), path, kind === 'set' ? rows : rows.map(function (r) { return kind === 'one' ? r[0] : r.length === 1 ? r[0] : r; }));
+  }
   function onChange(ev) {
     var t = ev.target;
-    if (t.closest && t.closest('details[data-ae="adv"]')) state.advOpen = true;
+    if (bound(t)) return;
     if (t.getAttribute('data-ae') === 'pick') { state.id = t.value; state.draft = null; state.preview = null; state.fault = ''; state.note = ''; draw(); }
     else if (t.getAttribute('data-ae-p') === 't') state.pt = +t.value;
     else if (t.getAttribute('data-ae-p') === 'pl') state.ppl = +t.value;
