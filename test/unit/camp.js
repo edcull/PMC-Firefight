@@ -1065,6 +1065,17 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
   var plainAlphas = 0;
   for (var pa = 0; pa < 30; pa++) plainAlphas += R.rollArmy(3, 2, null, 'xeno', 'ghadon').filter(function (k) { return R.profile(keyOf(k)).alpha; }).length;
   ok('...and with nothing set, one command unit a force, Alphas included', plainAlphas, 30);
+  // a rolled hull's drive: its usual one most of the time, else wheeled/tracked/anti-grav/hover (never legs); a drone about 15%
+  var dv = 0, usual = 0, legs = 0, del = 0, dr = 0;
+  ['armour', 'aircav', 'shock', 'swarm'].forEach(function (id) {
+    for (var i = 0; i < 40; i++) R.rollArmy(3, 2, null, 'pmc', id).forEach(function (k) {
+      var sp = R.splitPick(k), p = R.profile(sp.key);
+      if (R.canBeDrone(p)) { del++; if (sp.drone) dr++; }
+      if (p.cls === 'vehicle' && R.propsFor(p).length) { dv++; if (sp.prop === R.lookDrive(p)) usual++; if (sp.prop === 'walker') legs++; }
+    });
+  });
+  ok('rolled hulls: their usual drive about 55% of the time, never legs, drones about 15%', usual / dv > 0.45 && usual / dv < 0.65 && legs === 0 && dr / del > 0.07 && dr / del < 0.25, true,
+    Math.round(100 * usual / dv) + '% usual of ' + dv + ', ' + legs + ' walkers, ' + Math.round(100 * dr / del) + '% drones of ' + del);
   var cav4 = 0;
   for (var c4 = 0; c4 < 80; c4++) cav4 += R.rollArmy(3, 2, null, 'pmc', 'aircav').filter(function (k) { var p = R.profile(keyOf(k)); return p.cls !== 'infantry' && p.tier > 3; }).length;
   ok('...and a Cavalry at Tier III takes a Tier IV hull now and then', cav4 > 20 && cav4 < 160, true, cav4 + ' in 80 forces');

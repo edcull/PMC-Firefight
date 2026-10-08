@@ -248,6 +248,20 @@
     return DEFAULT_DRIVE[p.key] || 'wheeled';
   }
   function propOf(u) { return PROPULSION[u && u.prop] || null; }
+  /* A rolled or AI-bought hull's drive: the one it is usually drawn on two times in
+     five, otherwise any of wheeled, tracked, anti-grav and hover at random — so its
+     usual drive about 55% of the time and each other one about 15% (never legs). */
+  var ROLLED_DRIVES = ['wheeled', 'tracked', 'grav', 'hover'];
+  function rollDrive(p, rnd) {
+    if (!propsFor(p).length) return null;
+    rnd = rnd || Math.random;
+    var look = lookDrive(p);
+    if (ROLLED_DRIVES.indexOf(look) >= 0 && rnd() < 0.4) return look;
+    return ROLLED_DRIVES[Math.floor(rnd() * ROLLED_DRIVES.length)];
+  }
+  // ...and a hull that may be flown as a drone is one 15% of the time (p. 37)
+  var DRONE_CHANCE = 0.15;
+  function rollDrone(p, rnd) { return canBeDrone(p) && (rnd || Math.random)() < DRONE_CHANCE; }
   /* The special rules a unit is shown with: its own, and the Strafing Run every
      aircraft with Firepower may make — a rule of the game (p. 27), not printed
      on any profile, but the thing such a craft is for. */
@@ -634,30 +648,12 @@
       }
       return true;
     }
-    // a ground vehicle is rolled with a propulsion to match its job
-    var DRIVES = {
-      wheeled: ['wheeled', 'wheeled', 'tracked', 'grav', 'hover', 'walker'],
-      tank: ['tracked', 'tracked', 'wheeled', 'grav', 'walker'],
-      hunter: ['tracked', 'wheeled', 'grav', 'walker'],
-      destroyer: ['tracked', 'tracked', 'grav', 'walker'],
-      truck: ['wheeled', 'wheeled', 'hover'],
-      apc: ['tracked', 'wheeled', 'wheeled', 'hover', 'grav'],
-      engineer: ['tracked', 'tracked', 'walker'],
-      spg: ['tracked', 'tracked', 'wheeled', 'walker'],
-      flak: ['tracked', 'wheeled', 'grav'],
-      ewcar: ['wheeled', 'wheeled', 'hover', 'grav'],
-      medcar: ['wheeled', 'wheeled', 'tracked'],
-      // improvised hulls: civilian running gear, or whatever the yard had
-      technical: ['wheeled', 'wheeled', 'wheeled', 'hover'],
-      improvised: ['tracked', 'tracked', 'wheeled', 'walker'],
-      rtruck: ['wheeled', 'wheeled', 'wheeled', 'hover'],
-      rflak: ['wheeled', 'wheeled', 'tracked']
-    };
     function take(p) {
       if (p.cls === 'vehicle' && alienHull(p)) {
         keys.push(p.key);
-      } else if (p.cls === 'vehicle') {
-        keys.push(joinPick(p.key, pick(DRIVES[p.art] || PROP_ORDER)));
+      } else if (p.cls === 'vehicle' || p.cls === 'aircraft') {
+        // its drive, and flown as a drone now and then (rollDrive, rollDrone)
+        keys.push(joinPick(p.key, rollDrive(p, rnd), rollDrone(p, rnd)));
       } else if (p.ridersUpgrade && (st ? st.rides(p) : rnd() < 0.3)) {
         keys.push(joinPick(p.key, null, false, true));      // mounted, now and then
       } else keys.push(p.key);
@@ -2331,7 +2327,7 @@
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,
     canMartyr: canMartyr, resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
-    applyDrone: applyDrone, canBeDrone: canBeDrone, shownRules: shownRules, auxSpec: auxSpec, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
+    applyDrone: applyDrone, canBeDrone: canBeDrone, rollDrive: rollDrive, rollDrone: rollDrone, shownRules: shownRules, auxSpec: auxSpec, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
     shotMods: shotMods, shotOdds: shotOdds, expectedShot: expectedShot, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
