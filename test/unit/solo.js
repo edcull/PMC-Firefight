@@ -10,11 +10,11 @@ var R = global.PMC, C = global.PMCCamp;
 
 var pass = 0, fail = 0;
 
-/* A personality's own units: what its weighted list weighs above 0, where it has one
-   (the same list its rolls and its recruiting go by); else its groups and favoured units. */
+/* A personality's own units: what its weighted list weighs above 0 (the same list its
+   rolls and its recruiting go by). */
 function ownOf(a, p) {
-  if (a.weights) { var e = a.weights[p.key] != null ? a.weights[p.key] : a.weights[p.group]; return !!(e && (Array.isArray(e) ? e[0] : e)); }
-  return a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0;
+  var e = a.weights[p.key] != null ? a.weights[p.key] : a.weights[p.group];
+  return !!(e && (Array.isArray(e) ? e[0] : e));
 }
 
 function ok(name, got, want, note) {
@@ -73,8 +73,8 @@ ok('...and a Tier I over its ceiling takes the free place before a Tier II', cap
 /* ------------------------------------------------------------- the archetypes */
 head('Founding a rival');
 ok('six archetypes', C.ARCHETYPES.length, 6);
-ok('each has a name pool, a doctrine order and preferred groups',
-  C.ARCHETYPES.every(function (a) { return a.names.length && a.doctrines.length >= 6 && a.groups.length; }), true);
+ok('each has a name pool, a doctrine order and a weighted list',
+  C.ARCHETYPES.every(function (a) { return a.names.length && a.doctrines.length >= 6 && Object.keys(a.weights || {}).length; }), true);
 var names = {};
 C.ARCHETYPES.forEach(function (a) { a.names.forEach(function (n) { names[n] = (names[n] || 0) + 1; }); });
 ok('no company name belongs to two archetypes',
