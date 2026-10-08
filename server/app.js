@@ -3,6 +3,8 @@
    the real server does. */
 'use strict';
 const Auth = require('./auth.js');
+// the unit catalogue and the weapon table, which an admin's weapon changes are checked against
+require('./rules.js');
 
 /* The game also runs from a file:// page, which arrives as a null origin, so
    the campaign routes answer any origin. A write is safe all the same: it must
@@ -188,6 +190,43 @@ function create(opts) {
     return true;
   }
 
+  /* How units are drawn firing, as an admin has changed it (the viewer's weapon
+     editor): GET is anyone's, so every game this server serves draws the same;
+     POST { key, data } changes a unit, DELETE /:key puts it back as the table
+     in data.js has it, DELETE (no key) puts every one back. Only an admin's. */
+  function weaponsApi(req, res, url) {
+    const m = /^\/api\/weapons(?:\/([a-z0-9_-]{1,60}))?$/.exec(url);
+    if (!m) return false;
+    const send = (code, body) => {
+      res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(JSON.stringify(body));
+    };
+    const db = auth && auth.db;
+    if (req.method === 'GET' && !m[1]) return send(200, { weapons: db ? db.weapons() : {} }), true;
+    if (!db) return send(503, { error: 'this server keeps no changes' }), true;
+    const me = auth.session(Auth.tokenFrom(req));
+    if (!me || !me.admin) return send(403, { error: 'only an admin changes the weapon table' }), true;
+    if (req.headers.origin && !allowOrigin(req.headers.origin, req)) return send(403, { error: 'not from here' }), true;
+    const D = global.PMCData;
+    if (req.method === 'DELETE') {
+      if (m[1]) return send(200, { ok: db.dropWeapon(m[1]) }), true;
+      return send(200, { ok: true, dropped: db.dropWeapons() }), true;
+    }
+    if (req.method !== 'POST' || m[1]) return send(405, { error: 'method not allowed' }), true;
+    readBody(req, (body) => {
+      if (body === null) return send(413, { error: 'too large' });
+      let b;
+      try { b = JSON.parse(body); } catch (e) { return send(400, { error: 'that is not JSON' }); }
+      const key = String((b && b.key) || '');
+      if (!D.CATALOGUE.some((p) => p.key === key)) return send(400, { error: 'no unit has that key' });
+      const entry = D.weaponEntry(b.data);
+      if (!entry) return send(400, { error: 'that is not a weapon entry' });
+      db.putWeapon(key, entry, Date.now(), me.userId);
+      send(200, { ok: true, key: key, data: entry });
+    });
+    return true;
+  }
+
   /* A signed-in player's own campaigns (phase 3a, decision 7), kept whole, each
      with a version: a save carries the version it was read at, and one made from
      an older copy is refused (409) with the newer one, so two devices never
@@ -336,6 +375,7 @@ function create(opts) {
     if (url === '/api/archetypes' && req.method === 'GET') return json(res, 200, opts.archetypes ? opts.archetypes.list() : { changes: {}, updated: [], version: 0 });
     if (campaignsApi(req, res, url)) return;
     if (forcesApi(req, res, url)) return;
+    if (weaponsApi(req, res, url)) return;
     if (onlineApi(req, res, url)) return;
     if (url === '/campaigns') return json(res, 200, { campaigns: campaigns.list() });
     if (campaignRoute(req, res, url)) return;

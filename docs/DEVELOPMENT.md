@@ -89,6 +89,7 @@ src/
   net/               playing somebody else
     net.js           the two transports: a socket to a server, or the engine in this tab
     lobby.js         the multiplayer lobby, room and chat
+    weapons.js       the weapon table as the game server has it: an admin's changes laid over data.js's
 
   css/               base.css (tokens, shared), game.css (the game), viewer.css (the viewer)
 
@@ -395,7 +396,7 @@ xenoflow.js        a Xenotripod campaign, through the interface
 ```
 viewertest.js      every weapon style, the states, insertion
 viewerswipe.js     stepping through the list by swipe and key
-weaponedit.js      the weapon editor: an admin's tab, a unit's weapon changed, kept, copied out and reverted
+weaponedit.js      the weapon editor: an admin's tab, a unit's weapon changed, saved to the server and drawn by every page, copied out and reverted
 ```
 
 **Whole battles** (the slow set: `npm run test:slow`)
