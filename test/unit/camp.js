@@ -951,10 +951,17 @@ head('Doctrines: fixed, a shortlist, or random');
     return !C.ARCHETYPES.some(function (a) { return a.doctrines.indexOf(d.id) >= 0 || fixedOf(a).indexOf(d.id) >= 0; });
   }).map(function (d) { return d.name; }).join(', '), '');
   // (the PMC companies and the revolts all have a creed: none of them is random)
+  // (a creed of its own: no doctrine on the lists of four or more forces of one army)
+  ok('no doctrine is on four or more of an army\'s personalities', ['pmc', 'rebel', 'bugs', 'xeno'].map(function (f) {
+    var use = {};
+    C.archetypesFor(f).forEach(function (a) { (a.doctrines || []).concat(fixedOf(a)).filter(function (d, i, l) { return l.indexOf(d) === i; }).forEach(function (d) { use[d] = (use[d] || 0) + 1; }); });
+    return Object.keys(use).filter(function (d) { return use[d] >= 4; }).map(function (d) { return f + ' ' + d + ' ' + use[d]; }).join(',');
+  }).filter(Boolean).join(' '), '');
+  // (every swarm has a creed now, each its signature doctrine first; the Xenotripods keep one with none)
   ok('...and each army has forces of all three kinds', ['pmc', 'rebel', 'bugs', 'xeno'].every(function (f) {
     var as = C.archetypesFor(f);
-    return (f === 'pmc' || f === 'rebel' || as.some(function (a) { return a.random; })) && as.some(function (a) { return !!(a.fixedAt || {})[1]; }) &&
-      as.some(function (a) { return !a.random && !(a.fixedAt || {})[1]; });
+    return (f !== 'xeno' || as.some(function (a) { return a.random; })) && as.some(function (a) { return !!(a.fixedAt || {})[1]; }) &&
+      (f === 'bugs' || as.some(function (a) { return !a.random && !(a.fixedAt || {})[1]; }));
   }), true);
   function found(id) { var a = C.archetype(id), co = C.newCompany('D', { faction: a.faction || 'pmc' }); C.foundRival(co, id, []); return co; }
   // (a change an admin saved while "fixed" was its own field still means fixed at Tier I, II...)
@@ -979,7 +986,7 @@ head('Doctrines: fixed, a shortlist, or random');
     return co.docPlan.slice(0, 6).every(function (d) { return short.indexOf(d) >= 0; });
   }) && arm.some(function (co) { return co.docPlan.slice(0, 6).join() !== arm[0].docPlan.slice(0, 6).join(); }), true, arm.map(function (co) { return co.docPlan.slice(0, 6).join(''); }).join(' '));
   var firsts = {};
-  for (var i = 0; i < 40; i++) firsts[found('hydra').docPlan[0]] = 1;
+  for (var i = 0; i < 40; i++) firsts[found('ghadon').docPlan[0]] = 1;
   ok('a random force draws from the whole list', Object.keys(firsts).length > 8, true, Object.keys(firsts).length + ' different first doctrines in 40');
 })();
 

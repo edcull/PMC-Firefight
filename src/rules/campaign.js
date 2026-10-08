@@ -1547,18 +1547,18 @@
       id: 'ivenbea', name: 'Predators', faction: 'bugs',
       blurb: 'Mantis-like apex predators of the Ivenbean swamps: few, huge, and very close.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Few and huge. About 10-11 units at T3 PL2, most a Tier above the battle\'s, led by an Overmind a Tier above: pathfinders, lurkers and the odd shadow bug, winged bugs (never a carrier), attack forms and oversized attack forms. Red flags: tiny swarms or larvae in numbers, carrier bugs, 13+ units.',
+      notes: 'Few and huge hunters (behaviour +1). About 10 units at T3 PL2, leaning a Tier up, led by an Overmind a Tier above: pathfinders and lurkers (2-3), a shadow bug, winged bugs (large ones most), attack forms and oversized attack forms. Doctrines: Fierce Attacks first, then talons, feeding, quick learning. Red flags: tiny swarms, larvae or spitters beyond the Tier I minimum, underground bugs, carrier bugs, 13+ units.',
       names: ['Swarm of Ivenbea', 'The Swamp Mantids', 'Ivenbean Brood'],
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
-      doctrines: ['BB4', 'BP6', 'BP5', 'BC1', 'BB5', 'BP2'],
+      doctrines: ['BB4', 'BP6', 'BB5', 'BB6', 'BC1', 'BP3'],
       fixedAt: { 1: 'BB4' },
+      temper: 1, // the behaviour roll in battle (p. 147): hunters
       tier: 1,
       hulls: { min: 0, max: 1 },
       commandTier: 1,
-      weights: {
-        'Lesser Bugs': 5, btiny: 1, 'Underground Bugs': [1, 1], 'Spore Bugs': [1, 1], 'Flying Bugs': 6,
-        bcarrier: 0, 'Pioneer Bugs': 6, bshadow: 8
+      weights: {   // the big hunters only: lurkers, shadow bugs, large winged bugs, oversized attack forms
+        bshadow: 8, blurkers: 6, blargewing: 6, boversized: 6, battack: 3, bpathfinder: 3, bsmallwing: 2
       },
       spend: 'promote'
     },
@@ -1566,17 +1566,18 @@
       id: 'evatus', name: 'Horde', faction: 'bugs',
       blurb: 'One of ten thousand mound swarms on a dead world, and never short of bodies.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'The Horde: bodies. 15-17 units at T3 PL2, leaning a Tier below: tiny swarms and small bugs, spitter larvae and spitters, some underground bugs. Red flags: under 13 units, Tier V monsters more than once, flyers in numbers.',
+      notes: 'The Horde: bodies, thrown forward (behaviour +1). 17-18 units at T3 PL2, leaning a Tier below, led by Watchers of the battle\'s Tier: small bugs the bulk (5), tiny swarms, attack forms and spitter larvae (about 3 each), a couple of small underground bugs. Doctrines: Efficient Spawn Cycle first. Red flags: under 15 units, Tier V monsters, flyers or pathfinders.',
       names: ['Mound Swarm of Evatus II', 'The Evatus Mound', 'Red Mound Swarm'],
       t1: ['btiny', 'btiny', 'bspitlarva'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
       doctrines: ['BP1', 'BP2', 'BB1', 'BP3', 'BC1', 'BP5'],
       fixedAt: { 1: 'BP1' },
+      temper: 1, // the behaviour roll in battle (p. 147): bodies, thrown forward
       tier: -1,
       hulls: { min: 0, max: 1 },
-      commandTier: 1,
-      weights: {   // never short of bodies
-        'Lesser Bugs': 7, btiny: 8, 'Underground Bugs': 4, 'Spore Bugs': 4, bspitlarva: 6, 'Flying Bugs': [1, 1], 'Pioneer Bugs': 1
+      commandTier: 0,
+      weights: {   // never short of bodies: small lesser bugs, spitter larvae, a few burrowers
+        btiny: 8, bsmall: 7, battack: 4, bspitlarva: 5, bunderground: 2
       },
       spend: 'recruit'
     },
@@ -1584,16 +1585,18 @@
       id: 'terarson', name: 'Thinkers', faction: 'bugs',
       blurb: 'Something taught these bugs to think. They build cities now.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Thinking bugs: spitters and pathfinders, the claws kept back. About 12 units at T3 PL2: spore bugs the largest share (4-5), pathfinders (3), some flyers and attack forms. Red flags: lesser bugs outnumbering spitters, underground bugs.',
+      notes: 'Thinking bugs: one big brain, held back (behaviour -1). About 12 units at T3 PL2, led by an Overmind a Tier above (the swarm may have only the one): spore bugs over half (6-7, spitters most), pathfinders the rest (4-5) to mark for them. Doctrines: Increased Control first, then Strong Pheromones and the spitter doctrines. Red flags: lesser, underground or flying bugs, a leader of the battle\'s Tier.',
       names: ['Swarm of Terarson', 'The Terarson Hive', 'GN-786 Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bimmspit', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB3', 'BC3', 'BC2', 'BC6', 'BB6', 'BC4'],
       fixedAt: { 1: 'BB3' },
+      temper: -1, // the behaviour roll in battle (p. 147): holds back and spits
       tier: 0,
       hulls: { min: 0, max: 1 },
-      weights: {   // thinkers: spitters and pathfinders, the swarm kept back
-        'Spore Bugs': 6, 'Pioneer Bugs': 5, 'Flying Bugs': 3, 'Lesser Bugs': 2
+      commandTier: 1,   // one big brain (the swarm may have only the one), its reach long
+      weights: {   // thinkers: spitters, and the pathfinders that mark for them
+        'Spore Bugs': 7, 'Pioneer Bugs': 5
       },
       spend: 'honours'
     },
@@ -1601,16 +1604,18 @@
       id: 'hydra', name: 'Burrowers', faction: 'bugs',
       blurb: 'Mining bio-robots gone wild, tunnelling through asteroid after asteroid.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Burrowers. About 12 units at T3 PL2: underground bugs (3-4) beside lesser bugs, pathfinders coming up through the ground, few spitters. Red flags: no underground bugs, flyers.',
+      notes: 'Burrowers: they wait below, then strike (behaviour -1). About 11-12 units at T3 PL2, led by Watchers of the battle\'s Tier: underground bugs the largest share (4-5, a huge one or more), pathfinders and lurkers coming up with them (3-4), a few lesser bugs. Doctrines: Mimicry first. Red flags: no underground bugs, flyers, spitters.',
       names: ['Hydra Belt Swarm', 'The Uranium Diggers', 'Asteroid Swarm 7'],
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
-      doctrines: ['BB2', 'BP5', 'BP2', 'BP6', 'BB1', 'BP1'],
-      random: true,                 // no creed to speak of: the whole list, shuffled
+      doctrines: ['BB2', 'BP2', 'BP5', 'BP1', 'BB1', 'BP6'],
+      fixedAt: { 1: 'BB2' },               // Mimicry first: a quarter of it comes up out of the ground
+      temper: -1, // the behaviour roll in battle (p. 147): waits below, then strikes
       tier: 0,
       hulls: { min: 0, max: 1 },
-      weights: {   // tunnelling through everything
-        'Underground Bugs': 7, 'Lesser Bugs': 4, 'Pioneer Bugs': 3, 'Spore Bugs': 1
+      commandTier: 0,
+      weights: {   // tunnelling through everything: burrowers, and the pathfinders and lurkers that come up with them
+        'Underground Bugs': 8, bpathfinder: 4, blurkers: 4, bsmallpath: 2, bshadow: 2, 'Lesser Bugs': 1
       },
       spend: 'promote'
     },
@@ -1618,16 +1623,18 @@
       id: 'greyplague', name: 'Plague', faction: 'bugs',
       blurb: 'It ate a colony, and now the colonists march in its front rank.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'The Plague: the colonists march in front. About 12 units at T3 PL2: Infected humans the largest share (3-4), spitters and lesser bugs behind them, a burrower now and then. Red flags: under 2 Infected, flyers or pathfinders in numbers.',
+      notes: 'The Plague: the dead shamble forward (behaviour +1). About 14 units at T3 PL2, leaning a Tier below, led by Watchers of the battle\'s Tier: Infected humans in front (4), lesser bugs and spitters behind (4-5 each), a burrower now and then. Doctrines: Fungi Symbiosis first. Red flags: under 3 Infected, flyers or pathfinders.',
       names: ['The Grey Plague', 'The Harrow Infestation', 'Colony Nine Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
-      doctrines: ['BP4', 'BB5', 'BC1', 'BP3', 'BB1', 'BC4'],
+      doctrines: ['BP4', 'BP5', 'BC1', 'BP3', 'BB1', 'BC4'],
       fixedAt: { 1: 'BP4' },               // Fungi Symbiosis first: the humans it kills in an assault rise again as its Infected
-      tier: 0,
+      temper: 1, // the behaviour roll in battle (p. 147): the dead shamble forward
+      tier: -1,
       hulls: { min: 0, max: 1 },
-      weights: {
-        'Lesser Bugs': 4, 'Underground Bugs': 1, 'Spore Bugs': 6, 'Infected Humans': 100
+      commandTier: 0,
+      weights: {   // the Infected in front, a screen of lesser bugs and spitters behind
+        'Infected Humans': 100, 'Lesser Bugs': 3, 'Spore Bugs': 3, 'Underground Bugs': [1, 1]
       },
       spend: 'recruit'
     },
@@ -1635,15 +1642,17 @@
       id: 'velior', name: 'Skyswarm', faction: 'bugs',
       blurb: 'Nests in the cliffs of Velior, and comes down out of the sun.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Skyswarm: it comes out of the sun. About 11-12 units at T3 PL2: winged bugs the largest share (3-4, a carrier bug now and then), lesser bugs and spitters. Red flags: under 2 flyers, underground bugs.',
+      notes: 'Skyswarm: it comes out of the sun. About 11-12 units at T3 PL2, led by Watchers of the battle\'s Tier: winged bugs the largest share (4-5, small ones most, a carrier bug often), spitters to cover them, a few lesser bugs. Doctrines: Fierce Attacks first, then the spitter and flyer doctrines. Red flags: under 3 flyers, underground bugs or pathfinders.',
       names: ['Skyswarm of Velior', 'The Cliff Nest', 'Sunfall Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bimmspit'],
       machines: [], vehicles: 0,
-      doctrines: ['BP2', 'BB4', 'BC5', 'BB6', 'BC2', 'BP5'],
+      doctrines: ['BB4', 'BC5', 'BC2', 'BC6', 'BC4', 'BB6'],
+      fixedAt: { 1: 'BB4' },               // Fierce Attacks first: its winged bugs dive in hard
       tier: 0,
       hulls: { min: 0, max: 1 },
-      weights: {   // its flyers most of all
-        'Flying Bugs': 8, 'Spore Bugs': 3, 'Lesser Bugs': 3, 'Pioneer Bugs': 1
+      commandTier: 0,
+      weights: {   // its flyers most of all, spitters to cover them
+        'Flying Bugs': 8, 'Spore Bugs': 2, 'Lesser Bugs': 1
       },
       spend: 'recruit'
     }
