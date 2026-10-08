@@ -1194,6 +1194,8 @@
       id: 'armour', name: 'Bastion',
       temper: -1, // the behaviour roll in battle (p. 147): dug in behind its guns
       blurb: 'Fights from behind armour plate and expects you to come to it.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'An armoured line. At T3 PL2 expect about 12 units: battle armour and heavy infantry the biggest share (2-4), 3-4 hulls that are hunters, destroyers and support guns, a mortar or support weapon or two, a rifle team. Red flags: light infantry or assault troops in numbers, transports, under 2 hulls.',
       names: ['Kessler Combine', 'Ironvein Holdings', 'Bastion Werke', 'Sable Armour Group'],
       // armour before mobility: Enforcers on the way to battle armour, no transports, and the heavy guns
       t1: ['enforcers', 'recruits'],
@@ -1230,6 +1232,8 @@
     {
       id: 'elite', name: 'Elite',
       blurb: 'Few units, all of them expensive, all of them good.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Few, expensive, good. About 10-11 units at T3 PL2, no hulls at all. Heavy infantry, veteran rifle teams and assault troops, many a Tier above the battle\'s, hardly anything below it. Red flags: any vehicle, Recruits or Irregulars more than once, 13+ units.',
       names: ['Vantage Solutions', 'The Ashen Line', 'Praetor Associates', 'Halcyon Executive'],
       t1: ['enforcers', 'recruits'],
       t2: ['rookie', 'ecobats'],
@@ -1256,6 +1260,8 @@
       // (id kept from when it was "Swarm", so a saved campaign still finds it)
       id: 'swarm', name: 'Mercenary',
       blurb: 'Fights for whoever pays, wherever they point, and sends the invoice before the smoke clears.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Hired guns, cheap and many. 14-15 units at T3 PL2, leaning a Tier below: rifle teams and basic troops, machine guns, mortars and anti-tank teams, a truck or two. Red flags: battle armour or elite teams, more than 2 hulls, fewer than 13 units.',
       names: ['Corvid Contracting', 'The Tide Company', 'Grey Market Levies', 'Nineteen Hands'],
       // a little of everything and nothing specialised: hired wide rather than trained tall
       // Recruits and Irregulars (Enforcers grow only into battle armour, which it does not hire)
@@ -1281,6 +1287,8 @@
       id: 'marksmen', name: 'Special Ops',
       temper: -1, // the behaviour roll in battle (p. 147): shoots from cover, never closes
       blurb: 'Never where you are looking: a sniper in the treeline, a drone overhead, and your radios full of static.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Recon and precision. About 11 units at T3 PL2: rifle teams and light infantry (sharpshooters, snipers, LRRP, observers), 2-3 cars or light craft, an EW team or drone now and then. Red flags: heavy infantry or assault troops in numbers, tanks or destroyers, more than one LRRP or sniper team at PL2.',
       names: ['Meridian Security', 'Longsight Partners', 'The Quiet Trade', 'Orlov Group'],
       // Irregulars and Recruits to promote, Forward observers, and a rifle team or nomads
       t1: ['irregulars', 'recruits'],
@@ -1305,6 +1313,8 @@
       id: 'shock', name: 'Shock',
       temper: 1, // the behaviour roll in battle (p. 147): goes in hard
       blurb: 'Closes the distance and settles it with knives.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Closes the distance. About 12 units at T3 PL2: assault troops the largest share (3-4), Penal troops in front, chem warriors, 2-3 hulls that are transports and engineering vehicles. Red flags: artillery or support weapons in numbers, combat vehicles, a force that cannot ride to the fight.',
       names: ['Black Harbour PMC', 'Redline Assault', 'The Hard Bargain', 'Kroeger Shock'],
       // Irregulars (who promote into assault troops) and Enforcers, light engineers, and a truck to ride in
       t1: ['irregulars', 'enforcers'],
@@ -1330,6 +1340,8 @@
       id: 'aircav', name: 'Cavalry',
       temper: 1, // the behaviour roll in battle (p. 147): rides at them
       blurb: 'Rolls up in armour, drops its troopers at the door, and is through the line before the guns turn.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Mounted and fast. Always the full 6 hulls at T3 PL2, about 4 of them transports (ground and air), the rest combat vehicles or a strike craft; rifle and assault teams about evenly, most of them with a seat. Red flags: under 5 hulls, 3+ infantry on foot, slow support weapons.',
       names: ['Talon Mobile Group', 'Outrider Security', 'The High Road Company', 'Skyhook Logistics'],
       t1: ['recruits', 'irregulars'],   // who promote into rifle teams and assault troops (Enforcers only into heavy infantry)
       t2: ['lighteng', 'rookie'],
@@ -1359,6 +1371,8 @@
     {
       id: 'redfront', name: 'Revolutionaries', faction: 'rebel',
       blurb: 'Two centuries underground, and organised down to the last cell.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'A revolutionary army: numbers and organisation. About 14 units at T3 PL2, leaning a Tier below: Freedom Warriors the bulk (4-5), support troops with guns (3-4), some artillery, a technical or two. Red flags: Holy or Mounted Warriors in numbers, more than 2 hulls, under 12 units.',
       names: ['Red Revolutionary Front', 'The Combine Committee', 'Ninth of Marzen', 'Union Irregulars'],
       // the standard revolt: a core of Freedom Warriors, with support guns, artillery and vehicles around it
       t1: ['rciv'],
@@ -1382,6 +1396,8 @@
       id: 'freespace', name: 'Pirates', faction: 'rebel',
       temper: 1, // the behaviour roll in battle (p. 147): raiders, always on the move
       blurb: 'Pirates with a manifesto. Fast in, loaded up, gone.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Pirates: fast in, loaded up, gone. About 12 units at T3 PL2: Mounted Warriors the largest share (3), Holy Warriors and leaders riding, 3-4 hulls with trucks and shuttles to carry the rest. Red flags: artillery, slow infantry with no ride, under 3 hulls.',
       names: ['Free Space Freedom Fighters', 'The Long Haul', 'Kestrel Run', 'Salvage Rights'],
       // riders above all, its leaders mounted too; its hulls carry the infantry that does not ride; no artillery
       t1: ['rridergang'],
@@ -1409,6 +1425,8 @@
       id: 'faithful', name: 'Faithful', faction: 'rebel',
       temper: 1, // the behaviour roll in battle (p. 147): zealots
       blurb: 'They are not fighting for the colony. They are fighting for what comes after it.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Zealots. About 12 units at T3 PL2: Holy Warriors the largest share (3-4), Freedom Warriors and support troops behind them, little artillery, at most a vehicle or two. Red flags: more than 2 hulls, Deserters in numbers, artillery outnumbering the Holy Warriors.',
       names: ['The New Chosen', 'Pilgrims of the Seventh Gate', 'The Ashfall Congregation', 'Sons of the Furnace'],
       // the standard revolt heavy on Holy Warriors, and a little lighter on the guns that stay put
       t1: ['rciv'],
@@ -1432,6 +1450,8 @@
     {
       id: 'pitheads', name: 'Miners', faction: 'rebel',
       blurb: 'Miners who worked out that a cutting charge does the same job above ground.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Miners above ground. About 12 units at T3 PL2: miners teams (2-3) and armoured combat vehicles (about 3) the heart of it, Freedom Warriors and support troops, a little artillery. Red flags: no miners, aviation, Holy or Mounted Warriors in numbers.',
       names: ['The Pitheads', 'Shaft Fourteen', 'The Deep Seam Council', 'Hollowmen'],
       // heavy on Miners and on improvised combat vehicles
       t1: ['rciv'],
@@ -1455,6 +1475,8 @@
       id: 'partisans', name: 'Partisans', faction: 'rebel',
       temper: -1, // the behaviour roll in battle (p. 147): strike from hiding
       blurb: 'Out of the tunnels, into the dark, and never where you left them.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Tunnel fighters: commandos and locals. About 12 units at T3 PL2: Freedom Warriors the bulk, partisan commandos (1-3), a few miners and deserters, at most one vehicle. Red flags: 2+ hulls, artillery in numbers, no commandos across several forces.',
       names: ['The Partisans', 'Night Wire', 'The Quiet Column', 'Cell Sixteen'],
       // the standard revolt heavy on its Partisans (the Chosen Warriors' commandos) once it can field them
       t1: ['rciv'],
@@ -1479,6 +1501,8 @@
     {
       id: 'turncoats', name: 'Turncoats', faction: 'rebel',
       blurb: 'A garrison that changed sides, and kept its rifles, its drill and its grudges.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'A garrison that changed sides. About 12 units at T3 PL2: deserters and POWs (2-4, the army rules\' cap is 4), Freedom Warriors, support troops and artillery in drill, armed shuttles and a flak vehicle. Red flags: Holy or Mounted Warriors in numbers, no deserters, no aviation.',
       names: ['The Turncoat Battalion', 'The 41st Reborn', 'Garrison Free Corps', 'The Broken Oath'],
       // the standard revolt with Deserters in place of its first-rung Freedom Warriors, more aircraft,
       // and a little more of the garrison's artillery
@@ -1507,6 +1531,8 @@
     {
       id: 'ivenbea', name: 'Predators', faction: 'bugs',
       blurb: 'Mantis-like apex predators of the Ivenbean swamps: few, huge, and very close.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Few and huge. About 10-11 units at T3 PL2, most a Tier above the battle\'s: attack forms and oversized attack forms, winged bugs, pathfinders and lurkers, the odd Tier V monster. Red flags: tiny swarms or larvae in numbers, 13+ units.',
       names: ['Swarm of Ivenbea', 'The Swamp Mantids', 'Ivenbean Brood'],
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
@@ -1522,6 +1548,8 @@
     {
       id: 'evatus', name: 'Horde', faction: 'bugs',
       blurb: 'One of ten thousand mound swarms on a dead world, and never short of bodies.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'The Horde: bodies. 15-17 units at T3 PL2, leaning a Tier below: tiny swarms and small bugs, spitter larvae and spitters, some underground bugs. Red flags: under 13 units, Tier V monsters more than once, flyers in numbers.',
       names: ['Mound Swarm of Evatus II', 'The Evatus Mound', 'Red Mound Swarm'],
       t1: ['btiny', 'btiny', 'bspitlarva'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
@@ -1537,6 +1565,8 @@
     {
       id: 'terarson', name: 'Thinkers', faction: 'bugs',
       blurb: 'Something taught these bugs to think. They build cities now.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Thinking bugs: spitters and pathfinders, the claws kept back. About 12 units at T3 PL2: spore bugs the largest share (4-5), pathfinders (3), some flyers and attack forms. Red flags: lesser bugs outnumbering spitters, underground bugs.',
       names: ['Swarm of Terarson', 'The Terarson Hive', 'GN-786 Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bimmspit', 'bsmallpath'],
       machines: [], vehicles: 0,
@@ -1552,6 +1582,8 @@
     {
       id: 'hydra', name: 'Burrowers', faction: 'bugs',
       blurb: 'Mining bio-robots gone wild, tunnelling through asteroid after asteroid.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Burrowers. About 12 units at T3 PL2: underground bugs (3-4) beside lesser bugs, pathfinders coming up through the ground, few spitters. Red flags: no underground bugs, flyers.',
       names: ['Hydra Belt Swarm', 'The Uranium Diggers', 'Asteroid Swarm 7'],
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
@@ -1567,6 +1599,8 @@
     {
       id: 'greyplague', name: 'Plague', faction: 'bugs',
       blurb: 'It ate a colony, and now the colonists march in its front rank.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'The Plague: the colonists march in front. About 12 units at T3 PL2: Infected humans (2-4) with lesser bugs and spitters behind, a burrower or two. Red flags: no Infected, flyers or pathfinders in numbers.',
       names: ['The Grey Plague', 'The Harrow Infestation', 'Colony Nine Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
@@ -1582,6 +1616,8 @@
     {
       id: 'velior', name: 'Skyswarm', faction: 'bugs',
       blurb: 'Nests in the cliffs of Velior, and comes down out of the sun.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Skyswarm: it comes out of the sun. About 11-12 units at T3 PL2: winged bugs the largest share (3-4, a carrier bug now and then), lesser bugs and spitters. Red flags: under 2 flyers, underground bugs.',
       names: ['Skyswarm of Velior', 'The Cliff Nest', 'Sunfall Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bimmspit'],
       machines: [], vehicles: 0,
@@ -1599,6 +1635,8 @@
     {
       id: 'mithdu', name: 'Tunnellers', faction: 'xeno',
       blurb: 'The first tribe found, and slow to grow — but it has tunnels under everything.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Tunnellers: slow to grow, tunnels under everything. About 14 units at T3 PL2, leaning a Tier below: Epsilons the bulk (5-6), Betas and Deltas, a defensive turret and a teleport turret. Red flags: aviation, under 12 units, no turrets.',
       names: ['Mithdu-2 Tribe', 'The Klechtu Burrows', 'Mithdu Deepholds'],
       t1: ['xeps1', 'xdelta1'], t2: ['xeps2', 'xbeta2'],
       machines: ['xdturret1'], vehicles: 1,
@@ -1614,6 +1652,8 @@
     {
       id: 'amt', name: 'Architects', faction: 'xeno',
       blurb: 'Rules a whole planet from its towers, and fights the way it builds: precisely.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Architects: precise, from the towers. About 11 units at T3 PL2, reaching a Tier above: Gammas and Betas, shield and recon craft, a strike craft or two, about 4 hulls. Red flags: Tier I troopers more than once, Epsilons in numbers, no aircraft.',
       names: ['The Amt', 'Amt Tower-tribe', 'The Sigma-Pi Tribe'],
       t1: ['xeps1', 'xdelta1'], t2: ['xbeta2', 'xeps2'],
       machines: ['xstrike2'], vehicles: 1,
@@ -1628,6 +1668,8 @@
     {
       id: 'hashamer', name: 'Mimics', faction: 'xeno',
       blurb: 'Nine million Esh-Aven and not a Crock among them — copying their masters\' war as best they can.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Mimics: nine million Esh-Aven and hardly a machine. About 14-15 units at T3 PL2, leaning a Tier below: Epsilons (7-8) and Deltas (4-5), at most one turret. Red flags: aviation, Gammas, 2+ hulls.',
       names: ['Hashamer I Tribe', 'The Hashamer Esh-Aven', 'The Arid Host'],
       t1: ['xeps1', 'xeps1', 'xdelta1'], t2: ['xeps2', 'xdelta2'],
       machines: [], vehicles: 0,
@@ -1643,6 +1685,8 @@
     {
       id: 'ghadon', name: 'Furies', faction: 'xeno',
       blurb: 'Came to a world already overrun, and fought humans, bugs and other tribes with equal fury.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Furies: everything thrown at everyone. About 12 units at T3 PL2: Epsilons and Deltas, strike craft (2-3), Gammas, a Beta or two. Red flags: turrets, no strike craft across several forces.',
       names: ['Ghadon II 3rd Tribe', 'The Third of Ghadon', 'The Expansion'],
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xeps2'],
       machines: ['xstrike2'], vehicles: 1,
@@ -1658,6 +1702,8 @@
     {
       id: 'ulvar', name: 'Fortress', faction: 'xeno',
       blurb: 'Never leaves its walls without taking the walls along: shields, guns and patience.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'The Fortress: takes its walls along. About 12 units at T3 PL2, about 5 hulls: shield turrets and a defensive turret, shield craft, Gammas, Betas and Deltas behind them. Red flags: under 4 hulls, strike craft, no shield turret.',
       names: ['Ulvar Fortress Tribe', 'The Shieldwall of Ulvar', 'The Bastion Host'],
       t1: ['xdelta1', 'xeps1'], t2: ['xbeta2', 'xdelta2'],
       machines: ['xdturret1'], vehicles: 1,
@@ -1673,6 +1719,8 @@
     {
       id: 'shkar', name: 'Raiders', faction: 'xeno',
       blurb: 'A raiding tribe that steps out of the air behind you, takes what it came for, and steps back.',
+      // what a build of it should look like (the editor's validation notes, for people only)
+      notes: 'Raiders: out of the air behind you. About 12 units at T3 PL2: a teleport turret every time, strike craft (2-3), Betas and Deltas (3-4 each), a teleport craft now and then. Red flags: no teleport turret, defensive or shield turrets.',
       names: ['The Sh\'kar Raiders', 'The Blink Host', 'Shadow of Sh\'kar'],
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xbeta2'],
       machines: ['xstrike2'], vehicles: 1,
@@ -1704,7 +1752,7 @@
      an admin's changes in and the editor works on. FIELD_MAP is the one place the
      two meet: a flat field and where it sits in the nested shape. */
   var FIELD_MAP = {
-    names: 'names', blurb: 'blurb',
+    names: 'names', blurb: 'blurb', notes: 'notes',
     weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls', command: 'force.command', commandTier: 'force.commandTier',
     fieldsMachines: 'force.machineMinded', machinesMax: 'force.machinesMax', riders: 'force.riders',
     temper: 'battle.temper', tactics: 'battle.tactics',

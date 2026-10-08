@@ -2348,3 +2348,5 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .ae-pairin { display: flex; align-items: center; gap: 8px; }
 .ae-pairin .tin { flex: 1 1 0; min-width: 0; }
 .ae-pairin em { font-style: normal; color: var(--ink-faint); }
+.ae-notes { margin: 8px 0 4px; padding: 8px 10px; border-left: 3px solid var(--alpha); background: var(--panel); font-size: 12.5px; line-height: 1.45; white-space: pre-wrap; }
+.ae-notes b { display: block; font-family: var(--display); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 2px; }

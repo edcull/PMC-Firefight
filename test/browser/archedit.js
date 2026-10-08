@@ -126,15 +126,19 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const nT1 = await p.evaluate(() => document.querySelectorAll('#arch-edit [data-ae-row="campaign.found.t1"]').length);
     await click('#arch-edit [data-ae="add"][data-path="campaign.found.t1"]');
     await p.selectOption('#arch-edit [data-ae-row="campaign.found.t1"][data-r="' + nT1 + '"][data-m="0"]', 'commandos');
+    await p.fill('#arch-edit [data-ae-v="notes"]', 'Mostly heavy infantry; 2 hulls at PL2');
+    await p.evaluate(() => document.querySelector('#arch-edit [data-ae-v="notes"]').dispatchEvent(new Event('change', { bubbles: true })));
     await click('#arch-edit [data-ae="addstage"]');
     await p.fill('#arch-edit [data-ae-stage="0"]', 'T5, T2');
     await p.evaluate(() => document.querySelector('#arch-edit [data-ae-stage="0"]').dispatchEvent(new Event('change', { bubbles: true })));
     ok('...and the tier preference typed above survives adding rows', await p.evaluate(() => document.querySelector('#arch-edit [data-ae-f="tier"]').value === '-1'));
     await click('#arch-edit [data-ae="save"]');
     await till(() => /Saved/.test(document.querySelector('#arch-edit').innerText) && window.PMCCamp.archetype('armour').spend === 'honours', 'the save of the new fields');
-    const got = await p.evaluate(() => { const a = window.PMCCamp.archetype('armour'); return { spend: a.spend, lean: a.leanSize, t1: a.t1, stages: a.stages }; });
-    ok('...saved and in force: spending, lean size, a founding unit, a stage',
-      got.spend === 'honours' && got.lean === 20 && got.t1[got.t1.length - 1] === 'commandos' && JSON.stringify(got.stages) === '[["T5","T2"]]', JSON.stringify(got));
+    const got = await p.evaluate(() => { const a = window.PMCCamp.archetype('armour'); return { spend: a.spend, lean: a.leanSize, t1: a.t1, stages: a.stages, notes: a.notes }; });
+    ok('...saved and in force: spending, lean size, a founding unit, a stage, validation notes',
+      got.spend === 'honours' && got.lean === 20 && got.t1[got.t1.length - 1] === 'commandos' && JSON.stringify(got.stages) === '[["T5","T2"]]' && got.notes === 'Mostly heavy infantry; 2 hulls at PL2', JSON.stringify(got));
+
+    ok('...and the notes stand beside the preview, to read its forces against', await p.evaluate(() => /Mostly heavy infantry/.test((document.querySelector('#arch-edit #ae-s-preview .ae-notes') || {}).textContent || '')));
 
     console.log('\nA bad one refused');
     await p.fill('#arch-edit input[data-ae-w="bats"]', '150');

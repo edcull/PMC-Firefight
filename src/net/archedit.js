@@ -82,7 +82,7 @@
   function field(label, path, kind, extra, help) {
     var v = getP(draft(), path), at = ' data-ae-v="' + path + '" data-ae-k="' + kind + '"';
     if (kind === 'bool') return '<label class="ae-tick"><input type="checkbox"' + at + (v ? ' checked' : '') + '><span>' + label + tip(help) + '</span></label>';
-    if (kind === 'text') return '<label class="ae-wide">' + label + '<textarea class="tin" rows="2"' + at + '>' + esc(v || '') + '</textarea>' + tip(help) + '</label>';
+    if (kind === 'text') return '<label class="ae-wide">' + label + '<textarea class="tin" rows="' + (extra || 2) + '"' + at + '>' + esc(v || '') + '</textarea>' + tip(help) + '</label>';
     if (kind === 'sel') return '<label>' + label + '<select class="tin"' + at + '>' + extra.map(function (o) { return '<option value="' + o[0] + '"' + (String(v || '') === String(o[0]) ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' + tip(help) + '</label>';
     return '<label>' + label + '<input class="tin" type="number"' + (extra || '') + at + ' value="' + (v == null ? '' : v) + '">' + tip(help) + '</label>';
   }
@@ -169,7 +169,8 @@
     h += sec('who', 'Who it is') + '<div class="ae-grid">' +
       '<label>Name<input class="tin" data-ae-f="name" value="' + esc(u.name || '') + '" maxlength="60"></label>' +
       '<label class="ae-wide">Company names (one per line)<textarea class="tin" data-ae-f="names" rows="3">' + esc((u.names || []).join('\n')) + '</textarea></label>' +
-      field('Description', 'blurb', 'text') + '</div></div>';
+      field('Description', 'blurb', 'text') +
+      field('Validation notes', 'notes', 'text', 5, 'Free text, for people only: what a build of it should look like, to check the preview’s forces against. The game does not use it.') + '</div></div>';
     // the shape of its forces
     h += sec('shape', 'Force shape') + '<div class="ae-grid">' +
       '<label>Tier preference<select class="tin" data-ae-f="tier">' + [[-1, '−1 fills up a Tier below'], [0, '0 its own Tier'], [1, '+1 reaches a Tier above']].map(function (o) {
@@ -231,6 +232,8 @@
     h += more.hulls + docs + more.stages + more.camp;
     // preview
     h += sec('preview', 'Preview') + '<small class="ae-dim">Rolls forces with the edits in force, as they stand in the form, without saving them.</small>' +
+      // (its validation notes beside the forces, to read them against)
+      (u.notes ? '<p class="ae-notes"><b>Validation notes</b>' + esc(u.notes) + '</p>' : '') +
       '<div class="ae-prev"><label>Tier <select class="tin" data-ae-p="t">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (n === state.pt ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label>' +
       '<label>PL <select class="tin" data-ae-p="pl">' + [1, 2, 3].map(function (n) { return '<option' + (n === state.ppl ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label>' +
       '<button type="button" class="lnk" data-ae="preview">Roll forces</button></div>' + (state.preview || '') + '</div>';
@@ -438,7 +441,7 @@
       var kind = t.getAttribute('data-ae-k'), v;
       if (kind === 'bool') v = t.checked ? true : undefined;
       else if (kind === 'num') v = t.value === '' || isNaN(+t.value) ? undefined : +t.value;
-      else v = t.value.trim() === '' ? undefined : /^-?\d+$/.test(t.value) ? +t.value : t.value;   // (a choice of number, the command level, kept a number)
+      else v = t.value.trim() === '' ? undefined : kind === 'sel' && /^-?\d+$/.test(t.value) ? +t.value : t.value;   // (a choice of number, the command level, kept a number)
       setP(u, path, v);
       return true;
     }
