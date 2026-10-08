@@ -87,6 +87,24 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       !document.querySelector('#arch-edit [data-ae-f="advanced"]') && !!document.querySelector('#arch-edit [data-ae-v="campaign.spend"]') &&
       !!document.querySelector('#arch-edit [data-ae-row="campaign.found.t1"]') && !!document.querySelector('#arch-edit [data-ae-cb="force.favourites"]') &&
       !!document.querySelector('#arch-edit [data-ae="addstage"]')));
+    const unhelped = await p.evaluate(() => {
+      const out = [];
+      // every control says what it does: a help line in its own label, row heading or section
+      document.querySelectorAll('#arch-edit .ae > .ae-grid > label').forEach((c) => {
+        if (!c.querySelector('.ae-help') && !/^(Name|Company names)/.test(c.textContent.trim())) out.push('top: ' + c.textContent.trim().slice(0, 40));
+      });
+      document.querySelectorAll('#arch-edit .ae-sec').forEach((sec) => {
+        const name = (sec.querySelector('h4') || {}).textContent;
+        if (name === 'Preview') return;
+        if (!sec.querySelector('.ae-help, .ae-dim')) out.push(name);
+        sec.querySelectorAll('.ae-grid > label, .ae-ticks, .ae-rows').forEach((c) => {
+          if (!c.querySelector('.ae-help') && !/^(Name|Company names|How many founding hulls)/.test(c.textContent.trim())) out.push(name + ': ' + c.textContent.trim().slice(0, 40));
+        });
+      });
+      return out;
+    });
+    ok('every setting has a line saying what it does', !unhelped.length, unhelped.slice(0, 4).join(' | '));
+    ok('...and none points at the old Advanced box', await p.evaluate(() => !/Advanced[:( ]*(JSON|doctrines)|doctrines\.\w+/.test(document.querySelector('#arch-edit').innerText)));
     await p.selectOption('#arch-edit [data-ae-v="campaign.spend"]', 'honours');
     await p.fill('#arch-edit [data-ae-v="campaign.leanSize"]', '20');
     await p.evaluate(() => document.querySelector('#arch-edit [data-ae-v="campaign.leanSize"]').dispatchEvent(new Event('change', { bubbles: true })));

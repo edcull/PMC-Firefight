@@ -90,28 +90,30 @@
       return '<option value="' + x.id + '"' + (x.id === sel ? ' selected' : '') + '>' + x.id + ' ' + esc(x.name) + '</option>';
     }).join('');
   }
-  // one control bound to a path: text, a number, a tick, or a choice
-  function field(label, path, kind, extra) {
+  // what a setting does, in a line under it
+  function tip(t) { return t ? '<small class="ae-help">' + t + '</small>' : ''; }
+  // one control bound to a path: text, a number, a tick, or a choice (`help`: what it does)
+  function field(label, path, kind, extra, help) {
     var v = getP(draft(), path), at = ' data-ae-v="' + path + '" data-ae-k="' + kind + '"';
-    if (kind === 'bool') return '<label class="ae-tick"><input type="checkbox"' + at + (v ? ' checked' : '') + '> ' + label + '</label>';
-    if (kind === 'text') return '<label class="ae-wide">' + label + '<textarea class="tin" rows="2"' + at + '>' + esc(v || '') + '</textarea></label>';
-    if (kind === 'sel') return '<label>' + label + '<select class="tin"' + at + '>' + extra.map(function (o) { return '<option value="' + o[0] + '"' + (String(v || '') === String(o[0]) ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>';
-    return '<label>' + label + '<input class="tin" type="number"' + (extra || '') + at + ' value="' + (v == null ? '' : v) + '"></label>';
+    if (kind === 'bool') return '<label class="ae-tick"><input type="checkbox"' + at + (v ? ' checked' : '') + '><span>' + label + tip(help) + '</span></label>';
+    if (kind === 'text') return '<label class="ae-wide">' + label + '<textarea class="tin" rows="2"' + at + '>' + esc(v || '') + '</textarea>' + tip(help) + '</label>';
+    if (kind === 'sel') return '<label>' + label + '<select class="tin"' + at + '>' + extra.map(function (o) { return '<option value="' + o[0] + '"' + (String(v || '') === String(o[0]) ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' + tip(help) + '</label>';
+    return '<label>' + label + '<input class="tin" type="number"' + (extra || '') + at + ' value="' + (v == null ? '' : v) + '">' + tip(help) + '</label>';
   }
   // ticks for a list of groups bound to a path (favourite hulls, riders, the older rules' groups)
-  function ticks(label, path, options) {
+  function ticks(label, path, options, help) {
     var have = getP(draft(), path) || [];
-    return '<div class="ae-ticks"><span>' + label + '</span>' + options.map(function (o) {
+    return '<div class="ae-ticks"><span>' + label + tip(help) + '</span>' + options.map(function (o) {
       var val = Array.isArray(o) ? o[0] : o, name = Array.isArray(o) ? o[1] : o;
       return '<label><input type="checkbox" data-ae-cb="' + path + '" value="' + esc(val) + '"' + (have.indexOf(val) >= 0 ? ' checked' : '') + '> ' + esc(name) + '</label>';
     }).join('') + '</div>';
   }
   // rows of units bound to a path; `more` names what a second unit in a row means ('or' / '+')
-  function unitRows(label, path, test, more) {
+  function unitRows(label, path, test, more, help) {
     var rows = rowsOf(path), sel = function (k, i, m) { return '<select class="tin" data-ae-row="' + path + '" data-r="' + i + '" data-m="' + m + '">' + unitOpts(k, test) + '</select>'; };
     var del = function (i, m) { return '<button type="button" class="lnk" data-ae="delm" data-path="' + path + '" data-r="' + i + '" data-m="' + m + '" title="Take this one out">×</button>'; };
     var drop = function (i, what) { return '<button type="button" class="lnk acct-danger" data-ae="del" data-path="' + path + '" data-r="' + i + '">' + what + '</button>'; };
-    return '<div class="ae-rows"><span>' + label + '</span>' + rows.map(function (r, i) {
+    return '<div class="ae-rows"><span>' + label + tip(help) + '</span>' + rows.map(function (r, i) {
       // a signature set: a box of its own, a unit a line
       if (more === 'set') {
         return '<div class="ae-set"><small class="ae-dim">Set ' + (i + 1) + '</small>' + r.map(function (k, m) {
@@ -126,7 +128,7 @@
      limits); `keys` the choices for a key */
   function mapRows(label, path, keys, hint) {
     var m = getP(draft(), path) || {};
-    return '<div class="ae-rows"><span>' + label + (hint ? ' <small class="ae-dim">' + hint + '</small>' : '') + '</span>' + Object.keys(m).map(function (k) {
+    return '<div class="ae-rows"><span>' + label + tip(hint) + '</span>' + Object.keys(m).map(function (k) {
       return '<div class="ae-row"><select class="tin" data-ae-mapk="' + path + '" data-k="' + esc(k) + '">' + keys.map(function (o) {
         return '<option value="' + esc(o[0]) + '"' + (o[0] === k ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>' +
         '<input class="tin ae-n" type="number" min="0" max="20" step="0.5" data-ae-mapv="' + path + '" data-k="' + esc(k) + '" value="' + m[k] + '">' +
@@ -143,48 +145,64 @@
     var h = '';
     // its hulls and riders
     h += '<div class="ae-sec"><h4>Hulls and riders</h4>' +
-      ticks('Favourite hulls (taken first)', 'force.favourites', hullGroups.concat([['transports', 'anything that carries troops']])) +
-      '<div class="ae-grid">' + field('Hulls kept in a campaign (blank: twice the skirmish most)', 'force.machinesMax', 'num', ' min="0" max="9"') +
-      field('A machine company (any hull of its own counts as a favourite)', 'force.machineMinded', 'bool') + '</div>' +
-      (groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }).length ? ticks('Groups that ride (recruited mounted where they may)', 'force.riders', groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; })) : '') + '</div>';
+      ticks('Favourite hulls (taken first)', 'force.favourites', hullGroups.concat([['transports', 'anything that carries troops']]),
+        'A force rolls these before any other hull: as many as “Hulls a Priority Level, fewest” (one a Priority Level if blank), the biggest at or below the battle’s Tier, a different one each time. In a campaign it buys and upgrades to these first. None ticked: any hull it weights.') +
+      '<div class="ae-grid">' + field('Hulls kept in a campaign', 'force.machinesMax', 'num', ' min="0" max="9"',
+        'How many hulls a campaign company buys and keeps, trading its smallest for a bigger one as it grows. Blank: twice “Hulls a Priority Level, most”, or none if that is blank too (three for a company that spends on hulls). Under 3 also caps a skirmish roll at this many a Priority Level; 5 or more makes it a machine company.') +
+      field('A machine company', 'force.machineMinded', 'bool', null,
+        'May field the full three hulls a Priority Level (otherwise half that, unless “most” says otherwise), counts any hull it weights as a favourite, and rolls hulls half the time when it has the choice.') + '</div>' +
+      (groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }).length ? ticks('Groups that ride', 'force.riders', groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }),
+        'In a campaign, units of these groups (and its leader, if of one) are recruited mounted wherever the rules let them ride.') : '') + '</div>';
     // signature units
     h += '<div class="ae-sec"><h4>Signature units</h4><small class="ae-dim">What it is known for: kept up from each set (one a Priority Level in a skirmish roll; one a Company Tier in a campaign, up to the most).</small>' +
-      unitRows('Sets', 'force.signature.units', null, 'set') +
-      '<div class="ae-grid">' + field('Most kept from a set (campaign)', 'force.signature.max', 'num', ' min="0" max="9"') +
-      field('Or as many as this, whatever the Tier', 'force.signature.cap', 'num', ' min="0" max="20"') + '</div></div>';
+      unitRows('Sets', 'force.signature.units', null, 'set', 'A set of two or more: any one of them counts.') +
+      '<div class="ae-grid">' + field('Most kept from a set (campaign)', 'force.signature.max', 'num', ' min="0" max="9" placeholder="3"',
+        'A campaign company keeps one from each set a Company Tier, up to this many. Blank: 3.') +
+      field('Or a flat number (campaign)', 'force.signature.cap', 'num', ' min="0" max="20"',
+        'Set this and the company keeps exactly this many from each set at every Tier, in place of the line before (the Partisans’ commandos).') + '</div></div>';
     // doctrines beyond the fixed and the shortlist
     var fa = d.fixedAt || {};
     h += '<div class="ae-sec"><h4>Doctrine stages and set Tiers</h4>' +
-      '<div class="ae-rows"><span>Stages (in turn, each shuffled; used in place of the shortlist)</span>' + (d.stages || []).map(function (st, i) {
+      '<div class="ae-rows"><span>Stages' + tip('In place of the shortlist: after the fixed ones it takes all of stage 1 in a random order, then all of stage 2, and so on, then the rest at random. Doctrine codes separated by commas; the codes are listed under Doctrines above.') + '</span>' + (d.stages || []).map(function (st, i) {
         return '<div class="ae-row"><input class="tin" data-ae-stage="' + i + '" value="' + esc(st.join(', ')) + '" placeholder="e.g. V6, V5, V1">' +
           '<button type="button" class="lnk acct-danger" data-ae="delstage" data-r="' + i + '">Remove</button></div>';
       }).join('') + '<button type="button" class="lnk" data-ae="addstage">+ Add a stage</button></div>' +
-      '<div class="ae-rows"><span>Fixed at a Tier (that doctrine goes in at that place in the order)</span>' + Object.keys(fa).sort().map(function (t) {
+      '<div class="ae-rows"><span>Fixed at a Tier' + tip('That doctrine is the one it takes on reaching that Company Tier, whatever the order would have given; the rest move along one.') + '</span>' + Object.keys(fa).sort().map(function (t) {
         return '<div class="ae-row">Tier <select class="tin ae-n" data-ae-fat="' + t + '">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (String(n) === t ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>' +
           '<select class="tin" data-ae-fad="' + t + '">' + docOpts(fa[t]) + '</select>' +
           '<button type="button" class="lnk acct-danger" data-ae="delfat" data-k="' + t + '">Remove</button></div>';
       }).join('') + '<button type="button" class="lnk" data-ae="addfat">+ Add</button></div>' +
-      field('No creed to speak of: draws from the whole list at random', 'doctrines.random', 'bool') + '</div>';
+      field('No creed to speak of', 'doctrines.random', 'bool', null, 'Ignores the fixed ones, the shortlist and the stages: every doctrine is drawn from the whole list at random.') + '</div>';
     // the campaign rival's own
     h += '<div class="ae-sec"><h4>Campaign</h4>' +
-      unitRows('Founded with, Tier I', 'campaign.found.t1', function (p) { return p.cls === 'infantry' && !p.command; }) +
-      unitRows('Founded with, Tier II (two in a row: one of them, at random)', 'campaign.found.t2', function (p) { return p.cls === 'infantry' && !p.command; }, 'or') +
-      unitRows('Founding hulls', 'campaign.found.hulls', function (p) { return p.cls !== 'infantry'; }) +
+      '<small class="ae-dim">How an AI rival company starts and grows in a campaign. None of this changes a skirmish roll.</small>' +
+      unitRows('Founded with, Tier I', 'campaign.found.t1', function (p) { return p.cls === 'infantry' && !p.command; }, null,
+        'The Tier I units it is founded with, one each (a unit twice: two). It also fills later Tier I gaps from these unless the next list says otherwise.') +
+      unitRows('Founded with, Tier II', 'campaign.found.t2', function (p) { return p.cls === 'infantry' && !p.command; }, 'or',
+        'The Tier II units it is founded with. Two in a row: one or the other, at random each campaign. It fills Tier II gaps from these.') +
+      unitRows('Founding hulls', 'campaign.found.hulls', function (p) { return p.cls !== 'infantry'; }, null,
+        'The hulls it may be founded with; it takes as many as the next number, chosen from these.') +
       '<div class="ae-grid">' + field('How many founding hulls it takes', 'campaign.found.hullCount', 'num', ' min="0" max="6"') +
-      field('Its free founders are founded with too (not left to take on later)', 'campaign.found.free', 'bool') + '</div>' +
-      mapRows('Tier I gaps filled with', 'campaign.refill', unitKeys().filter(function (o) { return R().profile(o[0]).tier === 1; }), 'as often as its weight') +
-      '<div class="ae-grid">' + field('Spends its money and experience on', 'campaign.spend', 'sel', [['promote', 'promoting its units'], ['honours', 'honours before promotion'], ['recruit', 'recruiting widely'], ['machines', 'hulls']]) +
-      field('Lean: keeps to the size it means to be', 'campaign.lean', 'bool') +
-      field('Lean size (units)', 'campaign.leanSize', 'num', ' min="6" max="60" placeholder="24"') +
-      field('Honours before its first promotion, once it has Rapid Training Methods', 'campaign.honourFirst', 'bool') + '</div></div>';
+      field('Founded with its free units', 'campaign.found.free', 'bool', null,
+        'Units that cost nothing to recruit (Armed civilians) are normally left out of the founding list and come in later to fill gaps. Ticked: it is founded with them (a revolt that starts as civilians).') + '</div>' +
+      mapRows('Tier I gaps filled with', 'campaign.refill', unitKeys().filter(function (o) { return R().profile(o[0]).tier === 1; }),
+        'In place of the Tier I founders when it fills a gap: each unit chosen as often as its weight compared with the others.') +
+      '<div class="ae-grid">' + field('Spends its money and experience on', 'campaign.spend', 'sel', [['promote', 'promoting its units'], ['honours', 'honours before promotion'], ['recruit', 'recruiting widely'], ['machines', 'hulls']],
+        'Promoting: experience goes on promotions, money on growing a Tier at a time (the usual). Honours: a unit is trained to its full honours before it is promoted (veterans, not rank). Recruiting: it also hires up to three more units a turn at its own Tier and the next while it is not saving for a Company Tier. Hulls: it buys a hull whenever it can and fits armour and guns first.') +
+      field('Lean', 'campaign.lean', 'bool', null,
+        'Keeps to the size below: it does not hire with spare money, does not top up with free units, and at full size will not promote a unit out of a Tier that would leave it under three. Not ticked: it keeps hiring up to 12 + 7 a Company Tier units.') +
+      field('Lean size (units)', 'campaign.leanSize', 'num', ' min="6" max="60" placeholder="24"', 'Only for a lean company. Blank: 24.') +
+      field('Honours before its first promotion', 'campaign.honourFirst', 'bool', null,
+        'Once it holds Rapid Training Methods (S6), each unit takes one honour before its first promotion.') + '</div></div>';
     // the older rules, for a personality with no weighted list yet
     if (!f.weights) {
       h += '<div class="ae-sec"><h4>Older rules (until it has a weighted list)</h4>' +
-        ticks('Its own groups', 'force.groups', groupsOf()) +
-        ticks('Second choices', 'force.second', groupsOf()) +
-        unitRows('Favoured units from other groups', 'force.units') +
-        mapRows('Mix (its groups’ shares)', 'force.mix', groupKeys()) +
-        mapRows('Limits (most on its books; 0 none)', 'force.limit', groupKeys().concat(unitKeys())) + '</div>';
+        '<small class="ae-dim">Used only until it has a weighted list (above), which replaces all of these.</small>' +
+        ticks('Its own groups', 'force.groups', groupsOf(), 'What it is made of: most of its units come from these.') +
+        ticks('Second choices', 'force.second', groupsOf(), 'Taken when its own groups have nothing that fits.') +
+        unitRows('Favoured units from other groups', 'force.units', null, null, 'Single units it takes as if they were one of its own groups.') +
+        mapRows('Mix (its groups’ shares)', 'force.mix', groupKeys(), 'The share of each of its groups, by weight compared with the others; a campaign company also promotes to keep this mix.') +
+        mapRows('Limits', 'force.limit', groupKeys().concat(unitKeys()), 'The most of a unit or group it holds (0: none at all).') + '</div>';
     }
     return h;
   }
@@ -203,18 +221,22 @@
     h += '<div class="ae-grid">' +
       '<label>Name<input class="tin" data-ae-f="name" value="' + esc(u.name || '') + '" maxlength="60"></label>' +
       '<label class="ae-wide">Company names (one per line)<textarea class="tin" data-ae-f="names" rows="3">' + esc((u.names || []).join('\n')) + '</textarea></label>' +
-      field('Blurb (what it is, in a line)', 'blurb', 'text') +
+      field('Blurb', 'blurb', 'text', null, 'What it is, in a line: shown with the personality in the game.') +
       '<label>Tier preference<select class="tin" data-ae-f="tier">' + [[-1, '−1 fills up a Tier below'], [0, '0 its own Tier'], [1, '+1 reaches a Tier above']].map(function (o) {
-        return '<option value="' + o[0] + '"' + ((f.tier || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
-      '<label>Hulls a Priority Level, fewest<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmin" value="' + (f.hulls && f.hulls.min != null ? f.hulls.min : '') + '" placeholder="1"></label>' +
-      '<label>Hulls a Priority Level, most<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmax" value="' + (f.hulls && f.hulls.max != null ? f.hulls.max : '') + '" placeholder="1.5"></label>' +
+        return '<option value="' + o[0] + '"' + ((f.tier || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
+        tip('How elite it is. Each unit’s weight is scaled for every Tier it is off the battle’s. −1: units a Tier below come up more often, above rarely. 0: mostly the battle’s own Tier. +1: units a Tier above come up far more often, below rarely. In a campaign −1 also hires a Tier lower.') + '</label>' +
+      '<label>Hulls a Priority Level, fewest<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmin" value="' + (f.hulls && f.hulls.min != null ? f.hulls.min : '') + '" placeholder="1">' +
+        tip('Favourite hulls rolled before anything else, times the Priority Level, rounded (1.5: 2 at PL1, 3 at PL2, 5 at PL3).') + '</label>' +
+      '<label>Hulls a Priority Level, most<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmax" value="' + (f.hulls && f.hulls.max != null ? f.hulls.max : '') + '" placeholder="1.5">' +
+        tip('The most hulls, times the Priority Level, rounded; never past the rules’ three a Priority Level. Blank: half of three, or all three for a machine company.') + '</label>' +
       '<label>Temper (behaviour roll)<select class="tin" data-ae-f="temper">' + [-3, -2, -1, 0, 1, 2, 3].map(function (n) {
-        return '<option value="' + n + '"' + ((b.temper || 0) === n ? ' selected' : '') + '>' + (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + '</option>'; }).join('') + '</select></label>' +
+        return '<option value="' + n + '"' + ((b.temper || 0) === n ? ' selected' : '') + '>' + (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + '</option>'; }).join('') + '</select>' +
+        tip('Added to its units’ behaviour roll in battle (p. 147). +: presses in and charges. −: holds back and shoots from cover.') + '</label>' +
       '</div>';
     // tactics: a Rebel's
     if (faction() === 'rebel') {
       var t = b.tactics || {};
-      h += '<div class="ae-sec"><h4>Rebel Tactics</h4>' + ['open', 'attack', 'defend'].map(function (role) {
+      h += '<div class="ae-sec"><h4>Rebel Tactics</h4><small class="ae-dim">The Rebel tactic it chooses in battle, by the role it has. Human Wave: two extra infantry units a Priority Level, and faster infantry. Last Stand: +4 Defence in cover, barricades, and morale holds longer. Guerillas: its infantry gain Stealth and Battlefield Insertion.</small>' + ['open', 'attack', 'defend'].map(function (role) {
         var have = [].concat(t[role] || []);
         return '<div class="ae-tac"><span>' + ({ open: 'In the open', attack: 'Attacking', defend: 'Defending' })[role] + '</span>' + TACTICS.map(function (x) {
           return '<label><input type="checkbox" data-ae-tac="' + role + '" value="' + x[0] + '"' + (have.indexOf(x[0]) >= 0 ? ' checked' : '') + '> ' + x[1] + '</label>';
@@ -224,18 +246,20 @@
     // doctrines
     var creed = C().creedOf({ faction: faction() }).list;
     h += '<div class="ae-sec"><h4>Doctrines</h4><div class="ae-grid">' +
-      '<label>Fixed (taken first)<input class="tin" data-ae-f="fixed" value="' + esc((d.fixed || []).join(', ')) + '" placeholder="e.g. T4"></label>' +
-      '<label class="ae-wide">Shortlist (taken next, in a random order)<input class="tin" data-ae-f="shortlist" value="' + esc((d.shortlist || []).join(', ')) + '"></label></div>' +
-      '<small class="ae-dim">One a Company Tier: the fixed ones first, then the shortlist shuffled, then the rest shuffled.' +
-      (d.stages ? ' <b>This one takes its shortlist in stages (Advanced: doctrines.stages), each shuffled and in turn — the shortlist above is not used.</b>' : '') +
-      (d.fixedAt ? ' One is fixed at a Tier of its own (Advanced: doctrines.fixedAt).' : '') + '</small><br>' +
-      '<small class="ae-dim">' + creed.map(function (x) { return x.id + ' ' + esc(x.name); }).join(' · ') + '</small></div>';
+      '<label>Fixed (taken first)<input class="tin" data-ae-f="fixed" value="' + esc((d.fixed || []).join(', ')) + '" placeholder="e.g. T4">' + tip('In this order, from its first Company Tier.') + '</label>' +
+      '<label class="ae-wide">Shortlist (taken next, in a random order)<input class="tin" data-ae-f="shortlist" value="' + esc((d.shortlist || []).join(', ')) + '">' + tip('Shuffled anew for each company, so two companies of it differ.') + '</label></div>' +
+      '<small class="ae-dim">A campaign company takes one doctrine a Company Tier: the fixed ones first, then the shortlist shuffled, then the rest shuffled. Codes separated by commas.' +
+      (d.stages ? ' <b>This one takes its shortlist in stages (Doctrine stages, below): the shortlist here is not used.</b>' : '') +
+      (d.fixedAt ? ' One is fixed at a Tier of its own (below).' : '') + '</small>' +
+      '<details class="ae-codes"><summary class="ae-dim">The doctrine codes</summary><ul>' + creed.map(function (x) { return '<li><b>' + x.id + '</b> ' + esc(x.name) + '</li>'; }).join('') + '</ul></details></div>';
     // the weighted list
     var w = f.weights || null;
     h += '<div class="ae-sec"><h4>Weighted list</h4>';
     if (!w) h += '<p class="ae-dim">This one still rolls by its groups and mix (the older rules). <button type="button" class="lnk" data-ae="convert">Start a weighted list from them</button></p>';
     else {
-      h += '<small class="ae-dim">Weight 0–10 (blank: not listed, 0: never). Limit: the most a Priority Level, for a group its whole group. A unit’s own entry beats its group’s.</small>';
+      h += '<small class="ae-dim">Weight 0–10: how often a unit is picked compared with the others; a unit twice the weight comes up twice as often. A unit with no weight of its own takes its group’s (shown faded); 0 or blank: never. ' +
+        'Limit: the most of that unit a Priority Level (for a group, of the whole group together); blank: the rules’ own limits. A unit’s own entry beats its group’s. ' +
+        'In a campaign the limits count as Priority Level 3, and each copy it already has makes the next one less likely (in a skirmish roll too: half as likely a copy).</small>';
       var groups = {};
       list.forEach(function (p) { (groups[p.group] = groups[p.group] || []).push(p); });
       h += '<table class="ae-w"><tr><th></th><th>Weight</th><th>Limit</th></tr>' + Object.keys(groups).map(function (g) {
