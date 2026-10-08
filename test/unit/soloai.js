@@ -48,7 +48,7 @@ console.log('\nCumbersome Weapons may not advance (p. 57)');
 console.log('\nReasonably Neutral holds its position (p. 147)');
 (function () {
   let moves = 0, intoCover = 0, closer = 0;
-  for (let i = 0; i < 6; i++) for (const scen of ['s_crush', 's_sabotage', 's_decap']) {
+  for (let i = 0; i < 12; i++) for (const scen of ['s_crush', 's_sabotage', 's_decap']) {
     const e = Engine.create();
     e.start({ tier: 3, pl: 1, scenario: scen, armyA: SOLO.rollCommando(3, 1, 'pmc'), armyB: SOLO.rollOpFor(3, 1, 'rebel', false),
       nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse',

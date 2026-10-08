@@ -1209,6 +1209,7 @@
          own entry beats its group's; anything unlisted is 0. */
       tier: 0,                      // keeps to the battle's own Tier: solid armour, not a horde, not a handful
       hulls: { min: 1, max: 2 },    // hulls a Priority Level in a skirmish force (three the rules' most)
+      drives: { walker: 40 },   // odds of legs for a hull it rolls or buys (20 in 100 for most)
       weights: {
         // heavy on battle armour
         ecobats: 8, bats: 10, protectors: 10, protectorshm: 8,
@@ -1356,6 +1357,7 @@
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 0,
       hulls: { min: 2, max: 3 },    // as many hulls as the rules allow
+      drives: { walker: 5 },   // odds of legs for a hull it rolls or buys (20 in 100 for most)
       weights: {
         recruits: 3, irregulars: 3, 'Rifle infantry': 5, 'Assault troops': 6, 'Heavy infantry': [1, 1],
         'Light infantry': [1, 1], 'Heavy support': [1, 1], 'Transport vehicles': 7, insertplat: 2,
@@ -1388,6 +1390,7 @@
       /* a skirmish force's shopping list (see Bastion's) */
       tier: -1,                     // the masses: fills up on the Tier below
       hulls: { min: 0, max: 1 },
+      drives: { walker: 5 },   // odds of legs for a hull it rolls or buys (20 in 100 for most)
       weights: {
         'Freedom Warriors': 8, rciv: 6, 'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1],
         'Rebel support troops': 4, 'Rebel artillery': [3, 1], 'Rebel combat vehicles': [2, 1],
@@ -1471,6 +1474,7 @@
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 0,
       hulls: { min: 1, max: 1.5 },  // their improvised hulls
+      drives: { walker: 40 },   // odds of legs for a hull it rolls or buys (20 in 100 for most)
       weights: {
         'Freedom Warriors': 4, 'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1],
         'Rebel support troops': [2, 1], 'Rebel artillery': [2, 1], Miners: 8, 'Rebel combat vehicles': 4
@@ -1770,7 +1774,7 @@
      two meet: a flat field and where it sits in the nested shape. */
   var FIELD_MAP = {
     names: 'names', blurb: 'blurb', notes: 'notes',
-    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls', command: 'force.command', commandTier: 'force.commandTier',
+    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls', command: 'force.command', commandTier: 'force.commandTier', drives: 'force.drives', drones: 'force.drones',
     fieldsMachines: 'force.machineMinded', machinesMax: 'force.machinesMax', riders: 'force.riders',
     temper: 'battle.temper', tactics: 'battle.tactics',
     doctrines: 'doctrines.shortlist', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',

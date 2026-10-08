@@ -259,7 +259,7 @@
       var a0 = co && co.archetype ? archetype(co.archetype) : null, p0 = profile(key);
       if (!opts && a0 && a0.riders && p0 && a0.riders.indexOf(p0.group) >= 0 && R.canRide(p0)) opts = { riders: true };
       // a hull it buys goes out on a drive and now and then as a drone, as a rolled force's do
-      if (!opts && p0 && (p0.cls === 'vehicle' || p0.cls === 'aircraft')) opts = { prop: R.rollDrive(p0), drone: R.rollDrone(p0) };
+      if (!opts && p0 && (p0.cls === 'vehicle' || p0.cls === 'aircraft')) opts = { prop: R.rollDrive(p0, null, a0 && a0.drives), drone: R.rollDrone(p0, null, a0 && a0.drones) };
       return recruitBase(co, key, opts);
     };
     function flat(list) { return [].concat.apply([], list || []); }
@@ -418,8 +418,8 @@
       co.roster.forEach(function (e) {
         var p = profile(e.key);
         if (p.cls !== 'vehicle' && p.cls !== 'aircraft') return;
-        if (!e.prop) e.prop = R.rollDrive(p);
-        if (!e.drone) e.drone = R.rollDrone(p);
+        if (!e.prop) e.prop = R.rollDrive(p, null, a.drives);
+        if (!e.drone) e.drone = R.rollDrone(p, null, a.drones);
       });
       co.blurb = null;
       return co;

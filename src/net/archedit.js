@@ -116,7 +116,14 @@
       '<div class="ae-pair"><span>Vehicles a Priority Level (min / max)</span><div class="ae-pairin">' +
         '<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmin" aria-label="Vehicles a Priority Level, min" value="' + (f.hulls && f.hulls.min != null ? f.hulls.min : '') + '" placeholder="1"><em>to</em>' +
         '<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmax" aria-label="Vehicles a Priority Level, max" value="' + (f.hulls && f.hulls.max != null ? f.hulls.max : '') + '" placeholder="1.5"></div>' +
-        tip('Per Priority Level, rounded (1.5 = 2 at PL1, 3 at PL2, 5 at PL3). Never more than 3. The min are rolled first, by the weights.') + '</div></div>' +
+        tip('Per Priority Level, rounded (1.5 = 2 at PL1, 3 at PL2, 5 at PL3). Never more than 3. The min are rolled first, by the weights.') + '</div>' +
+      (faction() === 'pmc' || faction() === 'rebel' ? field('Drone %', 'force.drones', 'num', ' min="0" max="100" placeholder="15"',
+        'The chance in 100 a hull it rolls or buys that may be flown as a drone is one. Blank: 15.') : '') + '</div>' +
+      (faction() === 'pmc' || faction() === 'rebel' ? '<div class="ae-grid">' + [['usual', 'Its usual drive'], ['wheeled', 'Wheeled'], ['tracked', 'Tracked'], ['grav', 'Anti-grav'], ['hover', 'Hover'], ['walker', 'Walker']].map(function (d) {
+        return field(d[1] + ' odds', 'force.drives.' + d[0], 'num', ' min="0" max="100" placeholder="' + R().DRIVE_ODDS[d[0]] + '"',
+          d[0] === 'usual' ? 'Odds a ground hull it rolls or buys goes out on the drive it is usually drawn on. Odds are shares of their total, so they need not add to 100. Blank: ' + R().DRIVE_ODDS.usual + '.' :
+          d[0] === 'walker' ? 'Odds of legs. A transport never walks. Blank: ' + R().DRIVE_ODDS.walker + '.' : 'Blank: ' + R().DRIVE_ODDS[d[0]] + '.');
+      }).join('') + '</div>' : '') +
       (groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }).length ? ticks('Groups that ride', 'force.riders', groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }),
         'In a campaign, units of these groups (and its leader, if of one) are recruited mounted wherever the rules let them ride.') : '') + '</div>';
     // doctrines taken in stages, in place of the shortlist

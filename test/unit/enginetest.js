@@ -716,8 +716,9 @@ console.log('  vs the OpFor AI');
   const alt = R.listFor('pmc').find(p => p.tier === u.tier && p.key !== u.key && !p.command && p.cls === 'infantry');
   e.intent('A', { k: 'swappick', id: u.id });
   ok('a unit of the same Tier can be swapped in', e.intent('A', { k: 'swapin', id: alt.key }).ok && e.state().units.some(x => x.side === 'A' && x.key === alt.key));
-  const other = R.listFor('pmc').find(p => p.tier !== u.tier && !p.command && p.cls === 'infantry');
   const v = e.state().units.find(x => x.side === 'A' && !x.command && x.cls === 'infantry' && x.key !== alt.key);
+  // (a Tier other than the unit being swapped out's own)
+  const other = v && R.listFor('pmc').find(p => p.tier !== v.tier && !p.command && p.cls === 'infantry');
   if (v && other) { e.intent('A', { k: 'swappick', id: v.id }); ok('...but not one of another Tier', !e.intent('A', { k: 'swapin', id: other.key }).ok); }
   e.intent('A', { k: 'swapdone' });
   ok('done, the deployment goes on', !e.state().swapAsk && (e.intent('A', { k: 'autosplit' }), e.intent('A', { k: 'autodeploy' })).ok && e.query.deploymentDone());

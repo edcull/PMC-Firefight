@@ -248,20 +248,28 @@
     return DEFAULT_DRIVE[p.key] || 'wheeled';
   }
   function propOf(u) { return PROPULSION[u && u.prop] || null; }
-  /* A rolled or AI-bought hull's drive: the one it is usually drawn on two times in
-     five, otherwise any of wheeled, tracked, anti-grav and hover at random — so its
-     usual drive about 55% of the time and each other one about 15% (never legs). */
-  var ROLLED_DRIVES = ['wheeled', 'tracked', 'grav', 'hover'];
-  function rollDrive(p, rnd) {
+  /* A rolled or AI-bought hull's drive: 40 in 100 the one it is usually drawn on, 10
+     each wheeled, tracked, anti-grav and hover, 20 legs (its usual drive about half the
+     time, counting its own 10). `drives` is a personality's own odds for any of these in
+     place of the defaults (the Bastion's walking guns, the Cavalry's wheels); a transport
+     never walks. */
+  var DRIVE_ODDS = { usual: 40, wheeled: 10, tracked: 10, grav: 10, hover: 10, walker: 20 };
+  function rollDrive(p, rnd, drives) {
     if (!propsFor(p).length) return null;
     rnd = rnd || Math.random;
-    var look = lookDrive(p);
-    if (ROLLED_DRIVES.indexOf(look) >= 0 && rnd() < 0.4) return look;
-    return ROLLED_DRIVES[Math.floor(rnd() * ROLLED_DRIVES.length)];
+    var look = lookDrive(p), odds = {}, tot = 0, k;
+    for (k in DRIVE_ODDS) odds[k] = DRIVE_ODDS[k];
+    for (k in DRIVE_ODDS) if (drives && drives[k] != null) odds[k] = drives[k];
+    if (p.transport) odds.walker = 0;
+    for (k in odds) tot += odds[k];
+    var r = rnd() * tot;
+    for (k in odds) { r -= odds[k]; if (r < 0) return k === 'usual' ? look : k; }
+    return look;
   }
-  // ...and a hull that may be flown as a drone is one 15% of the time (p. 37)
-  var DRONE_CHANCE = 0.15;
-  function rollDrone(p, rnd) { return canBeDrone(p) && (rnd || Math.random)() < DRONE_CHANCE; }
+  // ...and a hull that may be flown as a drone is one 15% of the time (p. 37), or as
+  // often in 100 as its personality's `drones` say
+  var DRONE_CHANCE = 15;
+  function rollDrone(p, rnd, pct) { return canBeDrone(p) && (rnd || Math.random)() * 100 < (pct != null ? pct : DRONE_CHANCE); }
   /* The special rules a unit is shown with: its own, and the Strafing Run every
      aircraft with Firepower may make — a rule of the game (p. 27), not printed
      on any profile, but the thing such a craft is for. */
@@ -653,7 +661,7 @@
         keys.push(p.key);
       } else if (p.cls === 'vehicle' || p.cls === 'aircraft') {
         // its drive, and flown as a drone now and then (rollDrive, rollDrone)
-        keys.push(joinPick(p.key, rollDrive(p, rnd), rollDrone(p, rnd)));
+        keys.push(joinPick(p.key, rollDrive(p, rnd, st ? st.a.drives : null), rollDrone(p, rnd, st ? st.a.drones : null)));
       } else if (p.ridersUpgrade && (st ? st.rides(p) : rnd() < 0.3)) {
         keys.push(joinPick(p.key, null, false, true));      // mounted, now and then
       } else keys.push(p.key);
@@ -2327,7 +2335,7 @@
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,
     canMartyr: canMartyr, resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
-    applyDrone: applyDrone, canBeDrone: canBeDrone, rollDrive: rollDrive, rollDrone: rollDrone, shownRules: shownRules, auxSpec: auxSpec, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
+    applyDrone: applyDrone, canBeDrone: canBeDrone, rollDrive: rollDrive, rollDrone: rollDrone, DRIVE_ODDS: DRIVE_ODDS, DRONE_CHANCE: DRONE_CHANCE, shownRules: shownRules, auxSpec: auxSpec, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
     shotMods: shotMods, shotOdds: shotOdds, expectedShot: expectedShot, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
