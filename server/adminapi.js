@@ -59,6 +59,21 @@ function create(opts) {
       if (busy(me)) return no('too many admin changes in a minute — wait a moment', 429);
       const target = () => b.name ? db.userByName(String(b.name)) : null;
       switch (action) {
+        /* The personalities (archetypes.js): a whole one from the editor, kept as its
+           difference from the default, or put back to the default. */
+        case 'archetype-save': {
+          if (!opts.archetypes) return no('this server keeps no personalities');
+          const r = opts.archetypes.save(String(b.id || ''), b.data, me.name, now());
+          if (!r.ok) return no(r.why);
+          log('admin ' + me.name + ' changed the personality ' + b.id);
+          return { ok: true, text: 'Saved.', change: r.change, version: r.version };
+        }
+        case 'archetype-reset': {
+          if (!opts.archetypes) return no('this server keeps no personalities');
+          const r2 = opts.archetypes.reset(String(b.id || ''), me.name);
+          log('admin ' + me.name + ' reset the personality ' + b.id);
+          return { ok: true, text: 'Back to its default.', version: r2.version };
+        }
         case 'activate': {
           const u = target();
           if (!u) return no('no such account');

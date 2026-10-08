@@ -371,6 +371,8 @@ function create(opts) {
     if (req.method === 'OPTIONS') return json(res, 204);
     if (api(req, res, url)) return;
     if (adminApi(req, res, url)) return;
+    // the personalities as an admin has changed them: every page from this server lays them over its own
+    if (url === '/api/archetypes' && req.method === 'GET') return json(res, 200, opts.archetypes ? opts.archetypes.list() : { changes: {}, updated: [], version: 0 });
     if (campaignsApi(req, res, url)) return;
     if (forcesApi(req, res, url)) return;
     if (weaponsApi(req, res, url)) return;

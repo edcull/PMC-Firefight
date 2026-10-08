@@ -1024,7 +1024,13 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
         var ks2 = R.rollArmy(t, pl2, null, f, a.id);
         ks2.forEach(function (k) {
           var p = R.profile(keyOf(k));
-          var own2 = a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || [].concat(a.t1 || [], a.t2 || []).indexOf(p.key) >= 0 || p.command;
+          // (with a weighted list, its own is whatever it weighs above 0)
+          var wE = a.weights ? (a.weights[p.key] != null ? a.weights[p.key] : a.weights[p.group]) : null;
+          var own2 = a.weights ? !!(wE && (Array.isArray(wE) ? wE[0] : wE)) || p.command
+            : a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || [].concat(a.t1 || [], a.t2 || []).indexOf(p.key) >= 0 || p.command;
+          // a weighted list may take its own above the battle's Tier, at half weight: only an unweighted pick counts here
+          if (a.weights && !own2 && p.tier > t) { bigOdd++; return; }
+          if (a.weights) own2 = true;
           if (!own2 && p.tier > t) bigOdd++;
           if (p.command && p.tier < t) lowCmd++;
           if (a.id === 'shock' && (p.group === 'Transport vehicles' || p.group === 'Engineering and utility vehicles')) shockVeh++;
@@ -1048,6 +1054,19 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
     outside++; if (shockA.second.indexOf(p.group) >= 0) second++;
   });
   ok('Shock\'s picks from outside its kind are mostly its second choices', outside > 0 && second / outside > 0.7, true, second + ' of ' + outside);
+  // a weighted shopping list (Bastion): its limits a Priority Level each, and nothing it weighs 0
+  var bast = C.archetypesFor('pmc').filter(function (x) { return x.id === 'armour'; })[0], overLim = 0, zero = 0;
+  function wOf(p) { var e = bast.weights[p.key] != null ? bast.weights[p.key] : bast.weights[p.group]; return e == null ? 0 : Array.isArray(e) ? e[0] : e; }
+  for (var b2 = 0; b2 < 90; b2++) {
+    var bt2 = 1 + (b2 % 5), bpl = 1 + (b2 % 3), bk = R.rollArmy(bt2, bpl, null, 'pmc', 'armour');
+    var cnt = function (f) { return bk.filter(function (k) { return f(R.profile(keyOf(k))); }).length; };
+    if (cnt(function (p) { return p.key === 'sam'; }) > bpl || cnt(function (p) { return p.key === 'gausscannon'; }) > bpl ||
+      cnt(function (p) { return p.group === 'Remote mortars'; }) > bpl || cnt(function (p) { return p.group === 'Engineering and utility vehicles'; }) > bpl ||
+      cnt(function (p) { return p.group === 'Heavy support'; }) > 2 * bpl) overLim++;
+    zero += cnt(function (p) { return !p.command && wOf(p) === 0; });
+  }
+  ok('Bastion keeps to its limits, a Priority Level each', overLim, 0);
+  ok('...and takes nothing it weighs 0 while anything else is legal', zero, 0);
   ok('...and a roll with no personality still works', R.checkArmy(R.rollArmy(3, 2, null, 'pmc', false), 3, 2).ok && !R.rollArmy(3, 2, null, 'pmc', false).style, true);
   ok('a temper for a skirmish force by its personality id', C.aiTemper({ archetype: 'partisans' }).mod, -1);
 })();
@@ -1064,6 +1083,93 @@ head('A skirmish force rolled to a personality goes by one of its names');
   ok('...takes another when the other side has it', U.personaName(ks, n1, n1) !== n1 && a.names.indexOf(U.personaName(ks, n1, n1)) >= 0, true);
   ok('...and the name counts as made up, so it follows the force', U.isForceName(n1) && U.isPersonaName('The Partisans') && !U.isPersonaName('Task Force Ironhold'), true);
   ok('a force with no personality goes by its colours', U.forceName('jade', 'pmc', R.rollArmy(2, 1, null, 'pmc', false)), U.forceName('jade', 'pmc'));
+})();
+
+head('A personality as one object, and an admin\'s changes laid over it');
+(function () {
+  var u = C.unifiedArchetype('armour');
+  ok('Bastion read as one object: what it fields, how it fights, its doctrines, its campaign', !!(u.force && u.force.weights && u.battle && u.doctrines && u.campaign && u.campaign.found), true);
+  ok('...and an unchanged one makes no change', JSON.stringify(C.archetypeChange('armour', u)), '{}');
+  var before = JSON.stringify(C.archetype('armour'));
+  u.force.tier = -1; u.battle.temper = -2; u.force.weights = { bats: 10, protectors: 10 };
+  var ch = C.archetypeChange('armour', u);
+  ok('a change keeps only what differs', Object.keys(ch).sort().join(','), 'battle,force');
+  C.applyArchetypeChanges({ armour: ch });
+  var a = C.archetype('armour');
+  ok('...applied in place: the tier, the temper and the whole list of weights', [a.tier, a.temper, Object.keys(a.weights).length], [-1, -2, 2]);
+  ok('...rolls follow it', R.rollArmy(3, 1, null, 'pmc', 'armour').every(function (k) { var p = R.profile(R.splitPick(k).key); return p.command || ['bats', 'protectors'].indexOf(p.key) >= 0 || p.cls !== 'infantry' || p.tier !== 3; }), true);
+  ok('...and who it is never changes', a.id, 'armour');
+  C.applyArchetypeChanges({});
+  ok('cleared, it is the default again', JSON.stringify(C.archetype('armour')) === before, true);
+  var unmapped = [];
+  ['pmc', 'rebel', 'bugs', 'xeno'].forEach(function (f) { C.archetypesFor(f).forEach(function (x) {
+    Object.keys(x).forEach(function (k) { if (['id', 'name', 'faction'].indexOf(k) < 0 && !C.FIELD_MAP[k] && unmapped.indexOf(k) < 0) unmapped.push(k); });
+  }); });
+  ok('every field any personality has is in the one object (FIELD_MAP)', unmapped.join(','), '');
+  ok('...the lean size too, which the code reads with a default', C.FIELD_MAP.leanSize, 'campaign.leanSize');
+  var seen = C.withArchetypeChanges({ armour: { battle: { temper: 3 } } }, function () { return C.archetype('armour').temper; });
+  ok('a preview runs with the change and puts it back', [seen, C.archetype('armour').temper], [3, -1]);
+})();
+
+head('Campaign rivals recruit by the same weighted list');
+(function () {
+  function grow(id, f, turns) {
+    var co = C.newCompany('W', { faction: f }); C.foundRival(co, id, []);
+    for (var t = 0; t < turns; t++) C.idleTurn(co);
+    return co;
+  }
+  function wOf(a, p) { var e = a.weights[p.key] != null ? a.weights[p.key] : a.weights[p.group]; return e == null ? 0 : Array.isArray(e) ? e[0] : e; }
+  function limOf(a, k) { var e = a.weights[k]; return Array.isArray(e) ? e[1] : null; }
+  var stray = [], over = [];
+  ['armour', 'shock', 'redfront', 'pitheads'].forEach(function (id) {
+    var a = C.archetype(id), f = a.faction || 'pmc';
+    for (var r = 0; r < 4; r++) {
+      var co = grow(id, f, 25);
+      co.roster.forEach(function (e) {
+        var p = R.profile(e.key);
+        // the founding units and the commander are its own whatever the list says
+        if (p.command || [].concat(a.t1 || [], a.t2 || [], a.machines || []).indexOf(p.key) >= 0) return;
+        if (wOf(a, p) <= 0) stray.push(a.name + ': ' + p.name);
+      });
+      Object.keys(a.weights).forEach(function (k) {
+        var lim = limOf(a, k); if (lim == null) return;
+        var n = co.roster.filter(function (e) { var p = R.profile(e.key); return p.key === k || p.group === k; }).length;
+        if (n > lim * 3) over.push(a.name + ': ' + n + ' ' + k);
+      });
+    }
+  });
+  ok('a weighted rival recruits nothing its list weighs 0', stray.length, 0, stray.slice(0, 4).join('; '));
+  ok('...and keeps to its limits (three Priority Levels’ worth on its books)', over.length, 0, over.slice(0, 4).join('; '));
+  var bast = grow('armour', 'pmc', 25), groupsHeld = {};
+  bast.roster.forEach(function (e) { groupsHeld[R.profile(e.key).group] = 1; });
+  ok('a Bastion rival grows a mix: armour, support infantry and hulls', !!(groupsHeld['Heavy infantry'] && (groupsHeld['Heavy support'] || groupsHeld['Light support']) && (groupsHeld['Hunters and destroyers'] || groupsHeld['Support vehicles'])), true, Object.keys(groupsHeld).join(', '));
+  var merc = grow('swarm', 'pmc', 30);
+  ok('a recruiting company grows to a size that suits its Tier, not a hundred Recruits', merc.roster.length <= 12 + 7 * merc.tier + 4, true, merc.roster.length + ' units at Tier ' + merc.tier);
+})();
+
+head('Campaign rivals work towards their next Company Tier');
+(function () {
+  // grown until money is all that stands between it and its next Tier
+  var co = C.newCompany('B', { faction: 'pmc' }); C.foundRival(co, 'armour', []);
+  var pc = C.canPromoteCompany(co), g = 0;
+  while (g++ < 60) {
+    C.idleTurn(co); pc = C.canPromoteCompany(co);
+    if (co.tier >= 3 && !pc.ok && pc.faults.every(function (f) { return /costs/.test(f); })) break;
+  }
+  ok('a rival reaches the point where only the money is short', !pc.ok && pc.faults.every(function (f) { return /costs/.test(f); }), true, (pc.faults || []).join(' | '));
+  co.kUC = pc.cost - 5;
+  var before = co.kUC, n0 = co.roster.length;
+  C.developRival(co);
+  ok('...then it banks: nothing bought, nothing hired', [co.kUC, co.roster.length], [before, n0]);
+  co.kUC = pc.cost + 2;
+  var t0 = co.tier;
+  C.developRival(co);
+  ok('...and promotes the moment it can afford to', co.tier, t0 + 1);
+  // short of an army for the next Tier: it buys that army first
+  var y = C.newCompany('Y', { faction: 'pmc' }); C.foundRival(y, 'swarm', []);
+  y.kUC = 40;
+  var did = C.developRival(y).map(function (d) { return d.text; }).join(' | ');
+  ok('a rival short of a Tier II army buys towards it', /towards Company Tier II/.test(did) || y.tier === 2, true, did.slice(0, 200));
 })();
 
 head('Rebel Tactics by personality and part in the scenario');

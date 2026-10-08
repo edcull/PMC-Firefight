@@ -241,7 +241,28 @@
       var have = co.roster.filter(function (e) { return profile(e.key).group === g; }).length;
       return w / wsum - (tot ? have / tot : 0);
     }
+    /* A weighted shopping list (campaign.js `weights`, the same one a skirmish roll uses):
+       a unit's own entry, else its group's, else 0; its limit a Priority Level, which a
+       company's roster — a Priority Level 3 army's worth and more — counts three times. */
+    var ROSTER_PL = 3;
+    function wEntry(a, k) { var e = a.weights[k]; return e == null ? null : Array.isArray(e) ? { w: e[0], lim: e[1] } : { w: e, lim: null }; }
+    function weightIn(a, p) { var e = wEntry(a, p.key) || wEntry(a, p.group); return e ? e.w : 0; }
+    // how elite it is (`tier`): a unit off the company's own Tier counts for less, or more, as a skirmish roll has it
+    var TIER_LEAN = { '-1': { below: 1.5, above: 0.25 }, '0': { below: 0.35, above: 0.5 }, '1': { below: 0.2, above: 2.5 } };
+    function weighFor(co, a, p) {
+      var have = co.roster.filter(function (e) { return e.key === p.key; }).length;
+      var lean = TIER_LEAN[String(a.tier || 0)] || TIER_LEAN['0'], d = p.tier - co.tier;
+      // (a company keeps many of a kind, so each one it has counts for a little less, not half)
+      return weightIn(a, p) / (1 + have) * (d === 0 ? 1 : Math.pow(d < 0 ? lean.below : lean.above, Math.abs(d)));
+    }
     function leanTo(co, a, list) {
+      if (a && a.weights && list.length) {
+        var ws = list.map(function (p) { return weighFor(co, a, p); }), tot = ws.reduce(function (x, y) { return x + y; }, 0);
+        if (tot <= 0) return pick(list);
+        var r = Math.random() * tot;
+        for (var i = 0; i < list.length; i++) { r -= ws[i]; if (r <= 0) return list[i]; }
+        return list[list.length - 1];
+      }
       if (!a || !a.mix || list.length < 2) return pick(list);
       var best = Math.max.apply(null, list.map(function (p) { return mixShortfall(co, a, p.group); }));
       return pick(list.filter(function (p) { return mixShortfall(co, a, p.group) === best; }));
@@ -264,6 +285,12 @@
        snipers, two mortar units) neither recruits nor promotes past it. A key limits
        that unit, a group name the whole group. */
     function atLimit(co, a, p) {
+      if (a && a.weights) {
+        var eu = wEntry(a, p.key), eg = wEntry(a, p.group);
+        if (eu && eu.lim != null && co.roster.filter(function (e) { return e.key === p.key; }).length >= eu.lim * ROSTER_PL) return true;
+        if (eg && eg.lim != null && co.roster.filter(function (e) { return profile(e.key).group === p.group; }).length >= eg.lim * ROSTER_PL) return true;
+        return false;
+      }
       var lim = (a && a.limit) || {};
       if (lim[p.key] != null && co.roster.filter(function (e) { return e.key === p.key; }).length >= lim[p.key]) return true;
       if (lim[p.group] != null && co.roster.filter(function (e) { return profile(e.key).group === p.group; }).length >= lim[p.group]) return true;
@@ -301,6 +328,13 @@
         if (!pool.length) break;                        // nothing at this Tier it may hire
         pool.sort(function (x, y) { return recruitCost(co, x.key) - recruitCost(co, y.key); });
         var take = pool.filter(function (p) { return canRecruit(co, p.key).ok; })[0];
+        /* a personality with a weighted list hires what it would weigh, within its limits;
+           the cheapest only when nothing it wants is to be had */
+        var ad = co.archetype ? archetype(co.archetype) : null;
+        if (take && ad && ad.weights) {
+          var likedD = pool.filter(function (p) { return canRecruit(co, p.key).ok && weightIn(ad, p) > 0 && !atLimit(co, ad, p); });
+          if (likedD.length) take = leanTo(co, ad, likedD);
+        }
         if (!take) { co.kUC += RECRUIT_COST[tier] || 8; continue; }   // a season's earnings
         if (!recruit(co, take.key).ok) break;
       }
@@ -326,6 +360,8 @@
 
     /* Between your battles, the forces you did not fight were busy. They take a
        payment at their own Tier and spend it, so the world moves on without you. */
+    // the most units a company hires up to on its own account, by its Company Tier (33 at Tier III)
+    function rosterRoom(co) { return 12 + 7 * co.tier; }
     function idleTurn(co) {
       var take = sum(rollPayment(Math.max(1, co.tier), 1));
       co.kUC += take;
@@ -465,7 +501,23 @@
       var a = archetype(co.archetype);
       var did = rehireCommand(co);            // first call on the money, when it is due
       // its own groups, and the odd unit it favours from a group it otherwise does not (`units`)
-      function wanted(p) { return a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0; }
+      function wanted(p) {
+        if (a.weights) return weightIn(a, p) > 0;
+        return a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0;
+      }
+      /* Banking for its next Company Tier: the promotion affordable now, or short only of
+         the money (canPromoteCompany). Then nothing else is bought — no new hulls or trading
+         up, no hires on its own account, no more signature units past its first — so the
+         money goes on the promotion. */
+      function banking() {
+        if (co.tier >= 5) return false;
+        var pc = canPromoteCompany(co);
+        return pc.ok || (pc.faults || []).every(function (f) { return /costs/.test(f); });
+      }
+      // the lowest Tier it hires on its own account: its own, or one below for a force that fills up on numbers (tier −1)
+      var lowestHire = Math.max(1, co.tier - ((a.tier || 0) < 0 ? 1 : 0));
+      // the hulls it keeps: its own count (machinesMax), else twice its skirmish force's most (hulls a Priority Level)
+      var hullsKept = a.machinesMax || (a.weights && a.hulls && a.hulls.max ? Math.round(a.hulls.max * 2) : 0);
       function shortfall(g) { return mixShortfall(co, a, g); }
       function capped(p) { return atLimit(co, a, p); }
       function leaning(list) { return leanTo(co, a, list); }
@@ -528,6 +580,7 @@
         var have = co.roster.filter(function (e) { return sig.indexOf(e.key) >= 0; }).length;
         // (`signatureCap`: as many as that, whatever the Tier — the Partisans' commandos)
         if (have >= (a.signatureCap != null ? a.signatureCap : Math.min(a.signatureMax || 3, co.tier))) return;
+        if (have >= 1 && banking()) return;          // (its first, always; the rest wait on the promotion)
         var can = sig.map(profile).filter(function (p) { return p.tier <= co.tier + 1 && canRecruit(co, p.key).ok && !capped(p); });
         var top = Math.max.apply(null, can.map(function (p) { return p.tier; }).concat([0]));
         var buy = can.length ? pick(can.filter(function (p) { return p.tier === top; })) : null;
@@ -582,7 +635,7 @@
         /* A force keeping a mix holds a unit to its own line unless the line it would
            cross to is the shorter of its share (the Bastion's machine guns stay machine
            guns, half and half with its anti-tank teams), waiting for the step up instead. */
-        if (a.mix && a.mix[p.group]) {
+        if (!a.weights && a.mix && a.mix[p.group]) {
           // (it crosses only into a line shorter of its share than its own; with no step up its own line, it waits)
           targets = targets.filter(function (q) { return q.group === p.group || shortfall(q.group) > shortfall(p.group); });
         }
@@ -603,6 +656,8 @@
         if (a.honourFirst && hasDoctrine(co, 'S6') && !(e.honours || []).length && !stepIn) honour();
         if (targets.length) {
           var best = targets.sort(function (x, y) { return y.tier - x.tier || shortfall(y.group) - shortfall(x.group); })[0];
+          // (a weighted list chooses among the steps up of the biggest Tier it can reach, by its weights)
+          if (a.weights) best = leaning(targets.filter(function (q) { return q.tier === best.tier; }));
           if (promoteUnit(co, e, best.key).ok) {
             did.push({ what: 'promote', text: was + ' promoted to ' + e.name });
           }
@@ -610,15 +665,43 @@
         honour();                                     // whatever experience is left
       });
 
+      /* Growing comes first. The next Company Tier asks for a legal army at every Tier up
+         to it, and before Tier IV a Tier III army at Priority Level 2 (canPromoteCompany):
+         while any of those is short, the money buys that army's units — by its list, within
+         its limits — before any cheaper hire, and however full its books. (A swarm grows by
+         its own rules: its Overmind and Leader Bugs, below.) */
+      function promoNeeds() {
+        if (co.tier >= 5 || co.faction === 'bugs') return [];
+        var nt = co.tier + 1, probe = asPromoted(co, nt), out = [];
+        for (var t = 1; t <= nt; t++) if (!canFieldArmy(probe, t, 1)) out.push({ t: t, pl: 1 });
+        if (nt === 4 && !canFieldArmy(probe, 3, 2)) out.push({ t: 3, pl: 2 });
+        return out;
+      }
+      var needs = promoNeeds();
+      for (var gw = 0; gw < 4 && needs.length; gw++) {
+        var aim = needs[0];
+        var grow = R.listFor(co.faction).filter(function (p) {
+          return p.tier === aim.t && p.cls === 'infantry' && !isLeaderP(p) && wanted(p) && !capped(p) &&
+            canRecruit(co, p.key).ok && recruitCost(co, p.key) <= co.kUC;
+        });
+        if (!grow.length) { needs.shift(); continue; }        // nothing it can buy for that one now: the next
+        var rg = recruit(co, leaning(grow).key);
+        if (!rg.ok) break;
+        did.push({ what: 'recruit', text: 'recruited ' + rg.entry.name + ', towards ' + words(co).tier + ' Tier ' + R.ROMAN[co.tier + 1] });
+        needs = promoNeeds();
+      }
       // a company that recruits for a living keeps buying while it can afford to
       // ...though a company within reach of a Company Tier banks the money instead
       var nextCost = COMPANY_COST[co.tier + 1];
       var saving = nextCost && co.kUC >= nextCost * 0.6 && canPromoteCompany(co).faults
         .every(function (f) { return /costs/.test(f); });
-      if (a.spend === 'recruit' && !saving) {
-        for (var n = 0; n < 3; n++) {
+      if (a.spend === 'recruit' && !saving && !banking()) {
+        // (up to a size that suits its Company Tier: a company of a hundred Recruits fields no better army than one of twenty)
+        for (var n = 0; n < 3 && co.roster.length < rosterRoom(co); n++) {
           var pool2 = R.listFor(co.faction).filter(function (p) {
-            if (p.cls !== 'infantry' || isLeaderP(p) || p.tier > co.tier) return false;
+            /* its own Tier and the next: money goes on units that grow the company, not on
+               cheap ones below it (those come in only to close a gap, fillGaps, or free) */
+            if (p.cls !== 'infantry' || isLeaderP(p) || p.tier > co.tier + 1 || (p.tier < lowestHire && recruitCost(co, p.key) > 0)) return false;
             if (!wanted(p) && a.t1.indexOf(p.key) < 0 && flat(a.t2).indexOf(p.key) < 0) return false;
             if (capped(p)) return false;
             if (!canRecruit(co, p.key).ok || fullUp(p)) return false;
@@ -636,27 +719,28 @@
          field at its own Tier, the next one the moment the money is there; the Bastion
          keeps four, its tank hunters, destroyers and gun carriers. */
       // (and a force with hulls of its own to keep — the Bastion's guns — buys them however else it spends)
-      if (a.spend === 'machines' || a.machinesMax) {
-        var cap = a.machinesMax || 3, bought = 0;
+      if ((a.spend === 'machines' || hullsKept) && !banking()) {
+        var cap = hullsKept || 3, bought = 0;
         while (bought < 2 && co.roster.filter(function (e) { return profile(e.key).cls !== 'infantry'; }).length < cap) {
-          if (!a.machinesMax && co.kUC < 16) break;
+          if (!hullsKept && co.kUC < 16) break;
           var hulls = R.listFor(co.faction).filter(function (p) {
-            return p.cls !== 'infantry' && !p.noSlot && wanted(p) && canRecruit(co, p.key).ok && (!a.machinesMax || p.tier <= co.tier);
+            return p.cls !== 'infantry' && !p.noSlot && wanted(p) && !capped(p) && canRecruit(co, p.key).ok && (!hullsKept || p.tier <= co.tier);
           }).sort(function (x, y) { return y.tier - x.tier; });
           if (!hulls.length) break;
           // (the hulls it is known for first, where it has a preference: the Bastion's guns)
           var firstH = hulls.filter(function (p) { return hullFirst(a, p); });
           if (firstH.length) hulls = firstH;
-          var top = hulls[0].tier, pickH = a.machinesMax ? pick(hulls.filter(function (p) { return p.tier === top; })) : hulls[0];
+          var top = hulls[0].tier, pickH = a.weights ? leaning(hulls.filter(function (p) { return p.tier === top; }))
+            : hullsKept ? pick(hulls.filter(function (p) { return p.tier === top; })) : hulls[0];
           var rv = recruit(co, pickH.key);
           if (!rv.ok) break;
           did.push({ what: 'recruit', text: 'took delivery of a ' + rv.entry.name });
           bought++;
-          if (!a.machinesMax) break;
+          if (!hullsKept) break;
         }
         /* ...and once it has all it means to keep, the smallest goes for a bigger one
            when the money is there: the guns grow with the force. */
-        if (a.machinesMax) {
+        if (hullsKept) {
           var owned = co.roster.filter(function (e) { var q = profile(e.key); return q.cls !== 'infantry' && !q.noSlot && wanted(q); });
           if (owned.length >= cap) {
             var small = owned.slice().sort(function (x, y) { return profile(x.key).tier - profile(y.key).tier; })[0];
@@ -666,7 +750,7 @@
             var firstB = bigger.filter(function (p) { return hullFirst(a, p); });
             if (firstB.length) bigger = firstB;
             if (bigger.length && small.rid !== co.cmdRid) {
-              var nb = recruit(co, pick(bigger).key);
+              var nb = recruit(co, (a.weights ? leaning(bigger) : pick(bigger)).key);
               if (nb.ok) {
                 co.roster = co.roster.filter(function (e) { return e !== small; });
                 did.push({ what: 'recruit', text: 'traded the ' + small.name + ' for a ' + nb.entry.name });
@@ -682,13 +766,15 @@
       var savingFor = next && canPromoteCompany(co).faults.every(function (f) { return /costs/.test(f); });
       // (a lean force — the Elite — keeps the money for promotions and its next Tier instead)
       if (!a.lean && (!savingFor || co.kUC > next * 2)) {
-        for (var w = 0; w < 4 && co.kUC >= 24; w++) {
+        for (var w = 0; w < 4 && co.kUC >= 24 && co.roster.length < rosterRoom(co); w++) {
           var want = R.listFor(co.faction).filter(function (p) {
             return p.cls === 'infantry' && !isLeaderP(p) && wanted(p) &&
-              p.tier <= co.tier + 1 && canRecruit(co, p.key).ok;
+              p.tier <= co.tier + 1 && (p.tier >= lowestHire || recruitCost(co, p.key) === 0) && canRecruit(co, p.key).ok;
           }).sort(function (x, y) { return y.tier - x.tier; });
+          // (a weighted list hires by its weights, within its limits; otherwise the biggest it wants)
+          if (a.weights) want = want.filter(function (p) { return !capped(p); });
           if (!want.length) break;
-          var rw = recruit(co, want[0].key);
+          var rw = recruit(co, (a.weights ? leaning(want) : want[0]).key);
           if (!rw.ok) break;
           did.push({ what: 'recruit', text: 'recruited ' + rw.entry.name });
         }

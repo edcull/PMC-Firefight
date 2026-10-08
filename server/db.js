@@ -122,7 +122,15 @@ const MIGRATIONS = [
      updated INTEGER NOT NULL
    );
    CREATE UNIQUE INDEX forces_name ON forces(owner, kind, name COLLATE NOCASE);`,
-  /* 9: an admin's changes to how units are drawn firing (the weapon table in
+  /* 9: an admin's changes to the personalities (campaign.js ARCHETYPES), one row a
+     personality, kept as the difference from its default; who made it, and when. */
+  `CREATE TABLE archetypes (
+     id      TEXT PRIMARY KEY,
+     data    TEXT NOT NULL,
+     updated INTEGER NOT NULL,
+     by      TEXT
+   );`,
+  /* 10: an admin's changes to how units are drawn firing (the weapon table in
      src/rules/data.js), one entry per unit, laid over the table for every game
      this server serves. A unit with none fires as the table says. */
   `CREATE TABLE weapons (
@@ -211,6 +219,9 @@ function wrap(db) {
     saveCampaign: db.prepare('UPDATE campaigns SET state = ?, name = ?, turn = ?, kind = ?, version = version + 1, updated = ? WHERE id = ? AND owner = ? AND version = ?'),
     dropCampaign: db.prepare('DELETE FROM campaigns WHERE id = ? AND owner = ?'),
     forcesOf: db.prepare('SELECT id, kind, name, data, updated FROM forces WHERE owner = ? ORDER BY kind, name COLLATE NOCASE'),
+    archetypes: db.prepare('SELECT id, data, updated, by FROM archetypes ORDER BY id'),
+    putArchetype: db.prepare('INSERT INTO archetypes (id, data, updated, by) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated = excluded.updated, by = excluded.by'),
+    dropArchetype: db.prepare('DELETE FROM archetypes WHERE id = ?'),
     forceNamed: db.prepare('SELECT id FROM forces WHERE owner = ? AND kind = ? AND name = ? COLLATE NOCASE'),
     addForce: db.prepare('INSERT INTO forces (owner, kind, name, data, created, updated) VALUES (?, ?, ?, ?, ?, ?)'),
     saveForce: db.prepare('UPDATE forces SET name = ?, data = ?, updated = ? WHERE id = ? AND owner = ?'),
@@ -321,6 +332,10 @@ function wrap(db) {
       return q.addForce.run(f.owner, f.kind, f.name, JSON.stringify(f.data), f.at, f.at).lastInsertRowid;
     },
     dropForce: (id, owner) => q.dropForce.run(id, owner).changes > 0,
+    // ---- the personalities, as an admin has changed them ----
+    archetypes: () => q.archetypes.all().map((r) => ({ id: r.id, data: JSON.parse(r.data), updated: r.updated, by: r.by })),
+    putArchetype: (id, data, at, by) => q.putArchetype.run(id, JSON.stringify(data), at, by || null),
+    dropArchetype: (id) => q.dropArchetype.run(id).changes > 0,
     // ---- an admin's weapon table changes ----
     weapons: () => { const out = {}; q.weapons.all().forEach((w) => { out[w.key] = JSON.parse(w.data); }); return out; },
     putWeapon: (key, data, at, by) => q.putWeapon.run(key, JSON.stringify(data), at, by || null),
