@@ -388,7 +388,11 @@
                 if (SFX) SFX.shell();
                 add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: big ? 320 : 260, big: true, blocking: true });
                 add({ kind: 'bolt', from: F, to: to, dur: flightMs, heavy: big, blocking: true });
-                setTimeout(function () { land(big ? 4 : 2); }, flightMs);
+                setTimeout(function () {
+                  // where the weapon entry says (`blast: 'frag'`), each round goes off as a fragmentation blast
+                  if (alive() && spec.blast === 'frag') fragBlast(to, big ? 1.5 : 1.05, j);
+                  land(big ? 4 : 2);
+                }, flightMs);
                 redraw();
               }, j * shellGap);
             })(sh);
@@ -584,7 +588,11 @@
                 if (SFX) SFX.shell();
                 add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pick(from, j).mz, dur: 240, big: true, blocking: true });
                 add({ kind: 'bolt', from: pick(from, j), to: to, dur: 300, heavy: style === 'shellbig', blocking: true });
-                setTimeout(function () { if (alive()) secondaryLands(shooter, to, style === 'shellbig' ? 3 : 2); }, 300);
+                setTimeout(function () {
+                  if (!alive()) return;
+                  if (R.weaponSpec(shooter).blast === 'frag') fragBlast(to, style === 'shellbig' ? 1.5 : 1.05, j);
+                  else secondaryLands(shooter, to, style === 'shellbig' ? 3 : 2);
+                }, 300);
                 redraw();
               }, j * 230);
             })(q2);

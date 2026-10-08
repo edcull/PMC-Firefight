@@ -139,10 +139,21 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   ok('...and made to go off as a fragmentation blast where they land', blasts.indexOf('fragburst') >= 0 && blasts.indexOf('orbburst') < 0 &&
     /blast: 'frag'/.test(await src(p)), [...new Set(blasts)].join(','));
 
+  // a gun's shells too: the main battle tank's, set to burst as frag
+  await p.evaluate(() => { window.__viewer.pick('mcv'); });
+  await p.waitForTimeout(100);
+  ok('a tank firing shells has where they land to choose, its usual burst by default', await p.evaluate(() =>
+    !!document.querySelector('[data-w="blast"]') && document.querySelector('[data-w="blast"]').value === ''));
+  await pickW(p, 'blast', 'frag');
+  await p.evaluate(() => { window.__viewer.range(8); document.querySelector('.vweaponbody [data-do="fire"]').click(); });
+  let shells = [];
+  for (let i = 0; i < 40 && shells.indexOf('fragburst') < 0; i++) { await p.waitForTimeout(80); shells = shells.concat(await p.evaluate(() => window.__viewer.fx())); }
+  ok('...and its shells made to go off as fragmentation blasts', shells.indexOf('bolt') >= 0 && shells.indexOf('fragburst') >= 0, [...new Set(shells)].join(','));
+
   const n = Object.keys((await fetch(URL + 'api/weapons').then((r) => r.json())).weapons).length;
   await p.click('.vweaponbody [data-do="wrevertall"]'); await p.waitForTimeout(300);
   const none = (await fetch(URL + 'api/weapons').then((r) => r.json())).weapons;
-  ok('Revert all puts every changed unit back, once asked', n === 3 && !Object.keys(none).length &&
+  ok('Revert all puts every changed unit back, once asked', n === 4 && !Object.keys(none).length &&
     await p.evaluate(() => { window.__viewer.pick('regular'); return !window.__viewer.spec().glow; }), n + ' ' + JSON.stringify(none));
 
   // a save the server will not take is taken back on the bench

@@ -1197,8 +1197,14 @@
       GLOW_NAMES.concat([['none', 'none (plain rounds)']]), R.isXeno(profile()) ? 'Army’s own (blue)' : 'Army’s own (plain)') + '</div>';
     if (w.p === 'orb' || w.orb) h += '<div class="vgrp"><label>Orbs</label>' + wpick('orb', w.orb || '', ORBS,
       R.isMachine(profile()) ? 'As a machine’s: lobbed' : 'As a launcher team’s: teleported') + '</div>';
-    if (w.p === 'orb' || w.p === 'orbbig' || w.blast) h += '<div class="vgrp"><label>Where it lands</label>' + wpick('blast', w.blast || '',
-      [['frag', w.p === 'orbbig' ? 'A big fragmentation blast' : 'A fragmentation blast']], 'A burst of plasma') + '</div>';
+    // how its orbs or shells go off where they land
+    var blasts = ['orb', 'orbbig', 'shell', 'shellbig'];
+    if (blasts.indexOf(w.p) >= 0 || blasts.indexOf(w.s) >= 0 || w.blast) {
+      var bigBlast = w.p === 'orbbig' || w.p === 'shellbig' || (blasts.indexOf(w.p) < 0 && w.s === 'shellbig');
+      var orbs = w.p === 'orb' || w.p === 'orbbig';
+      h += '<div class="vgrp"><label>Where it lands</label>' + wpick('blast', w.blast || '',
+        [['frag', bigBlast ? 'A big fragmentation blast' : 'A fragmentation blast']], orbs ? 'A burst of plasma' : 'Its usual burst') + '</div>';
+    }
     h += '<code class="vesrc">' + esc(asSource(key)) + '</code>';
     h += '<p class="vtgtline">' + esc(editNote || (n ? n + ' unit' + (n === 1 ? '' : 's') + ' changed on this server, for every game it serves. ' +
       'Copy changes gives the lines to make them data.js’s own.'
