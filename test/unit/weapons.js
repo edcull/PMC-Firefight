@@ -183,8 +183,8 @@ is('recon', 'shell+pistol');
 head('Close-quarters automatics');
 is('enforcers', 'smg');
 all(['lighteng', 'engineers'], 'smg');
-// assault troops go in with a carbine and a pair of charges (p. 64)
-all(['shock', 'commandos'], 'arc+smg x2');
+// assault troops go in with a carbine and a pair of grenades (p. 64)
+all(['shock', 'commandos'], 'frag+smg x2');
 // the Protectors do the same, behind three of them
 all(['protectors', 'protectorshm'], 'arc+smg x3');
 // irregulars scavenge carbines, and the Holy Warriors go in close with them
@@ -226,7 +226,7 @@ all(['insertplat', 'rlifter'], 'none');
 head('Nothing falls through');
 var kinds = {};
 var bad = [];
-var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','orbbig','plasmabolt','molotov','none'];
+var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','orbbig','plasmabolt','molotov','frag','none'];
 R.CATALOGUE.forEach(function (p) {
   var w = R.weaponSpec(p);
   if (KNOWN.indexOf(w.p) < 0) bad.push(p.name + ' \u2192 ' + w.p);

@@ -133,7 +133,7 @@
       return n * (gap || 120) + 300;
     }
     function playOrbs(shooter, from, to, count, land, tele, big) {
-      var rgb = glowRGB(shooter), n = count || 1;
+      var rgb = glowRGB(shooter), n = count || 1, blast = R.weaponSpec(shooter).blast;
       var fl = tele ? 1000 : Math.round((big ? 760 : 560) + Math.min(600, R.unitDist(shooter, { x: to.x, y: to.y }) * 12));
       /* a Gamma's salvo all comes out of one exit portal, hanging short of the
          target on the shooter's side, and spreads from it */
@@ -152,7 +152,9 @@
             add({ kind: 'orb', from: pick(from, j), to: aim, rgb: rgb, tele: !!tele, exit: exit, big: !!big, dur: fl, blocking: true });
             setTimeout(function () {
               if (!alive()) return;
-              plasmaSplash(aim, rgb, big);
+              // where the weapon entry says (`blast: 'frag'`), it goes off as a fragmentation blast instead
+              if (blast === 'frag') fragBlast(aim, big ? 1.8 : 1.15, j);
+              else plasmaSplash(aim, rgb, big);
               if (land && j === n - 1) land(2, aim);
             }, fl);
             redraw();
@@ -160,6 +162,13 @@
         })(q);
       }
       return fl + (n - 1) * 200 + 600;
+    }
+
+    /* A fragmentation blast where a round lands (a frag grenade's, or an orb's
+       whose entry asks for one): `scale` how big, 1 a hand grenade's. */
+    function fragBlast(aim, scale, seed) {
+      add({ kind: 'fragburst', x: aim.x, y: aim.y, up: aim.up, seed: seed || 0, scale: scale || 1, dur: Math.round(1000 * Math.max(1, Math.sqrt(scale || 1))), blocking: true });
+      if (SFX) { SFX.impact(); SFX.shell(); if (scale > 1.5) SFX.impact(0.06); }
     }
 
     /* Where plasma lands: a ring of blue light and a white flash. A heavy round
@@ -268,6 +277,32 @@
       return fl + (n - 1) * gap + 900;
     }
 
+    /* Fragmentation grenades: `count` thrown from men through the squad, each
+       turning over along a short lob, skipping once and rolling to the mark,
+       then going off in a sharp burst of splinters, dust and earth. `land`
+       (the primary's) is told as the last one goes off. */
+    function playFrags(shooter, from, to, count, land) {
+      var n = count || 1, gap = 190;
+      var fl = Math.round(480 + Math.min(360, R.unitDist(shooter, { x: to.x, y: to.y }) * 16));
+      for (var q = 0; q < n; q++) {
+        (function (j) {
+          setTimeout(function () {
+            if (!alive()) return;
+            var aim = n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.4, y: to.y + (j % 2 ? 0.9 : -0.9), up: to.up } : to;
+            if (SFX) SFX.launch();
+            add({ kind: 'frag', from: spread(from, j, n), to: aim, seed: j, dur: fl, blocking: true });
+            setTimeout(function () {
+              if (!alive()) return;
+              fragBlast(aim, 1, j);
+              if (land && j === n - 1) land(3, aim);
+            }, fl);
+            redraw();
+          }, j * gap);
+        })(q);
+      }
+      return fl + (n - 1) * gap + 700;
+    }
+
     /* The primary weapon, played out. `o` carries the hits it scored, the range
        (how long anything lobbed is in the air), and `land(extra)`, called as
        the rounds arrive. Returns how long it takes, in ms, before any
@@ -279,6 +314,11 @@
           // nothing in hand: what it throws (the secondary) is the attack, and lands its hits
           if (spec.s) { setTimeout(function () { land(3); }, 150 + 520 + ((spec.sn || 1) - 1) * 170); return 120; }
           return 120;
+
+        // fragmentation grenades, thrown: skipping to the mark and going off
+        case 'frag': {
+          return playFrags(shooter, from, to, spec.n, land);
+        }
 
         // Molotov cocktails, thrown: tumbling, alight, bursting into fire
         case 'molotov': {
@@ -506,6 +546,7 @@
           return;
         }
         case 'molotov': playMolotovs(shooter, from, to, count, null); return;
+        case 'frag': playFrags(shooter, from, to, count, null); return;
         case 'arc': case 'arcbig': {
           /* Thrown charges: a short, high lob with a puff where it lands, and
              `count` of them — assault troops go in with a grenade in each hand. */

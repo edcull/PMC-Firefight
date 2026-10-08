@@ -132,6 +132,12 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   ok('an orb launcher team has its orbs’ flight to choose, teleported by default', orb.has && orb.now === '', JSON.stringify(orb));
   await pickW(p, 'orb', 'lob');
   ok('...and they can be lobbed', await p.evaluate(() => window.__viewer.spec().orb === 'lob'));
+  await pickW(p, 'blast', 'frag');
+  await p.evaluate(() => { window.__viewer.range(8); document.querySelector('.vweaponbody [data-do="fire"]').click(); });
+  let blasts = [];
+  for (let i = 0; i < 40 && blasts.indexOf('fragburst') < 0; i++) { await p.waitForTimeout(80); blasts = blasts.concat(await p.evaluate(() => window.__viewer.fx())); }
+  ok('...and made to go off as a fragmentation blast where they land', blasts.indexOf('fragburst') >= 0 && blasts.indexOf('orbburst') < 0 &&
+    /blast: 'frag'/.test(await src(p)), [...new Set(blasts)].join(','));
 
   const n = Object.keys((await fetch(URL + 'api/weapons').then((r) => r.json())).weapons).length;
   await p.click('.vweaponbody [data-do="wrevertall"]'); await p.waitForTimeout(300);

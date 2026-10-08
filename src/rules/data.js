@@ -338,6 +338,9 @@
                (the advanced support vehicle's energy howitzer)
        plasmabolt a big blue bolt of plasma, flat and fast, landing in the same
                splash of blue fire (the heavy engineering vehicle's breaching gun)
+       frag    a fragmentation grenade, thrown: it turns over along a short lob,
+               skips and rolls to the mark, and goes off in splinters, dust and
+               flying earth (assault troops)
        molotov a bottle of fuel with a burning rag, thrown: it tumbles end over
                end and bursts into fire where it lands (the riders' Incendiary
                Ammunition)
@@ -353,7 +356,9 @@
                a Xenotripod's are blue and anyone else's plain
        orb     how its orbs reach the target: 'tele' (out of a portal by the
                target) or 'lob' (thrown across); by default an infantry
-               launcher teleports them and anything else lobs them */
+               launcher teleports them and anything else lobs them
+       blast   how its orbs go off where they land: 'frag', a fragmentation
+               blast (a bigger one for orbbig), or by default a burst of plasma */
   var WEAPONS = {
     /* ---- PMC infantry ---- */
     recruits: { p: 'small' },
@@ -364,8 +369,8 @@
     // the senior rifle teams have carbines in the squad alongside the rifles
     veterans: { p: 'small', s: 'smg' }, rangers: { p: 'small', s: 'smg' },
     lighteng: { p: 'smg' }, engineers: { p: 'smg' },
-    // assault troops carry charges as well as carbines, and use them (p. 64)
-    shock: { p: 'arc', n: 2, s: 'smg' }, commandos: { p: 'arc', n: 2, s: 'smg' },
+    // assault troops carry grenades as well as carbines, and throw them (p. 64)
+    shock: { p: 'frag', n: 2, s: 'smg' }, commandos: { p: 'frag', n: 2, s: 'smg' },
     // battle armour sweeps a room with carbines rather than hammering it
     ecobats: { p: 'smg' }, bats: { p: 'smg' },
     // the Protectors go in close, behind three charges rather than two
@@ -549,10 +554,11 @@
      keeps an admin's changes to this table (server/app.js weaponsApi) */
   var WEAPON_FIELDS = {
     styles: ['small', 'pistol', 'smg', 'burst', 'chain', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket',
-      'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'orbbig', 'plasmabolt', 'molotov', 'none'],
+      'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'orbbig', 'plasmabolt', 'molotov', 'frag', 'none'],
     launch: ['sam', 'samturret'],
     glow: ['blue', 'green', 'red', 'violet', 'amber', 'white', 'none'],
     orb: ['tele', 'lob'],
+    blast: ['frag'],
     most: 6                                  // how many of a style may go at once
   };
   /* An entry as the table writes it, or null if it is not one: a known style,
@@ -564,16 +570,16 @@
     if (!count(w.n) || !count(w.sn)) return null;
     if (w.s !== undefined && w.s !== null && (F.styles.indexOf(w.s) < 0 || w.s === 'none')) return null;
     if (w.splash !== undefined && typeof w.splash !== 'boolean') return null;
-    var known = ['p', 'n', 's', 'sn', 'splash', 'launch', 'glow', 'orb'];
+    var known = ['p', 'n', 's', 'sn', 'splash', 'launch', 'glow', 'orb', 'blast'];
     if (Object.keys(w).some(function (k) { return known.indexOf(k) < 0; })) return null;
     var ok = true;
-    ['launch', 'glow', 'orb'].forEach(function (f) { if (w[f] !== undefined && w[f] !== null && F[f].indexOf(w[f]) < 0) ok = false; });
+    ['launch', 'glow', 'orb', 'blast'].forEach(function (f) { if (w[f] !== undefined && w[f] !== null && F[f].indexOf(w[f]) < 0) ok = false; });
     if (!ok) return null;
     var out = { p: w.p };
     if (w.n > 1) out.n = w.n;
     if (w.s) { out.s = w.s; if (w.sn > 1) out.sn = w.sn; }
     if (w.splash) out.splash = true;
-    ['launch', 'glow', 'orb'].forEach(function (f) { if (w[f]) out[f] = w[f]; });
+    ['launch', 'glow', 'orb', 'blast'].forEach(function (f) { if (w[f]) out[f] = w[f]; });
     return out;
   }
 
