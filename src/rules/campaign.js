@@ -1206,9 +1206,7 @@
       // the machine guns and the anti-tank teams half and half
       mix: { 'Heavy infantry': 3, 'Light support': 1, 'Heavy support': 1, 'Remote mortars': 1 },
       limit: { 'Remote mortars': 3 },
-      refill: { enforcers: 2, recruits: 1 },   // Tier I gaps later: Enforcers become battle armour, Recruits the gun crews
       machinesMax: 4,               // its heavy guns are on hulls: tank hunters, destroyers, gun carriers
-      hullsFirst: ['Hunters and destroyers', 'Support vehicles'],   // the guns before the engineering vehicles
       /* A skirmish force's shopping list (R.rollArmy): a weight for each unit or group
          (0 never, 10 the backbone), and [weight, limit] where it is kept rare, the
          limit a Priority Level (a group's limit counts the whole group). A unit's
@@ -1225,8 +1223,9 @@
         'Heavy support': [2, 2], sam: [1, 1],
         'Remote mortars': [1, 1],
         // a few hulls (hulls): gun carriers, tank hunters and destroyers, engineering vehicles
-        'Hunters and destroyers': [3, 1], 'Support vehicles': [3, 1], impsupport: 2,
-        'Engineering and utility vehicles': [2, 1], aaveh: 1, medveh: 1, ewveh: 0,
+        // (its guns before its engineering vehicles)
+        'Hunters and destroyers': [5, 1], 'Support vehicles': [5, 1], impsupport: 2,
+        'Engineering and utility vehicles': [1, 1], aaveh: 1, medveh: 1, ewveh: 0,
         // the founding troops at the low Tiers
         enforcers: 5, recruits: 3,
         // rare extras
@@ -1243,7 +1242,7 @@
       machines: [], vehicles: 0,
       // a handful of top-tier veterans make a legal army; then whatever keeps them fit, trained and paid
       doctrines: ['O2', 'S3', 'S6', 'T1', 'S5', 'T6'],
-      fixed: ['O2'],
+      fixedAt: { 1: 'O2' },
       groups: ['Rifle infantry', 'Heavy infantry', 'Assault troops'],
       second: ['Light infantry'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Heavy infantry': 2, 'Rifle infantry': 1, 'Assault troops': 1 },
@@ -1303,7 +1302,6 @@
       t2: ['observers', ['rookie', 'nomads']],
       machines: [], vehicles: 0,
       // Tier I gaps later: Recruits (who become rifle teams) and Irregulars (who become scouts)
-      refill: { recruits: 2, irregulars: 1 },
       doctrines: ['O3', 'S6', 'T6', 'O6', 'T1', 'O1'],
       groups: ['Rifle infantry', 'Light infantry', 'Support teams', 'Drones', 'Remote mortars'],
       second: ['Light support', 'Assault troops'], // what it takes when its own run out (a skirmish roll)
@@ -1312,18 +1310,16 @@
       limit: { lrrp: 2, snipers: 2, 'Drones': 2, ew: 2, ewveh: 1, 'Remote mortars': 2 },
       // and the vehicles and aircraft it may take: patrol and recon cars, a command and an EW vehicle, transport and strike craft
       units: ['nomads', 'lpv', 'hpv', 'recon', 'cmdveh', 'ewveh', 'adaptedcraft', 'lightcraft', 'heavycraft', 'fsc', 'tsc', 'gunboat', 'vtoldrone'],
-      // ...of which it keeps a couple on the books, and a drone or EW team or two — fewer machines than the Cavalry
-      signature: [['lpv', 'hpv', 'recon', 'cmdveh', 'adaptedcraft', 'lightcraft', 'fsc'], ['ew', 'drecon', 'dcombat']],
-      signatureMax: 2,
       // promoted to Veterans, Forward observers and Sharpshooters, then trained with what is left
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 1,                      // a few good teams
       hulls: { min: 1, max: 1.5 },  // its cars and craft
       weights: {
         'Rifle infantry': 6, 'Light infantry': 6, observers: 5, lrrp: [4, 1], snipers: [4, 1],
-        'Support teams': [2, 1], 'Remote mortars': [2, 1], 'Light support': [2, 1], 'Assault troops': [1, 1],
+        // (its cars and craft, and a drone or EW team or two: what it is known for)
+        'Support teams': [2, 1], ew: [3, 1], 'Drones': [3, 1], 'Remote mortars': [2, 1], 'Light support': [2, 1], 'Assault troops': [1, 1],
         nomads: 3, irregulars: 4, recruits: 3,
-        lpv: 3, hpv: 3, recon: 4, cmdveh: 2, adaptedcraft: 3, lightcraft: 3, fsc: 2, ewveh: [1, 1]
+        lpv: 4, hpv: 4, recon: 5, cmdveh: 2, adaptedcraft: 4, lightcraft: 4, fsc: 3, ewveh: [1, 1]
       },
       spend: 'promote'
     },
@@ -1337,23 +1333,20 @@
       t2: ['lighteng'],
       machines: ['unarmoured'], vehicles: 1,
       doctrines: ['T4', 'T1', 'T2', 'S1', 'O3', 'O5'],
-      fixed: ['T4'],
+      fixedAt: { 1: 'T4' },
       groups: ['Assault troops', 'Basic troops', 'Transport vehicles', 'Engineering and utility vehicles'],
       second: ['Heavy infantry', 'Rifle infantry'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Assault troops': 3, 'Basic troops': 1 },
       units: ['chem'],              // and Chem warriors
-      hullsFirst: ['Transport vehicles', 'Engineering and utility vehicles'],   // a ride to the fight and a way through, before anything else
-      // Penal troops thrown in first to soak the fire: free, and kept up (one per Tier, four at most)
-      signature: ['penal'],
-      signatureMax: 4,
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 0,
       hulls: { min: 1, max: 1.5 },  // a ride to the fight and a way through
       weights: {
         'Assault troops': 8, commandos: 6,
-        'Basic troops': 3, irregulars: 4, enforcers: 4, penal: [4, 2],
+        'Basic troops': 3, irregulars: 4, enforcers: 4, penal: [6, 2],   // Penal troops thrown in first to soak the fire
         'Heavy infantry': [2, 1], 'Rifle infantry': [2, 1], chem: [4, 1], 'Light support': [1, 1],
-        'Transport vehicles': 4, insertplat: [2, 1],
+        // (a ride to the fight and a way through, before anything else)
+        'Transport vehicles': 6, insertplat: [2, 1],
         'Engineering and utility vehicles': [2, 1], hengveh: 4, lengveh: 3, aaveh: 0, ewveh: 1, medveh: 1
       },
       spend: 'promote'
@@ -1368,7 +1361,7 @@
       t2: ['lighteng', 'rookie'],
       machines: ['lpv', 'unarmoured'], vehicles: 2,
       doctrines: ['S1', 'O3', 'O6', 'O1', 'T2', 'S2'],
-      fixed: ['S1'],
+      fixedAt: { 1: 'S1' },
       groups: ['Combat vehicles', 'Transport vehicles', 'Transport aircraft', 'Strike aircraft', 'Assault troops', 'Rifle infantry'],
       second: ['Light infantry', 'Heavy support'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Rifle infantry': 1, 'Assault troops': 1 },   // as many assault troops as riflemen in the back of its vehicles
@@ -1393,7 +1386,7 @@
      archetypes, so one policy engine runs both. */
   var REBEL_ARCHETYPES = [
     {
-      id: 'redfront', name: 'Red Revolutionary Front', faction: 'rebel',
+      id: 'redfront', name: 'Revolutionaries', faction: 'rebel',
       blurb: 'Two centuries underground, and organised down to the last cell.',
       names: ['Red Revolutionary Front', 'The Combine Committee', 'Ninth of Marzen', 'Union Irregulars'],
       // the standard revolt: a core of Freedom Warriors, with support guns, artillery and vehicles around it
@@ -1418,7 +1411,7 @@
       spend: 'promote'
     },
     {
-      id: 'freespace', name: 'Free Space Freedom Fighters', faction: 'rebel',
+      id: 'freespace', name: 'Pirates', faction: 'rebel',
       temper: 1, // the behaviour roll in battle (p. 147): raiders, always on the move
       blurb: 'Pirates with a manifesto. Fast in, loaded up, gone.',
       names: ['Free Space Freedom Fighters', 'The Long Haul', 'Kestrel Run', 'Salvage Rights'],
@@ -1432,9 +1425,8 @@
       limit: { 'Rebel artillery': 0 },
       riders: ['First Among Equals'],
       machinesMax: 4,
-      hullsFirst: ['transports'],   // trucks, lifters and shuttles for whoever is not on a mount
       // the haul first; then the smuggling, the hard crew, the hulls and the mounted faithful's fury
-      fixed: ['V2'],
+      fixedAt: { 1: 'V2' },
       doctrines: ['V2', 'V1', 'V5', 'H3', 'H5', 'P4'],
       stages: [['V1', 'V5', 'H3', 'H5'], ['P4']],   // Holy Fury last: at Tier V, once the rest is held
       tactics: { open: 'wave', attack: 'wave', defend: 'wave' },                              // pirates never dig in (and riders take nothing from Guerillas)
@@ -1443,13 +1435,14 @@
       hulls: { min: 1, max: 2 },    // troop carriers and shuttles
       weights: {
         'Mounted Warriors': 8, 'Holy Warriors': 3, 'Freedom Warriors': 3,
-        'Rebel transport vehicles': 4, 'Rebel aviation': 3, rlifter: 1, 'Rebel combat vehicles': 2,
+        // (trucks, lifters and shuttles for whoever is not on a mount)
+        'Rebel transport vehicles': 6, 'Rebel aviation': 3, rlifter: 1, 'Rebel combat vehicles': 1,
         'Rebel support troops': [1, 1], 'Deserters and POWs': [1, 1]
       },
       spend: 'promote'
     },
     {
-      id: 'faithful', name: 'The Faithful', faction: 'rebel',
+      id: 'faithful', name: 'Faithful', faction: 'rebel',
       temper: 1, // the behaviour roll in battle (p. 147): zealots
       blurb: 'They are not fighting for the colony. They are fighting for what comes after it.',
       names: ['The New Chosen', 'Pilgrims of the Seventh Gate', 'The Ashfall Congregation', 'Sons of the Furnace'],
@@ -1463,7 +1456,7 @@
       mix: { 'Holy Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
       machinesMax: 2,
       // Holy Fury first; then Stairs to Heaven or Martyrdom (two Prophet at most), and the Hero path: loyalty, victory and alms
-      fixed: ['P4'],
+      fixedAt: { 1: 'P4' },
       doctrines: ['P4', 'P3', 'P1', 'H4', 'H1', 'H5'],
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 0,
@@ -1476,7 +1469,7 @@
       spend: 'promote'
     },
     {
-      id: 'pitheads', name: 'The Pitheads', faction: 'rebel',
+      id: 'pitheads', name: 'Miners', faction: 'rebel',
       blurb: 'Miners who worked out that a cutting charge does the same job above ground.',
       names: ['The Pitheads', 'Shaft Fourteen', 'The Deep Seam Council', 'Hollowmen'],
       // heavy on Miners and on improvised combat vehicles
@@ -1488,7 +1481,6 @@
       second: ['Rebel support troops', 'Deserters and POWs'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Miners': 3, 'Freedom Warriors': 1, 'Rebel artillery': 0.5 },
       machinesMax: 4,
-      hullsFirst: ['Rebel combat vehicles'],
       // a pick from its list first, then Labour Leader at Tier II, when there are vehicles enough to want it
       fixedAt: { 2: 'H3' },
       doctrines: ['H2', 'H3', 'V4', 'H4', 'V5', 'V1'],
@@ -1502,7 +1494,7 @@
       spend: 'promote'
     },
     {
-      id: 'partisans', name: 'The Partisans', faction: 'rebel',
+      id: 'partisans', name: 'Partisans', faction: 'rebel',
       temper: -1, // the behaviour roll in battle (p. 147): strike from hiding
       blurb: 'Out of the tunnels, into the dark, and never where you left them.',
       names: ['The Partisans', 'Night Wire', 'The Quiet Column', 'Cell Sixteen'],
@@ -1514,40 +1506,36 @@
       groups: ['Chosen Warriors', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel combat vehicles'],
       second: ['Miners', 'Deserters and POWs'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Chosen Warriors': 4, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 0.5 },
-      signature: ['rassaultcdo', 'rsabcdo', 'rsnipercdo'],
-      signatureCap: 8,              // the commandos are the band: up to eight of them
       machinesMax: 2,
       lean: true,                   // a small band: no free troops to pad it, no hiring with spare money
       // the mined bridge first; then leaders who will not break, and the locals on side
-      fixed: ['V3'],
+      fixedAt: { 1: 'V3' },
       doctrines: ['V3', 'P2', 'H2', 'H4', 'V4', 'H5'],
       tactics: { open: 'guerillas', attack: 'guerillas', defend: ['guerillas', 'laststand'] },   // out of the tunnels; on defence, half the time behind barricades
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 0,
       hulls: { min: 0, max: 0.5 },  // lean: a hull rarely
       weights: {
-        'Chosen Warriors': 6, 'Freedom Warriors': 5, 'Rebel support troops': 3, 'Rebel artillery': [2, 1],
+        'Chosen Warriors': 6, rassaultcdo: 8, rsabcdo: 8, rsnipercdo: 8, 'Freedom Warriors': 5,   // (the commandos are the band) 'Rebel support troops': 3, 'Rebel artillery': [2, 1],
         Miners: [1, 1], 'Deserters and POWs': [1, 1], 'Rebel combat vehicles': [1, 1]
       },
       spend: 'promote'
     },
     {
-      id: 'turncoats', name: 'The Turncoat Battalion', faction: 'rebel',
+      id: 'turncoats', name: 'Turncoats', faction: 'rebel',
       blurb: 'A garrison that changed sides, and kept its rifles, its drill and its grudges.',
       names: ['The Turncoat Battalion', 'The 41st Reborn', 'Garrison Free Corps', 'The Broken Oath'],
       // the standard revolt with Deserters in place of its first-rung Freedom Warriors, more aircraft,
       // and a little more of the garrison's artillery
       t1: ['rdesconscript'],
       t2: ['rdesrookie', 'rmilitia'],
-      refill: { rdesconscript: 1 },
       machines: ['rtechnical'], vehicles: 1,
       groups: ['Deserters and POWs', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel aviation', 'Rebel combat vehicles', 'Rebel flak vehicles'],
       second: ['Holy Warriors', 'Mounted Warriors'], // what it takes when its own run out (a skirmish roll)
       mix: { 'Deserters and POWs': 2, 'Freedom Warriors': 2, 'Rebel support troops': 1, 'Rebel artillery': 1.5 },
       machinesMax: 3,
-      hullsFirst: ['Rebel aviation'],
       // its officers still command (the garrison's military past); then who pays, the discipline, and a chaplain's sermon
-      fixed: ['H6'],
+      fixedAt: { 1: 'H6' },
       doctrines: ['H6', 'V6', 'V5', 'V1', 'P5', 'P6'],
       stages: [['V6', 'V5', 'V1'], ['P5', 'P6']],   // two of the Villain doctrines first, the Prophet ones last
       tactics: { open: 'laststand', attack: ['wave', 'guerillas'], defend: 'laststand' },     // a garrison digs in; it attacks in a rush or by infiltration
@@ -1556,7 +1544,7 @@
       hulls: { min: 1, max: 1.5 },  // shuttles and FlaK first
       weights: {
         'Deserters and POWs': 7, 'Freedom Warriors': 5, 'Rebel support troops': 3, 'Rebel artillery': [3, 1],
-        'Rebel aviation': 3, rlifter: 1, 'Rebel combat vehicles': 2, 'Rebel flak vehicles': [2, 1],
+        'Rebel aviation': 5, rlifter: 1, 'Rebel combat vehicles': 1, 'Rebel flak vehicles': [2, 1],
         'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1]
       },
       spend: 'promote'
@@ -1565,40 +1553,40 @@
   /* Swarms a campaign may meet, from the book's own write-ups (pp. 125-127). */
   var BUG_ARCHETYPES = [
     {
-      id: 'ivenbea', name: 'Swarm of Ivenbea', faction: 'bugs',
+      id: 'ivenbea', name: 'Predators', faction: 'bugs',
       blurb: 'Mantis-like apex predators of the Ivenbean swamps: few, huge, and very close.',
       names: ['Swarm of Ivenbea', 'The Swamp Mantids', 'Ivenbean Brood'],
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB4', 'BP6', 'BP5', 'BC1', 'BB5', 'BP2'],
-      fixed: ['BB4'],
+      fixedAt: { 1: 'BB4' },
       groups: ['Lesser Bugs', 'Flying Bugs', 'Pioneer Bugs'],
       spend: 'promote'
     },
     {
-      id: 'evatus', name: 'Mound swarms of Evatus II', faction: 'bugs',
+      id: 'evatus', name: 'Horde', faction: 'bugs',
       blurb: 'One of ten thousand mound swarms on a dead world, and never short of bodies.',
       names: ['Mound Swarm of Evatus II', 'The Evatus Mound', 'Red Mound Swarm'],
       t1: ['btiny', 'btiny', 'bspitlarva'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
       doctrines: ['BP1', 'BP2', 'BB1', 'BP3', 'BC1', 'BP5'],
-      fixed: ['BP1'],
+      fixedAt: { 1: 'BP1' },
       groups: ['Lesser Bugs', 'Underground Bugs', 'Spore Bugs'],
       spend: 'recruit'
     },
     {
-      id: 'terarson', name: 'Swarm of Terarson', faction: 'bugs',
+      id: 'terarson', name: 'Thinkers', faction: 'bugs',
       blurb: 'Something taught these bugs to think. They build cities now.',
       names: ['Swarm of Terarson', 'The Terarson Hive', 'GN-786 Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bimmspit', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB3', 'BC3', 'BC2', 'BC6', 'BB6', 'BC4'],
-      fixed: ['BB3'],
+      fixedAt: { 1: 'BB3' },
       groups: ['Spore Bugs', 'Leader Bugs', 'Pioneer Bugs', 'Flying Bugs'],
       spend: 'honours'
     },
     {
-      id: 'hydra', name: 'Swarms of the Hydra Belt', faction: 'bugs',
+      id: 'hydra', name: 'Burrowers', faction: 'bugs',
       blurb: 'Mining bio-robots gone wild, tunnelling through asteroid after asteroid.',
       names: ['Hydra Belt Swarm', 'The Uranium Diggers', 'Asteroid Swarm 7'],
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
@@ -1609,44 +1597,44 @@
       spend: 'promote'
     },
     {
-      id: 'greyplague', name: 'The Grey Plague', faction: 'bugs',
+      id: 'greyplague', name: 'Plague', faction: 'bugs',
       blurb: 'It ate a colony, and now the colonists march in its front rank.',
       names: ['The Grey Plague', 'The Harrow Infestation', 'Colony Nine Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
       doctrines: ['BP4', 'BB5', 'BC1', 'BP3', 'BB1', 'BC4'],
-      fixed: ['BP4'],               // Fungi Symbiosis first: the humans it kills in an assault rise again as its Infected
+      fixedAt: { 1: 'BP4' },               // Fungi Symbiosis first: the humans it kills in an assault rise again as its Infected
       groups: ['Infected Humans', 'Lesser Bugs', 'Spore Bugs'],
-      signature: ['binfected'],
+      mix: { 'Infected Humans': 3, 'Lesser Bugs': 2, 'Spore Bugs': 1 },   // its Infected most of all
       spend: 'recruit'
     },
     {
-      id: 'velior', name: 'Skyswarm of Velior', faction: 'bugs',
+      id: 'velior', name: 'Skyswarm', faction: 'bugs',
       blurb: 'Nests in the cliffs of Velior, and comes down out of the sun.',
       names: ['Skyswarm of Velior', 'The Cliff Nest', 'Sunfall Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bimmspit'],
       machines: [], vehicles: 0,
       doctrines: ['BP2', 'BB4', 'BC5', 'BB6', 'BC2', 'BP5'],
       groups: ['Flying Bugs', 'Spore Bugs', 'Lesser Bugs'],
-      signature: ['bsmallwing', 'blargewing'],
+      mix: { 'Flying Bugs': 3, 'Spore Bugs': 1, 'Lesser Bugs': 2 },   // its flyers most of all
       spend: 'recruit'
     }
   ];
   /* Tribes a campaign may meet, from the book's own write-ups (pp. 144-145). */
   var XENO_ARCHETYPES = [
     {
-      id: 'mithdu', name: 'Mithdu-2 tribe', faction: 'xeno',
+      id: 'mithdu', name: 'Tunnellers', faction: 'xeno',
       blurb: 'The first tribe found, and slow to grow — but it has tunnels under everything.',
       names: ['Mithdu-2 Tribe', 'The Klechtu Burrows', 'Mithdu Deepholds'],
       t1: ['xeps1', 'xdelta1'], t2: ['xeps2', 'xbeta2'],
       machines: ['xdturret1'], vehicles: 1,
       doctrines: ['XO2', 'XT4', 'XO1', 'XS3', 'XO5', 'XT2'],
-      fixed: ['XO2'],
+      fixedAt: { 1: 'XO2' },
       groups: ['Epsilon Squads', 'Defensive Turrets', 'Teleport Turrets', 'Beta Squads'],
       spend: 'promote'
     },
     {
-      id: 'amt', name: 'Amt tribe', faction: 'xeno',
+      id: 'amt', name: 'Architects', faction: 'xeno',
       blurb: 'Rules a whole planet from its towers, and fights the way it builds: precisely.',
       names: ['The Amt', 'Amt Tower-tribe', 'The Sigma-Pi Tribe'],
       t1: ['xeps1', 'xdelta1'], t2: ['xbeta2', 'xeps2'],
@@ -1656,18 +1644,18 @@
       spend: 'honours'
     },
     {
-      id: 'hashamer', name: 'Hashamer I tribe', faction: 'xeno',
+      id: 'hashamer', name: 'Mimics', faction: 'xeno',
       blurb: 'Nine million Esh-Aven and not a Crock among them — copying their masters\' war as best they can.',
       names: ['Hashamer I Tribe', 'The Hashamer Esh-Aven', 'The Arid Host'],
       t1: ['xeps1', 'xeps1', 'xdelta1'], t2: ['xeps2', 'xdelta2'],
       machines: [], vehicles: 0,
       doctrines: ['XS1', 'XS5', 'XO2', 'XT2', 'XS3', 'XO6'],
-      fixed: ['XS1'],
+      fixedAt: { 1: 'XS1' },
       groups: ['Epsilon Squads', 'Delta Squads'],
       spend: 'recruit'
     },
     {
-      id: 'ghadon', name: 'Ghadon II 3rd tribe', faction: 'xeno',
+      id: 'ghadon', name: 'Furies', faction: 'xeno',
       blurb: 'Came to a world already overrun, and fought humans, bugs and other tribes with equal fury.',
       names: ['Ghadon II 3rd Tribe', 'The Third of Ghadon', 'The Expansion'],
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xeps2'],
@@ -1678,24 +1666,24 @@
       spend: 'promote'
     },
     {
-      id: 'ulvar', name: 'Ulvar fortress tribe', faction: 'xeno',
+      id: 'ulvar', name: 'Fortress', faction: 'xeno',
       blurb: 'Never leaves its walls without taking the walls along: shields, guns and patience.',
       names: ['Ulvar Fortress Tribe', 'The Shieldwall of Ulvar', 'The Bastion Host'],
       t1: ['xdelta1', 'xeps1'], t2: ['xbeta2', 'xdelta2'],
       machines: ['xdturret1'], vehicles: 1,
       doctrines: ['XO5', 'XS2', 'XO4', 'XT6', 'XS5', 'XO1'],
-      fixed: ['XO5'],
+      fixedAt: { 1: 'XO5' },
       groups: ['Shield Turrets', 'Defensive Turrets', 'Gamma Squads', 'Beta Squads', 'Delta Squads'],
       spend: 'honours'
     },
     {
-      id: 'shkar', name: 'Sh\'kar raiders', faction: 'xeno',
+      id: 'shkar', name: 'Raiders', faction: 'xeno',
       blurb: 'A raiding tribe that steps out of the air behind you, takes what it came for, and steps back.',
       names: ['The Sh\'kar Raiders', 'The Blink Host', 'Shadow of Sh\'kar'],
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xbeta2'],
       machines: ['xstrike2'], vehicles: 1,
       doctrines: ['XO1', 'XT4', 'XO6', 'XT1', 'XO2', 'XT3'],
-      fixed: ['XO1', 'XT4'],
+      fixedAt: { 1: 'XO1', 2: 'XT4' },
       groups: ['Teleport Turrets', 'Strike Aviation', 'Delta Squads', 'Beta Squads'],
       spend: 'machines'
     }
@@ -1719,18 +1707,17 @@
      two meet: a flat field and where it sits in the nested shape. */
   var FIELD_MAP = {
     names: 'names', blurb: 'blurb',
-    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls', hullsFirst: 'force.favourites',
+    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls',
     fieldsMachines: 'force.machineMinded', machinesMax: 'force.machinesMax', riders: 'force.riders',
     groups: 'force.groups', units: 'force.units', mix: 'force.mix', limit: 'force.limit', second: 'force.second',
-    signature: 'force.signature.units', signatureMax: 'force.signature.max', signatureCap: 'force.signature.cap',
     temper: 'battle.temper', tactics: 'battle.tactics',
-    doctrines: 'doctrines.shortlist', fixed: 'doctrines.fixed', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',
+    doctrines: 'doctrines.shortlist', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',
     t1: 'campaign.found.t1', t2: 'campaign.found.t2', machines: 'campaign.found.hulls', vehicles: 'campaign.found.hullCount',
-    foundFree: 'campaign.found.free', refill: 'campaign.refill', spend: 'campaign.spend', honourFirst: 'campaign.honourFirst', lean: 'campaign.lean',
+    foundFree: 'campaign.found.free', spend: 'campaign.spend', honourFirst: 'campaign.honourFirst', lean: 'campaign.lean',
     leanSize: 'campaign.leanSize'
   };
   // these are replaced whole by a change, not merged key by key (a list of weights is edited as one)
-  var WHOLE = ['force.weights', 'force.mix', 'force.limit', 'force.tactics', 'battle.tactics', 'campaign.refill', 'doctrines.fixedAt'];
+  var WHOLE = ['force.weights', 'force.mix', 'force.limit', 'force.tactics', 'battle.tactics', 'doctrines.fixedAt'];
   function clone(o) { return o == null ? o : JSON.parse(JSON.stringify(o)); }
   function getPath(o, path) { return path.split('.').reduce(function (x, k) { return x == null ? undefined : x[k]; }, o); }
   function setPath(o, path, v) {
@@ -1790,9 +1777,21 @@
      named is rebuilt from its default and its change, in place, so everything holding
      it (a rival's archetype lookups, a roll in progress) sees the new one; one not
      named goes back to its default. */
+  /* A change saved before "fixed" was folded into "fixed at a Tier": its fixed doctrines
+     are the ones at Tiers I, II... */
+  function legacyChange(ch, base) {
+    var d = ch && ch.doctrines;
+    if (!d || !('fixed' in d)) return ch;
+    var fa = clone(d.fixedAt || (base && base.fixedAt) || {});
+    (d.fixed || []).forEach(function (x, i) { fa[i + 1] = x; });
+    delete d.fixed;
+    if (Object.keys(fa).length) d.fixedAt = fa;
+    return ch;
+  }
   function applyArchetypeChanges(changes) {
     var defs = defaultsNow();
     ARCH_CHANGES = clone(changes || {});
+    Object.keys(ARCH_CHANGES).forEach(function (id) { if (defs[id]) legacyChange(ARCH_CHANGES[id], defs[id]); });
     allArchetypes().forEach(function (a) {
       var base = defs[a.id], ch = ARCH_CHANGES[a.id];
       var flat = ch ? flatOf(mergeInto(nestedOf(base), ch)) : clone(base);

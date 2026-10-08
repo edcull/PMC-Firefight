@@ -52,7 +52,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     }));
     ok('...with its sections listed to jump to', await p.evaluate(() => {
       const b = [...document.querySelectorAll('#arch-edit .ae-nav button')].map((x) => x.textContent);
-      return ['Who it is', 'Force shape', 'Weighted list', 'Hulls and riders', 'In battle', 'Doctrines', 'Campaign', 'Preview'].every((t) => b.indexOf(t) >= 0);
+      return ['Who it is', 'Force shape', 'Weighted list', 'Vehicle composition', 'Doctrines', 'Campaign', 'Preview'].every((t) => b.indexOf(t) >= 0);
     }));
     await click('#arch-edit .ae-nav [data-k="ae-s-camp"]'); await wait(150);
     ok('...a section in the list scrolls the form to it, and is lit', await p.evaluate(() => {
@@ -102,9 +102,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       return out;
     });
     ok('all 24 personalities read back from the form unchanged', !drift.length, drift.slice(0, 3).join(' | '));
-    ok('the campaign, signature, hull and doctrine fields have their own controls (no JSON)', await p.evaluate(() =>
+    ok('the campaign, hull and doctrine fields have their own controls (no JSON)', await p.evaluate(() =>
       !document.querySelector('#arch-edit [data-ae-f="advanced"]') && !!document.querySelector('#arch-edit [data-ae-v="campaign.spend"]') &&
-      !!document.querySelector('#arch-edit [data-ae-row="campaign.found.t1"]') && !!document.querySelector('#arch-edit [data-ae-cb="force.favourites"]') &&
+      !!document.querySelector('#arch-edit [data-ae-row="campaign.found.t1"]') && !!document.querySelector('#arch-edit [data-ae-f="hmin"]') &&
       !!document.querySelector('#arch-edit [data-ae="addstage"]')));
     const unhelped = await p.evaluate(() => {
       const out = [];
@@ -112,9 +112,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       document.querySelectorAll('#arch-edit .ae-sec').forEach((sec) => {
         const name = (sec.querySelector('h4') || {}).textContent;
         if (name === 'Preview') return;
-        if (!sec.querySelector('.ae-help, .ae-dim')) out.push(name);
         sec.querySelectorAll('.ae-grid > label, .ae-ticks, .ae-rows').forEach((c) => {
-          if (!c.querySelector('.ae-help') && !/^(Name|Company names|How many founding hulls|Tier|PL)/.test(c.textContent.trim())) out.push(name + ': ' + c.textContent.trim().slice(0, 40));
+          if (!c.querySelector('.ae-help') && !/^(Name|Company names|Description|How many founding hulls|Tier|PL)/.test(c.textContent.trim())) out.push(name + ': ' + c.textContent.trim().slice(0, 40));
         });
       });
       return out;
@@ -124,18 +123,18 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.selectOption('#arch-edit [data-ae-v="campaign.spend"]', 'honours');
     await p.fill('#arch-edit [data-ae-v="campaign.leanSize"]', '20');
     await p.evaluate(() => document.querySelector('#arch-edit [data-ae-v="campaign.leanSize"]').dispatchEvent(new Event('change', { bubbles: true })));
-    await click('#arch-edit [data-ae="add"][data-path="force.signature.units"]');
-    await p.selectOption('#arch-edit [data-ae-row="force.signature.units"][data-r="0"][data-m="0"]', 'commandos');
-    await p.evaluate(() => { const b = document.querySelector('#arch-edit [data-ae-cb="force.favourites"][value="Engineering and utility vehicles"]'); b.checked = true; b.dispatchEvent(new Event('change', { bubbles: true })); });
+    const nT1 = await p.evaluate(() => document.querySelectorAll('#arch-edit [data-ae-row="campaign.found.t1"]').length);
+    await click('#arch-edit [data-ae="add"][data-path="campaign.found.t1"]');
+    await p.selectOption('#arch-edit [data-ae-row="campaign.found.t1"][data-r="' + nT1 + '"][data-m="0"]', 'commandos');
     await click('#arch-edit [data-ae="addstage"]');
     await p.fill('#arch-edit [data-ae-stage="0"]', 'T5, T2');
     await p.evaluate(() => document.querySelector('#arch-edit [data-ae-stage="0"]').dispatchEvent(new Event('change', { bubbles: true })));
     ok('...and the tier preference typed above survives adding rows', await p.evaluate(() => document.querySelector('#arch-edit [data-ae-f="tier"]').value === '-1'));
     await click('#arch-edit [data-ae="save"]');
     await till(() => /Saved/.test(document.querySelector('#arch-edit').innerText) && window.PMCCamp.archetype('armour').spend === 'honours', 'the save of the new fields');
-    const got = await p.evaluate(() => { const a = window.PMCCamp.archetype('armour'); return { spend: a.spend, lean: a.leanSize, sig: a.signature, fav: a.hullsFirst, stages: a.stages }; });
-    ok('...saved and in force: spending, lean size, a signature set, a favourite hull, a stage',
-      got.spend === 'honours' && got.lean === 20 && JSON.stringify(got.sig) === '["commandos"]' && got.fav.indexOf('Engineering and utility vehicles') >= 0 && JSON.stringify(got.stages) === '[["T5","T2"]]', JSON.stringify(got));
+    const got = await p.evaluate(() => { const a = window.PMCCamp.archetype('armour'); return { spend: a.spend, lean: a.leanSize, t1: a.t1, stages: a.stages }; });
+    ok('...saved and in force: spending, lean size, a founding unit, a stage',
+      got.spend === 'honours' && got.lean === 20 && got.t1[got.t1.length - 1] === 'commandos' && JSON.stringify(got.stages) === '[["T5","T2"]]', JSON.stringify(got));
 
     console.log('\nA bad one refused');
     await p.fill('#arch-edit input[data-ae-w="bats"]', '15');

@@ -48,7 +48,7 @@ function check(id, u) {
     }
   }
   const doc = u.doctrines || {};
-  for (const k of ['shortlist', 'fixed']) {
+  for (const k of ['shortlist']) {
     if (doc[k] != null && (!Array.isArray(doc[k]) || doc[k].some((d) => !C.doctrine(d)))) return 'the ' + k + ' names a doctrine there is not';
   }
   // ---- the Advanced fields ----
@@ -61,19 +61,14 @@ function check(id, u) {
   if (!bool(doc.random)) return 'doctrines.random is true or false';
   if (!keyList(force.units)) return 'force.units names a unit this army does not have';
   for (const k of ['groups', 'second', 'riders']) if (force[k] != null && (!Array.isArray(force[k]) || !force[k].every(isGroup))) return 'force.' + k + ' names a group this army does not have';
-  if (force.favourites != null && (!Array.isArray(force.favourites) || !force.favourites.every((h) => isGroup(h) || isKey(h) || h === 'transports'))) return 'force.favourites names a hull group or unit, or "transports"';
   if (!numMap(force.mix, isGroup, 10)) return 'force.mix is { group: weight 0-10 }';
   if (!numMap(force.limit, (k) => isKey(k) || isGroup(k), 20)) return 'force.limit is { unit or group: 0-20 }';
   if (!bool(force.machineMinded)) return 'force.machineMinded is true or false';
   if (force.machinesMax != null && !num(force.machinesMax, 0, 9)) return 'force.machinesMax is 0-9';
-  const sig = force.signature || {};
-  if (!keyList(sig.units, true)) return 'force.signature.units names a unit this army does not have';
-  if ((sig.max != null && !num(sig.max, 0, 9)) || (sig.cap != null && !num(sig.cap, 0, 20))) return 'the signature counts are 0-9 (max) and 0-20 (cap)';
   const camp = u.campaign || {}, found = camp.found || {};
   if (!keyList(found.t1) || !keyList(found.t2, true) || !keyList(found.hulls)) return 'the founding units name a unit this army does not have';
   if (found.hullCount != null && !num(found.hullCount, 0, 6)) return 'campaign.found.hullCount is 0-6';
   if (!bool(found.free) || !bool(camp.honourFirst) || !bool(camp.lean)) return 'free, honourFirst and lean are true or false';
-  if (!numMap(camp.refill, isKey, 20)) return 'campaign.refill is { unit: weight }';
   if (camp.spend != null && ['promote', 'honours', 'recruit', 'machines'].indexOf(camp.spend) < 0) return 'campaign.spend is promote, honours, recruit or machines';
   if (camp.leanSize != null && !num(camp.leanSize, 6, 60)) return 'campaign.leanSize is 6-60';
   return null;

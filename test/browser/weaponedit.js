@@ -149,8 +149,8 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   ok('...and made to go off as a fragmentation blast where they land', blasts.indexOf('fragburst') >= 0 && blasts.indexOf('orbburst') < 0 &&
     /blast: 'frag'/.test(await src(p)), [...new Set(blasts)].join(','));
 
-  // a gun's shells too: the assault gun's, set to burst as frag
-  await p.evaluate(() => { window.__viewer.pick('asc'); });
+  // a gun's shells too: the recon car's, set to burst as frag
+  await p.evaluate(() => { window.__viewer.pick('recon'); });
   await p.waitForTimeout(100);
   ok('a gun firing shells has where they land to choose, its usual burst by default', await p.evaluate(() =>
     !!document.querySelector('[data-w="blast"]') && document.querySelector('[data-w="blast"]').value === ''));
@@ -196,9 +196,9 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
     };
     const w = await fileOf('[data-acct="admin-dl-weapons"]');
     ok('Server tools downloads the weapon animations in full, as JSON', /^pmc-weapons-.*\.json$/.test(w.name) && w.data.kind === 'weapon animations' &&
-      Object.keys(w.data.units).length > 100 && w.data.units.asc.entry.blast === 'frag' && w.data.units.asc.changed &&
-      w.data.units.asc.default.p === 'shellbig' && w.data.units.veterans.changed === false &&
-      JSON.stringify(w.data.units.asc.entry) === '{"p":"shellbig","n":3,"s":"rail","sn":3,"blast":"frag"}' && Object.keys(w.data.changes).length >= 3,
+      Object.keys(w.data.units).length > 100 && w.data.units.recon.entry.blast === 'frag' && w.data.units.recon.changed &&
+      w.data.units.recon.default.p === 'shell' && w.data.units.veterans.changed === false &&
+      JSON.stringify(w.data.units.recon.entry) === '{"p":"shell","s":"pistol","blast":"frag"}' && Object.keys(w.data.changes).length >= 3,
       w.name + ' ' + Object.keys(w.data.units || {}).length + ' units, ' + Object.keys(w.data.changes || {}).length + ' changed');
     const a = await fileOf('[data-acct="admin-dl-arch"]');
     ok('...and the personalities in full', /^pmc-personalities-.*\.json$/.test(a.name) && a.data.kind === 'personalities' &&

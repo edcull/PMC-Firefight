@@ -194,8 +194,9 @@ all(['racolytes', 'rfanatics'], 'smg');
 is('rpow', 'smg');
 // the partisan commandos work in pairs: a carbine and a rifle
 all(['rassaultcdo', 'rsabcdo'], 'small+smg');
-// the rider gangs come past throwing Molotovs (Incendiary Ammunition)
-all(['rridergang', 'rriderwar'], 'none+molotov');
+// the rider gangs come past throwing Molotovs (Incendiary Ammunition); the warriors fire their rifles too
+is('rridergang', 'none+molotov');
+is('rriderwar', 'small+molotov');
 
 head('And a rifle is still a rifle');
 all(['recruits', 'rookie', 'regular'], 'small');

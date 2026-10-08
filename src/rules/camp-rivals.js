@@ -274,10 +274,6 @@
       if (!opts && a0 && a0.riders && p0 && a0.riders.indexOf(p0.group) >= 0 && R.canRide(p0)) opts = { riders: true };
       return recruitBase(co, key, opts);
     };
-    // the hulls a force reaches for first: a group, a unit, or 'transports' (anything that carries troops)
-    function hullFirst(a, p) {
-      return (a.hullsFirst || []).some(function (h) { return h === p.group || h === p.key || (h === 'transports' && p.transport > 0); });
-    }
     function flat(list) { return [].concat.apply([], list || []); }
     /* A force that keeps some units rare (`limit`: Special Ops' one LRRP team, one of
        snipers, two mortar units) neither recruits nor promotes past it. A key limits
@@ -295,7 +291,6 @@
       return false;
     }
     // { irregulars: 11, recruits: 1 } as a list naming each as often as its weight
-    function weighted(w) { var out = []; for (var k in w) for (var i = 0; i < w[k]; i++) out.push(k); return out; }
     function catchUpTarget(playerTier) {
       var swing = pick([-1, 0, 0, 0, 1]);
       return Math.max(1, Math.min(5, Math.min(playerTier + 1, playerTier + swing)));
@@ -369,14 +364,15 @@
 
     /* Found a rival to the book's starting rules, in its archetype's own style. */
     /* The order it will take its doctrines in, one per Tier, written when it is
-       founded. A force known for one thing takes it first (`fixed`: the Grey Plague's
-       Fungi Symbiosis, the raiders' teleport network); most then reach for their own
+       founded. A force known for one thing takes it first (`fixedAt` Tier I: the Grey
+       Plague's Fungi Symbiosis, the raiders' teleport network); most then reach for their own
        shortlist (`doctrines`, in a random order of their own); and a force with no
        creed to speak of (`random`) draws from the whole list. Whatever is left comes
        after, shuffled — a force that has spent its shortlist still has somewhere to go. */
     function docPlanFor(co, a) {
       var all = creedOf(co).list.map(function (d) { return d.id; });
-      var fixed = a.random ? [] : (a.fixed || []).filter(function (d) { return all.indexOf(d) >= 0; });
+      // (the doctrines fixed at a Tier are left out here and put in their places below)
+      var fixed = a.random ? [] : Object.keys(a.fixedAt || {}).map(function (t) { return a.fixedAt[t]; });
       var short = a.random ? [] : shuffle((a.doctrines || []).filter(function (d) { return all.indexOf(d) >= 0 && fixed.indexOf(d) < 0; }));
       /* A shortlist taken in stages (`stages`: the Turncoats' Villain doctrines before their
          Prophet ones) is shuffled within each stage, the stages kept in their order. */
@@ -387,9 +383,9 @@
         });
       }
       var rest = shuffle(all.filter(function (d) { return fixed.indexOf(d) < 0 && short.indexOf(d) < 0; }));
-      var plan = fixed.concat(short, rest);
-      /* ...and one fixed for a later Tier (`fixedAt`: the Pitheads' Labour Leader at Tier II,
-         once there are vehicles enough to want it) goes in at that place in the order. */
+      var plan = short.concat(rest);
+      /* ...and each one fixed at a Tier (Tier I: what it is known for; the Pitheads' Labour
+         Leader at Tier II, once there are vehicles enough to want it) goes in at that place. */
       var at = a.random ? {} : (a.fixedAt || {});
       Object.keys(at).sort().forEach(function (t) {
         var d = at[t];
@@ -505,7 +501,7 @@
       }
       /* Banking for its next Company Tier: the promotion affordable now, or short only of
          the money (canPromoteCompany). Then nothing else is bought — no new hulls or trading
-         up, no hires on its own account, no more signature units past its first — so the
+         up, no hires on its own account — so the
          money goes on the promotion. */
       function banking() {
         if (co.tier >= 5) return false;
@@ -555,8 +551,8 @@
           // is what keeps a company in character at the Tiers its groups do not reach
           var liked = pool.filter(wanted);
           if (!liked.length) {
-            var own = t === 1 ? (a.refill ? weighted(a.refill) : a.t1) : t === 2 ? flat(a.t2) : [];
-            // as often as the founding list names them (Special Ops: two Irregulars to each Recruit)
+            var own = t === 1 ? a.t1 : t === 2 ? flat(a.t2) : [];
+            // (as often as the founding list names them)
             liked = [];
             own.forEach(function (k) { pool.forEach(function (p) { if (p.key === k) liked.push(p); }); });
           }
@@ -567,26 +563,6 @@
       }
       fillGaps();
       did = did.concat(rehireCommand(co));
-      /* Its signature units — what the force is known for, which nothing else on its
-         shopping list would bring in (a sky swarm's flyers, a plague's Infected): one
-         for each Tier it holds (three at most), the best it can afford, before the money
-         goes elsewhere. A list of lists is several such sets, each kept up on its own
-         (Special Ops: its cars and craft, and its drones and EW). */
-      var sigs = a.signature || [];
-      (Array.isArray(sigs[0]) ? sigs : [sigs]).forEach(function (sig) {
-        if (!sig.length) return;
-        var have = co.roster.filter(function (e) { return sig.indexOf(e.key) >= 0; }).length;
-        // (`signatureCap`: as many as that, whatever the Tier — the Partisans' commandos)
-        if (have >= (a.signatureCap != null ? a.signatureCap : Math.min(a.signatureMax || 3, co.tier))) return;
-        if (have >= 1 && banking()) return;          // (its first, always; the rest wait on the promotion)
-        var can = sig.map(profile).filter(function (p) { return p.tier <= co.tier + 1 && canRecruit(co, p.key).ok && !capped(p); });
-        var top = Math.max.apply(null, can.map(function (p) { return p.tier; }).concat([0]));
-        var buy = can.length ? pick(can.filter(function (p) { return p.tier === top; })) : null;
-        if (!buy) return;
-        var rs = recruit(co, buy.key);
-        if (rs.ok) did.push({ what: 'recruit', text: words(co).recruited + ' ' + rs.entry.name });
-      });
-
       // spend experience, the units closest to a decision first
       co.roster.slice().sort(function (x, y) { return y.exp - x.exp; }).forEach(function (e) {
         var p = profile(e.key), was = e.name;
@@ -725,9 +701,6 @@
             return p.cls !== 'infantry' && !p.noSlot && wanted(p) && !capped(p) && canRecruit(co, p.key).ok && (!hullsKept || p.tier <= co.tier);
           }).sort(function (x, y) { return y.tier - x.tier; });
           if (!hulls.length) break;
-          // (the hulls it is known for first, where it has a preference: the Bastion's guns)
-          var firstH = hulls.filter(function (p) { return hullFirst(a, p); });
-          if (firstH.length) hulls = firstH;
           var top = hulls[0].tier, pickH = a.weights ? leaning(hulls.filter(function (p) { return p.tier === top; }))
             : hullsKept ? pick(hulls.filter(function (p) { return p.tier === top; })) : hulls[0];
           var rv = recruit(co, pickH.key);
@@ -745,8 +718,6 @@
             var bigger = R.listFor(co.faction).filter(function (p) {
               return p.cls !== 'infantry' && !p.noSlot && wanted(p) && p.tier <= co.tier && p.tier >= profile(small.key).tier + 1 && canRecruit(co, p.key).ok;
             });
-            var firstB = bigger.filter(function (p) { return hullFirst(a, p); });
-            if (firstB.length) bigger = firstB;
             if (bigger.length && small.rid !== co.cmdRid) {
               var nb = recruit(co, (a.weights ? leaning(bigger) : pick(bigger)).key);
               if (nb.ok) {
