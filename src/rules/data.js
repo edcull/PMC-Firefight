@@ -357,10 +357,10 @@
        orb     how its orbs reach the target: 'tele' (out of a portal by the
                target) or 'lob' (thrown across); by default an infantry
                launcher teleports them and anything else lobs them
-       blast   how its orbs, shells or lobbed rounds (arc) go off where they
-               land: 'frag', a fragmentation blast (a bigger one for orbbig,
-               shellbig and arcbig), or by default a burst of plasma or the
-               round's own burst */
+       blast   how its orbs, shells, lobbed rounds (arc), missiles or rockets go
+               off where they land: 'frag', a fragmentation blast (a bigger one
+               for orbbig, shellbig and arcbig, a smaller one for each rocket of
+               a ripple), or by default a burst of plasma or the round's own */
   var WEAPONS = {
     /* ---- PMC infantry ---- */
     recruits: { p: 'small' },

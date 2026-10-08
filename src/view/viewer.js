@@ -1198,7 +1198,7 @@
     if (w.p === 'orb' || w.orb) h += '<div class="vgrp"><label>Orbs</label>' + wpick('orb', w.orb || '', ORBS,
       R.isMachine(profile()) ? 'As a machine’s: lobbed' : 'As a launcher team’s: teleported') + '</div>';
     // how its orbs or shells go off where they land
-    var blasts = ['orb', 'orbbig', 'shell', 'shellbig', 'arc', 'arcbig'];
+    var blasts = ['orb', 'orbbig', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket'];
     if (blasts.indexOf(w.p) >= 0 || blasts.indexOf(w.s) >= 0 || w.blast) {
       var bigBlast = w.p === 'orbbig' || w.p === 'shellbig' || w.p === 'arcbig' || (blasts.indexOf(w.p) < 0 && (w.s === 'shellbig' || w.s === 'arcbig'));
       var orbs = w.p === 'orb' || w.p === 'orbbig';

@@ -171,6 +171,12 @@
       if (SFX) { SFX.impact(); SFX.shell(); if (scale > 1.5) SFX.impact(0.06); }
     }
 
+    // where the i-th rocket of a ripple bursts: scattered a little about the mark, not all on one spot
+    function rocketSpot(to, i) {
+      var a = i * 2.4 + 0.7, r = 0.5 + (i % 3) * 0.45;
+      return { x: to.x + Math.cos(a) * r, y: to.y + Math.sin(a) * r * 0.8, up: to.up };
+    }
+
     /* Where plasma lands: a ring of blue light and a white flash. A heavy round
        throws the ground up with it — a wider ring of blue fire and a scatter of
        it around the crater (the energy howitzer, the plasma breaching gun). */
@@ -452,7 +458,11 @@
                 // no flash at the tube: it is ejected cold and lights further out
                 add({ kind: 'missile', from: F, to: to, seed: j, dur: mflight, curve: curve, blocking: true,
                   sam: samLaunch(spec, shooter, to) });
-                setTimeout(function () { land(3); }, mflight);
+                setTimeout(function () {
+                  // where the weapon entry says (`blast: 'frag'`), each missile goes off as a fragmentation blast
+                  if (alive() && spec.blast === 'frag') fragBlast(to, 1.2, j);
+                  land(3);
+                }, mflight);
                 redraw();
               }, j * birdGap);
             })(mi2);
@@ -475,7 +485,11 @@
                   kind: 'missile', from: F, to: to, rocket: true, seed: i,
                   dur: rflight, blocking: true
                 });
-                setTimeout(function () { land(i === rn - 1 ? 3 : 0); }, rflight);
+                setTimeout(function () {
+                  // as `blast: 'frag'` asks: each rocket a smaller blast, scattered about the mark
+                  if (alive() && spec.blast === 'frag') fragBlast(rocketSpot(to, i), 0.8, i);
+                  land(i === rn - 1 ? 3 : 0);
+                }, rflight);
               }, i * 78);
             })(r);
           }
@@ -627,7 +641,11 @@
                 if (!alive()) return;
                 if (SFX) SFX.missile(0, 0.9, 0.47);
                 add({ kind: 'missile', from: pick(from, j), to: to, seed: j, dur: 900, blocking: true });
-                setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 900);
+                setTimeout(function () {
+                  if (!alive()) return;
+                  if (R.weaponSpec(shooter).blast === 'frag') fragBlast(to, 1.2, j);
+                  else secondaryLands(shooter, to, 3);
+                }, 900);
                 redraw();
               }, j * 260);
             })(q4);
@@ -643,7 +661,8 @@
                 if (!alive()) return;
                 add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pick(from, j).mz, dur: 180, big: true, blocking: true });
                 add({ kind: 'missile', from: pick(from, j), to: to, rocket: true, seed: j, dur: 420, blocking: true });
-                if (j === 4) setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 420);
+                if (R.weaponSpec(shooter).blast === 'frag') setTimeout(function () { if (alive()) fragBlast(rocketSpot(to, j), 0.8, j); }, 420);
+                else if (j === 4) setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 420);
                 redraw();
               }, j * 78);
             })(q5);
