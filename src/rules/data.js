@@ -403,12 +403,12 @@
     // (the recon drones fire as light infantry do, a crack of single shots)
     dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'pistol' },
     // the engineer drones fire a sidearm and throw a grenade; the support drones lob three rounds, up and over
-    dengineer: { p: 'pistol', splash: true, glow: 'amber' }, dsupport: { p: 'arc', n: 5, blast: 'frag' }, dmedic: { p: 'pistol' },
+    dengineer: { p: 'pistol', splash: true }, dsupport: { p: 'arc', n: 5, blast: 'frag' }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
     // a patrol jeep has the crew's rifles; the heavy one mounts a machine gun
-    lpv: { p: 'small' }, hpv: { p: 'chain', splash: true, glow: 'amber' }, recon: { p: 'shell', s: 'pistol' },
+    lpv: { p: 'small' }, hpv: { p: 'chain', splash: true }, recon: { p: 'shell', s: 'pistol' },
     // the light tank: its main gun twice over, and the commander's sidearm
     lcv: { p: 'shell', n: 2, s: 'pistol', blast: 'frag' },
     /* A medium hull fires its main gun twice in quick succession over the
@@ -446,7 +446,7 @@
     heavycraft: { p: 'small' }, flyingcp: { p: 'small' },
     // the flexible strike craft rakes with its nose gun under a rocket rack; the transport has a door gun
     fsc: { p: 'burst', s: 'rocket', blast: 'frag' }, tsc: { p: 'small', s: 'rocket', blast: 'frag' },
-    gunboat: { p: 'chain', s: 'rocket', blast: 'frag' }, hsc: { p: 'missile', n: 3, s: 'rocket', blast: 'frag' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
+    gunboat: { p: 'chain', s: 'rocket', blast: 'frag' }, hsc: { p: 'missile', n: 3, s: 'rocket', blast: 'frag' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3, blast: 'frag' },
     // the light VTOL drone carries no gun worth the name: a light sidearm's crack
     vtoldrone: { p: 'pistol' },
     // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
@@ -465,7 +465,7 @@
     /* Mounted Warriors ride in throwing Molotovs from the saddle (Incendiary
        Ammunition): the rider gangs and warriors nothing else, the hellriders
        with a gun alongside, the legendary ones something heavier. */
-    rridergang: { p: 'none', s: 'molotov', sn: 2 }, rriderwar: { p: 'none', s: 'molotov', sn: 2 },
+    rridergang: { p: 'none', s: 'molotov', sn: 2 }, rriderwar: { p: 'small', s: 'molotov', sn: 2 },
     rhellriders: { p: 'smg', s: 'molotov', sn: 2 }, rlegendary: { p: 'chain', s: 'molotov', sn: 2 },
     rlmg: { p: 'burst', splash: true }, rautocannon: { p: 'chain', splash: true },
     rat: { p: 'shell', blast: 'frag' },
@@ -501,9 +501,9 @@
     rlflak: { p: 'burst' }, rmflak: { p: 'burst', s: 'burst' },
     rhflak: { p: 'chain', s: 'burst', splash: true },
     // a captured patrol craft and an armed shuttle: a door gun and the crew
-    rpatrol: { p: 'small' }, rlshuttle: { p: 'burst' },
+    rpatrol: { p: 'small' }, rlshuttle: { p: 'burst', splash: true },
     // the armed shuttles carry a proper door cannon, not a machine gun
-    rmshuttle: { p: 'chain', splash: true }, rhshuttle: { p: 'chain' },
+    rmshuttle: { p: 'chain', splash: true }, rhshuttle: { p: 'chain', splash: true },
     rlifter: { p: 'none' },
 
     /* ---- the Space Bugs ----
