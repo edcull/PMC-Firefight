@@ -8,7 +8,8 @@
    whole personality to the server (server/archetypes.js), which keeps its
    difference from the default; Reset puts the default back.
 
-   Mounted by account.js into the admin pane; it keeps its own state between draws. */
+   Opened by account.js from the server tools, in a window of its own over the
+   account screen; it keeps its own state between draws and between openings. */
 (function (root) {
   'use strict';
   var R = function () { return root.PMC; }, C = function () { return root.PMCCamp; };
@@ -122,7 +123,7 @@
       }
       return '<div class="ae-row">' + r.map(function (k, m) { return (m ? '<em>or</em>' : '') + sel(k, i, m) + (m ? del(i, m) : ''); }).join('') +
         (more === 'or' && r.length < 2 ? '<button type="button" class="lnk" data-ae="addm" data-path="' + path + '" data-r="' + i + '">+ or</button>' : '') + drop(i, 'Remove') + '</div>';
-    }).join('') + '<button type="button" class="lnk" data-ae="add" data-path="' + path + '">' + (more === 'set' ? '+ Add a set' : '+ Add') + '</button></div>';
+    }).join('') + '<div class="ae-row"><button type="button" class="lnk" data-ae="add" data-path="' + path + '">' + (more === 'set' ? '+ Add a set' : '+ Add') + '</button></div></div>';
   }
   /* rows of { key: number } bound to a path (the Tier I refill, the older rules' mix and
      limits); `keys` the choices for a key */
@@ -142,9 +143,9 @@
   function moreHTML(u) {
     var f = u.force || {}, d = u.doctrines || {};
     var hullGroups = groupsOf(function (p) { return p.cls !== 'infantry'; });
-    var h = '';
+    var S = { older: '' };
     // its hulls and riders
-    h += '<div class="ae-sec"><h4>Hulls and riders</h4>' +
+    S.hulls = sec('hulls', 'Hulls and riders') +
       ticks('Favourite hulls (taken first)', 'force.favourites', hullGroups.concat([['transports', 'anything that carries troops']]),
         'A force rolls these before any other hull: as many as “Hulls a Priority Level, fewest” (one a Priority Level if blank), the biggest at or below the battle’s Tier, a different one each time. In a campaign it buys and upgrades to these first. None ticked: any hull it weights.') +
       '<div class="ae-grid">' + field('Hulls kept in a campaign', 'force.machinesMax', 'num', ' min="0" max="9"',
@@ -154,7 +155,7 @@
       (groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }).length ? ticks('Groups that ride', 'force.riders', groupsOf(function (p) { return p.cls === 'infantry' && p.ridersUpgrade; }),
         'In a campaign, units of these groups (and its leader, if of one) are recruited mounted wherever the rules let them ride.') : '') + '</div>';
     // signature units
-    h += '<div class="ae-sec"><h4>Signature units</h4><small class="ae-dim">What it is known for: kept up from each set (one a Priority Level in a skirmish roll; one a Company Tier in a campaign, up to the most).</small>' +
+    S.sig = sec('sig', 'Signature units', 'Signature') + '<small class="ae-dim">What it is known for: kept up from each set (one a Priority Level in a skirmish roll; one a Company Tier in a campaign, up to the most).</small>' +
       unitRows('Sets', 'force.signature.units', null, 'set', 'A set of two or more: any one of them counts.') +
       '<div class="ae-grid">' + field('Most kept from a set (campaign)', 'force.signature.max', 'num', ' min="0" max="9" placeholder="3"',
         'A campaign company keeps one from each set a Company Tier, up to this many. Blank: 3.') +
@@ -162,7 +163,7 @@
         'Set this and the company keeps exactly this many from each set at every Tier, in place of the line before (the Partisans’ commandos).') + '</div></div>';
     // doctrines beyond the fixed and the shortlist
     var fa = d.fixedAt || {};
-    h += '<div class="ae-sec"><h4>Doctrine stages and set Tiers</h4>' +
+    S.stages = sec('stages', 'Doctrine stages and set Tiers', 'Stages') +
       '<div class="ae-rows"><span>Stages' + tip('In place of the shortlist: after the fixed ones it takes all of stage 1 in a random order, then all of stage 2, and so on, then the rest at random. Doctrine codes separated by commas; the codes are listed under Doctrines above.') + '</span>' + (d.stages || []).map(function (st, i) {
         return '<div class="ae-row"><input class="tin" data-ae-stage="' + i + '" value="' + esc(st.join(', ')) + '" placeholder="e.g. V6, V5, V1">' +
           '<button type="button" class="lnk acct-danger" data-ae="delstage" data-r="' + i + '">Remove</button></div>';
@@ -174,7 +175,7 @@
       }).join('') + '<button type="button" class="lnk" data-ae="addfat">+ Add</button></div>' +
       field('No creed to speak of', 'doctrines.random', 'bool', null, 'Ignores the fixed ones, the shortlist and the stages: every doctrine is drawn from the whole list at random.') + '</div>';
     // the campaign rival's own
-    h += '<div class="ae-sec"><h4>Campaign</h4>' +
+    S.camp = sec('camp', 'Campaign') +
       '<small class="ae-dim">How an AI rival company starts and grows in a campaign. None of this changes a skirmish roll.</small>' +
       unitRows('Founded with, Tier I', 'campaign.found.t1', function (p) { return p.cls === 'infantry' && !p.command; }, null,
         'The Tier I units it is founded with, one each (a unit twice: two). It also fills later Tier I gaps from these unless the next list says otherwise.') +
@@ -196,7 +197,7 @@
         'Once it holds Rapid Training Methods (S6), each unit takes one honour before its first promotion.') + '</div></div>';
     // the older rules, for a personality with no weighted list yet
     if (!f.weights) {
-      h += '<div class="ae-sec"><h4>Older rules (until it has a weighted list)</h4>' +
+      S.older = sec('older', 'Older rules (until it has a weighted list)', 'Older rules') +
         '<small class="ae-dim">Used only until it has a weighted list (above), which replaces all of these.</small>' +
         ticks('Its own groups', 'force.groups', groupsOf(), 'What it is made of: most of its units come from these.') +
         ticks('Second choices', 'force.second', groupsOf(), 'Taken when its own groups have nothing that fits.') +
@@ -204,48 +205,56 @@
         mapRows('Mix (its groups’ shares)', 'force.mix', groupKeys(), 'The share of each of its groups, by weight compared with the others; a campaign company also promotes to keep this mix.') +
         mapRows('Limits', 'force.limit', groupKeys().concat(unitKeys()), 'The most of a unit or group it holds (0: none at all).') + '</div>';
     }
-    return h;
+    return S;
   }
+  // a section of the form: a card with its heading, named in the side list
+  function sec(id, title, nav) { return '<div class="ae-sec" id="ae-s-' + id + '" data-nav="' + esc(nav || title) + '"><h4>' + title + '</h4>'; }
   function html() {
     var u = draft(), f = u.force || {}, b = u.battle || {}, d = u.doctrines || {}, list = R().listFor(faction());
-    var h = '<div class="ae">';
-    // which one
-    h += '<div class="ae-top"><select class="tin" data-ae="pick">' + FACTIONS.map(function (fa) {
+    // the window's head: which one, and whether an admin has changed it
+    var head = '<div class="ae-title"><small>Personality</small><select class="tin" data-ae="pick" aria-label="Personality">' + FACTIONS.map(function (fa) {
       return '<optgroup label="' + fa[1] + '">' + C().archetypesFor(fa[0]).filter(function (a) { return (a.faction || 'pmc') === fa[0]; }).map(function (a) {
         return '<option value="' + a.id + '"' + (a.id === state.id ? ' selected' : '') + '>' + esc(a.name) + (state.changed[a.id] ? ' •' : '') + '</option>';
       }).join('') + '</optgroup>';
-    }).join('') + '</select>' + (state.changed[state.id] ? '<small class="ae-tag">changed by ' + esc(state.changed[state.id].by || 'an admin') + '</small>' : '<small class="ae-tag ae-dim">default</small>') + '</div>';
-    if (state.fault) h += '<p class="faults">' + esc(state.fault) + '</p>';
-    if (state.note) h += '<p class="acct-notice">' + esc(state.note) + '</p>';
+    }).join('') + '</select></div>' +
+      '<span class="ae-chip">' + (FACTIONS.filter(function (fa) { return fa[0] === faction(); })[0] || ['', ''])[1] + '</span>' +
+      (state.changed[state.id] ? '<small class="ae-tag">changed by ' + esc(state.changed[state.id].by || 'an admin') + '</small>' : '<small class="ae-tag ae-dim">default</small>') +
+      '<button type="button" class="ae-x" data-ae="close" aria-label="Close" title="Close">×</button>';
+    var h = '';
     // who it is
-    h += '<div class="ae-grid">' +
+    h += sec('who', 'Who it is') + '<div class="ae-grid">' +
       '<label>Name<input class="tin" data-ae-f="name" value="' + esc(u.name || '') + '" maxlength="60"></label>' +
       '<label class="ae-wide">Company names (one per line)<textarea class="tin" data-ae-f="names" rows="3">' + esc((u.names || []).join('\n')) + '</textarea></label>' +
-      field('Blurb', 'blurb', 'text', null, 'What it is, in a line: shown with the personality in the game.') +
+      field('Blurb', 'blurb', 'text', null, 'What it is, in a line: shown with the personality in the game.') + '</div></div>';
+    // the shape of its forces
+    h += sec('shape', 'Force shape') + '<div class="ae-grid">' +
       '<label>Tier preference<select class="tin" data-ae-f="tier">' + [[-1, '−1 fills up a Tier below'], [0, '0 its own Tier'], [1, '+1 reaches a Tier above']].map(function (o) {
         return '<option value="' + o[0] + '"' + ((f.tier || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
         tip('How elite it is. Each unit’s weight is scaled for every Tier it is off the battle’s. −1: units a Tier below come up more often, above rarely. 0: mostly the battle’s own Tier. +1: units a Tier above come up far more often, below rarely. In a campaign −1 also hires a Tier lower.') + '</label>' +
       '<label>Hulls a Priority Level, fewest<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmin" value="' + (f.hulls && f.hulls.min != null ? f.hulls.min : '') + '" placeholder="1">' +
         tip('Favourite hulls rolled before anything else, times the Priority Level, rounded (1.5: 2 at PL1, 3 at PL2, 5 at PL3).') + '</label>' +
       '<label>Hulls a Priority Level, most<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmax" value="' + (f.hulls && f.hulls.max != null ? f.hulls.max : '') + '" placeholder="1.5">' +
-        tip('The most hulls, times the Priority Level, rounded; never past the rules’ three a Priority Level. Blank: half of three, or all three for a machine company.') + '</label>' +
+        tip('The most hulls, times the Priority Level, rounded; never past the rules’ three a Priority Level. Blank: half of three, or all three for a machine company.') + '</label></div></div>';
+    var more = moreHTML(u), battle = '';
+    // how it fights
+    battle += sec('battle', 'In battle') + '<div class="ae-grid">' +
       '<label>Temper (behaviour roll)<select class="tin" data-ae-f="temper">' + [-3, -2, -1, 0, 1, 2, 3].map(function (n) {
         return '<option value="' + n + '"' + ((b.temper || 0) === n ? ' selected' : '') + '>' + (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + '</option>'; }).join('') + '</select>' +
-        tip('Added to its units’ behaviour roll in battle (p. 147). +: presses in and charges. −: holds back and shoots from cover.') + '</label>' +
-      '</div>';
+        tip('Added to its units’ behaviour roll in battle (p. 147). +: presses in and charges. −: holds back and shoots from cover.') + '</label></div>';
     // tactics: a Rebel's
     if (faction() === 'rebel') {
       var t = b.tactics || {};
-      h += '<div class="ae-sec"><h4>Rebel Tactics</h4><small class="ae-dim">The Rebel tactic it chooses in battle, by the role it has. Human Wave: two extra infantry units a Priority Level, and faster infantry. Last Stand: +4 Defence in cover, barricades, and morale holds longer. Guerillas: its infantry gain Stealth and Battlefield Insertion.</small>' + ['open', 'attack', 'defend'].map(function (role) {
+      battle += '<div class="ae-sub"><h5>Rebel Tactics</h5><small class="ae-dim">The Rebel tactic it chooses in battle, by the role it has. Human Wave: two extra infantry units a Priority Level, and faster infantry. Last Stand: +4 Defence in cover, barricades, and morale holds longer. Guerillas: its infantry gain Stealth and Battlefield Insertion.</small>' + ['open', 'attack', 'defend'].map(function (role) {
         var have = [].concat(t[role] || []);
         return '<div class="ae-tac"><span>' + ({ open: 'In the open', attack: 'Attacking', defend: 'Defending' })[role] + '</span>' + TACTICS.map(function (x) {
           return '<label><input type="checkbox" data-ae-tac="' + role + '" value="' + x[0] + '"' + (have.indexOf(x[0]) >= 0 ? ' checked' : '') + '> ' + x[1] + '</label>';
         }).join('') + '</div>';
       }).join('') + '<small class="ae-dim">Two ticked: a coin toss between them. None: the usual (Human Wave, and Last Stand on defence).</small></div>';
     }
+    battle += '</div>';
     // doctrines
-    var creed = C().creedOf({ faction: faction() }).list;
-    h += '<div class="ae-sec"><h4>Doctrines</h4><div class="ae-grid">' +
+    var creed = C().creedOf({ faction: faction() }).list, docs = '';
+    docs += sec('docs', 'Doctrines') + '<div class="ae-grid">' +
       '<label>Fixed (taken first)<input class="tin" data-ae-f="fixed" value="' + esc((d.fixed || []).join(', ')) + '" placeholder="e.g. T4">' + tip('In this order, from its first Company Tier.') + '</label>' +
       '<label class="ae-wide">Shortlist (taken next, in a random order)<input class="tin" data-ae-f="shortlist" value="' + esc((d.shortlist || []).join(', ')) + '">' + tip('Shuffled anew for each company, so two companies of it differ.') + '</label></div>' +
       '<small class="ae-dim">A campaign company takes one doctrine a Company Tier: the fixed ones first, then the shortlist shuffled, then the rest shuffled. Codes separated by commas.' +
@@ -254,7 +263,7 @@
       '<details class="ae-codes"><summary class="ae-dim">The doctrine codes</summary><ul>' + creed.map(function (x) { return '<li><b>' + x.id + '</b> ' + esc(x.name) + '</li>'; }).join('') + '</ul></details></div>';
     // the weighted list
     var w = f.weights || null;
-    h += '<div class="ae-sec"><h4>Weighted list</h4>';
+    h += sec('weights', 'Weighted list');
     if (!w) h += '<p class="ae-dim">This one still rolls by its groups and mix (the older rules). <button type="button" class="lnk" data-ae="convert">Start a weighted list from them</button></p>';
     else {
       h += '<small class="ae-dim">Weight 0–10: how often a unit is picked compared with the others; a unit twice the weight comes up twice as often. A unit with no weight of its own takes its group’s (shown faded); 0 or blank: never. ' +
@@ -272,15 +281,20 @@
       }).join('') + '</table>';
     }
     h += '</div>';
-    h += moreHTML(u);
-    // preview and save
-    h += '<div class="ae-sec"><h4>Preview</h4><div class="ae-prev">Tier <select class="tin" data-ae-p="t">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (n === state.pt ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>' +
-      ' PL <select class="tin" data-ae-p="pl">' + [1, 2, 3].map(function (n) { return '<option' + (n === state.ppl ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>' +
-      ' <button type="button" class="lnk" data-ae="preview">Roll forces</button></div>' + (state.preview || '') + '</div>';
-    h += '<div class="acct-editrow"><button type="button" class="lnk acct-danger" data-ae="reset"' + (state.changed[state.id] ? '' : ' disabled') + '>Reset to default</button>' +
+    // in the order an admin thinks of it: what it fields, then how it fights, then its campaign
+    h += more.hulls + more.sig + battle + docs + more.stages + more.camp + more.older;
+    // preview
+    h += sec('preview', 'Preview') + '<small class="ae-dim">Rolls forces with the edits in force, as they stand in the form, without saving them.</small>' +
+      '<div class="ae-prev"><label>Tier <select class="tin" data-ae-p="t">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (n === state.pt ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label>' +
+      '<label>PL <select class="tin" data-ae-p="pl">' + [1, 2, 3].map(function (n) { return '<option' + (n === state.ppl ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label>' +
+      '<button type="button" class="lnk" data-ae="preview">Roll forces</button></div>' + (state.preview || '') + '</div>';
+    // the foot: what happened, and the buttons
+    var foot = (state.fault ? '<p class="faults">' + esc(state.fault) + '</p>' : '') + (state.note ? '<p class="acct-notice">' + esc(state.note) + '</p>' : '') +
+      '<div class="ae-btns"><button type="button" class="lnk acct-danger" data-ae="reset"' + (state.changed[state.id] ? '' : ' disabled') + '>Reset to default</button>' +
       '<button type="button" class="lnk" data-ae="revert">Undo edits</button>' +
+      '<button type="button" class="lnk" data-ae="preview">Preview</button>' +
       '<button type="button" class="start" data-ae="save"' + (state.busy ? ' disabled' : '') + '>' + (state.busy ? 'One moment…' : 'Save') + '</button></div>';
-    return h + '</div>';
+    return { head: head, form: h, foot: foot };
   }
 
   // the form read back into the personality
@@ -377,16 +391,82 @@
       if (then) then();
     }, function () { if (then) then(); });
   }
-  function draw() { if (host) host.innerHTML = html(); }
+  /* Its own window over the account screen: the head (which one, close), the sections
+     down the side, the form scrolling in the middle, and the buttons along the foot.
+     The scrolling box stays put between draws, so an edit does not jump the page. */
+  var modal = null, lastFocus = null;
+  function build() {
+    modal = document.createElement('div');
+    modal.className = 'ae-modal'; modal.hidden = true;
+    modal.innerHTML = '<div class="ae-win" id="arch-edit" role="dialog" aria-modal="true" aria-label="Personalities">' +
+      '<header class="ae-head"></header><div class="ae-body"><nav class="ae-nav" aria-label="Sections"></nav>' +
+      '<div class="ae-scroll"><div class="ae"></div></div></div><footer class="ae-foot"></footer></div>';
+    document.body.appendChild(modal);
+    host = modal.querySelector('#arch-edit');
+    host.addEventListener('click', onClick);
+    host.addEventListener('change', onChange);
+    host.querySelector('.ae-scroll').addEventListener('scroll', markNav, { passive: true });
+    modal.addEventListener('mousedown', function (ev) { if (ev.target === modal) close(); });
+    // (on the document, ahead of the account screen's own: a redraw can take the focus out of the window)
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && !modal.hidden) { ev.stopPropagation(); ev.preventDefault(); close(); }
+    }, true);
+  }
+  function draw() {
+    if (!host) return;
+    var p = html();
+    host.querySelector('.ae-head').innerHTML = p.head;
+    host.querySelector('.ae').innerHTML = p.form;
+    host.querySelector('.ae-foot').innerHTML = p.foot;
+    host.querySelector('.ae-nav').innerHTML = Array.prototype.map.call(host.querySelectorAll('.ae-sec[data-nav]'), function (x) {
+      return '<button type="button" data-ae="goto" data-k="' + x.id + '">' + x.getAttribute('data-nav') + '</button>';
+    }).join('');
+    markNav();
+  }
+  // the section in view, lit in the side list
+  function markNav() {
+    if (!host) return;
+    var sc = host.querySelector('.ae-scroll'), top = sc.getBoundingClientRect().top + 40, on = null;
+    Array.prototype.forEach.call(host.querySelectorAll('.ae-sec[data-nav]'), function (x) { if (x.getBoundingClientRect().top <= top) on = x.id; });
+    if (sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 4) { var all = host.querySelectorAll('.ae-sec[data-nav]'); if (all.length) on = all[all.length - 1].id; }
+    Array.prototype.forEach.call(host.querySelectorAll('.ae-nav button'), function (b) {
+      var is = b.getAttribute('data-k') === (on || 'ae-s-who');
+      b.classList.toggle('on', is);
+      if (is && b.scrollIntoView && host.querySelector('.ae-nav').scrollWidth > host.querySelector('.ae-nav').clientWidth) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+  }
+  function goTo(id) {
+    var x = host.querySelector('#' + id), sc = host.querySelector('.ae-scroll');
+    if (x) sc.scrollTop += x.getBoundingClientRect().top - sc.getBoundingClientRect().top - 8;
+  }
+  function open(io) {
+    api = io;
+    if (!modal) build();
+    lastFocus = document.activeElement;
+    modal.hidden = false;
+    document.documentElement.classList.add('ae-open');
+    if (!state.loaded) { state.loaded = true; refreshChanged(draw); }
+    draw();
+    var pick = host.querySelector('[data-ae="pick"]'); if (pick) pick.focus();
+  }
+  // (the draft is kept: opened again, the edits are still there until undone or saved)
+  function close() {
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    document.documentElement.classList.remove('ae-open');
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
 
   function onClick(ev) {
     var b = ev.target.closest && ev.target.closest('[data-ae]');
     if (!b) return;
     var a = b.getAttribute('data-ae');
     state.fault = ''; state.note = '';
+    if (a === 'close') { close(); return; }
+    if (a === 'goto') { goTo(b.getAttribute('data-k')); return; }
     if (['add', 'del', 'addm', 'delm', 'addk', 'delk', 'addstage', 'delstage', 'addfat', 'delfat'].indexOf(a) >= 0) { rowAction(a, b); return; }
     if (a === 'convert') { try { readForm(); } catch (e) { state.fault = e.message; draw(); return; } draft().force.weights = fromOlder(draft()); state.note = 'A starting list from its groups and mix: tune it, preview, then save.'; draw(); }
-    else if (a === 'preview') { try { preview(); } catch (e) { state.fault = e.message; } draw(); }
+    else if (a === 'preview') { try { preview(); } catch (e) { state.fault = e.message; } draw(); goTo('ae-s-preview'); }
     else if (a === 'revert') { state.draft = null; state.preview = null; draw(); }
     else if (a === 'save') {
       var u;
@@ -500,18 +580,11 @@
   }
 
   root.PMCArchEdit = {
-    /* Into `el` (drawn afresh by the account screen): `io` is { get, post } for the
-       server, as the account screen talks to it. */
-    mount: function (el, io) {
-      api = io;
-      if (host !== el) {
-        host = el;
-        el.addEventListener('click', onClick);
-        el.addEventListener('change', onChange);
-        if (!state.loaded) { state.loaded = true; refreshChanged(draw); }
-      }
-      draw();
-    },
+    /* Opened from the server tools: `io` is { get, post } for the server, as the
+       account screen talks to it. */
+    open: open,
+    close: close,
+    isOpen: function () { return !!modal && !modal.hidden; },
     // for a test: the form read back, and the preview's text
     read: function () { return readForm(); },
     previewNow: function () { preview(); draw(); return state.preview; },

@@ -27,8 +27,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const p = await (await b.newContext({ viewport: { width: 1200, height: 900 } })).newPage();
   const errs = [];
   p.on('pageerror', (e) => errs.push(e.message));
-  const click = (sel) => p.evaluate((s) => document.querySelector('#account ' + s).click(), sel);
-  const has = (sel) => p.evaluate((s) => !!document.querySelector('#account ' + s), sel);
+  // (the editor is a window of its own, over the account screen)
+  const q = (s) => (/^#arch-edit/.test(s) ? '' : '#account ') + s;
+  const click = (sel) => p.evaluate((s) => document.querySelector(s).click(), q(sel));
+  const has = (sel) => p.evaluate((s) => !!document.querySelector(s), q(sel));
   async function till(fn, what) {
     for (let i = 0; i < 80; i++) { if (await p.evaluate(fn)) return true; await wait(100); }
     throw new Error('waited for ' + what);
@@ -43,7 +45,24 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await till(() => !!document.querySelector('#account [data-acct="admin-arch"]'), 'the Personalities section');
     ok('the Server tools have a Personalities section', true);
     await click('[data-acct="admin-arch"]');
-    await till(() => !!document.querySelector('#arch-edit .ae select[data-ae="pick"]'), 'the editor');
+    await till(() => !!document.querySelector('#arch-edit select[data-ae="pick"]'), 'the editor');
+    ok('...in a window of its own, over the account screen', await p.evaluate(() => {
+      const m = document.querySelector('.ae-modal');
+      return !!m && !m.hidden && m.contains(document.querySelector('#arch-edit')) && !document.querySelector('#account #arch-edit') && !document.querySelector('#account').hidden;
+    }));
+    ok('...with its sections listed to jump to', await p.evaluate(() => {
+      const b = [...document.querySelectorAll('#arch-edit .ae-nav button')].map((x) => x.textContent);
+      return ['Who it is', 'Force shape', 'Weighted list', 'Hulls and riders', 'In battle', 'Doctrines', 'Campaign', 'Preview'].every((t) => b.indexOf(t) >= 0);
+    }));
+    await click('#arch-edit .ae-nav [data-k="ae-s-camp"]'); await wait(150);
+    ok('...a section in the list scrolls the form to it, and is lit', await p.evaluate(() => {
+      const sc = document.querySelector('#arch-edit .ae-scroll'), s = document.querySelector('#ae-s-camp');
+      return sc.scrollTop > 0 && Math.abs(s.getBoundingClientRect().top - sc.getBoundingClientRect().top) < 40 && document.querySelector('#arch-edit .ae-nav button.on').getAttribute('data-k') === 'ae-s-camp';
+    }));
+    await p.keyboard.press('Escape'); await wait(100);
+    ok('Escape closes it, back on the server tools', await p.evaluate(() => document.querySelector('.ae-modal').hidden && !!document.querySelector('#account [data-acct="admin-arch"]')));
+    await click('[data-acct="admin-arch"]');
+    await till(() => !document.querySelector('.ae-modal').hidden, 'the editor again');
     ok('the editor opens on Bastion, its default', await p.evaluate(() => document.querySelector('#arch-edit [data-ae="pick"]').value === 'armour' && /default/.test(document.querySelector('#arch-edit .ae-tag').textContent)));
     ok('...with its weighted list in the form', await has('#arch-edit input[data-ae-w="bats"]') && await p.evaluate(() => document.querySelector('#arch-edit input[data-ae-w="bats"]').value === '10'));
 
@@ -90,15 +109,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const unhelped = await p.evaluate(() => {
       const out = [];
       // every control says what it does: a help line in its own label, row heading or section
-      document.querySelectorAll('#arch-edit .ae > .ae-grid > label').forEach((c) => {
-        if (!c.querySelector('.ae-help') && !/^(Name|Company names)/.test(c.textContent.trim())) out.push('top: ' + c.textContent.trim().slice(0, 40));
-      });
       document.querySelectorAll('#arch-edit .ae-sec').forEach((sec) => {
         const name = (sec.querySelector('h4') || {}).textContent;
         if (name === 'Preview') return;
         if (!sec.querySelector('.ae-help, .ae-dim')) out.push(name);
         sec.querySelectorAll('.ae-grid > label, .ae-ticks, .ae-rows').forEach((c) => {
-          if (!c.querySelector('.ae-help') && !/^(Name|Company names|How many founding hulls)/.test(c.textContent.trim())) out.push(name + ': ' + c.textContent.trim().slice(0, 40));
+          if (!c.querySelector('.ae-help') && !/^(Name|Company names|How many founding hulls|Tier|PL)/.test(c.textContent.trim())) out.push(name + ': ' + c.textContent.trim().slice(0, 40));
         });
       });
       return out;
@@ -142,6 +158,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await till(() => !!document.querySelector('#arch-edit [data-ae-tac="defend"]'), 'the Rebel form');
     ok('...and Rebels have their tactics in the form', true);
     await p.screenshot({ path: require('path').join(require('../where.js').SHOTS, 'archedit.png'), fullPage: false });
+    await click('#arch-edit [data-ae="close"]');
+    ok('the × closes it too', await p.evaluate(() => document.querySelector('.ae-modal').hidden));
   } catch (e) {
     ok('the run finished', false, e.message);
   }
