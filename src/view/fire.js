@@ -425,7 +425,11 @@
                   : to;
                 add({ kind: 'lob', from: F, to: aim, dur: flight, heavy: heavy, blocking: true });
                 if (SFX) SFX.incoming(flight / 1000 - 0.45, 0.45);
-                setTimeout(function () { land(heavy ? 4 : 3, aim); }, flight);
+                setTimeout(function () {
+                  // where the weapon entry says (`blast: 'frag'`), each round goes off as a fragmentation blast
+                  if (alive() && spec.blast === 'frag') fragBlast(aim, heavy ? 1.5 : 1.05, i);
+                  land(heavy ? 4 : 3, aim);
+                }, flight);
               }, off);
             })(q);
           }
@@ -569,6 +573,7 @@
                 add({ kind: 'lob', from: from.pod ? pick(throwFrom, j) : spread(throwFrom, j, thrown), to: aim, dur: flight, heavy: style === 'arcbig', blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
+                  if (R.weaponSpec(shooter).blast === 'frag') { fragBlast(aim, style === 'arcbig' ? 1.5 : 1.05, j); return; }
                   add({ kind: 'impact', x: aim.x, y: aim.y, up: aim.up, n: 4, dur: 380, blocking: true });
                   if (SFX) SFX.impact();
                 }, flight);

@@ -150,10 +150,20 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   for (let i = 0; i < 40 && shells.indexOf('fragburst') < 0; i++) { await p.waitForTimeout(80); shells = shells.concat(await p.evaluate(() => window.__viewer.fx())); }
   ok('...and its shells made to go off as fragmentation blasts', shells.indexOf('bolt') >= 0 && shells.indexOf('fragburst') >= 0, [...new Set(shells)].join(','));
 
+  // and a mortar's rounds, up and over, set to burst as frag
+  await p.evaluate(() => { window.__viewer.pick('mortarsection'); });
+  await p.waitForTimeout(100);
+  ok('a mortar has where its rounds land to choose', await p.evaluate(() => !!document.querySelector('[data-w="blast"]')));
+  await pickW(p, 'blast', 'frag');
+  await p.evaluate(() => { window.__viewer.range(14); document.querySelector('.vweaponbody [data-do="fire"]').click(); });
+  let mortar = [];
+  for (let i = 0; i < 50 && mortar.indexOf('fragburst') < 0; i++) { await p.waitForTimeout(80); mortar = mortar.concat(await p.evaluate(() => window.__viewer.fx())); }
+  ok('...and its rounds made to go off as fragmentation blasts', mortar.indexOf('lob') >= 0 && mortar.indexOf('fragburst') >= 0, [...new Set(mortar)].join(','));
+
   const n = Object.keys((await fetch(URL + 'api/weapons').then((r) => r.json())).weapons).length;
   await p.click('.vweaponbody [data-do="wrevertall"]'); await p.waitForTimeout(300);
   const none = (await fetch(URL + 'api/weapons').then((r) => r.json())).weapons;
-  ok('Revert all puts every changed unit back, once asked', n === 4 && !Object.keys(none).length &&
+  ok('Revert all puts every changed unit back, once asked', n === 5 && !Object.keys(none).length &&
     await p.evaluate(() => { window.__viewer.pick('regular'); return !window.__viewer.spec().glow; }), n + ' ' + JSON.stringify(none));
 
   // a save the server will not take is taken back on the bench
