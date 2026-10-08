@@ -148,11 +148,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await till(() => /default/.test(document.querySelector('#arch-edit').innerText) && window.PMCCamp.archetype('armour').tier === 0, 'reset');
     ok('back to its default, here and on the server', await p.evaluate(() => fetch('api/archetypes').then((r) => r.json()).then((j) => !j.changes.armour && window.PMCCamp.archetype('armour').tier === 0)));
 
-    console.log('\nAn older one, and a Rebel');
+    console.log('\nA Bug, and a Rebel');
     await p.selectOption('#arch-edit [data-ae="pick"]', 'ivenbea');
-    await till(() => /older rules/.test(document.querySelector('#arch-edit').innerText), 'the older personality');
-    await click('#arch-edit [data-ae="convert"]');
-    ok('a personality on the older rules can start a weighted list from its groups', await p.evaluate(() => !!document.querySelector('#arch-edit input[data-ae-w="Lesser Bugs"]') && +document.querySelector('#arch-edit input[data-ae-w="Lesser Bugs"]').value > 0));
+    await till(() => !!document.querySelector('#arch-edit input[data-ae-w="Flying Bugs"]'), 'the Bug form');
+    ok('the Bugs have a weighted list too, and no older rules', await p.evaluate(() => +document.querySelector('#arch-edit input[data-ae-w="Flying Bugs"]').value > 0 &&
+      !/older rules/i.test(document.querySelector('#arch-edit').innerText) && !document.querySelector('#arch-edit [data-ae="convert"]')));
     await p.selectOption('#arch-edit [data-ae="pick"]', 'redfront');
     await till(() => !!document.querySelector('#arch-edit [data-ae-tac="defend"]'), 'the Rebel form');
     ok('...and Rebels have their tactics in the form', true);

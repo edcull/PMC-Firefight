@@ -931,12 +931,11 @@ head('Six personalities to every army');
     }
   });
   ok('each new one founds a legal force of its own kind', bad.join(','), '');
-  // a signature unit nothing else on its list would bring in, bought once it can be
-  var sky = C.newCompany('S', { faction: 'bugs' }); C.foundRival(sky, 'velior', []);
-  sky.tier = 2; sky.kUC = 40; C.developRival(sky);
+  // what it is known for, weighted up, within a few turns of being able to
+  var grow5 = function (co) { co.tier = 2; co.kUC = 40; for (var g5 = 0; g5 < 5; g5++) { C.developRival(co); co.kUC += 20; } };
+  var sky = C.newCompany('S', { faction: 'bugs' }); C.foundRival(sky, 'velior', []); grow5(sky);
   ok('a sky swarm spawns its flyers', sky.roster.some(function (e) { return R.profile(e.key).group === 'Flying Bugs'; }), true);
-  var plague = C.newCompany('P', { faction: 'bugs' }); C.foundRival(plague, 'greyplague', []);
-  plague.tier = 2; plague.kUC = 40; C.developRival(plague);
+  var plague = C.newCompany('P', { faction: 'bugs' }); C.foundRival(plague, 'greyplague', []); grow5(plague);
   ok('...and the Grey Plague its Infected', plague.roster.some(function (e) { return e.key === 'binfected'; }), true);
 })();
 
@@ -996,7 +995,8 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
         if (R.checkArmy(ks, t, pl, null, null, f).ok) legal++;
         ks.forEach(function (k) {
           var p = R.profile(keyOf(k)); tot++;
-          if (a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || [].concat(a.t1 || [], a.t2 || []).indexOf(p.key) >= 0) own++;
+          var wE0 = a.weights[p.key] != null ? a.weights[p.key] : a.weights[p.group];
+          if ((wE0 && (Array.isArray(wE0) ? wE0[0] : wE0)) || p.command || p.leaderBug || [].concat(a.t1 || [], a.t2 || []).indexOf(p.key) >= 0) own++;
         });
       }
       ok(a.name + ': legal at every Tier and PL, and mostly its own kind', legal === n && styled === n && own / tot > 0.6, true,
@@ -1053,14 +1053,10 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
         var ks2 = R.rollArmy(t, pl2, null, f, a.id);
         ks2.forEach(function (k) {
           var p = R.profile(keyOf(k));
-          // (with a weighted list, its own is whatever it weighs above 0)
-          var wE = a.weights ? (a.weights[p.key] != null ? a.weights[p.key] : a.weights[p.group]) : null;
-          var own2 = a.weights ? !!(wE && (Array.isArray(wE) ? wE[0] : wE)) || p.command
-            : a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || [].concat(a.t1 || [], a.t2 || []).indexOf(p.key) >= 0 || p.command;
-          // a weighted list may take its own above the battle's Tier, at half weight: only an unweighted pick counts here
-          if (a.weights && !own2 && p.tier > t) { bigOdd++; return; }
-          if (a.weights) own2 = true;
-          if (!own2 && p.tier > t) bigOdd++;
+          // (its own is whatever it weighs above 0; it may take its own above the battle's Tier: only an unweighted pick counts here)
+          var wE = a.weights[p.key] != null ? a.weights[p.key] : a.weights[p.group];
+          var own2 = !!(wE && (Array.isArray(wE) ? wE[0] : wE)) || p.command || p.leaderBug;
+          if (!own2 && p.tier > t) { bigOdd++; return; }
           if (p.command && p.tier < t) lowCmd++;
           if (a.id === 'shock' && (p.group === 'Transport vehicles' || p.group === 'Engineering and utility vehicles')) shockVeh++;
           if (a.id === 'swarm' && p.group === 'Remote mortars' && pl2 === 1) mortars++;
@@ -1075,14 +1071,6 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
   ok('Shock rides to the fight: a transport or engineering vehicle in every force', shockVeh >= shockN, true, shockVeh + ' in ' + shockN);
   ok('Mercenaries take one mortar unit at most at PL1', mortars <= 3, true, mortars + ' in 3 forces');
   ok('Cavalry fields more hulls than Shock', cavH > shockH, true, cavH + ' vs ' + shockH);
-  // its second choices when its own run out: Shock's outside picks are mostly Protectors and Veterans
-  var shockA = C.archetypesFor('pmc').filter(function (x) { return x.id === 'shock'; })[0], outside = 0, second = 0;
-  for (var q = 0; q < 60; q++) R.rollArmy(2 + (q % 4), 3, null, 'pmc', 'shock').forEach(function (k) {
-    var p = R.profile(keyOf(k));
-    if (shockA.groups.indexOf(p.group) >= 0 || (shockA.units || []).indexOf(p.key) >= 0 || p.command || [].concat(shockA.t1, shockA.t2).indexOf(p.key) >= 0) return;
-    outside++; if (shockA.second.indexOf(p.group) >= 0) second++;
-  });
-  ok('Shock\'s picks from outside its kind are mostly its second choices', outside > 0 && second / outside > 0.7, true, second + ' of ' + outside);
   // a weighted shopping list (Bastion): its limits a Priority Level each, and nothing it weighs 0
   var bast = C.archetypesFor('pmc').filter(function (x) { return x.id === 'armour'; })[0], overLim = 0, zero = 0;
   function wOf(p) { var e = bast.weights[p.key] != null ? bast.weights[p.key] : bast.weights[p.group]; return e == null ? 0 : Array.isArray(e) ? e[0] : e; }

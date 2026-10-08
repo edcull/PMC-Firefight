@@ -31,17 +31,6 @@
     if (w === '' || w == null || isNaN(+w)) return null;
     return l === '' || l == null || isNaN(+l) ? +w : [+w, +l];
   }
-  /* A starting list for a personality still on the older rules (groups, mix, limits,
-     second choices): its groups weighted by its mix, its second choices and favoured
-     units now and then, its limits as limits a Priority Level. */
-  function fromOlder(u) {
-    var f = u.force || {}, w = {}, mix = f.mix || {}, lim = f.limit || {};
-    (f.groups || []).forEach(function (g) { w[g] = mix[g] ? Math.min(10, Math.round(mix[g] * 2) + 2) : 3; });
-    (f.second || []).forEach(function (g) { if (w[g] == null) w[g] = 1; });
-    (f.units || []).forEach(function (k) { w[k] = 4; });
-    Object.keys(lim).forEach(function (k) { var p = parts(w[k]); w[k] = lim[k] === 0 ? 0 : [p.w === '' ? 3 : p.w, Math.max(1, Math.round(lim[k] / 3))]; });
-    return w;
-  }
 
   // ---- reading and writing the draft by path ('campaign.found.t1') ----
   function getP(o, path) { return path.split('.').reduce(function (x, k) { return x == null ? undefined : x[k]; }, o); }
@@ -51,10 +40,9 @@
     if (v === undefined) delete o[last]; else o[last] = v;
   }
   /* Lists of units, kept as rows of one or more units: the founding Tier I units and
-     hulls (one each), the founding Tier II units (one, or two to pick between), the
-     the favoured units of the older rules. */
+     hulls (one each), the founding Tier II units (one, or two to pick between). */
   var ROWS = {
-    'campaign.found.t1': 'one', 'campaign.found.hulls': 'one', 'force.units': 'one',
+    'campaign.found.t1': 'one', 'campaign.found.hulls': 'one',
     'campaign.found.t2': 'pick'
   };
   function rowsOf(path) {
@@ -98,7 +86,7 @@
     if (kind === 'sel') return '<label>' + label + '<select class="tin"' + at + '>' + extra.map(function (o) { return '<option value="' + o[0] + '"' + (String(v || '') === String(o[0]) ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' + tip(help) + '</label>';
     return '<label>' + label + '<input class="tin" type="number"' + (extra || '') + at + ' value="' + (v == null ? '' : v) + '">' + tip(help) + '</label>';
   }
-  // ticks for a list of groups bound to a path (riders, the older rules' groups)
+  // ticks for a list of groups bound to a path (the groups that ride)
   function ticks(label, path, options, help) {
     var have = getP(draft(), path) || [];
     return '<div class="ae-ticks"><span>' + label + tip(help) + '</span>' + options.map(function (o) {
@@ -116,25 +104,12 @@
         (more === 'or' && r.length < 2 ? '<button type="button" class="lnk" data-ae="addm" data-path="' + path + '" data-r="' + i + '">+ or</button>' : '') + drop(i, 'Remove') + '</div>';
     }).join('') + '<div class="ae-row"><button type="button" class="lnk" data-ae="add" data-path="' + path + '">' + '+ Add' + '</button></div></div>';
   }
-  /* rows of { key: number } bound to a path (the older rules' mix and
-     limits); `keys` the choices for a key */
-  function mapRows(label, path, keys, hint) {
-    var m = getP(draft(), path) || {};
-    return '<div class="ae-rows"><span>' + label + tip(hint) + '</span>' + Object.keys(m).map(function (k) {
-      return '<div class="ae-row"><select class="tin" data-ae-mapk="' + path + '" data-k="' + esc(k) + '">' + keys.map(function (o) {
-        return '<option value="' + esc(o[0]) + '"' + (o[0] === k ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>' +
-        '<input class="tin ae-n" type="number" min="0" max="20" step="0.5" data-ae-mapv="' + path + '" data-k="' + esc(k) + '" value="' + m[k] + '">' +
-        '<button type="button" class="lnk acct-danger" data-ae="delk" data-path="' + path + '" data-k="' + esc(k) + '">Remove</button></div>';
-    }).join('') + '<button type="button" class="lnk" data-ae="addk" data-path="' + path + '">+ Add</button></div>';
-  }
-  function unitKeys() { return R().listFor(faction()).map(function (p) { return [p.key, p.name + ' (' + R().ROMAN[p.tier] + ')']; }); }
-  function groupKeys() { return groupsOf().map(function (g) { return [g, g]; }); }
 
   // the sections beyond the weighted list: everything else a personality has
   function moreHTML(u) {
     var f = u.force || {}, d = u.doctrines || {};
     var hullGroups = groupsOf(function (p) { return p.cls !== 'infantry'; });
-    var S = { older: '' };
+    var S = {};
     // its vehicles: how many, and who rides
     S.hulls = sec('hulls', 'Vehicle composition') + '<div class="ae-grid">' +
       // (one control for both ends: vehicles a Priority Level, at least and at most)
@@ -174,16 +149,6 @@
       field('Lean size (units)', 'campaign.leanSize', 'num', ' min="6" max="60" placeholder="24"', 'Only for a lean company. Blank: 24.') +
       field('Honours before its first promotion', 'campaign.honourFirst', 'bool', null,
         'Once it holds Rapid Training Methods (S6), each unit takes one honour before its first promotion.') + '</div></div>';
-    // the older rules, for a personality with no weighted list yet
-    if (!f.weights) {
-      S.older = sec('older', 'Older rules (until it has a weighted list)', 'Older rules') +
-        '<small class="ae-dim">Used only until it has a weighted list (above), which replaces all of these.</small>' +
-        ticks('Its own groups', 'force.groups', groupsOf(), 'What it is made of: most of its units come from these.') +
-        ticks('Second choices', 'force.second', groupsOf(), 'Taken when its own groups have nothing that fits.') +
-        unitRows('Favoured units from other groups', 'force.units', null, null, 'Single units it takes as if they were one of its own groups.') +
-        mapRows('Mix (its groups’ shares)', 'force.mix', groupKeys(), 'The share of each of its groups, by weight compared with the others; a campaign company also promotes to keep this mix.') +
-        mapRows('Limits', 'force.limit', groupKeys().concat(unitKeys()), 'The most of a unit or group it holds (0: none at all).') + '</div>';
-    }
     return S;
   }
   // a section of the form: a card with its heading, named in the side list
@@ -242,8 +207,8 @@
     // the weighted list
     var w = f.weights || null;
     h += sec('weights', 'Weighted list');
-    if (!w) h += '<p class="ae-dim">This one still rolls by its groups and mix (the older rules). <button type="button" class="lnk" data-ae="convert">Start a weighted list from them</button></p>';
-    else {
+    w = w || {};
+    {
       var groups = {};
       list.forEach(function (p) { (groups[p.group] = groups[p.group] || []).push(p); });
       h += '<table class="ae-w"><tr><th></th><th>Weight</th><th>Limit</th></tr>' + Object.keys(groups).map(function (g) {
@@ -257,7 +222,7 @@
     }
     h += '</div>';
     // in the order an admin thinks of it: what it fields, then how it fights, then its campaign
-    h += more.hulls + docs + more.stages + more.camp + more.older;
+    h += more.hulls + docs + more.stages + more.camp;
     // preview
     h += sec('preview', 'Preview') + '<small class="ae-dim">Rolls forces with the edits in force, as they stand in the form, without saving them.</small>' +
       '<div class="ae-prev"><label>Tier <select class="tin" data-ae-p="t">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (n === state.pt ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label>' +
@@ -305,7 +270,7 @@
     var ids = function (s) { return (s || '').split(/[\s,]+/).map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean); };
     var sl = ids(val('shortlist'));
     if (sl.length) u.doctrines.shortlist = sl;
-    if (u.force.weights) {
+    {
       var w = {}, lims = {};
       Array.prototype.forEach.call(host.querySelectorAll('[data-ae-l]'), function (e) { lims[e.getAttribute('data-ae-l')] = e.value; });
       Array.prototype.forEach.call(host.querySelectorAll('[data-ae-w]'), function (e) {
@@ -438,9 +403,8 @@
     state.fault = ''; state.note = '';
     if (a === 'close') { close(); return; }
     if (a === 'goto') { goTo(b.getAttribute('data-k')); return; }
-    if (['add', 'del', 'addm', 'delm', 'addk', 'delk', 'addstage', 'delstage', 'addfat', 'delfat'].indexOf(a) >= 0) { rowAction(a, b); return; }
-    if (a === 'convert') { try { readForm(); } catch (e) { state.fault = e.message; draw(); return; } draft().force.weights = fromOlder(draft()); state.note = 'A starting list from its groups and mix: tune it, preview, then save.'; draw(); }
-    else if (a === 'preview') { try { preview(); } catch (e) { state.fault = e.message; } draw(); goTo('ae-s-preview'); }
+    if (['add', 'del', 'addm', 'delm', 'addstage', 'delstage', 'addfat', 'delfat'].indexOf(a) >= 0) { rowAction(a, b); return; }
+    if (a === 'preview') { try { preview(); } catch (e) { state.fault = e.message; } draw(); goTo('ae-s-preview'); }
     else if (a === 'revert') { state.draft = null; state.preview = null; draw(); }
     else if (a === 'save') {
       var u;
@@ -484,17 +448,6 @@
       if (rows[r]) { rows[r][m] = t.value; putRows(rp, rows); }
       return true;
     }
-    var mk = t.getAttribute('data-ae-mapk'), mv = t.getAttribute('data-ae-mapv');
-    if (mk || mv) {
-      var mp = mk || mv, old = t.getAttribute('data-k'), map = clone(getP(u, mp) || {}), out = {};
-      Object.keys(map).forEach(function (k) {
-        if (k !== old) { out[k] = map[k]; return; }
-        if (mk) out[t.value] = map[k]; else out[k] = t.value === '' ? 0 : +t.value;
-      });
-      setP(u, mp, Object.keys(out).length ? out : undefined);
-      if (mk) draw();                      // the row's key changed: its controls are named by it
-      return true;
-    }
     if (t.hasAttribute('data-ae-stage')) {
       u.doctrines = u.doctrines || {};
       var st = clone(u.doctrines.stages || []), i = +t.getAttribute('data-ae-stage');
@@ -523,13 +476,6 @@
     else if (a === 'del') { var rd = rowsOf(path); rd.splice(r, 1); putRows(path, rd); }
     else if (a === 'addm') { var ra = rowsOf(path); if (ra[r]) ra[r].push(''); putRowsKeep(path, ra); }
     else if (a === 'delm') { var rm = rowsOf(path); if (rm[r]) rm[r].splice(m, 1); putRows(path, rm); }
-    else if (a === 'addk') {
-      var map = clone(getP(u, path) || {});
-      var choices = path === 'force.mix' ? groupKeys() : groupKeys().concat(unitKeys());
-      var free = choices.filter(function (o) { return !(o[0] in map); })[0];
-      if (free) { map[free[0]] = 1; setP(u, path, map); }
-    }
-    else if (a === 'delk') { var mp = clone(getP(u, path) || {}); delete mp[k]; setP(u, path, Object.keys(mp).length ? mp : undefined); }
     else if (a === 'addstage') { u.doctrines = u.doctrines || {}; u.doctrines.stages = (u.doctrines.stages || []).concat([[]]); }
     else if (a === 'delstage') { var st = (u.doctrines.stages || []).slice(); st.splice(r, 1); if (st.length) u.doctrines.stages = st; else delete u.doctrines.stages; }
     else if (a === 'addfat') {

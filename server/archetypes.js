@@ -54,15 +54,11 @@ function check(id, u) {
   // ---- the Advanced fields ----
   const isKey = (k) => keys.has(k), isGroup = (g) => groups.has(g), bool = (v) => v == null || typeof v === 'boolean';
   const keyList = (v, nested) => v == null || (Array.isArray(v) && v.every((k) => (nested && Array.isArray(k)) ? k.every(isKey) : isKey(k)));
-  const numMap = (v, ok, hi) => v == null || (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).every((k) => ok(k) && num(v[k], 0, hi)));
   if (u.blurb != null && (typeof u.blurb !== 'string' || u.blurb.length > 300)) return 'the blurb is up to 300 characters';
   if (doc.fixedAt != null && (typeof doc.fixedAt !== 'object' || Object.keys(doc.fixedAt).some((t) => !/^[1-5]$/.test(t) || !C.doctrine(doc.fixedAt[t])))) return 'doctrines.fixedAt is { Tier: doctrine }';
   if (doc.stages != null && (!Array.isArray(doc.stages) || doc.stages.some((st) => !Array.isArray(st) || st.some((d) => !C.doctrine(d))))) return 'doctrines.stages is a list of lists of doctrines';
   if (!bool(doc.random)) return 'doctrines.random is true or false';
-  if (!keyList(force.units)) return 'force.units names a unit this army does not have';
-  for (const k of ['groups', 'second', 'riders']) if (force[k] != null && (!Array.isArray(force[k]) || !force[k].every(isGroup))) return 'force.' + k + ' names a group this army does not have';
-  if (!numMap(force.mix, isGroup, 10)) return 'force.mix is { group: weight 0-10 }';
-  if (!numMap(force.limit, (k) => isKey(k) || isGroup(k), 20)) return 'force.limit is { unit or group: 0-20 }';
+  for (const k of ['riders']) if (force[k] != null && (!Array.isArray(force[k]) || !force[k].every(isGroup))) return 'force.' + k + ' names a group this army does not have';
   if (!bool(force.machineMinded)) return 'force.machineMinded is true or false';
   if (force.machinesMax != null && !num(force.machinesMax, 0, 9)) return 'force.machinesMax is 0-9';
   const camp = u.campaign || {}, found = camp.found || {};
