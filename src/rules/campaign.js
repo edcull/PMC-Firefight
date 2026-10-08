@@ -1388,7 +1388,7 @@
      archetypes, so one policy engine runs both. */
   var REBEL_ARCHETYPES = [
     {
-      id: 'redfront', name: 'Red Revolutionary Front', faction: 'rebel',
+      id: 'redfront', name: 'Revolutionaries', faction: 'rebel',
       blurb: 'Two centuries underground, and organised down to the last cell.',
       names: ['Red Revolutionary Front', 'The Combine Committee', 'Ninth of Marzen', 'Union Irregulars'],
       // the standard revolt: a core of Freedom Warriors, with support guns, artillery and vehicles around it
@@ -1413,7 +1413,7 @@
       spend: 'promote'
     },
     {
-      id: 'freespace', name: 'Free Space Freedom Fighters', faction: 'rebel',
+      id: 'freespace', name: 'Pirates', faction: 'rebel',
       temper: 1, // the behaviour roll in battle (p. 147): raiders, always on the move
       blurb: 'Pirates with a manifesto. Fast in, loaded up, gone.',
       names: ['Free Space Freedom Fighters', 'The Long Haul', 'Kestrel Run', 'Salvage Rights'],
@@ -1444,7 +1444,7 @@
       spend: 'promote'
     },
     {
-      id: 'faithful', name: 'The Faithful', faction: 'rebel',
+      id: 'faithful', name: 'Faithful', faction: 'rebel',
       temper: 1, // the behaviour roll in battle (p. 147): zealots
       blurb: 'They are not fighting for the colony. They are fighting for what comes after it.',
       names: ['The New Chosen', 'Pilgrims of the Seventh Gate', 'The Ashfall Congregation', 'Sons of the Furnace'],
@@ -1471,7 +1471,7 @@
       spend: 'promote'
     },
     {
-      id: 'pitheads', name: 'The Pitheads', faction: 'rebel',
+      id: 'pitheads', name: 'Miners', faction: 'rebel',
       blurb: 'Miners who worked out that a cutting charge does the same job above ground.',
       names: ['The Pitheads', 'Shaft Fourteen', 'The Deep Seam Council', 'Hollowmen'],
       // heavy on Miners and on improvised combat vehicles
@@ -1496,7 +1496,7 @@
       spend: 'promote'
     },
     {
-      id: 'partisans', name: 'The Partisans', faction: 'rebel',
+      id: 'partisans', name: 'Partisans', faction: 'rebel',
       temper: -1, // the behaviour roll in battle (p. 147): strike from hiding
       blurb: 'Out of the tunnels, into the dark, and never where you left them.',
       names: ['The Partisans', 'Night Wire', 'The Quiet Column', 'Cell Sixteen'],
@@ -1524,7 +1524,7 @@
       spend: 'promote'
     },
     {
-      id: 'turncoats', name: 'The Turncoat Battalion', faction: 'rebel',
+      id: 'turncoats', name: 'Turncoats', faction: 'rebel',
       blurb: 'A garrison that changed sides, and kept its rifles, its drill and its grudges.',
       names: ['The Turncoat Battalion', 'The 41st Reborn', 'Garrison Free Corps', 'The Broken Oath'],
       // the standard revolt with Deserters in place of its first-rung Freedom Warriors, more aircraft,
@@ -1556,7 +1556,7 @@
   /* Swarms a campaign may meet, from the book's own write-ups (pp. 125-127). */
   var BUG_ARCHETYPES = [
     {
-      id: 'ivenbea', name: 'Swarm of Ivenbea', faction: 'bugs',
+      id: 'ivenbea', name: 'Predators', faction: 'bugs',
       blurb: 'Mantis-like apex predators of the Ivenbean swamps: few, huge, and very close.',
       names: ['Swarm of Ivenbea', 'The Swamp Mantids', 'Ivenbean Brood'],
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
@@ -1567,7 +1567,7 @@
       spend: 'promote'
     },
     {
-      id: 'evatus', name: 'Mound swarms of Evatus II', faction: 'bugs',
+      id: 'evatus', name: 'Horde', faction: 'bugs',
       blurb: 'One of ten thousand mound swarms on a dead world, and never short of bodies.',
       names: ['Mound Swarm of Evatus II', 'The Evatus Mound', 'Red Mound Swarm'],
       t1: ['btiny', 'btiny', 'bspitlarva'], t2: ['bsmall', 'bimmspit'],
@@ -1578,7 +1578,7 @@
       spend: 'recruit'
     },
     {
-      id: 'terarson', name: 'Swarm of Terarson', faction: 'bugs',
+      id: 'terarson', name: 'Thinkers', faction: 'bugs',
       blurb: 'Something taught these bugs to think. They build cities now.',
       names: ['Swarm of Terarson', 'The Terarson Hive', 'GN-786 Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bimmspit', 'bsmallpath'],
@@ -1589,7 +1589,7 @@
       spend: 'honours'
     },
     {
-      id: 'hydra', name: 'Swarms of the Hydra Belt', faction: 'bugs',
+      id: 'hydra', name: 'Burrowers', faction: 'bugs',
       blurb: 'Mining bio-robots gone wild, tunnelling through asteroid after asteroid.',
       names: ['Hydra Belt Swarm', 'The Uranium Diggers', 'Asteroid Swarm 7'],
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
@@ -1600,7 +1600,7 @@
       spend: 'promote'
     },
     {
-      id: 'greyplague', name: 'The Grey Plague', faction: 'bugs',
+      id: 'greyplague', name: 'Plague', faction: 'bugs',
       blurb: 'It ate a colony, and now the colonists march in its front rank.',
       names: ['The Grey Plague', 'The Harrow Infestation', 'Colony Nine Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bsmall', 'bimmspit'],
@@ -1612,7 +1612,7 @@
       spend: 'recruit'
     },
     {
-      id: 'velior', name: 'Skyswarm of Velior', faction: 'bugs',
+      id: 'velior', name: 'Skyswarm', faction: 'bugs',
       blurb: 'Nests in the cliffs of Velior, and comes down out of the sun.',
       names: ['Skyswarm of Velior', 'The Cliff Nest', 'Sunfall Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bimmspit'],
@@ -1626,7 +1626,7 @@
   /* Tribes a campaign may meet, from the book's own write-ups (pp. 144-145). */
   var XENO_ARCHETYPES = [
     {
-      id: 'mithdu', name: 'Mithdu-2 tribe', faction: 'xeno',
+      id: 'mithdu', name: 'Tunnellers', faction: 'xeno',
       blurb: 'The first tribe found, and slow to grow — but it has tunnels under everything.',
       names: ['Mithdu-2 Tribe', 'The Klechtu Burrows', 'Mithdu Deepholds'],
       t1: ['xeps1', 'xdelta1'], t2: ['xeps2', 'xbeta2'],
@@ -1637,7 +1637,7 @@
       spend: 'promote'
     },
     {
-      id: 'amt', name: 'Amt tribe', faction: 'xeno',
+      id: 'amt', name: 'Architects', faction: 'xeno',
       blurb: 'Rules a whole planet from its towers, and fights the way it builds: precisely.',
       names: ['The Amt', 'Amt Tower-tribe', 'The Sigma-Pi Tribe'],
       t1: ['xeps1', 'xdelta1'], t2: ['xbeta2', 'xeps2'],
@@ -1647,7 +1647,7 @@
       spend: 'honours'
     },
     {
-      id: 'hashamer', name: 'Hashamer I tribe', faction: 'xeno',
+      id: 'hashamer', name: 'Mimics', faction: 'xeno',
       blurb: 'Nine million Esh-Aven and not a Crock among them — copying their masters\' war as best they can.',
       names: ['Hashamer I Tribe', 'The Hashamer Esh-Aven', 'The Arid Host'],
       t1: ['xeps1', 'xeps1', 'xdelta1'], t2: ['xeps2', 'xdelta2'],
@@ -1658,7 +1658,7 @@
       spend: 'recruit'
     },
     {
-      id: 'ghadon', name: 'Ghadon II 3rd tribe', faction: 'xeno',
+      id: 'ghadon', name: 'Furies', faction: 'xeno',
       blurb: 'Came to a world already overrun, and fought humans, bugs and other tribes with equal fury.',
       names: ['Ghadon II 3rd Tribe', 'The Third of Ghadon', 'The Expansion'],
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xeps2'],
@@ -1669,7 +1669,7 @@
       spend: 'promote'
     },
     {
-      id: 'ulvar', name: 'Ulvar fortress tribe', faction: 'xeno',
+      id: 'ulvar', name: 'Fortress', faction: 'xeno',
       blurb: 'Never leaves its walls without taking the walls along: shields, guns and patience.',
       names: ['Ulvar Fortress Tribe', 'The Shieldwall of Ulvar', 'The Bastion Host'],
       t1: ['xdelta1', 'xeps1'], t2: ['xbeta2', 'xdelta2'],
@@ -1680,7 +1680,7 @@
       spend: 'honours'
     },
     {
-      id: 'shkar', name: 'Sh\'kar raiders', faction: 'xeno',
+      id: 'shkar', name: 'Raiders', faction: 'xeno',
       blurb: 'A raiding tribe that steps out of the air behind you, takes what it came for, and steps back.',
       names: ['The Sh\'kar Raiders', 'The Blink Host', 'Shadow of Sh\'kar'],
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xbeta2'],
