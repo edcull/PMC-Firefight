@@ -139,6 +139,19 @@ async function fireAndWatch(p, code, ms) {
     mortar.firstImpact > tank.firstImpact,
     tank.firstImpact + 'ms against ' + mortar.firstImpact + 'ms');
 
+  head('Riders throw Molotovs (Incendiary Ammunition)');
+  await stage(p, ['rridergang']);
+  await p.evaluate(() => {                         // a rider's reach is 12": the target comes in to 8"
+    window.PMC_STATE().units.filter(u => u.side === 'B').forEach((t, i) => { t.x = 18; t.y = 16 + i * 3; });
+    window.__rebuildScene();
+  });
+  const riders = await fireAndWatch(p, 'RDG', 3200);
+  ok('a rider gang fires its carbines with Molotovs alongside', riders.ok !== false &&
+    await p.evaluate(() => window.PMC.weaponSpec(window.PMC.profile('rridergang')).s === 'molotov'), riders.why || riders.name);
+  ok('...the bottles drawn tumbling through the air, alight',
+    !!riders.seen.molotov, Object.keys(riders.seen).join(' '));
+  ok('...and bursting into fire where they land', !!riders.seen.firesplash, Object.keys(riders.seen).join(' '));
+
   /* Three tubes walk their rounds apart, and each goes up where it comes down:
      three bursts in three places, not three on the one spot. */
   head('A mortar battery lands each round where it falls');

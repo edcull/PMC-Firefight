@@ -126,8 +126,8 @@ is('rheavyac', 'chain+shellbig');
 // the guard have carbines through the ranks as well as rifles
 is('rguard', 'small+smg');
 // so do the hellriders, across the saddle, and they ride in throwing
-is('rhellriders', 'smg+arc');
-is('rlegendary', 'chain+arc');
+is('rhellriders', 'smg+molotov');
+is('rlegendary', 'chain+molotov');
 is('rlflak', 'burst');
 is('rmflak', 'burst+burst');
 // every heavy infantry unit, whatever its Tier
@@ -194,8 +194,8 @@ all(['racolytes', 'rfanatics'], 'smg');
 is('rpow', 'smg');
 // the partisan commandos work in pairs: a carbine and a rifle
 all(['rassaultcdo', 'rsabcdo'], 'small+smg');
-// the rider gangs come past with a carbine in one hand and charges in the other
-all(['rridergang', 'rriderwar'], 'smg+arc');
+// the rider gangs come past with a carbine in one hand and Molotovs in the other (Incendiary Ammunition)
+all(['rridergang', 'rriderwar'], 'smg+molotov');
 
 head('And a rifle is still a rifle');
 all(['recruits', 'rookie', 'regular'], 'small');
@@ -226,7 +226,7 @@ all(['insertplat', 'rlifter'], 'none');
 head('Nothing falls through');
 var kinds = {};
 var bad = [];
-var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','orbbig','plasmabolt','none'];
+var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','orbbig','plasmabolt','molotov','none'];
 R.CATALOGUE.forEach(function (p) {
   var w = R.weaponSpec(p);
   if (KNOWN.indexOf(w.p) < 0) bad.push(p.name + ' \u2192 ' + w.p);

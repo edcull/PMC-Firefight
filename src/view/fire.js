@@ -241,6 +241,33 @@
       return null;
     }
 
+    /* Molotov cocktails: `count` bottles thrown from men through the squad, each
+       tumbling end over end along a high lob with its rag alight, and bursting
+       into a fiery splash where it lands — glass, a fireball, the fuel burning
+       on. `land` (the primary's) is told as the last one breaks. */
+    function playMolotovs(shooter, from, to, count, land) {
+      var n = count || 1, gap = 210;
+      var fl = Math.round(560 + Math.min(420, R.unitDist(shooter, { x: to.x, y: to.y }) * 18));
+      for (var q = 0; q < n; q++) {
+        (function (j) {
+          setTimeout(function () {
+            if (!alive()) return;
+            var aim = n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.3, y: to.y + (j % 2 ? 0.8 : -0.8), up: to.up } : to;
+            if (SFX) SFX.launch();
+            add({ kind: 'molotov', from: spread(from, j, n), to: aim, seed: j, dur: fl, blocking: true });
+            setTimeout(function () {
+              if (!alive()) return;
+              add({ kind: 'firesplash', x: aim.x, y: aim.y, up: aim.up, seed: j, dur: 1500, blocking: true });
+              if (SFX) { SFX.splat(); SFX.flamepuff(0.05); }
+              if (land && j === n - 1) land(2, aim);
+            }, fl);
+            redraw();
+          }, j * gap);
+        })(q);
+      }
+      return fl + (n - 1) * gap + 900;
+    }
+
     /* The primary weapon, played out. `o` carries the hits it scored, the range
        (how long anything lobbed is in the air), and `land(extra)`, called as
        the rounds arrive. Returns how long it takes, in ms, before any
@@ -252,6 +279,11 @@
           // nothing in hand: what it throws (the secondary) is the attack, and lands its hits
           if (spec.s) { setTimeout(function () { land(3); }, 150 + 520 + ((spec.sn || 1) - 1) * 170); return 120; }
           return 120;
+
+        // Molotov cocktails, thrown: tumbling, alight, bursting into fire
+        case 'molotov': {
+          return playMolotovs(shooter, from, to, spec.n, land);
+        }
 
         // Xenotripod small arms: pulses of the army's own light
         case 'energy': {
@@ -473,6 +505,7 @@
           }
           return;
         }
+        case 'molotov': playMolotovs(shooter, from, to, count, null); return;
         case 'arc': case 'arcbig': {
           /* Thrown charges: a short, high lob with a puff where it lands, and
              `count` of them — assault troops go in with a grenade in each hand. */

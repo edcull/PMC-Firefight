@@ -667,6 +667,104 @@
           I.ellipse(g, sp0.x + (sm2 - 1.5) * I.PIXEL * 3, sp0.y - k * I.K * (0.5 + sm2 * 0.15),
             I.PIXEL * 2, I.PIXEL * 1.4, 'rgba(190,220,150,' + (0.3 - k * 0.3) + ')');
         }
+      } else if (f.kind === 'molotov') {
+        /* A Molotov cocktail, thrown: a bottle tumbling end over end along a high
+           lob, its rag alight and leaving a thread of flame and smoke behind it. */
+        var ma0 = start(f, I.K * 0.7), mb0 = I.toScreen(f.to.x, f.to.y);
+        mb0.y -= liftB(f) + I.K * 0.15;
+        var mspan = Math.hypot(mb0.x - ma0.x, mb0.y - ma0.y);
+        var mapex = Math.max(I.K * 1.4, Math.min(I.K * 3.6, mspan * 0.32));
+        var mat = function (s2) {
+          return { x: ma0.x + (mb0.x - ma0.x) * s2, y: ma0.y + (mb0.y - ma0.y) * s2 - Math.sin(Math.PI * s2) * mapex };
+        };
+        var mp0 = mat(k);
+        // the burning rag's trail: flame close behind, thinning to smoke
+        for (var mt = 1; mt < 10; mt++) {
+          var mts = k - mt * 0.035;
+          if (mts <= 0) break;
+          var mq = mat(mts), mfade = 1 - mt / 10;
+          I.ellipse(g, mq.x, mq.y - mt * 0.5, I.PIXEL * (0.8 + mt * 0.28), I.PIXEL * (0.7 + mt * 0.24),
+            mt < 4 ? 'rgba(255,' + (190 - mt * 30) + ',70,' + (0.75 * mfade) + ')' : 'rgba(120,110,100,' + (0.35 * mfade) + ')');
+        }
+        // its shadow on the ground under it
+        var mg = { x: ma0.x + (mb0.x - ma0.x) * k, y: ma0.y + (mb0.y - ma0.y) * k + I.K * 0.5 };
+        I.ellipse(g, mg.x, mg.y, I.PIXEL * 2.2, I.PIXEL * 1, 'rgba(10,9,7,.22)');
+        // the bottle, turning over as it flies (each one its own way round)
+        var spin = (f.seed % 2 ? -1 : 1) * (k * Math.PI * 2 * 2.2 + (f.seed || 0) * 1.3);
+        g.save();
+        g.translate(mp0.x, mp0.y);
+        g.rotate(spin);
+        var P = I.PIXEL;
+        g.fillStyle = '#1d140c';                                   // its outline
+        g.fillRect(-P * 2.2, -P * 4.6, P * 4.4, P * 7.4);
+        g.fillStyle = 'rgba(96,128,60,.95)';                       // green glass, the fuel in it
+        g.fillRect(-P * 1.6, -P * 1.2, P * 3.2, P * 3.6);
+        g.fillStyle = 'rgba(214,150,52,.9)';
+        g.fillRect(-P * 1.6, P * 0.6, P * 3.2, P * 1.8);
+        g.fillStyle = 'rgba(200,236,170,.7)';                      // a glint down its side
+        g.fillRect(-P * 1.2, -P * 0.8, P * 0.6, P * 2.4);
+        g.fillStyle = 'rgba(80,110,52,1)';                         // the neck
+        g.fillRect(-P * 0.7, -P * 3.4, P * 1.4, P * 2.4);
+        g.fillStyle = '#e8dcc0';                                   // the rag stuffed in it
+        g.fillRect(-P * 0.9, -P * 4.4, P * 1.8, P * 1.2);
+        g.restore();
+        // and the rag alight at the neck's end, flickering
+        var nk = { x: mp0.x + Math.sin(spin) * P * 4, y: mp0.y - Math.cos(spin) * P * 4 };
+        var flick = 0.75 + 0.25 * Math.sin(t * 0.05 + (f.seed || 0));
+        I.ellipse(g, nk.x, nk.y - P, P * 2.6 * flick, P * 3 * flick, 'rgba(255,140,40,.75)');
+        I.ellipse(g, nk.x, nk.y - P * 0.6, P * 1.4 * flick, P * 1.8 * flick, 'rgba(255,236,150,.95)');
+      } else if (f.kind === 'firesplash') {
+        /* Where a Molotov lands: the bottle bursts in a flash, glass flies, a
+           fireball rolls up off the ground and the spilled fuel burns on, then
+           smokes out. */
+        var fs0 = I.toScreen(f.x, f.y); fs0.y -= liftAt(f);
+        var fr = I.K * (f.big ? 1.3 : 1);
+        var seed = (f.seed || 0) * 1.7 + f.t0 * 0.001;
+        // the flash as it breaks
+        if (k < 0.18) {
+          var fk = k / 0.18;
+          I.ellipse(g, fs0.x, fs0.y - fr * 0.3, fr * (0.4 + fk * 0.9), fr * (0.3 + fk * 0.6), 'rgba(255,244,200,' + (0.95 * (1 - fk)) + ')');
+        }
+        // glass thrown out, glinting
+        if (k < 0.5) {
+          for (var gs = 0; gs < 9; gs++) {
+            var ga2 = gs * 0.7 + seed, gd = (k / 0.5) * fr * (0.6 + (gs % 3) * 0.25);
+            I.rect(g, fs0.x + Math.cos(ga2) * gd, fs0.y + Math.sin(ga2) * gd * 0.5 - Math.sin((k / 0.5) * Math.PI) * fr * 0.5,
+              I.PIXEL, I.PIXEL, 'rgba(210,240,200,' + (1 - k / 0.5) + ')');
+          }
+        }
+        // the spilled fuel burning on the ground: a pool of licking flames that dies down
+        var burn = k < 0.1 ? k / 0.1 : Math.max(0, 1 - (k - 0.55) / 0.45);
+        I.ellipse(g, fs0.x, fs0.y, fr * 0.95, fr * 0.45, 'rgba(70,30,10,' + (0.35 * Math.min(1, k * 4)) + ')');
+        for (var fl2 = 0; fl2 < 16; fl2++) {
+          var fa3 = fl2 * 0.83 + seed, fd = fr * (0.12 + (fl2 % 5) * 0.17);
+          var lk = Math.abs(Math.sin(t * 0.018 + fl2 * 1.7));
+          var fh = (1.6 + lk * 3.4) * burn;
+          var fx3 = fs0.x + Math.cos(fa3) * fd, fy3 = fs0.y + Math.sin(fa3) * fd * 0.5;
+          I.ellipse(g, fx3, fy3 - fh * 0.5 * I.PIXEL, I.PIXEL * 1.5 * burn, I.PIXEL * fh * 0.7,
+            'rgba(230,' + (90 + Math.round(lk * 60)) + ',30,' + (0.8 * burn) + ')');
+          I.ellipse(g, fx3, fy3 - fh * 0.3 * I.PIXEL, I.PIXEL * 0.8 * burn, I.PIXEL * fh * 0.35,
+            'rgba(255,226,140,' + (0.9 * burn) + ')');
+        }
+        // the fireball rolling up off it, darkening to smoke as it climbs
+        if (k < 0.75) {
+          var bk = k / 0.75;
+          for (var fb2 = 0; fb2 < 6; fb2++) {
+            var bx = fs0.x + Math.sin(fb2 * 2.1 + seed) * fr * 0.35 * (0.4 + bk);
+            var by = fs0.y - fr * (0.2 + bk * (1.1 + (fb2 % 3) * 0.25));
+            var bs = fr * (0.22 + bk * 0.35) * (0.8 + (fb2 % 2) * 0.3);
+            var hot = Math.max(0, 1 - bk * 1.6);
+            I.ellipse(g, bx, by, bs, bs * 0.85, hot > 0.2
+              ? 'rgba(255,' + Math.round(120 + hot * 100) + ',' + Math.round(40 + hot * 60) + ',' + (0.8 * (1 - bk)) + ')'
+              : 'rgba(80,66,58,' + (0.5 * (1 - bk)) + ')');
+          }
+        }
+        // sparks and embers lifting off
+        for (var em = 0; em < 8; em++) {
+          var ek = (k * 1.3 + em * 0.11) % 1;
+          I.rect(g, fs0.x + Math.sin(em * 2.7 + seed) * fr * 0.6 + Math.sin(ek * 6 + em) * 2,
+            fs0.y - ek * fr * 1.8, I.PIXEL, I.PIXEL, 'rgba(255,' + (150 + em * 10) + ',60,' + ((1 - ek) * burn) + ')');
+        }
       } else if (f.kind === 'wave') {
         /* Psychic Wave: rings rolling out 12" across the table, violet. */
         var wp = I.toScreen(f.x, f.y); wp.y -= liftAt(f) + I.K * 0.5;

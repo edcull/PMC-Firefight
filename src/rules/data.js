@@ -338,6 +338,9 @@
                (the advanced support vehicle's energy howitzer)
        plasmabolt a big blue bolt of plasma, flat and fast, landing in the same
                splash of blue fire (the heavy engineering vehicle's breaching gun)
+       molotov a bottle of fuel with a burning rag, thrown: it tumbles end over
+               end and bursts into fire where it lands (the riders' Incendiary
+               Ammunition)
        none    it has no gun at all
 
      And three more a unit may carry, each with a default for when it does not:
@@ -455,8 +458,9 @@
     /* Mounted Warriors ride in throwing: a carbine in one hand and a pair of
        charges in the other, and the hellriders with something heavier across
        the saddle. */
-    rridergang: { p: 'smg', s: 'arc', sn: 2 }, rriderwar: { p: 'smg', s: 'arc', sn: 2 },
-    rhellriders: { p: 'smg', s: 'arc', sn: 2 }, rlegendary: { p: 'chain', s: 'arc', sn: 2 },
+    // riders throw Molotovs from the saddle (Incendiary Ammunition), alongside their guns
+    rridergang: { p: 'smg', s: 'molotov', sn: 2 }, rriderwar: { p: 'smg', s: 'molotov', sn: 2 },
+    rhellriders: { p: 'smg', s: 'molotov', sn: 2 }, rlegendary: { p: 'chain', s: 'molotov', sn: 2 },
     rlmg: { p: 'burst' }, rautocannon: { p: 'chain' },
     rat: { p: 'shell' },
     // the insurgents' AA weapons are old shoulder guns: they fire a shell, not a guided missile
@@ -545,7 +549,7 @@
      keeps an admin's changes to this table (server/app.js weaponsApi) */
   var WEAPON_FIELDS = {
     styles: ['small', 'pistol', 'smg', 'burst', 'chain', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket',
-      'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'orbbig', 'plasmabolt', 'none'],
+      'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'orbbig', 'plasmabolt', 'molotov', 'none'],
     launch: ['sam', 'samturret'],
     glow: ['blue', 'green', 'red', 'violet', 'amber', 'white', 'none'],
     orb: ['tele', 'lob'],
