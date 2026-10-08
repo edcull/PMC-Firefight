@@ -1233,7 +1233,7 @@
       id: 'elite', name: 'Elite',
       blurb: 'Few units, all of them expensive, all of them good.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Few, expensive, good. About 10-11 units at T3 PL2, no hulls at all. Heavy infantry, veteran rifle teams and assault troops, many a Tier above the battle\'s, hardly anything below it. Red flags: any vehicle, Recruits or Irregulars more than once, 13+ units.',
+      notes: 'Few, expensive, good. About 11 units at T3 PL2, no hulls at all, led by a commander a Tier above the battle\'s: veteran and ranger rifle teams, assault engineers, shock troopers and commandos, some battle armour, many a Tier above the battle\'s. Red flags: any vehicle, Recruits or Irregulars more than once, 13+ units.',
       names: ['Vantage Solutions', 'The Ashen Line', 'Praetor Associates', 'Halcyon Executive'],
       t1: ['enforcers', 'recruits'],
       t2: ['rookie', 'ecobats'],
@@ -1246,13 +1246,11 @@
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 1,                      // fewer, better: reaches for the Tier above
       hulls: { min: 0, max: 0 },    // no hulls at all
+      commandTier: 1,
       weights: {
-        'Heavy infantry': 6, protectors: 8, protectorshm: 8,
-        'Rifle infantry': 5, rookie: 2, veterans: 7, rangers: 8,
-        'Assault troops': 4, lighteng: 2, shock: 6, commandos: 7,
-        'Light infantry': [2, 1], snipers: [3, 1],
-        gausscannon: [3, 1], hmgteam: 2, missile: 2, medics: [1, 1],
-        enforcers: 3, recruits: 2
+        recruits: 3, enforcers: 2, 'Rifle infantry': 5, rookie: 2, veterans: 7, rangers: 8,
+        'Assault troops': 4, lighteng: 2, shock: 6, commandos: 7, 'Heavy infantry': 3, ecobats: 1,
+        'Light infantry': [2, 1], snipers: [3, 1], missile: 2, medics: [1, 1]
       },
       spend: 'promote'
     },
@@ -1274,11 +1272,10 @@
       tier: -1,                     // numbers: fills up on the Tier below
       hulls: { min: 0, max: 1 },    // a truck now and then
       weights: {
-        'Basic troops': 5, enforcers: 0, penal: [3, 1],
-        'Rifle infantry': 6, 'Light support': 5, 'Remote mortars': [3, 1],
-        'Heavy support': [3, 2], sam: [1, 1],
-        'Assault troops': [2, 1], 'Light infantry': [1, 1], nomads: [2, 1],
-        'Transport vehicles': [2, 1], unarmoured: 3, insertplat: 0
+        'Basic troops': 5, enforcers: 0, penal: [3, 1], 'Rifle infantry': 6, 'Assault troops': [2, 1],
+        'Light infantry': [1, 1], 'Light support': 5, 'Heavy support': [3, 2], sam: [1, 1],
+        'Remote mortars': [3, 1], nomads: [1, 2], 'Combat vehicles': [2, 1], 'Transport vehicles': [1, 1],
+        insertplat: 0
       },
       spend: 'recruit'
     },
@@ -1300,12 +1297,12 @@
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 1,                      // a few good teams
       hulls: { min: 1, max: 1.5 },  // its cars and craft
+      commandTier: 1,
       weights: {
-        'Rifle infantry': 6, 'Light infantry': 6, observers: 5, lrrp: [4, 1], snipers: [4, 1],
-        // (its cars and craft, and a drone or EW team or two: what it is known for)
-        'Support teams': [2, 1], ew: [3, 1], 'Drones': [3, 1], 'Remote mortars': [2, 1], 'Light support': [2, 1], 'Assault troops': [1, 1],
-        nomads: 3, irregulars: 4, recruits: 3,
-        lpv: 4, hpv: 4, recon: 5, cmdveh: 2, adaptedcraft: 4, lightcraft: 4, fsc: 3, ewveh: [1, 1]
+        recruits: 3, irregulars: 4, 'Rifle infantry': 6, 'Assault troops': [1, 1], 'Light infantry': 6,
+        observers: 5, lrrp: [4, 1], snipers: [4, 1], 'Light support': [2, 1], 'Remote mortars': [2, 1],
+        'Support teams': [2, 1], ew: [3, 1], nomads: 4, lpv: 4, hpv: 4, recon: 5, cmdveh: 2, ewveh: [1, 1],
+        adaptedcraft: 4, lightcraft: 4, fsc: 3
       },
       spend: 'promote'
     },
@@ -1314,7 +1311,7 @@
       temper: 1, // the behaviour roll in battle (p. 147): goes in hard
       blurb: 'Closes the distance and settles it with knives.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Closes the distance. About 12 units at T3 PL2: assault troops the largest share (3-4), Penal troops in front, chem warriors, 2-3 hulls that are transports and engineering vehicles. Red flags: artillery or support weapons in numbers, combat vehicles, a force that cannot ride to the fight.',
+      notes: 'Closes the distance. About 12 units at T3 PL2: assault troops the largest share (3-4: assault engineers, shock troopers), chem warriors, a commando team now and then, 2-3 hulls that are transports and engineering vehicles. Red flags: artillery or support weapons in numbers, Penal troops (weighted 0), combat vehicles.',
       names: ['Black Harbour PMC', 'Redline Assault', 'The Hard Bargain', 'Kroeger Shock'],
       // Irregulars (who promote into assault troops) and Enforcers, light engineers, and a truck to ride in
       t1: ['irregulars', 'enforcers'],
@@ -1326,12 +1323,10 @@
       tier: 0,
       hulls: { min: 1, max: 1.5 },  // a ride to the fight and a way through
       weights: {
-        'Assault troops': 8, commandos: 6,
-        'Basic troops': 3, irregulars: 4, enforcers: 4, penal: [6, 2],   // Penal troops thrown in first to soak the fire
-        'Heavy infantry': [2, 1], 'Rifle infantry': [2, 1], chem: [4, 1], 'Light support': [1, 1],
-        // (a ride to the fight and a way through, before anything else)
-        'Transport vehicles': 6, insertplat: [2, 1],
-        'Engineering and utility vehicles': [2, 1], hengveh: 4, lengveh: 3, aaveh: 0, ewveh: 1, medveh: 1
+        'Basic troops': 3, enforcers: 4, irregulars: 4, penal: 0, 'Rifle infantry': [2, 1],
+        'Assault troops': 8, commandos: 6, 'Heavy infantry': [2, 1], 'Light support': [1, 1], chem: [4, 1],
+        lpv: 2, hpv: 2, recon: 3, lhunter: 2, hunter: 2, 'Transport vehicles': 6, insertplat: [2, 1],
+        'Engineering and utility vehicles': [2, 1], lengveh: 3, aaveh: 0, ewveh: 0, medveh: 1, hengveh: 4
       },
       spend: 'promote'
     },
@@ -1354,11 +1349,9 @@
       tier: 0,
       hulls: { min: 2, max: 3 },    // as many hulls as the rules allow
       weights: {
-        // (transports above its gun vehicles: most of its troopers ride, if not all of them)
-        'Combat vehicles': 4, 'Transport vehicles': 7, insertplat: 2,
-        'Transport aircraft': 4, 'Strike aircraft': 3, vtoldrone: 1,
-        'Assault troops': 5, 'Rifle infantry': 5, 'Light infantry': [1, 1], 'Heavy support': [1, 1],
-        recruits: 3, irregulars: 3
+        recruits: 3, irregulars: 3, 'Rifle infantry': 5, 'Assault troops': 6, 'Heavy infantry': [1, 1],
+        'Light infantry': [1, 1], 'Heavy support': [1, 1], 'Transport vehicles': 7, insertplat: 2,
+        'Transport aircraft': 4, 'Strike aircraft': 3, vtoldrone: 1
       },
       spend: 'machines'
     }
@@ -1372,7 +1365,7 @@
       id: 'redfront', name: 'Revolutionaries', faction: 'rebel',
       blurb: 'Two centuries underground, and organised down to the last cell.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'A revolutionary army: numbers and organisation. About 14 units at T3 PL2, leaning a Tier below: Freedom Warriors the bulk (4-5), support troops with guns (3-4), some artillery, a technical or two. Red flags: Holy or Mounted Warriors in numbers, more than 2 hulls, under 12 units.',
+      notes: 'A revolutionary army: numbers and organisation. About 14 units at T3 PL2, leaning a Tier below: Freedom Warriors the bulk (4-5, militia and organized insurgents), armed civilians, support troops with guns (3-4), some artillery, a technical or truck. Human Wave in the open and attacking, Last Stand in defence. Red flags: Holy or Mounted Warriors in numbers, more than 2 hulls, under 12 units.',
       names: ['Red Revolutionary Front', 'The Combine Committee', 'Ninth of Marzen', 'Union Irregulars'],
       // the standard revolt: a core of Freedom Warriors, with support guns, artillery and vehicles around it
       t1: ['rciv'],
@@ -1386,10 +1379,11 @@
       tier: -1,                     // the masses: fills up on the Tier below
       hulls: { min: 0, max: 1 },
       weights: {
-        'Freedom Warriors': 8, rciv: 6, 'Rebel support troops': 4, 'Rebel artillery': [3, 1],
-        'Deserters and POWs': [1, 1], 'Mounted Warriors': [1, 1], 'Holy Warriors': [1, 1],
-        'Rebel combat vehicles': [2, 1], 'Rebel transport vehicles': [2, 1]
+        'Freedom Warriors': 8, rciv: 6, 'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1],
+        'Rebel support troops': 4, 'Rebel artillery': [3, 1], 'Rebel combat vehicles': [2, 1],
+        'Rebel transport vehicles': [2, 1]
       },
+      tactics: { open: 'wave', attack: 'wave', defend: 'laststand' },
       spend: 'promote'
     },
     {
@@ -1403,7 +1397,7 @@
       t1: ['rridergang'],
       t2: ['rriderwar', 'rmilitia'],
       machines: ['rtechnical'], vehicles: 1,
-      riders: ['First Among Equals'],
+      riders: ['Holy Warriors', 'First Among Equals'],
       machinesMax: 4,
       // the haul first; then the smuggling, the hard crew, the hulls and the mounted faithful's fury
       fixedAt: { 1: 'V2' },
@@ -1440,11 +1434,13 @@
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 0,
       hulls: { min: 0, max: 1 },
+      commandTier: 1,
       weights: {
-        'Holy Warriors': 8, 'Freedom Warriors': 4, 'Rebel support troops': [2, 2], 'Rebel artillery': [2, 1],
-        'Mounted Warriors': [1, 1], Miners: [1, 1],
-        'Rebel combat vehicles': [2, 1], 'Rebel transport vehicles': [1, 1]
+        'Freedom Warriors': 4, 'Holy Warriors': 8, 'Mounted Warriors': [1, 1],
+        'Rebel support troops': [2, 2], 'Rebel artillery': [2, 1], 'Rebel combat vehicles': [2, 1],
+        'Rebel transport vehicles': [1, 1]
       },
+      tactics: { open: 'wave', attack: 'wave', defend: 'laststand' },
       spend: 'promote'
     },
     {
@@ -1466,9 +1462,10 @@
       tier: 0,
       hulls: { min: 1, max: 1.5 },  // their improvised hulls
       weights: {
-        Miners: 8, 'Freedom Warriors': 4, 'Rebel combat vehicles': 4,
-        'Rebel artillery': [2, 1], 'Rebel support troops': [2, 1], 'Deserters and POWs': [1, 1], 'Mounted Warriors': [1, 1]
+        'Freedom Warriors': 4, 'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1],
+        'Rebel support troops': [2, 1], 'Rebel artillery': [2, 1], Miners: 8, 'Rebel combat vehicles': 4
       },
+      tactics: { open: 'wave', attack: 'wave', defend: 'laststand' },
       spend: 'promote'
     },
     {
@@ -1476,7 +1473,7 @@
       temper: -1, // the behaviour roll in battle (p. 147): strike from hiding
       blurb: 'Out of the tunnels, into the dark, and never where you left them.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Tunnel fighters: commandos and locals. About 12 units at T3 PL2: Freedom Warriors the bulk, partisan commandos (1-3), a few miners and deserters, at most one vehicle. Red flags: 2+ hulls, artillery in numbers, no commandos across several forces.',
+      notes: 'Tunnel fighters, reaching a Tier above. About 11 units at T3 PL2, led by a commander a Tier above the battle\'s: Freedom Warriors the bulk (3), Hellriders and other mounted warriors (about 2), partisan commandos (1-2), a deserter now and then, at most one vehicle. Red flags: 2+ hulls, artillery, no commandos across several forces.',
       names: ['The Partisans', 'Night Wire', 'The Quiet Column', 'Cell Sixteen'],
       // the standard revolt heavy on its Partisans (the Chosen Warriors' commandos) once it can field them
       t1: ['rciv'],
@@ -1490,11 +1487,13 @@
       doctrines: ['V3', 'P2', 'H2', 'H4', 'V4', 'H5'],
       tactics: { open: 'guerillas', attack: 'guerillas', defend: ['guerillas', 'laststand'] },   // out of the tunnels; on defence, half the time behind barricades
       /* a skirmish force's shopping list (see Bastion's) */
-      tier: 0,
+      tier: 1,
       hulls: { min: 0, max: 0.5 },  // lean: a hull rarely
+      commandTier: 1,
       weights: {
-        'Chosen Warriors': 6, rassaultcdo: 8, rsabcdo: 8, rsnipercdo: 8, 'Freedom Warriors': 5,   // (the commandos are the band) 'Rebel support troops': 3, 'Rebel artillery': [2, 1],
-        Miners: [1, 1], 'Deserters and POWs': [1, 1], 'Rebel combat vehicles': [1, 1]
+        'Freedom Warriors': 5, 'Mounted Warriors': [3, 2], 'Rebel support troops': [1, 1],
+        'Chosen Warriors': 10, rassaultcdo: 8, rsabcdo: 8, rsnipercdo: 8, 'Deserters and POWs': [1, 1],
+        'Rebel combat vehicles': [1, 1]
       },
       spend: 'promote'
     },
@@ -1502,7 +1501,7 @@
       id: 'turncoats', name: 'Turncoats', faction: 'rebel',
       blurb: 'A garrison that changed sides, and kept its rifles, its drill and its grudges.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'A garrison that changed sides. About 12 units at T3 PL2: deserters and POWs (2-4, the army rules\' cap is 4), Freedom Warriors, support troops and artillery in drill, armed shuttles and a flak vehicle. Red flags: Holy or Mounted Warriors in numbers, no deserters, no aviation.',
+      notes: 'A garrison that changed sides. About 12 units at T3 PL2: deserters and POWs at the army rules\' cap of 4 (mostly rifle deserters), two leaders, the higher a Tier above the battle\'s, armed shuttles, some Freedom Warriors, support troops and artillery. Red flags: under 3 deserters, Holy or Mounted Warriors in numbers, no aviation.',
       names: ['The Turncoat Battalion', 'The 41st Reborn', 'Garrison Free Corps', 'The Broken Oath'],
       // the standard revolt with Deserters in place of its first-rung Freedom Warriors, more aircraft,
       // and a little more of the garrison's artillery
@@ -1518,10 +1517,12 @@
       /* a skirmish force's shopping list (see Bastion's) */
       tier: 0,
       hulls: { min: 1, max: 1.5 },  // shuttles and FlaK first
+      commandTier: 1,
+      command: 1,
       weights: {
-        'Deserters and POWs': 7, 'Freedom Warriors': 5, 'Rebel support troops': 3, 'Rebel artillery': [3, 1],
-        'Rebel aviation': 5, rlifter: 1, 'Rebel combat vehicles': 1, 'Rebel flak vehicles': [2, 1],
-        'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1]
+        'Freedom Warriors': 5, 'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1],
+        'Rebel support troops': 3, 'Rebel artillery': [3, 1], 'Deserters and POWs': 100,
+        'Rebel combat vehicles': 1, 'Rebel flak vehicles': [1, 1], 'Rebel aviation': 5, rlifter: 1
       },
       spend: 'promote'
     }
@@ -1532,7 +1533,7 @@
       id: 'ivenbea', name: 'Predators', faction: 'bugs',
       blurb: 'Mantis-like apex predators of the Ivenbean swamps: few, huge, and very close.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Few and huge. About 10-11 units at T3 PL2, most a Tier above the battle\'s: attack forms and oversized attack forms, winged bugs, pathfinders and lurkers, the odd Tier V monster. Red flags: tiny swarms or larvae in numbers, 13+ units.',
+      notes: 'Few and huge. About 10-11 units at T3 PL2, most a Tier above the battle\'s, led by an Overmind a Tier above: pathfinders, lurkers and the odd shadow bug, winged bugs (never a carrier), attack forms and oversized attack forms. Red flags: tiny swarms or larvae in numbers, carrier bugs, 13+ units.',
       names: ['Swarm of Ivenbea', 'The Swamp Mantids', 'Ivenbean Brood'],
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
@@ -1540,8 +1541,10 @@
       fixedAt: { 1: 'BB4' },
       tier: 1,
       hulls: { min: 0, max: 1 },
-      weights: {   // few, huge and close: the big ones
-        'Lesser Bugs': 5, btiny: 1, 'Flying Bugs': 6, 'Pioneer Bugs': 4, 'Spore Bugs': [1, 1], 'Underground Bugs': [1, 1]
+      commandTier: 1,
+      weights: {
+        'Lesser Bugs': 5, btiny: 1, 'Underground Bugs': [1, 1], 'Spore Bugs': [1, 1], 'Flying Bugs': 6,
+        bcarrier: 0, 'Pioneer Bugs': 6, bshadow: 8
       },
       spend: 'promote'
     },
@@ -1557,6 +1560,7 @@
       fixedAt: { 1: 'BP1' },
       tier: -1,
       hulls: { min: 0, max: 1 },
+      commandTier: 1,
       weights: {   // never short of bodies
         'Lesser Bugs': 7, btiny: 8, 'Underground Bugs': 4, 'Spore Bugs': 4, bspitlarva: 6, 'Flying Bugs': [1, 1], 'Pioneer Bugs': 1
       },
@@ -1600,7 +1604,7 @@
       id: 'greyplague', name: 'Plague', faction: 'bugs',
       blurb: 'It ate a colony, and now the colonists march in its front rank.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'The Plague: the colonists march in front. About 12 units at T3 PL2: Infected humans (2-4) with lesser bugs and spitters behind, a burrower or two. Red flags: no Infected, flyers or pathfinders in numbers.',
+      notes: 'The Plague: the colonists march in front. About 12 units at T3 PL2: Infected humans the largest share (3-4), spitters and lesser bugs behind them, a burrower now and then. Red flags: under 2 Infected, flyers or pathfinders in numbers.',
       names: ['The Grey Plague', 'The Harrow Infestation', 'Colony Nine Swarm'],
       t1: ['bspitlarva', 'btiny'], t2: ['bsmall', 'bimmspit'],
       machines: [], vehicles: 0,
@@ -1608,8 +1612,8 @@
       fixedAt: { 1: 'BP4' },               // Fungi Symbiosis first: the humans it kills in an assault rise again as its Infected
       tier: 0,
       hulls: { min: 0, max: 1 },
-      weights: {   // its Infected most of all
-        'Infected Humans': 7, 'Lesser Bugs': 4, 'Spore Bugs': 3, 'Underground Bugs': 1
+      weights: {
+        'Lesser Bugs': 4, 'Underground Bugs': 1, 'Spore Bugs': 6, 'Infected Humans': 100
       },
       spend: 'recruit'
     },
@@ -1653,15 +1657,17 @@
       id: 'amt', name: 'Architects', faction: 'xeno',
       blurb: 'Rules a whole planet from its towers, and fights the way it builds: precisely.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Architects: precise, from the towers. About 11 units at T3 PL2, reaching a Tier above: Gammas and Betas, shield and recon craft, a strike craft or two, about 4 hulls. Red flags: Tier I troopers more than once, Epsilons in numbers, no aircraft.',
+      notes: 'Architects: precise, from the towers. About 11 units at T3 PL2, reaching a Tier above: two Alphas (one a Tier above the battle\'s), Gammas and Betas, shield and recon craft, a strike craft or two, about 4 hulls. Red flags: Tier I troopers, Epsilons or Deltas in numbers, no aircraft.',
       names: ['The Amt', 'Amt Tower-tribe', 'The Sigma-Pi Tribe'],
       t1: ['xeps1', 'xdelta1'], t2: ['xbeta2', 'xeps2'],
       machines: ['xstrike2'], vehicles: 1,
       doctrines: ['XT6', 'XT1', 'XO3', 'XT5', 'XS6', 'XO4'],
       tier: 1,
       hulls: { min: 1, max: 2 },
-      weights: {   // precise: Gammas and aviation
-        'Gamma Squads': 6, 'Beta Squads': 4, 'Strike Aviation': 4, 'Support Aviation': 4, 'Epsilon Squads': 1
+      commandTier: 1,
+      command: 1,
+      weights: {
+        'Beta Squads': 4, 'Gamma Squads': 6, 'Strike Aviation': 4, 'Support Aviation': 4
       },
       spend: 'honours'
     },
@@ -1669,7 +1675,7 @@
       id: 'hashamer', name: 'Mimics', faction: 'xeno',
       blurb: 'Nine million Esh-Aven and not a Crock among them — copying their masters\' war as best they can.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Mimics: nine million Esh-Aven and hardly a machine. About 14-15 units at T3 PL2, leaning a Tier below: Epsilons (7-8) and Deltas (4-5), at most one turret. Red flags: aviation, Gammas, 2+ hulls.',
+      notes: 'Mimics: nine million Esh-Aven and hardly a machine. About 14-15 units at T3 PL2, leaning a Tier below: two Alphas, Epsilons (7-8) and Deltas (4-5), at most one turret. Red flags: aviation, Gammas, 2+ hulls.',
       names: ['Hashamer I Tribe', 'The Hashamer Esh-Aven', 'The Arid Host'],
       t1: ['xeps1', 'xeps1', 'xdelta1'], t2: ['xeps2', 'xdelta2'],
       machines: [], vehicles: 0,
@@ -1677,6 +1683,7 @@
       fixedAt: { 1: 'XS1' },
       tier: -1,
       hulls: { min: 0, max: 0.5 },
+      command: 1,
       weights: {   // nine million Esh-Aven, and hardly a machine
         'Epsilon Squads': 7, 'Delta Squads': 5, 'Defensive Turrets': [1, 1]
       },
