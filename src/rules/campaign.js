@@ -1209,6 +1209,29 @@
       refill: { enforcers: 2, recruits: 1 },   // Tier I gaps later: Enforcers become battle armour, Recruits the gun crews
       machinesMax: 4,               // its heavy guns are on hulls: tank hunters, destroyers, gun carriers
       hullsFirst: ['Hunters and destroyers', 'Support vehicles'],   // the guns before the engineering vehicles
+      /* A skirmish force's shopping list (R.rollArmy): a weight for each unit or group
+         (0 never, 10 the backbone), and [weight, limit] where it is kept rare, the
+         limit a Priority Level (a group's limit counts the whole group). A unit's
+         own entry beats its group's; anything unlisted is 0. */
+      tier: 0,                      // keeps to the battle's own Tier: solid armour, not a horde, not a handful
+      hulls: { min: 1, max: 2 },    // hulls a Priority Level in a skirmish force (three the rules' most)
+      weights: {
+        // heavy on battle armour
+        ecobats: 8, bats: 10, protectors: 10, protectorshm: 8,
+        // some rifle infantry, a little assault
+        'Rifle infantry': [3, 2], 'Assault troops': [1, 1],
+        // some support infantry: machine guns, anti-armour guns, mortars (the Gauss cannon and SAM now and then)
+        'Light support': [2, 2], gausscannon: [1, 1],
+        'Heavy support': [2, 2], sam: [1, 1],
+        'Remote mortars': [1, 1],
+        // a few hulls (hulls): gun carriers, tank hunters and destroyers, engineering vehicles
+        'Hunters and destroyers': [3, 1], 'Support vehicles': [3, 1], impsupport: 2,
+        'Engineering and utility vehicles': [2, 1], aaveh: 1, medveh: 1, ewveh: 0,
+        // the founding troops at the low Tiers
+        enforcers: 5, recruits: 3,
+        // rare extras
+        observers: [1, 1], medics: [1, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1227,6 +1250,17 @@
       units: ['gausscannon'],
       lean: true,                   // few units, all of them good: no free troops to pad the list, no hiring with spare money
       honourFirst: true,            // and with Rapid Training Methods, each earns an honour before it is promoted
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 1,                      // fewer, better: reaches for the Tier above
+      hulls: { min: 0, max: 0 },    // no hulls at all
+      weights: {
+        'Heavy infantry': 6, protectors: 8, protectorshm: 8,
+        'Rifle infantry': 5, rookie: 2, veterans: 7, rangers: 8,
+        'Assault troops': 4, lighteng: 2, shock: 6, commandos: 7,
+        'Light infantry': [2, 1], snipers: [3, 1],
+        gausscannon: [3, 1], hmgteam: 2, missile: 2, medics: [1, 1],
+        enforcers: 3, recruits: 2
+      },
       spend: 'promote'
     },
     {
@@ -1246,6 +1280,16 @@
       // two of the line (basic and rifle troops) to each machine gun and each mortar, the mortars four at most
       mix: { 'Basic troops': 1, 'Rifle infantry': 1, 'Light support': 1, 'Remote mortars': 1 },
       limit: { 'Remote mortars': 4, enforcers: 0 },   // (and no Enforcers: they grow only into battle armour)
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: -1,                     // numbers: fills up on the Tier below
+      hulls: { min: 0, max: 1 },    // a truck now and then
+      weights: {
+        'Basic troops': 5, enforcers: 0, penal: [3, 1],
+        'Rifle infantry': 6, 'Light support': 5, 'Remote mortars': [3, 1],
+        'Heavy support': [3, 2], sam: [1, 1],
+        'Assault troops': [2, 1], 'Light infantry': [1, 1], nomads: [2, 1],
+        'Transport vehicles': [2, 1], unarmoured: 3, insertplat: 0
+      },
       spend: 'recruit'
     },
     {
@@ -1272,6 +1316,15 @@
       signature: [['lpv', 'hpv', 'recon', 'cmdveh', 'adaptedcraft', 'lightcraft', 'fsc'], ['ew', 'drecon', 'dcombat']],
       signatureMax: 2,
       // promoted to Veterans, Forward observers and Sharpshooters, then trained with what is left
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 1,                      // a few good teams
+      hulls: { min: 1, max: 1.5 },  // its cars and craft
+      weights: {
+        'Rifle infantry': 6, 'Light infantry': 6, observers: 5, lrrp: [4, 1], snipers: [4, 1],
+        'Support teams': [2, 1], 'Remote mortars': [2, 1], 'Light support': [2, 1], 'Assault troops': [1, 1],
+        nomads: 3, irregulars: 4, recruits: 3,
+        lpv: 3, hpv: 3, recon: 4, cmdveh: 2, adaptedcraft: 3, lightcraft: 3, fsc: 2, ewveh: [1, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1293,6 +1346,16 @@
       // Penal troops thrown in first to soak the fire: free, and kept up (one per Tier, four at most)
       signature: ['penal'],
       signatureMax: 4,
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 1, max: 1.5 },  // a ride to the fight and a way through
+      weights: {
+        'Assault troops': 8, commandos: 6,
+        'Basic troops': 3, irregulars: 4, enforcers: 4, penal: [4, 2],
+        'Heavy infantry': [2, 1], 'Rifle infantry': [2, 1], chem: [4, 1], 'Light support': [1, 1],
+        'Transport vehicles': 4, insertplat: [2, 1],
+        'Engineering and utility vehicles': [2, 1], hengveh: 4, lengveh: 3, aaveh: 0, ewveh: 1, medveh: 1
+      },
       spend: 'promote'
     },
     {
@@ -1311,6 +1374,15 @@
       mix: { 'Rifle infantry': 1, 'Assault troops': 1 },   // as many assault troops as riflemen in the back of its vehicles
       machinesMax: 6,               // as many hulls as a Priority Level 2 army can field
       fieldsMachines: true,         // and into battle in them first
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 2, max: 3 },    // as many hulls as the rules allow
+      weights: {
+        'Combat vehicles': 6, 'Transport vehicles': 5, insertplat: 2,
+        'Transport aircraft': 4, 'Strike aircraft': 4, vtoldrone: 1,
+        'Assault troops': 5, 'Rifle infantry': 5, 'Light infantry': [1, 1], 'Heavy support': [1, 1],
+        recruits: 3, irregulars: 3
+      },
       spend: 'machines'
     }
   ];
@@ -1334,6 +1406,14 @@
       machinesMax: 3,
       // the cells and their commissars, the movement and its cry: Hero and Prophet, nothing criminal
       doctrines: ['H6', 'H1', 'H2', 'P6', 'P2', 'P5'],
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: -1,                     // the masses: fills up on the Tier below
+      hulls: { min: 0, max: 1 },
+      weights: {
+        'Freedom Warriors': 8, rciv: 6, 'Rebel support troops': 4, 'Rebel artillery': [3, 1],
+        'Deserters and POWs': [1, 1], 'Mounted Warriors': [1, 1], 'Holy Warriors': [1, 1],
+        'Rebel combat vehicles': [2, 1], 'Rebel transport vehicles': [2, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1357,6 +1437,14 @@
       doctrines: ['V2', 'V1', 'V5', 'H3', 'H5', 'P4'],
       stages: [['V1', 'V5', 'H3', 'H5'], ['P4']],   // Holy Fury last: at Tier V, once the rest is held
       tactics: { open: 'wave', attack: 'wave', defend: 'wave' },                              // pirates never dig in (and riders take nothing from Guerillas)
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 1, max: 2 },    // troop carriers and shuttles
+      weights: {
+        'Mounted Warriors': 8, 'Holy Warriors': 3, 'Freedom Warriors': 3,
+        'Rebel transport vehicles': 4, 'Rebel aviation': 3, rlifter: 1, 'Rebel combat vehicles': 2,
+        'Rebel support troops': [1, 1], 'Deserters and POWs': [1, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1376,6 +1464,14 @@
       // Holy Fury first; then Stairs to Heaven or Martyrdom (two Prophet at most), and the Hero path: loyalty, victory and alms
       fixed: ['P4'],
       doctrines: ['P4', 'P3', 'P1', 'H4', 'H1', 'H5'],
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 0, max: 1 },
+      weights: {
+        'Holy Warriors': 8, 'Freedom Warriors': 4, 'Rebel support troops': [2, 2], 'Rebel artillery': [2, 1],
+        'Mounted Warriors': [1, 1], Miners: [1, 1],
+        'Rebel combat vehicles': [2, 1], 'Rebel transport vehicles': [1, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1395,6 +1491,13 @@
       // a pick from its list first, then Labour Leader at Tier II, when there are vehicles enough to want it
       fixedAt: { 2: 'H3' },
       doctrines: ['H2', 'H3', 'V4', 'H4', 'V5', 'V1'],
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 1, max: 1.5 },  // their improvised hulls
+      weights: {
+        Miners: 8, 'Freedom Warriors': 4, 'Rebel combat vehicles': 4,
+        'Rebel artillery': [2, 1], 'Rebel support troops': [2, 1], 'Deserters and POWs': [1, 1], 'Mounted Warriors': [1, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1418,6 +1521,13 @@
       fixed: ['V3'],
       doctrines: ['V3', 'P2', 'H2', 'H4', 'V4', 'H5'],
       tactics: { open: 'guerillas', attack: 'guerillas', defend: ['guerillas', 'laststand'] },   // out of the tunnels; on defence, half the time behind barricades
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 0, max: 0.5 },  // lean: a hull rarely
+      weights: {
+        'Chosen Warriors': 6, 'Freedom Warriors': 5, 'Rebel support troops': 3, 'Rebel artillery': [2, 1],
+        Miners: [1, 1], 'Deserters and POWs': [1, 1], 'Rebel combat vehicles': [1, 1]
+      },
       spend: 'promote'
     },
     {
@@ -1440,6 +1550,14 @@
       doctrines: ['H6', 'V6', 'V5', 'V1', 'P5', 'P6'],
       stages: [['V6', 'V5', 'V1'], ['P5', 'P6']],   // two of the Villain doctrines first, the Prophet ones last
       tactics: { open: 'laststand', attack: ['wave', 'guerillas'], defend: 'laststand' },     // a garrison digs in; it attacks in a rush or by infiltration
+      /* a skirmish force's shopping list (see Bastion's) */
+      tier: 0,
+      hulls: { min: 1, max: 1.5 },  // shuttles and FlaK first
+      weights: {
+        'Deserters and POWs': 7, 'Freedom Warriors': 5, 'Rebel support troops': 3, 'Rebel artillery': [3, 1],
+        'Rebel aviation': 3, rlifter: 1, 'Rebel combat vehicles': 2, 'Rebel flak vehicles': [2, 1],
+        'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1]
+      },
       spend: 'promote'
     }
   ];
@@ -1590,6 +1708,106 @@
     var all = ARCHETYPES.concat(REBEL_ARCHETYPES).concat(BUG_ARCHETYPES).concat(XENO_ARCHETYPES);
     for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
     return ARCHETYPES[0];
+  }
+
+  /* ================= a personality as one object =================
+     The definitions above are flat, with a comment beside each field. Read as one
+     object they fall into what a force fields, how it fights, the doctrines it
+     reaches for and what a campaign rival does besides — the shape the server keeps
+     an admin's changes in and the editor works on. FIELD_MAP is the one place the
+     two meet: a flat field and where it sits in the nested shape. */
+  var FIELD_MAP = {
+    names: 'names', blurb: 'blurb',
+    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls', hullsFirst: 'force.favourites',
+    fieldsMachines: 'force.machineMinded', machinesMax: 'force.machinesMax', riders: 'force.riders',
+    groups: 'force.groups', units: 'force.units', mix: 'force.mix', limit: 'force.limit', second: 'force.second',
+    signature: 'force.signature.units', signatureMax: 'force.signature.max', signatureCap: 'force.signature.cap',
+    temper: 'battle.temper', tactics: 'battle.tactics',
+    doctrines: 'doctrines.shortlist', fixed: 'doctrines.fixed', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',
+    t1: 'campaign.found.t1', t2: 'campaign.found.t2', machines: 'campaign.found.hulls', vehicles: 'campaign.found.hullCount',
+    foundFree: 'campaign.found.free', refill: 'campaign.refill', spend: 'campaign.spend', honourFirst: 'campaign.honourFirst', lean: 'campaign.lean',
+    leanSize: 'campaign.leanSize'
+  };
+  // these are replaced whole by a change, not merged key by key (a list of weights is edited as one)
+  var WHOLE = ['force.weights', 'force.mix', 'force.limit', 'force.tactics', 'battle.tactics', 'campaign.refill', 'doctrines.fixedAt'];
+  function clone(o) { return o == null ? o : JSON.parse(JSON.stringify(o)); }
+  function getPath(o, path) { return path.split('.').reduce(function (x, k) { return x == null ? undefined : x[k]; }, o); }
+  function setPath(o, path, v) {
+    var ks = path.split('.'), last = ks.pop();
+    ks.forEach(function (k) { if (o[k] == null || typeof o[k] !== 'object') o[k] = {}; o = o[k]; });
+    o[last] = v;
+  }
+  function nestedOf(flat) {
+    var u = { id: flat.id, name: flat.name, faction: flat.faction || 'pmc' };
+    Object.keys(FIELD_MAP).forEach(function (k) { if (flat[k] !== undefined) setPath(u, FIELD_MAP[k], clone(flat[k])); });
+    return u;
+  }
+  function flatOf(u) {
+    var flat = { id: u.id, name: u.name };
+    if (u.faction && u.faction !== 'pmc') flat.faction = u.faction;
+    Object.keys(FIELD_MAP).forEach(function (k) { var v = getPath(u, FIELD_MAP[k]); if (v !== undefined && v !== null) flat[k] = clone(v); });
+    return flat;
+  }
+  // a change laid over the nested shape: objects merged, lists and the WHOLE fields replaced, null removing
+  function mergeInto(base, change, at) {
+    Object.keys(change || {}).forEach(function (k) {
+      var path = at ? at + '.' + k : k, v = change[k];
+      if (v === null) { delete base[k]; return; }
+      if (v && typeof v === 'object' && !Array.isArray(v) && WHOLE.indexOf(path) < 0 && base[k] && typeof base[k] === 'object' && !Array.isArray(base[k])) mergeInto(base[k], v, path);
+      else base[k] = clone(v);
+    });
+    return base;
+  }
+  // what differs from the default: the part worth keeping as a change
+  function diffFrom(base, now, at) {
+    var out = {};
+    Object.keys(now || {}).forEach(function (k) {
+      var path = at ? at + '.' + k : k, a = base ? base[k] : undefined, b = now[k];
+      if (b && typeof b === 'object' && !Array.isArray(b) && WHOLE.indexOf(path) < 0 && a && typeof a === 'object' && !Array.isArray(a)) {
+        var d = diffFrom(a, b, path);
+        if (Object.keys(d).length) out[k] = d;
+      } else if (JSON.stringify(a) !== JSON.stringify(b)) out[k] = clone(b);
+    });
+    Object.keys(base || {}).forEach(function (k) { if (now && !(k in now)) out[k] = null; });
+    return out;
+  }
+  var ARCH_DEFAULTS = null, ARCH_CHANGES = {}, archVersion = 0;
+  function allArchetypes() { return ARCHETYPES.concat(REBEL_ARCHETYPES).concat(BUG_ARCHETYPES).concat(XENO_ARCHETYPES); }
+  function defaultsNow() {
+    if (!ARCH_DEFAULTS) { ARCH_DEFAULTS = {}; allArchetypes().forEach(function (a) { ARCH_DEFAULTS[a.id] = clone(a); }); }
+    return ARCH_DEFAULTS;
+  }
+  /* An admin's changes, { id: nested change }, laid over the defaults: each personality
+     named is rebuilt from its default and its change, in place, so everything holding
+     it (a rival's archetype lookups, a roll in progress) sees the new one; one not
+     named goes back to its default. */
+  function applyArchetypeChanges(changes) {
+    var defs = defaultsNow();
+    ARCH_CHANGES = clone(changes || {});
+    allArchetypes().forEach(function (a) {
+      var base = defs[a.id], ch = ARCH_CHANGES[a.id];
+      var flat = ch ? flatOf(mergeInto(nestedOf(base), ch)) : clone(base);
+      flat.id = base.id; if (base.faction) flat.faction = base.faction;     // who it is never changes
+      Object.keys(a).forEach(function (k) { delete a[k]; });
+      Object.keys(flat).forEach(function (k) { a[k] = flat[k]; });
+    });
+    archVersion++;
+    return archVersion;
+  }
+  function unifiedArchetype(id, fromDefault) {
+    var defs = defaultsNow(), a = fromDefault ? defs[id] : allArchetypes().filter(function (x) { return x.id === id; })[0];
+    return a ? nestedOf(a) : null;
+  }
+  // the change that turns the default into this nested personality (what the server stores)
+  function archetypeChange(id, nested) {
+    var defs = defaultsNow();
+    return defs[id] ? diffFrom(nestedOf(defs[id]), nested) : null;
+  }
+  // run fn with these personalities in force for a moment (the editor's preview), then put things back
+  function withArchetypeChanges(changes, fn) {
+    var was = clone(ARCH_CHANGES);
+    applyArchetypeChanges(changes);
+    try { return fn(); } finally { applyArchetypeChanges(was); }
   }
 
 
@@ -1873,6 +2091,9 @@
     salvage: salvage, aftermath: aftermath, developRival: developRival,
     pickForce: pickForce, evenWorld: evenWorld, battleElsewhere: battleElsewhere, elsewherePairs: elsewherePairs,
     ARCHETYPES: ARCHETYPES, archetype: archetype, foundRival: foundRival,
+    FIELD_MAP: FIELD_MAP, unifiedArchetype: unifiedArchetype, archetypeChange: archetypeChange,
+    applyArchetypeChanges: applyArchetypeChanges, withArchetypeChanges: withArchetypeChanges,
+    archetypeChanges: function () { return clone(ARCH_CHANGES); }, archetypeVersion: function () { return archVersion; },
     d6: d6, d3: d3, d10: d10
   };
 })(typeof window !== 'undefined' ? window : global);

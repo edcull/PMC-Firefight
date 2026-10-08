@@ -655,7 +655,7 @@
         if (side === state.sc.attacker) return false;   // the attacker lands, it never deploys
         return x >= 6 && y >= 6 && x <= W - 6 && y <= H - 6;
       },
-      hint: 'Three landing zones. The attacker has to hold two of the three at the end, or rout the defender; the defender only has to stop them. A zone is held only by units standing at least partly in its circle. While the defender holds all three, the second wave cannot land.',
+      hint: 'Three landing zones. The attacker has to hold two of the three at the end, or rout the defender; the defender only has to stop them. A zone is held only by units standing at least partly in its circle. While the defender holds all three, the second wave cannot land — and once the first wave is gone with all three held, the landing has failed and the battle ends.',
       reserves: function (state, side) {
         var atk = state.sc.attacker;
         var pool = state.units.filter(function (u) {
@@ -703,6 +703,16 @@
            clause is the attacker's alone. Breaking the landing does not win the
            battle for the defender; holding the ground at the end does. */
         if (routed(state, def)) return { winner: atk, text: atk + ' routs the defenders off their own ground.', routed: [def] };
+        /* The first wave gone and every landing zone in the defender's hands: the second
+           wave can never come down while they stay hot (p. 53), and with nothing on the
+           table the attacker can neither take a zone nor rout anyone. The battle is
+           decided, so it ends here rather than waiting out the turns (a reading: the book
+           would have the attacker roll on every turn to the end). */
+        var landed = state.units.some(function (u) { return u.side === atk && onTable(u) && R.countsForVictory(u); });
+        if (state.turn >= 1 && !landed && state.objectives.length && !state.sc.lzPending &&
+          state.objectives.every(function (o) { return o.owner === def; })) {
+          return { winner: def, text: 'The first wave is gone and every landing zone is hot: ' + atk + ' calls off the second wave — the landing has failed.' };
+        }
         if (rollEnd(state, 12)) {
           if (mineZ >= 2) return { winner: atk, text: atk + ' holds ' + mineZ + ' of the three landing zones — the beachhead is secure.' };
           return { winner: def, text: def + ' still holds the ground — the landing has failed.' };

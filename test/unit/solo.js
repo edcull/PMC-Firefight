@@ -9,6 +9,14 @@ require('../../src/rules/campaign.js');
 var R = global.PMC, C = global.PMCCamp;
 
 var pass = 0, fail = 0;
+
+/* A personality's own units: what its weighted list weighs above 0, where it has one
+   (the same list its rolls and its recruiting go by); else its groups and favoured units. */
+function ownOf(a, p) {
+  if (a.weights) { var e = a.weights[p.key] != null ? a.weights[p.key] : a.weights[p.group]; return !!(e && (Array.isArray(e) ? e[0] : e)); }
+  return a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0;
+}
+
 function ok(name, got, want, note) {
   var good = String(got) === String(want);
   good ? pass++ : fail++;
@@ -144,9 +152,9 @@ C.ARCHETYPES.forEach(function (a) {
   var B = camp.companies.B;
   var groups = {};
   B.roster.forEach(function (e) { var g = R.profile(e.key).group; groups[g] = (groups[g] || 0) + 1; });
-  var own = B.roster.filter(function (e) { return a.groups.indexOf(R.profile(e.key).group) >= 0 || (a.units || []).indexOf(e.key) >= 0; }).length;
+  var own = B.roster.filter(function (e) { return ownOf(a, R.profile(e.key)); }).length;
   // the free Tier I units taken on out of character to fill an army out are not counted against it, nor its command units
-  var counted = B.roster.filter(function (e) { var p = R.profile(e.key); return !p.command && !(C.freeUnit(e.key) && a.groups.indexOf(p.group) < 0); }).length;
+  var counted = B.roster.filter(function (e) { var p = R.profile(e.key); return !p.command && !(C.freeUnit(e.key) && !ownOf(a, p)); }).length;
   var honours = B.roster.reduce(function (n, e) { return n + e.honours.length; }, 0);
   var upgrades = B.roster.reduce(function (n, e) { return n + e.upgrades.length; }, 0);
   var machines = B.roster.filter(function (e) { return R.profile(e.key).cls !== 'infantry'; }).length;
@@ -228,11 +236,11 @@ function runOne(a, turns) {
     // the free Tier I units it takes on to fill an army out, where they are out of character
     units: B.roster.filter(function (e) {
       var p = R.profile(e.key);
-      return !p.command && !(C.freeUnit(e.key) && a.groups.indexOf(p.group) < 0);
+      return !p.command && !(C.freeUnit(e.key) && !ownOf(a, p));
     }).length,
     own: B.roster.filter(function (e) {
       var p = R.profile(e.key);
-      return !p.command && (a.groups.indexOf(p.group) >= 0 || (a.units || []).indexOf(e.key) >= 0);
+      return !p.command && ownOf(a, p);
     }).length,
     tier: B.tier
   };

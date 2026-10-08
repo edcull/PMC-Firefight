@@ -24,6 +24,7 @@
   /* An admin's tools (server/adminapi.js), opened from their account: what the
      server holds, as last fetched, and the removal waiting on their password. */
   var adminOpen = false, adminData = null, adminAsk = null;
+  var adminView = '';            // '' the server tools; 'arch' the personality editor (archedit.js)
   var fault = '', notice = '', busy = false;
   var linkToken = null;          // a reset link's token, while its new password is being chosen
   var lastName = '';             // the name last tried (to send an activation link again)
@@ -44,6 +45,14 @@
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, code: r.status, j: j }; }, function () { return { ok: r.ok, code: r.status, j: {} }; }); });
   }
 
+  /* The personalities as this server's admin has changed them (server/archetypes.js),
+     laid over the ones this page carries, so its skirmish rolls and campaigns follow
+     them. A server that cannot be reached leaves the defaults. */
+  function personalities() {
+    var C = root.PMCCamp;
+    if (!C || !C.applyArchetypeChanges) return;
+    get('api/archetypes').then(function (r) { if (r.ok && r.j && r.j.changes) C.applyArchetypeChanges(r.j.changes); }, function () { });
+  }
   // ask the server who this browser is (a server that cannot be reached changes nothing)
   function refresh(then) {
     if (!online() || !root.fetch) { who = null; label(); if (then) then(); return; }
@@ -134,6 +143,10 @@
   }
   function when(t) { if (!t) return '-'; var d = new Date(t); return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + d.toTimeString().slice(0, 5); }
   function adminHTML() {
+    if (adminView === 'arch') {
+      return msgs() + '<div class="acct-line"><span>Admin</span><b>Personalities</b><button type="button" class="lnk acct-signout" data-acct="admin-tools">Server tools</button></div>' +
+        '<div id="arch-edit"></div>';
+    }
     var h = msgs() + '<div class="acct-line"><span>Admin</span><b>Server tools</b><button type="button" class="lnk acct-signout" data-acct="admin-close">Done</button></div>';
     if (!adminData) return h + '<p class="acct-lede">Looking at the server\u2026</p>';
     var d = adminData, st = d.stats || {}, he = d.health || {};
@@ -148,6 +161,10 @@
     h += '<div class="acct-sec"><h3>Server</h3><div class="acct-row"><span><b>' + [(st.users || 0) + ' account' + (st.users === 1 ? '' : 's')].concat(Object.keys(st.games || {}).map(function (k) { return st.games[k] + ' ' + (k === 'battle' ? 'under way' : k); })).join(', ') + '</b>' +
       '<small>Up ' + Math.round((he.up || 0) / 3600) + ' h \u00b7 email ' + (he.mail ? 'on' : 'off') + ' \u00b7 last backup ' + (he.backup ? when(Date.parse(he.backup)) : 'none') + '</small></span>' +
       '<em>' + btn('backup', '', 'Back up now') + ' ' + btn('prune', '30', 'Clear finished battles over 30 days') + '</em></div></div>';
+    // the personalities: what each kind of force fields and how it fights, as this server has them
+    h += '<div class="acct-sec"><h3>Personalities</h3><div class="acct-row"><span><b>How each kind of force is built and fights</b>' +
+      '<small>Weighted unit lists, tier preference, hulls, temper, tactics, doctrines — with a preview</small></span><em>' +
+      '<button type="button" class="lnk" data-acct="admin-arch">Edit personalities</button></em></div></div>';
     h += '<div class="acct-sec"><h3>Accounts</h3>' + (d.users || []).map(function (u) {
       var row = '<div class="acct-row"><span><b>' + esc(u.name) + (u.admin ? ' <i class="acct-tag">admin</i>' : '') + '</b><small>' +
         esc(u.email || 'no email') + (u.email && !u.emailOk ? ' (unconfirmed)' : '') + (u.active ? '' : ' \u00b7 not activated') + ' \u00b7 last seen ' + when(u.seen) + '</small></span><em>' +
@@ -276,6 +293,8 @@
     var body = el('acct-body');
     if (!body || !host || host.hidden) return;
     body.innerHTML = who ? signedInHTML() : signedOutHTML();
+    // the personality editor keeps its own form, drawn into the pane once it is there
+    if (adminOpen && adminView === 'arch' && el('arch-edit') && root.PMCArchEdit) root.PMCArchEdit.mount(el('arch-edit'), { get: get, post: post });
   }
 
   // signed in or out: the campaign screen and the lobby follow
@@ -434,7 +453,9 @@
         });
       }
       else if (a === 'admin-open') { adminOpen = true; adminData = null; adminAsk = null; fault = ''; notice = ''; draw(); adminLoad(); }
-      else if (a === 'admin-close') { adminOpen = false; adminAsk = null; fault = ''; notice = ''; draw(); }
+      else if (a === 'admin-close') { adminOpen = false; adminView = ''; adminAsk = null; fault = ''; notice = ''; draw(); }
+      else if (a === 'admin-arch') { adminView = 'arch'; fault = ''; notice = ''; draw(); }
+      else if (a === 'admin-tools') { adminView = ''; fault = ''; notice = ''; draw(); adminLoad(); }
       else if (a === 'adm') {
         var act = b.getAttribute('data-act'), key = b.getAttribute('data-key');
         fault = ''; notice = '';
@@ -497,6 +518,7 @@
           serverUp = true;
           refresh();
           fromLink();
+          personalities();
         })
         .catch(function () { });
     }

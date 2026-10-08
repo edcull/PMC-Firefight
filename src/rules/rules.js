@@ -493,7 +493,8 @@
     function lightCap(g) { return mix[g] && mix[g] < 1 ? Math.ceil(pl / 2) : null; }
     function hullFirst(p) {
       if (p.cls === 'infantry') return false;
-      if (machineMinded && !(a.hullsFirst || []).length) return true;      // a machine company: any hull of its own
+      // a machine company, or a weighted list with hulls to field and no favourites named: any hull of its own
+      if ((machineMinded || (W && a.hulls)) && !(a.hullsFirst || []).length) return true;
       return (a.hullsFirst || []).some(function (h) { return h === p.group || h === p.key || (h === 'transports' && p.transport > 0); });
     }
     // more kinds rather than more of one: the units it has fewest of, more often than not
@@ -503,7 +504,25 @@
       var lo = Math.min.apply(null, list.map(n));
       return list.filter(function (p) { return n(p) === lo; });
     }
-    function liked(p) { return (a.groups || []).indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || sigKeys.indexOf(p.key) >= 0; }
+    /* A weighted shopping list (campaign.js `weights`) stands in for the groups, mix,
+       limits and second choices: its own entry for a unit, else its group's, else 0. */
+    var W = a.weights || null;
+    function entry(k) { var e = W[k]; return e == null ? null : Array.isArray(e) ? { w: e[0], lim: e[1] } : { w: e, lim: null }; }
+    function baseWeight(p) { var e = entry(p.key) || entry(p.group); return e ? e.w : 0; }
+    /* How elite it is (`tier`): −1 fills up on the Tier below the battle's, 0 keeps to
+       the battle's own, +1 reaches for the Tier above. A unit's weight is scaled once
+       for each Tier it is off the battle's, below or above. */
+    var TIER_LEAN = { '-1': { below: 1.5, above: 0.25 }, '0': { below: 0.35, above: 0.5 }, '1': { below: 0.2, above: 2.5 } };
+    var lean = TIER_LEAN[String(a.tier || 0)] || TIER_LEAN['0'];
+    function tierFactor(p) { var d = p.tier - bt; return d === 0 ? 1 : Math.pow(d < 0 ? lean.below : lean.above, Math.abs(d)); }
+    // halved for each copy it already has (more kinds, fewer repeats), and scaled by its Tier
+    function weightOf(p, keys) {
+      return baseWeight(p) * Math.pow(0.5, count(keys, function (x) { return x === p.key; })) * tierFactor(p);
+    }
+    function liked(p) {
+      if (W) return baseWeight(p) > 0;
+      return (a.groups || []).indexOf(p.group) >= 0 || (a.units || []).indexOf(p.key) >= 0 || sigKeys.indexOf(p.key) >= 0;
+    }
     function count(keys, f) { return keys.filter(function (k) { return f(splitPick(k).key); }).length; }
     function shortfall(g, keys) {
       var w = mix[g]; if (!w) return 0;
@@ -515,14 +534,21 @@
       a: a, sets: sets,
       // what it would never take: past a limit (0 for none at all), or a hull it does not run
       allows: function (p, keys) {
-        if (lim[p.key] != null && count(keys, function (x) { return x === p.key; }) >= cut(lim[p.key])) return false;
+        if (W) {
+          // its limits, a Priority Level's worth each: the unit's own, and its group's
+          var eu = entry(p.key), eg = entry(p.group);
+          if (eu && eu.lim != null && count(keys, function (x) { return x === p.key; }) >= eu.lim * pl) return false;
+          if (eg && eg.lim != null && count(keys, function (x) { return groupOf(x) === p.group; }) >= eg.lim * pl) return false;
+        } else if (lim[p.key] != null && count(keys, function (x) { return x === p.key; }) >= cut(lim[p.key])) return false;
         if (lim[p.group] != null && count(keys, function (x) { return groupOf(x) === p.group; }) >= cut(lim[p.group])) return false;
-        var lc = lightCap(p.group);
+        var lc = W ? null : lightCap(p.group);
         if (lc != null && count(keys, function (x) { return groupOf(x) === p.group; }) >= lc) return false;
         if (p.cls !== 'infantry' && !p.leaderBug && !liked(p)) return false;
         if (p.cls !== 'infantry' && !p.leaderBug) {
           // half the hulls the rules allow (three a Priority Level), or fewer; all of them only for a machine company
           var hullCap = machineMinded ? 3 * pl : Math.ceil(1.5 * pl);
+          // its own range (`hulls`: so many a Priority Level), never past the rules' three
+          if (a.hulls && a.hulls.max != null) hullCap = Math.min(3 * pl, Math.round(a.hulls.max * pl));
           if (a.machinesMax != null && a.machinesMax < 3) hullCap = Math.min(hullCap, a.machinesMax * pl);
           if (count(keys, function (x) { var q = profile(x); return q && q.cls !== 'infantry'; }) >= hullCap) return false;
         }
@@ -532,6 +558,19 @@
          with) most of the time, and the group furthest behind its mix first (its
          favourite hulls are taken before this, one a Priority Level) */
       favour: function (list, keys, wider) {
+        if (W) {
+          // one of them by weight, each copy it already has halving a unit's (more kinds, fewer repeats)
+          var ws = list.map(function (p) { return weightOf(p, keys); });
+          var tot = ws.reduce(function (s2, w) { return s2 + w; }, 0);
+          if (tot <= 0) {
+            // nothing it wants is legal here: something of the battle's weight, so the army is made
+            var none = list.filter(function (p) { return p.tier <= bt; });
+            return none.length ? none : list;
+          }
+          var r = rnd() * tot;
+          for (var wi = 0; wi < list.length; wi++) { r -= ws[wi]; if (r <= 0) return [list[wi]]; }
+          return [list[list.length - 1]];
+        }
         var own = list.filter(function (p) { return liked(p) || starters.indexOf(p.key) >= 0; });
         if (!own.length || rnd() > 0.85) {
           // an odd pick from outside its kind is never one of the battle's big guns (a Gauss cannon in a Shock force)
@@ -554,9 +593,10 @@
       /* past the battle's minimum, no more than a Priority Level and one of any one
          unit (Tier V is not fifteen Revolutionary Guard and nothing else) */
       // (Tier I is the rank and file, and may run to twice that: a rising is mostly Armed civilians)
-      tooMany: function (p, keys) { return count(keys, function (x) { return x === p.key; }) >= (p.tier === 1 ? 2 * pl + 1 : pl + 1); },
-      own: function (p) { return liked(p) || starters.indexOf(p.key) >= 0; },
+      tooMany: function (p, keys) { return !W && count(keys, function (x) { return x === p.key; }) >= (p.tier === 1 ? 2 * pl + 1 : pl + 1); },
+      own: function (p) { return liked(p) || (!W && starters.indexOf(p.key) >= 0); },
       machineMinded: machineMinded,
+      weighted: !!W,
       hullFirst: function (p) { return liked(p) && hullFirst(p); },
       rides: function (p) { return (a.riders || []).indexOf(p.group) >= 0; }
     };
@@ -666,7 +706,9 @@
     var need = comp.limits[battleTier - 1][0] * pl;
     var guard = 0;
     while (counts[battleTier] < need && guard++ < 200) {
-      var core = POOL.filter(function (p) { return p.tier === battleTier && !p.command && p.cls === 'infantry' && room(p); });
+      /* (with a weighted list its hulls count too, as the rules have them: Bastion's
+         Tier V is destroyers and gun carriers as well as Protectors) */
+      var core = POOL.filter(function (p) { return p.tier === battleTier && !p.command && (p.cls === 'infantry' || (st && st.weighted && st.own(p))) && room(p); });
       if (!core.length) break;
       /* no more of one unit than it would take past the minimum: once its own are used up
          it takes another of the Tier (Mujahideen beside the Revolutionary Guard), and
@@ -691,7 +733,8 @@
     /* ...and its favourite hulls (Bastion's hunters, Shock's transports and engineering
        vehicles, Free Space's troop carriers): one a Priority Level, the biggest at or
        below the battle's Tier, a different one each time where it can */
-    if (st) for (var hn = 0; hn < pl; hn++) {
+    var hullsFirstN = st ? (st.a.hulls && st.a.hulls.min != null ? Math.round(st.a.hulls.min * pl) : pl) : 0;
+    if (st) for (var hn = 0; hn < hullsFirstN; hn++) {
       var hulls = POOL.filter(function (p) { return !p.command && st.hullFirst(p) && room(p); });
       if (!hulls.length) break;
       // one of the battle's own weight where there is one (not three super-heavies at Tier II), and not one it has
@@ -699,6 +742,8 @@
       if (fit.length) hulls = fit;
       var newH = hulls.filter(function (p) { return !keys.some(function (k) { return splitPick(k).key === p.key; }); });
       if (newH.length) hulls = newH;
+      // (a weighted list takes one by its weights; otherwise the biggest)
+      if (st.weighted) { take(pick(st.favour(hulls, keys))); continue; }
       var hiH = Math.max.apply(null, hulls.map(function (p) { return p.tier; }));
       take(pick(hulls.filter(function (p) { return p.tier === hiH; })));
     }
@@ -709,7 +754,8 @@
       if (!any.length) break;
       any.sort(function (a, b) { return b.tier - a.tier; });
       var top = any.filter(function (p) { return p.tier === any[0].tier; });
-      var from = rnd() > 0.35 ? top : any;
+      // (a weighted list does not lean to the bigger units at all: its weights choose, across every Tier)
+      var from = st && st.weighted ? any : rnd() > 0.35 ? top : any;
       if (st && !from.some(st.own)) from = any;     // none of its own among the biggest: its own, smaller
       /* a force that is not out to field machines fills its last points with men rather
          than cheap hulls (not a Technical for every Armed civilian it could not take) */
