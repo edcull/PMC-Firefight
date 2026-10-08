@@ -291,7 +291,6 @@
       return false;
     }
     // { irregulars: 11, recruits: 1 } as a list naming each as often as its weight
-    function weighted(w) { var out = []; for (var k in w) for (var i = 0; i < w[k]; i++) out.push(k); return out; }
     function catchUpTarget(playerTier) {
       var swing = pick([-1, 0, 0, 0, 1]);
       return Math.max(1, Math.min(5, Math.min(playerTier + 1, playerTier + swing)));
@@ -552,8 +551,8 @@
           // is what keeps a company in character at the Tiers its groups do not reach
           var liked = pool.filter(wanted);
           if (!liked.length) {
-            var own = t === 1 ? (a.refill ? weighted(a.refill) : a.t1) : t === 2 ? flat(a.t2) : [];
-            // as often as the founding list names them (Special Ops: two Irregulars to each Recruit)
+            var own = t === 1 ? a.t1 : t === 2 ? flat(a.t2) : [];
+            // (as often as the founding list names them)
             liked = [];
             own.forEach(function (k) { pool.forEach(function (p) { if (p.key === k) liked.push(p); }); });
           }

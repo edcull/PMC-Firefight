@@ -69,7 +69,6 @@ function check(id, u) {
   if (!keyList(found.t1) || !keyList(found.t2, true) || !keyList(found.hulls)) return 'the founding units name a unit this army does not have';
   if (found.hullCount != null && !num(found.hullCount, 0, 6)) return 'campaign.found.hullCount is 0-6';
   if (!bool(found.free) || !bool(camp.honourFirst) || !bool(camp.lean)) return 'free, honourFirst and lean are true or false';
-  if (!numMap(camp.refill, isKey, 20)) return 'campaign.refill is { unit: weight }';
   if (camp.spend != null && ['promote', 'honours', 'recruit', 'machines'].indexOf(camp.spend) < 0) return 'campaign.spend is promote, honours, recruit or machines';
   if (camp.leanSize != null && !num(camp.leanSize, 6, 60)) return 'campaign.leanSize is 6-60';
   return null;

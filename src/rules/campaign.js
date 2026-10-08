@@ -1206,7 +1206,6 @@
       // the machine guns and the anti-tank teams half and half
       mix: { 'Heavy infantry': 3, 'Light support': 1, 'Heavy support': 1, 'Remote mortars': 1 },
       limit: { 'Remote mortars': 3 },
-      refill: { enforcers: 2, recruits: 1 },   // Tier I gaps later: Enforcers become battle armour, Recruits the gun crews
       machinesMax: 4,               // its heavy guns are on hulls: tank hunters, destroyers, gun carriers
       /* A skirmish force's shopping list (R.rollArmy): a weight for each unit or group
          (0 never, 10 the backbone), and [weight, limit] where it is kept rare, the
@@ -1303,7 +1302,6 @@
       t2: ['observers', ['rookie', 'nomads']],
       machines: [], vehicles: 0,
       // Tier I gaps later: Recruits (who become rifle teams) and Irregulars (who become scouts)
-      refill: { recruits: 2, irregulars: 1 },
       doctrines: ['O3', 'S6', 'T6', 'O6', 'T1', 'O1'],
       groups: ['Rifle infantry', 'Light infantry', 'Support teams', 'Drones', 'Remote mortars'],
       second: ['Light support', 'Assault troops'], // what it takes when its own run out (a skirmish roll)
@@ -1531,7 +1529,6 @@
       // and a little more of the garrison's artillery
       t1: ['rdesconscript'],
       t2: ['rdesrookie', 'rmilitia'],
-      refill: { rdesconscript: 1 },
       machines: ['rtechnical'], vehicles: 1,
       groups: ['Deserters and POWs', 'Freedom Warriors', 'Rebel support troops', 'Rebel artillery', 'Rebel aviation', 'Rebel combat vehicles', 'Rebel flak vehicles'],
       second: ['Holy Warriors', 'Mounted Warriors'], // what it takes when its own run out (a skirmish roll)
@@ -1716,11 +1713,11 @@
     temper: 'battle.temper', tactics: 'battle.tactics',
     doctrines: 'doctrines.shortlist', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',
     t1: 'campaign.found.t1', t2: 'campaign.found.t2', machines: 'campaign.found.hulls', vehicles: 'campaign.found.hullCount',
-    foundFree: 'campaign.found.free', refill: 'campaign.refill', spend: 'campaign.spend', honourFirst: 'campaign.honourFirst', lean: 'campaign.lean',
+    foundFree: 'campaign.found.free', spend: 'campaign.spend', honourFirst: 'campaign.honourFirst', lean: 'campaign.lean',
     leanSize: 'campaign.leanSize'
   };
   // these are replaced whole by a change, not merged key by key (a list of weights is edited as one)
-  var WHOLE = ['force.weights', 'force.mix', 'force.limit', 'force.tactics', 'battle.tactics', 'campaign.refill', 'doctrines.fixedAt'];
+  var WHOLE = ['force.weights', 'force.mix', 'force.limit', 'force.tactics', 'battle.tactics', 'doctrines.fixedAt'];
   function clone(o) { return o == null ? o : JSON.parse(JSON.stringify(o)); }
   function getPath(o, path) { return path.split('.').reduce(function (x, k) { return x == null ? undefined : x[k]; }, o); }
   function setPath(o, path, v) {

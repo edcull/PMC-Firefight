@@ -498,7 +498,7 @@
   function styleKit(a, rnd, pl, bt) {
     var flat = function (l) { return [].concat.apply([], l || []); };
     var lim = a.limit || {}, mix = a.mix || {};
-    var starters = flat([a.t1, a.t2, a.refill ? Object.keys(a.refill) : []]);
+    var starters = flat([a.t1, a.t2]);
     var profile = function (k) { return BY_KEY[k]; };
     var machineMinded = !!a.fieldsMachines || (a.machinesMax || 0) >= 5;
     var groupOf = function (k) { var p = profile(k); return p ? p.group : null; };

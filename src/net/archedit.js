@@ -116,7 +116,7 @@
         (more === 'or' && r.length < 2 ? '<button type="button" class="lnk" data-ae="addm" data-path="' + path + '" data-r="' + i + '">+ or</button>' : '') + drop(i, 'Remove') + '</div>';
     }).join('') + '<div class="ae-row"><button type="button" class="lnk" data-ae="add" data-path="' + path + '">' + '+ Add' + '</button></div></div>';
   }
-  /* rows of { key: number } bound to a path (the Tier I refill, the older rules' mix and
+  /* rows of { key: number } bound to a path (the older rules' mix and
      limits); `keys` the choices for a key */
   function mapRows(label, path, keys, hint) {
     var m = getP(draft(), path) || {};
@@ -155,7 +155,7 @@
     S.camp = sec('camp', 'Campaign') +
       '<small class="ae-dim">How an AI rival company starts, grows and fields its forces in a campaign.</small>' +
       unitRows('Founded with, Tier I', 'campaign.found.t1', function (p) { return p.cls === 'infantry' && !p.command; }, null,
-        'The Tier I units it is founded with, one each (a unit twice: two). It also fills later Tier I gaps from these unless the next list says otherwise.') +
+        'The Tier I units it is founded with, one each (a unit twice: two). Later Tier I gaps are filled by its weights.') +
       unitRows('Founded with, Tier II', 'campaign.found.t2', function (p) { return p.cls === 'infantry' && !p.command; }, 'or',
         'The Tier II units it is founded with. Two in a row: one or the other, at random each campaign. It fills Tier II gaps from these.') +
       unitRows('Founding hulls', 'campaign.found.hulls', function (p) { return p.cls !== 'infantry'; }, null,
@@ -163,8 +163,6 @@
       '<div class="ae-grid">' + field('How many founding hulls it takes', 'campaign.found.hullCount', 'num', ' min="0" max="6"') +
       field('Founded with its free units', 'campaign.found.free', 'bool', null,
         'Units that cost nothing to recruit (Armed civilians) are normally left out of the founding list and come in later to fill gaps. Ticked: it is founded with them (a revolt that starts as civilians).') + '</div>' +
-      mapRows('Tier I gaps filled with', 'campaign.refill', unitKeys().filter(function (o) { return R().profile(o[0]).tier === 1; }),
-        'In place of the Tier I founders when it fills a gap: each unit chosen as often as its weight compared with the others.') +
       '<div class="ae-grid">' + field('Hulls kept', 'force.machinesMax', 'num', ' min="0" max="9"',
         'How many hulls it buys and keeps, trading the smallest for a bigger one as it grows. Blank: twice the vehicle max.') +
       field('Fields its hulls first', 'force.machineMinded', 'bool', null,
@@ -527,7 +525,7 @@
     else if (a === 'delm') { var rm = rowsOf(path); if (rm[r]) rm[r].splice(m, 1); putRows(path, rm); }
     else if (a === 'addk') {
       var map = clone(getP(u, path) || {});
-      var choices = path === 'campaign.refill' ? unitKeys().filter(function (o) { return R().profile(o[0]).tier === 1; }) : path === 'force.mix' ? groupKeys() : groupKeys().concat(unitKeys());
+      var choices = path === 'force.mix' ? groupKeys() : groupKeys().concat(unitKeys());
       var free = choices.filter(function (o) { return !(o[0] in map); })[0];
       if (free) { map[free[0]] = 1; setP(u, path, map); }
     }
