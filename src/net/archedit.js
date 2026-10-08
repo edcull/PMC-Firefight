@@ -178,6 +178,9 @@
       '<label>Temper (behaviour roll)<select class="tin" data-ae-f="temper">' + [-3, -2, -1, 0, 1, 2, 3].map(function (n) {
         return '<option value="' + n + '"' + ((b.temper || 0) === n ? ' selected' : '') + '>' + (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + '</option>'; }).join('') + '</select>' +
         tip('Added to its units’ behaviour roll in battle (p. 147). +: presses in and charges. −: holds back and shoots from cover.') + '</label>' +
+      // (a swarm has one Leader Bug, as the rules have it: nothing to choose)
+      (faction() === 'bugs' ? '' : field('Command units a Priority Level', 'force.command', 'num', ' min="0" max="1" step="0.25" placeholder="one a force"',
+        'On average, in a skirmish roll: 0 none, 0.5 one for every two Priority Levels, 1 one each (the most the rules allow). Blank: one, whatever the Priority Level.')) +
       '</div>';
     var more = moreHTML(u), battle = '';
     // tactics: a Rebel's

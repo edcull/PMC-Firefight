@@ -1705,7 +1705,7 @@
      two meet: a flat field and where it sits in the nested shape. */
   var FIELD_MAP = {
     names: 'names', blurb: 'blurb',
-    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls',
+    weights: 'force.weights', tier: 'force.tier', hulls: 'force.hulls', command: 'force.command',
     fieldsMachines: 'force.machineMinded', machinesMax: 'force.machinesMax', riders: 'force.riders',
     temper: 'battle.temper', tactics: 'battle.tactics',
     doctrines: 'doctrines.shortlist', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',

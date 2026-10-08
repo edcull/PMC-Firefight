@@ -24,6 +24,7 @@ function check(id, u) {
   if (u.names != null && (!Array.isArray(u.names) || !u.names.length || u.names.some((n) => typeof n !== 'string' || !n.trim() || n.length > 60))) return 'company names must be a list of names';
   const force = u.force || {};
   if (force.tier != null && [-1, 0, 1].indexOf(force.tier) < 0) return 'the tier preference is -1, 0 or 1';
+  if (force.command != null && !num(force.command, 0, 1)) return 'command units are 0-1 a Priority Level';
   if (force.hulls != null) {
     const h = force.hulls;
     if (typeof h !== 'object' || (h.min != null && !num(h.min, 0, 3)) || (h.max != null && !num(h.max, 0, 3))) return 'hulls are 0-3 a Priority Level';

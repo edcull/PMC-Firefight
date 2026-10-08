@@ -1043,6 +1043,16 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
   var sw = offs('swarm', 'pmc', 3), el = offs('elite', 'pmc', 3);
   ok('...one Tier off is taken more than two, whichever way it leans', sw[-1] > (sw[-2] || 0) && el[1] > (el[2] || 0), true, JSON.stringify([sw, el]));
   ok('...and the factors fall away past one Tier', [R.tierLean(-1, -1) > R.tierLean(-1, -2), R.tierLean(1, 1) > R.tierLean(1, 2), R.tierLean(0, 2) < R.tierLean(0, 1), R.tierLean(0, -3) < R.tierLean(0, -2)].every(Boolean), true);
+  // command units a Priority Level, on average: none, one for every two, one each (Alphas count for a Xenotripod)
+  var cmdAt = function (id, f, c, pl) {
+    var u = C.unifiedArchetype(id); u.force.command = c; var n = 0, bad = 0, ch = {}; ch[id] = C.archetypeChange(id, u);
+    C.withArchetypeChanges(ch, function () {
+      for (var i = 0; i < 40; i++) { var ks = R.rollArmy(3, pl, null, f, id); if (!R.checkArmy(ks, 3, pl, null, null, f).ok) bad++; ks.forEach(function (k) { var p = R.profile(keyOf(k)); if (p.command || p.alpha) n++; }); }
+    });
+    return bad ? -1 : n / 40;
+  };
+  var cmdGot = [cmdAt('armour', 'pmc', 0, 2), cmdAt('armour', 'pmc', 0.5, 2), cmdAt('armour', 'pmc', 1, 3), cmdAt('ghadon', 'xeno', 0, 2), cmdAt('ghadon', 'xeno', 1, 2)];
+  ok('command units follow the personality: 0, 0.5 and 1 a Priority Level, all legal', JSON.stringify(cmdGot), '[0,1,3,0,2]');
   var cav4 = 0;
   for (var c4 = 0; c4 < 80; c4++) cav4 += R.rollArmy(3, 2, null, 'pmc', 'aircav').filter(function (k) { var p = R.profile(keyOf(k)); return p.cls !== 'infantry' && p.tier > 3; }).length;
   ok('...and a Cavalry at Tier III takes a Tier IV hull now and then', cav4 > 20 && cav4 < 160, true, cav4 + ' in 80 forces');

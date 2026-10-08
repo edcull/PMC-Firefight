@@ -606,6 +606,8 @@
       var hi = lim[1] === 99 ? 99 : lim[1] * pl;
       if (!p.noSlot && counts[p.tier] + 1 > hi) return false;
       if (p.command && commands + 1 > pl) return false;
+      // (a personality's `command` is the whole count of them, Alphas included: none come in later)
+      if (st && st.a.command != null && (p.command || p.alpha) && !cmdPhase) return false;
       if (p.cap && (perKey[p.key] || 0) + 1 > p.cap) return false;
       if (p.capPL && (perKey[p.key] || 0) + 1 > p.capPL * pl) return false;
       if (p.groupCap && (perGroup[p.group] || 0) + 1 > p.groupCap) return false;
@@ -661,14 +663,24 @@
       if (p.command) commands++;
       if (p.cls !== 'infantry') { machines++; if (p.cls === 'aircraft') aircraft++; }
     }
-    // a command unit first, at or below the battle tier
-    var cmds = POOL.filter(function (p) { return (p.command || p.alpha) && p.tier <= battleTier && room(p); });
-    // (a personality's force is led by a commander of the battle's own Tier where it can be, or the nearest below)
-    if (st && cmds.length) {
-      var topC = Math.max.apply(null, cmds.map(function (p) { return p.tier; }));
-      cmds = cmds.filter(function (p) { return p.tier === topC; });
+    /* its command units first, at or below the battle tier: one, or as many as a
+       personality's `command` has a Priority Level on average (0.5 at PL3: one or two) */
+    var cmdN = 1, cmdPhase = true;
+    if (st && st.a.command != null) {
+      var wantC = st.a.command * pl;
+      cmdN = Math.floor(wantC) + (rnd() < wantC - Math.floor(wantC) ? 1 : 0);
     }
-    if (cmds.length) take(pick(cmds));
+    for (var cn = 0; cn < cmdN; cn++) {
+      var cmds = POOL.filter(function (p) { return (p.command || p.alpha) && p.tier <= battleTier && room(p); });
+      if (!cmds.length) break;
+      // (a personality's force is led by a commander of the battle's own Tier where it can be, or the nearest below)
+      if (st) {
+        var topC = Math.max.apply(null, cmds.map(function (p) { return p.tier; }));
+        cmds = cmds.filter(function (p) { return p.tier === topC; });
+      }
+      take(pick(cmds));
+    }
+    cmdPhase = false;
     // then the minimum of the battle tier's own units
     var need = comp.limits[battleTier - 1][0] * pl;
     var guard = 0;
