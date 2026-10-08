@@ -1065,6 +1065,32 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
   var plainAlphas = 0;
   for (var pa = 0; pa < 30; pa++) plainAlphas += R.rollArmy(3, 2, null, 'xeno', 'ghadon').filter(function (k) { return R.profile(keyOf(k)).alpha; }).length;
   ok('...and with nothing set, one command unit a force, Alphas included', plainAlphas, 30);
+  // a rolled hull's drive: its usual one about 50% of the time, legs about 20% (less with transports, which never walk); a drone about 15%
+  var dv = 0, usual = 0, legs = 0, del = 0, dr = 0;
+  ['marksmen', 'shock', 'swarm'].forEach(function (id) {
+    for (var i = 0; i < 40; i++) R.rollArmy(3, 2, null, 'pmc', id).forEach(function (k) {
+      var sp = R.splitPick(k), p = R.profile(sp.key);
+      if (R.canBeDrone(p)) { del++; if (sp.drone) dr++; }
+      if (p.cls === 'vehicle' && R.propsFor(p).length) { dv++; if (sp.prop === R.lookDrive(p)) usual++; if (sp.prop === 'walker') legs++; }
+    });
+  });
+  ok('rolled hulls: their usual drive about 50% of the time, legs up to 20%, drones about 15%', usual / dv > 0.4 && usual / dv < 0.66 && legs / dv > 0.06 && legs / dv < 0.28 && dr / del > 0.07 && dr / del < 0.25, true,
+    Math.round(100 * usual / dv) + '% usual of ' + dv + ', ' + legs + ' walkers, ' + Math.round(100 * dr / del) + '% drones of ' + del);
+  // ...or as its personality says: its own drone % and drive odds, a transport still never on legs
+  var oddsAt = function (id, drones, drives) {
+    var u = C.unifiedArchetype(id); u.force.drones = drones; u.force.drives = drives; var ch = {}; ch[id] = C.archetypeChange(id, u);
+    var o = { dr: 0, del: 0, legs: 0, dv: 0, tlegs: 0 };
+    C.withArchetypeChanges(ch, function () {
+      for (var i = 0; i < 40; i++) R.rollArmy(3, 2, null, 'pmc', id).forEach(function (k) {
+        var sp = R.splitPick(k), p = R.profile(sp.key);
+        if (R.canBeDrone(p)) { o.del++; if (sp.drone) o.dr++; }
+        if (p.cls === 'vehicle' && R.propsFor(p).length) { o.dv++; if (sp.prop === 'walker') { o.legs++; if (p.transport) o.tlegs++; } }
+      });
+    });
+    return o;
+  };
+  var allLegs = oddsAt('armour', 100, { usual: 0, wheeled: 0, tracked: 0, grav: 0, hover: 0, walker: 10 }), noDr = oddsAt('armour', 0, { walker: 0 });
+  ok('a personality\'s own drone % and drive odds: all drones and legs, then none', [allLegs.dr === allLegs.del && allLegs.del > 0, allLegs.legs > 0 && allLegs.tlegs === 0, noDr.dr, noDr.legs].join(' '), 'true true 0 0');
   var cav4 = 0;
   for (var c4 = 0; c4 < 80; c4++) cav4 += R.rollArmy(3, 2, null, 'pmc', 'aircav').filter(function (k) { var p = R.profile(keyOf(k)); return p.cls !== 'infantry' && p.tier > 3; }).length;
   ok('...and a Cavalry at Tier III takes a Tier IV hull now and then', cav4 > 20 && cav4 < 160, true, cav4 + ' in 80 forces');

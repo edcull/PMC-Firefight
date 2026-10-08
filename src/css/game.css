@@ -1574,6 +1574,8 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
 .olob-who { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
 .olob-who b, .olob-who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .olob-slot select { flex: none; max-width: 46%; }
+.olob-sels { flex: none; max-width: 46%; display: flex; flex-direction: column; gap: 4px; }
+.olob-slot .olob-sels select { max-width: 100%; }
 .olob-who small { color: var(--ink-faint); font-size: 11px; }
 .olob-slot select, .olob-n select { flex: 0 1 auto; min-width: 0; max-width: 100%; background: var(--panel-3, var(--panel-2)); color: var(--ink);
   border: 1px solid var(--line); border-radius: 5px; padding: 5px 8px; font-family: var(--body); font-size: 12px; }

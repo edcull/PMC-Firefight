@@ -258,6 +258,8 @@
     recruit = function (co, key, opts) {
       var a0 = co && co.archetype ? archetype(co.archetype) : null, p0 = profile(key);
       if (!opts && a0 && a0.riders && p0 && a0.riders.indexOf(p0.group) >= 0 && R.canRide(p0)) opts = { riders: true };
+      // a hull it buys goes out on a drive and now and then as a drone, as a rolled force's do
+      if (!opts && p0 && (p0.cls === 'vehicle' || p0.cls === 'aircraft')) opts = { prop: R.rollDrive(p0, null, a0 && a0.drives), drone: R.rollDrone(p0, null, a0 && a0.drones) };
       return recruitBase(co, key, opts);
     };
     function flat(list) { return [].concat.apply([], list || []); }
@@ -412,6 +414,13 @@
       // a force whose leaders ride has its founding leader mounted too: founding is its recruitment
       var lead0 = byRid(co, co.cmdRid);
       if (lead0 && a.riders && a.riders.indexOf(profile(lead0.key).group) >= 0 && R.canRide(profile(lead0.key))) lead0.riders = true;
+      // ...and its founding hulls go out on a drive, now and then as drones, as the ones it buys later do
+      co.roster.forEach(function (e) {
+        var p = profile(e.key);
+        if (p.cls !== 'vehicle' && p.cls !== 'aircraft') return;
+        if (!e.prop) e.prop = R.rollDrive(p, null, a.drives);
+        if (!e.drone) e.drone = R.rollDrone(p, null, a.drones);
+      });
       co.blurb = null;
       return co;
     }

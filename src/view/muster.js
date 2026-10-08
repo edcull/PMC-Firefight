@@ -450,7 +450,7 @@
               var chk = cmd ? SOLO.checkCommando(sd.keys, musterTier(), musterPL(), sd.faction)
                 : R.checkArmy(sd.keys, musterTier(), musterPL(), null, sd.tactic, sd.faction);
               if (hotOwn(hk) && !(hk === 'ai' && i === 1) && (!sd.keys.length || chk.ok)) return;
-              sd.keys = cmd ? SOLO.rollCommando(musterTier(), musterPL(), sd.faction) : R.rollArmy(musterTier(), musterPL(), null, sd.faction);
+              sd.keys = cmd ? SOLO.rollCommando(musterTier(), musterPL(), sd.faction) : R.rollArmy(musterTier(), musterPL(), null, sd.faction, sd.style || undefined);
             });
             hotPaint(); return;
           }
@@ -653,6 +653,8 @@
         el('hot-sum').addEventListener('change', function (ev) {
           var s = ev.target.closest && ev.target.closest('[data-hotarmy]');
           if (s) hotArmy(hotLine(s.getAttribute('data-hotarmy')), s.value);
+          var ps = ev.target.closest && ev.target.closest('[data-hotstyle]');
+          if (ps) hotStyle(+ps.getAttribute('data-hotstyle'), ps.value);
         });
         // a force's colours, open by its chip: a tap anywhere else puts them away
         document.addEventListener('click', function (ev) {
@@ -792,7 +794,9 @@
         var tacts = Array.prototype.map.call(el('sel-tactic').options, function (o) { return o.value; }).filter(Boolean);
         el('sel-tactic').value = tacts[Math.floor(Math.random() * tacts.length)] || '';
       }
-      muster.keys = muster.solo ? SOLO.rollCommando(musterTier(), musterPL(), f) : R.rollArmy(musterTier(), musterPL(), null, f);
+      // (rolled again as the same kind: to the personality picked for it, if one was)
+      var sd0 = muster.hot.sides[i], st0 = keepFaction && sd0 && sd0.faction === f ? sd0.style : null;
+      muster.keys = muster.solo ? SOLO.rollCommando(musterTier(), musterPL(), f) : R.rollArmy(musterTier(), musterPL(), null, f, st0 || undefined);
       var other = muster.hot.sides[1 - i];
       if (!keepFaction && !keepColour) muster.colour = foeColour(other ? [other.colour] : []);
       // a demo force, and the AI's opposition, take a name from their colour and kind: the Jade Brood
@@ -825,8 +829,11 @@
     function copyKeys(keys) { var c = keys.slice(); if (keys.style) c.style = keys.style; return c; }
     function hotSaveSide() {
       var i = muster.hot.step - 1;
+      var was = muster.hot.sides[i];
       muster.hot.sides[i] = {
         keys: copyKeys(muster.keys), faction: musterFaction(), tactic: muster.solo ? null : musterTactic(),
+        // the personality picked for a rolled force, kept while it stays the same army
+        style: was && was.style && was.faction === musterFaction() ? was.style : null,
         name: ((el('hot-name') && el('hot-name').value) || '').trim() || muster.name || '',
         colour: muster.colour || 'ochre', noun: muster.demoNoun || null
       };
@@ -1024,6 +1031,19 @@
       var armySel = function (i, want) {
         return U.armySelect('data-hotarmy="' + i + '" aria-label="' + escHtml(hotWhoOf(i)) + ' \u2014 army"', want);
       };
+      /* A force rolled for the AI (or a demo's) is rolled to a personality: one picked
+         here, or one at random (the default), named beside it once rolled. */
+      var styleSel = function (sd, i) {
+        var C = root.PMCCamp;
+        if (cmd || !hotRolled(i + 1) || !C || !C.archetypesFor) return '';
+        var all = C.archetypesFor(sd.faction).filter(function (a) { return a.faction === sd.faction || (!a.faction && sd.faction === 'pmc'); });
+        if (!all.length) return '';
+        var got = !sd.style && sd.keys && sd.keys.style && all.filter(function (a) { return a.id === sd.keys.style; })[0];
+        var opt = function (v, t) { return '<option value="' + escHtml(v) + '"' + ((sd.style || '') === v ? ' selected' : '') + '>' + escHtml(t) + '</option>'; };
+        return '<select data-hotstyle="' + i + '" aria-label="' + escHtml(hotWhoOf(i)) + ' \u2014 personality">' +
+          opt('', 'Random' + (got ? ' (' + got.name + ')' : ' personality')) +
+          all.map(function (a) { return opt(a.id, a.name); }).join('') + '</select>';
+      };
       var html = '<div class="olob-slots">' + h.sides.map(function (sd, i) {
         var who = hotWho(i + 1);
         // a player's own force is theirs, as the lobby marks the slot you hold; a force rolled for the AI is not
@@ -1033,7 +1053,7 @@
           '<button type="button" class="olob-who hot-who" data-hotside="' + i + '"><b>' + escHtml(sd.name) + '</b>' +
           '<small>' + (sd.name === who ? '' : who + ' \u00b7 ') +
           (sd.keys.length ? sd.keys.length + ' units \u00b7 change' : 'no units yet \u2014 tap to muster it') + '</small></button>' +
-          armySel(i, sd.faction) + '</div>';
+          (styleSel(sd, i) ? '<span class="olob-sels">' + armySel(i, sd.faction) + styleSel(sd, i) + '</span>' : armySel(i, sd.faction)) + '</div>';
       }).join('');
       // the OpFor: its army drives the hidden "The OpFor" choice the battle reads
       if (cmd) {
@@ -1108,7 +1128,18 @@
       if (!sd) return;
       sd.faction = f;
       sd.tactic = null;
+      sd.style = null;   // another army's personalities: back to a random one
       sd.keys = hotCommando(h.kind) ? SOLO.rollCommando(musterTier(), musterPL(), f) : R.rollArmy(musterTier(), musterPL(), null, f);
+      hotRename(sd, i);
+      hotSum();
+    }
+    // a personality for a rolled force: rolled again to it ('' for one at random)
+    function hotStyle(i, id) {
+      var h = muster.hot, sd = h && h.sides[i];
+      if (!sd || hotCommando(h.kind)) return;
+      sd.style = id || null;
+      sd.tactic = null;
+      sd.keys = R.rollArmy(musterTier(), musterPL(), null, sd.faction, sd.style || undefined);
       hotRename(sd, i);
       hotSum();
     }

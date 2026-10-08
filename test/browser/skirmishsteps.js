@@ -143,6 +143,13 @@ const { ROOT, SHOTS, seedDice } = require('../where.js');
   check('it opens on the battlefield: your force empty, the opposition already rolled',
     /^The battlefield$/.test(await title()) && start.step === 3 && start.sides[0].keys.length === 0 && start.sides[1].keys.length > 0 &&
     start.sides[0].colour !== start.sides[1].colour && await shown('sel-terrain'), JSON.stringify(start).slice(0, 200));
+  // the opposition's personality: random by default, or one picked, which it is rolled to
+  const pers = await p.evaluate(() => { const s = document.querySelector('#hot-sum [data-hotstyle="1"]'); return s && { v: s.value, first: s.options[0].text, n: s.options.length, mine: !!document.querySelector('#hot-sum [data-hotstyle="0"]') }; });
+  check('the opposition\'s personality is Random to start, naming the one it was rolled to', pers && pers.v === '' && /^Random/.test(pers.first) && pers.n > 2 && !pers.mine, JSON.stringify(pers));
+  const pick = await p.evaluate(() => { const s = document.querySelector('#hot-sum [data-hotstyle="1"]'); const id = s.options[2].value; s.value = id; s.dispatchEvent(new Event('change', { bubbles: true })); return id; });
+  const picked = await p.evaluate(() => ({ style: window.__hot().sides[1].style, n: window.__hot().sides[1].keys.length, sel: document.querySelector('#hot-sum [data-hotstyle="1"]').value }));
+  check('...pick one and the opposition is rolled to it', picked.style === pick && picked.n > 0 && picked.sel === pick, JSON.stringify(picked) + ' wanted ' + pick);
+  await p.evaluate(() => { const s = document.querySelector('#hot-sum [data-hotstyle="1"]'); s.value = ''; s.dispatchEvent(new Event('change', { bubbles: true })); });
   await p.click('[data-hotside="0"]');
   check('tap your force to change it: a name and colours of your own', /^Muster your force$/.test(await title()) &&
     await shown('hot-name') && await shown('btn-colour-pop') && !(await shown('sel-op')));

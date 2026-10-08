@@ -26,6 +26,14 @@ function check(id, u) {
   if (force.tier != null && [-1, 0, 1].indexOf(force.tier) < 0) return 'the tier preference is -1, 0 or 1';
   if (force.command != null && !num(force.command, 0, 1)) return 'command units are 0-1 a Priority Level';
   if (force.commandTier != null && [-1, 0, 1].indexOf(force.commandTier) < 0) return 'the command level is -1, 0 or 1';
+  if (force.drones != null && !num(force.drones, 0, 100)) return 'drone odds are 0-100';
+  if (force.drives != null) {
+    if (typeof force.drives !== 'object' || Array.isArray(force.drives)) return 'the drive odds must be a list';
+    for (const k of Object.keys(force.drives)) {
+      if (!(k in R.DRIVE_ODDS)) return k + ' is not a drive';
+      if (force.drives[k] != null && !num(force.drives[k], 0, 100)) return 'drive odds are 0-100';
+    }
+  }
   if (force.hulls != null) {
     const h = force.hulls;
     if (typeof h !== 'object' || (h.min != null && !num(h.min, 0, 3)) || (h.max != null && !num(h.max, 0, 3))) return 'hulls are 0-3 a Priority Level';
