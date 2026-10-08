@@ -1108,7 +1108,7 @@
      missile goes straight up the line of sight. So they part company here. */
   // what each unit shoots with (the table, and how to read it, in data.js)
   // what a dug-in piece fires instead, laid level over open sights
-  var DUG_WEAPONS = { rmedart: { p: 'shellbig' }, rheavyart: { p: 'shellbig', n: 2 } };
+  var DUG_WEAPONS = { rmedart: { p: 'shellbig', blast: 'frag' }, rheavyart: { p: 'shellbig', n: 2, blast: 'frag' } };
   var WEAPONS = DATA.WEAPONS;
 
   /* A unit that is not in the table — a profile added later, or one built by a
@@ -1143,6 +1143,7 @@
     if (w.launch) spec.launch = w.launch;
     if (w.glow) spec.glow = w.glow;
     if (w.orb) spec.orb = w.orb;
+    if (w.blast) spec.blast = w.blast;
     return spec;
   }
   /* Auxiliary fire is a sidearm, whatever the unit's main weapon: a pistol

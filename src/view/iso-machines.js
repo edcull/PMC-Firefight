@@ -341,7 +341,8 @@
       missile: ['missile', 'rocket', 'gun'], rocket: ['rocket', 'missile', 'gun'],
       arc: ['rocket', 'gun'], arcbig: ['rocket', 'gun'], flame: ['flame', 'gun'],
       energy: ['mg', 'gun', 'auto'], orb: ['rocket', 'gun', 'missile'],
-      orbbig: ['gun', 'rocket', 'missile'], plasmabolt: ['gun', 'rail', 'auto', 'missile']
+      orbbig: ['gun', 'rocket', 'missile'], plasmabolt: ['gun', 'rail', 'auto', 'missile'],
+      molotov: ['gun', 'mg', 'auto'], frag: ['gun', 'mg', 'auto']
     };
     /* What a walker's arm carries for each weapon style: the barrel a shot comes
        out of is the barrel that looks like it fires it. Each of these registers
@@ -353,7 +354,7 @@
       shell: 'cannon', shellbig: 'bigcannon', rail: 'rail', flame: 'flame',
       arc: 'rocket', arcbig: 'rocket', rocket: 'rocket', missile: 'missile',
       spit: 'auto', spitbig: 'auto', spine: 'auto', energy: 'plasma', orb: 'plasma', orbbig: 'howitzer',
-      plasmabolt: 'bigcannon',
+      plasmabolt: 'bigcannon', molotov: 'mg', frag: 'mg',
       none: 'none'
     };
     // one cell of a machine's digital camouflage, in inches

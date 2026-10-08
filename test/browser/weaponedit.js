@@ -39,6 +39,16 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
     await p.waitForTimeout(800);
     ok('the unit has its Stats and Options tabs and no Weapon tab', (await tabs(p)).join(',') === 'stats,opts');
     ok('...and fires as the table in data.js has it', await p.evaluate(() => { window.__viewer.pick('aaveh'); return window.__viewer.spec().p === 'missile'; }));
+    // a splashing round's own bursts take the army's colour: amber for the mercenaries and the revolt, blue for a Xenotripod
+    const splashed = async (key) => {
+      await p.evaluate((k) => { window.PMC.WEAPONS[k] = { p: 'smg', splash: true }; window.__viewer.pick(k); window.__viewer.range(8); window.__viewer.fireNow(); }, key);
+      let rgbs = [];
+      for (let i = 0; i < 30 && !rgbs.length; i++) { await p.waitForTimeout(80); rgbs = await p.evaluate(() => window.__viewer.fxRGB()); }
+      return rgbs;
+    };
+    const pmc = await splashed('regular'), reb = await splashed('rmilitia');
+    ok('a splashing round bursts amber for the mercenaries and the revolt, not blue', pmc.indexOf('255,190,90') >= 0 && pmc.indexOf('110,190,255') < 0 &&
+      reb.indexOf('255,190,90') >= 0 && reb.indexOf('110,190,255') < 0, pmc.join(' ') + ' | ' + reb.join(' '));
     await ctx.close();
   }
 
@@ -71,14 +81,14 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   await p.evaluate(() => { window.__viewer.pick('aaveh'); window.__viewer.set('tab', 'weapon'); });
   await p.waitForTimeout(200);
   const before = await src(p);
-  ok('the unit’s entry, as the table writes it', /^aaveh: \{ p: 'missile', n: 2, s: 'chain', launch: 'samturret' \}$/.test(before), before);
+  ok('the unit’s entry, as the table writes it', /^aaveh: \{ p: 'missile', n: 2, s: 'chain', launch: 'samturret', blast: 'frag' \}$/.test(before), before);
   ok('...with its missiles’ surface-to-air launch, chosen from the table', await p.evaluate(() => document.querySelector('[data-w="launch"]').value === 'samturret' && window.__viewer.spec().launch === 'samturret'));
 
   await pickW(p, 'p', 'rail');
   await pickW(p, 'n', '4');
   const after = await p.evaluate(() => ({ spec: window.__viewer.spec(), src: document.querySelector('.vesrc').textContent, changed: !!document.querySelector('.vedited') }));
   ok('changing the primary changes what the unit fires', after.spec.p === 'rail' && after.spec.n === 4 && after.spec.s === 'chain', JSON.stringify(after.spec));
-  ok('...marked as changed, and its line written out', after.changed && /^aaveh: \{ p: 'rail', n: 4, s: 'chain', launch: 'samturret' \}$/.test(after.src), after.src);
+  ok('...marked as changed, and its line written out', after.changed && /^aaveh: \{ p: 'rail', n: 4, s: 'chain', launch: 'samturret', blast: 'frag' \}$/.test(after.src), after.src);
   ok('...and saved to the server', /^Saved/.test(await note(p)) &&
     (await fetch(URL + 'api/weapons').then((r) => r.json())).weapons.aaveh.p === 'rail', await note(p));
 
@@ -88,7 +98,7 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   ok('Fire on the tab fires it as changed', seen.indexOf('rail') >= 0, [...new Set(seen)].join(','));
 
   const lines = await p.evaluate(() => window.__viewer.exportEdits());
-  ok('Copy changes gives the lines to make it the table’s own', /aaveh: \{ p: 'rail', n: 4, s: 'chain', launch: 'samturret' \},\s+\/\/ Anti-aircraft vehicle/.test(lines), lines);
+  ok('Copy changes gives the lines to make it the table’s own', /aaveh: \{ p: 'rail', n: 4, s: 'chain', launch: 'samturret', blast: 'frag' \},\s+\/\/ Anti-aircraft vehicle/.test(lines), lines);
 
   // everyone else: a page loaded now draws the change, in the viewer and in the game
   await player.p.reload(); await player.p.waitForTimeout(900);
@@ -101,7 +111,7 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   await pickW(p, 's', '');
   await p.click('[data-w="splash"]'); await p.waitForTimeout(250);
   const s2 = await src(p);
-  ok('the secondary can be taken off, and splash set', /^aaveh: \{ p: 'rail', n: 4, splash: true, launch: 'samturret' \}$/.test(s2), s2);
+  ok('the secondary can be taken off, and splash set', /^aaveh: \{ p: 'rail', n: 4, splash: true, launch: 'samturret', blast: 'frag' \}$/.test(s2), s2);
 
   await p.click('.vweaponbody [data-do="wrevert"]'); await p.waitForTimeout(250);
   const back = await p.evaluate(() => ({ spec: window.__viewer.spec(), edits: Object.keys(window.__viewer.edits()) }));
@@ -114,7 +124,7 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   // the rest of how it is drawn: the launch, the shots' colour, an orb's flight
   await pickW(p, 'launch', '');
   ok('its missiles can be made to fly flat', await p.evaluate(() => window.__viewer.spec().launch === undefined &&
-    document.querySelector('.vesrc').textContent === "aaveh: { p: 'missile', n: 2, s: 'chain' }"));
+    document.querySelector('.vesrc').textContent === "aaveh: { p: 'missile', n: 2, s: 'chain', blast: 'frag' }"));
   await p.evaluate(() => { window.__viewer.pick('regular'); });
   await p.waitForTimeout(100);
   ok('a rifle team has no missile launch or orbs to choose, but a shot colour', await p.evaluate(() =>
@@ -132,11 +142,75 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   ok('an orb launcher team has its orbs’ flight to choose, teleported by default', orb.has && orb.now === '', JSON.stringify(orb));
   await pickW(p, 'orb', 'lob');
   ok('...and they can be lobbed', await p.evaluate(() => window.__viewer.spec().orb === 'lob'));
+  await pickW(p, 'blast', 'frag');
+  await p.evaluate(() => { window.__viewer.range(8); document.querySelector('.vweaponbody [data-do="fire"]').click(); });
+  let blasts = [];
+  for (let i = 0; i < 40 && blasts.indexOf('fragburst') < 0; i++) { await p.waitForTimeout(80); blasts = blasts.concat(await p.evaluate(() => window.__viewer.fx())); }
+  ok('...and made to go off as a fragmentation blast where they land', blasts.indexOf('fragburst') >= 0 && blasts.indexOf('orbburst') < 0 &&
+    /blast: 'frag'/.test(await src(p)), [...new Set(blasts)].join(','));
+
+  // a gun's shells too: the assault gun's, set to burst as frag
+  await p.evaluate(() => { window.__viewer.pick('asc'); });
+  await p.waitForTimeout(100);
+  ok('a gun firing shells has where they land to choose, its usual burst by default', await p.evaluate(() =>
+    !!document.querySelector('[data-w="blast"]') && document.querySelector('[data-w="blast"]').value === ''));
+  await pickW(p, 'blast', 'frag');
+  await p.evaluate(() => { window.__viewer.range(8); document.querySelector('.vweaponbody [data-do="fire"]').click(); });
+  let shells = [];
+  for (let i = 0; i < 40 && shells.indexOf('fragburst') < 0; i++) { await p.waitForTimeout(80); shells = shells.concat(await p.evaluate(() => window.__viewer.fx())); }
+  ok('...and its shells made to go off as fragmentation blasts', shells.indexOf('bolt') >= 0 && shells.indexOf('fragburst') >= 0, [...new Set(shells)].join(','));
+
+  // and a mortar's rounds, up and over, burst as frag as the table has it
+  await p.evaluate(() => { window.__viewer.pick('mortarsection'); });
+  await p.waitForTimeout(100);
+  ok('a mortar has where its rounds land to choose, frag by default', await p.evaluate(() =>
+    !!document.querySelector('[data-w="blast"]') && document.querySelector('[data-w="blast"]').value === 'frag'));
+  await p.evaluate(() => { window.__viewer.range(14); document.querySelector('.vweaponbody [data-do="fire"]').click(); });
+  let mortar = [];
+  for (let i = 0; i < 50 && mortar.indexOf('fragburst') < 0; i++) { await p.waitForTimeout(80); mortar = mortar.concat(await p.evaluate(() => window.__viewer.fx())); }
+  ok('...and its rounds made to go off as fragmentation blasts', mortar.indexOf('lob') >= 0 && mortar.indexOf('fragburst') >= 0, [...new Set(mortar)].join(','));
+
+  // missiles and rockets: a missile team's birds, and a support vehicle's ripple, frag as the table has them
+  for (const [key, style, kind] of [['missile', 'missile', 'missile'], ['impsupport', 'rocket', 'missile']]) {
+    await p.evaluate((k) => { window.__viewer.pick(k); }, key);
+    await p.waitForTimeout(100);
+    const has = await p.evaluate(() => (document.querySelector('[data-w="blast"]') || {}).value === 'frag');
+    await p.evaluate(() => { window.__viewer.range(14); document.querySelector('.vweaponbody [data-do="fire"]').click(); });
+    let got = [];
+    for (let i = 0; i < 60 && got.filter((x) => x === 'fragburst').length < 2; i++) { await p.waitForTimeout(80); got = got.concat(await p.evaluate(() => window.__viewer.fx())); }
+    ok('a ' + style + ' unit has where it lands to choose, frag by default, and goes off in fragmentation blasts',
+      has && got.indexOf(kind) >= 0 && got.indexOf('fragburst') >= 0, [...new Set(got)].join(','));
+  }
+
+  // the server tools: everything both editors decide, downloaded as JSON
+  {
+    const q = await chief.ctx.newPage();
+    q.on('pageerror', (e) => errs.push(e.message));
+    await q.goto(URL); await q.waitForTimeout(700);
+    await q.evaluate(() => window.PMCAccount.show()); await q.waitForTimeout(300);
+    await q.click('[data-acct="admin-open"]');
+    await q.waitForSelector('#account [data-acct="admin-dl-weapons"]', { timeout: 5000 });
+    const fileOf = async (sel) => {
+      const [dl] = await Promise.all([q.waitForEvent('download'), q.click(sel)]);
+      return { name: dl.suggestedFilename(), data: JSON.parse(require('fs').readFileSync(await dl.path(), 'utf8')) };
+    };
+    const w = await fileOf('[data-acct="admin-dl-weapons"]');
+    ok('Server tools downloads the weapon animations in full, as JSON', /^pmc-weapons-.*\.json$/.test(w.name) && w.data.kind === 'weapon animations' &&
+      Object.keys(w.data.units).length > 100 && w.data.units.asc.entry.blast === 'frag' && w.data.units.asc.changed &&
+      w.data.units.asc.default.p === 'shellbig' && w.data.units.veterans.changed === false &&
+      JSON.stringify(w.data.units.asc.entry) === '{"p":"shellbig","n":3,"s":"rail","sn":3,"blast":"frag"}' && Object.keys(w.data.changes).length >= 3,
+      w.name + ' ' + Object.keys(w.data.units || {}).length + ' units, ' + Object.keys(w.data.changes || {}).length + ' changed');
+    const a = await fileOf('[data-acct="admin-dl-arch"]');
+    ok('...and the personalities in full', /^pmc-personalities-.*\.json$/.test(a.name) && a.data.kind === 'personalities' &&
+      Array.isArray(a.data.personalities) && a.data.personalities.length > 10 && !!a.data.personalities[0].id && typeof a.data.changes === 'object',
+      a.name + ' ' + (a.data.personalities || []).length);
+    await q.close();
+  }
 
   const n = Object.keys((await fetch(URL + 'api/weapons').then((r) => r.json())).weapons).length;
   await p.click('.vweaponbody [data-do="wrevertall"]'); await p.waitForTimeout(300);
   const none = (await fetch(URL + 'api/weapons').then((r) => r.json())).weapons;
-  ok('Revert all puts every changed unit back, once asked', n === 3 && !Object.keys(none).length &&
+  ok('Revert all puts every changed unit back, once asked', n === 4 && !Object.keys(none).length &&
     await p.evaluate(() => { window.__viewer.pick('regular'); return !window.__viewer.spec().glow; }), n + ' ' + JSON.stringify(none));
 
   // a save the server will not take is taken back on the bench

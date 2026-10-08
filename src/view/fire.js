@@ -117,6 +117,10 @@
     function glowOf(u) { var g = u ? R.weaponSpec(u).glow : null; return g ? (g === 'none' ? 'none' : GLOWS[g] || null) : null; }
     function glowRGB(u) { var g = glowOf(u); return g && g !== 'none' ? g : XENO_BLUE; }
     function shotRGB(u) { var g = glowOf(u); return g ? (g === 'none' ? null : g) : R.isXeno(u) ? XENO_BLUE : null; }
+    /* What a splashing round (`splash`) bursts in when its shots are plain: the
+       army's own — a Xenotripod's blue, a bug's acid green, and amber for the
+       mercenaries and the revolt. */
+    function splashRGB(u) { return R.isXeno(u) ? XENO_BLUE : (u && u.faction === 'bugs') ? '150,220,80' : '255,190,90'; }
     function playEnergy(shooter, from, to, count, land, gap) {
       var rgb = glowRGB(shooter), n = count || 1;
       for (var q = 0; q < n; q++) {
@@ -133,7 +137,7 @@
       return n * (gap || 120) + 300;
     }
     function playOrbs(shooter, from, to, count, land, tele, big) {
-      var rgb = glowRGB(shooter), n = count || 1;
+      var rgb = glowRGB(shooter), n = count || 1, blast = R.weaponSpec(shooter).blast;
       var fl = tele ? 1000 : Math.round((big ? 760 : 560) + Math.min(600, R.unitDist(shooter, { x: to.x, y: to.y }) * 12));
       /* a Gamma's salvo all comes out of one exit portal, hanging short of the
          target on the shooter's side, and spreads from it */
@@ -152,7 +156,9 @@
             add({ kind: 'orb', from: pick(from, j), to: aim, rgb: rgb, tele: !!tele, exit: exit, big: !!big, dur: fl, blocking: true });
             setTimeout(function () {
               if (!alive()) return;
-              plasmaSplash(aim, rgb, big);
+              // where the weapon entry says (`blast: 'frag'`), it goes off as a fragmentation blast instead
+              if (blast === 'frag') fragBlast(aim, big ? 1.8 : 1.15, j);
+              else plasmaSplash(aim, rgb, big);
               if (land && j === n - 1) land(2, aim);
             }, fl);
             redraw();
@@ -160,6 +166,19 @@
         })(q);
       }
       return fl + (n - 1) * 200 + 600;
+    }
+
+    /* A fragmentation blast where a round lands (a frag grenade's, or an orb's
+       whose entry asks for one): `scale` how big, 1 a hand grenade's. */
+    function fragBlast(aim, scale, seed) {
+      add({ kind: 'fragburst', x: aim.x, y: aim.y, up: aim.up, seed: seed || 0, scale: scale || 1, dur: Math.round(1000 * Math.max(1, Math.sqrt(scale || 1))), blocking: true });
+      if (SFX) { SFX.impact(); SFX.shell(); if (scale > 1.5) SFX.impact(0.06); }
+    }
+
+    // where the i-th rocket of a ripple bursts: scattered a little about the mark, not all on one spot
+    function rocketSpot(to, i) {
+      var a = i * 2.4 + 0.7, r = 0.5 + (i % 3) * 0.45;
+      return { x: to.x + Math.cos(a) * r, y: to.y + Math.sin(a) * r * 0.8, up: to.up };
     }
 
     /* Where plasma lands: a ring of blue light and a white flash. A heavy round
@@ -241,6 +260,59 @@
       return null;
     }
 
+    /* Molotov cocktails: `count` bottles thrown from men through the squad, each
+       tumbling end over end along a high lob with its rag alight, and bursting
+       into a fiery splash where it lands — glass, a fireball, the fuel burning
+       on. `land` (the primary's) is told as the last one breaks. */
+    function playMolotovs(shooter, from, to, count, land) {
+      var n = count || 1, gap = 210;
+      var fl = Math.round(560 + Math.min(420, R.unitDist(shooter, { x: to.x, y: to.y }) * 18));
+      for (var q = 0; q < n; q++) {
+        (function (j) {
+          setTimeout(function () {
+            if (!alive()) return;
+            var aim = n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.3, y: to.y + (j % 2 ? 0.8 : -0.8), up: to.up } : to;
+            if (SFX) SFX.launch();
+            add({ kind: 'molotov', from: spread(from, j, n), to: aim, seed: j, dur: fl, blocking: true });
+            setTimeout(function () {
+              if (!alive()) return;
+              add({ kind: 'firesplash', x: aim.x, y: aim.y, up: aim.up, seed: j, dur: 1500, blocking: true });
+              if (SFX) { SFX.splat(); SFX.flamepuff(0.05); }
+              if (land && j === n - 1) land(2, aim);
+            }, fl);
+            redraw();
+          }, j * gap);
+        })(q);
+      }
+      return fl + (n - 1) * gap + 900;
+    }
+
+    /* Fragmentation grenades: `count` thrown from men through the squad, each
+       turning over along a short lob, skipping once and rolling to the mark,
+       then going off in a sharp burst of splinters, dust and earth. `land`
+       (the primary's) is told as the last one goes off. */
+    function playFrags(shooter, from, to, count, land) {
+      var n = count || 1, gap = 190;
+      var fl = Math.round(480 + Math.min(360, R.unitDist(shooter, { x: to.x, y: to.y }) * 16));
+      for (var q = 0; q < n; q++) {
+        (function (j) {
+          setTimeout(function () {
+            if (!alive()) return;
+            var aim = n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.4, y: to.y + (j % 2 ? 0.9 : -0.9), up: to.up } : to;
+            if (SFX) SFX.launch();
+            add({ kind: 'frag', from: spread(from, j, n), to: aim, seed: j, dur: fl, blocking: true });
+            setTimeout(function () {
+              if (!alive()) return;
+              fragBlast(aim, 1, j);
+              if (land && j === n - 1) land(3, aim);
+            }, fl);
+            redraw();
+          }, j * gap);
+        })(q);
+      }
+      return fl + (n - 1) * gap + 700;
+    }
+
     /* The primary weapon, played out. `o` carries the hits it scored, the range
        (how long anything lobbed is in the air), and `land(extra)`, called as
        the rounds arrive. Returns how long it takes, in ms, before any
@@ -252,6 +324,16 @@
           // nothing in hand: what it throws (the secondary) is the attack, and lands its hits
           if (spec.s) { setTimeout(function () { land(3); }, 150 + 520 + ((spec.sn || 1) - 1) * 170); return 120; }
           return 120;
+
+        // fragmentation grenades, thrown: skipping to the mark and going off
+        case 'frag': {
+          return playFrags(shooter, from, to, spec.n, land);
+        }
+
+        // Molotov cocktails, thrown: tumbling, alight, bursting into fire
+        case 'molotov': {
+          return playMolotovs(shooter, from, to, spec.n, land);
+        }
 
         // Xenotripod small arms: pulses of the army's own light
         case 'energy': {
@@ -316,7 +398,11 @@
                 if (SFX) SFX.shell();
                 add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: big ? 320 : 260, big: true, blocking: true });
                 add({ kind: 'bolt', from: F, to: to, dur: flightMs, heavy: big, blocking: true });
-                setTimeout(function () { land(big ? 4 : 2); }, flightMs);
+                setTimeout(function () {
+                  // where the weapon entry says (`blast: 'frag'`), each round goes off as a fragmentation blast
+                  if (alive() && spec.blast === 'frag') fragBlast(to, big ? 1.5 : 1.05, j);
+                  land(big ? 4 : 2);
+                }, flightMs);
                 redraw();
               }, j * shellGap);
             })(sh);
@@ -349,7 +435,11 @@
                   : to;
                 add({ kind: 'lob', from: F, to: aim, dur: flight, heavy: heavy, blocking: true });
                 if (SFX) SFX.incoming(flight / 1000 - 0.45, 0.45);
-                setTimeout(function () { land(heavy ? 4 : 3, aim); }, flight);
+                setTimeout(function () {
+                  // where the weapon entry says (`blast: 'frag'`), each round goes off as a fragmentation blast
+                  if (alive() && spec.blast === 'frag') fragBlast(aim, heavy ? 1.5 : 1.05, i);
+                  land(heavy ? 4 : 3, aim);
+                }, flight);
               }, off);
             })(q);
           }
@@ -372,7 +462,11 @@
                 // no flash at the tube: it is ejected cold and lights further out
                 add({ kind: 'missile', from: F, to: to, seed: j, dur: mflight, curve: curve, blocking: true,
                   sam: samLaunch(spec, shooter, to) });
-                setTimeout(function () { land(3); }, mflight);
+                setTimeout(function () {
+                  // where the weapon entry says (`blast: 'frag'`), each missile goes off as a fragmentation blast
+                  if (alive() && spec.blast === 'frag') fragBlast(to, 1.2, j);
+                  land(3);
+                }, mflight);
                 redraw();
               }, j * birdGap);
             })(mi2);
@@ -395,7 +489,11 @@
                   kind: 'missile', from: F, to: to, rocket: true, seed: i,
                   dur: rflight, blocking: true
                 });
-                setTimeout(function () { land(i === rn - 1 ? 3 : 0); }, rflight);
+                setTimeout(function () {
+                  // as `blast: 'frag'` asks: each rocket a smaller blast, scattered about the mark
+                  if (alive() && spec.blast === 'frag') fragBlast(rocketSpot(to, i), 0.8, i);
+                  land(i === rn - 1 ? 3 : 0);
+                }, rflight);
               }, i * 78);
             })(r);
           }
@@ -473,6 +571,8 @@
           }
           return;
         }
+        case 'molotov': playMolotovs(shooter, from, to, count, null); return;
+        case 'frag': playFrags(shooter, from, to, count, null); return;
         case 'arc': case 'arcbig': {
           /* Thrown charges: a short, high lob with a puff where it lands, and
              `count` of them — assault troops go in with a grenade in each hand. */
@@ -491,6 +591,7 @@
                 add({ kind: 'lob', from: from.pod ? pick(throwFrom, j) : spread(throwFrom, j, thrown), to: aim, dur: flight, heavy: style === 'arcbig', blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
+                  if (R.weaponSpec(shooter).blast === 'frag') { fragBlast(aim, style === 'arcbig' ? 1.5 : 1.05, j); return; }
                   add({ kind: 'impact', x: aim.x, y: aim.y, up: aim.up, n: 4, dur: 380, blocking: true });
                   if (SFX) SFX.impact();
                 }, flight);
@@ -510,7 +611,11 @@
                 if (SFX) SFX.shell();
                 add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pick(from, j).mz, dur: 240, big: true, blocking: true });
                 add({ kind: 'bolt', from: pick(from, j), to: to, dur: 300, heavy: style === 'shellbig', blocking: true });
-                setTimeout(function () { if (alive()) secondaryLands(shooter, to, style === 'shellbig' ? 3 : 2); }, 300);
+                setTimeout(function () {
+                  if (!alive()) return;
+                  if (R.weaponSpec(shooter).blast === 'frag') fragBlast(to, style === 'shellbig' ? 1.5 : 1.05, j);
+                  else secondaryLands(shooter, to, style === 'shellbig' ? 3 : 2);
+                }, 300);
                 redraw();
               }, j * 230);
             })(q2);
@@ -540,7 +645,11 @@
                 if (!alive()) return;
                 if (SFX) SFX.missile(0, 0.9, 0.47);
                 add({ kind: 'missile', from: pick(from, j), to: to, seed: j, dur: 900, blocking: true });
-                setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 900);
+                setTimeout(function () {
+                  if (!alive()) return;
+                  if (R.weaponSpec(shooter).blast === 'frag') fragBlast(to, 1.2, j);
+                  else secondaryLands(shooter, to, 3);
+                }, 900);
                 redraw();
               }, j * 260);
             })(q4);
@@ -556,7 +665,8 @@
                 if (!alive()) return;
                 add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pick(from, j).mz, dur: 180, big: true, blocking: true });
                 add({ kind: 'missile', from: pick(from, j), to: to, rocket: true, seed: j, dur: 420, blocking: true });
-                if (j === 4) setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 420);
+                if (R.weaponSpec(shooter).blast === 'frag') setTimeout(function () { if (alive()) fragBlast(rocketSpot(to, j), 0.8, j); }, 420);
+                else if (j === 4) setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 420);
                 redraw();
               }, j * 78);
             })(q5);
@@ -620,7 +730,7 @@
         });
         if (splash) {
           add({
-            kind: 'impact', n: 2, rgb: shotRGB(shooter) || XENO_BLUE, delay: at + 240, dur: 520 + at, blocking: true,
+            kind: 'impact', n: 2, rgb: shotRGB(shooter) || splashRGB(shooter), delay: at + 240, dur: 520 + at, blocking: true,
             x: to.x + (Math.random() - 0.5) * 1.6, y: to.y + (Math.random() - 0.5) * 1.6, up: to.up
           });
         }

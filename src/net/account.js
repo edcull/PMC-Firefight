@@ -160,6 +160,11 @@
     h += '<div class="acct-sec"><h3>Personalities</h3><div class="acct-row"><span><b>How each kind of force is built and fights</b>' +
       '<small>Weighted unit lists, tier preference, hulls, temper, tactics, doctrines — with a preview</small></span><em>' +
       '<button type="button" class="lnk" data-acct="admin-arch">Edit personalities</button></em></div></div>';
+    // everything both editors decide, as this server has it, to keep or look over
+    h += '<div class="acct-sec"><h3>Data</h3><div class="acct-row"><span><b>Download as JSON</b>' +
+      '<small>Each in full as games here use it, with the changes made on this server and the defaults they were made to</small></span><em>' +
+      '<button type="button" class="lnk" data-acct="admin-dl-weapons">Weapon animations</button> ' +
+      '<button type="button" class="lnk" data-acct="admin-dl-arch">Personalities</button></em></div></div>';
     h += '<div class="acct-sec"><h3>Accounts</h3>' + (d.users || []).map(function (u) {
       var row = '<div class="acct-row"><span><b>' + esc(u.name) + (u.admin ? ' <i class="acct-tag">admin</i>' : '') + '</b><small>' +
         esc(u.email || 'no email') + (u.email && !u.emailOk ? ' (unconfirmed)' : '') + (u.active ? '' : ' \u00b7 not activated') + ' \u00b7 last seen ' + when(u.seen) + '</small></span><em>' +
@@ -182,6 +187,41 @@
       return row + (asking('delete-campaign', c.id) ? confirm() : '');
     }).join('') : '<p class="acct-none">None.</p>') + '</div>';
     return h + '</div>';
+  }
+  /* A download of everything an editor decides, in full: fetched fresh from the
+     server first, so it is what every game here uses now. */
+  function saveJSON(name, data) {
+    var url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' }));
+    var a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+  }
+  function stamp() { return new Date().toISOString().slice(0, 10); }
+  function downloadWeapons() {
+    var W = root.PMCWeapons, D = root.PMCData, R = root.PMC;
+    if (!W || !D || !R) { fault = 'The weapon table is not on this page.'; draw(); return; }
+    W.load(function () {
+      var changed = W.changed(), units = {};
+      D.CATALOGUE.forEach(function (p) {
+        units[p.key] = { name: p.name, faction: p.faction || 'pmc', entry: D.weaponEntry(R.weaponSpec(p)) || R.weaponSpec(p), changed: !!changed[p.key],
+          default: W.base(p.key) || null };
+      });
+      saveJSON('pmc-weapons-' + stamp() + '.json', { kind: 'weapon animations', exported: new Date().toISOString(), server: location.host,
+        fields: D.WEAPON_FIELDS, changes: changed, units: units });
+      notice = 'Weapon animations downloaded (' + Object.keys(units).length + ' units, ' + Object.keys(changed).length + ' changed).'; draw();
+    });
+  }
+  function downloadPersonalities() {
+    var C = root.PMCCamp;
+    if (!C || !C.applyArchetypeChanges) { fault = 'The personalities are not on this page.'; draw(); return; }
+    get('api/archetypes').then(function (r) {
+      if (r.ok && r.j && r.j.changes) C.applyArchetypeChanges(r.j.changes);
+      var all = [].concat(C.ARCHETYPES, C.REBEL_ARCHETYPES, C.BUG_ARCHETYPES, C.XENO_ARCHETYPES);
+      var changes = C.archetypeChanges();
+      saveJSON('pmc-personalities-' + stamp() + '.json', { kind: 'personalities', exported: new Date().toISOString(), server: location.host,
+        changes: changes, updated: (r.j && r.j.updated) || [], personalities: JSON.parse(JSON.stringify(all)) });
+      notice = 'Personalities downloaded (' + all.length + ', ' + Object.keys(changes).length + ' changed).'; draw();
+    }, function () { fault = 'The server could not be reached.'; draw(); });
   }
   function adminLoad() {
     get('api/admin/overview').then(function (r) {
@@ -449,6 +489,8 @@
       else if (a === 'admin-close') { adminOpen = false; adminAsk = null; fault = ''; notice = ''; draw(); }
       // the personality editor: a window of its own over this one (archedit.js)
       else if (a === 'admin-arch') { if (root.PMCArchEdit) root.PMCArchEdit.open({ get: get, post: post }); }
+      else if (a === 'admin-dl-weapons') { fault = ''; notice = ''; downloadWeapons(); }
+      else if (a === 'admin-dl-arch') { fault = ''; notice = ''; downloadPersonalities(); }
       else if (a === 'adm') {
         var act = b.getAttribute('data-act'), key = b.getAttribute('data-key');
         fault = ''; notice = '';

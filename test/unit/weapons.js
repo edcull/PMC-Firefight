@@ -119,19 +119,19 @@ is('rheavyart', 'arcbig x3');
 
 head('Autocannon');
 all(['hpv', 'hmgteam', 'rautocannon'], 'chain');
-is('lifv', 'chain+missile');
+is('lifv', 'missile+chain');
 is('hifv', 'missile+chain x2');
 // the heavy autocannon squad puts three heavy rounds through its own fire
 is('rheavyac', 'chain+shellbig');
 // the guard have carbines through the ranks as well as rifles
 is('rguard', 'small+smg');
 // so do the hellriders, across the saddle, and they ride in throwing
-is('rhellriders', 'smg+arc');
-is('rlegendary', 'chain+arc');
+is('rhellriders', 'smg+molotov');
+is('rlegendary', 'chain+molotov');
 is('rlflak', 'burst');
 is('rmflak', 'burst+burst');
 // every heavy infantry unit, whatever its Tier
-all(['ecobats', 'bats'], 'smg');
+all(['ecobats', 'bats'], 'smg+energy');
 
 is('lcv', 'shell+pistol x2');
 
@@ -183,10 +183,10 @@ is('recon', 'shell+pistol');
 head('Close-quarters automatics');
 is('enforcers', 'smg');
 all(['lighteng', 'engineers'], 'smg');
-// assault troops go in with a carbine and a pair of charges (p. 64)
-all(['shock', 'commandos'], 'arc+smg x2');
-// the Protectors do the same, behind three of them
-all(['protectors', 'protectorshm'], 'arc+smg x3');
+// assault troops go in with a carbine and a pair of grenades (p. 64)
+all(['shock', 'commandos'], 'frag+smg x2');
+// the Protectors sweep with carbines and follow up with energy charges
+all(['protectors', 'protectorshm'], 'smg+energy');
 // irregulars scavenge carbines, and the Holy Warriors go in close with them
 is('irregulars', 'smg');
 all(['racolytes', 'rfanatics'], 'smg');
@@ -194,8 +194,8 @@ all(['racolytes', 'rfanatics'], 'smg');
 is('rpow', 'smg');
 // the partisan commandos work in pairs: a carbine and a rifle
 all(['rassaultcdo', 'rsabcdo'], 'small+smg');
-// the rider gangs come past with a carbine in one hand and charges in the other
-all(['rridergang', 'rriderwar'], 'smg+arc');
+// the rider gangs come past throwing Molotovs (Incendiary Ammunition)
+all(['rridergang', 'rriderwar'], 'none+molotov');
 
 head('And a rifle is still a rifle');
 all(['recruits', 'rookie', 'regular'], 'small');
@@ -226,7 +226,7 @@ all(['insertplat', 'rlifter'], 'none');
 head('Nothing falls through');
 var kinds = {};
 var bad = [];
-var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','orbbig','plasmabolt','none'];
+var KNOWN = ['pistol','small','smg','burst','chain','shell','shellbig','arc','arcbig','missile','rocket','flame','rail','spit','spitbig','spine','energy','orb','orbbig','plasmabolt','molotov','frag','none'];
 R.CATALOGUE.forEach(function (p) {
   var w = R.weaponSpec(p);
   if (KNOWN.indexOf(w.p) < 0) bad.push(p.name + ' \u2192 ' + w.p);
@@ -266,6 +266,14 @@ ok('a support vehicle flown as a drone still lobs',
   R.weaponStyle(R.applyDrone(build('msupport'), true)) === 'arcbig');
 ok('a combat vehicle flown as a drone still hammers',
   R.weaponStyle(R.applyDrone(build('hpv'), true)) === 'chain');
+
+/* Dug in, the rebel guns are laid level and fire over open sights, and their
+   heavy shells go off in fragmentation blasts. */
+head('A dug-in rebel gun fires its shells level');
+['rmedart', 'rheavyart'].forEach(function (k) {
+  var w = R.weaponSpec(Object.assign({}, R.profile(k), { dugIn: true }));
+  ok(R.profile(k).name + ', dug in', w.p === 'shellbig' && w.blast === 'frag', fmt(w) + (w.blast ? ' ' + w.blast : ''));
+});
 
 /* A profile the table has never heard of still has to fire like something. */
 head('An unlisted profile is read from the rules it carries');
