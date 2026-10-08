@@ -1073,20 +1073,14 @@
   function pickerFaction() { return el('vsearch').value.trim() ? null : (view.pickFac || 'pmc'); }
   /* ---------- the weapon editor (an admin's) ----------
      The weapon table (rules/data.js WEAPONS) is the one place that decides what a
-     unit looks and sounds like when it fires, and it is a plain object, so the
-     bench can change it in place and the change is seen and heard at once.
-     Nothing here touches the rules: Firepower, Range and the dice are untouched.
-     An edit lives in this browser until it is copied back into data.js. It is
-     offered only to an admin of the game server the viewer is served from. */
-  var STYLES = ['small', 'pistol', 'smg', 'burst', 'chain', 'shell', 'shellbig', 'arc', 'arcbig',
-    'missile', 'rocket', 'flame', 'rail', 'spit', 'spitbig', 'spine', 'energy', 'orb', 'orbbig', 'plasmabolt', 'none'];
-  var EDITS = 'pmc-weapon-edits';
-  var admin = false, edits = {}, editNote = '';
-  // the table as data.js wrote it, so any change can always be put back
-  var BASE = {};
-  Object.keys(R.WEAPONS).forEach(function (k) { BASE[k] = R.WEAPONS[k]; });
-
-  function hasOwn(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+     unit looks and sounds like when it fires. An admin of the game server the
+     viewer is served from may change a unit's entry here: it is drawn at once,
+     and saved to the server (net/weapons.js), which lays it over the table for
+     every game it serves. Revert puts a unit back as data.js has it. Nothing
+     here touches the rules: Firepower, Range and the dice are untouched. */
+  var WF = root.PMCData.WEAPON_FIELDS, STORE = root.PMCWeapons;
+  var STYLES = WF.styles;
+  var admin = false, editNote = '';
   // what the table holds for a unit now, in full
   function entry(key) {
     return entry0(R.WEAPONS[key] || R.weaponSpec(R.profile(key) || {}));
@@ -1109,32 +1103,30 @@
     return { p: w.p || 'small', n: w.n || 1, s: w.s || null, sn: w.sn || 1, splash: !!w.splash,
       launch: w.launch || null, glow: w.glow || null, orb: w.orb || null };
   }
-  function saveEdits() { try { localStorage.setItem(EDITS, JSON.stringify(edits)); } catch (e) { } }
-  function loadEdits() {
-    try { edits = JSON.parse(localStorage.getItem(EDITS) || '{}') || {}; } catch (e) { edits = {}; }
-    // an edit the table has since caught up with is no longer an edit
-    Object.keys(edits).forEach(function (k) {
-      if (!R.profile(k) || same(BASE[k], edits[k])) delete edits[k];
-      else R.WEAPONS[k] = edits[k];
-    });
-    saveEdits();
-  }
+  function changedKeys() { return Object.keys(STORE.changed()).sort(); }
   function edited() { FX.clear(); drawControls(); frame(); }
+  // what the server said, under the buttons
+  function told(ok, yes) { return function (r) { editNote = r.ok ? yes : 'Not saved: ' + (r.why || 'the server would not take it.'); edited(); }; }
+  // a unit's entry changed: drawn at once, kept on the server (taken back if it will not keep it)
   function setEntry(key, w) {
     var out = tidy(w);
-    if (same(BASE[key], out)) { revert(key); return; }
-    R.WEAPONS[key] = out; edits[key] = out; saveEdits();
-    editNote = ''; edited();
+    if (same(STORE.base(key), out)) { revert(key); return; }
+    editNote = 'Saving…';
+    STORE.save(key, out, told(true, 'Saved: every game on this server fires it so.'));
+    edited();
   }
   function revert(key) {
-    if (BASE[key]) R.WEAPONS[key] = BASE[key]; else delete R.WEAPONS[key];
-    delete edits[key]; saveEdits();
-    editNote = ''; edited();
+    if (!STORE.isChanged(key)) return;
+    editNote = 'Putting it back…';
+    STORE.revert(key, told(true, 'Put back as data.js has it.'));
+    edited();
   }
   function revertAll() {
-    Object.keys(edits).forEach(function (k) { if (BASE[k]) R.WEAPONS[k] = BASE[k]; else delete R.WEAPONS[k]; });
-    edits = {}; saveEdits();
-    editNote = 'Every change put back.'; edited();
+    var n = changedKeys().length;
+    if (!n || (root.confirm && !root.confirm('Put all ' + n + ' changed units back as data.js has them, for every game on this server?'))) return;
+    editNote = 'Putting them back…';
+    STORE.revertAll(told(true, 'Every unit put back as data.js has it.'));
+    edited();
   }
   // one line of the table, as data.js writes it
   function asSource(key) {
@@ -1147,7 +1139,7 @@
   }
   // every unit changed, ready to paste over its line in data.js
   function exportEdits() {
-    var keys = Object.keys(edits).sort();
+    var keys = changedKeys();
     if (!keys.length) return '// nothing changed yet';
     return keys.map(function (k) { return '    ' + asSource(k) + ',   // ' + R.profile(k).name; }).join('\n');
   }
@@ -1180,11 +1172,18 @@
       '</select>';
   }
   var LAUNCHES = [['sam', 'Surface-to-air, up the line it faces'], ['samturret', 'Surface-to-air, turret onto the target']];
-  var GLOW_NAMES = ['blue', 'green', 'red', 'violet', 'amber', 'white'];
+  var GLOW_NAMES = WF.glow.filter(function (g) { return g !== 'none'; });
   var ORBS = [['tele', 'Teleported, out of a portal by the target'], ['lob', 'Lobbed across']];
   function editorHtml() {
-    var key = view.key, w = entry(key), changed = hasOwn(edits, key), n = Object.keys(edits).length;
-    var h = '<div class="vgrp"><label>Primary' + (changed ? ' <em class="vedited">· changed</em>' : '') + '</label>' +
+    var key = view.key, w = entry(key), changed = STORE.isChanged(key), n = changedKeys().length;
+    // the buttons first, as the options have theirs: on a phone the tab scrolls, and they stay in reach
+    var h = '<div class="vacts">' +
+      '<button class="vbtn primary" data-do="fire"' + fireBlock() + '>Fire</button>' +
+      '<button class="vbtn" data-do="wrevert"' + (changed ? '' : ' disabled') + '>Revert</button>' +
+      '<button class="vbtn" data-do="wexport"' + (n ? '' : ' disabled') + '>Copy changes</button>' +
+      '<button class="vbtn" data-do="wexportall">Copy table</button>' +
+      (n ? '<button class="vbtn" data-do="wrevertall">Revert all ' + n + '</button>' : '') + '</div>';
+    h += '<div class="vgrp"><label>Primary' + (changed ? ' <em class="vedited">· changed</em>' : '') + '</label>' +
       '<div class="veline">' + wpick('p', w.p, STYLES) + '<span>×</span>' + wpick('n', w.n, [1, 2, 3, 4, 5, 6]) + '</div></div>';
     h += '<div class="vgrp"><label>Secondary, alongside it</label>' +
       '<div class="veline">' + wpick('s', w.s || '', STYLES.filter(function (x) { return x !== 'none'; }), true) +
@@ -1198,14 +1197,9 @@
     if (w.p === 'orb' || w.orb) h += '<div class="vgrp"><label>Orbs</label>' + wpick('orb', w.orb || '', ORBS,
       R.isMachine(profile()) ? 'As a machine’s: lobbed' : 'As a launcher team’s: teleported') + '</div>';
     h += '<code class="vesrc">' + esc(asSource(key)) + '</code>';
-    h += '<div class="vacts">' +
-      '<button class="vbtn primary" data-do="fire"' + fireBlock() + '>Fire</button>' +
-      '<button class="vbtn" data-do="wrevert"' + (changed ? '' : ' disabled') + '>Revert</button>' +
-      '<button class="vbtn" data-do="wexport"' + (n ? '' : ' disabled') + '>Copy changes</button>' +
-      '<button class="vbtn" data-do="wexportall">Copy table</button>' +
-      (n ? '<button class="vbtn" data-do="wrevertall">Revert all ' + n + '</button>' : '') + '</div>';
-    h += '<p class="vtgtline">' + esc(editNote || (n ? n + ' unit' + (n === 1 ? '' : 's') + ' changed in this browser: copy them into WEAPONS in src/rules/data.js to keep them.'
-      : 'Changes are kept in this browser until copied into WEAPONS in src/rules/data.js.')) + '</p>';
+    h += '<p class="vtgtline">' + esc(editNote || (n ? n + ' unit' + (n === 1 ? '' : 's') + ' changed on this server, for every game it serves. ' +
+      'Copy changes gives the lines to make them data.js’s own.'
+      : 'A change is saved to the server at once and every game it serves fires it so. Revert puts a unit back as data.js has it.')) + '</p>';
     return h;
   }
   // an admin of the server this page came from (opened as a file, or on a static site, there is none)
@@ -1218,12 +1212,7 @@
   function becomeAdmin(on) {
     if (on === admin) return;
     admin = !!on;
-    if (admin) loadEdits();
-    else {
-      Object.keys(edits).forEach(function (k) { if (BASE[k]) R.WEAPONS[k] = BASE[k]; else delete R.WEAPONS[k]; });
-      edits = {};
-      if (view.tab === 'weapon') view.tab = 'stats';
-    }
+    if (!admin && view.tab === 'weapon') view.tab = 'stats';
     drawControls(); frame();
   }
 
@@ -1598,6 +1587,8 @@
     cv = el('vboard');
     if (!cv) return;
     askAdmin();
+    // the server's weapon changes, as they come in: drawn from then on
+    STORE.ready(function () { if (FX) { drawControls(); frame(); } });
     g = cv.getContext('2d');
     FX = root.PMCFx.create({ lift: function () { return 0; } });
     STANDING = root.PMCFx.create({ lift: function () { return 0; } });
@@ -1877,7 +1868,7 @@
     spec: function () { return R.weaponSpec(unit()); },
     // the weapon editor: as an admin (or not), what is changed, and the lines to paste back
     admin: function (on) { if (on !== undefined) becomeAdmin(on); return admin; },
-    edits: function () { return JSON.parse(JSON.stringify(edits)); },
+    edits: function () { return STORE.changed(); },
     exportEdits: function () { return exportEdits(); },
     unit: unit
   };
