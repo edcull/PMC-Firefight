@@ -395,6 +395,7 @@ xenoflow.js        a Xenotripod campaign, through the interface
 ```
 viewertest.js      every weapon style, the states, insertion
 viewerswipe.js     stepping through the list by swipe and key
+weaponedit.js      the weapon editor: an admin's tab, a unit's weapon changed, kept, copied out and reverted
 ```
 
 **Whole battles** (the slow set: `npm run test:slow`)

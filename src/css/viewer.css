@@ -333,11 +333,14 @@ input[type=range] { width: 100%; accent-color: var(--alpha); }
   #vctl .vtabs { display: none; }
   #vctl .vtabbody, #vctl .vtabbody[hidden] { display: block; flex: none; overflow: visible; padding: 10px 2px 0; }
   #vctl .voptsbody { order: 1; }
-  #vctl .vstatsbody { order: 2; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
-  #vctl .voptsbody::before {
+  #vctl .vstatsbody { order: 3; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  #vctl .voptsbody::before, #vctl .vweaponbody::before {
     content: 'Options'; display: block; font-family: var(--display); font-size: 10px; letter-spacing: .09em;
     text-transform: uppercase; color: var(--ink-faint); margin-bottom: 7px;
   }
+  /* an admin's weapon editor, under the options, with a Fire of its own to try a change */
+  #vctl .vweaponbody { order: 2; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  #vctl .vweaponbody::before { content: 'Weapon · admin'; color: var(--alpha); }
   #vctl .voptsbody > .vacts:first-child { margin-top: 0; }
   #vlist .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
   #vlist .card.unit { width: auto; min-width: 0; padding: 4px 4px 5px; }
@@ -424,3 +427,18 @@ input[type=range] { width: 100%; accent-color: var(--alpha); }
   background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
 }
 .vtgtline { margin: 6px 0 0; font-size: 12px; color: var(--ink-dim); min-height: 1.4em; }
+
+/* the weapon editor, an admin's tab: a style and a count to a line, and the
+   entry as data.js writes it */
+.veline { display: flex; align-items: center; gap: 6px; }
+.veline .vselect:first-child { flex: 1; min-width: 0; }
+.veline .vselect:last-child { flex: none; width: 4.2em; }
+.veline > span { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+.vedited { color: var(--alpha); font-style: normal; }
+.vgrp label.vecheck { display: flex; align-items: center; gap: 7px; text-transform: none; letter-spacing: 0; font-family: inherit; font-size: 12px; color: var(--ink-dim); cursor: pointer; }
+.vesrc {
+  display: block; margin: 4px 0 10px; padding: 7px 9px; border-radius: 4px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-dim);
+  word-break: break-all; line-height: 1.5;
+}

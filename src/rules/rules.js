@@ -1112,6 +1112,10 @@
     // `n` is how many the primary puts out at once; `sn` the same for the secondary
     var spec = { p: w.p, s: w.s || null, n: w.n || 1, sn: w.sn || 1 };
     if (w.splash) spec.splash = true;
+    // how it is drawn beyond the style: a missile's launch, the shots' colour, an orb's flight
+    if (w.launch) spec.launch = w.launch;
+    if (w.glow) spec.glow = w.glow;
+    if (w.orb) spec.orb = w.orb;
     return spec;
   }
   /* Auxiliary fire is a sidearm, whatever the unit's main weapon: a pistol
