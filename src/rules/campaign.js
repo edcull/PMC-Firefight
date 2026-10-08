@@ -1378,8 +1378,9 @@
       tier: 0,
       hulls: { min: 2, max: 3 },    // as many hulls as the rules allow
       weights: {
-        'Combat vehicles': 6, 'Transport vehicles': 5, insertplat: 2,
-        'Transport aircraft': 4, 'Strike aircraft': 4, vtoldrone: 1,
+        // (transports above its gun vehicles: most of its troopers ride, if not all of them)
+        'Combat vehicles': 4, 'Transport vehicles': 7, insertplat: 2,
+        'Transport aircraft': 4, 'Strike aircraft': 3, vtoldrone: 1,
         'Assault troops': 5, 'Rifle infantry': 5, 'Light infantry': [1, 1], 'Heavy support': [1, 1],
         recruits: 3, irregulars: 3
       },
