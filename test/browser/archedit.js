@@ -68,6 +68,18 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p2.goto(URL); await wait(1500);
     ok('a page loaded afresh lays it over its own', await p2.evaluate(() => window.PMCCamp.archetype('armour').tier === -1));
 
+    console.log('\nThe Advanced fields');
+    ok('the rest of the personality is in an Advanced section, as JSON', await p.evaluate(() => { const t = document.querySelector('#arch-edit [data-ae-f="advanced"]'); const j = JSON.parse(t.value); return !!(j.campaign && j.campaign.found && j.campaign.spend); }));
+    await p.evaluate(() => { const t = document.querySelector('#arch-edit [data-ae-f="advanced"]'); const j = JSON.parse(t.value); j.campaign.spend = 'honours'; j.campaign.leanSize = 20; t.value = JSON.stringify(j); });
+    await click('#arch-edit [data-ae="save"]');
+    await till(() => /Saved/.test(document.querySelector('#arch-edit').innerText) && window.PMCCamp.archetype('armour').spend === 'honours', 'the advanced save');
+    ok('...and an edit there is saved and in force', await p.evaluate(() => window.PMCCamp.archetype('armour').spend === 'honours' && window.PMCCamp.archetype('armour').leanSize === 20));
+    await p.evaluate(() => { document.querySelector('#arch-edit [data-ae-f="advanced"]').value = '{ not json'; });
+    await click('#arch-edit [data-ae="save"]');
+    await till(() => !!document.querySelector('#arch-edit .faults'), 'the JSON refusal');
+    ok('...JSON that does not parse is refused in the page, with the reason', await p.evaluate(() => /not valid JSON/.test(document.querySelector('#arch-edit .faults').textContent)));
+    await click('#arch-edit [data-ae="revert"]');
+
     console.log('\nA bad one refused');
     await p.fill('#arch-edit input[data-ae-w="bats"]', '15');
     await click('#arch-edit [data-ae="save"]');
@@ -80,12 +92,14 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await till(() => /default/.test(document.querySelector('#arch-edit').innerText) && window.PMCCamp.archetype('armour').tier === 0, 'reset');
     ok('back to its default, here and on the server', await p.evaluate(() => fetch('api/archetypes').then((r) => r.json()).then((j) => !j.changes.armour && window.PMCCamp.archetype('armour').tier === 0)));
 
-    console.log('\nAn older one');
-    await p.selectOption('#arch-edit [data-ae="pick"]', 'redfront');
+    console.log('\nAn older one, and a Rebel');
+    await p.selectOption('#arch-edit [data-ae="pick"]', 'ivenbea');
     await till(() => /older rules/.test(document.querySelector('#arch-edit').innerText), 'the older personality');
     await click('#arch-edit [data-ae="convert"]');
-    ok('a personality on the older rules can start a weighted list from its groups', await p.evaluate(() => !!document.querySelector('#arch-edit input[data-ae-w="Freedom Warriors"]') && +document.querySelector('#arch-edit input[data-ae-w="Freedom Warriors"]').value > 0));
-    ok('...and Rebels have their tactics in the form', await has('#arch-edit [data-ae-tac="defend"]'));
+    ok('a personality on the older rules can start a weighted list from its groups', await p.evaluate(() => !!document.querySelector('#arch-edit input[data-ae-w="Lesser Bugs"]') && +document.querySelector('#arch-edit input[data-ae-w="Lesser Bugs"]').value > 0));
+    await p.selectOption('#arch-edit [data-ae="pick"]', 'redfront');
+    await till(() => !!document.querySelector('#arch-edit [data-ae-tac="defend"]'), 'the Rebel form');
+    ok('...and Rebels have their tactics in the form', true);
     await p.screenshot({ path: require('path').join(require('../where.js').SHOTS, 'archedit.png'), fullPage: false });
   } catch (e) {
     ok('the run finished', false, e.message);

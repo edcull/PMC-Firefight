@@ -1101,6 +1101,12 @@ head('A personality as one object, and an admin\'s changes laid over it');
   ok('...and who it is never changes', a.id, 'armour');
   C.applyArchetypeChanges({});
   ok('cleared, it is the default again', JSON.stringify(C.archetype('armour')) === before, true);
+  var unmapped = [];
+  ['pmc', 'rebel', 'bugs', 'xeno'].forEach(function (f) { C.archetypesFor(f).forEach(function (x) {
+    Object.keys(x).forEach(function (k) { if (['id', 'name', 'faction'].indexOf(k) < 0 && !C.FIELD_MAP[k] && unmapped.indexOf(k) < 0) unmapped.push(k); });
+  }); });
+  ok('every field any personality has is in the one object (FIELD_MAP)', unmapped.join(','), '');
+  ok('...the lean size too, which the code reads with a default', C.FIELD_MAP.leanSize, 'campaign.leanSize');
   var seen = C.withArchetypeChanges({ armour: { battle: { temper: 3 } } }, function () { return C.archetype('armour').temper; });
   ok('a preview runs with the change and puts it back', [seen, C.archetype('armour').temper], [3, -1]);
 })();
@@ -1139,6 +1145,31 @@ head('Campaign rivals recruit by the same weighted list');
   ok('a Bastion rival grows a mix: armour, support infantry and hulls', !!(groupsHeld['Heavy infantry'] && (groupsHeld['Heavy support'] || groupsHeld['Light support']) && (groupsHeld['Hunters and destroyers'] || groupsHeld['Support vehicles'])), true, Object.keys(groupsHeld).join(', '));
   var merc = grow('swarm', 'pmc', 30);
   ok('a recruiting company grows to a size that suits its Tier, not a hundred Recruits', merc.roster.length <= 12 + 7 * merc.tier + 4, true, merc.roster.length + ' units at Tier ' + merc.tier);
+})();
+
+head('Campaign rivals work towards their next Company Tier');
+(function () {
+  // grown until money is all that stands between it and its next Tier
+  var co = C.newCompany('B', { faction: 'pmc' }); C.foundRival(co, 'armour', []);
+  var pc = C.canPromoteCompany(co), g = 0;
+  while (g++ < 60) {
+    C.idleTurn(co); pc = C.canPromoteCompany(co);
+    if (co.tier >= 3 && !pc.ok && pc.faults.every(function (f) { return /costs/.test(f); })) break;
+  }
+  ok('a rival reaches the point where only the money is short', !pc.ok && pc.faults.every(function (f) { return /costs/.test(f); }), true, (pc.faults || []).join(' | '));
+  co.kUC = pc.cost - 5;
+  var before = co.kUC, n0 = co.roster.length;
+  C.developRival(co);
+  ok('...then it banks: nothing bought, nothing hired', [co.kUC, co.roster.length], [before, n0]);
+  co.kUC = pc.cost + 2;
+  var t0 = co.tier;
+  C.developRival(co);
+  ok('...and promotes the moment it can afford to', co.tier, t0 + 1);
+  // short of an army for the next Tier: it buys that army first
+  var y = C.newCompany('Y', { faction: 'pmc' }); C.foundRival(y, 'swarm', []);
+  y.kUC = 40;
+  var did = C.developRival(y).map(function (d) { return d.text; }).join(' | ');
+  ok('a rival short of a Tier II army buys towards it', /towards Company Tier II/.test(did) || y.tier === 2, true, did.slice(0, 200));
 })();
 
 head('Rebel Tactics by personality and part in the scenario');

@@ -2267,3 +2267,4 @@ svg.chev { width: .8em; height: .65em; vertical-align: .05em; display: inline-bl
 .ae-stats { font-size: 12px; margin: 6px 0 0; line-height: 1.45; }
 .ae-list { font-size: 12px; margin: 6px 0 0; padding-left: 18px; line-height: 1.45; }
 .ae-list li { margin-bottom: 4px; }
+.ae-json { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; margin-top: 6px; resize: vertical; }

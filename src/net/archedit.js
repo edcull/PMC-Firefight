@@ -43,6 +43,18 @@
     return w;
   }
 
+  // the fields the form above does not show, in the nested shape
+  var SHOWN = { force: ['weights', 'tier', 'hulls'], battle: ['temper', 'tactics'], doctrines: ['fixed', 'shortlist'] };
+  function advancedOf(u) {
+    var out = { blurb: u.blurb };
+    ['force', 'battle', 'doctrines'].forEach(function (sec) {
+      var rest = {};
+      Object.keys(u[sec] || {}).forEach(function (k) { if (SHOWN[sec].indexOf(k) < 0) rest[k] = u[sec][k]; });
+      if (Object.keys(rest).length) out[sec] = rest;
+    });
+    if (u.campaign) out.campaign = u.campaign;
+    return out;
+  }
   function html() {
     var u = draft(), f = u.force || {}, b = u.battle || {}, d = u.doctrines || {}, list = R().listFor(faction());
     var h = '<div class="ae">';
@@ -99,6 +111,11 @@
       }).join('') + '</table>';
     }
     h += '</div>';
+    /* everything else, as it is kept: the campaign's founding and spending, the signature
+       units and favourite hulls, the staged doctrines, and the older group rules */
+    var adv = advancedOf(u);
+    h += '<div class="ae-sec"><h4>Advanced</h4><details' + (state.advOpen ? ' open' : '') + ' data-ae="adv"><summary class="ae-dim">Campaign founding and spending, signature units, favourite hulls, riders, staged doctrines, the older group rules (JSON)</summary>' +
+      '<textarea class="tin ae-json" data-ae-f="advanced" rows="14" spellcheck="false">' + esc(JSON.stringify(adv, null, 2)) + '</textarea></details></div>';
     // preview and save
     h += '<div class="ae-sec"><h4>Preview</h4><div class="ae-prev">Tier <select class="tin" data-ae-p="t">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (n === state.pt ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>' +
       ' PL <select class="tin" data-ae-p="pl">' + [1, 2, 3].map(function (n) { return '<option' + (n === state.ppl ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>' +
@@ -137,6 +154,18 @@
     var fx = ids(val('fixed')), sl = ids(val('shortlist'));
     if (fx.length) u.doctrines.fixed = fx; else delete u.doctrines.fixed;
     if (sl.length) u.doctrines.shortlist = sl;
+    var advEl = host.querySelector('[data-ae-f="advanced"]');
+    if (advEl) {
+      var adv;
+      try { adv = JSON.parse(advEl.value || '{}'); } catch (e) { throw new Error('The Advanced section is not valid JSON: ' + e.message); }
+      if (adv.blurb != null) u.blurb = adv.blurb;
+      ['force', 'battle', 'doctrines'].forEach(function (sec) {
+        // what the form above does not show is replaced by what the Advanced section says
+        Object.keys(u[sec] || {}).forEach(function (k) { if (SHOWN[sec].indexOf(k) < 0) delete u[sec][k]; });
+        Object.keys((adv && adv[sec]) || {}).forEach(function (k) { if (SHOWN[sec].indexOf(k) < 0) u[sec][k] = adv[sec][k]; });
+      });
+      if (adv.campaign) u.campaign = adv.campaign; else delete u.campaign;
+    }
     if (u.force.weights) {
       var w = {}, lims = {};
       Array.prototype.forEach.call(host.querySelectorAll('[data-ae-l]'), function (e) { lims[e.getAttribute('data-ae-l')] = e.value; });
@@ -201,11 +230,12 @@
     if (!b) return;
     var a = b.getAttribute('data-ae');
     state.fault = ''; state.note = '';
-    if (a === 'convert') { readForm(); draft().force.weights = fromOlder(draft()); state.note = 'A starting list from its groups and mix: tune it, preview, then save.'; draw(); }
-    else if (a === 'preview') { preview(); draw(); }
+    if (a === 'convert') { try { readForm(); } catch (e) { state.fault = e.message; draw(); return; } draft().force.weights = fromOlder(draft()); state.note = 'A starting list from its groups and mix: tune it, preview, then save.'; draw(); }
+    else if (a === 'preview') { try { preview(); } catch (e) { state.fault = e.message; } draw(); }
     else if (a === 'revert') { state.draft = null; state.preview = null; draw(); }
     else if (a === 'save') {
-      var u = readForm();
+      var u;
+      try { u = readForm(); } catch (e) { state.fault = e.message; draw(); return; }
       state.busy = true; draw();
       api.post('api/admin/archetype-save', { id: state.id, data: u }).then(function (r) {
         state.busy = false;
@@ -224,6 +254,7 @@
   }
   function onChange(ev) {
     var t = ev.target;
+    if (t.closest && t.closest('details[data-ae="adv"]')) state.advOpen = true;
     if (t.getAttribute('data-ae') === 'pick') { state.id = t.value; state.draft = null; state.preview = null; state.fault = ''; state.note = ''; draw(); }
     else if (t.getAttribute('data-ae-p') === 't') state.pt = +t.value;
     else if (t.getAttribute('data-ae-p') === 'pl') state.ppl = +t.value;

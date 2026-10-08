@@ -52,6 +52,11 @@ function ok(name, cond, note) {
   ok('more fewest hulls than most', !(await bad((x) => { x.force.hulls = { min: 3, max: 1 }; })).ok);
   ok('a doctrine there is not', !(await bad((x) => { x.doctrines.shortlist = ['ZZ9']; })).ok);
   ok('a tactic there is not', !(await bad((x) => { x.battle.tactics = { open: 'charge' }; })).ok);
+  ok('a spending style there is not', !(await bad((x) => { x.campaign.spend = 'splurge'; })).ok);
+  ok('a founding unit the army does not have', !(await bad((x) => { x.campaign.found.t1 = ['rguard']; })).ok);
+  ok('a staged doctrine there is not', !(await bad((x) => { x.doctrines.stages = [['ZZ1']]; })).ok);
+  ok('a favourite hull group the army does not have', !(await bad((x) => { x.force.favourites = ['Rebel aviation']; })).ok);
+  ok('...but every default passes', ['pmc', 'rebel', 'bugs', 'xeno'].every((f) => C.archetypesFor(f).every((x) => !Archetypes.check(x.id, C.unifiedArchetype(x.id, true)))));
   ok('...and nothing of it was kept', C.archetype('armour').tier === 1 && db.archetypes().length === 1);
 
   console.log('\nThe server starting again');

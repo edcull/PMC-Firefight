@@ -1725,7 +1725,8 @@
     temper: 'battle.temper', tactics: 'battle.tactics',
     doctrines: 'doctrines.shortlist', fixed: 'doctrines.fixed', fixedAt: 'doctrines.fixedAt', stages: 'doctrines.stages', random: 'doctrines.random',
     t1: 'campaign.found.t1', t2: 'campaign.found.t2', machines: 'campaign.found.hulls', vehicles: 'campaign.found.hullCount',
-    foundFree: 'campaign.found.free', refill: 'campaign.refill', spend: 'campaign.spend', honourFirst: 'campaign.honourFirst', lean: 'campaign.lean'
+    foundFree: 'campaign.found.free', refill: 'campaign.refill', spend: 'campaign.spend', honourFirst: 'campaign.honourFirst', lean: 'campaign.lean',
+    leanSize: 'campaign.leanSize'
   };
   // these are replaced whole by a change, not merged key by key (a list of weights is edited as one)
   var WHOLE = ['force.weights', 'force.mix', 'force.limit', 'force.tactics', 'battle.tactics', 'campaign.refill', 'doctrines.fixedAt'];
