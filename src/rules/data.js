@@ -373,27 +373,27 @@
     lighteng: { p: 'smg' }, engineers: { p: 'smg' },
     // assault troops carry grenades as well as carbines, and throw them (p. 64)
     shock: { p: 'frag', n: 2, s: 'smg' }, commandos: { p: 'frag', n: 2, s: 'smg' },
-    // battle armour sweeps a room with carbines rather than hammering it
-    ecobats: { p: 'smg' }, bats: { p: 'smg' },
-    // the Protectors go in close, behind three charges rather than two
-    protectors: { p: 'arc', n: 3, s: 'smg' },
-    protectorshm: { p: 'arc', n: 3, s: 'smg' },
+    // battle armour sweeps a room with carbines, then follows up with energy charges
+    ecobats: { p: 'smg', s: 'energy', sn: 2 }, bats: { p: 'smg', s: 'energy', sn: 2, blast: 'frag' },
+    // the Protectors go in close the same way; the hi-mobility ones with three charges
+    protectors: { p: 'smg', s: 'energy', sn: 2, blast: 'frag' },
+    protectorshm: { p: 'smg', s: 'energy', sn: 3, blast: 'frag' },
     // the forward observers carry rifles, and fire them like any rifle team
     observers: { p: 'small' }, sharpshooters: { p: 'shell', s: 'pistol' },
     lrrp: { p: 'rail', n: 2 },
     // the sniper team: a pair of heavy rounds, then a pair of Gauss lines
     snipers: { p: 'shell', n: 2, s: 'rail', sn: 2 },
     // the section is its two machine guns: the loader feeds them rather than shooting
-    lmgsection: { p: 'burst' },
+    lmgsection: { p: 'burst', splash: true },
     // the MG team has a carbine in the section alongside the gun
     // four machine guns, fed by two loaders
-    lmgteam: { p: 'burst' },
+    lmgteam: { p: 'burst', splash: true },
     // a crew-served Gauss cannon: three shots in quick succession, not one
-    hmgteam: { p: 'chain' }, gausscannon: { p: 'rail', n: 3 },
-    lightat: { p: 'shell' }, atteam: { p: 'shell' },
+    hmgteam: { p: 'chain', splash: true }, gausscannon: { p: 'rail', n: 3 },
+    lightat: { p: 'shell', blast: 'frag' }, atteam: { p: 'shell', blast: 'frag' },
     // an ATGM team and a SAM team both put a pair of guided missiles in the air
-    missile: { p: 'missile', n: 2 }, sam: { p: 'missile', n: 2, launch: 'sam' },
-    mortarsection: { p: 'arc', n: 1 }, mortarteam: { p: 'arc', n: 2 }, mortarbattery: { p: 'arc', n: 3 },
+    missile: { p: 'missile', n: 2, blast: 'frag' }, sam: { p: 'missile', n: 2, launch: 'sam', blast: 'frag' },
+    mortarsection: { p: 'arc', blast: 'frag' }, mortarteam: { p: 'arc', n: 2, blast: 'frag' }, mortarbattery: { p: 'arc', n: 3, blast: 'frag' },
     /* Command, medics and signallers all carry Firepower 1 at 12": a sidearm,
        not a rifle line. They are defending themselves, not putting fire down. */
     cmd4: { p: 'pistol' }, cmd3: { p: 'pistol' }, cmd2: { p: 'pistol' },
@@ -403,27 +403,27 @@
     // (the recon drones fire as light infantry do, a crack of single shots)
     dcombat: { p: 'small' }, dassault: { p: 'smg' }, drecon: { p: 'pistol' },
     // the engineer drones fire a sidearm and throw a grenade; the support drones lob three rounds, up and over
-    dengineer: { p: 'pistol', s: 'arc', sn: 1 }, dsupport: { p: 'arc', n: 5 }, dmedic: { p: 'pistol' },
+    dengineer: { p: 'pistol', splash: true, glow: 'amber' }, dsupport: { p: 'arc', n: 5, blast: 'frag' }, dmedic: { p: 'pistol' },
     nomads: { p: 'small' }, chem: { p: 'flame' },
 
     /* ---- PMC machines ---- */
     // a patrol jeep has the crew's rifles; the heavy one mounts a machine gun
-    lpv: { p: 'small' }, hpv: { p: 'chain' }, recon: { p: 'shell', s: 'pistol' },
+    lpv: { p: 'small' }, hpv: { p: 'chain', splash: true, glow: 'amber' }, recon: { p: 'shell', s: 'pistol' },
     // the light tank: its main gun twice over, and the commander's sidearm
-    lcv: { p: 'shell', n: 2, s: 'pistol' },
+    lcv: { p: 'shell', n: 2, s: 'pistol', blast: 'frag' },
     /* A medium hull fires its main gun twice in quick succession over the
        coaxial; an advanced one puts three rounds of main gun down and follows
        them with two lines from its rail driver. */
-    mcv: { p: 'shellbig', n: 2, s: 'pistol' },
-    acv: { p: 'shellbig', n: 3, s: 'rail', sn: 2 },
-    lhunter: { p: 'missile', n: 2 }, hunter: { p: 'missile', n: 3 },
-    ldestroyer: { p: 'shellbig', n: 2 },
+    mcv: { p: 'shellbig', n: 2, s: 'pistol', blast: 'frag' },
+    acv: { p: 'shellbig', n: 3, s: 'rail', sn: 2, blast: 'frag' },
+    lhunter: { p: 'missile', n: 2, launch: 'samturret', blast: 'frag' }, hunter: { p: 'missile', n: 3, launch: 'samturret', blast: 'frag' },
+    ldestroyer: { p: 'shellbig', n: 2, blast: 'frag' },
     // the medium destroyer's gun is a rail driver: the line, then the round bursting
-    mdestroyer: { p: 'shellbig', n: 2, s: 'rail', sn: 2 },
+    mdestroyer: { p: 'shellbig', n: 2, s: 'rail', sn: 2, blast: 'frag' },
     // a soft-skinned lorry has no gun of its own: what shoots is the crew, at 12"
     unarmoured: { p: 'pistol' }, ltransport: { p: 'smg' },
     lapc: { p: 'small' },
-    lifv: { p: 'chain', s: 'missile' }, hapc: { p: 'small' }, hifv: { p: 'missile', n: 2, s: 'chain' },
+    lifv: { p: 'missile', s: 'chain', launch: 'sam', blast: 'frag' }, hapc: { p: 'small' }, hifv: { p: 'missile', n: 2, s: 'chain', launch: 'sam', blast: 'frag' },
     // a command vehicle is a staff car with an antenna farm, not a gun platform
     cmdveh: { p: 'small' },
     insertplat: { p: 'none' },
@@ -431,13 +431,13 @@
     lengveh: { p: 'flame', s: 'chain' },
     hengveh: { p: 'plasmabolt' },
     // support hulls fire in batteries: two tubes, then three
-    impsupport: { p: 'rocket' }, lsupport: { p: 'arcbig', n: 3 },
-    msupport: { p: 'arcbig', n: 5, s: 'arcbig', sn: 5 },
+    impsupport: { p: 'rocket', blast: 'frag' }, lsupport: { p: 'arcbig', n: 3, blast: 'frag' },
+    msupport: { p: 'arcbig', n: 5, s: 'arcbig', sn: 5, blast: 'frag' },
     // the advanced support hull's heavy plasma cannon: four bolts, each one bursting
     // an energy howitzer: three heavy orbs lobbed over, bursting blue
     asupport: { p: 'orbbig', n: 3 },
     // air defence: the gun first, then the missiles off the rails
-    aaveh: { p: 'missile', n: 2, s: 'chain', launch: 'samturret' },
+    aaveh: { p: 'missile', n: 2, s: 'chain', launch: 'samturret', blast: 'frag' },
     // signals and ambulance hulls: a pintle gun and the crew, nothing more
     ewveh: { p: 'small' }, medveh: { p: 'small' },
     /* Transport aircraft: a door gun and whoever is leaning out of it, inside a
@@ -445,12 +445,12 @@
     adaptedcraft: { p: 'small' }, lightcraft: { p: 'small' },
     heavycraft: { p: 'small' }, flyingcp: { p: 'small' },
     // the flexible strike craft rakes with its nose gun under a rocket rack; the transport has a door gun
-    fsc: { p: 'burst', s: 'rocket' }, tsc: { p: 'small', s: 'rocket' },
-    gunboat: { p: 'chain', s: 'rocket' }, hsc: { p: 'missile', n: 3, s: 'rocket' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
+    fsc: { p: 'burst', s: 'rocket', blast: 'frag' }, tsc: { p: 'small', s: 'rocket', blast: 'frag' },
+    gunboat: { p: 'chain', s: 'rocket', blast: 'frag' }, hsc: { p: 'missile', n: 3, s: 'rocket', blast: 'frag' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3 },
     // the light VTOL drone carries no gun worth the name: a light sidearm's crack
     vtoldrone: { p: 'pistol' },
     // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
-    interceptor: { p: 'missile', n: 2, s: 'burst' },
+    interceptor: { p: 'missile', n: 2, s: 'burst', blast: 'frag' },
 
     /* ---- the Rebel list, read the same way ---- */
     // armed civilians: whatever was in the house, at 12"
@@ -462,19 +462,18 @@
     // the Holy Warriors go in close, with whatever will fire on the run
     racolytes: { p: 'smg' }, rfanatics: { p: 'smg' },
     renlightened: { p: 'small' }, rmujahideen: { p: 'small' },
-    /* Mounted Warriors ride in throwing: a carbine in one hand and a pair of
-       charges in the other, and the hellriders with something heavier across
-       the saddle. */
-    // riders throw Molotovs from the saddle (Incendiary Ammunition), alongside their guns
-    rridergang: { p: 'smg', s: 'molotov', sn: 2 }, rriderwar: { p: 'smg', s: 'molotov', sn: 2 },
+    /* Mounted Warriors ride in throwing Molotovs from the saddle (Incendiary
+       Ammunition): the rider gangs and warriors nothing else, the hellriders
+       with a gun alongside, the legendary ones something heavier. */
+    rridergang: { p: 'none', s: 'molotov', sn: 2 }, rriderwar: { p: 'none', s: 'molotov', sn: 2 },
     rhellriders: { p: 'smg', s: 'molotov', sn: 2 }, rlegendary: { p: 'chain', s: 'molotov', sn: 2 },
-    rlmg: { p: 'burst' }, rautocannon: { p: 'chain' },
-    rat: { p: 'shell' },
+    rlmg: { p: 'burst', splash: true }, rautocannon: { p: 'chain', splash: true },
+    rat: { p: 'shell', blast: 'frag' },
     // the insurgents' AA weapons are old shoulder guns: they fire a shell, not a guided missile
-    raa: { p: 'shell' },
-    rlightart: { p: 'arcbig', n: 1 }, rmedart: { p: 'arcbig', n: 2 }, rheavyart: { p: 'arcbig', n: 3 },
+    raa: { p: 'shell', blast: 'frag' },
+    rlightart: { p: 'arcbig', blast: 'frag' }, rmedart: { p: 'arcbig', n: 2, blast: 'frag' }, rheavyart: { p: 'arcbig', n: 3, blast: 'frag' },
     // the heavy autocannon squad hammers, then puts three heavy rounds through it
-    rheavyac: { p: 'chain', s: 'shellbig', sn: 3 },
+    rheavyac: { p: 'chain', s: 'shellbig', sn: 3, blast: 'frag' },
     rassaultcdo: { p: 'small', s: 'smg' }, rsabcdo: { p: 'small', s: 'smg' },
     rsnipercdo: { p: 'shell', s: 'pistol' },
     /* Miners carry Gauss Weapon (las-cutters) — a mining tool the rules let them
@@ -493,18 +492,18 @@
        gun-truck throwing charges over its machine gun, then a proper autocannon,
        and at the top a rocket rack over one. */
     rtechnical: { p: 'small' },
-    ricv: { p: 'chain', s: 'rocket' },
-    rlicv: { p: 'chain' },
-    rhicv: { p: 'shellbig', n: 2, s: 'rocket' },
-    rltv: { p: 'small' }, ritv: { p: 'chain' },
+    ricv: { p: 'chain', s: 'rocket', splash: true, blast: 'frag' },
+    rlicv: { p: 'chain', splash: true },
+    rhicv: { p: 'shellbig', n: 2, s: 'rocket', blast: 'frag' },
+    rltv: { p: 'small' }, ritv: { p: 'chain', splash: true },
     // the super-heavy carries a gun in the back as well as its autocannon
-    rshtv: { p: 'chain', s: 'shell', sn: 2 },
+    rshtv: { p: 'chain', s: 'shell', sn: 2, splash: true },
     rlflak: { p: 'burst' }, rmflak: { p: 'burst', s: 'burst' },
-    rhflak: { p: 'chain', s: 'burst' },
+    rhflak: { p: 'chain', s: 'burst', splash: true },
     // a captured patrol craft and an armed shuttle: a door gun and the crew
     rpatrol: { p: 'small' }, rlshuttle: { p: 'burst' },
     // the armed shuttles carry a proper door cannon, not a machine gun
-    rmshuttle: { p: 'chain' }, rhshuttle: { p: 'chain' },
+    rmshuttle: { p: 'chain', splash: true }, rhshuttle: { p: 'chain' },
     rlifter: { p: 'none' },
 
     /* ---- the Space Bugs ----
