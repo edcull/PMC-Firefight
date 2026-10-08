@@ -230,7 +230,7 @@
     h += sec('shape', 'Force shape') + '<div class="ae-grid">' +
       '<label>Tier preference<select class="tin" data-ae-f="tier">' + [[-1, '−1 fills up a Tier below'], [0, '0 its own Tier'], [1, '+1 reaches a Tier above']].map(function (o) {
         return '<option value="' + o[0] + '"' + ((f.tier || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
-        tip('How elite it is. Each unit’s weight is scaled for every Tier it is off the battle’s. −1: units a Tier below come up more often, above rarely. 0: mostly the battle’s own Tier. +1: units a Tier above come up far more often, below rarely. In a campaign −1 also hires a Tier lower.') + '</label>' +
+        tip('How elite it is: each Tier off the battle’s scales a unit’s weight, and two Tiers off always counts for less than one. −1: units a Tier below come up more often (two below less), above rarely. 0: mostly the battle’s own Tier. +1: units a Tier above come up far more often (two above less), below rarely. In a campaign −1 also hires a Tier lower.') + '</label>' +
       '<label>Hulls a Priority Level, fewest<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmin" value="' + (f.hulls && f.hulls.min != null ? f.hulls.min : '') + '" placeholder="1">' +
         tip('Favourite hulls rolled before anything else, times the Priority Level, rounded (1.5: 2 at PL1, 3 at PL2, 5 at PL3).') + '</label>' +
       '<label>Hulls a Priority Level, most<input class="tin" type="number" min="0" max="3" step="0.5" data-ae-f="hmax" value="' + (f.hulls && f.hulls.max != null ? f.hulls.max : '') + '" placeholder="1.5">' +

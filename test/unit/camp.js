@@ -1029,6 +1029,15 @@ head('Skirmish forces rolled to a personality, at every Tier and Priority Level'
   var t2a = mixOf('armour', 'pmc', 2), t4a = mixOf('armour', 'pmc', 4), t2r = mixOf('redfront', 'rebel', 2);
   ok('a force of its own Tier is mostly its own Tier, at Tier II as at Tier IV', t2a[1] > 2 * t2a[2] && t4a[1] > 2 * t4a[2], true, JSON.stringify([t2a, t4a]));
   ok('...and one set to fill up a Tier below takes more below than above', t2r[0] > 2 * t2r[2], true, JSON.stringify(t2r));
+  // (the way it leans peaks one Tier off: two Tiers off is always the fewer)
+  var offs = function (id, f, t) {
+    var c = {};
+    for (var i = 0; i < 80; i++) R.rollArmy(t, 2, null, f, id).forEach(function (k) { var p = R.profile(keyOf(k)); if (!p.command) c[p.tier - t] = (c[p.tier - t] || 0) + 1; });
+    return c;
+  };
+  var sw = offs('swarm', 'pmc', 3), el = offs('elite', 'pmc', 3);
+  ok('...one Tier off is taken more than two, whichever way it leans', sw[-1] > (sw[-2] || 0) && el[1] > (el[2] || 0), true, JSON.stringify([sw, el]));
+  ok('...and the factors fall away past one Tier', [R.tierLean(-1, -1) > R.tierLean(-1, -2), R.tierLean(1, 1) > R.tierLean(1, 2), R.tierLean(0, 2) < R.tierLean(0, 1), R.tierLean(0, -3) < R.tierLean(0, -2)].every(Boolean), true);
   var cav4 = 0;
   for (var c4 = 0; c4 < 80; c4++) cav4 += R.rollArmy(3, 2, null, 'pmc', 'aircav').filter(function (k) { var p = R.profile(keyOf(k)); return p.cls !== 'infantry' && p.tier > 3; }).length;
   ok('...and a Cavalry at Tier III takes a Tier IV hull now and then', cav4 > 20 && cav4 < 160, true, cav4 + ' in 80 forces');
