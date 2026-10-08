@@ -34,8 +34,8 @@ function check(id, u) {
     for (const k of Object.keys(force.weights)) {
       if (!keys.has(k) && !groups.has(k)) return k + ' is not a unit or group of this army';
       const v = force.weights[k];
-      const ok = num(v, 0, 10) || (Array.isArray(v) && v.length >= 1 && v.length <= 2 && num(v[0], 0, 10) && (v[1] == null || (num(v[1], 0, 9) && Math.round(v[1]) === v[1])));
-      if (!ok) return k + ': a weight is 0-10, and a limit a whole number 0-9';
+      const ok = num(v, 0, 100) || (Array.isArray(v) && v.length >= 1 && v.length <= 2 && num(v[0], 0, 100) && (v[1] == null || (num(v[1], 0, 9) && Math.round(v[1]) === v[1])));
+      if (!ok) return k + ': a weight is 0-100, and a limit a whole number 0-9';
     }
   }
   const battle = u.battle || {};

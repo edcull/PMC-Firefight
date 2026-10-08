@@ -213,10 +213,10 @@
       list.forEach(function (p) { (groups[p.group] = groups[p.group] || []).push(p); });
       h += '<table class="ae-w"><tr><th></th><th>Weight</th><th>Limit</th></tr>' + Object.keys(groups).map(function (g) {
         var gp = parts(w[g]);
-        var row = '<tr class="ae-g"><td>' + esc(g) + '</td><td><input class="tin" type="number" min="0" max="10" data-ae-w="' + esc(g) + '" value="' + gp.w + '"></td><td><input class="tin" type="number" min="0" max="9" data-ae-l="' + esc(g) + '" value="' + gp.l + '"></td></tr>';
+        var row = '<tr class="ae-g"><td>' + esc(g) + '</td><td><input class="tin" type="number" min="0" max="100" data-ae-w="' + esc(g) + '" value="' + gp.w + '"></td><td><input class="tin" type="number" min="0" max="9" data-ae-l="' + esc(g) + '" value="' + gp.l + '"></td></tr>';
         return row + groups[g].sort(function (a, b2) { return a.tier - b2.tier; }).map(function (p) {
           var pp = parts(w[p.key]);
-          return '<tr class="ae-u"><td>' + esc(p.name) + ' <small>' + R().ROMAN[p.tier] + (p.cls !== 'infantry' ? ' · ' + p.cls : '') + '</small></td><td><input class="tin" type="number" min="0" max="10" data-ae-w="' + p.key + '" value="' + pp.w + '" placeholder="' + gp.w + '"></td><td><input class="tin" type="number" min="0" max="9" data-ae-l="' + p.key + '" value="' + pp.l + '" placeholder="' + gp.l + '"></td></tr>';
+          return '<tr class="ae-u"><td>' + esc(p.name) + ' <small>' + R().ROMAN[p.tier] + (p.cls !== 'infantry' ? ' · ' + p.cls : '') + '</small></td><td><input class="tin" type="number" min="0" max="100" data-ae-w="' + p.key + '" value="' + pp.w + '" placeholder="' + gp.w + '"></td><td><input class="tin" type="number" min="0" max="9" data-ae-l="' + p.key + '" value="' + pp.l + '" placeholder="' + gp.l + '"></td></tr>';
         }).join('');
       }).join('') + '</table>';
     }

@@ -47,7 +47,7 @@ function ok(name, cond, note) {
   console.log('\nChecked before it is kept');
   const bad = (f) => { const x = C.unifiedArchetype('armour'); f(x); return api.handle(me, 'archetype-save', { id: 'armour', data: x }); };
   ok('a tier preference out of range', !(await bad((x) => { x.force.tier = 2; })).ok);
-  ok('a weight out of range', !(await bad((x) => { x.force.weights.bats = 11; })).ok);
+  ok('a weight out of range', !(await bad((x) => { x.force.weights.bats = 101; })).ok);
   ok('a unit the army does not have', !(await bad((x) => { x.force.weights.rguard = 5; })).ok);
   ok('more fewest hulls than most', !(await bad((x) => { x.force.hulls = { min: 3, max: 1 }; })).ok);
   ok('a doctrine there is not', !(await bad((x) => { x.doctrines.shortlist = ['ZZ9']; })).ok);
