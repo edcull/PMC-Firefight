@@ -235,13 +235,12 @@
     h += sec('shape', 'Force shape') + '<div class="ae-grid">' +
       '<label>Tier preference<select class="tin" data-ae-f="tier">' + [[-1, '−1 fills up a Tier below'], [0, '0 its own Tier'], [1, '+1 reaches a Tier above']].map(function (o) {
         return '<option value="' + o[0] + '"' + ((f.tier || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
-        tip('How elite the force is. −1 to prefer Tiers below, +1 to prefer Tiers above the battle Tier.') + '</label></div></div>';
-    var more = moreHTML(u), battle = '';
-    // how it fights
-    battle += sec('battle', 'In battle') + '<div class="ae-grid">' +
+        tip('How elite the force is. −1 to prefer Tiers below, +1 to prefer Tiers above the battle Tier.') + '</label>' +
       '<label>Temper (behaviour roll)<select class="tin" data-ae-f="temper">' + [-3, -2, -1, 0, 1, 2, 3].map(function (n) {
         return '<option value="' + n + '"' + ((b.temper || 0) === n ? ' selected' : '') + '>' + (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + '</option>'; }).join('') + '</select>' +
-        tip('Added to its units’ behaviour roll in battle (p. 147). +: presses in and charges. −: holds back and shoots from cover.') + '</label></div>';
+        tip('Added to its units’ behaviour roll in battle (p. 147). +: presses in and charges. −: holds back and shoots from cover.') + '</label>' +
+      '</div>';
+    var more = moreHTML(u), battle = '';
     // tactics: a Rebel's
     if (faction() === 'rebel') {
       var t = b.tactics || {};
@@ -252,7 +251,8 @@
         }).join('') + '</div>';
       }).join('') + '<small class="ae-dim">Two ticked: a coin toss between them. None: the usual (Human Wave, and Last Stand on defence).</small></div>';
     }
-    battle += '</div>';
+    // (in the force's shape, under its temper)
+    h += battle + '</div>';
     // doctrines
     var creed = C().creedOf({ faction: faction() }).list, docs = '';
     docs += sec('docs', 'Doctrines') + '<div class="ae-grid">' +
@@ -280,7 +280,7 @@
     }
     h += '</div>';
     // in the order an admin thinks of it: what it fields, then how it fights, then its campaign
-    h += more.hulls + more.sig + battle + docs + more.stages + more.camp + more.older;
+    h += more.hulls + more.sig + docs + more.stages + more.camp + more.older;
     // preview
     h += sec('preview', 'Preview') + '<small class="ae-dim">Rolls forces with the edits in force, as they stand in the form, without saving them.</small>' +
       '<div class="ae-prev"><label>Tier <select class="tin" data-ae-p="t">' + [1, 2, 3, 4, 5].map(function (n) { return '<option' + (n === state.pt ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label>' +

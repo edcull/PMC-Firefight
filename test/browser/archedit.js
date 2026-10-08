@@ -52,7 +52,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     }));
     ok('...with its sections listed to jump to', await p.evaluate(() => {
       const b = [...document.querySelectorAll('#arch-edit .ae-nav button')].map((x) => x.textContent);
-      return ['Who it is', 'Force shape', 'Weighted list', 'Vehicle composition', 'In battle', 'Doctrines', 'Campaign', 'Preview'].every((t) => b.indexOf(t) >= 0);
+      return ['Who it is', 'Force shape', 'Weighted list', 'Vehicle composition', 'Doctrines', 'Campaign', 'Preview'].every((t) => b.indexOf(t) >= 0);
     }));
     await click('#arch-edit .ae-nav [data-k="ae-s-camp"]'); await wait(150);
     ok('...a section in the list scrolls the form to it, and is lit', await p.evaluate(() => {
