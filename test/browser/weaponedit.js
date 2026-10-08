@@ -39,6 +39,16 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
     await p.waitForTimeout(800);
     ok('the unit has its Stats and Options tabs and no Weapon tab', (await tabs(p)).join(',') === 'stats,opts');
     ok('...and fires as the table in data.js has it', await p.evaluate(() => { window.__viewer.pick('aaveh'); return window.__viewer.spec().p === 'missile'; }));
+    // a splashing round's own bursts take the army's colour: amber for the mercenaries and the revolt, blue for a Xenotripod
+    const splashed = async (key) => {
+      await p.evaluate((k) => { window.PMC.WEAPONS[k] = { p: 'smg', splash: true }; window.__viewer.pick(k); window.__viewer.range(8); window.__viewer.fireNow(); }, key);
+      let rgbs = [];
+      for (let i = 0; i < 30 && !rgbs.length; i++) { await p.waitForTimeout(80); rgbs = await p.evaluate(() => window.__viewer.fxRGB()); }
+      return rgbs;
+    };
+    const pmc = await splashed('regular'), reb = await splashed('rmilitia');
+    ok('a splashing round bursts amber for the mercenaries and the revolt, not blue', pmc.indexOf('255,190,90') >= 0 && pmc.indexOf('110,190,255') < 0 &&
+      reb.indexOf('255,190,90') >= 0 && reb.indexOf('110,190,255') < 0, pmc.join(' ') + ' | ' + reb.join(' '));
     await ctx.close();
   }
 
@@ -171,6 +181,31 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
     for (let i = 0; i < 60 && got.filter((x) => x === 'fragburst').length < 2; i++) { await p.waitForTimeout(80); got = got.concat(await p.evaluate(() => window.__viewer.fx())); }
     ok('a ' + style + ' unit has where it lands to choose, and set to frag goes off in fragmentation blasts',
       has && got.indexOf(kind) >= 0 && got.indexOf('fragburst') >= 0, [...new Set(got)].join(','));
+  }
+
+  // the server tools: everything both editors decide, downloaded as JSON
+  {
+    const q = await chief.ctx.newPage();
+    q.on('pageerror', (e) => errs.push(e.message));
+    await q.goto(URL); await q.waitForTimeout(700);
+    await q.evaluate(() => window.PMCAccount.show()); await q.waitForTimeout(300);
+    await q.click('[data-acct="admin-open"]');
+    await q.waitForSelector('#account [data-acct="admin-dl-weapons"]', { timeout: 5000 });
+    const fileOf = async (sel) => {
+      const [dl] = await Promise.all([q.waitForEvent('download'), q.click(sel)]);
+      return { name: dl.suggestedFilename(), data: JSON.parse(require('fs').readFileSync(await dl.path(), 'utf8')) };
+    };
+    const w = await fileOf('[data-acct="admin-dl-weapons"]');
+    ok('Server tools downloads the weapon animations in full, as JSON', /^pmc-weapons-.*\.json$/.test(w.name) && w.data.kind === 'weapon animations' &&
+      Object.keys(w.data.units).length > 100 && w.data.units.mortarsection.entry.blast === 'frag' && w.data.units.mortarsection.changed &&
+      w.data.units.mortarsection.default.p === 'arc' && w.data.units.veterans.changed === false &&
+      JSON.stringify(w.data.units.mortarsection.entry) === '{"p":"arc","blast":"frag"}' && Object.keys(w.data.changes).length >= 5,
+      w.name + ' ' + Object.keys(w.data.units || {}).length + ' units, ' + Object.keys(w.data.changes || {}).length + ' changed');
+    const a = await fileOf('[data-acct="admin-dl-arch"]');
+    ok('...and the personalities in full', /^pmc-personalities-.*\.json$/.test(a.name) && a.data.kind === 'personalities' &&
+      Array.isArray(a.data.personalities) && a.data.personalities.length > 10 && !!a.data.personalities[0].id && typeof a.data.changes === 'object',
+      a.name + ' ' + (a.data.personalities || []).length);
+    await q.close();
   }
 
   const n = Object.keys((await fetch(URL + 'api/weapons').then((r) => r.json())).weapons).length;
