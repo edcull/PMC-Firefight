@@ -1105,6 +1105,42 @@ head('A personality as one object, and an admin\'s changes laid over it');
   ok('a preview runs with the change and puts it back', [seen, C.archetype('armour').temper], [3, -1]);
 })();
 
+head('Campaign rivals recruit by the same weighted list');
+(function () {
+  function grow(id, f, turns) {
+    var co = C.newCompany('W', { faction: f }); C.foundRival(co, id, []);
+    for (var t = 0; t < turns; t++) C.idleTurn(co);
+    return co;
+  }
+  function wOf(a, p) { var e = a.weights[p.key] != null ? a.weights[p.key] : a.weights[p.group]; return e == null ? 0 : Array.isArray(e) ? e[0] : e; }
+  function limOf(a, k) { var e = a.weights[k]; return Array.isArray(e) ? e[1] : null; }
+  var stray = [], over = [];
+  ['armour', 'shock', 'redfront', 'pitheads'].forEach(function (id) {
+    var a = C.archetype(id), f = a.faction || 'pmc';
+    for (var r = 0; r < 4; r++) {
+      var co = grow(id, f, 25);
+      co.roster.forEach(function (e) {
+        var p = R.profile(e.key);
+        // the founding units and the commander are its own whatever the list says
+        if (p.command || [].concat(a.t1 || [], a.t2 || [], a.machines || []).indexOf(p.key) >= 0) return;
+        if (wOf(a, p) <= 0) stray.push(a.name + ': ' + p.name);
+      });
+      Object.keys(a.weights).forEach(function (k) {
+        var lim = limOf(a, k); if (lim == null) return;
+        var n = co.roster.filter(function (e) { var p = R.profile(e.key); return p.key === k || p.group === k; }).length;
+        if (n > lim * 3) over.push(a.name + ': ' + n + ' ' + k);
+      });
+    }
+  });
+  ok('a weighted rival recruits nothing its list weighs 0', stray.length, 0, stray.slice(0, 4).join('; '));
+  ok('...and keeps to its limits (three Priority Levels’ worth on its books)', over.length, 0, over.slice(0, 4).join('; '));
+  var bast = grow('armour', 'pmc', 25), groupsHeld = {};
+  bast.roster.forEach(function (e) { groupsHeld[R.profile(e.key).group] = 1; });
+  ok('a Bastion rival grows a mix: armour, support infantry and hulls', !!(groupsHeld['Heavy infantry'] && (groupsHeld['Heavy support'] || groupsHeld['Light support']) && (groupsHeld['Hunters and destroyers'] || groupsHeld['Support vehicles'])), true, Object.keys(groupsHeld).join(', '));
+  var merc = grow('swarm', 'pmc', 30);
+  ok('a recruiting company grows to a size that suits its Tier, not a hundred Recruits', merc.roster.length <= 12 + 7 * merc.tier + 4, true, merc.roster.length + ' units at Tier ' + merc.tier);
+})();
+
 head('Rebel Tactics by personality and part in the scenario');
 (function () {
   function tally(id, roles) {
