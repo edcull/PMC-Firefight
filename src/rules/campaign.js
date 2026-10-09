@@ -1278,6 +1278,7 @@
         'Basic troops': 5, enforcers: 0, penal: [3, 1], 'Rifle infantry': 6, 'Assault troops': [2, 1],
         'Light infantry': [1, 1], 'Light support': 5, 'Heavy support': [3, 2], sam: [1, 1],
         'Remote mortars': [3, 1], nomads: [1, 2], 'Combat vehicles': [2, 1], 'Transport vehicles': [1, 1],
+        'Support vehicles': [2, 1], impsupport: 2,   // self-propelled guns, the cheap improvised one most
         insertplat: 0,
         // (a drone unit, low)
         dcombat: [1, 1]
