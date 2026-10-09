@@ -1405,10 +1405,10 @@
     },
     {
       id: 'freespace', name: 'Pirates', faction: 'rebel',
-      temper: 1, // the behaviour roll in battle (p. 147): raiders, always on the move
+      temper: 0, // the behaviour roll in battle (p. 147): raiders, quick but not reckless
       blurb: 'Pirates with a manifesto. Fast in, loaded up, gone.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Pirates: fast in, loaded up, gone. About 12 units at T3 PL2: Mounted Warriors the largest share (3), Holy Warriors and leaders riding, 3-4 hulls with trucks and shuttles to carry the rest. Red flags: artillery, slow infantry with no ride, under 3 hulls.',
+      notes: 'Pirates: fast in, loaded up, gone. About 12 units at T3 PL2: Mounted Warriors and Freedom Warriors the largest shares (about 2 each), a support gun or two, Holy Warriors and leaders riding, 3-4 hulls with trucks and shuttles to carry the rest. Red flags: artillery, slow infantry with no ride, under 3 hulls.',
       names: ['Free Space Freedom Fighters', 'The Long Haul', 'Kestrel Run', 'Salvage Rights'],
       // riders above all, its leaders mounted too; its hulls carry the infantry that does not ride; no artillery
       t1: ['rridergang'],
@@ -1425,10 +1425,11 @@
       tier: 0,
       hulls: { min: 1, max: 2 },    // troop carriers and shuttles
       weights: {
-        'Mounted Warriors': 8, 'Holy Warriors': 3, 'Freedom Warriors': 3,
+        // riders still the heart of it, with rifles and support guns enough to hold what they take
+        'Mounted Warriors': 6, 'Holy Warriors': 3, 'Freedom Warriors': 5,
         // (trucks, lifters and shuttles for whoever is not on a mount)
         'Rebel transport vehicles': 6, 'Rebel aviation': 3, rlifter: 1, 'Rebel combat vehicles': 1,
-        'Rebel support troops': [1, 1], 'Deserters and POWs': [1, 1]
+        'Rebel support troops': 2, 'Deserters and POWs': [1, 1]
       },
       spend: 'promote'
     },

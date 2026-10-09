@@ -97,5 +97,39 @@ console.log('\nAn empty transport never takes a squad back off the line');
   ok('...but one stranded far behind its own front line is picked up', !!squad.aboard);
 })();
 
+console.log('\nBattlefield Insertion: the AI comes down clear of the enemy');
+(function () {
+  let landed = 0, exposed = 0, close = 0;
+  for (let n = 0; n < 6; n++) {
+    const e = Engine.create();
+    e.start({ tier: 2, pl: 1, scenario: 'meeting', armyA: R.rollArmy(2, 1, null, 'rebel'), armyB: R.rollArmy(2, 1, null, 'pmc'),
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'dense', campaign: true, terrainSetup: 'auto',
+      tactics: { A: 'guerillas', B: null } });
+    for (let g = 0; g < 400 && !e.over() && e.state().phase !== 'battle'; g++) {
+      const s = e.state();
+      if (s.swapAsk) { e.intent(s.swapAsk.side, { k: 'swapdone' }); continue; }
+      if (s.faceAsk) { e.intent(s.faceAsk.side, { k: 'vfaceall' }); continue; }
+      e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+    }
+    const st = e.state();
+    st.units.filter((u) => u.side === 'A' && u.reserve && R.has(u, 'Battlefield Insertion')).forEach((u) => {
+      e.state().over = { winner: null, text: 'test' };
+      // the AI's own choice of spot: the scatter die held at 1, on target
+      const d6 = R.d6; R.d6 = () => 1;
+      try { e.query.aiInsert(u); } finally { R.d6 = d6; }
+      if (u.reserve || u.x < 0) return;
+      landed++;
+      const ghost = { x: u.x, y: u.y, alive: true, of: u };
+      // (Stealth, which Guerillas have: an enemy beyond 12" is shooting at +2 Defence or more, a risk worth taking)
+      if (st.units.some((f) => f.side === 'B' && f.alive && f.x >= 0 && !f.aboard && f.fp != null &&
+        R.inches(f.x, f.y, u.x, u.y) <= Math.min(12, f.range || 0) && R.hasLoS(st, f, ghost))) exposed++;
+      if (st.units.some((f) => f.side === 'B' && f.alive && f.x >= 0 && !f.aboard && R.inches(f.x, f.y, u.x, u.y) < 10)) close++;
+    });
+  }
+  ok('Guerillas come down by insertion', landed >= 6, landed + ' landed');
+  ok('...never within 10" of an enemy', close === 0, close + ' of ' + landed);
+  ok('...nor where an enemy within 12" has them in sight and range', exposed <= landed * 0.1, exposed + ' of ' + landed + ' exposed');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
