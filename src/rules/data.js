@@ -384,10 +384,10 @@
     // the sniper team: a pair of heavy rounds, then a pair of Gauss lines
     snipers: { p: 'shell', n: 2, s: 'rail', sn: 2 },
     // the section is its two machine guns: the loader feeds them rather than shooting
-    lmgsection: { p: 'burst', splash: true },
+    lmgsection: { p: 'burst' },
     // the MG team has a carbine in the section alongside the gun
     // four machine guns, fed by two loaders
-    lmgteam: { p: 'burst', splash: true },
+    lmgteam: { p: 'burst' },
     // a crew-served Gauss cannon: three shots in quick succession, not one
     hmgteam: { p: 'chain', splash: true }, gausscannon: { p: 'rail', n: 3 },
     lightat: { p: 'shell', blast: 'frag' }, atteam: { p: 'shell', blast: 'frag' },
@@ -423,12 +423,12 @@
     // a soft-skinned lorry has no gun of its own: what shoots is the crew, at 12"
     unarmoured: { p: 'pistol' }, ltransport: { p: 'smg' },
     lapc: { p: 'small' },
-    lifv: { p: 'missile', s: 'chain', launch: 'sam', blast: 'frag' }, hapc: { p: 'small' }, hifv: { p: 'missile', n: 2, s: 'chain', launch: 'sam', blast: 'frag' },
+    lifv: { p: 'chain', s: 'missile', splash: true, launch: 'sam', blast: 'frag' }, hapc: { p: 'small' }, hifv: { p: 'chain', n: 2, s: 'missile', sn: 2, splash: true, launch: 'sam', blast: 'frag' },
     // a command vehicle is a staff car with an antenna farm, not a gun platform
     cmdveh: { p: 'small' },
     insertplat: { p: 'none' },
     // engineering hulls: a flame projector over a gun, and a plasma breaching cannon
-    lengveh: { p: 'flame', s: 'chain' },
+    lengveh: { p: 'chain', s: 'flame', splash: true },
     hengveh: { p: 'plasmabolt' },
     // support hulls fire in batteries: two tubes, then three
     impsupport: { p: 'rocket', blast: 'frag' }, lsupport: { p: 'arcbig', n: 3, blast: 'frag' },
@@ -437,7 +437,7 @@
     // an energy howitzer: three heavy orbs lobbed over, bursting blue
     asupport: { p: 'orbbig', n: 3 },
     // air defence: the gun first, then the missiles off the rails
-    aaveh: { p: 'missile', n: 2, s: 'chain', launch: 'samturret', blast: 'frag' },
+    aaveh: { p: 'chain', n: 2, s: 'missile', sn: 2, splash: true, launch: 'samturret', blast: 'frag' },
     // signals and ambulance hulls: a pintle gun and the crew, nothing more
     ewveh: { p: 'small' }, medveh: { p: 'small' },
     /* Transport aircraft: a door gun and whoever is leaning out of it, inside a
@@ -446,7 +446,7 @@
     heavycraft: { p: 'small' }, flyingcp: { p: 'small' },
     // the flexible strike craft rakes with its nose gun under a rocket rack; the transport has a door gun
     fsc: { p: 'burst', s: 'rocket', blast: 'frag' }, tsc: { p: 'small', s: 'rocket', blast: 'frag' },
-    gunboat: { p: 'chain', s: 'rocket', blast: 'frag' }, hsc: { p: 'missile', n: 3, s: 'rocket', blast: 'frag' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3, blast: 'frag' },
+    gunboat: { p: 'chain', s: 'rocket', splash: true, blast: 'frag' }, hsc: { p: 'missile', n: 3, s: 'rocket', blast: 'frag' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3, blast: 'frag' },
     // the light VTOL drone carries no gun worth the name: a light sidearm's crack
     vtoldrone: { p: 'pistol' },
     // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
@@ -467,7 +467,7 @@
        with a gun alongside, the legendary ones something heavier. */
     rridergang: { p: 'none', s: 'molotov', sn: 2 }, rriderwar: { p: 'small', s: 'molotov', sn: 2 },
     rhellriders: { p: 'smg', s: 'molotov', sn: 2 }, rlegendary: { p: 'chain', s: 'molotov', sn: 2 },
-    rlmg: { p: 'burst', splash: true }, rautocannon: { p: 'chain', splash: true },
+    rlmg: { p: 'burst' }, rautocannon: { p: 'chain', splash: true },
     rat: { p: 'shell', blast: 'frag' },
     // the insurgents' AA weapons are old shoulder guns: they fire a shell, not a guided missile
     raa: { p: 'shell', blast: 'frag' },
@@ -501,7 +501,7 @@
     rlflak: { p: 'burst' }, rmflak: { p: 'burst', s: 'burst' },
     rhflak: { p: 'chain', s: 'burst', splash: true },
     // a captured patrol craft and an armed shuttle: a door gun and the crew
-    rpatrol: { p: 'small' }, rlshuttle: { p: 'burst', splash: true },
+    rpatrol: { p: 'small' }, rlshuttle: { p: 'burst' },
     // the armed shuttles carry a proper door cannon, not a machine gun
     rmshuttle: { p: 'chain', splash: true }, rhshuttle: { p: 'chain', splash: true },
     rlifter: { p: 'none' },

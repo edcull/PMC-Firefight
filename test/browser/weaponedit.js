@@ -38,7 +38,7 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
     await p.goto('file://' + path.join(ROOT, 'viewer.html'));
     await p.waitForTimeout(800);
     ok('the unit has its Stats and Options tabs and no Weapon tab', (await tabs(p)).join(',') === 'stats,opts');
-    ok('...and fires as the table in data.js has it', await p.evaluate(() => { window.__viewer.pick('aaveh'); return window.__viewer.spec().p === 'missile'; }));
+    ok('...and fires as the table in data.js has it', await p.evaluate(() => { window.__viewer.pick('aaveh'); return window.__viewer.spec().p === 'chain'; }));
     // a splashing round's own bursts take the army's colour: amber for the mercenaries and the revolt, blue for a Xenotripod
     const splashed = async (key) => {
       await p.evaluate((k) => { window.PMC.WEAPONS[k] = { p: 'smg', splash: true }; window.__viewer.pick(k); window.__viewer.range(8); window.__viewer.fireNow(); }, key);
@@ -81,14 +81,14 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   await p.evaluate(() => { window.__viewer.pick('aaveh'); window.__viewer.set('tab', 'weapon'); });
   await p.waitForTimeout(200);
   const before = await src(p);
-  ok('the unit’s entry, as the table writes it', /^aaveh: \{ p: 'missile', n: 2, s: 'chain', launch: 'samturret', blast: 'frag' \}$/.test(before), before);
+  ok('the unit’s entry, as the table writes it', /^aaveh: \{ p: 'chain', n: 2, s: 'missile', sn: 2, splash: true, launch: 'samturret', blast: 'frag' \}$/.test(before), before);
   ok('...with its missiles’ surface-to-air launch, chosen from the table', await p.evaluate(() => document.querySelector('[data-w="launch"]').value === 'samturret' && window.__viewer.spec().launch === 'samturret'));
 
   await pickW(p, 'p', 'rail');
   await pickW(p, 'n', '4');
   const after = await p.evaluate(() => ({ spec: window.__viewer.spec(), src: document.querySelector('.vesrc').textContent, changed: !!document.querySelector('.vedited') }));
-  ok('changing the primary changes what the unit fires', after.spec.p === 'rail' && after.spec.n === 4 && after.spec.s === 'chain', JSON.stringify(after.spec));
-  ok('...marked as changed, and its line written out', after.changed && /^aaveh: \{ p: 'rail', n: 4, s: 'chain', launch: 'samturret', blast: 'frag' \}$/.test(after.src), after.src);
+  ok('changing the primary changes what the unit fires', after.spec.p === 'rail' && after.spec.n === 4 && after.spec.s === 'missile', JSON.stringify(after.spec));
+  ok('...marked as changed, and its line written out', after.changed && /^aaveh: \{ p: 'rail', n: 4, s: 'missile', sn: 2, splash: true, launch: 'samturret', blast: 'frag' \}$/.test(after.src), after.src);
   ok('...and saved to the server', /^Saved/.test(await note(p)) &&
     (await fetch(URL + 'api/weapons').then((r) => r.json())).weapons.aaveh.p === 'rail', await note(p));
 
@@ -98,7 +98,7 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   ok('Fire on the tab fires it as changed', seen.indexOf('rail') >= 0, [...new Set(seen)].join(','));
 
   const lines = await p.evaluate(() => window.__viewer.exportEdits());
-  ok('Copy changes gives the lines to make it the table’s own', /aaveh: \{ p: 'rail', n: 4, s: 'chain', launch: 'samturret', blast: 'frag' \},\s+\/\/ Anti-aircraft vehicle/.test(lines), lines);
+  ok('Copy changes gives the lines to make it the table’s own', /aaveh: \{ p: 'rail', n: 4, s: 'missile', sn: 2, splash: true, launch: 'samturret', blast: 'frag' \},\s+\/\/ Anti-aircraft vehicle/.test(lines), lines);
 
   // everyone else: a page loaded now draws the change, in the viewer and in the game
   await player.p.reload(); await player.p.waitForTimeout(900);
@@ -111,20 +111,20 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   await pickW(p, 's', '');
   await p.click('[data-w="splash"]'); await p.waitForTimeout(250);
   const s2 = await src(p);
-  ok('the secondary can be taken off, and splash set', /^aaveh: \{ p: 'rail', n: 4, splash: true, launch: 'samturret', blast: 'frag' \}$/.test(s2), s2);
+  ok('the secondary can be taken off, and splash cleared', /^aaveh: \{ p: 'rail', n: 4, launch: 'samturret', blast: 'frag' \}$/.test(s2), s2);
 
   await p.click('.vweaponbody [data-do="wrevert"]'); await p.waitForTimeout(250);
   const back = await p.evaluate(() => ({ spec: window.__viewer.spec(), edits: Object.keys(window.__viewer.edits()) }));
   const kept = (await fetch(URL + 'api/weapons').then((r) => r.json())).weapons;
-  ok('Revert puts the table’s own entry back, on the server too', back.spec.p === 'missile' && back.spec.n === 2 && back.spec.s === 'chain' && !back.edits.length && !kept.aaveh, JSON.stringify(back) + ' ' + JSON.stringify(kept));
+  ok('Revert puts the table’s own entry back, on the server too', back.spec.p === 'chain' && back.spec.n === 2 && back.spec.s === 'missile' && !back.edits.length && !kept.aaveh, JSON.stringify(back) + ' ' + JSON.stringify(kept));
 
-  await pickW(p, 'p', 'missile');
+  await pickW(p, 'p', 'chain');
   ok('choosing what the table already says is no change', await p.evaluate(() => !Object.keys(window.__viewer.edits()).length));
 
   // the rest of how it is drawn: the launch, the shots' colour, an orb's flight
   await pickW(p, 'launch', '');
   ok('its missiles can be made to fly flat', await p.evaluate(() => window.__viewer.spec().launch === undefined &&
-    document.querySelector('.vesrc').textContent === "aaveh: { p: 'missile', n: 2, s: 'chain', blast: 'frag' }"));
+    document.querySelector('.vesrc').textContent === "aaveh: { p: 'chain', n: 2, s: 'missile', sn: 2, splash: true, blast: 'frag' }"));
   await p.evaluate(() => { window.__viewer.pick('regular'); });
   await p.waitForTimeout(100);
   ok('a rifle team has no missile launch or orbs to choose, but a shot colour', await p.evaluate(() =>
@@ -219,7 +219,7 @@ async function pickW(p, field, value) { await p.selectOption('[data-w="' + field
   await player.p.evaluate(() => { window.__viewer.pick('aaveh'); window.__viewer.set('tab', 'weapon'); });
   await pickW(player.p, 'p', 'rail');
   const refused = await player.p.evaluate(() => ({ p: window.__viewer.spec().p, note: document.querySelector('.vweaponbody .vtgtline').textContent }));
-  ok('a change the server refuses (not an admin’s) is not kept', refused.p === 'missile' && /^Not saved/.test(refused.note), JSON.stringify(refused));
+  ok('a change the server refuses (not an admin’s) is not kept', refused.p === 'chain' && /^Not saved/.test(refused.note), JSON.stringify(refused));
 
   await nobody.ctx.close(); await player.ctx.close(); await chief.ctx.close();
   srv.kill();

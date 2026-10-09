@@ -30,7 +30,7 @@ function all(keys, want) { keys.forEach(function (k) { if (R.profile(k)) is(k, w
 head('Flamethrowers');
 is('chem', 'flame');
 // the engineering hull keeps a gun behind its flame projector
-is('lengveh', 'flame+chain');
+is('lengveh', 'chain+flame');
 
 head('Gauss weapons draw a line');
 is('lrrp', 'rail x2');
@@ -46,7 +46,7 @@ is('raa', 'shell');
 // the launcher teams put a pair in the air
 all(['sam', 'missile'], 'missile x2');
 // air defence hulls put the gun up first and the missiles off the rails after
-is('aaveh', 'missile+chain x2');
+is('aaveh', 'chain+missile x2');
 is('interceptor', 'missile+burst x2');
 
 
@@ -119,8 +119,8 @@ is('rheavyart', 'arcbig x3');
 
 head('Autocannon');
 all(['hpv', 'hmgteam', 'rautocannon'], 'chain');
-is('lifv', 'missile+chain');
-is('hifv', 'missile+chain x2');
+is('lifv', 'chain+missile');
+is('hifv', 'chain+missile x2');
 // the heavy autocannon squad puts three heavy rounds through its own fire
 is('rheavyac', 'chain+shellbig');
 // the guard have carbines through the ranks as well as rifles
