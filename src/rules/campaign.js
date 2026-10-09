@@ -1364,6 +1364,7 @@
         recruits: 3, irregulars: 3, 'Rifle infantry': 5, 'Assault troops': 6, 'Heavy infantry': [1, 1],
         'Light infantry': [1, 1], 'Heavy support': [1, 1], 'Transport vehicles': 7, insertplat: 2,
         'Transport aircraft': 4, 'Strike aircraft': 3, vtoldrone: 1,
+        'Combat vehicles': [3, 2], recon: 4,   // patrol and recon vehicles riding with the transports
         // (a drone unit, low)
         dassault: [1, 1], dcombat: [1, 1]
       },
