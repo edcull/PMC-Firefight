@@ -530,7 +530,7 @@
     }
 
     // pick a legal force from the roster, the way the rival does (campaign.js)
-    function autoPick(co, tier, pl, tactic) { return C.pickForce(co, tier, pl, tactic); }
+    function autoPick(co, tier, pl, tactic) { return C.pickForce(co, tier, pl, tactic, { scenario: E.contract && E.contract.scenario && E.contract.scenario.id }); }
 
     /* Drug Dealer (p. 112): up to a third of the infantry, leaders aside, are sent
        in Determined — and pay for it afterwards. The choice is made as the force

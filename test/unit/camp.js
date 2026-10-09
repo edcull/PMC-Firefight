@@ -1269,5 +1269,35 @@ head('Rebel Tactics by personality and part in the scenario');
   ok('...and a PMC company takes no Rebel Tactic', C.aiTactic(C.newCompany('P', {}), atk, 'B'), null);
 })();
 
+// Demolish (p. 54): the objective's SAM system shoots every aircraft near it, so a force picked for it leaves its aircraft at home
+(function () {
+  var co = C.newCompany('T', { faction: 'pmc' }); C.foundRival(co, 'aircav', []); C.catchUp(co, 2);
+  co.kUC = 999; C.recruit(co, 'adaptedcraft');
+  var air = function (list) { return list.filter(function (e) { return R.profile(e.key).cls === 'aircraft'; }).length; };
+  var legal = function (list) { return R.checkArmy(list.map(function (e) { return R.entryPick(e); }), 2, 1, co.doctrines || []).ok; };
+  var any = false;
+  for (var i = 0; i < 10 && !any; i++) any = air(C.pickForce(co, 2, 1, null)) > 0;
+  ok('a Cavalry force takes its transport craft into an ordinary battle', any, true);
+  var dem = C.pickForce(co, 2, 1, null, { scenario: 'demolish' });
+  ok('...but none into Demolish, and the army is still legal', [air(dem), legal(dem)], [0, true]);
+})();
+// Saving for a Company Tier no longer stops a force that rides replacing the hulls it has lost
+(function () {
+  var hulls = 0, set = 0;
+  for (var n = 0; n < 6; n++) {
+    var co = C.newCompany('T', { faction: 'pmc' }); C.foundRival(co, 'aircav', []); C.catchUp(co, 2);
+    co.kUC = 999;
+    for (var i = 0; i < 8 && !C.canPromoteCompany(co).ok; i++) C.recruit(co, 'regular');
+    co.roster = co.roster.filter(function (e) { return R.profile(e.key).cls === 'infantry'; });
+    co.kUC = 80;
+    if (C.canPromoteCompany(co).ok) set++;
+    C.developRival(co);
+    hulls += co.roster.filter(function (e) { return R.profile(e.key).cls !== 'infantry'; }).length;
+  }
+  ok('a Cavalry company with every hull lost, the money there for its next Tier...', set, 6);
+  ok('...buys hulls back even while it saves for the promotion', hulls >= 6, true, hulls + ' hulls over 6 companies');
+})();
+ok('Special Ops plays the behaviour table untempered', C.aiTemper({ archetype: 'marksmen' }), null);
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -1289,7 +1289,6 @@
     {
       // (id kept from when it was "Marksmen")
       id: 'marksmen', name: 'Special Ops',
-      temper: -1, // the behaviour roll in battle (p. 147): shoots from cover, never closes
       blurb: 'Never where you are looking: a sniper in the treeline, a drone overhead, and your radios full of static.',
       // what a build of it should look like (the editor's validation notes, for people only)
       notes: 'Recon and precision. About 11 units at T3 PL2: rifle teams and light infantry (sharpshooters, snipers, LRRP, observers), 2-3 cars or light craft, an EW team or drone now and then. Red flags: heavy infantry or assault troops in numbers, tanks or destroyers, more than one LRRP or sniper team at PL2. A recon drone in about 1 force in 8.',
@@ -1990,16 +1989,26 @@
     var f = FREE_UNITS[key];
     return f ? (typeof f === 'string' ? f : 'Free to recruit while the force has fewer than four') : null;
   }
-  function pickForce(co, tier, pl, tactic) {
+  function pickForce(co, tier, pl, tactic, opts) {
+    var docs0 = co.doctrines || [];
+    function legal(list) { return list.length && R.checkArmy(list.map(function (e) { return R.entryPick(e); }), tier, pl, docs0, tactic).ok; }
     /* Nursing the force: a unit one bad battle from a Battle Trauma is left at home
        unless the army cannot be legal without it, and one getting close is taken only
        after the rest — so the AI forces (and Pick a force for me) spread the wear. */
-    var fresh = pickFrom(co, tier, pl, tactic, true);
-    var docs0 = co.doctrines || [];
-    if (fresh.length && R.checkArmy(fresh.map(function (e) { return R.entryPick(e); }), tier, pl, docs0, tactic).ok) return fresh;
-    return pickFrom(co, tier, pl, tactic, false);
+    function nursed(noAir) {
+      var fresh = pickFrom(co, tier, pl, tactic, true, noAir);
+      return legal(fresh) ? fresh : pickFrom(co, tier, pl, tactic, false, noAir);
+    }
+    /* Demolish (p. 54): the objective's SAM system shoots at every aircraft that ends
+       a move within 12" of it, so the aircraft stay at home — unless the army cannot be
+       legal without them. (`opts.scenario`: the scenario's id, when it is known.) */
+    if (opts && opts.scenario === 'demolish') {
+      var grounded = nursed(true);
+      if (legal(grounded)) return grounded;
+    }
+    return nursed(false);
   }
-  function pickFrom(co, tier, pl, tactic, spare) {
+  function pickFrom(co, tier, pl, tactic, spare, noAir) {
     /* The units marked on the dossier for the contract come into it that way: the
        favoured looked at first, the unfavoured only when nothing else will do —
        each Tier's slots, and the points after, filled in that order; within those,
@@ -2008,7 +2017,9 @@
     // an AI force with a liking for machines (the Cavalry) takes its hulls first
     var arch = co.archetype && !co.human ? archetype(co.archetype) : null;
     var hullFirst = function (e) { return arch && arch.fieldsMachines && profile(e.key).cls !== 'infantry' ? 0 : 1; };
-    var avail = co.roster.filter(function (e) { return !(e.restUntil > 0) && !(spare && traumaBand(co, e) === 2); }).slice().sort(function (a, b) {
+    var avail = co.roster.filter(function (e) {
+      return !(e.restUntil > 0) && !(spare && traumaBand(co, e) === 2) && !(noAir && profile(e.key).cls === 'aircraft');
+    }).slice().sort(function (a, b) {
       return markRank(a) - markRank(b) || traumaBand(co, a) - traumaBand(co, b) || hullFirst(a) - hullFirst(b) || profile(b.key).tier - profile(a.key).tier;
     });
     var docs = co.doctrines || [];

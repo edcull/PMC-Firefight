@@ -671,8 +671,15 @@
          field at its own Tier, the next one the moment the money is there; the Bastion
          keeps four, its tank hunters, destroyers and gun carriers. */
       // (and a force with hulls of its own to keep — the Bastion's guns — buys them however else it spends)
-      if ((a.spend === 'machines' || hullsKept) && !banking()) {
-        var cap = hullsKept || 3, bought = 0;
+      /* Saving for a Company Tier stops new hulls, but not replacing lost ones: a force
+         that rides keeps at least a Priority Level 2 army's minimum of them (twice its
+         skirmish `hulls.min`), or the machines it is built around wear away battle by
+         battle while the money waits for the promotion. */
+      var hullFloor = Math.round(((a.hulls && a.hulls.min) || 0) * 2);
+      var hullsNow = co.roster.filter(function (e) { return profile(e.key).cls !== 'infantry'; }).length;
+      var bankingNow = banking(), replacing = bankingNow && hullsNow < hullFloor;
+      if ((a.spend === 'machines' || hullsKept) && (!bankingNow || replacing)) {
+        var cap = replacing ? hullFloor : hullsKept || 3, bought = 0;
         while (bought < 2 && co.roster.filter(function (e) { return profile(e.key).cls !== 'infantry'; }).length < cap) {
           if (!hullsKept && co.kUC < 16) break;
           var hulls = R.listFor(co.faction).filter(function (p) {
@@ -689,7 +696,7 @@
         }
         /* ...and once it has all it means to keep, the smallest goes for a bigger one
            when the money is there: the guns grow with the force. */
-        if (hullsKept) {
+        if (hullsKept && !bankingNow) {
           var owned = co.roster.filter(function (e) { var q = profile(e.key); return q.cls !== 'infantry' && !q.noSlot && wanted(q); });
           if (owned.length >= cap) {
             var small = owned.slice().sort(function (x, y) { return profile(x.key).tier - profile(y.key).tier; })[0];
