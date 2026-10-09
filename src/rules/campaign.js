@@ -1725,7 +1725,6 @@
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xeps2'],
       machines: ['xstrike2'], vehicles: 1,
       doctrines: ['XO6', 'XO5', 'XS4', 'XT3', 'XO3', 'XS6'],
-      random: true,                 // no creed to speak of: the whole list, shuffled
       tier: 0,
       hulls: { min: 1, max: 1.5 },
       weights: {   // fights everyone, with whatever it has
