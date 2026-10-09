@@ -118,7 +118,7 @@
     }
 
     /* Putting a hull's squads down: each where it may stand (R.dropSpots), as near
-       `toward` as it can — the hull's front, or (under fire) the side away from the enemy. */
+       `toward` as it can — the hull's front, or the side toward the fight. */
     function unloadAll(u, toward) {
       var spot = toward || { x: u.x + Math.cos(u.facing || 0) * 2.5, y: u.y + Math.sin(u.facing || 0) * 2.5 };
       var lines = [];
@@ -147,7 +147,8 @@
        hulls come on full. Loaded, an armoured carrier (heavyCarrier) spearheads for the
        objective; anything lighter follows the force up, never ahead of its front line
        and only onto ground no enemy can shoot into, and puts its squads down at the
-       front, or at once on the hull's far side if it comes under the guns. Empty, it
+       front, or at once if it comes under the guns — always on the side toward the
+       fight, so they push on and screen the hull. Empty, it
        picks up only squads stranded behind the fighting, keeps out of reach otherwise
        and shoots what it can from there; it never takes troops off the line and never
        drives at the enemy. Hands back false when the ordinary orders should run instead
@@ -205,13 +206,15 @@
       if (carrying) {
         var hurt = (u.damage || 0) > 0;
         var atObj = goal && nearestObjective(u) && R.inches(u.x, u.y, goal.x, goal.y) < 9;
-        var away = function () {
-          var ne = nearestEnemy(u);
-          if (!ne) return null;
-          var dx = u.x - ne.unit.x, dy = u.y - ne.unit.y, dl = Math.hypot(dx, dy) || 1;
+        /* Squads go out on the hull's near side to the fight — toward the objective, else
+           the nearest enemy: a step further on, and between the enemy and their ride. */
+        var ahead = function () {
+          var t = goal || (nearestEnemy(u) || {}).unit;
+          if (!t) return null;
+          var dx = t.x - u.x, dy = t.y - u.y, dl = Math.hypot(dx, dy) || 1;
           return { x: u.x + dx / dl * 2.5, y: u.y + dy / dl * 2.5 };
         };
-        if (atObj) { unloadAll(u, null); return true; }
+        if (atObj) { unloadAll(u, ahead()); return true; }
         var now = sightAt(u, u);
         if (!goal) return false;
         var here = R.inches(u.x, u.y, goal.x, goal.y);
@@ -221,27 +224,27 @@
              badly hurt. */
           if (gap <= 10 || (u.damage || 0) * 2 >= (u.str || 1) || (hurt && now.seen > 0)) {
             logLine('ai', u.label + ' puts its troops down at the front.');
-            unloadAll(u, away()); return true;
+            unloadAll(u, ahead()); return true;
           }
           var spear = bestDriveSpot(u, allowance, function (c) {
             var sa = sightAt(u, c), g = foeGap({ x: c.x, y: c.y, side: u.side });
             return -R.inches(c.x, c.y, goal.x, goal.y) - 2 * sa.seen - (g < 8 ? (8 - g) * 4 : 0);
           });
-          if (!spear || R.inches(spear.pt.x, spear.pt.y, goal.x, goal.y) > here - 1) { unloadAll(u, away()); return true; }
+          if (!spear || R.inches(spear.pt.x, spear.pt.y, goal.x, goal.y) > here - 1) { unloadAll(u, ahead()); return true; }
           aiRoll(u, spear.pt, false, { close: true });
           return true;
         }
         /* Anything lighter follows the force: never out in front of its leading ground
            units, only onto ground no enemy can shoot into, and its squads out at the front
-           line — or at once, on the side away from the enemy, if it comes under the guns. */
+           line — or at once, if it comes under the guns. */
         if (now.seen > 0 || (hurt && now.threat > 0)) {
           logLine('ai', u.label + ' puts its troops down short of the enemy.');
-          unloadAll(u, away()); return true;
+          unloadAll(u, ahead()); return true;
         }
         var front = frontLine(u, goal);
         if (front != null && here <= front + 4) {
           logLine('ai', u.label + ' brings its troops up to the front line.');
-          unloadAll(u, null); return true;
+          unloadAll(u, ahead()); return true;
         }
         var pick = bestDriveSpot(u, allowance, function (c) {
           var sa = sightAt(u, c), d = R.inches(c.x, c.y, goal.x, goal.y);
@@ -249,7 +252,7 @@
         });
         var safe = pick && sightAt(u, pick.pt).seen === 0 && R.inches(pick.pt.x, pick.pt.y, goal.x, goal.y) <= here - 1;
         // no hidden way on: they walk from here
-        if (!safe) { unloadAll(u, now.threat > 0 ? away() : null); return true; }
+        if (!safe) { unloadAll(u, ahead()); return true; }
         aiRoll(u, pick.pt, false, { close: true });
         return true;
       }

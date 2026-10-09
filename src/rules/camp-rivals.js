@@ -671,6 +671,26 @@
          field at its own Tier, the next one the moment the money is there; the Bastion
          keeps four, its tank hunters, destroyers and gun carriers. */
       // (and a force with hulls of its own to keep — the Bastion's guns — buys them however else it spends)
+      /* A soft transport (an unarmoured or light truck) is a stopgap for the low Tiers:
+         as soon as the company may field an armoured carrier its list wants, and has the
+         money (only what is beyond the promotion's cost while it saves for one), the
+         truck goes for the carrier — two a time at most. */
+      function softTransport(q) { return q.transport > 0 && q.cls === 'vehicle' && !q.noSlot && (q.def || 0) < 12 && (q.str || 0) < 10; }
+      for (var sw = 0; sw < 2; sw++) {
+        var soft = co.roster.filter(function (e) { return e.rid !== co.cmdRid && softTransport(profile(e.key)); })[0];
+        if (!soft) break;
+        var purse = banking() ? co.kUC - (COMPANY_COST[co.tier + 1] || 0) : co.kUC;
+        var carriers = R.listFor(co.faction).filter(function (p) {
+          return p.transport > 0 && p.cls === 'vehicle' && !p.noSlot && !softTransport(p) && p.tier <= co.tier && wanted(p) && !capped(p) &&
+            canRecruit(co, p.key).ok && recruitCost(co, p.key) <= purse;
+        });
+        if (!carriers.length) break;
+        var ca = recruit(co, leaning(carriers).key);
+        if (!ca.ok) break;
+        co.roster = co.roster.filter(function (e) { return e !== soft; });
+        did.push({ what: 'recruit', text: 'traded the ' + soft.name + ' for a ' + ca.entry.name });
+      }
+
       /* Saving for a Company Tier stops new hulls, but not replacing lost ones: a force
          that rides keeps at least a Priority Level 2 army's minimum of them (twice its
          skirmish `hulls.min`), or the machines it is built around wear away battle by

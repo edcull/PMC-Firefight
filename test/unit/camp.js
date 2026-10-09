@@ -1307,6 +1307,19 @@ head('Rebel Tactics by personality and part in the scenario');
     did.filter(function (d) { return /took delivery/.test(d.text); }).length], [0, 0]);
 })();
 ok('Special Ops plays the behaviour table untempered', C.aiTemper({ archetype: 'marksmen' }), null);
+// a soft transport is a low-Tier stopgap: at Tier III, with the money, it goes for an armoured carrier
+(function () {
+  var soft = function (co) { return co.roster.filter(function (e) { var p = R.profile(e.key); return p.transport > 0 && p.cls === 'vehicle' && (p.def || 0) < 12 && (p.str || 0) < 10; }).length; };
+  var armoured = function (co) { return co.roster.filter(function (e) { var p = R.profile(e.key); return p.transport > 0 && p.cls === 'vehicle' && ((p.def || 0) >= 12 || (p.str || 0) >= 10); }).length; };
+  var co = C.newCompany('T', { faction: 'pmc' }); C.foundRival(co, 'aircav', []); C.catchUp(co, 3);
+  co.kUC = 999; C.recruit(co, 'unarmoured'); C.recruit(co, 'ltransport');
+  var before = soft(co), arm0 = armoured(co);
+  co.kUC = 400; C.developRival(co);
+  ok('a Tier III Cavalry company trades its trucks for armoured carriers', [before >= 2, soft(co) <= before - 2, armoured(co) >= arm0 + 2], [true, true, true], before + ' soft → ' + soft(co) + '; armoured ' + arm0 + ' → ' + armoured(co));
+  var lo = C.newCompany('T', { faction: 'pmc' }); C.foundRival(lo, 'aircav', []);
+  lo.kUC = 999; C.recruit(lo, 'unarmoured'); var s1 = soft(lo); C.developRival(lo);
+  ok('...but at Tier I, with nothing armoured to field, it keeps them', soft(lo) >= s1, true);
+})();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

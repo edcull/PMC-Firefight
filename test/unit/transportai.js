@@ -63,7 +63,7 @@ console.log('\nA loaded transport puts its squad down once the enemy has it in s
   ok('...the squad is aboard', (hull.cargo || []).length === 1);
   act(e, hull);
   ok('...and it gets out rather than riding on into the enemy', !squad.aboard && squad.x >= 0, 'squad at ' + squad.x.toFixed(1) + ', ' + squad.y.toFixed(1));
-  ok('...on the side away from the enemy', squad.x < foe.x && R.inches(squad.x, squad.y, foe.x, foe.y) >= R.inches(hull.x, hull.y, foe.x, foe.y) - 1);
+  ok('...on the side toward the enemy, between it and the hull', R.inches(squad.x, squad.y, foe.x, foe.y) < R.inches(hull.x, hull.y, foe.x, foe.y));
 })();
 
 console.log('\nAn armoured carrier spearheads where a light transport would stop');
