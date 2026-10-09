@@ -95,6 +95,8 @@ console.log('\nDecapitation: every OpFor Command Unit is a leader (p. 152)');
   ok('...in place from the start, not under a counter', cmd.every((u) => !u.reserve));
   // kill the scenario's leader only: the game is not won while the pool's one lives
   const extra = cmd.find((u) => u.key !== 'cmd3') || cmd[0], pooled = cmd.find((u) => u !== extra);
+  // (a demo game may already be under way: the pool's leader is put back on its feet so only one is down)
+  pooled.alive = true;
   extra.alive = false;
   const r1 = st.scen.check(st);
   ok('killing one leader is not enough', !r1 || r1.winner !== 'A');
