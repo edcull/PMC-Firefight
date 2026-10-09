@@ -49,7 +49,12 @@
       if (n) logLine('note', sideName(side) + ' — Rapid Relocation: ' + n + ' unit' + (n === 1 ? '' : 's') + ' shift into cover.');
     }
 
-    // the OpFor drops on the objective it most wants, or behind the player's line
+    /* Where an AI unit comes down by Battlefield Insertion — Guerillas, Nomads,
+       Underground Advance (p. 56). Not wherever the dice put it next to the objective:
+       the ground it may land on (insertionLegal) is searched for a hiding place within
+       reach of the fight — out of the sight and range of every enemy it can manage,
+       in cover, where it can shoot without being shot (the ambush), near the objective
+       it most wants (else the enemy), and near its own side rather than alone. */
     function aiInsert(u, done) {
       done = done || function () {};
       var want = null, wd = Infinity;
@@ -58,14 +63,26 @@
         var d = held + R.inches(o.x, o.y, W / 2, H / 2);
         if (d < wd) { wd = d; want = o; }
       });
-      for (var k = 0; k < 400; k++) {
-        var ang = Math.random() * Math.PI * 2, rad = 12 + Math.random() * 8;
-        var p = want
-          ? { x: want.x + Math.cos(ang) * rad, y: want.y + Math.sin(ang) * rad }
-          : { x: 8 + Math.random() * (W - 16), y: 4 + Math.random() * (H - 8) };
-        if (!insertionLegal(p)) continue;
-        if (R.unitNear(E.state, p.x, p.y, u, 1)) continue;
-        u.x = p.x; u.y = p.y; u.reserve = false;
+      var foes = E.state.units.filter(function (e) { return e.alive && e.side !== u.side && onTable(e) && !husk(e); });
+      var focus = want || (foes.length ? {
+        x: foes.reduce(function (s, e) { return s + e.x; }, 0) / foes.length,
+        y: foes.reduce(function (s, e) { return s + e.y; }, 0) / foes.length
+      } : { x: W / 2, y: H / 2 });
+      var friends = E.state.units.filter(function (f) { return f.alive && f !== u && f.side === u.side && onTable(f) && !f.aboard; });
+      var best = null, bs = -Infinity;
+      for (var k = 0; k < 360; k++) {
+        // most of the search close round the focus, some of it anywhere on the table
+        var p = k % 3 ? (function () { var ang = Math.random() * Math.PI * 2, rad = 10 + Math.random() * 16; return { x: focus.x + Math.cos(ang) * rad, y: focus.y + Math.sin(ang) * rad }; })()
+          : { x: 6 + Math.random() * (W - 12), y: 6 + Math.random() * (H - 12) };
+        if (!insertionLegal(p) || R.unitNear(E.state, p.x, p.y, u, 1)) continue;
+        var sa = sightAt(u, p), cover = R.coverAt(E.state, p.x, p.y, u) || 0;
+        var near = friends.some(function (f) { return R.inches(f.x, f.y, p.x, p.y) <= 10; });
+        var sc = -6 * sa.seen - 0.8 * sa.threat + 2 * cover + (sa.seen === 0 && sa.sees > 0 ? 3 : 0) +
+          (near ? 1.5 : 0) - 0.25 * R.inches(p.x, p.y, focus.x, focus.y);
+        if (sc > bs) { bs = sc; best = p; }
+      }
+      if (best) {
+        u.x = best.x; u.y = best.y; u.reserve = false;
         logLine('note', u.label + ' comes in by Battlefield Insertion.');
         scatterInsertion(u, function () { landUnit(u); done(); });
         return;

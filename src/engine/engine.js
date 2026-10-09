@@ -2328,6 +2328,8 @@
         beginningRites: acting(function () { beginningRites(); }),
         // the OpFor's pick of target for a Defensive or Neutral result (SOL-6), for the tests
         threatTarget: function (u) { return K.threatTarget(u, 'fire'); },
+        // where an AI unit comes down by Battlefield Insertion, for the tests
+        aiInsert: acting(function (u, done) { K.aiInsert(u, done || function () {}); }),
         greetArrival: acting(function (u) { return K.greetArrival(u); }),
         reservePhase: acting(function (done) { K.reservePhase(done || function () {}); }),
         aiAct: acting(function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); }),
