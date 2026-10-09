@@ -674,17 +674,21 @@
       /* Saving for a Company Tier stops new hulls, but not replacing lost ones: a force
          that rides keeps at least a Priority Level 2 army's minimum of them (twice its
          skirmish `hulls.min`), or the machines it is built around wear away battle by
-         battle while the money waits for the promotion. */
+         battle while the money waits for the promotion. It balances the two: only money
+         beyond the promotion's cost goes on a replacement (`spare`), so the hulls come
+         back without holding the company at its Tier. */
       var hullFloor = Math.round(((a.hulls && a.hulls.min) || 0) * 2);
       var hullsNow = co.roster.filter(function (e) { return profile(e.key).cls !== 'infantry'; }).length;
-      var bankingNow = banking(), replacing = bankingNow && hullsNow < hullFloor;
+      var spare = co.kUC - (COMPANY_COST[co.tier + 1] || 0);
+      var bankingNow = banking(), replacing = bankingNow && hullsNow < hullFloor && spare > 0;
       if ((a.spend === 'machines' || hullsKept) && (!bankingNow || replacing)) {
         var cap = replacing ? hullFloor : hullsKept || 3, bought = 0;
         while (bought < 2 && co.roster.filter(function (e) { return profile(e.key).cls !== 'infantry'; }).length < cap) {
           if (!hullsKept && co.kUC < 16) break;
           var hulls = R.listFor(co.faction).filter(function (p) {
             // (a free hull, a Xenotripod's Tier I turret, comes in only to close a gap, like any free unit)
-            return p.cls !== 'infantry' && !p.noSlot && wanted(p) && !capped(p) && canRecruit(co, p.key).ok && recruitCost(co, p.key) > 0 && (!hullsKept || p.tier <= co.tier);
+            return p.cls !== 'infantry' && !p.noSlot && wanted(p) && !capped(p) && canRecruit(co, p.key).ok && recruitCost(co, p.key) > 0 && (!hullsKept || p.tier <= co.tier) &&
+              (!replacing || recruitCost(co, p.key) <= co.kUC - (COMPANY_COST[co.tier + 1] || 0));
           }).sort(function (x, y) { return y.tier - x.tier; });
           if (!hulls.length) break;
           var top = hulls[0].tier, pickH = leaning(hulls.filter(function (p) { return p.tier === top; }));

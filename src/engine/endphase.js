@@ -141,9 +141,6 @@
     function aiYields(side) {
       var cfg = E.state.cfg || {};
       if (!cfg.campaign || !isAI(side) || (E.state.turn || 0) < 4) return false;
-      /* Demolish and Hostile takeover have no rout clause (pp. 54-55): they are decided
-         by the objective and the clock, so nobody gives up on them part-way. */
-      if (E.state.scen && (E.state.scen.id === 'demolish' || E.state.scen.id === 'takeover')) return false;
       if ((E.state.objectives || []).some(function (o) { return o.owner === side; })) return false;
       var mine = lossShare(side), theirs = lossShare(side === 'A' ? 'B' : 'A');
       return mine >= 0.6 && mine - theirs >= 0.25;

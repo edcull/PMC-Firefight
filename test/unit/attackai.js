@@ -1,6 +1,6 @@
 /* An AI side attacking a held position (Demolish p. 54, Hostile takeover p. 55):
-   it sets charges against the Demolish objective when it can, and neither side
-   gives up part-way through a scenario with no rout clause. */
+   it sets charges against the Demolish objective when it can, and a shattered AI
+   force surrenders there as anywhere else. */
 'use strict';
 const { R, Engine } = require('../../server/rules.js');
 let seed = 7;
@@ -45,7 +45,7 @@ console.log('\nDemolish: the attacking AI sets charges against the objective (p.
   ok('...and one beside it goes in with charges', /sets charges against the objective/.test(txt), txt.slice(0, 160));
 })();
 
-console.log('\nNo surrender in a scenario with no rout clause (pp. 54-55)');
+console.log('\nA shattered AI attacker surrenders, whatever the scenario');
 // the AI attacker, most of its men gone and nothing held, at the End phase of turn 5
 function yieldsIn(scenario) {
   const e = battle(scenario), st = e.state();
@@ -62,8 +62,8 @@ function yieldsIn(scenario) {
   return e.state().log.some((l) => / surrenders, its force shattered/.test(l.text || ''));
 }
 ok('a shattered AI attacker surrenders in a Meeting engagement', yieldsIn('meeting'));
-ok('...but fights on in Demolish', !yieldsIn('demolish'));
-ok('...and in Hostile takeover', !yieldsIn('takeover'));
+ok('...in Demolish', yieldsIn('demolish'));
+ok('...and in Hostile takeover', yieldsIn('takeover'));
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -1296,6 +1296,15 @@ head('Rebel Tactics by personality and part in the scenario');
   }
   ok('a Cavalry company with every hull lost, the money there for its next Tier...', set, 6);
   ok('...buys hulls back even while it saves for the promotion', hulls >= 6, true, hulls + ' hulls over 6 companies');
+  // ...but only with the money beyond the promotion's cost: with none spare, the promotion comes first
+  var co2 = C.newCompany('T', { faction: 'pmc' }); C.foundRival(co2, 'aircav', []); C.catchUp(co2, 2);
+  co2.kUC = 999;
+  for (var j = 0; j < 8 && !C.canPromoteCompany(co2).ok; j++) C.recruit(co2, 'regular');
+  co2.roster = co2.roster.filter(function (e) { return R.profile(e.key).cls === 'infantry'; });
+  co2.kUC = C.COMPANY_COST[co2.tier + 1];
+  var did = C.developRival(co2) || [];
+  ok('...and with no money to spare it keeps it for the promotion: no hull bought', [co2.roster.filter(function (e) { return R.profile(e.key).cls !== 'infantry'; }).length,
+    did.filter(function (d) { return /took delivery/.test(d.text); }).length], [0, 0]);
 })();
 ok('Special Ops plays the behaviour table untempered', C.aiTemper({ archetype: 'marksmen' }), null);
 
