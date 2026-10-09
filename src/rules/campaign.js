@@ -1279,6 +1279,7 @@
         'Light infantry': [1, 1], 'Light support': 5, 'Heavy support': [3, 2], sam: [1, 1],
         'Remote mortars': [3, 1], nomads: [1, 2], 'Combat vehicles': [2, 1], 'Transport vehicles': [1, 1],
         'Support vehicles': [2, 1], impsupport: 2,   // self-propelled guns, the cheap improvised one most
+        ldestroyer: [1, 1], mdestroyer: [1, 1], aaveh: [2, 1],
         insertplat: 0,
         // (a drone unit, low)
         dcombat: [1, 1]
@@ -1333,7 +1334,7 @@
       weights: {
         'Basic troops': 3, enforcers: 4, irregulars: 4, penal: 0, 'Rifle infantry': [2, 1],
         'Assault troops': 8, commandos: 6, 'Heavy infantry': [2, 1], 'Light support': [1, 1], chem: [4, 1],
-        lpv: 2, hpv: 2, recon: 3, lhunter: 2, hunter: 2, 'Transport vehicles': 6, insertplat: [2, 1],
+        lpv: 2, hpv: 2, recon: 3, lhunter: 2, hunter: 2, ldestroyer: [2, 1], mdestroyer: [1, 1], 'Transport vehicles': 6, insertplat: [2, 1],
         'Engineering and utility vehicles': [2, 1], lengveh: 3, aaveh: 0, ewveh: 0, medveh: 1, hengveh: 4,
         // (a drone unit, low)
         dassault: [1, 1]
@@ -1395,7 +1396,7 @@
       weights: {
         'Freedom Warriors': 8, rciv: 6, 'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1],
         'Rebel support troops': 4, 'Rebel artillery': [3, 1], 'Rebel combat vehicles': [2, 1],
-        'Rebel transport vehicles': [2, 1]
+        'Rebel transport vehicles': [2, 1], 'Rebel flak vehicles': [1, 1]
       },
       tactics: { open: 'wave', attack: 'wave', defend: 'laststand' },
       spend: 'promote'
@@ -1478,7 +1479,8 @@
       drives: { walker: 40 },   // odds of legs for a hull it rolls or buys (20 in 100 for most)
       weights: {
         'Freedom Warriors': 4, 'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1],
-        'Rebel support troops': [2, 1], 'Rebel artillery': [2, 1], Miners: 8, 'Rebel combat vehicles': 4
+        'Rebel support troops': [2, 1], 'Rebel artillery': [2, 1], Miners: 8, 'Rebel combat vehicles': 4,
+        'Rebel flak vehicles': [2, 1]
       },
       tactics: { open: 'wave', attack: 'wave', defend: 'laststand' },
       spend: 'promote'
