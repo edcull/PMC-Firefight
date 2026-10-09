@@ -800,7 +800,7 @@
         }
         if (go === 'occlear') { pk.rids = []; pk.field = []; pk.drugs = []; E.render(); return true; }
         if (go === 'ocauto') {
-          var got = C.pickForce(myCo(), k.tier, k.pl, pk.tactic || null) || [];
+          var got = C.pickForce(myCo(), k.tier, k.pl, pk.tactic || null, { scenario: k.scenario && k.scenario.id }) || [];
           pk.rids = got.filter(function (e) { return !e.fielded; }).map(function (e) { return e.rid; });
           pk.field = got.filter(function (e) { return e.fielded; }).map(function (e) { return e.key; });
           pk.drugs = [];

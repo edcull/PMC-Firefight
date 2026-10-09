@@ -14,8 +14,8 @@
   var R = root.PMC, C = root.PMCCamp, SC = root.PMCScen;
   var TACTICS = [null, 'laststand', 'wave', 'guerillas'];
 
-  function pickArmy(co, tier, pl, tactic) {
-    var picks = C.pickForce(co, tier, pl, tactic);
+  function pickArmy(co, tier, pl, tactic, scen) {
+    var picks = C.pickForce(co, tier, pl, tactic, { scenario: scen });
     var keys = picks.map(function (e) { return R.entryPick(e); });
     return R.checkArmy(keys, tier, pl, co.doctrines || [], tactic).ok ? { picks: picks, keys: keys } : null;
   }
@@ -30,11 +30,12 @@
     var tier = Math.max(1, Math.min(coA.tier || 1, coB.tier || 1, fa || coA.tier || 1, fb || coB.tier || 1)), pl = 1;
     var tacA = coA.faction === 'rebel' ? TACTICS[Math.floor(Math.random() * TACTICS.length)] : null;
     var tacB = coB.faction === 'rebel' ? TACTICS[Math.floor(Math.random() * TACTICS.length)] : null;
-    var a = pickArmy(coA, tier, pl, tacA), b = pickArmy(coB, tier, pl, tacB);
-    if (!a) { C.developRival(coA); a = pickArmy(coA, tier, pl, tacA); }
-    if (!b) { C.developRival(coB); b = pickArmy(coB, tier, pl, tacB); }
-    if (!a || !b) return null;
+    // (the scenario first: the forces are picked for it)
     var scen = SC && SC.ORDER ? SC.ORDER[Math.floor(Math.random() * SC.ORDER.length)] : 'meeting';
+    var a = pickArmy(coA, tier, pl, tacA, scen), b = pickArmy(coB, tier, pl, tacB, scen);
+    if (!a) { C.developRival(coA); a = pickArmy(coA, tier, pl, tacA, scen); }
+    if (!b) { C.developRival(coB); b = pickArmy(coB, tier, pl, tacB, scen); }
+    if (!a || !b) return null;
     return {
       tier: tier, pl: pl, scenario: scen,
       cfg: {

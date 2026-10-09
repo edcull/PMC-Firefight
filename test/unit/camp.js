@@ -957,11 +957,9 @@ head('Doctrines: fixed, a shortlist, or random');
     C.archetypesFor(f).forEach(function (a) { (a.doctrines || []).concat(fixedOf(a)).filter(function (d, i, l) { return l.indexOf(d) === i; }).forEach(function (d) { use[d] = (use[d] || 0) + 1; }); });
     return Object.keys(use).filter(function (d) { return use[d] >= 4; }).map(function (d) { return f + ' ' + d + ' ' + use[d]; }).join(',');
   }).filter(Boolean).join(' '), '');
-  // (every swarm has a creed now, each its signature doctrine first; the Xenotripods keep one with none)
-  ok('...and each army has forces of all three kinds', ['pmc', 'rebel', 'bugs', 'xeno'].every(function (f) {
-    var as = C.archetypesFor(f);
-    return (f !== 'xeno' || as.some(function (a) { return a.random; })) && as.some(function (a) { return !!(a.fixedAt || {})[1]; }) &&
-      (f === 'bugs' || as.some(function (a) { return !a.random && !(a.fixedAt || {})[1]; }));
+  // (every force has a creed of its own now: a fixed first doctrine, or a shortlist alone)
+  ok('...and each army has forces with a fixed first doctrine', ['pmc', 'rebel', 'bugs', 'xeno'].every(function (f) {
+    return C.archetypesFor(f).some(function (a) { return !!(a.fixedAt || {})[1]; }) && !C.archetypesFor(f).some(function (a) { return a.random; });
   }), true);
   function found(id) { var a = C.archetype(id), co = C.newCompany('D', { faction: a.faction || 'pmc' }); C.foundRival(co, id, []); return co; }
   // (a change an admin saved while "fixed" was its own field still means fixed at Tier I, II...)
@@ -986,7 +984,9 @@ head('Doctrines: fixed, a shortlist, or random');
     return co.docPlan.slice(0, 6).every(function (d) { return short.indexOf(d) >= 0; });
   }) && arm.some(function (co) { return co.docPlan.slice(0, 6).join() !== arm[0].docPlan.slice(0, 6).join(); }), true, arm.map(function (co) { return co.docPlan.slice(0, 6).join(''); }).join(' '));
   var firsts = {};
-  for (var i = 0; i < 40; i++) firsts[found('ghadon').docPlan[0]] = 1;
+  // (no personality is random now: the switch is tried on one, as an admin might set it)
+  var rnd = C.unifiedArchetype('ghadon'); rnd.doctrines.random = true; var rch = { ghadon: C.archetypeChange('ghadon', rnd) };
+  C.withArchetypeChanges(rch, function () { for (var i = 0; i < 40; i++) firsts[found('ghadon').docPlan[0]] = 1; });
   ok('a random force draws from the whole list', Object.keys(firsts).length > 8, true, Object.keys(firsts).length + ' different first doctrines in 40');
 })();
 
@@ -1267,6 +1267,58 @@ head('Rebel Tactics by personality and part in the scenario');
   var fd = tally('freespace', def);
   ok('Free Space rushes even on defence, and never goes Guerilla (its riders take nothing from it)', fd.wave > 300 && !fd.guerillas, true, JSON.stringify(fd));
   ok('...and a PMC company takes no Rebel Tactic', C.aiTactic(C.newCompany('P', {}), atk, 'B'), null);
+})();
+
+// Demolish (p. 54): the objective's SAM system shoots every aircraft near it, so a force picked for it leaves its aircraft at home
+(function () {
+  var co = C.newCompany('T', { faction: 'pmc' }); C.foundRival(co, 'aircav', []); C.catchUp(co, 2);
+  co.kUC = 999; C.recruit(co, 'adaptedcraft');
+  var air = function (list) { return list.filter(function (e) { return R.profile(e.key).cls === 'aircraft'; }).length; };
+  var legal = function (list) { return R.checkArmy(list.map(function (e) { return R.entryPick(e); }), 2, 1, co.doctrines || []).ok; };
+  var any = false;
+  for (var i = 0; i < 10 && !any; i++) any = air(C.pickForce(co, 2, 1, null)) > 0;
+  ok('a Cavalry force takes its transport craft into an ordinary battle', any, true);
+  var dem = C.pickForce(co, 2, 1, null, { scenario: 'demolish' });
+  ok('...but none into Demolish, and the army is still legal', [air(dem), legal(dem)], [0, true]);
+})();
+// Saving for a Company Tier no longer stops a force that rides replacing the hulls it has lost
+(function () {
+  var hulls = 0, set = 0;
+  for (var n = 0; n < 6; n++) {
+    var co = C.newCompany('T', { faction: 'pmc' }); C.foundRival(co, 'aircav', []); C.catchUp(co, 2);
+    co.kUC = 999;
+    for (var i = 0; i < 8 && !C.canPromoteCompany(co).ok; i++) C.recruit(co, 'regular');
+    co.roster = co.roster.filter(function (e) { return R.profile(e.key).cls === 'infantry'; });
+    co.kUC = 80;
+    if (C.canPromoteCompany(co).ok) set++;
+    C.developRival(co);
+    hulls += co.roster.filter(function (e) { return R.profile(e.key).cls !== 'infantry'; }).length;
+  }
+  ok('a Cavalry company with every hull lost, the money there for its next Tier...', set, 6);
+  ok('...buys hulls back even while it saves for the promotion', hulls >= 6, true, hulls + ' hulls over 6 companies');
+  // ...but only with the money beyond the promotion's cost: with none spare, the promotion comes first
+  var co2 = C.newCompany('T', { faction: 'pmc' }); C.foundRival(co2, 'aircav', []); C.catchUp(co2, 2);
+  co2.kUC = 999;
+  for (var j = 0; j < 8 && !C.canPromoteCompany(co2).ok; j++) C.recruit(co2, 'regular');
+  co2.roster = co2.roster.filter(function (e) { return R.profile(e.key).cls === 'infantry'; });
+  co2.kUC = C.COMPANY_COST[co2.tier + 1];
+  var did = C.developRival(co2) || [];
+  ok('...and with no money to spare it keeps it for the promotion: no hull bought', [co2.roster.filter(function (e) { return R.profile(e.key).cls !== 'infantry'; }).length,
+    did.filter(function (d) { return /took delivery/.test(d.text); }).length], [0, 0]);
+})();
+ok('Special Ops plays the behaviour table untempered', C.aiTemper({ archetype: 'marksmen' }), null);
+// a soft transport is a low-Tier stopgap: at Tier III, with the money, it goes for an armoured carrier
+(function () {
+  var soft = function (co) { return co.roster.filter(function (e) { var p = R.profile(e.key); return p.transport > 0 && p.cls === 'vehicle' && (p.def || 0) < 12 && (p.str || 0) < 10; }).length; };
+  var armoured = function (co) { return co.roster.filter(function (e) { var p = R.profile(e.key); return p.transport > 0 && p.cls === 'vehicle' && ((p.def || 0) >= 12 || (p.str || 0) >= 10); }).length; };
+  var co = C.newCompany('T', { faction: 'pmc' }); C.foundRival(co, 'aircav', []); C.catchUp(co, 3);
+  co.kUC = 999; C.recruit(co, 'unarmoured'); C.recruit(co, 'ltransport');
+  var before = soft(co), arm0 = armoured(co);
+  co.kUC = 400; C.developRival(co);
+  ok('a Tier III Cavalry company trades its trucks for armoured carriers', [before >= 2, soft(co) <= before - 2, armoured(co) >= arm0 + 2], [true, true, true], before + ' soft → ' + soft(co) + '; armoured ' + arm0 + ' → ' + armoured(co));
+  var lo = C.newCompany('T', { faction: 'pmc' }); C.foundRival(lo, 'aircav', []);
+  lo.kUC = 999; C.recruit(lo, 'unarmoured'); var s1 = soft(lo); C.developRival(lo);
+  ok('...but at Tier I, with nothing armoured to field, it keeps them', soft(lo) >= s1, true);
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

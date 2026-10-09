@@ -486,7 +486,7 @@
     /* The roles come before the tactics (p. 95): rolled now, where a scenario has
        them and a contract has not settled them already. */
     if (state.scen.attacker && !cfg.roles && !state.solo) {
-      cfg.roles = SC.rollRoles(scenId, state.doctrines, cfg.attacker);
+      cfg.roles = SC.rollRoles(scenId, state.doctrines, cfg.attacker, null, (state.cfg && state.cfg.aiSides) || []);
       logLine('note', sideName(cfg.roles.attacker) + ' attacks; ' + sideName(cfg.roles.defender) + ' defends.');
     }
     if (tacticStep(built, manual)) return;
@@ -783,6 +783,7 @@
     V.newTable();
     // (where both companies enter in turn 1, nobody is placed now: the OpFor comes on then, like everyone)
     state.cfg.aiSides.forEach(function (s2) { K.aiLoadReserves(s2); });     // its waiting squads board its waiting hulls
+    state.cfg.aiSides.forEach(function (s2) { K.aiLoadStart(s2); });        // and its squads on the table board the hulls there
     state.cfg.aiSides.forEach(function (s2) { if (!K.entering(s2)) K.autoDeploy(s2); });
     /* Hero of the People (p. 111): "in scenarios using the alternating deployment
        sequence, the opponent has to set up half of their units first before the
@@ -1086,7 +1087,8 @@
   function bestDefenceNote() {
     var bd = state.sc && state.sc.bestDefence;
     return bd && bd.swapped
-      ? ' The Best Defence is Good Offence: D6 ' + bd.roll + ' — the roles were swapped.' : '';
+      ? ' The Best Defence is Good Offence: D6 ' + bd.roll + ' — the roles were swapped.'
+      : bd && bd.declined ? ' ' + sideName(bd.side) + ' holds the position rather than use The Best Defence is Good Offence.' : '';
   }
 
   function roleSentence() {

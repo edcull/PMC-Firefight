@@ -155,6 +155,8 @@
        shot's own, taken at the nearest point of the piece — Fire! for standing
        still, half range, height, Basic Firepower where it applies — less what
        only a unit can be (marked, crossfired, a vehicle's flank). */
+    // the piece's name after a "the" (the Demolish objective's own name carries one: "The objective")
+    function noun(r) { return TERRAIN[r.kind].name.toLowerCase().replace(/^the /, ''); }
     function shootTerrain(state, a, r) {
       var log = [];
       var roll = d10();
@@ -169,7 +171,7 @@
       var down = roll === 9 || total >= 15;
       log.push({
         t: 'shoot',
-        text: a.label + ' fires on the ' + TERRAIN[r.kind].name.toLowerCase(),
+        text: a.label + ' fires on the ' + noun(r),
         math: parts.map(fmtPart).join(', ') + ' = ' + total + ' — needs 15+, or an unmodified 9 → ' +
           (down ? 'it comes down' : 'it holds')
       });
@@ -191,7 +193,7 @@
       var down = roll === 9 || total >= 15;
       log.push({
         t: 'shoot',
-        text: a.label + ' sets off the charge under the ' + TERRAIN[r.kind].name.toLowerCase() + '.',
+        text: a.label + ' sets off the charge under the ' + noun(r) + '.',
         math: parts.map(fmtPart).join(', ') + ' = ' + total + ' — needs 15+, or an unmodified 9 → ' +
           (down ? 'it comes down' : 'it holds')
       });
@@ -237,7 +239,7 @@
       var down = roll === 9 || total >= 15;
       log.push({
         t: 'assault',
-        text: a.label + ' sets charges against the ' + TERRAIN[r.kind].name.toLowerCase(),
+        text: a.label + ' sets charges against the ' + noun(r),
         math: parts.map(fmtPart).join(', ') + ' = ' + total + ' — needs 15+, or an unmodified 9 → ' +
           (down ? 'the charges blow' : 'the charges fail')
       });

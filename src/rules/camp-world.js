@@ -150,10 +150,10 @@
       drugged(A, pA, k.picks.A.drugs);
       // its tactic by its personality and its part in the scenario (the AI force is side B here)
       const tacticB = C.aiTactic(B, k.roles, 'B');
-      let pB = C.pickForce(B, k.tier, k.pl, tacticB) || [];
+      let pB = C.pickForce(B, k.tier, k.pl, tacticB, { scenario: k.scenario && k.scenario.id }) || [];
       if (!R.checkArmy(pB.map((e) => R.entryPick(e)), k.tier, k.pl, B.doctrines, tacticB).ok) {
         C.developRival(B);                                      // it hires in for this battle
-        pB = C.pickForce(B, k.tier, k.pl, tacticB) || [];
+        pB = C.pickForce(B, k.tier, k.pl, tacticB, { scenario: k.scenario && k.scenario.id }) || [];
       }
       pB.forEach((e) => { delete e.drugged; });
       const pending = Object.assign(pendingOf(k, pA, pB), { vs: k.vs });

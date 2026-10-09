@@ -81,6 +81,14 @@
       // the Tier alone: what it is worth in points is on the muster's head
       Array.prototype.forEach.call(sel.options, function (o) { o.textContent = R.ROMAN[+o.value]; });
     }
+    // a hull's drives, opened, put by its icon (ui-parts.js)
+    function placeDrives() {
+      var c = el('chosen');
+      if (c) c.querySelectorAll('.propop').forEach(function (pop) {
+        var btn = pop.parentNode.querySelector('[data-drive]');
+        if (btn && btn.offsetParent) U.placePop(pop, btn);
+      });
+    }
     function drawMuster() {
       tierLabels();
       var tier = musterTier(), pl = musterPL(), faction = musterFaction(), tactic = musterTactic();
@@ -147,17 +155,24 @@
         var pick = R.splitPick(k), p = R.profile(pick.key);
         if (!p) return '';
         var props = R.propsFor(p);
-        var drive = props.length
-          ? '<select class="drive" data-drive="' + i + '" title="Propulsion">' +
-          props.map(function (pr) {
-            var d = R.PROPULSION[pr];
-            return '<option value="' + pr + '"' + ((pick.prop || R.defaultDrive(p) || 'wheeled') === pr ? ' selected' : '') +
-              '>' + d.name + '</option>';
-          }).join('') + '</select>'
-          : '';
+        /* its propulsion, an icon that opens the drives it may take beside it, and its
+           crew or Drone Control, an icon that flips on a tap (as the campaign's founding cards) */
+        var drive = '';
+        if (props.length) {
+          var now = pick.prop || R.defaultDrive(p) || 'wheeled', P = R.PROPULSION[now], open = muster.propFor === i;
+          drive = '<span class="fdrive"><button type="button" class="drive dicon' + (open ? ' on' : '') + '" data-drive="' + i + '" aria-expanded="' + open +
+            '" title="' + esc(P.name + ' \u2014 ' + P.note) + '" aria-label="Propulsion: ' + esc(P.name) + '">' + U.DRIVE_ICON[now] + '</button>' +
+            (open ? '<div class="found-pop propop" role="listbox"><label>Propulsion</label>' + props.map(function (k) {
+              var Q = R.PROPULSION[k];
+              return '<button type="button" class="propopt' + (k === now ? ' on' : '') + '" role="option" aria-selected="' + (k === now) + '" data-driveset="' + i + '" data-prop="' + k + '">' +
+                U.DRIVE_ICON[k] + '<span><b>' + esc(Q.name) + '</b><small>' + esc(Q.note) + '</small></span></button>';
+            }).join('') + '</div>' : '') + '</span>';
+        }
         var drone = R.canBeDrone(p)
-          ? '<button type="button" class="drone' + (pick.drone ? ' on' : '') + '" data-drone="' + i +
-          '" title="Drone Control: +1 Structure, no crew — but enemy Hackers can reach it">DRN</button>'
+          ? '<button type="button" class="drive dicon' + (pick.drone ? ' on' : '') + '" data-drone="' + i + '" aria-pressed="' + !!pick.drone + '" title="' +
+            (pick.drone ? 'Drone Control: +1 Structure, no crew \u2014 but enemy Hackers can reach it. Tap for a crew.'
+              : 'Crewed. Tap for Drone Control: +1 Structure, no crew \u2014 but enemy Hackers can reach it.') +
+            '" aria-label="' + (pick.drone ? 'Drone Control' : 'Crewed') + '">' + (pick.drone ? U.DRONE_ICON : U.CREW_ICON) + '</button>'
           : '';
         var mnt = R.canMount(p, pick.riders)
           ? '<select class="drive" data-mount="' + i + '" title="What they ride: a motorbike can go in a transport but bogs down in rough ground; a grav bike ignores the ground at \u22121 Defence; a horse jumps walls but takes 1 more SP whenever it is shot at">' +
@@ -186,6 +201,7 @@
           U.ruleMarks(u0.rules) + '</div>';
       }).join('');
       el('chosen').classList.add('fcards');
+      placeDrives();
 
       var f = el('faults');
       if (!muster.keys.length) {
@@ -478,6 +494,22 @@
       });
       if (el('sel-tactic')) el('sel-tactic').addEventListener('change', drawMuster);
       el('chosen').addEventListener('click', function (e) {
+        // a hull's drives: its icon opens them, a pick sets it
+        var dv = e.target.closest('[data-drive]');
+        if (dv) {
+          var dvi = parseInt(dv.getAttribute('data-drive'), 10);
+          muster.propFor = muster.propFor === dvi ? null : dvi;
+          drawMuster();
+          return;
+        }
+        var ds = e.target.closest('[data-driveset]');
+        if (ds) {
+          var dsi = parseInt(ds.getAttribute('data-driveset'), 10), cur = R.splitPick(muster.keys[dsi]);
+          muster.keys[dsi] = R.joinPick(cur.key, ds.getAttribute('data-prop'), cur.drone, cur.riders, cur.mount);
+          muster.propFor = null;
+          drawMuster();
+          return;
+        }
         var dr = e.target.closest('[data-drone]');
         if (dr) {
           var di = parseInt(dr.getAttribute('data-drone'), 10);
@@ -496,6 +528,7 @@
         }
         var b = e.target.closest('[data-drop]');
         if (!b) return;
+        muster.propFor = null;
         muster.keys.splice(parseInt(b.getAttribute('data-drop'), 10), 1);
         muster.name = '';
         drawMuster();
@@ -507,15 +540,16 @@
           var mp = R.splitPick(muster.keys[mi]);
           muster.keys[mi] = R.joinPick(mp.key, mp.prop, mp.drone, mp.riders, ms.value);
           drawMuster();
-          return;
         }
-        var sel = e.target.closest('[data-drive]');
-        if (!sel) return;
-        var i = parseInt(sel.getAttribute('data-drive'), 10);
-        var cur = R.splitPick(muster.keys[i]);
-        muster.keys[i] = R.joinPick(cur.key, sel.value, cur.drone, cur.riders, cur.mount);
+      });
+      // the open drives close on a tap anywhere else, and follow their icon as the sheet scrolls
+      document.addEventListener('click', function (e) {
+        if (muster.propFor == null || !e.target.closest || e.target.closest('.propop, [data-drive], [data-driveset]')) return;   // (a re-drawn card's button, no longer in the list, counts too)
+        muster.propFor = null;
         drawMuster();
       });
+      var shs = el('setup') && el('setup').querySelector('.sheet');
+      if (shs) shs.addEventListener('scroll', placeDrives);
       el('cat').addEventListener('click', function (e) {
         var b = e.target.closest('[data-add]');
         if (!b || b.disabled) return;

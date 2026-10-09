@@ -42,15 +42,20 @@ function head(t) { console.log('\n  ' + t); }
     document.querySelector('[data-army="roll"]').click();
     await new Promise(r => setTimeout(r, 200));
     // and give one vehicle a propulsion, to prove the upgrades come back too
+    // (its icon opens the drives it may take; the last is picked)
     const drive = document.querySelector('#chosen [data-drive]');
     if (drive) {
-      drive.value = drive.options[drive.options.length - 1].value;
-      drive.dispatchEvent(new Event('change', { bubbles: true }));
+      drive.click();
+      await new Promise(r => setTimeout(r, 120));
+      const opts = document.querySelectorAll('#chosen [data-driveset]');
+      opts[opts.length - 1].click();
       await new Promise(r => setTimeout(r, 120));
     }
-    return { keys: window.__forces.muster(), drove: !!drive };
+    const icons = !drive || (!!document.querySelector('#chosen [data-drive] svg') && !document.querySelector('#chosen select[data-drive]') && !document.querySelector('#chosen .propop'));
+    return { keys: window.__forces.muster(), drove: !!drive, icons };
   });
   ok('the force has units in it', built.keys.length > 3, built.keys.length + ' units');
+  ok('a hull\'s drive is an icon, its list closed once a drive is picked', built.icons);
   ok('...and a propulsion was picked for a hull', built.drove || true,
     built.keys.filter(k => k.indexOf(':') > 0).join(', ') || 'no vehicles rolled');
 

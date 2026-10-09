@@ -161,10 +161,34 @@
     return '<button type="button" class="camp-back" ' + attrs + ' aria-label="Back"><span class="bk-ar" aria-hidden="true">←</span><span class="bk-w"> Back</span></button>';
   }
 
+  /* A vehicle's propulsion and its crew or Drone Control, as icons (the
+     campaign's founding cards and the skirmish muster's). */
+  var SVG = function (d) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
+  var HULL = '<path d="M3 12h18v-2.5L18 6H8L5 9.5H3z"/>';
+  var DRIVE_ICON = {
+    none: SVG('<path d="M3 14h18v-3l-3-4H8l-3 4H3z"/><path d="M3 14v3h18v-3"/>'),
+    wheeled: SVG(HULL + '<circle cx="7.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>'),
+    tracked: SVG('<path d="M5 9h14l-2-3H7z"/><rect x="2.5" y="11" width="19" height="7.5" rx="3.75"/><circle cx="7" cy="14.75" r="1.3"/><circle cx="12" cy="14.75" r="1.3"/><circle cx="17" cy="14.75" r="1.3"/>'),
+    grav: SVG(HULL + '<path d="M6 15.5h12M8 18.5h8M10.5 21.5h3"/>'),
+    hover: SVG(HULL + '<path d="M3 13.5h18l-2.5 3.5h-13z"/><path d="M7 20.5l-1 1M12 20v1.5M17 20.5l1 1"/>'),
+    walker: SVG('<path d="M5 6h14v5H5z"/><path d="M8 11l-2.5 5 2.5 5.5M16 11l2.5 5-2.5 5.5"/>')
+  };
+  var CREW_ICON = SVG('<circle cx="12" cy="8" r="3.6"/><path d="M8.6 6.6c.6-2 1.8-3 3.4-3s2.8 1 3.4 3"/><path d="M4.5 21c0-4 3.4-6.8 7.5-6.8s7.5 2.8 7.5 6.8"/>');
+  var DRONE_ICON = SVG('<rect x="9" y="10" width="6" height="4" rx="1"/><path d="M9.5 10.5 6.5 7.5M14.5 10.5l3-3M9.5 13.5l-3 3M14.5 13.5l3 3"/><circle cx="5.5" cy="6.5" r="2.3"/><circle cx="18.5" cy="6.5" r="2.3"/><circle cx="5.5" cy="17.5" r="2.3"/><circle cx="18.5" cy="17.5" r="2.3"/>');
+  /* A list opened by its button, fixed so a scrolling list does not cut it off:
+     under the button, or over it when there is no room below. */
+  function placePop(pop, btn) {
+    var r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    var left = Math.max(12, Math.min(r.right - w, innerWidth - w - 12));
+    var top = r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - 6 - h) : r.bottom + 6;
+    pop.style.left = left + 'px'; pop.style.top = top + 'px'; pop.style.visibility = 'visible';
+  }
+
   root.PMCUi = {
     fill: fill, face: face, swatch: swatch, chip: chip, chipButton: chipButton, chipStill: chipStill, colourPop: colourPop,
     ARMIES: ARMIES, ARMY_NAMES: ARMY_NAMES, armySelect: armySelect, armyStill: armyStill,
     FORCE_NOUN: FORCE_NOUN, forceName: forceName, isForceName: isForceName, personaName: personaName, isPersonaName: isPersonaName,
-    tip: tip, mark: mark, ruleMarks: ruleMarks, unitRow: unitRow, freeMark: freeMark, limitsLine: limitsLine, backButton: backButton
+    tip: tip, mark: mark, ruleMarks: ruleMarks, unitRow: unitRow, freeMark: freeMark, limitsLine: limitsLine, backButton: backButton,
+    DRIVE_ICON: DRIVE_ICON, CREW_ICON: CREW_ICON, DRONE_ICON: DRONE_ICON, placePop: placePop
   };
 })(window);

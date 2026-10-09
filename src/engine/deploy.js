@@ -572,6 +572,26 @@
       });
     }
 
+    /* ...and the hulls it sets up on the table fill up the same way before the battle:
+       a transport starts with its squads aboard rather than spending its first turn
+       collecting them. Not a defender's in Demolish or Hostile takeover, whose troops
+       start where they are to hold. */
+    function aiLoadStart(side) {
+      var sc = E.state.sc || {}, scen = E.state.scen || {};
+      if (scen.attacker && sc.attacker && sc.attacker !== side && (scen.id === 'demolish' || scen.id === 'takeover')) return;
+      var hulls = E.state.units.filter(function (v) {
+        return v.side === side && v.alive && !v.reserve && v.transport > 0 && !v.aboard && !R.has(v, 'Immobile') && !R.has(v, 'Lifter');
+      });
+      hulls.forEach(function (v) {
+        var riders = boardableFor(v).filter(function (u) {
+          return !u.reserve && !u.aboard && (u.wave || 1) === (v.wave || 1) && !R.has(u, 'Stationary Artillery') && !u.insert;
+        }).sort(function (a, b2) { return ((a.command ? 4 : 0) + a.tier * 0.1) - ((b2.command ? 4 : 0) + b2.tier * 0.1); });
+        riders.forEach(function (u) {
+          if ((v.cargo || []).length < v.transport && loadBefore(v, u, true)) logLine('note', u.label + ' starts aboard ' + v.name + '.');
+        });
+      });
+    }
+
     /* ---- the scenario's split, the player's to change ----
        A scenario that holds part of a force back (Find and secure, Invasion,
        Demolish, Hostile takeover) splits it for them; before the battle the
@@ -779,7 +799,7 @@
       garrisonAt: garrisonAt, garrisonable: garrisonable, garrisonSpots: garrisonSpots,
       zoneCentre: zoneCentre, placingSide: placingSide, deployRoster: deployRoster, deployNext: deployNext, deployOwner: deployOwner, entering: entering,
       pickToDeploy: pickToDeploy, nearestDeploySpot: nearestDeploySpot, emptyPlatforms: emptyPlatforms,
-      seatPlatforms: seatPlatforms, aiLoadReserves: aiLoadReserves, splitFor: splitFor, baselineSplits: baselineSplits,
+      seatPlatforms: seatPlatforms, aiLoadReserves: aiLoadReserves, aiLoadStart: aiLoadStart, splitFor: splitFor, baselineSplits: baselineSplits,
       toggleHold: toggleHold, deploymentDone: deploymentDone, sideDone: sideDone, startBattle: startBattle,
       clearSplits: clearSplits, autoSplit: autoSplit, faces: faces, faceDefault: faceDefault, faceInward: faceInward, faceOnArrival: faceOnArrival,
       askFacing: askFacing, answerFacing: answerFacing, splitsOK: splitsOK, insertionFor: insertionFor, toggleInsertion: toggleInsertion

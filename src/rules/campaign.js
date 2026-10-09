@@ -1278,6 +1278,8 @@
         'Basic troops': 5, enforcers: 0, penal: [3, 1], 'Rifle infantry': 6, 'Assault troops': [2, 1],
         'Light infantry': [1, 1], 'Light support': 5, 'Heavy support': [3, 2], sam: [1, 1],
         'Remote mortars': [3, 1], nomads: [1, 2], 'Combat vehicles': [2, 1], 'Transport vehicles': [1, 1],
+        'Support vehicles': [2, 1], impsupport: 2,   // self-propelled guns, the cheap improvised one most
+        ldestroyer: [1, 1], mdestroyer: [1, 1], aaveh: [2, 1],
         insertplat: 0,
         // (a drone unit, low)
         dcombat: [1, 1]
@@ -1287,7 +1289,6 @@
     {
       // (id kept from when it was "Marksmen")
       id: 'marksmen', name: 'Special Ops',
-      temper: -1, // the behaviour roll in battle (p. 147): shoots from cover, never closes
       blurb: 'Never where you are looking: a sniper in the treeline, a drone overhead, and your radios full of static.',
       // what a build of it should look like (the editor's validation notes, for people only)
       notes: 'Recon and precision. About 11 units at T3 PL2: rifle teams and light infantry (sharpshooters, snipers, LRRP, observers), 2-3 cars or light craft, an EW team or drone now and then. Red flags: heavy infantry or assault troops in numbers, tanks or destroyers, more than one LRRP or sniper team at PL2. A recon drone in about 1 force in 8.',
@@ -1332,7 +1333,7 @@
       weights: {
         'Basic troops': 3, enforcers: 4, irregulars: 4, penal: 0, 'Rifle infantry': [2, 1],
         'Assault troops': 8, commandos: 6, 'Heavy infantry': [2, 1], 'Light support': [1, 1], chem: [4, 1],
-        lpv: 2, hpv: 2, recon: 3, lhunter: 2, hunter: 2, 'Transport vehicles': 6, insertplat: [2, 1],
+        lpv: 2, hpv: 2, recon: 3, lhunter: 2, hunter: 2, ldestroyer: [2, 1], mdestroyer: [1, 1], 'Transport vehicles': 6, insertplat: [2, 1],
         'Engineering and utility vehicles': [2, 1], lengveh: 3, aaveh: 0, ewveh: 0, medveh: 1, hengveh: 4,
         // (a drone unit, low)
         dassault: [1, 1]
@@ -1345,7 +1346,7 @@
       temper: 1, // the behaviour roll in battle (p. 147): rides at them
       blurb: 'Rolls up in armour, drops its troopers at the door, and is through the line before the guns turn.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Mounted and fast. Always the full 6 hulls at T3 PL2, about 4 of them transports (ground and air), the rest combat vehicles or a strike craft; rifle and assault teams about evenly, most of them with a seat. Red flags: under 5 hulls, 3+ infantry on foot, slow support weapons. An assault or combat drone in about 1 force in 4.',
+      notes: 'Mounted and fast. Always the full 6 hulls at T3 PL2, about 4 of them transports (ground and air), the rest combat vehicles or a strike craft; rifle and assault teams about evenly, most of them with a seat. Red flags: under 5 hulls, 3+ infantry on foot, slow support weapons, unarmoured transports in numbers. An assault or combat drone in about 1 force in 4.',
       names: ['Talon Mobile Group', 'Outrider Security', 'The High Road Company', 'Skyhook Logistics'],
       t1: ['recruits', 'irregulars'],   // who promote into rifle teams and assault troops (Enforcers only into heavy infantry)
       t2: ['lighteng', 'rookie'],
@@ -1361,7 +1362,10 @@
       weights: {
         recruits: 3, irregulars: 3, 'Rifle infantry': 5, 'Assault troops': 6, 'Heavy infantry': [1, 1],
         'Light infantry': [1, 1], 'Heavy support': [1, 1], 'Transport vehicles': 7, insertplat: 2,
+        // armoured carriers over the soft ones: an unarmoured truck dies to rifle fire
+        unarmoured: 1, ltransport: 3, lapc: 8, lifv: 6, hapc: 8, hifv: 6,
         'Transport aircraft': 4, 'Strike aircraft': 3, vtoldrone: 1,
+        'Combat vehicles': [3, 2], recon: 4,   // patrol and recon vehicles riding with the transports
         // (a drone unit, low)
         dassault: [1, 1], dcombat: [1, 1]
       },
@@ -1394,7 +1398,7 @@
       weights: {
         'Freedom Warriors': 8, rciv: 6, 'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1],
         'Rebel support troops': 4, 'Rebel artillery': [3, 1], 'Rebel combat vehicles': [2, 1],
-        'Rebel transport vehicles': [2, 1]
+        'Rebel transport vehicles': [2, 1], 'Rebel flak vehicles': [1, 1]
       },
       tactics: { open: 'wave', attack: 'wave', defend: 'laststand' },
       spend: 'promote'
@@ -1477,7 +1481,8 @@
       drives: { walker: 40 },   // odds of legs for a hull it rolls or buys (20 in 100 for most)
       weights: {
         'Freedom Warriors': 4, 'Holy Warriors': [1, 1], 'Mounted Warriors': [1, 1],
-        'Rebel support troops': [2, 1], 'Rebel artillery': [2, 1], Miners: 8, 'Rebel combat vehicles': 4
+        'Rebel support troops': [2, 1], 'Rebel artillery': [2, 1], Miners: 8, 'Rebel combat vehicles': 4,
+        'Rebel flak vehicles': [2, 1]
       },
       tactics: { open: 'wave', attack: 'wave', defend: 'laststand' },
       spend: 'promote'
@@ -1721,7 +1726,6 @@
       t1: ['xdelta1', 'xeps1'], t2: ['xdelta2', 'xeps2'],
       machines: ['xstrike2'], vehicles: 1,
       doctrines: ['XO6', 'XO5', 'XS4', 'XT3', 'XO3', 'XS6'],
-      random: true,                 // no creed to speak of: the whole list, shuffled
       tier: 0,
       hulls: { min: 1, max: 1.5 },
       weights: {   // fights everyone, with whatever it has
@@ -1987,16 +1991,26 @@
     var f = FREE_UNITS[key];
     return f ? (typeof f === 'string' ? f : 'Free to recruit while the force has fewer than four') : null;
   }
-  function pickForce(co, tier, pl, tactic) {
+  function pickForce(co, tier, pl, tactic, opts) {
+    var docs0 = co.doctrines || [];
+    function legal(list) { return list.length && R.checkArmy(list.map(function (e) { return R.entryPick(e); }), tier, pl, docs0, tactic).ok; }
     /* Nursing the force: a unit one bad battle from a Battle Trauma is left at home
        unless the army cannot be legal without it, and one getting close is taken only
        after the rest — so the AI forces (and Pick a force for me) spread the wear. */
-    var fresh = pickFrom(co, tier, pl, tactic, true);
-    var docs0 = co.doctrines || [];
-    if (fresh.length && R.checkArmy(fresh.map(function (e) { return R.entryPick(e); }), tier, pl, docs0, tactic).ok) return fresh;
-    return pickFrom(co, tier, pl, tactic, false);
+    function nursed(noAir) {
+      var fresh = pickFrom(co, tier, pl, tactic, true, noAir);
+      return legal(fresh) ? fresh : pickFrom(co, tier, pl, tactic, false, noAir);
+    }
+    /* Demolish (p. 54): the objective's SAM system shoots at every aircraft that ends
+       a move within 12" of it, so the aircraft stay at home — unless the army cannot be
+       legal without them. (`opts.scenario`: the scenario's id, when it is known.) */
+    if (opts && opts.scenario === 'demolish') {
+      var grounded = nursed(true);
+      if (legal(grounded)) return grounded;
+    }
+    return nursed(false);
   }
-  function pickFrom(co, tier, pl, tactic, spare) {
+  function pickFrom(co, tier, pl, tactic, spare, noAir) {
     /* The units marked on the dossier for the contract come into it that way: the
        favoured looked at first, the unfavoured only when nothing else will do —
        each Tier's slots, and the points after, filled in that order; within those,
@@ -2005,7 +2019,9 @@
     // an AI force with a liking for machines (the Cavalry) takes its hulls first
     var arch = co.archetype && !co.human ? archetype(co.archetype) : null;
     var hullFirst = function (e) { return arch && arch.fieldsMachines && profile(e.key).cls !== 'infantry' ? 0 : 1; };
-    var avail = co.roster.filter(function (e) { return !(e.restUntil > 0) && !(spare && traumaBand(co, e) === 2); }).slice().sort(function (a, b) {
+    var avail = co.roster.filter(function (e) {
+      return !(e.restUntil > 0) && !(spare && traumaBand(co, e) === 2) && !(noAir && profile(e.key).cls === 'aircraft');
+    }).slice().sort(function (a, b) {
       return markRank(a) - markRank(b) || traumaBand(co, a) - traumaBand(co, b) || hullFirst(a) - hullFirst(b) || profile(b.key).tier - profile(a.key).tier;
     });
     var docs = co.doctrines || [];

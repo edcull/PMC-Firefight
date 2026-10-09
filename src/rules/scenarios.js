@@ -975,7 +975,11 @@
   /* `ask`: the sides whose player decides for themselves whether to roll (p. 87
      — "the player may decide to roll"). Their roll is left pending, and made by
      bestDefence() if they choose to. */
-  function rollRoles(id, docs, forced, ask) {
+  /* `ask`: the sides whose players choose for themselves whether to use The Best Defence
+     (any other side's is the computer's); `ai`: where nobody is asked, the sides the
+     computer plays. The computer turns it down in Hostile takeover — attacking a dug-in
+     position is the worst of trades, and holding one is the best. */
+  function rollRoles(id, docs, forced, ask, ai) {
     var s = SCENARIOS[id] || SCENARIOS.secure;
     if (!s.attacker) return null;
     var atk = forced || (Math.random() < 0.5 ? 'A' : 'B');
@@ -986,6 +990,8 @@
     var bd = null;
     if (defHas && !atkHas && ask && ask.indexOf(def) >= 0) {
       bd = { side: def, pending: true };
+    } else if (defHas && !atkHas && id === 'takeover' && (ask ? ask.indexOf(def) < 0 : (ai || []).indexOf(def) >= 0)) {
+      bd = { side: def, declined: true, swapped: false };
     } else if (defHas && !atkHas) {
       var roll = d6();
       bd = { side: def, roll: roll, swapped: roll >= 2 };
