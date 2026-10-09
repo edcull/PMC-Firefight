@@ -158,8 +158,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
     console.log('\nA Bug, and a Rebel');
     await p.selectOption('#arch-edit [data-ae="pick"]', 'ivenbea');
-    await till(() => !!document.querySelector('#arch-edit input[data-ae-w="Flying Bugs"]'), 'the Bug form');
-    ok('the Bugs have a weighted list too, and no older rules', await p.evaluate(() => +document.querySelector('#arch-edit input[data-ae-w="Flying Bugs"]').value > 0 &&
+    await till(() => !!document.querySelector('#arch-edit input[data-ae-w="bshadow"]'), 'the Bug form');
+    ok('the Bugs have a weighted list too, and no older rules', await p.evaluate(() => +document.querySelector('#arch-edit input[data-ae-w="bshadow"]').value > 0 &&
       !/older rules/i.test(document.querySelector('#arch-edit').innerText) && !document.querySelector('#arch-edit [data-ae="convert"]')));
     await p.selectOption('#arch-edit [data-ae="pick"]', 'redfront');
     await till(() => !!document.querySelector('#arch-edit [data-ae-tac="defend"]'), 'the Rebel form');
