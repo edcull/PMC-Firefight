@@ -52,9 +52,14 @@
     /* Where an AI unit comes down by Battlefield Insertion — Guerillas, Nomads,
        Underground Advance (p. 56). Not wherever the dice put it next to the objective:
        the ground it may land on (insertionLegal) is searched for a hiding place within
-       reach of the fight — out of the sight and range of every enemy it can manage,
-       in cover, where it can shoot without being shot (the ambush), near the objective
-       it most wants (else the enemy), and near its own side rather than alone. */
+       reach of the fight — never within 10" of an enemy, out of the sight and range of
+       every enemy it can manage (a Stealth unit fears a distant one less), in cover,
+       where it can shoot without being shot (the ambush), near the objective it most
+       wants (else the enemy), and near its own side rather than alone; and between
+       spots as safe as each other, a long-ranged Stealth unit's overwatch from 18" out,
+       or ground beyond the enemy for cross fire. Hiding comes first: rebel infantry
+       landed for the flank or for overwatch at the cost of being seen died faster
+       than it did anything. */
     function aiInsert(u, done) {
       done = done || function () {};
       var want = null, wd = Infinity;
@@ -70,15 +75,27 @@
       } : { x: W / 2, y: H / 2 });
       var friends = E.state.units.filter(function (f) { return f.alive && f !== u && f.side === u.side && onTable(f) && !f.aboard; });
       var best = null, bs = -Infinity;
+      var ec = foes.length ? { x: foes.reduce(function (t, e) { return t + e.x; }, 0) / foes.length, y: foes.reduce(function (t, e) { return t + e.y; }, 0) / foes.length } : focus;
+      var fc = friends.length ? { x: friends.reduce(function (t, f) { return t + f.x; }, 0) / friends.length, y: friends.reduce(function (t, f) { return t + f.y; }, 0) / friends.length } : null;
+      var stealth = R.has(u, 'Stealth'), longR = u.fp != null && (u.range || 0) >= 18;
       for (var k = 0; k < 360; k++) {
         // most of the search close round the focus, some of it anywhere on the table
         var p = k % 3 ? (function () { var ang = Math.random() * Math.PI * 2, rad = 10 + Math.random() * 16; return { x: focus.x + Math.cos(ang) * rad, y: focus.y + Math.sin(ang) * rad }; })()
           : { x: 6 + Math.random() * (W - 12), y: 6 + Math.random() * (H - 12) };
         if (!insertionLegal(p) || R.unitNear(E.state, p.x, p.y, u, 1)) continue;
-        var sa = sightAt(u, p), cover = R.coverAt(E.state, p.x, p.y, u) || 0;
+        var gap = foeGap({ x: p.x, y: p.y, side: u.side });
+        if (gap < 10) continue;                            // in the enemy's lap: shot or charged before it can act
+        var sa = sightAt(u, p, stealth), cover = R.coverAt(E.state, p.x, p.y, u) || 0;
         var near = friends.some(function (f) { return R.inches(f.x, f.y, p.x, p.y) <= 10; });
         var sc = -6 * sa.seen - 0.8 * sa.threat + 2 * cover + (sa.seen === 0 && sa.sees > 0 ? 3 : 0) +
           (near ? 1.5 : 0) - 0.25 * R.inches(p.x, p.y, focus.x, focus.y);
+        // and, between spots as safe as each other, the purpose: a long-ranged Stealth unit's
+        // overwatch from 18" out, or ground beyond the enemy for cross fire
+        if (sa.seen < 0.3) {
+          if (longR && stealth && sa.sees > 0 && gap >= 18) sc += 1.5;
+          if (fc) { var ax = ec.x - fc.x, ay = ec.y - fc.y, al = Math.hypot(ax, ay) || 1;
+            if (((p.x - ec.x) * ax + (p.y - ec.y) * ay) / al > 3 && gap >= 14) sc += 1; }
+        }
         if (sc > bs) { bs = sc; best = p; }
       }
       if (best) {
@@ -180,7 +197,7 @@
     /* At a spot: how many enemies could shoot the hull there now (`seen`: in range and
        sight), how many could after their own move (`threat`: within their Movement and
        range, sight or not), and how many it could shoot itself (`sees`). */
-    function sightAt(u, c) {
+    function sightAt(u, c, stealth) {
       var ghost = { x: c.x, y: c.y, alive: true, of: u }, seen = 0, sees = 0, threat = 0;
       E.state.units.forEach(function (e) {
         if (!e.alive || e.side === u.side || !onTable(e) || husk(e) || e.fp == null) return;
@@ -188,7 +205,8 @@
         if (d <= (e.range || 0) + (e.move || 0) + 2) threat++;
         if (d > Math.max(e.range || 0, u.range || 0) + 2) return;
         if (!R.hasLoS(E.state, e, ghost)) return;
-        if (d <= (e.range || 0) + 2) seen++;
+        // (with `stealth`, a distant enemy counts for less: +1 Defence beyond 6", +2 beyond 12"... p. 59)
+        if (d <= (e.range || 0) + 2) seen += stealth ? 1 / (1 + Math.max(0, Math.ceil(d / 6) - 1)) : 1;
         if (u.fp != null && d <= (u.range || 0)) sees++;
       });
       return { seen: seen, sees: sees, threat: threat };
