@@ -1,0 +1,76 @@
+/* How an AI side drives its transports: the squads go down short of the enemy's
+   guns, not inside them, and an empty hull never takes troops back off the line. */
+'use strict';
+const { R, Engine } = require('../../server/rules.js');
+let seed = 11;
+Math.random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+
+let pass = 0, fail = 0;
+function ok(name, cond, note) {
+  cond ? pass++ : fail++;
+  console.log('  ' + (cond ? '✓' : '✗') + ' ' + name + (note ? '  — ' + note : ''));
+}
+// a campaign battle, both sides the AI, walked on to the first turn of the battle
+function battle() {
+  const e = Engine.create();
+  e.start({ tier: 2, pl: 1, scenario: 'meeting', armyA: ['cmd3', 'rookie', 'recruits', 'ltransport:wheeled', 'ltransport:wheeled'],
+    armyB: R.rollArmy(2, 1, null, 'pmc'), nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo',
+    planet: 'sparse', campaign: true, terrainSetup: 'auto' });
+  for (let g = 0; g < 400 && !e.over() && e.state().phase !== 'battle'; g++) {
+    const s = e.state();
+    if (s.swapAsk) { e.intent(s.swapAsk.side, { k: 'swapdone' }); continue; }
+    if (s.faceAsk) { e.intent(s.faceAsk.side, { k: 'vfaceall' }); continue; }
+    e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+  }
+  return e;
+}
+// the AI acts for `u` alone, the rest of the table cleared but for one enemy rifle squad
+function setUp(e) {
+  const st = e.state();
+  const hull = st.units.filter((u) => u.side === 'A' && u.transport && u.alive)[0];
+  const squad = st.units.filter((u) => u.side === 'A' && u.alive && !R.isMachine(u) && !R.has(u, 'Command'))[0];
+  const foe = st.units.filter((u) => u.side === 'B' && u.alive && !R.isMachine(u) && u.fp != null)[0];
+  st.units.forEach((u) => { if (u !== hull && u !== squad && u !== foe && !u.aboard) { u.alive = false; } });
+  st.terrain = st.terrain.filter((t) => t.kind === 'objective');
+  st.objectives = [];
+  [hull, squad, foe].forEach((u) => { u.sp = 0; u.activated = false; u.bld = null; u.disembarked = false; u.aboard = null; u.reserve = false; });
+  hull.cargo = []; hull.damage = 0;
+  st.activeSide = 'A';
+  return { st, hull, squad, foe };
+}
+
+// the one activation, and no more: the battle is marked over so the AI does not play on
+function act(e, u) { e.state().over = { winner: null, text: 'test' }; e.query.aiAct(u); }
+
+console.log('\nA loaded transport puts its squad down once the enemy has it in sight and range');
+(function () {
+  const e = battle(), { st, hull, squad, foe } = setUp(e);
+  ok('(a transport, a squad and an enemy rifle squad)', !!(hull && squad && foe));
+  if (!hull || !squad || !foe) return;
+  hull.x = 30; hull.y = 24; foe.x = 30 + Math.min(foe.range - 2, 14); foe.y = 24;
+  squad.x = hull.x - 2; squad.y = hull.y;
+  R.embark(st, hull, squad); squad.boarded = false;      // (aboard from an earlier turn)
+  ok('...the squad is aboard', (hull.cargo || []).length === 1);
+  act(e, hull);
+  ok('...and it gets out rather than riding on into the enemy', !squad.aboard && squad.x >= 0, 'squad at ' + squad.x.toFixed(1) + ', ' + squad.y.toFixed(1));
+  ok('...on the side away from the enemy', squad.x < foe.x && R.inches(squad.x, squad.y, foe.x, foe.y) >= R.inches(hull.x, hull.y, foe.x, foe.y) - 1);
+})();
+
+console.log('\nAn empty transport never takes a squad back off the line');
+(function () {
+  const e = battle(), { hull, squad, foe } = setUp(e);
+  if (!hull || !squad || !foe) { ok('(set up)', false); return; }
+  hull.x = 30; hull.y = 24; squad.x = 32; squad.y = 24; foe.x = 42; foe.y = 24;
+  act(e, hull);
+  ok('a squad 10" from the enemy stays where it is', !squad.aboard);
+})();
+(function () {
+  const e = battle(), { hull, squad, foe } = setUp(e);
+  if (!hull || !squad || !foe) { ok('(set up)', false); return; }
+  hull.x = 8; hull.y = 24; squad.x = 10; squad.y = 24; foe.x = 60; foe.y = 24;
+  act(e, hull);
+  ok('...but one far behind the fighting is picked up', !!squad.aboard);
+})();
+
+console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
+process.exit(fail ? 1 : 0);

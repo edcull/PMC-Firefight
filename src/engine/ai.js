@@ -117,6 +117,131 @@
       return best;
     }
 
+    /* Putting a hull's squads down: each where it may stand (R.dropSpots), as near
+       `toward` as it can — the hull's front, or (under fire) the side away from the enemy. */
+    function unloadAll(u, toward) {
+      var spot = toward || { x: u.x + Math.cos(u.facing || 0) * 2.5, y: u.y + Math.sin(u.facing || 0) * 2.5 };
+      var lines = [];
+      (u.cargo || []).slice().forEach(function (rider) {
+        var at = nearestTo(R.dropSpots(E.state, u, rider).filter(function (c) { return canStand(rider, c); }), spot);
+        var r = R.disembark(E.state, u, rider, at);
+        if (r) { logLine('note', r.text); lines.push({ text: r.text }); stepOff(rider, u); }
+      });
+      if (SFX) { SFX.step(); SFX.step(0.22); }
+      u.activated = true;
+      pushRes({ kind: 'Disembark', title: u.name + ' unloads', side: u.side, list: lines });
+      endActivation();
+    }
+    function embarkOne(u, t) {
+      var was = { x: t.x, y: t.y };
+      var r = R.embark(E.state, u, t);
+      if (r) boardAnim(t, u, was);
+      logLine('note', r ? r.text : u.label + ' waits for its troops.');
+      u.activated = true;
+      if (r) pushRes({ kind: 'Embark', title: u.name + ' takes on troops', side: u.side, note: r.text });
+      endActivation();
+    }
+
+    /* How a transport is driven by an AI side (not the solitaire OpFor, which keeps the
+       book's orders): it carries its squads up to the fight, only onto ground no enemy
+       can shoot into, and puts them down short of the enemy's guns — at the objective,
+       as soon as an enemy has it in sight and range (or could reach it, once it is hit),
+       or where it can get no further unseen — on the hull's far side from them. Empty, it goes back for squads still well behind the
+       fighting — reserves coming on, troops left in the rear — and otherwise keeps out
+       of reach, shooting what it can from there. It never takes troops back off the
+       line, and never drives at the enemy. Hands back false when the ordinary orders
+       should run instead (an empty hull with a good shot rolls its behaviour as before). */
+    function foeGap(p) {
+      var d = Infinity;
+      E.state.units.forEach(function (e) {
+        if (e.alive && e.side !== p.side && onTable(e) && !husk(e)) d = Math.min(d, R.inches(p.x, p.y, e.x, e.y));
+      });
+      return d;
+    }
+    /* At a spot: how many enemies could shoot the hull there now (`seen`: in range and
+       sight), how many could after their own move (`threat`: within their Movement and
+       range, sight or not), and how many it could shoot itself (`sees`). */
+    function sightAt(u, c) {
+      var ghost = { x: c.x, y: c.y, alive: true, of: u }, seen = 0, sees = 0, threat = 0;
+      E.state.units.forEach(function (e) {
+        if (!e.alive || e.side === u.side || !onTable(e) || husk(e) || e.fp == null) return;
+        var d = R.inches(c.x, c.y, e.x, e.y);
+        if (d <= (e.range || 0) + (e.move || 0) + 2) threat++;
+        if (d > Math.max(e.range || 0, u.range || 0) + 2) return;
+        if (!R.hasLoS(E.state, e, ghost)) return;
+        if (d <= (e.range || 0) + 2) seen++;
+        if (u.fp != null && d <= (u.range || 0)) sees++;
+      });
+      return { seen: seen, sees: sees, threat: threat };
+    }
+    function bestDriveSpot(u, allowance, score) {
+      var best = null, bs = -Infinity;
+      R.reachable(E.state, u, allowance).forEach(function (c) {
+        if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2) || !canStand(u, c)) return;
+        var v = score(c);
+        if (v > bs) { bs = v; best = c; }
+      });
+      return best ? { pt: best, score: bs } : null;
+    }
+    function transportPlan(u, carrying, shot) {
+      var goal = nearestObjective(u) || (nearestEnemy(u) || {}).unit;
+      var advance = u.fp != null && !R.has(u, 'Cumbersome Weapon');
+      var allowance = advance ? u.move : u.move + moveBonus(u, 'move');
+      var gap = foeGap(u);
+      if (carrying) {
+        var hurt = (u.damage || 0) > 0;
+        var atObj = goal && nearestObjective(u) && R.inches(u.x, u.y, goal.x, goal.y) < 9;
+        var away = function () {
+          var ne = nearestEnemy(u);
+          if (!ne) return null;
+          var dx = u.x - ne.unit.x, dy = u.y - ne.unit.y, dl = Math.hypot(dx, dy) || 1;
+          return { x: u.x + dx / dl * 2.5, y: u.y + dy / dl * 2.5 };
+        };
+        if (atObj) { unloadAll(u, null); return true; }
+        // under the enemy's guns already: everybody out, on the side away from them
+        var now = sightAt(u, u);
+        if (now.seen > 0 || (hurt && now.threat > 0)) {
+          logLine('ai', u.label + ' puts its troops down short of the enemy.');
+          unloadAll(u, away()); return true;
+        }
+        if (!goal) return false;
+        // forward to ground no enemy can shoot into now, as near the goal as that allows
+        var here = R.inches(u.x, u.y, goal.x, goal.y);
+        var pick = bestDriveSpot(u, allowance, function (c) {
+          var sa = sightAt(u, c);
+          return -R.inches(c.x, c.y, goal.x, goal.y) - 10 * sa.seen - 2 * sa.threat;
+        });
+        var safe = pick && sightAt(u, pick.pt).seen === 0 && R.inches(pick.pt.x, pick.pt.y, goal.x, goal.y) <= here - 1;
+        // no hidden way on: they walk from here
+        if (!safe) { unloadAll(u, now.threat > 0 ? away() : null); return true; }
+        aiRoll(u, pick.pt, false, { close: true });
+        return true;
+      }
+      if (!u.transport) return false;
+      // empty: troops well behind the fighting, ready to go, are its passengers
+      var needs = function (t) {
+        return t.side === u.side && t.alive && onTable(t) && !t.aboard && !R.isMachine(t) && !t.bld && !t.disembarked &&
+          R.status(t) === 'ready' && foeGap(t) > 18 && (!goal || R.inches(t.x, t.y, goal.x, goal.y) > 15);
+      };
+      var pax = activeUnits(u.side).filter(function (t) { return needs(t) && R.canEmbark(E.state, u, t); });
+      if (pax.length) { embarkOne(u, pax[0]); return true; }
+      if (shot.t && shot.score > 0.35) return false;          // a good shot: its ordinary orders
+      var lift = activeUnits(u.side).filter(function (t) {
+        return needs(t) && R.inches(u.x, u.y, t.x, t.y) <= allowance * 2 + 4;
+      }).sort(function (a, b) { return R.inches(u.x, u.y, a.x, a.y) - R.inches(u.x, u.y, b.x, b.y); })[0];
+      if (lift) { logLine('ai', u.label + ' goes back for ' + lift.label + '.'); aiRoll(u, lift, false, { close: true }); return true; }
+      // nobody to carry: out of reach, where its guns still find something
+      var standoff = function (c) {
+        var sa = sightAt(u, c);
+        return 1.5 * sa.sees - 4 * sa.seen - sa.threat - 0.1 * (goal ? R.inches(c.x, c.y, goal.x, goal.y) : 0);
+      };
+      var spot = bestDriveSpot(u, allowance, standoff), hs = standoff(u);
+      if (spot && spot.score > hs + 0.5) { aiRoll(u, spot.pt, false, { close: true }); return true; }
+      if (shot.t) { fire(u, shot.t, 'fire'); return true; }
+      logLine('ai', u.label + ' keeps out of reach.');
+      u.activated = true; endActivation(u); return true;
+    }
+
     // Machines think differently: they have no nerve to lose, they never charge,
     // and a transport's job is to get its passengers forward and put them down.
     function aiDrive(u) {
@@ -171,23 +296,14 @@
         u.activated = true; endActivation(u); return;
       }
 
+      /* A transport's job is to get its squads forward and put them down, not to fight
+         (transportPlan). The solitaire OpFor keeps the book's plainer orders below. */
+      if (!opFor && (u.transport || carrying) && !R.has(u, 'Lifter') && transportPlan(u, carrying, shot)) return;
+
       // a transport with troops aboard heads for the nearest objective and unloads
       if (carrying && specialsV) {
         var obj = nearestObjective(u);
-        if (obj && R.inches(u.x, u.y, obj.x, obj.y) < 9) {
-          // each squad put down where it may be (R.dropSpots), as near the hull's front as it can
-          var spot = { x: u.x + Math.cos(u.facing || 0) * 2.5, y: u.y + Math.sin(u.facing || 0) * 2.5 };
-          var lines = [];
-          (u.cargo || []).slice().forEach(function (rider) {
-            var at = nearestTo(R.dropSpots(E.state, u, rider).filter(function (c) { return canStand(rider, c); }), spot);
-            var r = R.disembark(E.state, u, rider, at);
-            if (r) { logLine('note', r.text); lines.push({ text: r.text }); stepOff(rider, u); }
-          });
-          if (SFX) { SFX.step(); SFX.step(0.22); }
-          u.activated = true;
-          pushRes({ kind: 'Disembark', title: u.name + ' unloads', side: u.side, list: lines });
-          endActivation(); return;
-        }
+        if (obj && R.inches(u.x, u.y, obj.x, obj.y) < 9) { unloadAll(u, null); return; }
         /* An OpFor hull told to hold — Reasonably Defensive or Neutral (p. 147) — keeps
            its troops aboard where it stands, rather than driving them in. */
         if (!(opFor && (bhV === 'defensive' || bhV === 'neutral'))) return aiRoll(u, obj || nearestEnemy(u), true);
@@ -196,15 +312,7 @@
       // an empty transport picks up the nearest squad that will fit
       if (u.transport && !carrying && specialsV) {
         var pax = activeUnits(u.side).filter(function (t) { return R.canEmbark(E.state, u, t); });
-        if (pax.length) {
-          var was2 = { x: pax[0].x, y: pax[0].y };
-          var r2 = R.embark(E.state, u, pax[0]);
-          if (r2) boardAnim(pax[0], u, was2);
-          logLine('note', r2.text);
-          u.activated = true;
-          pushRes({ kind: 'Embark', title: u.name + ' takes on troops', side: u.side, note: r2.text });
-          endActivation(); return;
-        }
+        if (pax.length) { embarkOne(u, pax[0]); return; }
       }
 
       if (soloB) {
