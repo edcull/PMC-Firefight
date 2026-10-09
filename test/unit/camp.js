@@ -1321,5 +1321,16 @@ ok('Special Ops plays the behaviour table untempered', C.aiTemper({ archetype: '
   ok('...but at Tier I, with nothing armoured to field, it keeps them', soft(lo) >= s1, true);
 })();
 
+head('A second aircraft or Alpha squad never takes a Tier slot another unit could fill');
+(function () {
+  // (the Beta troopers a little worn, so looked at after both Strike craft)
+  var co = C.newCompany('Raiders', { faction: 'xeno' });
+  co.doctrines = ['XO1', 'XT4'];
+  co.roster = ['xalpha2', 'xdelta1', 'xdelta3', 'xstrike2', 'xbeta2', 'xalpha1', 'xdelta1', 'xstrike2', 'xdelta3', 'xbeta3']
+    .map(function (k, i) { return { rid: 'r' + i, key: k, exp: 0, tp: k === 'xbeta2' ? 5 : 0, honours: [], traumas: [], upgrades: [], restUntil: 0 }; });
+  var res = R.checkArmy(C.pickForce(co, 2, 1).map(R.entryPick), 2, 1, co.doctrines);
+  ok('a Tier II force at Priority Level 1 takes the Beta troopers for its third Tier II unit', res.ok, true, res.faults.join(' '));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
