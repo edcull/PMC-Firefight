@@ -1405,7 +1405,7 @@
     },
     {
       id: 'freespace', name: 'Pirates', faction: 'rebel',
-      temper: 1, // the behaviour roll in battle (p. 147): raiders, always on the move
+      temper: 0, // the behaviour roll in battle (p. 147): raiders, quick but not reckless
       blurb: 'Pirates with a manifesto. Fast in, loaded up, gone.',
       // what a build of it should look like (the editor's validation notes, for people only)
       notes: 'Pirates: fast in, loaded up, gone. About 12 units at T3 PL2: Mounted Warriors the largest share (3), Holy Warriors and leaders riding, 3-4 hulls with trucks and shuttles to carry the rest. Red flags: artillery, slow infantry with no ride, under 3 hulls.',
