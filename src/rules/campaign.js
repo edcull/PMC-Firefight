@@ -1553,18 +1553,19 @@
       id: 'ivenbea', name: 'Predators', faction: 'bugs',
       blurb: 'Mantis-like apex predators of the Ivenbean swamps: few, huge, and very close.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Few and huge hunters (behaviour +1). About 10 units at T3 PL2, leaning a Tier up, led by an Overmind a Tier above: pathfinders and lurkers (2-3), a shadow bug, winged bugs (large ones most), attack forms and oversized attack forms. Doctrines: Fierce Attacks first, then talons, feeding, quick learning. Red flags: tiny swarms, larvae or spitters beyond the Tier I minimum, underground bugs, carrier bugs, 13+ units.',
+      notes: 'Ambush hunters (behaviour -1). About 11 units at T3 PL2, led by an Overmind a Tier above: pathfinders and lurkers (about 3), spitters to pin the prey (about 3), winged bugs, attack forms and smaller bugs, a shadow bug now and then. Doctrines: Fierce Attacks first, then talons, feeding, quick learning. Red flags: tiny swarms, underground bugs, carrier bugs, 13+ units.',
       names: ['Swarm of Ivenbea', 'The Swamp Mantids', 'Ivenbean Brood'],
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB4', 'BP6', 'BB5', 'BB6', 'BC1', 'BP3'],
       fixedAt: { 1: 'BB4' },
-      temper: 1, // the behaviour roll in battle (p. 147): hunters
-      tier: 1,
+      temper: -1, // the behaviour roll in battle (p. 147): ambushers, waiting for the prey to come to them
+      tier: 0,
       hulls: { min: 0, max: 1 },
       commandTier: 1,
-      weights: {   // the big hunters only: lurkers, shadow bugs, large winged bugs, oversized attack forms
-        bshadow: 8, blurkers: 6, blargewing: 6, boversized: 6, battack: 3, bpathfinder: 3, bsmallwing: 2
+      weights: {   // the big hunters, with smaller bugs to grow from and spitters to pin the prey
+        bshadow: 4, blurkers: 5, blargewing: 5, boversized: 4, battack: 4, bpathfinder: 4, bsmallwing: 3,
+        bsmall: 3, bsmallpath: 2, 'Spore Bugs': 3
       },
       spend: 'promote'
     },
@@ -1610,18 +1611,18 @@
       id: 'hydra', name: 'Burrowers', faction: 'bugs',
       blurb: 'Mining bio-robots gone wild, tunnelling through asteroid after asteroid.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Burrowers: they wait below, then strike (behaviour -1). About 11-12 units at T3 PL2, led by Watchers of the battle\'s Tier: underground bugs the largest share (4-5, a huge one or more), pathfinders and lurkers coming up with them (3-4), a few lesser bugs. Doctrines: Mimicry first. Red flags: no underground bugs, flyers, spitters.',
+      notes: 'Burrowers: they wait below, then strike. About 12 units at T3 PL2, led by Watchers of the battle\'s Tier: underground bugs (about 3, a huge one now and then), pathfinders and lurkers coming up with them (about 3), lesser bugs and spitters holding the ground above (2-3 each). Doctrines: Mimicry first. Red flags: no underground bugs, flyers.',
       names: ['Hydra Belt Swarm', 'The Uranium Diggers', 'Asteroid Swarm 7'],
       t1: ['btiny', 'bspitlarva'], t2: ['bsmall', 'bsmallpath'],
       machines: [], vehicles: 0,
       doctrines: ['BB2', 'BP2', 'BP5', 'BP1', 'BB1', 'BP6'],
       fixedAt: { 1: 'BB2' },               // Mimicry first: a quarter of it comes up out of the ground
-      temper: -1, // the behaviour roll in battle (p. 147): waits below, then strikes
+      temper: 0, // the behaviour roll in battle (p. 147): waits below, then strikes
       tier: 0,
       hulls: { min: 0, max: 1 },
       commandTier: 0,
-      weights: {   // tunnelling through everything: burrowers, and the pathfinders and lurkers that come up with them
-        'Underground Bugs': 8, bpathfinder: 4, blurkers: 4, bsmallpath: 2, bshadow: 2, 'Lesser Bugs': 1
+      weights: {   // burrowers and the pathfinders and lurkers that come up with them, lesser bugs and spitters holding the ground above
+        'Underground Bugs': 5, bpathfinder: 4, blurkers: 3, bsmallpath: 3, bshadow: 1, 'Lesser Bugs': 3, 'Spore Bugs': 2
       },
       spend: 'promote'
     },
