@@ -76,7 +76,8 @@
         // where your side deploys, and the roll that turned the roles round, if one did
         h += '<div class="cpstat">' + esc(sc && sc.roles ? sc.roles[mine] || '' : '') +
           (ro.bestDefence && ro.bestDefence.swapped
-            ? ' <b>The Best Defence is Good Offence</b> turned it round (D6 ' + ro.bestDefence.roll + ').' : '') + '</div>';
+            ? ' <b>The Best Defence is Good Offence</b> turned it round (D6 ' + ro.bestDefence.roll + ').'
+            : ro.bestDefence && ro.bestDefence.declined ? ' They hold the position rather than use <b>The Best Defence is Good Offence</b>.' : '') + '</div>';
       } else {
         h += '<div class="cpstat">Neither side has the initiative here \u2014 you meet on even terms.</div>';
       }

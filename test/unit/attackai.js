@@ -65,5 +65,15 @@ ok('a shattered AI attacker surrenders in a Meeting engagement', yieldsIn('meeti
 ok('...in Demolish', yieldsIn('demolish'));
 ok('...and in Hostile takeover', yieldsIn('takeover'));
 
+console.log('\nThe computer turns down The Best Defence in Hostile takeover');
+(function () {
+  const { SC } = require('../../server/rules.js');
+  const count = (id, ask, ai, what) => { let n = 0; for (let i = 0; i < 200; i++) { const r = SC.rollRoles(id, { A: ['S1'], B: [] }, 'B', ask, ai); if (r.bestDefence && r.bestDefence[what]) n++; } return n; };
+  ok('an AI defender holding S1 keeps the Takeover position (contract roll, the player asked)', count('takeover', ['B'], null, 'declined') === 200);
+  ok('...and in a battle the engine rolls for two AI sides', count('takeover', null, ['A', 'B'], 'declined') === 200);
+  ok('...but still uses it in Demolish', count('demolish', ['B'], null, 'swapped') > 120);
+  ok('...and a player holding it is still asked', count('takeover', ['A', 'B'], null, 'pending') === 200);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
