@@ -248,6 +248,17 @@
       }
 
       if (shot.t && shot.score > 0.35) { fire(u, shot.t, 'fire'); return; }
+      /* Attacking a held position (assaultPlan), a hull works toward the objective, not
+         the nearest enemy: out ahead of the force it waits for the rest, and when the
+         attack goes in it drives onto the objective (Hostile takeover counts it there). */
+      var apV = assaultPlan(u);
+      if (apV && !R.isFlying(u)) {
+        if (apV.ahead > 6 && !apV.push) {
+          if (shot.t) { fire(u, shot.t, 'fire'); return; }
+          u.activated = true; endActivation(u); return;
+        }
+        return aiRoll(u, apV.o, false, apV.push && !apV.demolish ? { close: true } : {});
+      }
       aiRoll(u, nearestEnemy(u), false);
     }
 
@@ -479,6 +490,47 @@
     function tableAI(u) { return (!!E.state.solo && u.side === 'B') || isAI(u.side); }
     function soloOpFor(u) { return !!E.state.solo && u.side === 'B'; }
 
+    /* An AI side attacking a held position — Demolish (p. 54), Hostile takeover
+       (p. 55) — plays it as an attack, not a firefight at the range it happened to
+       stop at. The force closes together: a unit well ahead of the rest holds in
+       cover and shoots (keeping heads down for the ones coming up), one lagging
+       behind comes on, and the rest press in harder once the defenders near the
+       objective are pinned. With only the turns left that the walk in and the
+       work at the objective need, everything goes. Read from the attacker's ground
+       units on the table: how far each stands from the objective, the middle of
+       them (`medD`), how far this one is ahead of that (`ahead`), and the share of
+       the defenders within 14" of the objective that are Suppressed or Broken. */
+    var curPlan = null;
+    function assaultPlan(u) {
+      if (curPlan && curPlan.u === u && curPlan.turn === E.state.turn) return curPlan.ap;
+      var s = E.state, sc = s.sc || {};
+      if (!sc.attacker || u.side !== sc.attacker || !tableAI(u) || soloOpFor(u)) return null;
+      if (!s.scen || (s.scen.id !== 'demolish' && s.scen.id !== 'takeover')) return null;
+      var o = (s.objectives || [])[0];
+      if (!o) return null;
+      var ds = s.units.filter(function (f) {
+        return f.alive && f.side === u.side && onTable(f) && !f.aboard && !R.isFlying(f);
+      }).map(function (f) { return R.inches(f.x, f.y, o.x, o.y); }).sort(function (a, b) { return a - b; });
+      if (!ds.length) return null;
+      var medD = ds[ds.length >> 1], myD = R.inches(u.x, u.y, o.x, o.y);
+      var demolish = s.scen.id === 'demolish';
+      var left = (s.scen.turns || 12) - (s.turn || 1);
+      var defs = s.units.filter(function (e) {
+        return e.alive && e.side !== u.side && onTable(e) && !husk(e) && R.inches(e.x, e.y, o.x, o.y) <= 14;
+      });
+      var supp = defs.length ? defs.filter(function (e) { return R.status(e) !== 'ready'; }).length / defs.length : 1;
+      // the walk in at some 6" a turn, and then the turns the work there takes (Demolish's charges fail more often than not)
+      var push = left <= Math.ceil(medD / 6) + (demolish ? 4 : 2) || ds.length >= 2 * Math.max(1, defs.length);
+      return { o: o, medD: medD, myD: myD, ahead: medD - myD, supp: supp, push: push, demolish: demolish };
+    }
+    function planMod(ap) {
+      if (!ap) return null;
+      if (ap.push) return { mod: 3, why: 'the attack goes in +3' };
+      if (ap.ahead > 6) return { mod: -2, why: 'ahead of the attack, covers it −2' };
+      if (ap.ahead < -4) return { mod: 2, why: 'closing up on the attack +2' };
+      return ap.supp >= 0.5 ? { mod: 1, why: 'defenders pinned, moves up +1' } : null;
+    }
+
     /* The behaviour table (p. 147), rolled for every unit as it activates —
        a hull or an aircraft as much as a squad. */
     function rollBehaviour(u) {
@@ -496,8 +548,17 @@
       // an AI company's personality: some hold back, some go in (campaign.js aiTemper)
       var tp = tableAI(u) && E.state.cfg.temper && E.state.cfg.temper[u.side];
       if (tp && tp.mod) { mods += tp.mod; why.push(tp.why); }
+      // attacking a held position: close together, cover the ones moving up, then go in (assaultPlan)
+      var ap = assaultPlan(u), pm = planMod(ap);
+      if (pm) { mods += pm.mod; why.push(pm.why); }
       var total = roll + mods;
       var behaviour = total <= 0 ? 'flee' : total <= 2 ? 'defensive' : total <= 4 ? 'neutral' : total <= 6 ? 'offensive' : 'assault';
+      /* ...and until the attack goes in, nobody runs at the enemy across open ground:
+         Kill Them All! is a charge at one in reach, else an Advance that shoots. */
+      if (ap && !ap.push && behaviour === 'assault') {
+        var near = nearestEnemy(u);
+        if (!(near && R.canAssault(u, near.unit) && near.dist <= chargeAllow(u))) behaviour = 'offensive';
+      }
       // units with Cumbersome Weapons count 4-7 as Reasonably Neutral (p. 147)
       if (R.has(u, 'Cumbersome Weapon') && total >= 4 && total <= 7) behaviour = 'neutral';
       logLine('ai', u.label + ' — behaviour D6 ' + roll + (why.length ? ' (' + why.join(', ') + ')' : '') + ' = ' + total + ': ' + behaviour + '.');
@@ -545,6 +606,7 @@
         u.activated = true; endActivation(u); return;
       }
       aiHonours(u);
+      curPlan = null; curPlan = { u: u, turn: E.state.turn, ap: assaultPlan(u) };
       if (R.isMachine(u)) { aiDrive(u); return; }
       /* "Death or Glory, Comrades!" (p. 94): a shaken unit with a leader shouting
          at it goes in rather than going to ground — that is the whole point of the
@@ -624,6 +686,16 @@
       if (specials && R.has(u, 'Psychic Wave') && R.status(u) === 'ready') {
         var wv = bestWaveSpot(u);
         if (wv && wv.n >= 2) { doWave(u, wv.pt); return; }
+      }
+
+      /* Demolish (p. 54): the objective comes down only to charges set by hand, and any
+         attacking infantry may set them — so one in reach does, before anything else.
+         It is the only way the attack is won. */
+      var dTarget = E.state.scen.id === 'demolish' && E.state.sc && E.state.sc.target;
+      if (dTarget && !u.bld && R.status(u) === 'ready' && E.state.terrain.indexOf(dTarget) >= 0 &&
+        E.breachTargets(u).indexOf(dTarget) >= 0) {
+        logLine('ai', u.label + ' goes in to set charges against the objective.');
+        ui.selected = u; E.doBreach(dTarget); return;
       }
 
       // standing over an unchecked location is worth more than any other action
@@ -838,13 +910,22 @@
     // the solitaire OpFor's Reasonably Neutral infantry (see actInfantry)
     function neutralHold(u, shot) {
       var here = R.coverAt(E.state, u.x, u.y, u), hereScore = shot.t ? shot.score : 0;
+      /* An attacker not out ahead of its force (assaultPlan) bounds forward instead: to
+         cover as good as it has, at least 2" nearer the objective, and not so far that it
+         ends up out in front; the shot it gives up for that is the price of the ground.
+         Against Hostile takeover's dug-in position it waits for the defenders to be
+         pinned first (or the attack to go in): twenty turns leave time to wear them down. */
+      var ap = assaultPlan(u), bound = ap && ap.ahead <= 6 && (ap.demolish || ap.push || ap.supp >= 0.5);
       var cands = R.reachable(E.state, u, u.move).filter(function (c) {
         if (!canStand(u, c)) return false;
         c.cv = R.coverAt(E.state, c.x, c.y, u);
-        return c.cv > here;
+        if (!bound) return c.cv > here;
+        c.od = R.inches(c.x, c.y, ap.o.x, ap.o.y);
+        return c.cv >= here && c.cv > 0 && c.od <= ap.myD - 2 && ap.medD - c.od <= 6;
       });
-      // the best cover first, the nearest of it first
-      cands.sort(function (a, b) { return (b.cv - a.cv) || ((a.cost || 0) - (b.cost || 0)); });
+      if (bound) hereScore = 0;
+      // the best cover first, the nearest of it first (an attacker's: the nearest the objective)
+      cands.sort(function (a, b) { return (b.cv - a.cv) || (bound ? a.od - b.od : (a.cost || 0) - (b.cost || 0)); });
       var pick = null, pickShot = null, ox = u.x, oy = u.y;
       for (var i = 0; i < cands.length && i < 16 && !pick; i++) {
         u.x = cands[i].x; u.y = cands[i].y;
@@ -909,6 +990,14 @@
       if (behaviour === 'offensive') { s += cover * 1.0; if (terr.fp) s += 4.5; }
       else { s += cover * 1.6; if (terr.fp) s += 2; }
       s -= 0.6 * R.inches(c.x, c.y, goal.x, goal.y);
+      /* Attacking a held position (assaultPlan): no further than 6" out in front of the
+         force until it goes in; then the objective pulls, whatever else is near. */
+      var ap = assaultPlan(u);
+      if (ap && behaviour !== 'flee') {
+        var od = R.inches(c.x, c.y, ap.o.x, ap.o.y);
+        if (ap.push) s -= 0.5 * od;
+        else if (ap.medD - od > 6) s -= 1.2 * (ap.medD - od - 6);
+      }
       var ghost = { x: c.x, y: c.y, alive: true, of: u };
       var exposure = 0, opportunity = 0;
       E.state.units.forEach(function (e) {
