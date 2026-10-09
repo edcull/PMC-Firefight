@@ -11,9 +11,9 @@ function ok(name, cond, note) {
   console.log('  ' + (cond ? '✓' : '✗') + ' ' + name + (note ? '  — ' + note : ''));
 }
 // a campaign battle, both sides the AI, walked on to the first turn of the battle
-function battle() {
+function battle(armyA) {
   const e = Engine.create();
-  e.start({ tier: 2, pl: 1, scenario: 'meeting', armyA: ['cmd3', 'rookie', 'recruits', 'ltransport:wheeled', 'ltransport:wheeled'],
+  e.start({ tier: 2, pl: 1, scenario: 'meeting', armyA: armyA || ['cmd3', 'rookie', 'recruits', 'ltransport:wheeled', 'ltransport:wheeled'],
     armyB: R.rollArmy(2, 1, null, 'pmc'), nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo',
     planet: 'sparse', campaign: true, terrainSetup: 'auto' });
   for (let g = 0; g < 400 && !e.over() && e.state().phase !== 'battle'; g++) {
@@ -27,6 +27,8 @@ function battle() {
 // the AI acts for `u` alone, the rest of the table cleared but for one enemy rifle squad
 function setUp(e) {
   const st = e.state();
+  // everyone off the hulls first: each check puts its own squad aboard
+  st.units.forEach((v) => { (v.cargo || []).forEach((c) => { c.aboard = null; }); v.cargo = []; });
   const hull = st.units.filter((u) => u.side === 'A' && u.transport && u.alive)[0];
   const squad = st.units.filter((u) => u.side === 'A' && u.alive && !R.isMachine(u) && !R.has(u, 'Command'))[0];
   const foe = st.units.filter((u) => u.side === 'B' && u.alive && !R.isMachine(u) && u.fp != null)[0];
@@ -42,6 +44,14 @@ function setUp(e) {
 // the one activation, and no more: the battle is marked over so the AI does not play on
 function act(e, u) { e.state().over = { winner: null, text: 'test' }; e.query.aiAct(u); }
 
+console.log('\nTransports start the battle full');
+(function () {
+  const e = battle(), st = e.state();
+  const hulls = st.units.filter((u) => u.side === 'A' && u.transport && u.alive);
+  ok('each of the AI\'s transports on the table has a squad aboard at the start', hulls.length === 2 && hulls.every((v) => (v.cargo || []).length > 0),
+    hulls.map((v) => v.name + ' ' + (v.cargo || []).length).join(', '));
+})();
+
 console.log('\nA loaded transport puts its squad down once the enemy has it in sight and range');
 (function () {
   const e = battle(), { st, hull, squad, foe } = setUp(e);
@@ -56,6 +66,18 @@ console.log('\nA loaded transport puts its squad down once the enemy has it in s
   ok('...on the side away from the enemy', squad.x < foe.x && R.inches(squad.x, squad.y, foe.x, foe.y) >= R.inches(hull.x, hull.y, foe.x, foe.y) - 1);
 })();
 
+console.log('\nAn armoured carrier spearheads where a light transport would stop');
+(function () {
+  const e = battle(['cmd3', 'rookie', 'recruits', 'lapc:tracked']), { st, hull, squad, foe } = setUp(e);
+  if (!hull || !squad || !foe) { ok('(set up)', false); return; }
+  hull.x = 20; hull.y = 24; foe.x = 36; foe.y = 24; foe.range = Math.max(foe.range, 18); squad.x = 18; squad.y = 24;
+  R.embark(st, hull, squad); squad.boarded = false;
+  const x0 = hull.x;
+  act(e, hull);
+  ok('a Light APC under the enemy\'s guns 16" out keeps its squad aboard and drives on', !!squad.aboard && hull.x > x0 + 1,
+    hull.name + ' moved ' + (hull.x - x0).toFixed(1) + '", squad ' + (squad.aboard ? 'aboard' : 'out'));
+})();
+
 console.log('\nAn empty transport never takes a squad back off the line');
 (function () {
   const e = battle(), { hull, squad, foe } = setUp(e);
@@ -65,11 +87,14 @@ console.log('\nAn empty transport never takes a squad back off the line');
   ok('a squad 10" from the enemy stays where it is', !squad.aboard);
 })();
 (function () {
-  const e = battle(), { hull, squad, foe } = setUp(e);
+  const e = battle(), { st, hull, squad, foe } = setUp(e);
   if (!hull || !squad || !foe) { ok('(set up)', false); return; }
+  // the rest of the force out ahead: this squad is stranded well behind its own front line
+  const lead = st.units.filter((u) => u.side === 'A' && !R.isMachine(u) && u !== squad)[0];
+  Object.assign(lead, { alive: true, x: 40, y: 24, aboard: null, reserve: false, sp: 0 });
   hull.x = 8; hull.y = 24; squad.x = 10; squad.y = 24; foe.x = 60; foe.y = 24;
   act(e, hull);
-  ok('...but one far behind the fighting is picked up', !!squad.aboard);
+  ok('...but one stranded far behind its own front line is picked up', !!squad.aboard);
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

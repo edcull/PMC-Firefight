@@ -783,6 +783,7 @@
     V.newTable();
     // (where both companies enter in turn 1, nobody is placed now: the OpFor comes on then, like everyone)
     state.cfg.aiSides.forEach(function (s2) { K.aiLoadReserves(s2); });     // its waiting squads board its waiting hulls
+    state.cfg.aiSides.forEach(function (s2) { K.aiLoadStart(s2); });        // and its squads on the table board the hulls there
     state.cfg.aiSides.forEach(function (s2) { if (!K.entering(s2)) K.autoDeploy(s2); });
     /* Hero of the People (p. 111): "in scenarios using the alternating deployment
        sequence, the opponent has to set up half of their units first before the

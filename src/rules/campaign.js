@@ -1346,7 +1346,7 @@
       temper: 1, // the behaviour roll in battle (p. 147): rides at them
       blurb: 'Rolls up in armour, drops its troopers at the door, and is through the line before the guns turn.',
       // what a build of it should look like (the editor's validation notes, for people only)
-      notes: 'Mounted and fast. Always the full 6 hulls at T3 PL2, about 4 of them transports (ground and air), the rest combat vehicles or a strike craft; rifle and assault teams about evenly, most of them with a seat. Red flags: under 5 hulls, 3+ infantry on foot, slow support weapons. An assault or combat drone in about 1 force in 4.',
+      notes: 'Mounted and fast. Always the full 6 hulls at T3 PL2, about 4 of them transports (ground and air), the rest combat vehicles or a strike craft; rifle and assault teams about evenly, most of them with a seat. Red flags: under 5 hulls, 3+ infantry on foot, slow support weapons, unarmoured transports in numbers. An assault or combat drone in about 1 force in 4.',
       names: ['Talon Mobile Group', 'Outrider Security', 'The High Road Company', 'Skyhook Logistics'],
       t1: ['recruits', 'irregulars'],   // who promote into rifle teams and assault troops (Enforcers only into heavy infantry)
       t2: ['lighteng', 'rookie'],
@@ -1362,6 +1362,8 @@
       weights: {
         recruits: 3, irregulars: 3, 'Rifle infantry': 5, 'Assault troops': 6, 'Heavy infantry': [1, 1],
         'Light infantry': [1, 1], 'Heavy support': [1, 1], 'Transport vehicles': 7, insertplat: 2,
+        // armoured carriers over the soft ones: an unarmoured truck dies to rifle fire
+        unarmoured: 1, ltransport: 3, lapc: 8, lifv: 6, hapc: 8, hifv: 6,
         'Transport aircraft': 4, 'Strike aircraft': 3, vtoldrone: 1,
         'Combat vehicles': [3, 2], recon: 4,   // patrol and recon vehicles riding with the transports
         // (a drone unit, low)
