@@ -84,5 +84,32 @@ head('Broken artillery does not retreat (p. 97)');
   ok('in an assault, a gun that breaks stays put', broke > 0 && moved === 0, true, broke + ' broke, ' + moved + ' moved');
 })();
 
+head('A garrison\'s wing brought down in the assault is not taken (it is gone)');
+(function () {
+  var thrown = 0, took = 0, won = 0, downed = 0, movedIntoGone = 0;
+  function storm(key, seed) {
+    Math.random = seeded(seed);
+    var b = { kind: 'building', x: 20, y: 20, w: 8, h: 4, parts: [{ x: 20, y: 20, w: 4, h: 4 }, { x: 24, y: 20, w: 4, h: 4 }] };
+    var wing = b.parts[1], def = unit('rookie', 'B', 26, 22), atk = unit(key, 'A', 26, 25.4);
+    def.bld = b; def.sec = 1; def.models = 1;
+    var st = world([atk, def], [b]);
+    try { R.assault(st, atk, def); } catch (e) { thrown++; return null; }
+    return { b: b, wing: wing, atk: atk, def: def, gone: b.parts.indexOf(wing) < 0 };
+  }
+  for (var i = 0; i < 40; i++) {
+    // Commandos' charges can blow the wing in (and the numbers of the wings after it close up)
+    var c = storm('commandos', 900 + i);
+    if (c && c.gone) { downed++; if (c.atk.bld) movedIntoGone++; }
+    // Veterans have no charges: a win takes the wing the garrison held
+    var v = storm('veterans', 1900 + i);
+    if (v && !v.gone && (!v.def.alive || v.def.bld !== v.b) && v.atk.alive && R.status(v.atk) !== 'broken') {
+      won++; if (v.atk.bld === v.b && v.b.parts[v.atk.sec] === v.wing) took++;
+    }
+  }
+  ok('no assault throws', thrown, 0);
+  ok('...the charges bring the wing down, and the winners do not move into it', downed > 0 && movedIntoGone === 0, true, movedIntoGone + ' of ' + downed + ' moved in');
+  ok('...without them, the winner takes the wing the garrison held', won > 0 && took === won, true, took + ' of ' + won + ' wins');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -449,6 +449,7 @@
     /* ------------------------------------------------ Secure and control (p. 51) */
     secure: {
       edges: true,             // opposite table edges, randomised after the terrain is set (p. 50)
+      groundTaking: true,             // won on ground held: a computer side makes for the objectives (ai.js)
       id: 'secure', name: 'Secure and control', page: 51,
       blurb: 'Both companies have to seize and hold the ground that matters.',
       win: 'Hold more objectives at the end; hold all three at any End phase; or hold the same two for three End phases running.',
@@ -490,6 +491,7 @@
     /* -------------------------------------------------- Find and secure (p. 52) */
     find: {
       edges: true,             // opposite table edges, randomised after the terrain is set (p. 50)
+      groundTaking: true,             // won on ground held: a computer side makes for the objectives (ai.js)
       id: 'find', name: 'Find and secure', page: 52,
       blurb: 'Something worth blood is hidden out there, and neither company knows quite where.',
       win: 'Find the objective with "Check the area!" and hold it at the end — or rout the enemy, which the holder cannot suffer while they hold it.',
@@ -722,6 +724,7 @@
 
     /* --------------------------------------------------------- Demolish (p. 54) */
     demolish: {
+      heldPosition: true,             // an attack on a held position: the attacking AI plays it as an assault (ai.js assaultPlan)
       id: 'demolish', name: 'Demolish', page: 54,
       blurb: 'One company has to bring a structure down; the other has to keep it standing.',
       win: 'Attacker: destroy the objective. Defender: keep it standing to the end of turn 12. Neither side wins by routing the other.',
@@ -849,6 +852,7 @@
 
     /* -------------------------------------------------- Hostile takeover (p. 55) */
     takeover: {
+      heldPosition: true,             // an attack on a held position: the attacking AI plays it as an assault (ai.js assaultPlan)
       id: 'takeover', name: 'Hostile takeover', page: 55,
       blurb: 'A prepared position at the centre of the table, and twenty turns to take it.',
       win: 'Attacker: control the objective at the End phase of turn 20. Defender: keep them off it. Neither side wins by routing the other.',
