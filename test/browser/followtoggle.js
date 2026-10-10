@@ -48,7 +48,7 @@ async function watch(p, ms) {
         if (t.e !== 'shoot' || !t.to) continue;
         const a = s.units.find(u => u.id === t.id), b = s.units.find(u => u.id === t.to);
         if (!a || !b || a.side !== 'B') continue;
-        const I = window.PMCIso, pa = I.toScreen(a.x, a.y), pb = I.toScreen(b.x, b.y), cv = document.querySelector('#board canvas').getBoundingClientRect();
+        const I = window.PMCIso, pa = I.toScreen(a.x, a.y), pb = I.toScreen(b.x, b.y), cv = document.getElementById('board').getBoundingClientRect();
         const need = Math.min(cv.width * 0.9 / (Math.abs(pa.x - pb.x) + 180), cv.height * 0.8 / (Math.abs(pa.y - pb.y) + 180));
         if (need < w.z0) w.needed++;
       }
