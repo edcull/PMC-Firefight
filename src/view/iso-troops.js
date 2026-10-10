@@ -779,6 +779,13 @@
         P(px + 6, -36 + drop, 1, 18, 'rgba(255,255,255,.12)');
       }
       PARTS.pack(P, drop, kit, pal, px);
+      if (kit.law) {                                      // a disposable anti-tank tube slung behind him, down his left side
+        for (var lw = 0; lw < 5; lw++) P(-21 + lw * 0.8, -52 + drop + lw * 6.4, 5.5, 7, '#4b5532');
+        for (var lw3 = 0; lw3 < 5; lw3++) P(-21 + lw3 * 0.8, -52 + drop + lw3 * 6.4, 1.4, 7, '#7a8752');
+        P(-21.5, -53.5 + drop, 6.5, 2.6, '#1c2014');        // the end caps
+        P(-18.3, -21.5 + drop, 6.5, 2.6, '#1c2014');
+        P(-20.6, -46 + drop, 5.5, 1.5, '#d8c040');          // the yellow band
+      }
 
       if (kit.armoured) armourPack(P, pal, drop, px);
       if (PACK_DETAIL[kit.pack]) PACK_DETAIL[kit.pack](P, pal, drop, px);
@@ -787,13 +794,6 @@
       PARTS.torso(P, b, carve, drop, kit, pal, pose, sw, tw, tx);
       /* ---- arms ---- */
       PARTS.arms(P, b, drop, kit, pal, pose, step, tw, tx);
-      if (kit.law) {                                      // a disposable anti-tank tube slung over the near shoulder, sights folded
-        for (var lw = 0; lw < 6; lw++) P(tx - 3 + lw * 1.8, -60 + drop + lw * 7, 4, 8, '#4b5532');
-        for (var lw2 = 0; lw2 < 6; lw2++) P(tx - 3 + lw2 * 1.8, -60 + drop + lw2 * 7, 1.2, 8, '#7a8752');
-        P(tx - 3.5, -61 + drop, 5, 2.5, '#1c2014');        // the end caps
-        P(tx + 5.5, -20 + drop, 5, 2.5, '#1c2014');
-        P(tx - 1.4, -53 + drop, 4, 1.5, '#d8c040');        // the yellow band
-      }
       /* ---- head ---- */
       if (kit.robot) P(-1, -46 + drop, 3, 5, RB.piston); // a neck piston, not a neck
       else P(-2, -45 + drop, 5, 4, pal.dark);            // neck
