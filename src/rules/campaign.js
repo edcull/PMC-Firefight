@@ -2051,7 +2051,15 @@
     for (var t = 1; t <= 5; t++) {
       var need = comp.limits[t - 1][0] * pl - (credit[t] || 0);
       if (docs.indexOf('O2') >= 0 && t === tier) need = Math.ceil(need / 2);
-      for (var i = 0; i < need; i++) take(function (p) { return p.tier === t; });
+      /* each one taken only where it breaks no other limit — a second aircraft or Alpha
+         squad at Priority Level 1 would be trimmed later, the Tier left a unit short
+         when another on the roster would have filled it */
+      for (var i = 0; i < need; i++) {
+        take(function (p, e) {
+          return p.tier === t && !blocking(R.checkArmy(out.concat([e]).map(keyOf), tier, pl, docs, tactic).faults)
+            .some(function (f) { return !/Over budget/.test(f); });
+        }) || take(function (p) { return p.tier === t; });
+      }
     }
     for (var guard = 0; guard < 60; guard++) {
       var keys = out.map(keyOf);
