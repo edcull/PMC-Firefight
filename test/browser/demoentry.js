@@ -19,14 +19,24 @@ function ok(name, cond, note) {
   await p.goto('file://' + PAGE); await p.waitForTimeout(600);
 
   console.log('\n  an AI-against-AI meeting engagement');
-  await p.evaluate(() => window.PMC_NEWGAME({ tier: 3, pl: 1, mode: 'demo', aiSides: ['A', 'B'], planet: 'sparse', scenario: 'meeting',
-    nameA: 'A', nameB: 'B', armyA: window.PMC.rollArmy(3, 1), armyB: window.PMC.rollArmy(3, 1) }));
-  // the first look, as soon as the battle's first batch is in
-  await p.waitForFunction(() => window.PMC_STATE() && window.PMC_STATE().phase === 'battle' && window.__showQueue() > 0, null, { timeout: 20000 }).catch(() => {});
-  const first = await p.evaluate(() => {
-    const s = window.PMC_STATE(), on = s.units.filter((u) => u.alive && u.x >= 0 && !u.aboard);
-    return { on: on.length, waiting: on.filter((u) => window.__arrivalQueued(u.id)).length };
-  });
+  /* The first look, taken in the page on the first animation frame the battle's first
+     batch is queued — looked at from outside, a round trip later, the first walk-ons
+     have already played (and are rightly on the table). */
+  const first = await p.evaluate(() => new Promise((resolve) => {
+    const t0 = performance.now();
+    const look = () => {
+      const s = window.PMC_STATE();
+      if (s && s.phase === 'battle' && window.__showQueue() > 0) {
+        const on = s.units.filter((u) => u.alive && u.x >= 0 && !u.aboard);
+        return resolve({ on: on.length, waiting: on.filter((u) => window.__arrivalQueued(u.id)).length });
+      }
+      if (performance.now() - t0 > 20000) return resolve({ on: 0, waiting: 0 });
+      requestAnimationFrame(look);
+    };
+    requestAnimationFrame(look);
+    window.PMC_NEWGAME({ tier: 3, pl: 1, mode: 'demo', aiSides: ['A', 'B'], planet: 'sparse', scenario: 'meeting',
+      nameA: 'A', nameB: 'B', armyA: window.PMC.rollArmy(3, 1), armyB: window.PMC.rollArmy(3, 1) });
+  }));
   ok('the engine has the companies down at once', first.on > 6, first.on + ' on the table');
   ok('...but the table leaves off every unit whose walk-on is still to play', first.waiting >= first.on - 2,
     first.waiting + ' of ' + first.on + ' waiting');

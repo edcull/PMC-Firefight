@@ -31,17 +31,33 @@ async function battle(p) {
 async function watch(p, ms) {
   await p.evaluate(() => {
     const c0 = window.__cam();
-    window.__watch = { borrowed: false, moved: 0, aiTime: 0, last: null, z0: c0.z, minZ: c0.z };
+    window.__traceShow = [];
+    window.__watch = { borrowed: false, moved: 0, aiTime: 0, last: null, z0: c0.z, minZ: c0.z, needed: 0, seenShots: 0 };
     window.__watchT = setInterval(() => {
       const c = window.__cam(), w = window.__watch, s = window.PMC_STATE();
       if (c.borrowed) w.borrowed = true;
       /* Where the camera is headed, through the other side's activations only:
          the player's own taps aim it too, and it may still be easing there
          when the other side starts — that is not the other side moving it. */
+      /* Each of the other side's shots as it plays: did shooter and target fit on the
+         screen at the zoom the camera had? Only one that does not needs pulling back
+         for — worked out as the camera does (view.js fitShot). */
+      const tr = window.__traceShow || [];
+      for (; w.seenShots < tr.length; w.seenShots++) {
+        const t = tr[w.seenShots];
+        if (t.e !== 'shoot' || !t.to) continue;
+        const a = s.units.find(u => u.id === t.id), b = s.units.find(u => u.id === t.to);
+        if (!a || !b || a.side !== 'B') continue;
+        const I = window.PMCIso, pa = I.toScreen(a.x, a.y), pb = I.toScreen(b.x, b.y), cv = document.getElementById('board').getBoundingClientRect();
+        const need = Math.min(cv.width * 0.9 / (Math.abs(pa.x - pb.x) + 180), cv.height * 0.8 / (Math.abs(pa.y - pb.y) + 180));
+        if (need < w.z0) w.needed++;
+      }
       const theirs = s && s.phase === 'battle' && !window.__mySide();
+      /* The show plays behind the state: the other side's last shot can still be
+         playing, the camera borrowed for it, after the state has handed the turn back. */
+      if (theirs || c.borrowed) w.minZ = Math.min(w.minZ, c.z);
       if (theirs) {
         w.aiTime++;
-        w.minZ = Math.min(w.minZ, c.z);
         if (w.last && Math.hypot(c.tx - w.last.x, c.ty - w.last.y) > 1) {
           // aimed somewhere new: at one of theirs (chasing), or at one of the player's own (its own action replayed)?
           const me = s.cfg.aiSides.indexOf('A') < 0 ? 'A' : 'B', I = window.PMCIso;
@@ -58,7 +74,6 @@ async function watch(p, ms) {
     }, 40);
   });
   const t0 = Date.now();
-  await p.evaluate(() => { window.__traceShow = []; });
   // long enough to see the AI's turns, and (up to a limit) until it has fired at somebody
   const shot = () => p.evaluate(() => window.__traceShow.some(t => t.e === 'shoot' && t.id && window.PMC_STATE().units.some(u => u.id === t.id && u.side === 'B')));
   let firedAt = 0;
@@ -74,10 +89,10 @@ async function watch(p, ms) {
     });
     await p.waitForTimeout(80);
   }
-  return p.evaluate(() => {
+  return p.evaluate((fired) => {
     clearInterval(window.__watchT);
-    return window.__watch;
-  });
+    return Object.assign({}, window.__watch, { fired: fired });
+  }, !!firedAt);
 }
 
 (async () => {
@@ -114,7 +129,10 @@ async function watch(p, ms) {
   // a fresh battle for it (the first may be over): Follow, back on, carries into it
   await battle(p);
   ok('...and it carries into the next battle', await p.evaluate(() => document.getElementById('follow-toggle').classList.contains('on')));
-  // closer in, so an AI shot has room to pull the camera back
+  /* Closer in, and on a narrower window (the desktop layout still), so no shooter and
+     target fit on the screen at the zoom it has: every AI shot has to pull it back. */
+  await p.setViewportSize({ width: 1040, height: 950 });
+  await p.waitForTimeout(300);
   for (let i = 0; i < 6; i++) await p.evaluate(() => document.querySelector('#viewctl [data-zoom="in"]').click());
   // the two sides brought within a shot of each other as the battle starts, so the AI fires on its first go
   await p.evaluate(() => {
@@ -122,22 +140,27 @@ async function watch(p, ms) {
     const s = window.PMC_STATE(), mine = s.units.filter(u => u.side === 'A' && u.x >= 0 && !u.aboard);
     s.units.filter(u => u.side === 'B' && u.x >= 0 && !u.aboard).forEach((u, i) => {
       const m = mine[i % mine.length];
-      u.x = m.x + (i % 2 ? 3 : -3); u.y = m.y + (u.y > m.y ? 14 : -14);   // towards where they came from
+      // towards where they came from — and kept on the table: the player's line stands at its own edge
+      u.x = Math.max(2, Math.min(46, m.x + (i % 2 ? 3 : -3)));
+      u.y = Math.max(2, Math.min(46, m.y + (u.y > m.y ? 14 : -14)));
     });
   });
   await p.waitForTimeout(600);
   const on = await watch(p, 9000);
   ok('on again, the camera goes over to the AI\'s units', on.borrowed, JSON.stringify(on));
-  ok('...pulls back to take in the shooter and its target', on.minZ < on.z0, 'zoom ' + on.z0 + ' → ' + on.minZ.toFixed(2));
+  // (a shot whose shooter and target already fit on the screen rightly leaves the camera where it is: `needed` counts the ones that do not)
+  ok('...pulls back to take in the shooter and its target', on.needed > 0 && on.minZ < on.z0,
+    'zoom ' + on.z0 + ' → ' + on.minZ.toFixed(2) + ', ' + on.needed + ' shots needing it' + (on.fired ? '' : ', and the AI never fired'));
   // once it is the player's go again and the table is still, the camera is back as it was left
   let back = null;
   for (let i = 0; i < 80; i++) {
-    back = await p.evaluate(() => ({ mine: window.__mySide(), idle: !window.__busy() && window.__showQueue() === 0, c: window.__cam() }));
+    back = await p.evaluate(() => ({ mine: window.__mySide(), idle: !window.__busy() && window.__showQueue() === 0, c: window.__cam(),
+      over: !!window.PMC_STATE().over, turn: window.PMC_STATE().turn }));
     if (back.mine && back.idle && !back.c.borrowed) break;
     await drain(p);
     await p.waitForTimeout(150);
   }
-  ok('...and is put back as it was afterwards', back && !back.c.borrowed && Math.abs(back.c.z - on.z0) < 0.01, JSON.stringify(back && back.c));
+  ok('...and is put back as it was afterwards', back && !back.c.borrowed && Math.abs(back.c.z - on.z0) < 0.01, JSON.stringify(back && { c: back.c, over: back.over, turn: back.turn }));
   ok('the choice is kept', await p.evaluate(() => localStorage.getItem('pmc.followOther')) === 'on');
   await ctx.close();
 
