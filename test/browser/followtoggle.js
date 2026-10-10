@@ -140,7 +140,9 @@ async function watch(p, ms) {
     const s = window.PMC_STATE(), mine = s.units.filter(u => u.side === 'A' && u.x >= 0 && !u.aboard);
     s.units.filter(u => u.side === 'B' && u.x >= 0 && !u.aboard).forEach((u, i) => {
       const m = mine[i % mine.length];
-      u.x = m.x + (i % 2 ? 3 : -3); u.y = m.y + (u.y > m.y ? 14 : -14);   // towards where they came from
+      // towards where they came from — and kept on the table: the player's line stands at its own edge
+      u.x = Math.max(2, Math.min(46, m.x + (i % 2 ? 3 : -3)));
+      u.y = Math.max(2, Math.min(46, m.y + (u.y > m.y ? 14 : -14)));
     });
   });
   await p.waitForTimeout(600);
