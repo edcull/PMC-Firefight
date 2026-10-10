@@ -1019,7 +1019,7 @@
       }
 
       // a cautious squad next to an empty building takes it rather than standing in the open
-      if (!pull && (behaviour === 'defensive' || behaviour === 'neutral') && R.coverAt(E.state, u.x, u.y, u) === 0 && Math.random() < 0.7) {
+      if ((behaviour === 'defensive' || behaviour === 'neutral') && R.coverAt(E.state, u.x, u.y, u) === 0 && Math.random() < 0.7) {
         var ins = R.enterTargets(E.state, u);
         if (ins.length) {
           ins.sort(function (a, b) { return R.rectPointDist(a.rect, u.x, u.y) - R.rectPointDist(b.rect, u.x, u.y); });
@@ -1160,11 +1160,11 @@
     /* Ground that has to be taken (Secure and control, Find and secure): a computer side's
        unit that would only stand and shoot — a cautious squad, or any hull, which
        otherwise drives at the nearest enemy — makes for an objective its side does not
-       hold instead, and shoots after the move. One already at an objective stays there.
-       Not the solitaire OpFor, which keeps to its behaviour table (p. 147).
-       Returns the objective to make for, or null. */
+       hold instead, and shoots after the move. One already at an objective stays there,
+       and a pinned one looks to cover first (p. 34). Not the solitaire OpFor, which
+       keeps to its behaviour table (p. 147). Returns the objective to make for, or null. */
     function objectivePull(u) {
-      if (E.state.solo || !isAI(u.side) || R.isFlying(u)) return null;
+      if (E.state.solo || !isAI(u.side) || R.isFlying(u) || R.status(u) !== 'ready') return null;
       var id = E.state.scen && E.state.scen.id;
       if (id !== 'secure' && id !== 'find') return null;
       var goals = goalPoints();
