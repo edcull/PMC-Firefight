@@ -455,14 +455,21 @@
       if (net.events.length < 4000) net.events.push(e);
     }
     function ids(list) { return (list || []).map(function (d) { return { id: d.u.id, x: d.x, y: d.y }; }); }
+    /* How the units an attack names stood the moment it was over: the board fills their
+       bars to this, not to the state, which may already have run on into the Rally phase. */
+    function after(a, t) {
+      var o = {};
+      [a, t].forEach(function (u) { if (u && u.id) o[u.id] = { sp: u.sp, models: u.models, damage: u.damage }; });
+      return o;
+    }
     return {
       log: function (t, text, math) { rec({ e: 'log', t: t, text: text, math: math }); },
       card: function (card) { rec({ e: 'card', card: card }); },
       fx: function (f) { rec({ e: 'fx', f: f }); },
       move: function (u, path, follow) { rec({ e: 'move', id: u.id, path: path, follow: !!follow }); },
       // a shot at a unit names it; one at a piece of the table (a demolition) gives the spot
-      shoot: function (a, t, res, deaths) { rec({ e: 'shoot', from: a.id, to: t.id, at: t.id ? undefined : { x: t.x, y: t.y }, res: res, deaths: ids(deaths) }); },
-      assault: function (a, t, deaths) { rec({ e: 'assault', from: a.id, to: t.id, deaths: ids(deaths) }); },
+      shoot: function (a, t, res, deaths) { rec({ e: 'shoot', from: a.id, to: t.id, at: t.id ? undefined : { x: t.x, y: t.y }, res: res, deaths: ids(deaths), after: after(a, t) }); },
+      assault: function (a, t, deaths) { rec({ e: 'assault', from: a.id, to: t.id, deaths: ids(deaths), after: after(a, t) }); },
       strafe: function (u, from, to, deaths) { rec({ e: 'strafe', id: u.id, from: from, to: to, deaths: ids(deaths) }); },
       arrive: function (u, how, from, veh) { rec({ e: 'arrive', id: u.id, how: how, from: from || null, veh: veh ? veh.id : null }); },
       sound: function (what, args) { rec({ e: 'sound', what: what, args: args && args.length ? args : undefined }); },

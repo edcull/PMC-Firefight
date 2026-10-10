@@ -147,7 +147,10 @@
           if (held[id]) return;
           var was = shown[id], u = evUnit(id);
           if (!u || !was.alive) return;
-          if (was.models !== u.models || was.sp !== u.sp || was.alive !== u.alive || was.damage !== u.damage) held[id] = was;
+          // (what the attack itself left — the event's record — counts too: the Rally phase after may have undone it in the state)
+          var aft = ev.after && ev.after[id];
+          if (was.models !== u.models || was.sp !== u.sp || was.alive !== u.alive || was.damage !== u.damage ||
+              (aft && (aft.sp !== was.sp || aft.models !== was.models || aft.damage !== was.damage))) held[id] = was;
         });
       });
       /* A batch that runs on into the Rally phase (settle): what the phase does to a
@@ -159,6 +162,10 @@
       if (si < 0) return;
       var se = events[si], last = {};
       events.forEach(function (ev, i) { evIds(ev).forEach(function (id) { last[id] = i; }); });
+      /* ...and one the last activation did name — shot at, say — shows what that did
+         to it (fillSp, from the event's own record), and only what the phase does
+         after, at the pause: it is held till then, not let go when its shot is over. */
+      Object.keys(held).forEach(function (id) { if (last[id] !== undefined && last[id] < si) heldTill[id] = se; });
       B.state.units.forEach(function (su) {
         var was = shown[su.id];
         if (!was || !was.alive || held[su.id] || last[su.id] !== undefined) return;
@@ -190,14 +197,19 @@
     /* The Suppression a shot or an assault puts on a unit is not simply there once
        it has played: from the moment it lands the unit's bar fills (or empties)
        towards what the rules now say, over the rest of the attack. */
-    function fillSp(id, ms) {
+    /* `after`: how the attack left the unit (the event's own record). The state may
+       have run on past it — into the Rally phase, the unit's Suppression rallied off —
+       and the bar fills to what the attack did, not to that; the rest shows when the
+       phase plays (the unit stays held till then, holdForShow). */
+    function fillSp(id, ms, after) {
       var h = id && held[id], u = evUnit(id);
       if (!h || !u || !u.alive) return;
+      var to = (after && after[id]) || u;
       /* ...and the men it lost (a machine, its damage) show from the same moment:
          its Morale, and with it the bands of its bar, go down as they fall. */
-      h.models = u.models; h.damage = u.damage;
-      if (h.sp === u.sp) return;
-      h.spFill = { from: h.sp, to: u.sp, t0: nowMs(), dur: Math.max(200, ms) };
+      h.models = to.models; h.damage = to.damage;
+      if (h.sp === to.sp) return;
+      h.spFill = { from: h.sp, to: to.sp, t0: nowMs(), dur: Math.max(200, ms) };
     }
     function spNow(h) {
       var f = h.spFill;
@@ -385,7 +397,7 @@
           if (!(sa && sb)) return false;
           lookAtOther(ev.from);
           playShooting(sa, sb, ev.res || { hits: 0 }, deathsOf(ev.deaths), done || null,
-            function (ms) { fillSp(ev.to, ms); fillSp(ev.from, ms); });
+            function (ms) { fillSp(ev.to, ms, ev.after); fillSp(ev.from, ms, ev.after); });
           lookAtShot(sa, sb);                          // once the shot is playing, so it waits for it
           return !!done;
         }
@@ -394,7 +406,7 @@
           if (!(aa && ab)) return false;
           lookAtOther(ev.from);
           playAssault(aa, ab, deathsOf(ev.deaths), done || null,
-            function (ms) { fillSp(ev.to, ms); fillSp(ev.from, ms); });
+            function (ms) { fillSp(ev.to, ms, ev.after); fillSp(ev.from, ms, ev.after); });
           lookAtShot(aa, ab);
           return !!done;
         }

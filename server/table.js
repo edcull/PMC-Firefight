@@ -58,15 +58,21 @@ class Table {
     this.quiet = false;                            // replaying a kept battle: nothing is sent, nothing written
 
     const table = this;
+    const afterOf = (a, t) => {
+      const o = {};
+      [a, t].forEach((u) => { if (u && u.id) o[u.id] = { sp: u.sp, models: u.models, damage: u.damage }; });
+      return o;
+    };
     this.engine = Engine.create({
       log: (t, text, math) => table.rec({ e: 'log', t: t, text: text, math: math }),
       card: (card) => table.rec({ e: 'card', card: card }),
       fx: (f) => table.rec({ e: 'fx', f: f }),
       move: (u, path, follow) => table.rec({ e: 'move', id: u.id, path: path, follow: !!follow }),
+      // (`after`: how the two stood once it was over — the board fills their bars to that, see net.js)
       shoot: (a, t, res, deaths) => table.rec({
-        e: 'shoot', from: a.id, to: t.id, res: table.shotOf(res), deaths: table.deathsOf(deaths)
+        e: 'shoot', from: a.id, to: t.id, res: table.shotOf(res), deaths: table.deathsOf(deaths), after: afterOf(a, t)
       }),
-      assault: (a, t, deaths) => table.rec({ e: 'assault', from: a.id, to: t.id, deaths: table.deathsOf(deaths) }),
+      assault: (a, t, deaths) => table.rec({ e: 'assault', from: a.id, to: t.id, deaths: table.deathsOf(deaths), after: afterOf(a, t) }),
       strafe: (u, from, to, deaths) => table.rec({
         e: 'strafe', id: u.id, from: from, to: to, deaths: table.deathsOf(deaths)
       }),

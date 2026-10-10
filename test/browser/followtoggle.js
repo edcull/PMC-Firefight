@@ -39,9 +39,11 @@ async function watch(p, ms) {
          the player's own taps aim it too, and it may still be easing there
          when the other side starts — that is not the other side moving it. */
       const theirs = s && s.phase === 'battle' && !window.__mySide();
+      /* The show plays behind the state: the other side's last shot can still be
+         playing, the camera borrowed for it, after the state has handed the turn back. */
+      if (theirs || c.borrowed) w.minZ = Math.min(w.minZ, c.z);
       if (theirs) {
         w.aiTime++;
-        w.minZ = Math.min(w.minZ, c.z);
         if (w.last && Math.hypot(c.tx - w.last.x, c.ty - w.last.y) > 1) {
           // aimed somewhere new: at one of theirs (chasing), or at one of the player's own (its own action replayed)?
           const me = s.cfg.aiSides.indexOf('A') < 0 ? 'A' : 'B', I = window.PMCIso;
@@ -74,10 +76,10 @@ async function watch(p, ms) {
     });
     await p.waitForTimeout(80);
   }
-  return p.evaluate(() => {
+  return p.evaluate((fired) => {
     clearInterval(window.__watchT);
-    return window.__watch;
-  });
+    return Object.assign({}, window.__watch, { fired: fired });
+  }, !!firedAt);
 }
 
 (async () => {
@@ -128,16 +130,17 @@ async function watch(p, ms) {
   await p.waitForTimeout(600);
   const on = await watch(p, 9000);
   ok('on again, the camera goes over to the AI\'s units', on.borrowed, JSON.stringify(on));
-  ok('...pulls back to take in the shooter and its target', on.minZ < on.z0, 'zoom ' + on.z0 + ' → ' + on.minZ.toFixed(2));
+  ok('...pulls back to take in the shooter and its target', on.minZ < on.z0, 'zoom ' + on.z0 + ' → ' + on.minZ.toFixed(2) + (on.fired ? '' : ', and the AI never fired'));
   // once it is the player's go again and the table is still, the camera is back as it was left
   let back = null;
   for (let i = 0; i < 80; i++) {
-    back = await p.evaluate(() => ({ mine: window.__mySide(), idle: !window.__busy() && window.__showQueue() === 0, c: window.__cam() }));
+    back = await p.evaluate(() => ({ mine: window.__mySide(), idle: !window.__busy() && window.__showQueue() === 0, c: window.__cam(),
+      over: !!window.PMC_STATE().over, turn: window.PMC_STATE().turn }));
     if (back.mine && back.idle && !back.c.borrowed) break;
     await drain(p);
     await p.waitForTimeout(150);
   }
-  ok('...and is put back as it was afterwards', back && !back.c.borrowed && Math.abs(back.c.z - on.z0) < 0.01, JSON.stringify(back && back.c));
+  ok('...and is put back as it was afterwards', back && !back.c.borrowed && Math.abs(back.c.z - on.z0) < 0.01, JSON.stringify(back && { c: back.c, over: back.over, turn: back.turn }));
   ok('the choice is kept', await p.evaluate(() => localStorage.getItem('pmc.followOther')) === 'on');
   await ctx.close();
 
