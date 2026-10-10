@@ -591,8 +591,9 @@
     ROLES.deserterrk = ROLES.deserter.map(rolled);
     ROLES.conscript = ROLES.conscript.map(rolled);
     ROLES.rider = ROLES.militia.map(mounted);
-    /* The Mounted Warriors ride with a Molotov in hand; from the rider warriors
-       up, the third man carries the squad's RPG instead. */
+    /* The Mounted Warriors: the leader with nothing in his hands, then a
+       Molotov, the squad's RPG (from the rider warriors up; a second Molotov
+       in a rider gang) and a pistol. */
     function armed(r, gun) {
       if (KIT[r].gun === gun) return r;
       var k = r + gun;
@@ -604,8 +605,9 @@
       }
       return k;
     }
-    var withRpg = function (k, i) { return armed(k, i === 2 ? 'rpg' : 'molotov'); };
-    ROLES.ridergang = ROLES.ridergang.map(function (k) { return armed(k, 'molotov'); });
+    var RIDER_GUNS = ['none', 'molotov', 'rpg', 'pistol'];
+    var withRpg = function (k, i) { return armed(k, RIDER_GUNS[Math.min(i, 3)]); };
+    ROLES.ridergang = ROLES.ridergang.map(function (k, i) { return armed(k, i === 2 ? 'molotov' : RIDER_GUNS[Math.min(i, 3)]); });
     ROLES.rider = ROLES.rider.map(withRpg);
     ROLES.hellrider = ROLES.hellrider.map(withRpg);
     ROLES.legendrider = ROLES.legendrider.map(withRpg);
@@ -777,13 +779,6 @@
         P(px + 6, -36 + drop, 1, 18, 'rgba(255,255,255,.12)');
       }
       PARTS.pack(P, drop, kit, pal, px);
-      if (kit.law) {                                      // a disposable anti-tank tube slung across the pack, sights folded
-        for (var lw = 0; lw < 6; lw++) P(px + 1 + lw * 1.6, -60 + drop + lw * 7, 4, 8, '#4b5532');
-        for (var lw2 = 0; lw2 < 6; lw2++) P(px + 1 + lw2 * 1.6, -60 + drop + lw2 * 7, 1.2, 8, '#7a8752');
-        P(px + 0.5, -61 + drop, 5, 2.5, '#1c2014');        // the end caps
-        P(px + 8.5, -20 + drop, 5, 2.5, '#1c2014');
-        P(px + 2.6, -53 + drop, 4, 1.5, '#d8c040');        // the yellow band
-      }
 
       if (kit.armoured) armourPack(P, pal, drop, px);
       if (PACK_DETAIL[kit.pack]) PACK_DETAIL[kit.pack](P, pal, drop, px);
@@ -792,6 +787,13 @@
       PARTS.torso(P, b, carve, drop, kit, pal, pose, sw, tw, tx);
       /* ---- arms ---- */
       PARTS.arms(P, b, drop, kit, pal, pose, step, tw, tx);
+      if (kit.law) {                                      // a disposable anti-tank tube slung over the near shoulder, sights folded
+        for (var lw = 0; lw < 6; lw++) P(tx - 3 + lw * 1.8, -60 + drop + lw * 7, 4, 8, '#4b5532');
+        for (var lw2 = 0; lw2 < 6; lw2++) P(tx - 3 + lw2 * 1.8, -60 + drop + lw2 * 7, 1.2, 8, '#7a8752');
+        P(tx - 3.5, -61 + drop, 5, 2.5, '#1c2014');        // the end caps
+        P(tx + 5.5, -20 + drop, 5, 2.5, '#1c2014');
+        P(tx - 1.4, -53 + drop, 4, 1.5, '#d8c040');        // the yellow band
+      }
       /* ---- head ---- */
       if (kit.robot) P(-1, -46 + drop, 3, 5, RB.piston); // a neck piston, not a neck
       else P(-2, -45 + drop, 5, 4, pal.dark);            // neck

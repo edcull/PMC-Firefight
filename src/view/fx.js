@@ -149,6 +149,19 @@
           I.PIXEL * (cl % 2 ? 1.5 : 1), I.PIXEL * (cl % 2 ? 1.5 : 1), 'rgba(58,46,34,' + (1 - Math.max(0, k - 0.6) * 2.5) + ')');
       }
     }
+    /* The Xenotripods' charges going off: a shockwave of blue plasma thrown out
+       in a ring, a white flash and a dome of blue fire over the spot. */
+    function plasmaAt(g, rb, k, rgb) {
+      var orr = 1.8 * I.K;
+      g.save();
+      g.strokeStyle = 'rgba(' + rgb + ',' + (0.9 * (1 - k)) + ')';
+      g.lineWidth = I.PIXEL * 2.5 * (1 - k * 0.6);
+      g.beginPath(); g.ellipse(rb.x, rb.y, orr * (0.2 + k), orr * (0.1 + k * 0.5), 0, 0, Math.PI * 2); g.stroke();
+      g.restore();
+      if (k < 0.4) I.ellipse(g, rb.x, rb.y - I.K * 0.4, I.K * 0.8 * (1 - k * 2), I.K * 0.65 * (1 - k * 2), 'rgba(255,255,255,' + (0.9 - k * 2) + ')');
+      if (k < 0.7) I.ellipse(g, rb.x, rb.y - I.K * 0.45 * (1 - k), orr * 0.45 * (1 - k * 0.6), orr * 0.38 * (1 - k * 0.6), 'rgba(' + rgb + ',' + (0.55 * (1 - k / 0.7)) + ')');
+      I.ellipse(g, rb.x, rb.y, orr * 0.5 * (1 - k * 0.5), orr * 0.25 * (1 - k * 0.5), 'rgba(' + rgb + ',' + (0.35 * (1 - k)) + ')');
+    }
     function start(f, h) {
       var q = I.toScreen(f.from.x, f.from.y), mz = f.from.mz;
       if (mz) { q.x += mz.dx; q.y += mz.dy - liftA(f); } else q.y -= liftA(f) + h;
@@ -1028,7 +1041,8 @@
         g.restore();
       } else if (f.kind === 'charges') {
         /* Sappers: demolition charges set around a point, flashing red, faster
-           and faster — then all going off together, each in a fragmentation blast. */
+           and faster — then all going off together, each in a fragmentation blast
+           (`xeno`: a shockwave of blue plasma). */
         var cp = I.toScreen(f.x, f.y); cp.y -= liftAt(f);
         var cn = f.n || 4, cr = (f.r || 1.5) * I.K * 0.72, boom = 0.45;
         for (var ci = 0; ci < cn; ci++) {
@@ -1045,7 +1059,8 @@
               I.ellipse(g, cx, cy - I.PIXEL * 1.5, I.PIXEL * 1.3, I.PIXEL * 1.3, 'rgba(255,60,40,0.95)');
             }
           } else {
-            fragAt(g, { seed: ci, t0: f.t0, scale: 0.9 }, { x: cx, y: cy }, (k - boom) / (1 - boom));
+            if (f.xeno) plasmaAt(g, { x: cx, y: cy }, (k - boom) / (1 - boom), '110,190,255');
+            else fragAt(g, { seed: ci, t0: f.t0, scale: 0.9 }, { x: cx, y: cy }, (k - boom) / (1 - boom));
           }
         }
       } else if (f.kind === 'collar') {

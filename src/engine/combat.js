@@ -345,7 +345,7 @@
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
       var mid = { x: piece.x + piece.w / 2, y: piece.y + piece.h / 2 };
       // Sappers set their charges round the piece first; anyone else just goes at it
-      if (R.has(u, 'Sappers')) addFx({ kind: 'charges', x: mid.x, y: mid.y, r: Math.min(piece.w, piece.h) / 2 + 0.5, n: 5, dur: 1400, blocking: true });
+      if (R.has(u, 'Sappers')) addFx({ kind: 'charges', x: mid.x, y: mid.y, r: Math.min(piece.w, piece.h) / 2 + 0.5, n: 5, dur: 1400, blocking: true, xeno: R.isXeno(u) });
       addFx({ kind: 'clash', x: mid.x, y: mid.y, delay: R.has(u, 'Sappers') ? 850 : 0, dur: R.has(u, 'Sappers') ? 1270 : 420 });
       if (res.result) whenIdle(function () { repaintTerrain([res.result]); });
       pushRes(fromLog('Demolition charges', u.name + ' → ' + piece.kind, u.side, res.log));
