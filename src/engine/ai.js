@@ -413,6 +413,8 @@
         }
         // Reasonably Defensive or Neutral: engage from where it stands, or keep its distance
         if (bh === 'defensive' || bh === 'neutral') {
+          var pullB = !shot.forced ? objectivePull(u) : null;
+          if (pullB) return aiRoll(u, pullB, false, { close: true });
           if (shot.t) { fire(u, shot.t, 'fire'); return; }
           // Neutral "holds its position" (p. 147) as Defensive does: a hull has no cover to make for
           logLine('ai', u.label + (bh === 'defensive' ? ' holds back.' : ' holds its position.'));
@@ -436,6 +438,8 @@
         u.activated = true; endActivation(); return;
       }
 
+      var pullV = !shot.forced ? objectivePull(u) : null;
+      if (pullV) return aiRoll(u, pullV, false, { close: true });
       if (shot.t && shot.score > 0.35) { fire(u, shot.t, 'fire'); return; }
       /* Attacking a held position (assaultPlan), a hull works toward the objective, not
          the nearest enemy: out ahead of the force it waits for the rest, and when the
@@ -489,7 +493,7 @@
       /* Either an Advance — its Movement, then a shot — or a Move: Movement and the
          +4" (p. 36), with no shot after it. A hull told not to shoot, carrying a
          Cumbersome Weapon (which may not advance, p. 57) or with no gun takes the Move. */
-      var advance = !o.noShoot && u.fp != null && !R.has(u, 'Cumbersome Weapon');
+      var advance = !o.noShoot && u.fp != null && !R.has(u, 'Cumbersome Weapon') && !outOfReach(u);
       var allowance = advance ? u.move : u.move + moveBonus(u, 'move');
       var spots = R.reachable(E.state, u, allowance).filter(function (c) { return canStand(u, c); }), best = null, bestD = Infinity;
       var want = cautious ? 6 : Math.max(4, u.range * 0.45);
@@ -661,6 +665,15 @@
         if (th > best.threat + 0.05 || (Math.abs(th - best.threat) <= 0.05 && e > best.score)) best = { t: t, score: e, threat: th };
       });
       return best.t ? best : forced;
+    }
+
+    /* A computer side's unit with no enemy it could reach to shoot after an Advance
+       takes the Move instead — its Movement and the +4" (p. 36) — rather than walking
+       short for a shot it will not have. (Not the solitaire OpFor: p. 147 says Advance.) */
+    function outOfReach(u) {
+      if (E.state.solo || !isAI(u.side) || u.fp == null) return false;
+      var ne = nearestEnemy(u);
+      return !ne || ne.dist > u.move + (u.range || 0) + 1;
     }
 
     function nearestEnemy(u) {
@@ -999,13 +1012,14 @@
          cover for a better shot. So: a spot within Movement with better cover than
          here, from which its best shot is at least as good as the one it has; else
          it fires from where it is, or holds. */
-      if (soloI && behaviour === 'neutral') { neutralHold(u, shot); return; }
-      if ((behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4) {
+      var pull = (behaviour === 'defensive' || behaviour === 'neutral') && !shot.forced ? objectivePull(u) : null;
+      if (soloI && behaviour === 'neutral' && !pull) { neutralHold(u, shot); return; }
+      if (!pull && (behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4) {
         fire(u, shot.t, 'fire'); return;
       }
 
       // a cautious squad next to an empty building takes it rather than standing in the open
-      if ((behaviour === 'defensive' || behaviour === 'neutral') && R.coverAt(E.state, u.x, u.y, u) === 0 && Math.random() < 0.7) {
+      if (!pull && (behaviour === 'defensive' || behaviour === 'neutral') && R.coverAt(E.state, u.x, u.y, u) === 0 && Math.random() < 0.7) {
         var ins = R.enterTargets(E.state, u);
         if (ins.length) {
           ins.sort(function (a, b) { return R.rectPointDist(a.rect, u.x, u.y) - R.rectPointDist(b.rect, u.x, u.y); });
@@ -1016,7 +1030,7 @@
       var goal = pickGoal(u, behaviour);
       /* An Advance (Movement, then a shot) unless it is running, charging in, or
          carries a Cumbersome Weapon, which may not advance (p. 57): that is a Move. */
-      var noAdv = R.has(u, 'Cumbersome Weapon');
+      var noAdv = R.has(u, 'Cumbersome Weapon') || outOfReach(u);
       var allowance = behaviour === 'flee' || killAll || noAdv ? u.move + moveBonus(u, 'move') : u.move;
       var look = R.groundLookup(E.state);             // the ground under every spot, read off the shared grid
       var here = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look);
@@ -1038,7 +1052,7 @@
         soloAfterMove(u);
         if (u.x < 0) { u.activated = true; endActivation(u); return; }
       }
-      if (behaviour !== 'flee' && !killAll && !R.campFlag(u, 'noAdvance')) {
+      if (behaviour !== 'flee' && !killAll && !noAdv && !R.campFlag(u, 'noAdvance')) {
         var t2 = bestTarget(u, 'advance');
         if (t2.t && t2.score > 0.2) {
           whenIdle(function () { if (E.state && !E.state.over && u.alive) fire(u, t2.t, 'advance'); });
@@ -1141,6 +1155,22 @@
       if (shot.t && shot.score > 0) { fire(u, shot.t, 'fire'); return; }
       logLine('ai', u.label + ' holds its position.');
       u.activated = true; endActivation(u);
+    }
+
+    /* Ground that has to be taken (Secure and control, Find and secure): a computer side's
+       unit that would only stand and shoot — a cautious squad, or any hull, which
+       otherwise drives at the nearest enemy — makes for an objective its side does not
+       hold instead, and shoots after the move. One already at an objective stays there.
+       Not the solitaire OpFor, which keeps to its behaviour table (p. 147).
+       Returns the objective to make for, or null. */
+    function objectivePull(u) {
+      if (E.state.solo || !isAI(u.side) || R.isFlying(u)) return null;
+      var id = E.state.scen && E.state.scen.id;
+      if (id !== 'secure' && id !== 'find') return null;
+      var goals = goalPoints();
+      if (!goals.length || goals.some(function (o) { return objDist(u, o) <= objReach(o); })) return null;
+      var o = pickGoal(u, 'neutral');
+      return o && goals.indexOf(o) >= 0 && o.owner !== u.side ? o : null;
     }
 
     function pickGoal(u, behaviour) {
