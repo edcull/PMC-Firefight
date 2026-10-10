@@ -187,13 +187,8 @@
        and shoots what it can from there; it never takes troops off the line and never
        drives at the enemy. Hands back false when the ordinary orders should run instead
        (an empty hull with a good shot rolls its behaviour as before). */
-    function foeGap(p) {
-      var d = Infinity;
-      E.state.units.forEach(function (e) {
-        if (e.alive && e.side !== p.side && onTable(e) && !husk(e)) d = Math.min(d, R.inches(p.x, p.y, e.x, e.y));
-      });
-      return d;
-    }
+    // how far the nearest enemy stands from a point ({ x, y, side }), centre to centre
+    function foeGap(p) { var c = closestFoe(p, function (e) { return R.inches(p.x, p.y, e.x, e.y); }); return c ? c.dist : Infinity; }
     /* At a spot: how many enemies could shoot the hull there now (`seen`: in range and
        sight), how many could after their own move (`threat`: within their Movement and
        range, sight or not), and how many it could shoot itself (`sees`). */
@@ -561,12 +556,8 @@
       return best;
     }
 
-    // how far a unit stands from the nearest of the other side's units on the table
-    function gapToFoes(u) {
-      var d = Infinity;
-      E.state.units.forEach(function (e) { if (onTable(e) && e.side !== u.side) d = Math.min(d, R.unitDist(u, e)); });
-      return d;
-    }
+    // how far a unit stands from the nearest of the other side's units on the table, base to base
+    function gapToFoes(u) { var ne = nearestEnemy(u); return ne ? ne.dist : Infinity; }
 
     // a scenario may put ground off limits: the VIP's leash, the safe zone the OpFor cannot enter
     // of the spots given, the one nearest p (null if there are none)
@@ -727,26 +718,34 @@
        takes the Move instead — its Movement and the +4" (p. 36) — rather than walking
        short for a shot it will not have. (Not the solitaire OpFor: p. 147 says Advance.) */
     function outOfReach(u) {
-      if (E.state.solo || !isAI(u.side) || u.fp == null) return false;
+      if (!companyAI(u) || u.fp == null) return false;
       var ne = nearestEnemy(u);
       return !ne || ne.dist > u.move + (u.range || 0) + 1;
     }
 
-    function nearestEnemy(u) {
+    /* The nearest enemy to `p` (a unit, or a point with a side) by `measure`, as
+       { unit, dist }, or null. Only enemies on the table: one waiting in reserve sits
+       off its corner, and chasing it walks nowhere. An empty insertion platform is
+       scenery (husk), not an enemy. */
+    function closestFoe(p, measure) {
       var best = null, bd = Infinity;
       E.state.units.forEach(function (t) {
-        // only enemies on the table: one waiting in reserve sits off its corner, and chasing it walks nowhere
-        if (!t.alive || t.side === u.side || !onTable(t) || husk(t)) return;
-        var d = R.unitDist(u, t);
+        if (!t.alive || t.side === p.side || !onTable(t) || husk(t)) return;
+        var d = measure(t);
         if (d < bd) { bd = d; best = t; }
       });
       return best ? { unit: best, dist: bd } : null;
     }
+    function nearestEnemy(u) { return closestFoe(u, function (t) { return R.unitDist(u, t); }); }
 
     /* Who plays the behaviour table in full (p. 147): the solitaire OpFor, and any
        side the computer runs in a campaign, contract or skirmish. */
     function tableAI(u) { return (!!E.state.solo && u.side === 'B') || isAI(u.side); }
     function soloOpFor(u) { return !!E.state.solo && u.side === 'B'; }
+    /* A side the computer runs in a campaign, contract or skirmish — not the solitaire
+       OpFor, which keeps to the book's behaviour table (p. 147). The play this side's
+       AI adds of its own (making for objectives, taking the Move) is for these only. */
+    function companyAI(u) { return !E.state.solo && isAI(u.side); }
 
     /* An AI side attacking a held position — Demolish (p. 54), Hostile takeover
        (p. 55) — plays it as an attack, not a firefight at the range it happened to
@@ -763,7 +762,7 @@
       if (curPlan && curPlan.u === u && curPlan.turn === E.state.turn) return curPlan.ap;
       var s = E.state, sc = s.sc || {};
       if (!sc.attacker || u.side !== sc.attacker || !tableAI(u) || soloOpFor(u)) return null;
-      if (!s.scen || (s.scen.id !== 'demolish' && s.scen.id !== 'takeover')) return null;
+      if (!s.scen || !s.scen.heldPosition) return null;
       var o = (s.objectives || [])[0];
       if (!o) return null;
       var ds = s.units.filter(function (f) {
@@ -1227,9 +1226,8 @@
        and a pinned one looks to cover first (p. 34). Not the solitaire OpFor, which
        keeps to its behaviour table (p. 147). Returns the objective to make for, or null. */
     function objectivePull(u) {
-      if (E.state.solo || !isAI(u.side) || R.isFlying(u) || R.status(u) !== 'ready') return null;
-      var id = E.state.scen && E.state.scen.id;
-      if (id !== 'secure' && id !== 'find') return null;
+      if (!companyAI(u) || R.isFlying(u) || R.status(u) !== 'ready') return null;
+      if (!E.state.scen || !E.state.scen.groundTaking) return null;
       var goals = goalPoints();
       if (!goals.length || goals.some(function (o) { return objDist(u, o) <= objReach(o); })) return null;
       var o = pickGoal(u, 'neutral');

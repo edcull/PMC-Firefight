@@ -182,7 +182,9 @@
 
       /* Into base-to-base contact — against a garrison, up against its wall. A unit
          going at the next section of its own building stays where it is. */
-      var held = t.bld ? { piece: t.bld, sec: t.sec || 0 } : null;
+      // (the wing itself is kept: one brought down in the fight is spliced out, and the numbers after it close up)
+      var wingsOf = function (r) { return r.parts && r.parts.length ? r.parts : [r]; };
+      var held = t.bld ? { piece: t.bld, sec: t.sec || 0, wing: wingsOf(t.bld)[t.sec || 0] } : null;
       /* ...from the end of the route it took, not along the straight line from
          where it began: that line may run through the building it went round. */
       var went = opts.path && opts.path.length ? opts.path[opts.path.length - 1] : null;
@@ -250,7 +252,9 @@
       }
       /* "If the attackers win, they occupy the building and the defenders leave it
          and fall back 2"" (p. 41). */
-      if (held && a.alive && status(a) !== 'broken' && (!t.alive || t.bld !== held.piece) &&
+      // the wing they held as it is numbered now — none, if it came down in the fight
+      if (held) held.sec = wingsOf(held.piece).indexOf(held.wing);
+      if (held && held.sec >= 0 && a.alive && status(a) !== 'broken' && (!t.alive || t.bld !== held.piece) &&
         enterable(held.piece) && !occupant(state, held.piece, held.sec)) {
         if (!t.alive && t.bld) { t.bld = null; t.sec = null; }
         /* only a unit that may garrison moves in: a Rider unit "cannot occupy a

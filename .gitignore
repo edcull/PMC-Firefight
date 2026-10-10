@@ -12,3 +12,6 @@ test/art/diff/
 
 # the bundle scripts/bundle.js makes (the published site is built in CI)
 dist/
+
+# balance simulation output (scripts/balance)
+/balance/

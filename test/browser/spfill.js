@@ -46,16 +46,16 @@ function ok(name, cond, note) {
       e.def = 2;                                  // a soft target, so men fall and its Morale with them
       const before = e.sp, moraleBefore = window.PMC.currentMorale(e);
       window.__shootAt(e.id);
-      const seen = [], lit = [], mor = [];
+      const seen = [], lit = [], mor = [], at = [];
       const litNow = () => window.PMCIso.spSegments(window.__shownSp(e.id), window.__shownMorale(e.id)).filter(q => q.lit).length;
       for (let i = 0; i < 200; i++) {
-        seen.push(window.__shownSp(e.id)); lit.push(litNow()); mor.push(window.__shownMorale(e.id));
+        seen.push(window.__shownSp(e.id)); lit.push(litNow()); mor.push(window.__shownMorale(e.id)); at.push(performance.now());
         await new Promise(r => setTimeout(r, 15));
         if (i > 30 && !window.__busy() && !window.__showQueue()) break;
       }
       // what it is drawn with once all of it has played, taken fresh rather than the last sample in flight
       await new Promise(r => setTimeout(r, 400));
-      return { before, after: e.sp, alive: e.alive, seen, lit, mor, moraleBefore, moraleAfter: e.alive ? window.PMC.currentMorale(e) : null,
+      return { before, after: e.sp, alive: e.alive, seen, lit, mor, at, moraleBefore, moraleAfter: e.alive ? window.PMC.currentMorale(e) : null,
         settled: window.__shownSp(e.id), litSettled: litNow() };
     });
     if (got.none) break;
@@ -70,9 +70,13 @@ function ok(name, cond, note) {
     ok('...and ends on what the rules gave it', got.settled === got.after, String(got.settled));
     ok('...having shown what it had until the rounds landed', got.seen[0] === got.before, String(got.seen[0]));
     // the bar's segments: from what it had lit, each one in turn, to one an SP it now has
-    const steps = got.lit.filter((v, i) => i === 0 || v !== got.lit[i - 1]);
-    ok('its segments lit one after another', steps[0] === got.before && steps.every((v, i) => i === 0 || v === steps[i - 1] + 1),
-      steps.join(' → '));
+    /* A sample is taken every 15ms, but a busy machine can hold one back, and the bar
+       goes on filling meanwhile: a segment skipped across a sample that came late
+       (over 50ms after the one before) is the sampler's, not the bar's. */
+    const steps = [], late = [];
+    got.lit.forEach((v, i) => { if (i === 0 || v !== got.lit[i - 1]) { steps.push(v); late.push(i > 0 && got.at[i] - got.at[i - 1] > 50); } });
+    ok('its segments lit one after another', steps[0] === got.before && steps.every((v, i) => i === 0 || v === steps[i - 1] + 1 || (late[i] && v > steps[i - 1])),
+      steps.map((v, i) => (late[i] ? '(late) ' : '') + v).join(' → '));
     ok('...each for a while, not all at once', got.after - got.before < 2 || new Set(got.lit).size >= 3, new Set(got.lit).size + ' counts seen');
     ok('...ending with one lit an SP', got.litSettled === got.after, got.litSettled + ' lit');
     // the bands are as wide as its Morale as it stands: men lost bring them in, as they fall
