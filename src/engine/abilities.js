@@ -74,7 +74,7 @@
       }
       // Sappers: charges set against the wall or building the enemy is sheltering behind
       var cover = a && t && !noSap && R.has(a, 'Sappers') && !R.isMachine(t) ? R.shelterOf(st, a, t) : null;
-      if (cover) addFx({ kind: 'charges', x: cover.x + cover.w / 2, y: cover.y + cover.h / 2, r: Math.min(cover.w, cover.h) / 2 + 0.5, dur: 1300 });
+      if (cover) addFx({ kind: 'charges', x: cover.x + cover.w / 2, y: cover.y + cover.h / 2, r: Math.min(cover.w, cover.h) / 2 + 0.5, dur: 1300, xeno: R.isXeno(a) });
       var route = a && t && !a.bld ? R.chargeRoute(st, a, t, chargeAllow(a) + 0.5) : null;
       var res = R.assault(st, a, t, { path: route ? route.path : null, martyr: martyr || {}, noSap: !!noSap });
       abilityFx(res, t, null, trails);
