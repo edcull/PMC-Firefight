@@ -100,6 +100,68 @@
       var q = I.toScreen(e.x, e.y);
       return { x: q.x, y: q.y - lift(e.x, e.y) - (e.up || 0) - I.K * 1.3 };
     }
+    /* A fragmentation blast at the screen point `rb`, `k` of the way through:
+       a grenade's or shell's burst ('fragburst'), and each demolition charge's. */
+    function fragAt(g, f, rb, k) {
+      var R0 = I.K * (f.scale || 1);
+      var sd2 = (f.seed || 0) * 2.3 + f.t0 * 0.001;
+      // the scorch, darkening in and fading out
+      I.ellipse(g, rb.x, rb.y, R0 * 0.7, R0 * 0.33, 'rgba(24,20,16,' + (0.5 * Math.min(1, k * 6) * (1 - k * 0.6)) + ')');
+      // the flash: white, then orange, gone in a moment
+      if (k < 0.16) {
+        var fk2 = k / 0.16;
+        I.ellipse(g, rb.x, rb.y - R0 * 0.3, R0 * (0.5 + fk2 * 0.7), R0 * (0.42 + fk2 * 0.5), 'rgba(255,' + Math.round(220 - fk2 * 80) + ',' + Math.round(120 - fk2 * 80) + ',' + (0.85 * (1 - fk2) * (1 - fk2)) + ')');
+        I.ellipse(g, rb.x, rb.y - R0 * 0.3, R0 * 0.38 * (1 - fk2 * 0.5), R0 * 0.32 * (1 - fk2 * 0.5), 'rgba(255,252,230,' + (1 - fk2) + ')');
+      }
+      // splinters: thin bright streaks racing outwards, fading as they go
+      if (k < 0.35) {
+        var sk = k / 0.35;
+        g.save();
+        g.lineCap = 'round';
+        for (var sp2 = 0; sp2 < 14; sp2++) {
+          var sa2 = sp2 * (Math.PI * 2 / 14) + Math.sin(sp2 * 3.1 + sd2) * 0.2;
+          var r1 = R0 * (0.2 + sk * 1.6), r2 = R0 * (0.05 + sk * 1.25);
+          g.strokeStyle = 'rgba(255,' + (200 + (sp2 % 3) * 18) + ',140,' + (0.9 * (1 - sk)) + ')';
+          g.lineWidth = Math.max(1, I.PIXEL * 0.7);
+          g.beginPath();
+          g.moveTo(rb.x + Math.cos(sa2) * r2, rb.y - R0 * 0.15 + Math.sin(sa2) * r2 * 0.5);
+          g.lineTo(rb.x + Math.cos(sa2) * r1, rb.y - R0 * 0.15 + Math.sin(sa2) * r1 * 0.5);
+          g.stroke();
+        }
+        g.restore();
+      }
+      // the dust and smoke thrown out low, rolling and thinning
+      for (var dc = 0; dc < 10; dc++) {
+        var da = dc * 0.63 + sd2, dk = Math.min(1, k * 1.8);
+        var dd = R0 * (0.15 + dk * (0.55 + (dc % 3) * 0.15));
+        var dsz = R0 * (0.16 + dk * 0.28);
+        I.ellipse(g, rb.x + Math.cos(da) * dd, rb.y + Math.sin(da) * dd * 0.45 - dk * R0 * (0.15 + (dc % 2) * 0.2),
+          dsz, dsz * 0.75, (dc % 3 ? 'rgba(116,104,88,' : 'rgba(70,64,58,') + (0.65 * (1 - k) * Math.min(1, Math.max(0, (k - 0.06) * 6))) + ')');
+      }
+      // a puff of dark smoke climbing off the middle
+      I.ellipse(g, rb.x, rb.y - R0 * (0.3 + k * 0.9), R0 * (0.2 + k * 0.35), R0 * (0.17 + k * 0.28), 'rgba(52,48,44,' + (0.55 * (1 - k)) + ')');
+      // clods of earth thrown up and coming back down
+      for (var cl = 0; cl < 7; cl++) {
+        var ca2 = cl * 0.9 + sd2, ck = Math.min(1, k * 1.4);
+        var cdist = ck * R0 * (0.6 + (cl % 3) * 0.3);
+        var cup = Math.sin(Math.PI * ck) * R0 * (0.7 + (cl % 2) * 0.4);
+        I.rect(g, rb.x + Math.cos(ca2) * cdist, rb.y + Math.sin(ca2) * cdist * 0.5 - cup,
+          I.PIXEL * (cl % 2 ? 1.5 : 1), I.PIXEL * (cl % 2 ? 1.5 : 1), 'rgba(58,46,34,' + (1 - Math.max(0, k - 0.6) * 2.5) + ')');
+      }
+    }
+    /* The Xenotripods' charges going off: a shockwave of blue plasma thrown out
+       in a ring, a white flash and a dome of blue fire over the spot. */
+    function plasmaAt(g, rb, k, rgb) {
+      var orr = 1.8 * I.K;
+      g.save();
+      g.strokeStyle = 'rgba(' + rgb + ',' + (0.9 * (1 - k)) + ')';
+      g.lineWidth = I.PIXEL * 2.5 * (1 - k * 0.6);
+      g.beginPath(); g.ellipse(rb.x, rb.y, orr * (0.2 + k), orr * (0.1 + k * 0.5), 0, 0, Math.PI * 2); g.stroke();
+      g.restore();
+      if (k < 0.4) I.ellipse(g, rb.x, rb.y - I.K * 0.4, I.K * 0.8 * (1 - k * 2), I.K * 0.65 * (1 - k * 2), 'rgba(255,255,255,' + (0.9 - k * 2) + ')');
+      if (k < 0.7) I.ellipse(g, rb.x, rb.y - I.K * 0.45 * (1 - k), orr * 0.45 * (1 - k * 0.6), orr * 0.38 * (1 - k * 0.6), 'rgba(' + rgb + ',' + (0.55 * (1 - k / 0.7)) + ')');
+      I.ellipse(g, rb.x, rb.y, orr * 0.5 * (1 - k * 0.5), orr * 0.25 * (1 - k * 0.5), 'rgba(' + rgb + ',' + (0.35 * (1 - k)) + ')');
+    }
     function start(f, h) {
       var q = I.toScreen(f.from.x, f.from.y), mz = f.from.mz;
       if (mz) { q.x += mz.dx; q.y += mz.dy - liftA(f); } else q.y -= liftA(f) + h;
@@ -753,51 +815,7 @@
            out low, splinters streaking away in every direction, clods of earth
            thrown up and falling back, and a scorch left on the ground. */
         var rb = I.toScreen(f.x, f.y); rb.y -= liftAt(f);
-        var R0 = I.K * (f.scale || 1);
-        var sd2 = (f.seed || 0) * 2.3 + f.t0 * 0.001;
-        // the scorch, darkening in and fading out
-        I.ellipse(g, rb.x, rb.y, R0 * 0.7, R0 * 0.33, 'rgba(24,20,16,' + (0.5 * Math.min(1, k * 6) * (1 - k * 0.6)) + ')');
-        // the flash: white, then orange, gone in a moment
-        if (k < 0.16) {
-          var fk2 = k / 0.16;
-          I.ellipse(g, rb.x, rb.y - R0 * 0.3, R0 * (0.5 + fk2 * 0.7), R0 * (0.42 + fk2 * 0.5), 'rgba(255,' + Math.round(220 - fk2 * 80) + ',' + Math.round(120 - fk2 * 80) + ',' + (0.85 * (1 - fk2) * (1 - fk2)) + ')');
-          I.ellipse(g, rb.x, rb.y - R0 * 0.3, R0 * 0.38 * (1 - fk2 * 0.5), R0 * 0.32 * (1 - fk2 * 0.5), 'rgba(255,252,230,' + (1 - fk2) + ')');
-        }
-        // splinters: thin bright streaks racing outwards, fading as they go
-        if (k < 0.35) {
-          var sk = k / 0.35;
-          g.save();
-          g.lineCap = 'round';
-          for (var sp2 = 0; sp2 < 14; sp2++) {
-            var sa2 = sp2 * (Math.PI * 2 / 14) + Math.sin(sp2 * 3.1 + sd2) * 0.2;
-            var r1 = R0 * (0.2 + sk * 1.6), r2 = R0 * (0.05 + sk * 1.25);
-            g.strokeStyle = 'rgba(255,' + (200 + (sp2 % 3) * 18) + ',140,' + (0.9 * (1 - sk)) + ')';
-            g.lineWidth = Math.max(1, I.PIXEL * 0.7);
-            g.beginPath();
-            g.moveTo(rb.x + Math.cos(sa2) * r2, rb.y - R0 * 0.15 + Math.sin(sa2) * r2 * 0.5);
-            g.lineTo(rb.x + Math.cos(sa2) * r1, rb.y - R0 * 0.15 + Math.sin(sa2) * r1 * 0.5);
-            g.stroke();
-          }
-          g.restore();
-        }
-        // the dust and smoke thrown out low, rolling and thinning
-        for (var dc = 0; dc < 10; dc++) {
-          var da = dc * 0.63 + sd2, dk = Math.min(1, k * 1.8);
-          var dd = R0 * (0.15 + dk * (0.55 + (dc % 3) * 0.15));
-          var dsz = R0 * (0.16 + dk * 0.28);
-          I.ellipse(g, rb.x + Math.cos(da) * dd, rb.y + Math.sin(da) * dd * 0.45 - dk * R0 * (0.15 + (dc % 2) * 0.2),
-            dsz, dsz * 0.75, (dc % 3 ? 'rgba(116,104,88,' : 'rgba(70,64,58,') + (0.65 * (1 - k) * Math.min(1, Math.max(0, (k - 0.06) * 6))) + ')');
-        }
-        // a puff of dark smoke climbing off the middle
-        I.ellipse(g, rb.x, rb.y - R0 * (0.3 + k * 0.9), R0 * (0.2 + k * 0.35), R0 * (0.17 + k * 0.28), 'rgba(52,48,44,' + (0.55 * (1 - k)) + ')');
-        // clods of earth thrown up and coming back down
-        for (var cl = 0; cl < 7; cl++) {
-          var ca2 = cl * 0.9 + sd2, ck = Math.min(1, k * 1.4);
-          var cdist = ck * R0 * (0.6 + (cl % 3) * 0.3);
-          var cup = Math.sin(Math.PI * ck) * R0 * (0.7 + (cl % 2) * 0.4);
-          I.rect(g, rb.x + Math.cos(ca2) * cdist, rb.y + Math.sin(ca2) * cdist * 0.5 - cup,
-            I.PIXEL * (cl % 2 ? 1.5 : 1), I.PIXEL * (cl % 2 ? 1.5 : 1), 'rgba(58,46,34,' + (1 - Math.max(0, k - 0.6) * 2.5) + ')');
-        }
+        fragAt(g, f, rb, k);
       } else if (f.kind === 'firesplash') {
         /* Where a Molotov lands: the bottle bursts in a flash, glass flies, a
            fireball rolls up off the ground and the spilled fuel burns on, then
@@ -1022,10 +1040,11 @@
         g.fillRect(gp.x - I.PIXEL, gp.y - I.PIXEL, I.PIXEL * 2, I.PIXEL * 2);
         g.restore();
       } else if (f.kind === 'charges') {
-        /* Sappers: demolition charges set around a point, blinking red — then
-           all going off together in a flash and a spray of rubble. */
+        /* Sappers: demolition charges set around a point, flashing red, faster
+           and faster — then all going off together, each in a fragmentation blast
+           (`xeno`: a shockwave of blue plasma). */
         var cp = I.toScreen(f.x, f.y); cp.y -= liftAt(f);
-        var cn = f.n || 4, cr = (f.r || 1.5) * I.K * 0.72, boom = 0.6;
+        var cn = f.n || 4, cr = (f.r || 1.5) * I.K * 0.72, boom = 0.45;
         for (var ci = 0; ci < cn; ci++) {
           var ca = ci / cn * Math.PI * 2 + 0.4;
           var cx = cp.x + Math.cos(ca) * cr, cy = cp.y + Math.sin(ca) * cr * 0.5 - I.K * 0.3;
@@ -1033,15 +1052,15 @@
             var set = k > ci * 0.08;                       // placed one after another
             if (!set) continue;
             I.rect(g, cx - I.PIXEL, cy - I.PIXEL, I.PIXEL * 2, I.PIXEL * 2, 'rgba(70,60,50,1)');
-            if (Math.sin(k * 55 + ci) > 0) I.ellipse(g, cx, cy - I.PIXEL * 1.5, I.PIXEL * 1.3, I.PIXEL * 1.3, 'rgba(255,60,40,0.95)');
-          } else {
-            var bk = (k - boom) / (1 - boom);
-            I.ellipse(g, cx, cy, I.K * (0.4 + bk * 0.9), I.K * (0.3 + bk * 0.6), 'rgba(255,' + Math.round(220 - bk * 120) + ',120,' + (0.9 * (1 - bk)) + ')');
-            for (var cd = 0; cd < 5; cd++) {
-              var cda = cd * 1.26 + ci, cdd = bk * I.K * 1.6;
-              I.rect(g, cx + Math.cos(cda) * cdd, cy + Math.sin(cda) * cdd * 0.5 - bk * I.K * 1.2 + bk * bk * I.K,
-                I.PIXEL, I.PIXEL, 'rgba(150,130,105,' + (1 - bk) + ')');
+            // the telltale flashes red (a Xenotripod's, blue), quickening as the moment comes
+            var ck0 = k / boom;
+            if (Math.sin(ck0 * ck0 * 48 + ci * 0.7) > 0) {
+              I.ellipse(g, cx, cy - I.PIXEL * 1.5, I.PIXEL * 2.6, I.PIXEL * 2.2, f.xeno ? 'rgba(110,190,255,0.35)' : 'rgba(255,40,30,0.35)');
+              I.ellipse(g, cx, cy - I.PIXEL * 1.5, I.PIXEL * 1.3, I.PIXEL * 1.3, f.xeno ? 'rgba(150,215,255,0.95)' : 'rgba(255,60,40,0.95)');
             }
+          } else {
+            if (f.xeno) plasmaAt(g, { x: cx, y: cy }, (k - boom) / (1 - boom), '110,190,255');
+            else fragAt(g, { seed: ci, t0: f.t0, scale: 0.9 }, { x: cx, y: cy }, (k - boom) / (1 - boom));
           }
         }
       } else if (f.kind === 'collar') {

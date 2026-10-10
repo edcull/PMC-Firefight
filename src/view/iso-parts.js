@@ -1261,15 +1261,18 @@
           P(9, wy - 3, 5, 2, GUN.md);                    // a hunting scope, taped on
           P(22, wy - 1, 3, 1, GUN.lt);
           break;
-        case 'molotov':                                   // a bottle, a rag, and a lighter
-          P(-13, wy - 2, 5, 8, '#3f6a3a');
-          P(-13, wy - 2, 2, 8, '#6aa05f');
-          P(-12, wy - 6, 3, 4, '#d8cfae');               // the rag
-          P(-12, wy - 8, 3, 2, '#e08a3a');
-          P(-12, wy - 10, 2, 2, '#ffc861');              // lit
+        case 'molotov': {                                 // a bottle, a rag, and a lighter
+          // held low, by the hip, where a man wears an armband: the band stays in sight above it
+          var mo = kit.armband ? 8 : 0, mx = kit.armband ? 6 : 0;
+          P(-13 + mx, wy - 2 + mo, 5, 8, '#3f6a3a');
+          P(-13 + mx, wy - 2 + mo, 2, 8, '#6aa05f');
+          P(-12 + mx, wy - 6 + mo, 3, 4, '#d8cfae');     // the rag
+          P(-12 + mx, wy - 8 + mo, 3, 2, '#e08a3a');
+          P(-12 + mx, wy - 10 + mo, 2, 2, '#ffc861');    // lit
           P(2, wy + 2, 12, 2, GUN.dk);                   // a pistol on the other hip
           P(2, wy + 4, 3, 4, GUN.md);
           break;
+        }
         case 'machete':                                   // a blade, held high
           P(-11, wy - 1, 4, 5, '#4a3a22');               // grip
           P(-9, wy - 22, 4, 22, '#8d98a4');              // the blade
