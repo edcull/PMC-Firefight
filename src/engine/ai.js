@@ -606,6 +606,57 @@
        another matter. */
     function husk(t) { return !R.countsForVictory(t) && !(t.cargo || []).length; }
 
+    /* Picking among several targets (the owner's ruling). A weapon goes first for what
+       it is made for: Suppressive Fire for infantry; Incendiary Ammunition for infantry
+       in area terrain; a Gauss Weapon for infantry in cover, Battle Armour and vehicles;
+       Anti-tank (the limited kind within its 6") for vehicles; Anti-aircraft for
+       aircraft, then vehicles. Then, still with a choice, an unsuppressed unit already
+       carrying Suppression Points (one more push breaks its stride), then a Suppressed
+       one that is not Broken, then the rest. A Defensive or Neutral unit still answers
+       the biggest threat (p. 147, SOL-6) once its weapon is suited: the threat comes
+       before the suppression order there, and any target it can hurt is weighed.
+       Otherwise only shots worth taking are — at least 40% of the best one on offer —
+       and the shot itself settles what is left. */
+    function inCoverNow(t) {
+      return !!t.bld || R.coverAt(E.state, t.x, t.y, t) > 0;
+    }
+    function inAreaTerrain(t) {
+      if (t.bld) return true;
+      return R.kindsUnder(E.state, t).some(function (k) { var tr = R.TERRAIN[k]; return k !== 'open' && tr && !tr.shallow && !tr.linear; });
+    }
+    function weaponFit(u, t, opts) {
+      if (opts && opts.aux) return 2;
+      var inf = !R.isMachine(t), veh = t.cls === 'vehicle', fly = R.isFlying(t), d = R.unitDist(u, t), rank = 2;
+      if (R.has(u, 'Suppressive Fire') && inf && !R.has(t, 'Battle Armour')) rank = 0;
+      if (R.has(u, 'Incendiary Ammunition') && inf && !R.has(t, 'Battle Armour') && inAreaTerrain(t)) rank = 0;
+      if (R.has(u, 'Gauss Weapon') && ((inf && inCoverNow(t)) || R.has(t, 'Battle Armour') || veh)) rank = 0;
+      if (R.antiTank(u, d) && veh) rank = 0;
+      if (R.has(u, 'Anti-aircraft')) { if (fly) rank = 0; else if (veh) rank = Math.min(rank, 1); }
+      return rank;
+    }
+    function suppressionRank(t) {
+      if (R.isMachine(t)) return 2;
+      var st = R.status(t);
+      if (st === 'ready' && (t.sp || 0) > 0) return 0;
+      if (st === 'suppressed') return 1;
+      return 2;
+    }
+    // of the candidates ({ t, score, tie }), the one these priorities choose
+    function prioritise(u, cands, opts, threatFirst) {
+      if (!cands.length) return null;
+      var top = Math.max.apply(null, cands.map(function (c) { return c.score; }));
+      // (answering the biggest threat, any target it can hurt will do, as before)
+      var worth = cands.filter(function (c) { return c.score > 0 && (threatFirst || c.score >= top * 0.4); });
+      if (!worth.length) worth = cands;
+      worth.forEach(function (c) { c.fit = weaponFit(u, c.t, opts); c.sup = suppressionRank(c.t); });
+      worth.sort(function (a, b) {
+        if (a.fit !== b.fit) return a.fit - b.fit;
+        if (threatFirst && Math.abs(a.threat - b.threat) > 0.05) return b.threat - a.threat;
+        return a.sup - b.sup || b.tie - a.tie;
+      });
+      return worth[0];
+    }
+
     function bestTarget(u, mode, opts) {
       var best = { t: null, score: -1 };
       /* Protecting the VIP: "whenever an OpFor unit can attack the VIP unit, it
@@ -617,13 +668,16 @@
           if (ev >= 0) return { t: vip, score: Math.max(ev, 0.5), forced: true };
         }
       }
+      var cands = [];
       E.state.units.forEach(function (t) {
         // an enemy in reserve or riding in a hull is not on the table to be shot at
         if (!t.alive || t.side === u.side || !onTable(t) || husk(t)) return;
         var e = expectedHits(u, t, mode || 'fire', opts);
         if (e > best.score) best = { t: t, score: e };
+        if (e >= 0) cands.push({ t: t, score: e, tie: e });
       });
-      return best;
+      var pick = prioritise(u, cands, opts);
+      return pick && pick.score > 0 ? { t: pick.t, score: pick.score } : best;
     }
 
     /* Reasonably Defensive and Neutral (p. 147): "The OpFor unit engages the enemy unit
@@ -656,15 +710,17 @@
     function threatTarget(u, mode, opts) {
       var forced = bestTarget(u, mode, opts);
       if (forced.forced) return forced;                   // the VIP first, always (p. 151)
-      var pts = objectivePoints(), best = { t: null, score: -1, threat: -1 };
+      var pts = objectivePoints(), cands = [];
       E.state.units.forEach(function (t) {
         if (!t.alive || t.side === u.side || !onTable(t) || husk(t)) return;
         var e = expectedHits(u, t, mode || 'fire', opts);
         if (e <= 0) return;
         var th = threatOf(t, u.side, pts);
-        if (th > best.threat + 0.05 || (Math.abs(th - best.threat) <= 0.05 && e > best.score)) best = { t: t, score: e, threat: th };
+        // (the threat it poses settles a tie; the hits this unit would do, a tie in that)
+        cands.push({ t: t, score: e, tie: th + e * 0.01, threat: th });
       });
-      return best.t ? best : forced;
+      var pick = prioritise(u, cands, opts, true);
+      return pick ? { t: pick.t, score: pick.score, threat: pick.threat } : forced;
     }
 
     /* A computer side's unit with no enemy it could reach to shoot after an Advance
@@ -883,6 +939,13 @@
         var shaken2 = R.steadyTargets(E.state, u).filter(function (t) { return R.status(t) === 'broken' || (t.sp || 0) >= 4; })
           .sort(function (a, b) { return (b.sp || 0) - (a.sp || 0); })[0];
         if (shaken2) { logLine('ai', u.label + ' — NOT ONE STEP BACKWARDS!: steadies ' + shaken2.label + '.'); doSteady(shaken2, u); return; }
+      }
+      /* Hackers go for the enemy's drones before anything else (the owner's ruling): the
+         most valuable one in reach — the highest Tier, then the least damaged. */
+      if (specials && R.has(u, 'Hackers') && R.status(u) === 'ready' && E.doHack) {
+        var drones = E.state.units.filter(function (t) { return R.canHack(E.state, u, t); })
+          .sort(function (a, b) { return (b.tier || 0) - (a.tier || 0) || (a.damage || 0) - (b.damage || 0); });
+        if (drones.length) { logLine('ai', u.label + ' reaches into ' + drones[0].label + '.'); ui.selected = u; E.doHack(drones[0]); return; }
       }
       // a Psychic Wave that catches two or more is worth more than a shot
       if (specials && R.has(u, 'Psychic Wave') && R.status(u) === 'ready') {
