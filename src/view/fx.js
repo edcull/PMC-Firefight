@@ -1052,11 +1052,11 @@
             var set = k > ci * 0.08;                       // placed one after another
             if (!set) continue;
             I.rect(g, cx - I.PIXEL, cy - I.PIXEL, I.PIXEL * 2, I.PIXEL * 2, 'rgba(70,60,50,1)');
-            // the telltale flashes red, quickening as the moment comes
+            // the telltale flashes red (a Xenotripod's, blue), quickening as the moment comes
             var ck0 = k / boom;
             if (Math.sin(ck0 * ck0 * 48 + ci * 0.7) > 0) {
-              I.ellipse(g, cx, cy - I.PIXEL * 1.5, I.PIXEL * 2.6, I.PIXEL * 2.2, 'rgba(255,40,30,0.35)');
-              I.ellipse(g, cx, cy - I.PIXEL * 1.5, I.PIXEL * 1.3, I.PIXEL * 1.3, 'rgba(255,60,40,0.95)');
+              I.ellipse(g, cx, cy - I.PIXEL * 1.5, I.PIXEL * 2.6, I.PIXEL * 2.2, f.xeno ? 'rgba(110,190,255,0.35)' : 'rgba(255,40,30,0.35)');
+              I.ellipse(g, cx, cy - I.PIXEL * 1.5, I.PIXEL * 1.3, I.PIXEL * 1.3, f.xeno ? 'rgba(150,215,255,0.95)' : 'rgba(255,60,40,0.95)');
             }
           } else {
             if (f.xeno) plasmaAt(g, { x: cx, y: cy }, (k - boom) / (1 - boom), '110,190,255');

@@ -780,11 +780,11 @@
       }
       PARTS.pack(P, drop, kit, pal, px);
       if (kit.law) {                                      // a disposable anti-tank tube slung behind him, down his left side
-        for (var lw = 0; lw < 5; lw++) P(-21 + lw * 0.8, -52 + drop + lw * 6.4, 5.5, 7, '#4b5532');
-        for (var lw3 = 0; lw3 < 5; lw3++) P(-21 + lw3 * 0.8, -52 + drop + lw3 * 6.4, 1.4, 7, '#7a8752');
-        P(-21.5, -53.5 + drop, 6.5, 2.6, '#1c2014');        // the end caps
-        P(-18.3, -21.5 + drop, 6.5, 2.6, '#1c2014');
-        P(-20.6, -46 + drop, 5.5, 1.5, '#d8c040');          // the yellow band
+        for (var lw = 0; lw < 5; lw++) P(-18 + lw * 0.8, -52 + drop + lw * 6.4, 5.5, 7, '#4b5532');
+        for (var lw3 = 0; lw3 < 5; lw3++) P(-18 + lw3 * 0.8, -52 + drop + lw3 * 6.4, 1.4, 7, '#7a8752');
+        P(-18.5, -53.5 + drop, 6.5, 2.6, '#1c2014');        // the end caps
+        P(-15.3, -21.5 + drop, 6.5, 2.6, '#1c2014');
+        P(-17.6, -46 + drop, 5.5, 1.5, '#d8c040');          // the yellow band
       }
 
       if (kit.armoured) armourPack(P, pal, drop, px);
