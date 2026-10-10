@@ -999,6 +999,7 @@
       from = mountFrom(spec.p);
     }
     from.second = from.poolFor ? from.poolFor(spec.s) : mountFrom(spec.s);
+    if (spec.t) from.third = from.poolFor ? from.poolFor(spec.t) : mountFrom(spec.t);
     var shot = rollShot(), hits = shot ? shot.hits : 0;
     syncSound();
     play(spec, from, to, hits, u);
@@ -1033,6 +1034,7 @@
   function play(spec, from, to, hits, u) {
     var dist = R.unitDist(u, to);
     if (spec.s) setTimeout(function () { SHOTS.secondary(spec.s, u, from.second || from, to, hits, spec.sn); start(); }, 150);
+    if (spec.t) setTimeout(function () { SHOTS.secondary(spec.t, u, from.third || from, to, hits, spec.tn); start(); }, 330);
     SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, land: function (extra, at) { SHOTS.hit(u, at || to, hits, extra); } });
   }
 
@@ -1090,6 +1092,7 @@
     var out = { p: w.p };
     if (w.n > 1) out.n = w.n;
     if (w.s) { out.s = w.s; if (w.sn > 1) out.sn = w.sn; }
+    if (w.t) { out.t = w.t; if (w.tn > 1) out.tn = w.tn; }
     if (w.splash) out.splash = true;
     // a missile's launch, the shots' colour and an orb's flight, where they are not the default
     if (w.launch) out.launch = w.launch;
@@ -1101,7 +1104,7 @@
   function same(a, b) { return JSON.stringify(tidy(entry0(a))) === JSON.stringify(tidy(entry0(b))); }
   function entry0(w) {
     w = w || {};
-    return { p: w.p || 'small', n: w.n || 1, s: w.s || null, sn: w.sn || 1, splash: !!w.splash,
+    return { p: w.p || 'small', n: w.n || 1, s: w.s || null, sn: w.sn || 1, t: w.t || null, tn: w.tn || 1, splash: !!w.splash,
       launch: w.launch || null, glow: w.glow || null, orb: w.orb || null, blast: w.blast || null };
   }
   function changedKeys() { return Object.keys(STORE.changed()).sort(); }
@@ -1134,6 +1137,7 @@
     var w = tidy(entry(key)), bits = ["p: '" + w.p + "'"];
     if (w.n) bits.push('n: ' + w.n);
     if (w.s) { bits.push("s: '" + w.s + "'"); if (w.sn) bits.push('sn: ' + w.sn); }
+    if (w.t) { bits.push("t: '" + w.t + "'"); if (w.tn) bits.push('tn: ' + w.tn); }
     if (w.splash) bits.push('splash: true');
     ['launch', 'glow', 'orb', 'blast'].forEach(function (f) { if (w[f]) bits.push(f + ": '" + w[f] + "'"); });
     return key + ': { ' + bits.join(', ') + ' }';
@@ -1189,6 +1193,9 @@
     h += '<div class="vgrp"><label>Secondary, alongside it</label>' +
       '<div class="veline">' + wpick('s', w.s || '', STYLES.filter(function (x) { return x !== 'none'; }), true) +
       '<span>×</span>' + wpick('sn', w.sn, [1, 2, 3, 4, 5, 6]) + '</div></div>';
+    h += '<div class="vgrp"><label>Third, after them</label>' +
+      '<div class="veline">' + wpick('t', w.t || '', STYLES.filter(function (x) { return x !== 'none'; }), true) +
+      '<span>×</span>' + wpick('tn', w.tn, [1, 2, 3, 4, 5, 6]) + '</div></div>';
     h += '<div class="vgrp"><label class="vecheck"><input type="checkbox" data-w="splash"' + (w.splash ? ' checked' : '') +
       '> Every round lands in its own burst (splash)</label></div>';
     // what else it is drawn with: the launch, where it fires missiles; the colour; the orbs' flight, where it fires orbs
@@ -1199,7 +1206,7 @@
       R.isMachine(profile()) ? 'As a machine’s: lobbed' : 'As a launcher team’s: teleported') + '</div>';
     // how its orbs or shells go off where they land
     var blasts = ['orb', 'orbbig', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket'];
-    if (blasts.indexOf(w.p) >= 0 || blasts.indexOf(w.s) >= 0 || w.blast) {
+    if (blasts.indexOf(w.p) >= 0 || blasts.indexOf(w.s) >= 0 || blasts.indexOf(w.t) >= 0 || w.blast) {
       var bigBlast = w.p === 'orbbig' || w.p === 'shellbig' || w.p === 'arcbig' || (blasts.indexOf(w.p) < 0 && (w.s === 'shellbig' || w.s === 'arcbig'));
       var orbs = w.p === 'orb' || w.p === 'orbbig';
       h += '<div class="vgrp"><label>Where it lands</label>' + wpick('blast', w.blast || '',
@@ -1740,7 +1747,7 @@
       if (wf && admin) {
         var w = entry(view.key);
         if (wf === 'splash') w.splash = e.target.checked;
-        else if (wf === 'n' || wf === 'sn') w[wf] = +e.target.value;
+        else if (wf === 'n' || wf === 'sn' || wf === 'tn') w[wf] = +e.target.value;
         else w[wf] = e.target.value || null;
         setEntry(view.key, w);
         return;

@@ -585,6 +585,24 @@
     ROLES.deserterrk = ROLES.deserter.map(rolled);
     ROLES.conscript = ROLES.conscript.map(rolled);
     ROLES.rider = ROLES.militia.map(mounted);
+    /* The Mounted Warriors ride with pistols, a hand free for the Molotovs; from
+       the rider warriors up, the third man carries the squad's RPG. */
+    function armed(r, gun) {
+      if (KIT[r].gun === gun) return r;
+      var k = r + gun;
+      if (!KIT[k]) {
+        var m = {};
+        for (var f in KIT[r]) m[f] = KIT[r][f];
+        m.gun = gun;
+        KIT[k] = m;
+      }
+      return k;
+    }
+    var withRpg = function (k, i) { return armed(k, i === 2 ? 'rpg' : 'pistol'); };
+    ROLES.ridergang = ROLES.ridergang.map(function (k) { return armed(k, 'pistol'); });
+    ROLES.rider = ROLES.rider.map(withRpg);
+    ROLES.hellrider = ROLES.hellrider.map(withRpg);
+    ROLES.legendrider = ROLES.legendrider.map(withRpg);
 
     /* ---------- one trooper, drawn into a cache canvas ----------
        Proportions are roughly human: about six and a half heads tall, shoulders a

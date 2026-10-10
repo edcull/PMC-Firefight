@@ -220,7 +220,12 @@
         if (B.state) playSecondary(spec.s, shooter, from.poolFor ? from.poolFor(spec.s) : mountFrom(spec.s), to, hits, spec.sn);
       }, 150);
 
-      var tail = spec.s ? 320 + ((spec.sn || 1) - 1) * 260 : 0;
+      // and a third, a beat after that: the riders' pistols, under the RPG and the Molotovs
+      if (spec.t) later(function () {
+        if (B.state) playSecondary(spec.t, shooter, from.poolFor ? from.poolFor(spec.t) : mountFrom(spec.t), to, hits, spec.tn);
+      }, 330);
+
+      var tail = Math.max(spec.s ? 320 + ((spec.sn || 1) - 1) * 260 : 0, spec.t ? 500 + ((spec.tn || 1) - 1) * 260 : 0);
 
       var ms = SHOTS.primary(spec, shooter, from, to, { hits: hits, dist: R.unitDist(shooter, target), land: land }) + tail;
       endsAt = nowMs() + ms;

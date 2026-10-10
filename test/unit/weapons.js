@@ -125,9 +125,6 @@ is('hifv', 'chain+missile x2');
 is('rheavyac', 'chain+shellbig');
 // the guard have carbines through the ranks as well as rifles
 is('rguard', 'small+smg');
-// so do the hellriders, across the saddle, and they ride in throwing
-is('rhellriders', 'smg+molotov');
-is('rlegendary', 'chain+molotov');
 is('rlflak', 'burst');
 is('rmflak', 'burst+burst');
 // every heavy infantry unit, whatever its Tier
@@ -194,9 +191,23 @@ all(['racolytes', 'rfanatics'], 'smg');
 is('rpow', 'smg');
 // the partisan commandos work in pairs: a carbine and a rifle
 all(['rassaultcdo', 'rsabcdo'], 'small+smg');
-// the rider gangs come past throwing Molotovs (Incendiary Ammunition); the warriors fire their rifles too
-is('rridergang', 'none+molotov');
-is('rriderwar', 'small+molotov');
+// the rider gangs come past with pistols, throwing Molotovs (Incendiary Ammunition)
+is('rridergang', 'pistol+molotov');
+// and from the rider warriors up one of them fires an RPG, the rest their pistols
+['rriderwar', 'rhellriders', 'rlegendary'].forEach(function (k) {
+  var w = spec(k);
+  ok(R.profile(k).name + ': RPG, Molotovs, pistols', w.p === 'shell' && w.n === 1 && w.s === 'molotov' && w.t === 'pistol' && w.blast === 'frag',
+    fmt(w) + ' + ' + w.t);
+});
+// the rocket leaves the RPG man's shoulder, and he throws and shoots nothing else
+(function () {
+  require('../../src/view/fire.js');
+  var pool = [{ gun: 'pistol', id: 0 }, { gun: 'pistol', id: 1 }, { gun: 'rpg', id: 2 }, { gun: 'pistol', id: 3 }];
+  var from = global.PMCFire.troop({ x: 0, y: 0 }, spec('rhellriders'), pool);
+  var ids = function (st) { return from.poolFor(st).pool.map(function (m) { return m.id; }).join(','); };
+  ok('the RPG fires from the man carrying it', from.mz.id === 2, 'from ' + from.mz.id);
+  ok('...the Molotovs and pistols from the rest', ids('molotov') === '0,1,3' && ids('pistol') === '0,1,3', ids('molotov') + ' / ' + ids('pistol'));
+})();
 
 head('And a rifle is still a rifle');
 all(['recruits', 'rookie', 'regular'], 'small');
@@ -211,8 +222,8 @@ head('And a sidearm is not a rifle');
 // Firepower 1 at 12": command, medics and signallers are defending themselves
 all(['cmd4', 'cmd3', 'cmd2', 'cmd1', 'highcmd'], 'pistol');
 all(['ew', 'medics'], 'pistol');
-// penal troops are handed cheap SMGs
-is('penal', 'smg');
+// penal troops are handed cheap pistols
+is('penal', 'pistol');
 // armed civilians: whatever was in the house
 is('rciv', 'pistol');
 

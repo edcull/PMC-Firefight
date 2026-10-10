@@ -766,12 +766,16 @@
     var poolFor = function (style) {
       var mgStyle = style === 'burst' || style === 'chain';
       // (a SAW in a rifle squad is one of its rifles: only a unit with an MG weapon splits its men)
-      var mgUnit = /^(burst|chain)$/.test(spec.p) || /^(burst|chain)$/.test(spec.s || '');
+      var mgUnit = /^(burst|chain)$/.test(spec.p) || /^(burst|chain)$/.test(spec.s || '') || /^(burst|chain)$/.test(spec.t || '');
       var pl = mgStyle ? (mgs.length ? mgs : pool) : (mgUnit && rest.length && mgs.length ? rest : pool);
       // a shell or a missile leaves a launcher, where the squad carries them
+      var tubes = pool.filter(function (m) { return /^(rpg|atlauncher)$/.test(m.gun || ''); });
       if (style === 'shell' || style === 'missile') {
-        var tubes = pool.filter(function (m) { return /^(rpg|atlauncher)$/.test(m.gun || ''); });
         if (tubes.length) pl = tubes;
+      } else if (tubes.length && [spec.p, spec.s, spec.t].some(function (x) { return x === 'shell' || x === 'missile'; })) {
+        // and where the launcher is one of the unit's weapons, the man carrying it fires nothing else
+        var others = pl.filter(function (m) { return tubes.indexOf(m) < 0; });
+        if (others.length) pl = others;
       }
       return { x: from.x, y: from.y, up: from.up, mz: pl[0], pool: pl, pod: from.pod, pods: from.pods };
     };

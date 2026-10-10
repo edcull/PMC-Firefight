@@ -308,9 +308,10 @@
      The book gives no weapon types, only a Firepower and a Range, so this table
      is the reading: every profile is named, and the name says what you see and
      hear when it fires. `p` is the primary; `s` an optional secondary that goes
-     off with it (a tank's coaxial, a gunship's guns under its rockets); `n` is
-     how many tubes fire at once, which is what separates a mortar section from
-     a battery.
+     off with it (a tank's coaxial, a gunship's guns under its rockets); `t` an
+     optional third after that (the riders' pistols, under the RPG and the
+     Molotovs); `n`, `sn` and `tn` are how many of each fire at once, which is
+     what separates a mortar section from a battery.
 
      The styles:
        small   a rifle volley — eight men, ragged, about a second
@@ -364,8 +365,8 @@
   var WEAPONS = {
     /* ---- PMC infantry ---- */
     recruits: { p: 'small' },
-    // irregulars scavenge carbines, and penal troops are handed out cheap SMGs
-    irregulars: { p: 'smg' }, penal: { p: 'smg' },
+    // irregulars scavenge carbines, and penal troops are handed out cheap pistols
+    irregulars: { p: 'smg' }, penal: { p: 'pistol' },
     enforcers: { p: 'smg' },
     rookie: { p: 'small' }, regular: { p: 'small' },
     // the senior rifle teams have carbines in the squad alongside the rifles
@@ -462,11 +463,13 @@
     // the Holy Warriors go in close, with whatever will fire on the run
     racolytes: { p: 'smg' }, rfanatics: { p: 'smg' },
     renlightened: { p: 'small' }, rmujahideen: { p: 'small' },
-    /* Mounted Warriors ride in throwing Molotovs from the saddle (Incendiary
-       Ammunition): the rider gangs and warriors nothing else, the hellriders
-       with a gun alongside, the legendary ones something heavier. */
-    rridergang: { p: 'none', s: 'molotov', sn: 2 }, rriderwar: { p: 'small', s: 'molotov', sn: 2 },
-    rhellriders: { p: 'smg', s: 'molotov', sn: 2 }, rlegendary: { p: 'chain', s: 'molotov', sn: 2 },
+    /* Mounted Warriors ride in with pistols, throwing Molotovs from the saddle
+       (Incendiary Ammunition); from the rider warriors up, one of them carries
+       an RPG (Anti-tank (limited)), and the rocket leaves his shoulder. */
+    rridergang: { p: 'pistol', s: 'molotov', sn: 2 },
+    rriderwar: { p: 'shell', s: 'molotov', sn: 2, t: 'pistol', blast: 'frag' },
+    rhellriders: { p: 'shell', s: 'molotov', sn: 2, t: 'pistol', blast: 'frag' },
+    rlegendary: { p: 'shell', s: 'molotov', sn: 2, t: 'pistol', blast: 'frag' },
     rlmg: { p: 'burst' }, rautocannon: { p: 'chain', splash: true },
     rat: { p: 'shell', blast: 'frag' },
     // the insurgents' AA weapons are old shoulder guns: they fire a shell, not a guided missile
@@ -568,10 +571,11 @@
     var F = WEAPON_FIELDS;
     if (!w || typeof w !== 'object' || F.styles.indexOf(w.p) < 0) return null;
     var count = function (v) { return v === undefined || (v === (v | 0) && v >= 1 && v <= F.most); };
-    if (!count(w.n) || !count(w.sn)) return null;
+    if (!count(w.n) || !count(w.sn) || !count(w.tn)) return null;
     if (w.s !== undefined && w.s !== null && (F.styles.indexOf(w.s) < 0 || w.s === 'none')) return null;
+    if (w.t !== undefined && w.t !== null && (F.styles.indexOf(w.t) < 0 || w.t === 'none')) return null;
     if (w.splash !== undefined && typeof w.splash !== 'boolean') return null;
-    var known = ['p', 'n', 's', 'sn', 'splash', 'launch', 'glow', 'orb', 'blast'];
+    var known = ['p', 'n', 's', 'sn', 't', 'tn', 'splash', 'launch', 'glow', 'orb', 'blast'];
     if (Object.keys(w).some(function (k) { return known.indexOf(k) < 0; })) return null;
     var ok = true;
     ['launch', 'glow', 'orb', 'blast'].forEach(function (f) { if (w[f] !== undefined && w[f] !== null && F[f].indexOf(w[f]) < 0) ok = false; });
@@ -579,6 +583,7 @@
     var out = { p: w.p };
     if (w.n > 1) out.n = w.n;
     if (w.s) { out.s = w.s; if (w.sn > 1) out.sn = w.sn; }
+    if (w.t) { out.t = w.t; if (w.tn > 1) out.tn = w.tn; }
     if (w.splash) out.splash = true;
     ['launch', 'glow', 'orb', 'blast'].forEach(function (f) { if (w[f]) out[f] = w[f]; });
     return out;
