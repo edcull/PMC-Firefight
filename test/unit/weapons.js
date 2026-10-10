@@ -191,22 +191,21 @@ all(['racolytes', 'rfanatics'], 'smg');
 is('rpow', 'smg');
 // the partisan commandos work in pairs: a carbine and a rifle
 all(['rassaultcdo', 'rsabcdo'], 'small+smg');
-// the rider gangs come past with pistols, throwing Molotovs (Incendiary Ammunition)
-is('rridergang', 'pistol+molotov');
-// and from the rider warriors up one of them fires an RPG, the rest their pistols
+// the rider gangs come past throwing Molotovs (Incendiary Ammunition)
+is('rridergang', 'none+molotov');
+// and from the rider warriors up one of them fires an RPG while the rest throw
 ['rriderwar', 'rhellriders', 'rlegendary'].forEach(function (k) {
   var w = spec(k);
-  ok(R.profile(k).name + ': RPG, Molotovs, pistols', w.p === 'shell' && w.n === 1 && w.s === 'molotov' && w.t === 'pistol' && w.blast === 'frag',
-    fmt(w) + ' + ' + w.t);
+  ok(R.profile(k).name + ': an RPG and Molotovs', w.p === 'shell' && w.n === 1 && w.s === 'molotov' && !w.t && w.blast === 'frag', fmt(w));
 });
-// the rocket leaves the RPG man's shoulder, and he throws and shoots nothing else
+// the rocket leaves the RPG man's shoulder, and he throws nothing else
 (function () {
   require('../../src/view/fire.js');
-  var pool = [{ gun: 'pistol', id: 0 }, { gun: 'pistol', id: 1 }, { gun: 'rpg', id: 2 }, { gun: 'pistol', id: 3 }];
+  var pool = [{ gun: 'molotov', id: 0 }, { gun: 'molotov', id: 1 }, { gun: 'rpg', id: 2 }, { gun: 'molotov', id: 3 }];
   var from = global.PMCFire.troop({ x: 0, y: 0 }, spec('rhellriders'), pool);
   var ids = function (st) { return from.poolFor(st).pool.map(function (m) { return m.id; }).join(','); };
   ok('the RPG fires from the man carrying it', from.mz.id === 2, 'from ' + from.mz.id);
-  ok('...the Molotovs and pistols from the rest', ids('molotov') === '0,1,3' && ids('pistol') === '0,1,3', ids('molotov') + ' / ' + ids('pistol'));
+  ok('...the Molotovs from the rest', ids('molotov') === '0,1,3', ids('molotov'));
 })();
 
 head('And a rifle is still a rifle');

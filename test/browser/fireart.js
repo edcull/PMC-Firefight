@@ -146,7 +146,7 @@ async function fireAndWatch(p, code, ms) {
     window.__rebuildScene();
   });
   const riders = await fireAndWatch(p, 'RDG', 3200);
-  ok('a rider gang fires its pistols with Molotovs alongside', riders.ok !== false &&
+  ok('a rider gang throws Molotovs', riders.ok !== false &&
     await p.evaluate(() => window.PMC.weaponSpec(window.PMC.profile('rridergang')).s === 'molotov'), riders.why || riders.name);
   ok('...the bottles drawn tumbling through the air, alight',
     !!riders.seen.molotov, Object.keys(riders.seen).join(' '));

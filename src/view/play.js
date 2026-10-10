@@ -220,7 +220,7 @@
         if (B.state) playSecondary(spec.s, shooter, from.poolFor ? from.poolFor(spec.s) : mountFrom(spec.s), to, hits, spec.sn);
       }, 150);
 
-      // and a third, a beat after that: the riders' pistols, under the RPG and the Molotovs
+      // and a third, a beat after that
       if (spec.t) later(function () {
         if (B.state) playSecondary(spec.t, shooter, from.poolFor ? from.poolFor(spec.t) : mountFrom(spec.t), to, hits, spec.tn);
       }, 330);

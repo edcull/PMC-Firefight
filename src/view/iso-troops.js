@@ -151,8 +151,9 @@
       command1: ['cmdr1', 'cmdr4', 'signals', 'cmdspotter', 'cmdsmg'],
       commandhi: ['cmdrhi', 'cmdr4', 'signals', 'cmdspotter', 'cmdsmg'],
       // rifle teams: the leader at the front right with an SMG, the SAW at the front left, riflemen behind
-      rifle: ['riflelead', 'saw', 'rifleman'],
-      veteran: ['vetlead', 'vetsaw', 'vet'],
+      // the senior rifle squads carry a disposable anti-tank tube on one man's back (for the look of it)
+      rifle: ['riflelead', 'saw', 'riflelaw', 'rifleman'],
+      veteran: ['vetlead', 'vetsaw', 'vetlaw', 'vet'],
       engineer: ['breacher', 'sapper'],
       lighteng: ['breacherlt', 'sapperlt'],
       rookie: ['rookielead', 'sawrk', 'riflemanrk'],
@@ -186,7 +187,7 @@
       penal: ['convict'],
       shock: ['shocklead', 'shockbreacher', 'shock'],
       // rangers and commandos: the veteran and assault kit, with night-vision goggles
-      ranger: ['rangerlead', 'rangersaw', 'ranger'],
+      ranger: ['rangerlead', 'rangersaw', 'rangerlaw', 'ranger'],
       commando: ['commandolead', 'commandobreacher', 'commando'],
       antitank: ['atgunner', 'atloader', 'supsmg'],
       // the missile-armed and SAM teams work a launcher set up on a tripod
@@ -284,8 +285,10 @@
       // the Riders upgrade (p. 93) puts the same troops on bikes and beasts
       // holymounted … holy4mounted and leadermounted … leaderhugemounted: built from the tier's own figures, under KIT
     };
+    // a figure with no squad of its own is a plain rifleman: the rifle team without its anti-tank tube
+    var FALLBACK_ROLES = ['riflelead', 'saw', 'rifleman'];
     function roleAt(art, i) {
-      var r = ROLES[art] || ROLES.rifle;
+      var r = ROLES[art] || FALLBACK_ROLES;
       return r[Math.min(i, r.length - 1)];
     }
 
@@ -309,9 +312,11 @@
       // line infantry: battle rifles, with a squad automatic in the front rank
       rifle: { helm: 'std', gun: 'battlerifle', pack: 'std' },
       rifleman: { helm: 'std', gun: 'battlerifle', pack: 'std' },
+      riflelaw: { helm: 'std', gun: 'battlerifle', pack: 'std', law: true, fitAs: 'rifleman' },
       saw: { helm: 'std', gun: 'saw', pack: 'ammo' },
       riflelead: { helm: 'std', gun: 'smg', pack: 'std', fitAs: 'rifle' },
       vet: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true },
+      vetlaw: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true, law: true, fitAs: 'vet' },
       vetsaw: { helm: 'heavy', gun: 'saw', pack: 'ammo', bulk: 1, mark: true },
       vetlead: { helm: 'heavy', gun: 'smg', pack: 'std', bulk: 1, mark: true },
       officer: { helm: 'cap', gun: 'slate', pack: 'std', badge: '#e8c15a' },
@@ -378,6 +383,7 @@
       shockbreacher: { helm: 'welder', gun: 'shotgun', pack: 'charges', bulk: 1, vest: true },
       shock: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, vest: true },
       ranger: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true, nvg: true },
+      rangerlaw: { helm: 'heavy', gun: 'battlerifle', pack: 'std', bulk: 1, mark: true, nvg: true, law: true, fitAs: 'ranger' },
       rangersaw: { helm: 'heavy', gun: 'saw', pack: 'ammo', bulk: 1, mark: true, nvg: true },
       rangerlead: { helm: 'heavy', gun: 'smg', pack: 'std', bulk: 1, mark: true, nvg: true },
       commandolead: { helm: 'welder', gun: 'smg', pack: 'charges', bulk: 1, mark: true, vest: true, nvg: true },
@@ -585,8 +591,8 @@
     ROLES.deserterrk = ROLES.deserter.map(rolled);
     ROLES.conscript = ROLES.conscript.map(rolled);
     ROLES.rider = ROLES.militia.map(mounted);
-    /* The Mounted Warriors ride with pistols, a hand free for the Molotovs; from
-       the rider warriors up, the third man carries the squad's RPG. */
+    /* The Mounted Warriors ride with a Molotov in hand; from the rider warriors
+       up, the third man carries the squad's RPG instead. */
     function armed(r, gun) {
       if (KIT[r].gun === gun) return r;
       var k = r + gun;
@@ -598,8 +604,8 @@
       }
       return k;
     }
-    var withRpg = function (k, i) { return armed(k, i === 2 ? 'rpg' : 'pistol'); };
-    ROLES.ridergang = ROLES.ridergang.map(function (k) { return armed(k, 'pistol'); });
+    var withRpg = function (k, i) { return armed(k, i === 2 ? 'rpg' : 'molotov'); };
+    ROLES.ridergang = ROLES.ridergang.map(function (k) { return armed(k, 'molotov'); });
     ROLES.rider = ROLES.rider.map(withRpg);
     ROLES.hellrider = ROLES.hellrider.map(withRpg);
     ROLES.legendrider = ROLES.legendrider.map(withRpg);
@@ -771,6 +777,13 @@
         P(px + 6, -36 + drop, 1, 18, 'rgba(255,255,255,.12)');
       }
       PARTS.pack(P, drop, kit, pal, px);
+      if (kit.law) {                                      // a disposable anti-tank tube slung across the pack, sights folded
+        for (var lw = 0; lw < 6; lw++) P(px + 1 + lw * 1.6, -60 + drop + lw * 7, 4, 8, '#4b5532');
+        for (var lw2 = 0; lw2 < 6; lw2++) P(px + 1 + lw2 * 1.6, -60 + drop + lw2 * 7, 1.2, 8, '#7a8752');
+        P(px + 0.5, -61 + drop, 5, 2.5, '#1c2014');        // the end caps
+        P(px + 8.5, -20 + drop, 5, 2.5, '#1c2014');
+        P(px + 2.6, -53 + drop, 4, 1.5, '#d8c040');        // the yellow band
+      }
 
       if (kit.armoured) armourPack(P, pal, drop, px);
       if (PACK_DETAIL[kit.pack]) PACK_DETAIL[kit.pack](P, pal, drop, px);

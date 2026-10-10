@@ -309,8 +309,7 @@
      is the reading: every profile is named, and the name says what you see and
      hear when it fires. `p` is the primary; `s` an optional secondary that goes
      off with it (a tank's coaxial, a gunship's guns under its rockets); `t` an
-     optional third after that (the riders' pistols, under the RPG and the
-     Molotovs); `n`, `sn` and `tn` are how many of each fire at once, which is
+     optional third after that; `n`, `sn` and `tn` are how many of each fire at once, which is
      what separates a mortar section from a battery.
 
      The styles:
@@ -463,13 +462,13 @@
     // the Holy Warriors go in close, with whatever will fire on the run
     racolytes: { p: 'smg' }, rfanatics: { p: 'smg' },
     renlightened: { p: 'small' }, rmujahideen: { p: 'small' },
-    /* Mounted Warriors ride in with pistols, throwing Molotovs from the saddle
-       (Incendiary Ammunition); from the rider warriors up, one of them carries
-       an RPG (Anti-tank (limited)), and the rocket leaves his shoulder. */
-    rridergang: { p: 'pistol', s: 'molotov', sn: 2 },
-    rriderwar: { p: 'shell', s: 'molotov', sn: 2, t: 'pistol', blast: 'frag' },
-    rhellriders: { p: 'shell', s: 'molotov', sn: 2, t: 'pistol', blast: 'frag' },
-    rlegendary: { p: 'shell', s: 'molotov', sn: 2, t: 'pistol', blast: 'frag' },
+    /* Mounted Warriors ride in throwing Molotovs from the saddle (Incendiary
+       Ammunition); from the rider warriors up, one of them carries an RPG
+       (Anti-tank (limited)), and the rocket leaves his shoulder. */
+    rridergang: { p: 'none', s: 'molotov', sn: 2 },
+    rriderwar: { p: 'shell', s: 'molotov', sn: 2, blast: 'frag' },
+    rhellriders: { p: 'shell', s: 'molotov', sn: 2, blast: 'frag' },
+    rlegendary: { p: 'shell', s: 'molotov', sn: 2, blast: 'frag' },
     rlmg: { p: 'burst' }, rautocannon: { p: 'chain', splash: true },
     rat: { p: 'shell', blast: 'frag' },
     // the insurgents' AA weapons are old shoulder guns: they fire a shell, not a guided missile
