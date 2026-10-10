@@ -429,7 +429,7 @@
     };
     // the skirmish set-up in progress, and where the camera is
     window.__hot = function () { return B.muster.hot ? JSON.parse(JSON.stringify(B.muster.hot)) : null; };
-    window.__cam = function () { return { x: cam.x, y: cam.y, tx: cam.tx, ty: cam.ty, z: cam.z, borrowed: !!cam.borrowed, home: cam.home ? { x: cam.home.x, y: cam.home.y } : null }; };
+    window.__cam = function () { return { x: cam.x, y: cam.y, tx: cam.tx, ty: cam.ty, z: cam.z, zGoal: cam.zGoal, shotPre: cam.shotPre ? { z: cam.shotPre.z } : null, borrowed: !!cam.borrowed, home: cam.home ? { x: cam.home.x, y: cam.home.y } : null }; };
   };
   /* The campaign dossier's, installed by dossier.js (D): its own choice of
      contract, and a contract's scenario set by hand, to look at each one's
