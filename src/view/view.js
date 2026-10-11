@@ -487,7 +487,8 @@
     function render() {
       if (!B.state) return;
       scoreObjectives();   // who holds what, live in the battle (game.js)
-      drawBoard();
+      // while the board is animating it is drawn every frame anyway (game.js tick): not twice in one
+      if (!B.loop) drawBoard();
       drawHeader();
       drawBar();
       drawStats();
@@ -553,9 +554,20 @@
     /* The header's height is what the board is pinned under, and it changes when
        the phase text does. Keep the custom property honest, and resize the board
        when it actually moves. */
+    /* Asking the header its height makes the browser lay the page out, and the header
+       is redrawn with every event the battle plays: where the browser can say when
+       the height changes (ResizeObserver), it is measured then and only then. */
+    var hdrWatch = null;
     function syncHeaderHeight() {
       var hdr = document.querySelector('header');
       if (!hdr) return;
+      if (hdrWatch === null && typeof window.ResizeObserver === 'function') {
+        hdrWatch = new window.ResizeObserver(function () { measureHeader(hdr); });
+        hdrWatch.observe(hdr);                      // (and it reports the height it has now, at once)
+      }
+      if (!hdrWatch) measureHeader(hdr);
+    }
+    function measureHeader(hdr) {
       var h = Math.round(hdr.getBoundingClientRect().height);
       if (!h || h === ui.hdrH) return;
       ui.hdrH = h;

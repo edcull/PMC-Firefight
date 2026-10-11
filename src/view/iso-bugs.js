@@ -520,7 +520,7 @@
         var fly = bb.fly && !dead ? ELEV * (hullSpec(u.art).fly || 0) : 0;
         var base = (opts.lift || 0) - (opts.hop || 0);
         var lift = base + fly;
-        var step = opts.walk ? opts.walk % 2 : (bb.fly && !dead ? Math.floor((root.performance ? performance.now() : 0) / 110) % 2 : 0);
+        var step = opts.walk ? opts.walk % 2 : (bb.fly && !dead ? Math.floor(root.PMCGfx.idleNow() / 110) % 2 : 0);
         var pal = B.PALETTE[u.paint || u.side] || B.PALETTE.A;
         var SH = dead ? { lt: '#5a5044', md: '#443c33', dk: '#26211b', gl: '#6a6052' }
           : { lt: pal.light, md: pal.mid, dk: pal.dark, gl: hexMix(pal.light, '#ffffff', 0.55) };

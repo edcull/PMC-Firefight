@@ -713,7 +713,8 @@
       VIEW_W = Math.max(320, Math.min(2200, Math.round(avail)));
       VIEW_H = Math.max(240, Math.min(1600, Math.round(room)));
     }
-    DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+    // (low graphics draws one pixel per CSS pixel: a quarter of the work on a phone)
+    DPR = window.PMCGfx.low() ? 1 : Math.min(2, Math.max(1, window.devicePixelRatio || 1));
     var bw2 = Math.round(VIEW_W * DPR), bh2 = Math.round(VIEW_H * DPR);
     if (!first && canvas.width === bw2 && canvas.height === bh2) return false;
     canvas.width = bw2; canvas.height = bh2;
@@ -784,6 +785,12 @@
         clampCam();
         if (state) render();
       }, 120);
+    });
+    // low graphics switched on or off: the board's buffer at its new density, and the idle animations stopped or restarted
+    window.PMCGfx.onChange(function () {
+      sizeView(false);
+      clampCam();
+      if (state) render();
     });
     // a battle under way when the page went away is not opened by itself: the main menu comes up, and Continue has it
   }
@@ -1138,6 +1145,8 @@
      and the functions and fixed values it uses. */
   var VIEW = window.PMCView({
     get Q() { return Q; },
+    // the animation loop, while one is running (render leaves the board to it then)
+    get loop() { return loop; },
     // the sides this screen plays: without them every side reads as this screen's, and a networked game never says "Your turn"
     get seats() { return seats; },
     replaying: function () { return replaying(); },

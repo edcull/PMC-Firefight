@@ -1659,6 +1659,21 @@
         });
       });
       paintSound();
+      // low graphics, beside the sound on the menu (iso-gfx.js)
+      var gfxBtn = el('btn-menu-gfx');
+      function paintGfx() {
+        var low = window.PMCGfx.low();
+        gfxBtn.textContent = low ? 'Graphics low' : 'Graphics high';
+        gfxBtn.setAttribute('aria-pressed', low ? 'true' : 'false');
+      }
+      if (gfxBtn) {
+        gfxBtn.addEventListener('click', function () {
+          window.PMCGfx.setLow(!window.PMCGfx.low());
+          paintGfx();
+          if (SFX) SFX.click();
+        });
+        paintGfx();
+      }
       document.addEventListener('pointerdown', function unlock() {
         if (SFX) SFX.unlock();
         document.removeEventListener('pointerdown', unlock);

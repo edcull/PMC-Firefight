@@ -37,7 +37,7 @@
           sEllipse(c[0], c[1] + 0.3, rx, ry, '#0e1115');                      // the well
           if (!dead) {
             sEllipse(c[0], c[1] + 0.5, rx * 0.9, ry * 0.9, 'rgba(170,182,198,.22)');
-            var fsp = ((root.performance ? performance.now() : 0) * 0.007 * (q < 0 ? -1 : 1)) % (Math.PI * 2);
+            var fsp = (root.PMCGfx.idleNow() * 0.007 * (q < 0 ? -1 : 1)) % (Math.PI * 2);
             for (var fi = 0; fi < 5; fi++) {
               var fa = fi * Math.PI * 2 / 5 + 0.4 + fsp;
               line([c[0], c[1] + 0.5], [c[0] + Math.cos(fa) * rx * 0.9, c[1] + 0.5 + Math.sin(fa) * ry * 0.9], 1.1, 'rgba(206,214,226,.3)');
@@ -78,7 +78,7 @@
         if (!dead) {
           sEllipse(c[0], cy + 0.8, rx - lipW, ry - lipW * 0.6, 'rgba(170,182,198,.22)');
           // the blades turning: the two sides of a craft counter-rotate
-          var spin = ((root.performance ? performance.now() : 0) * 0.007 * (q < 0 ? -1 : 1)) % (Math.PI * 2);
+          var spin = (root.PMCGfx.idleNow() * 0.007 * (q < 0 ? -1 : 1)) % (Math.PI * 2);
           for (var i = 0; i < 5; i++) {
             var ba = i * Math.PI * 2 / 5 + 0.4 + spin;
             line([c[0], cy + 0.8], [c[0] + Math.cos(ba) * (rx - lipW), cy + 0.8 + Math.sin(ba) * (ry - lipW * 0.6)], 1.1, 'rgba(206,214,226,.3)');
@@ -219,7 +219,7 @@
             if (!dead) {
               var ug = S3(AF(0, 0), z - 1);
               sEllipse(ug[0], ug[1], R0 * K * 0.8, R0 * K * 0.4, 'rgba(110,190,255,.16)');
-              var tn = root.performance ? performance.now() : 0;
+              var tn = root.PMCGfx.idleNow();
               var sw = Math.sin(tn / 700) * 0.3, reach = R0 + 0.55;
               var n0 = S3(AF(R0 * 1.14, 0), podZ + 2);
               var f0 = S3(AF(reach, sw - 0.32), 0), f1 = S3(AF(reach, sw + 0.32), 0);
@@ -241,7 +241,7 @@
               [-0.1, 0, 0.1].forEach(function (q, i) {
                 var lp = S3(AF(R0 * 1.13, q * R0 * 1.4), podZ + Math.round(H * 0.2));
                 sEllipse(lp[0], lp[1], 1.3, 1.1, '#123a6e');
-                var blink = Math.floor((root.performance ? performance.now() : 0) / 240) % 3 === i;
+                var blink = Math.floor(root.PMCGfx.idleNow() / 240) % 3 === i;
                 sEllipse(lp[0], lp[1], 0.8, 0.7, dead ? '#3a4048' : blink ? '#e4f4ff' : '#6ebeff');
               });
               // the marker laser: a short emitter off the pod's flank, a red eye at its tip
@@ -249,7 +249,7 @@
               line(e0, e1, 2.2, '#15181e');
               line(e0, e1, 1, '#4a5260');
               // the red eye at its tip blinks, about once a second: the drone's light
-              var eyeOn = !dead && Math.floor((root.performance ? performance.now() : 0) / 500) % 2 === 0;
+              var eyeOn = !dead && Math.floor(root.PMCGfx.idleNow() / 500) % 2 === 0;
               sEllipse(e1[0], e1[1], 1.2, 1, dead ? '#3a2020' : eyeOn ? '#ff4038' : '#5a1c16');
               mount('nose', e1);                                   // where a marker's beam leaves the craft
               mount('scan', S3(AF(R0 * 1.13, 0), podZ + Math.round(H * 0.2)));   // and where it looks from

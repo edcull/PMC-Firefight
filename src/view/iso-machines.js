@@ -1331,7 +1331,7 @@
       }
       // the red light on a drone's aerial: it blinks, about once a second, and is out on a wreck
       function droneLamp(x, y) {
-        var lit = !dead && Math.floor((root.performance ? performance.now() : 0) / 500) % 2 === 0;
+        var lit = !dead && Math.floor(root.PMCGfx.idleNow() / 500) % 2 === 0;
         if (lit) ellipse(g, x, y, 3.6, 3.6, 'rgba(255,80,64,.28)');
         ellipse(g, x, y, 1.6, 1.6, lit ? '#ff5040' : '#5a1c16');
       }

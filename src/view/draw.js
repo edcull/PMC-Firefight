@@ -73,6 +73,7 @@
     var activeUnits = B.activeUnits, addFx = B.addFx, arrivalQueued = B.arrivalQueued, arriving = B.arriving;
     var boxesFor = B.boxesFor, clonePiece = B.clonePiece, curArea = B.curArea, dispX = B.dispX;
     var dispY = B.dispY, drawFx = B.drawFx, fitGhost = B.fitGhost, insertionMine = B.insertionMine;
+    var GFX = window.PMCGfx;
     var isAI = B.isAI, liftOf = B.liftOf, nowMs = B.nowMs, onTable = B.onTable, placingSide = B.placingSide;
     var shownAs = B.shownAs, unitById = B.unitById, zoneFor = B.zoneFor, FX = B.FX, H = B.H, ISO = B.ISO;
     var K = B.K, R = B.R, SFX = B.SFX, UR = B.UR, W = B.W, cam = B.cam, ui = B.ui;
@@ -395,7 +396,8 @@
        steps rather than flows, so lava in view gets about sixteen. */
     var ambientTick = 0;
     setInterval(function () {
-      if (!B.state || !B.vc.scene || B.loop || document.hidden) return;
+      // (in low graphics nothing moves by itself: the board waits for the next action)
+      if (!B.state || !B.vc.scene || B.loop || document.hidden || GFX.low()) return;
       ambientTick++;
       /* an aircraft keeps its rotors turning and scanners sweeping, a Beta's deflector
          breathes, a cloak shimmers — but only one in view (drawBoard notes it) is worth
@@ -482,7 +484,7 @@
 
     function heatHaze(v) {
       B.vc.hazeOnView = false;
-      if (calmMotion || !B.state.terrain) return;
+      if (calmMotion || GFX.low() || !B.state.terrain) return;
       // the fields of hot air: over every melt, and the desert's sun-baked stretches
       var fields = B.state.terrain.filter(function (r) { return r.kind === 'lava' && !r.wrecked; }).map(function (r) {
         return { foot: r.poly || [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]], rise: K * 2.2, amp: 1.3, k: 1 };
@@ -685,16 +687,26 @@
           return x - y + 2 > r.x - (r.y + r.h) && x - y - 2 < r.x + r.w - r.y;      // and the two overlap on screen
         });
         if (!over.length) return;
-        // the unit's own patch of the frame, in buffer pixels
+        /* the unit's own patch of the frame: 3" either side of it, 6" up and 1.5" down, room
+           for the widest and tallest figures there are (a Queen, an aircraft aloft) and
+           their markers — K is a whole inch, so a patch of 22" by 18" was most of the table */
         var p = ISO.toScreen(x, y), lift = it.drawn.lift || 0;
-        var bx = p.x - K * 11, by = p.y - lift - K * 15, bw = K * 22, bh = K * 18;
+        var bx = p.x - K * 3, by = p.y - lift - K * 6, bw = K * 6, bh = K * 7.5;
+        // its corner on a whole pixel of the frame, so the outline lands on the figures' own pixels rather than between them
+        bx = (Math.floor(bx * sc + tr.e) - tr.e) / sc; by = (Math.floor(by * sc + tr.f) - tr.f) / sc;
         var W2 = Math.ceil(bw * sc), H2 = Math.ceil(bh * sc);
         if (W2 < 2 || H2 < 2) return;
+        /* The scratch canvases only ever grow (one close-up frame and they are the size
+           of the window), so every step is kept to the unit's own patch — and the
+           outline's spread past it — clipped there too, as the compositing steps below
+           would otherwise touch every pixel of the canvas. */
+        var d = Math.max(1, Math.round(sc * 0.75)), Wc = W2 + d, Hc = H2 + d;
         if (!xrUnit) { xrUnit = document.createElement('canvas'); xrMask = document.createElement('canvas'); xrBar = document.createElement('canvas'); }
-        [xrUnit, xrMask, xrBar].forEach(function (c) { if (c.width < W2 || c.height < H2) { c.width = Math.max(c.width, W2); c.height = Math.max(c.height, H2); } });
-        var ug = xrUnit.getContext('2d'), mg = xrMask.getContext('2d');
-        ug.setTransform(1, 0, 0, 1, 0, 0); ug.clearRect(0, 0, xrUnit.width, xrUnit.height);
-        mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, xrMask.width, xrMask.height);
+        [xrUnit, xrMask, xrBar].forEach(function (c) { if (c.width < Wc || c.height < Hc) { c.width = Math.max(c.width, Wc); c.height = Math.max(c.height, Hc); } });
+        var ug = xrUnit.getContext('2d'), mg = xrMask.getContext('2d'), bg = xrBar.getContext('2d');
+        [ug, mg, bg].forEach(function (c) { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.beginPath(); c.rect(0, 0, Wc, Hc); c.clip(); c.clearRect(0, 0, Wc, Hc); });
+        // a patch of one scratch canvas onto another, at an offset
+        var patch = function (dst, src, ox, oy) { dst.drawImage(src, 0, 0, Wc, Hc, ox || 0, oy || 0, Wc, Hc); };
         // the figures alone, as they were drawn: no base ring, no selection
         var o = {};
         for (var k in it.drawn) o[k] = it.drawn[k];
@@ -705,11 +717,10 @@
         /* Its markers (the Suppression bar, the flee mark) are shown whole over the
            building, not as an outline: what the unit drew, less what it draws
            without them. */
-        var bg = xrBar.getContext('2d'), marks = !!(o.morale && u.sp > 0) || !!u.marked;
+        var marks = !!(o.morale && u.sp > 0) || !!u.marked;
         if (marks) {
-          bg.setTransform(1, 0, 0, 1, 0, 0); bg.clearRect(0, 0, xrBar.width, xrBar.height);
           bg.globalCompositeOperation = 'source-over';
-          bg.drawImage(xrUnit, 0, 0);
+          patch(bg, xrUnit);
           var bare = {}; for (var kk in o) bare[kk] = o[kk];
           bare.morale = null; bare.noMarks = true;
           mg.setTransform(sc, 0, 0, sc, -bx * sc, -by * sc);
@@ -717,38 +728,39 @@
           ISO.drawUnit(mg, Object.assign({}, u, { marked: false }), bare);
           mg.setTransform(1, 0, 0, 1, 0, 0);
           bg.globalCompositeOperation = 'destination-out';
-          bg.drawImage(xrMask, 0, 0);
+          patch(bg, xrMask);
           bg.globalCompositeOperation = 'source-over';
-          mg.clearRect(0, 0, xrMask.width, xrMask.height);
+          mg.clearRect(0, 0, Wc, Hc);
           // and the outline is of the figures alone
           ug.save(); ug.setTransform(1, 0, 0, 1, 0, 0);
           ug.globalCompositeOperation = 'destination-out';
-          ug.drawImage(xrBar, 0, 0);
+          patch(ug, xrBar);
           ug.restore();
         }
         // the outline: the figures spread a pixel each way, less the figures themselves
-        var d = Math.max(1, Math.round(sc * 0.75));
-        mg.drawImage(xrUnit, -d, 0); mg.drawImage(xrUnit, d, 0); mg.drawImage(xrUnit, 0, -d); mg.drawImage(xrUnit, 0, d);
+        patch(mg, xrUnit, -d, 0); patch(mg, xrUnit, d, 0); patch(mg, xrUnit, 0, -d); patch(mg, xrUnit, 0, d);
         mg.globalCompositeOperation = 'destination-out';
-        mg.drawImage(xrUnit, 0, 0);
+        patch(mg, xrUnit);
         // with the wash inside
         mg.globalCompositeOperation = 'source-over';
         mg.globalAlpha = 0.22;
-        mg.drawImage(xrUnit, 0, 0);
+        patch(mg, xrUnit);
         mg.globalAlpha = 1;
         mg.globalCompositeOperation = 'source-in';
         mg.fillStyle = sideInk(u.paint || u.side);
         mg.fillRect(0, 0, W2, H2);
         // only where a building in front of it is drawn
-        ug.setTransform(1, 0, 0, 1, 0, 0); ug.clearRect(0, 0, xrUnit.width, xrUnit.height);
+        ug.setTransform(1, 0, 0, 1, 0, 0); ug.clearRect(0, 0, Wc, Hc);
         ug.setTransform(sc, 0, 0, sc, -bx * sc, -by * sc);
         over.forEach(function (b) {
           var pa = b.pr._solid;
           if (pa) ug.drawImage(pa.cv, 0, 0, pa.box.w, pa.box.h, pa.box.x, pa.box.y, pa.box.w, pa.box.h);
         });
+        mg.setTransform(1, 0, 0, 1, 0, 0);
         mg.globalCompositeOperation = 'destination-in';
-        mg.drawImage(xrUnit, 0, 0);
+        patch(mg, xrUnit);
         mg.globalCompositeOperation = 'source-over';
+        [ug, mg, bg].forEach(function (c) { c.restore(); });
         g.save();
         g.globalAlpha = 0.85;
         g.drawImage(xrMask, 0, 0, W2, H2, bx, by, W2 / sc, H2 / sc);
@@ -979,7 +991,7 @@
       });
       B.vc.liveOnView = lives.length > 0;
       // the dead and the wrecks stay where they fell
-      var now = now0, anyFire = false;
+      var anyFire = false;
       (B.vc.remains || []).forEach(function (r) {
         if (!onView(r.x, r.y)) return;
         if (r.kind === 'wreck') {
@@ -995,7 +1007,7 @@
       // an aircraft's rotors, a deflector, a cloak: only worth redrawing for while one is in view
       B.vc.animOnView = order.some(function (it) { return it.draw === 'unit' && !it.unit.aboard && ISO.animates(it.unit); });
 
-      var held = heldWings(blockers), tNow = nowMs();
+      var held = heldWings(blockers), tNow = GFX.idleNow();
       B.vc.flagOnView = held.length > 0;
       blockers.forEach(function (b) { b.flag = null; });
       // a contested wing flies no flag
@@ -1012,7 +1024,7 @@
             if (it.pr.kind === 'beacon' && !it.pr.lz) it.pr.holder = holderPalette(B.state.objectives[it.pr.index]);
             // an Invasion's smoke is the attacker's colour: they are the ones coming down on it
             if (it.pr.kind === 'beacon' && it.pr.lz) it.pr.holder = holderPalette({ owner: B.state.sc && B.state.sc.attacker });
-            ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), now0);
+            ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), GFX.idleNow());
             return;
           }
           if (it.draw === 'body') {
@@ -1046,7 +1058,7 @@
             return;
           }
           if (it.draw === 'wreck') {
-            ISO.drawWreck(B.pctx, it.u, { x: it.r.x, y: it.r.y }, liftOf(it.r.x, it.r.y), now + it.r.t0);
+            ISO.drawWreck(B.pctx, it.u, { x: it.r.x, y: it.r.y }, liftOf(it.r.x, it.r.y), GFX.idleNow() + it.r.t0);
             return;
           }
           var u = shownAs(it.unit), ax = dispX(u), ay = dispY(u);

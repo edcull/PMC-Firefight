@@ -22,7 +22,7 @@
         // turrets burn the tribe's blue energy whatever colours it wears; the craft carry the army colour
         var gc1 = spec.kind === 'craft' ? xenoGlow(pal) : '#6ebeff';
         var GLO = dead ? { m: '#3e3c38', l: '#4a4843', h: 'rgba(0,0,0,0)' } : { m: gc1, l: hexMix(gc1, '#ffffff', 0.55), h: hexA(gc1, 0.28), a: hexA(gc1, 0.5) };
-        var tnow = root.performance ? performance.now() : 0;
+        var tnow = root.PMCGfx.idleNow();
         function Wd(t, s2) { return { x: at.x + cos * t - sin * s2, y: at.y + sin * t + cos * s2 }; }
         function S(t, s2, z) { var w = Wd(t, s2), q = toScreen(w.x, w.y); return [q.x, q.y - base - z]; }
         function path(pts, c) { poly(g, pts, c); }

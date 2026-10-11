@@ -151,6 +151,19 @@
     };
   }
   function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+  /* The scanline and dotted shapes below are many one-pixel rectangles of one colour:
+     gathered into one path and filled once, they are one draw rather than a hundred
+     (a phone's canvas pays for each). A separate Path2D, so a path the caller is
+     building is left alone; where there is none (a bare test canvas), rect by rect. */
+  var HAS_PATH2D = typeof Path2D === 'function';
+  function rects(g, c) {
+    var path = HAS_PATH2D ? new Path2D() : null;
+    g.fillStyle = c;
+    return {
+      add: function (x, y, w, h) { if (path) path.rect(x, y, w, h); else g.fillRect(x, y, w, h); },
+      done: function () { if (path) g.fill(path); }
+    };
+  }
 
   /* ---------- pixel helpers ---------- */
   var PIXEL = 2;                // the visible "pixel" of the art, in buffer px
@@ -195,7 +208,7 @@
       if (pts[i][1] < minY) minY = pts[i][1];
       if (pts[i][1] > maxY) maxY = pts[i][1];
     }
-    g.fillStyle = c;
+    var fill = rects(g, c);
     for (var y = Math.round(minY); y < Math.round(maxY); y++) {
       var xs = [], cy = y + 0.5;
       for (i = 0; i < pts.length; i++) {
@@ -208,27 +221,34 @@
       xs.sort(function (p, q) { return p - q; });
       for (var k = 0; k + 1 < xs.length; k += 2) {
         var x0 = Math.round(xs[k]), x1 = Math.round(xs[k + 1]);
-        if (x1 > x0) g.fillRect(x0, y, x1 - x0, 1);
+        if (x1 > x0) fill.add(x0, y, x1 - x0, 1);
       }
     }
+    fill.done();
   }
 
   function ellipse(g, cx, cy, rx, ry, c) {
-    g.fillStyle = c;
+    var fill = rects(g, c);
     for (var y = -Math.ceil(ry); y <= Math.ceil(ry); y++) {
       var t = 1 - (y * y) / (ry * ry);
       if (t <= 0) continue;
       var half = Math.sqrt(t) * rx;
       var x0 = Math.round(cx - half), x1 = Math.round(cx + half);
-      if (x1 > x0) g.fillRect(x0, Math.round(cy + y), x1 - x0, 1);
+      if (x1 > x0) fill.add(x0, Math.round(cy + y), x1 - x0, 1);
     }
+    fill.done();
   }
 
+  // (each dot once: round the ring the steps land on the same pixel now and then)
   function ellipseRing(g, cx, cy, rx, ry, c) {
-    g.fillStyle = c;
+    var fill = rects(g, c), lx = null, ly = null;
     for (var a = 0; a < Math.PI * 2; a += 0.06) {
-      g.fillRect(Math.round(cx + Math.cos(a) * rx), Math.round(cy + Math.sin(a) * ry), 1, 1);
+      var x = Math.round(cx + Math.cos(a) * rx), y = Math.round(cy + Math.sin(a) * ry);
+      if (x === lx && y === ly) continue;
+      lx = x; ly = y;
+      fill.add(x, y, 1, 1);
     }
+    fill.done();
   }
   /* A unit's state, laid over its ring as short dashes, so the army's dots
      still show between them whatever its colour: amber when suppressed, red
@@ -409,9 +429,9 @@
      goes off. It is out when he is dead. */
   function collarLamp(g, x, y, mi, st) {
     if (st === 'destroyed') return;
-    var t = root.performance ? performance.now() : 0;
+    var t = root.PMCGfx.idleNow();
     var red = st === 'red', warn = st === 'suppressed' || st === 'broken';
-    var per = red ? 180 : warn ? 420 : 1100, lit = ((t + mi * (red ? 30 : warn ? 70 : 180)) % per) < per * 0.5;
+    var per = red ? 180 : warn ? 420 : 1100, lit = root.PMCGfx.low() || ((t + mi * (red ? 30 : warn ? 70 : 180)) % per) < per * 0.5;
     var on = red ? '#ff3b2e' : warn ? '#ffb030' : '#5cff7a', off = red ? '#5a1410' : warn ? '#6a4414' : '#1f4a2a';
     if (lit) ellipse(g, x, y, 2.6, 2.2, red ? 'rgba(255,60,40,.38)' : warn ? 'rgba(255,170,40,.32)' : 'rgba(80,255,120,.28)');
     g.fillStyle = lit ? on : off;
@@ -586,7 +606,7 @@
         var sseed = 0, ssid = String(u.id || u.code || '');
         for (var sq = 0; sq < ssid.length; sq++) sseed = (sseed * 31 + ssid.charCodeAt(sq)) | 0;
         damageSmoke(g, p.x + a(0.5), p.y - m.lift - m.hgt * 0.7,
-          opts.t != null ? opts.t : (root.performance ? performance.now() : 0), Math.abs(sseed));
+          opts.t != null ? opts.t : root.PMCGfx.idleNow(), Math.abs(sseed));
       }
       var top = p.y - m.lift - m.hgt - a(4);
       // its Structure, in place of suppression: a segment a point, once it has taken damage

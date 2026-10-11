@@ -599,7 +599,7 @@
                 var tip = barrel(TF, TR * 0.3, TR * 1.05, 0, tz + 5, 4.2, 'flame', { col: '#3a3f38', lit: '#5c6458' });
                 // the pilot light at the nozzle: a small flame licking upward, flickering
                 if (!dead) {
-                  var ft = (root.performance ? performance.now() : 0) / 90, fk = Math.floor(ft) % 4;
+                  var ft = root.PMCGfx.idleNow() / 90, fk = Math.floor(ft) % 4;
                   var fh = [5, 7, 6, 8][fk], fs = [0, 0.8, 0, -0.8][fk];
                   poly(g, [[tip[0] - 2, tip[1]], [tip[0] + fs, tip[1] - fh], [tip[0] + 2, tip[1]]], '#e08a3a');
                   poly(g, [[tip[0] - 1, tip[1]], [tip[0] + fs * 0.6, tip[1] - fh * 0.55], [tip[0] + 1, tip[1]]], '#ffd070');
