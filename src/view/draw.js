@@ -440,55 +440,13 @@
       return lo.slice(0, -1).concat(up.slice(0, -1));
     }
 
-    /* On a desert world the sun does it too: a few stretches of open sand, well
-       clear of any piece of terrain, shimmer gently — the same ripple, weaker and
-       lower than over a melt. Chosen once a table, from its seed, so every redraw
-       (and every screen) has the same ones. */
-    function desertPatches() {
-      var st = B.state;
-      if (!st || !st.cfg || st.cfg.planet !== 'desert') return [];
-      var key = st.seed + '|' + st.terrain.length;
-      if (B.vc.sandHaze && B.vc.sandHaze.key === key) return B.vc.sandHaze.list;
-      var seed = (st.seed || 1) >>> 0;
-      function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
-      // open ground: nothing of the table's terrain within a few inches
-      function clear(x, y, m) {
-        return st.terrain.every(function (r) {
-          if (r.kind === 'lava' || r.wrecked) return true;
-          var bx = r.poly ? Math.min.apply(null, r.poly.map(function (q) { return q[0]; })) : r.x;
-          var by = r.poly ? Math.min.apply(null, r.poly.map(function (q) { return q[1]; })) : r.y;
-          var bw = r.poly ? Math.max.apply(null, r.poly.map(function (q) { return q[0]; })) - bx : r.w;
-          var bh = r.poly ? Math.max.apply(null, r.poly.map(function (q) { return q[1]; })) - by : r.h;
-          return x < bx - m || x > bx + bw + m || y < by - m || y > by + bh + m;
-        });
-      }
-      var spots = [];
-      for (var gx = 5; gx <= W - 5; gx += 5) for (var gy = 5; gy <= H - 5; gy += 5) {
-        var x = gx + (rnd() - 0.5) * 3, y = gy + (rnd() - 0.5) * 3, rad = 3 + rnd() * 2.5;
-        if (clear(x, y, rad + 1) && spots.every(function (q) { return Math.hypot(q.x - x, q.y - y) > q.rad + rad + 3; })) spots.push({ x: x, y: y, rad: rad });
-      }
-      // a handful, not a carpet
-      spots.sort(function () { return rnd() - 0.5; });
-      var list = spots.slice(0, 9).map(function (q) {
-        var foot = [];
-        for (var i = 0; i < 14; i++) {
-          var an = i / 14 * Math.PI * 2, rr = q.rad * (0.8 + 0.2 * Math.sin(an * 3 + q.x));
-          foot.push([q.x + Math.cos(an) * rr, q.y + Math.sin(an) * rr * 0.8]);
-        }
-        // swaying up to 2 plate pixels each way at its strongest (amp × k)
-        return { foot: foot, rise: K * 1.2, amp: 2.67, k: 0.75 };
-      });
-      B.vc.sandHaze = { key: key, list: list };
-      return list;
-    }
-
     function heatHaze(v) {
       B.vc.hazeOnView = false;
       if (calmMotion || GFX.low() || !B.state.terrain) return;
-      // the fields of hot air: over every melt, and the desert's sun-baked stretches
+      // the fields of hot air: over every melt
       var fields = B.state.terrain.filter(function (r) { return r.kind === 'lava' && !r.wrecked; }).map(function (r) {
         return { foot: r.poly || [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]], rise: K * 2.2, amp: 1.3, k: 1 };
-      }).concat(desertPatches());
+      });
       if (!fields.length) return;
       var t = nowMs() / 1000;
 
@@ -696,6 +654,24 @@
         bx = (Math.floor(bx * sc + tr.e) - tr.e) / sc; by = (Math.floor(by * sc + tr.f) - tr.f) / sc;
         var W2 = Math.ceil(bw * sc), H2 = Math.ceil(bh * sc);
         if (W2 < 2 || H2 < 2) return;
+        /* An outline that would come out the same as last frame's is the last frame's:
+           the unit standing still, drawn the same, at the same zoom, where it sits on the
+           frame's pixels the same, behind the same buildings' patches. */
+        var solids = over.map(function (b) { return b.pr._solid || null; });
+        var still = !it.drawn.hop && !it.drawn.walk && !it.drawn.arc && !ISO.animates(u) && !ISO.smoking(u) && !(ISO.turning && ISO.turning(u)) && !window.__noMachineCache;
+        var XC = B.vc.xcache || (B.vc.xcache = {}), xc = XC[u.id];
+        var xkey = still ? unitSig(u) + '|' + JSON.stringify(it.drawn) + '|' + sc + '|' + ((p.x - bx) * sc).toFixed(3) + ',' + ((p.y - by) * sc).toFixed(3) +
+          '|' + g.imageSmoothingEnabled + '|' + W2 + 'x' + H2 : null;
+        var same = xc && xkey && xc.key === xkey && xc.solids && xc.solids.length === solids.length && xc.solids.every(function (q, i) { return q === solids[i]; });
+        if (same) { lay(xc.mask, xc.bar); return; }
+        function lay(mask, bar) {
+          g.save();
+          g.globalAlpha = 0.85;
+          g.drawImage(mask, 0, 0, W2, H2, bx, by, W2 / sc, H2 / sc);
+          g.globalAlpha = 1;
+          if (bar) g.drawImage(bar, 0, 0, W2, H2, bx, by, W2 / sc, H2 / sc);
+          g.restore();
+        }
         /* The scratch canvases only ever grow (one close-up frame and they are the size
            of the window), so every step is kept to the unit's own patch — and the
            outline's spread past it — clipped there too, as the compositing steps below
@@ -761,12 +737,13 @@
         patch(mg, xrUnit);
         mg.globalCompositeOperation = 'source-over';
         [ug, mg, bg].forEach(function (c) { c.restore(); });
-        g.save();
-        g.globalAlpha = 0.85;
-        g.drawImage(xrMask, 0, 0, W2, H2, bx, by, W2 / sc, H2 / sc);
-        g.globalAlpha = 1;
-        if (marks) g.drawImage(xrBar, 0, 0, W2, H2, bx, by, W2 / sc, H2 / sc);
-        g.restore();
+        lay(xrMask, marks ? xrBar : null);
+        // kept for the next frame: a copy of the outline (and the markers), the scratch canvases being shared
+        if (!xkey) { delete XC[u.id]; return; }
+        // seen once like this: not kept (a camera on the move would copy it every frame); seen twice, it is
+        if (!xc || xc.seen !== xkey) { XC[u.id] = { seen: xkey }; return; }
+        var keep = function (src) { var c = document.createElement('canvas'); c.width = W2; c.height = H2; c.getContext('2d').drawImage(src, 0, 0, W2, H2, 0, 0, W2, H2); return c; };
+        XC[u.id] = { key: xkey, solids: solids, mask: keep(xrMask), bar: marks ? keep(xrBar) : null };
       });
     }
     var mScratch = null;       // the patches themselves are the view cache's (vc.mcache), one set a battle
@@ -778,9 +755,12 @@
         return val;
       });
     }
+    /* A unit that looks the same two frames running — a machine, or a squad standing
+       still — is drawn once into a patch at the frame's scale and copied at whole
+       pixels; anything moving, turning, smoking or alive by itself is drawn as ever. */
     function drawUnitOn(u, opts) {
       var g = B.pctx;
-      if (!R.isMachine(u) || opts.hop || opts.walk || opts.arc || u.aboard || ISO.animates(u) || ISO.smoking(u) ||
+      if (opts.hop || opts.walk || opts.arc || u.aboard || ISO.animates(u) || ISO.smoking(u) ||
           (ISO.turning && ISO.turning(u)) || g.globalAlpha !== 1 || !g.getTransform || window.__noMachineCache) { ISO.drawUnit(g, u, opts); return; }
       var tr = g.getTransform(), p = ISO.toScreen(opts.at.x, opts.at.y);
       var dx = tr.a * p.x + tr.e, dy = tr.d * p.y + tr.f, ix = Math.floor(dx), iy = Math.floor(dy);

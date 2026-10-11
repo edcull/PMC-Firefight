@@ -340,6 +340,8 @@
     };
     // the view's own caches of the table (the baked plates, the bodies): not the battle's
     window.__vc = function () { return B.vc; };
+    // the board drawn now, whatever the animation loop is doing (render leaves it to the loop while one runs)
+    window.__drawNow = function () { drawBoard(); };
     window.__rebuildScene = function () { var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.opened = null; drawBoard(); };
     window.__tapTerrain = function (i) {
       var r = ui.terrain[i];
