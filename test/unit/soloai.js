@@ -81,6 +81,32 @@ console.log('\nReasonably Neutral holds its position (p. 147)');
   ok('...and never closes on the players in the open', closer === 0, closer + '');
 })();
 
+console.log('\nSOL-9 Reasonably Defensive seeks cover before it shoots (p. 147)');
+(function () {
+  let intoCover = 0, shot = 0;
+  for (let i = 0; i < 8; i++) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 's_crush', armyA: ['regular'], armyB: ['regular'],
+      nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse',
+      solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+    const st = e.state();
+    st.terrain.length = 0; st.objectives.length = 0; if (st.sc) { st.sc.targets = []; st.sc.counters = []; }
+    st.units.forEach((u) => { u.reserve = false; u.aboard = null; u.sp = 0; u.bld = null; u.activated = false; });
+    st.activeSide = 'B';
+    // in the open, a target 12" off, a wood a couple of inches behind
+    const a = st.units.find((u) => u.side === 'A'), b = st.units.find((u) => u.side === 'B');
+    b.x = 20; b.y = 24; a.x = 32; a.y = 24;
+    st.terrain.push({ kind: 'woods', x: 14, y: 20, w: 4, h: 8 });
+    const d6 = R.d6; let first = true; R.d6 = () => { if (first) { first = false; return 1; } return d6(); };   // the behaviour die: Defensive
+    const n0 = st.log.length;
+    try { e.query.aiAct(b); } finally { R.d6 = d6; }
+    if (R.coverAt(st, b.x, b.y, b) > 0) intoCover++;
+    if (st.log.slice(n0).some((l) => /fires at/.test(l.text || ''))) shot++;
+  }
+  ok('a Defensive unit in the open goes into the cover in reach', intoCover === 8, intoCover + ' of 8');
+  ok('...and still shoots from it', shot === 8, shot + ' of 8');
+})();
+
 console.log('\nDecapitation: every OpFor Command Unit is a leader (p. 152)');
 (function () {
   const e = Engine.create();
@@ -103,6 +129,28 @@ console.log('\nDecapitation: every OpFor Command Unit is a leader (p. 152)');
   pooled.alive = false;
   const r2 = st.scen.check(st);
   ok('...killing every one wins', !!r2 && r2.winner === 'A', r2 && r2.text);
+})();
+
+console.log('\nSOL-10 Decapitation: the leaders are placed in defensive positions (p. 152)');
+(function () {
+  let leaders = 0, garrison = 0, open = 0, edge = 0, near = 0;
+  for (const planet of ['sparse', 'dense', 'industrial', 'jungle']) for (let g = 0; g < 6; g++) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 1, scenario: 's_decap', armyA: SOLO.rollCommando(3, 1, 'pmc'), armyB: SOLO.rollOpFor(3, 1, 'pmc', false),
+      nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet,
+      solo: { coop: false, faction: 'pmc', opFaction: 'pmc', names: ['A'] } });
+    const st = e.state(), ls = st.units.filter((u) => u.soloLeader);
+    ls.forEach((u, i) => {
+      leaders++;
+      if (u.bld) garrison++;
+      else if (!R.coverAt(st, u.x, u.y, u) && !st.terrain.some((t) => t.kind === 'barricade' && R.rectPointDist(t, u.x, u.y) <= 1.5)) open++;
+      if (u.x < 12 || u.y < 12 || u.x > 36 || u.y > 36) edge++;
+      ls.slice(i + 1).forEach((v) => { if (R.inches(u.x, u.y, v.x, v.y) < 12) near++; });
+    });
+  }
+  ok('leaders garrison buildings where there are any', garrison > 0, garrison + ' of ' + leaders);
+  ok('...and stand in the open only where there is no position to be had', open <= leaders * 0.2, open + ' of ' + leaders + ' in the open');
+  ok('...each 12" from the table edges and from the other leaders', edge === 0 && near === 0, edge + ' near an edge, ' + near + ' pairs too close');
 })();
 
 console.log('\nThe OpFor answers the commando\u2019s machines, threat by threat (p. 148)');
@@ -388,13 +436,16 @@ console.log('\nA campaign AI plays the whole behaviour table, tempered by its pe
     steps(e, 4000);
     const st = e.state(), label = {};
     st.units.forEach((u) => { label[u.label] = u; });
-    st.log.forEach((l) => {
+    st.log.forEach((l, i) => {
       const m = /^(.*) — behaviour D6/.exec(l.text || '');
       if (!m) return;
       rolls++;
       const u = label[m[1]];
       if (u && R.isMachine(u)) hullRolls++;
-      if (u && (u.side === 'A' ? /Bastion −1/ : /Shock \+1/).test(l.text)) tempered++;
+      // a hacked unit is worked by the side that hacked it, to that side's temper
+      const hacked = i > 0 && (st.log[i - 1].text || '').indexOf(m[1] + ' is under ') === 0;
+      const by = u && (hacked ? (u.side === 'A' ? 'B' : 'A') : u.side);
+      if (u && (by === 'A' ? /Bastion −1/ : /Shock \+1/).test(l.text)) tempered++;
     });
   }
   ok('hulls roll on the table outside solitaire too', hullRolls > 0, hullRolls + ' of ' + rolls + ' rolls');

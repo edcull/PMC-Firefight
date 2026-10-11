@@ -14,6 +14,7 @@ Severity: **H** changes outcomes often or breaks a scenario; **M** wrong in a co
 4. [Owner decisions](#4-owner-decisions)
 5. [Regressions](#5-regressions)
 6. [Coverage](#6-coverage)
+7. [Progress](#7-progress)
 
 ## 1. Summary
 
@@ -177,4 +178,14 @@ composition table and caps (`rules.js:72-78`, `checkArmy` 415-441); every profil
 ### Solitaire and co-op (l.4752–5118)
 
 phases and co-op alternation, OpFor activation order; behaviour table bands and modifiers, Kill Them All!, Offensive, machines; commando and OpFor composition (`comp.js`: 4 factions × BT I–V × PL1–2 × 3 threat settings, no fault); Crushing the Resistance, Protecting the VIP, Decapitation, Evacuation, Sabotage, Ambush! set-up, arrivals, special rules and victory. [ambiguous, not raised: Ambush "order … determined randomly" read as a shuffled column.] Left out on purpose: co-op campaign halving, hand-placed terrain and counters, OpFor pool rolled not chosen, terrain guidance advisory, "common sense" replaced by heuristics; Evacuation militia always the PMC rifle profile.
+
+## 7. Progress
+
+| Finding | Outcome | Where |
+|---|---|---|
+| REB-6 Online Rebel tactic chosen twice | **Fixed.** Online, the tactic is chosen at the table only: the server checks a contract pick without a tactic, whatever the client sends, so Human Wave's free units cannot be claimed on the contract as well. | `camp-cmds.js` (`contractPick`); test `online.js` |
+| XEN-16 Dual-mode Weapons only within 12" | **Fixed** to the owner's reading: "in LoS" is the tribe's sight (Mental Projection), so a target any unbroken Xenotripod sees gets full modifiers at any range, so long as the shooter's own line to it is clear; through blocking terrain it is still Indirect Fire at Basic Firepower. The card says so. | `xeno.js` (`dualMode`), `campaign.js` (XT6); test `xeno.js` |
+| SOL-9 Reasonably Defensive does not seek cover | **Fixed.** A Defensive OpFor unit first takes the best cover within its Movement, from where it can still shoot if there is such a spot (an Advance and a shot), else the best cover there is; only with no better cover in reach does it fire from where it stands. | `ai.js` (`defensiveHold`); test `soloai.js` |
+| SOL-10 Decapitation leaders placed in the open | **Fixed.** A leader that can garrison takes a building or bunker section; else a trench, ruins, crater or woods; else a spot behind a low wall (the scenario's barricades included); open ground only failing all of those. Every spot is 12" from the edges and the other leaders. In 274 leaders over eight planets: 67 garrisoned, 139 in cover, 41 behind a wall, 27 in the open (was 176 of 288), none near an edge or each other. | `solitaire.js` (`s_decap.deploy`); test `soloai.js` |
+| SOL-11 Advancing Defensive/Neutral OpFor shoot the easiest target | **Fixed** with SOL-9: after an Advance they engage the biggest threat too. | `ai.js` (`neutralHold`, `defensiveHold`, the move-then-shoot) |
 

@@ -1076,6 +1076,7 @@
          it fires from where it is, or holds. */
       var pull = (behaviour === 'defensive' || behaviour === 'neutral') && !shot.forced ? objectivePull(u) : null;
       if (soloI && behaviour === 'neutral' && !pull) { neutralHold(u, shot); return; }
+      if (soloI && behaviour === 'defensive' && !pull && !shot.forced && defensiveHold(u)) return;
       if (!pull && (behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4) {
         fire(u, shot.t, 'fire'); return;
       }
@@ -1115,7 +1116,8 @@
         if (u.x < 0) { u.activated = true; endActivation(u); return; }
       }
       if (behaviour !== 'flee' && !killAll && !noAdv && !R.campFlag(u, 'noAdvance')) {
-        var t2 = bestTarget(u, 'advance');
+        // (the cautious OpFor engage the biggest threat after an Advance too, SOL-6)
+        var t2 = soloI && (behaviour === 'defensive' || behaviour === 'neutral') ? threatTarget(u, 'advance') : bestTarget(u, 'advance');
         if (t2.t && t2.score > 0.2) {
           whenIdle(function () { if (E.state && !E.state.over && u.alive) fire(u, t2.t, 'advance'); });
           return;
@@ -1173,6 +1175,44 @@
     }
 
     // the solitaire OpFor's Reasonably Neutral infantry (see actInfantry)
+    /* Reasonably Defensive, in a solitaire game (p. 147): "Unit seeks cover, but will
+       engage the enemy if possible. That said, the soldiers are more concerned with their
+       safety than the effectiveness of their fire." So better cover within its Movement
+       comes first, and the shot second: the best cover it can shoot from, else the best
+       cover there is (an Advance with no shot at the end). With no better cover in reach
+       it is left to the rest of aiAct, which fires from where it stands. True if it acted. */
+    function defensiveHold(u) {
+      var here = R.coverAt(E.state, u.x, u.y, u);
+      var cands = R.reachable(E.state, u, u.move).filter(function (c) {
+        if (!canStand(u, c)) return false;
+        c.cv = R.coverAt(E.state, c.x, c.y, u);
+        return c.cv > here;
+      });
+      if (!cands.length) return false;
+      cands.sort(function (a, b) { return (b.cv - a.cv) || (a.cost || 0) - (b.cost || 0); });
+      var pick = null, pickShot = null, ox = u.x, oy = u.y;
+      for (var i = 0; i < cands.length && i < 24 && !pick; i++) {
+        u.x = cands[i].x; u.y = cands[i].y;
+        var s2 = threatTarget(u, 'advance');
+        u.x = ox; u.y = oy;
+        if (s2.t && s2.score > 0.2) { pick = cands[i]; pickShot = s2; }
+      }
+      if (!pick) pick = cands[0];
+      var path = R.pathTo(E.state, u, u.move, pick);
+      faceAfter(u, path, pick);
+      var d = R.inches(u.x, u.y, pick.x, pick.y);
+      u.x = pick.x; u.y = pick.y;
+      logLine('move', u.label + ' advances ' + d.toFixed(1) + '" into cover.');
+      crushAlong(u, path);
+      animateMove(u, path, true);
+      soloAfterMove(u);
+      if (u.x < 0) { u.activated = true; endActivation(u); return true; }
+      if (pickShot) {
+        whenIdle(function () { if (E.state && !E.state.over && u.alive) fire(u, pickShot.t, 'advance'); });
+        return true;
+      }
+      u.activated = true; endActivation(u); return true;
+    }
     function neutralHold(u, shot) {
       var here = R.coverAt(E.state, u.x, u.y, u), hereScore = shot.t ? shot.score : 0;
       /* An attacker not out ahead of its force (assaultPlan) bounds forward instead: to
@@ -1194,7 +1234,7 @@
       var pick = null, pickShot = null, ox = u.x, oy = u.y;
       for (var i = 0; i < cands.length && i < 16 && !pick; i++) {
         u.x = cands[i].x; u.y = cands[i].y;
-        var s2 = bestTarget(u, 'advance');
+        var s2 = threatTarget(u, 'advance');
         u.x = ox; u.y = oy;
         if ((s2.t ? s2.score : 0) >= hereScore - 1e-9) { pick = cands[i]; pickShot = s2; }
       }

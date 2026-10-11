@@ -217,6 +217,8 @@ function ok(name, cond, note) {
   ok('Ash picks', cmd(ash, 'duel', { cmd: 'contractPick', args: { rids: dA } }).ok);
   ok('...unseen by Brann until both are ready', camp(brann).online.duel.contract.picks.A.hidden === true);
   cmd(ash, 'duel', { cmd: 'contractReady', args: {} });
+  cmd(brann, 'duel', { cmd: 'contractPick', args: { rids: dB, tactic: 'wave' } });
+  ok('...a tactic sent with the pick is not taken: it is chosen at the table, once (REB-6)', camp(brann).online.duel.contract.picks.B.tactic === null);
   ok('Brann picks', cmd(brann, 'duel', { cmd: 'contractPick', args: { rids: dB } }).ok);
   const n1 = told.length;
   const dgo = cmd(brann, 'duel', { cmd: 'contractReady', args: {} });

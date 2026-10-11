@@ -792,7 +792,6 @@
           pk.drugs = pk.drugs.filter(function (r) { return pk.rids.indexOf(r) >= 0; });
           E.render(); return true;
         }
-        if (attr('data-octactic') !== null) { pk.tactic = attr('data-octactic') || null; E.render(); return true; }
         if (attr('data-ocdrug')) {
           var dg = attr('data-ocdrug'), at = pk.drugs.indexOf(dg);
           if (at >= 0) pk.drugs.splice(at, 1); else pk.drugs.push(dg);
