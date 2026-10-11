@@ -151,6 +151,19 @@
     };
   }
   function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+  /* The scanline and dotted shapes below are many one-pixel rectangles of one colour:
+     gathered into one path and filled once, they are one draw rather than a hundred
+     (a phone's canvas pays for each). A separate Path2D, so a path the caller is
+     building is left alone; where there is none (a bare test canvas), rect by rect. */
+  var HAS_PATH2D = typeof Path2D === 'function';
+  function rects(g, c) {
+    var path = HAS_PATH2D ? new Path2D() : null;
+    g.fillStyle = c;
+    return {
+      add: function (x, y, w, h) { if (path) path.rect(x, y, w, h); else g.fillRect(x, y, w, h); },
+      done: function () { if (path) g.fill(path); }
+    };
+  }
 
   /* ---------- pixel helpers ---------- */
   var PIXEL = 2;                // the visible "pixel" of the art, in buffer px
@@ -195,7 +208,7 @@
       if (pts[i][1] < minY) minY = pts[i][1];
       if (pts[i][1] > maxY) maxY = pts[i][1];
     }
-    g.fillStyle = c;
+    var fill = rects(g, c);
     for (var y = Math.round(minY); y < Math.round(maxY); y++) {
       var xs = [], cy = y + 0.5;
       for (i = 0; i < pts.length; i++) {
@@ -208,27 +221,34 @@
       xs.sort(function (p, q) { return p - q; });
       for (var k = 0; k + 1 < xs.length; k += 2) {
         var x0 = Math.round(xs[k]), x1 = Math.round(xs[k + 1]);
-        if (x1 > x0) g.fillRect(x0, y, x1 - x0, 1);
+        if (x1 > x0) fill.add(x0, y, x1 - x0, 1);
       }
     }
+    fill.done();
   }
 
   function ellipse(g, cx, cy, rx, ry, c) {
-    g.fillStyle = c;
+    var fill = rects(g, c);
     for (var y = -Math.ceil(ry); y <= Math.ceil(ry); y++) {
       var t = 1 - (y * y) / (ry * ry);
       if (t <= 0) continue;
       var half = Math.sqrt(t) * rx;
       var x0 = Math.round(cx - half), x1 = Math.round(cx + half);
-      if (x1 > x0) g.fillRect(x0, Math.round(cy + y), x1 - x0, 1);
+      if (x1 > x0) fill.add(x0, Math.round(cy + y), x1 - x0, 1);
     }
+    fill.done();
   }
 
+  // (each dot once: round the ring the steps land on the same pixel now and then)
   function ellipseRing(g, cx, cy, rx, ry, c) {
-    g.fillStyle = c;
+    var fill = rects(g, c), lx = null, ly = null;
     for (var a = 0; a < Math.PI * 2; a += 0.06) {
-      g.fillRect(Math.round(cx + Math.cos(a) * rx), Math.round(cy + Math.sin(a) * ry), 1, 1);
+      var x = Math.round(cx + Math.cos(a) * rx), y = Math.round(cy + Math.sin(a) * ry);
+      if (x === lx && y === ly) continue;
+      lx = x; ly = y;
+      fill.add(x, y, 1, 1);
     }
+    fill.done();
   }
   /* A unit's state, laid over its ring as short dashes, so the army's dots
      still show between them whatever its colour: amber when suppressed, red

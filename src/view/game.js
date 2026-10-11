@@ -1138,6 +1138,8 @@
      and the functions and fixed values it uses. */
   var VIEW = window.PMCView({
     get Q() { return Q; },
+    // the animation loop, while one is running (render leaves the board to it then)
+    get loop() { return loop; },
     // the sides this screen plays: without them every side reads as this screen's, and a networked game never says "Your turn"
     get seats() { return seats; },
     replaying: function () { return replaying(); },
