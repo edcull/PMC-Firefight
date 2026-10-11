@@ -429,9 +429,9 @@
      goes off. It is out when he is dead. */
   function collarLamp(g, x, y, mi, st) {
     if (st === 'destroyed') return;
-    var t = root.performance ? performance.now() : 0;
+    var t = root.PMCGfx.idleNow();
     var red = st === 'red', warn = st === 'suppressed' || st === 'broken';
-    var per = red ? 180 : warn ? 420 : 1100, lit = ((t + mi * (red ? 30 : warn ? 70 : 180)) % per) < per * 0.5;
+    var per = red ? 180 : warn ? 420 : 1100, lit = root.PMCGfx.low() || ((t + mi * (red ? 30 : warn ? 70 : 180)) % per) < per * 0.5;
     var on = red ? '#ff3b2e' : warn ? '#ffb030' : '#5cff7a', off = red ? '#5a1410' : warn ? '#6a4414' : '#1f4a2a';
     if (lit) ellipse(g, x, y, 2.6, 2.2, red ? 'rgba(255,60,40,.38)' : warn ? 'rgba(255,170,40,.32)' : 'rgba(80,255,120,.28)');
     g.fillStyle = lit ? on : off;
@@ -606,7 +606,7 @@
         var sseed = 0, ssid = String(u.id || u.code || '');
         for (var sq = 0; sq < ssid.length; sq++) sseed = (sseed * 31 + ssid.charCodeAt(sq)) | 0;
         damageSmoke(g, p.x + a(0.5), p.y - m.lift - m.hgt * 0.7,
-          opts.t != null ? opts.t : (root.performance ? performance.now() : 0), Math.abs(sseed));
+          opts.t != null ? opts.t : root.PMCGfx.idleNow(), Math.abs(sseed));
       }
       var top = p.y - m.lift - m.hgt - a(4);
       // its Structure, in place of suppression: a segment a point, once it has taken damage

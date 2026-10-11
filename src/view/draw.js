@@ -73,6 +73,7 @@
     var activeUnits = B.activeUnits, addFx = B.addFx, arrivalQueued = B.arrivalQueued, arriving = B.arriving;
     var boxesFor = B.boxesFor, clonePiece = B.clonePiece, curArea = B.curArea, dispX = B.dispX;
     var dispY = B.dispY, drawFx = B.drawFx, fitGhost = B.fitGhost, insertionMine = B.insertionMine;
+    var GFX = window.PMCGfx;
     var isAI = B.isAI, liftOf = B.liftOf, nowMs = B.nowMs, onTable = B.onTable, placingSide = B.placingSide;
     var shownAs = B.shownAs, unitById = B.unitById, zoneFor = B.zoneFor, FX = B.FX, H = B.H, ISO = B.ISO;
     var K = B.K, R = B.R, SFX = B.SFX, UR = B.UR, W = B.W, cam = B.cam, ui = B.ui;
@@ -395,7 +396,8 @@
        steps rather than flows, so lava in view gets about sixteen. */
     var ambientTick = 0;
     setInterval(function () {
-      if (!B.state || !B.vc.scene || B.loop || document.hidden) return;
+      // (in low graphics nothing moves by itself: the board waits for the next action)
+      if (!B.state || !B.vc.scene || B.loop || document.hidden || GFX.low()) return;
       ambientTick++;
       /* an aircraft keeps its rotors turning and scanners sweeping, a Beta's deflector
          breathes, a cloak shimmers — but only one in view (drawBoard notes it) is worth
@@ -482,7 +484,7 @@
 
     function heatHaze(v) {
       B.vc.hazeOnView = false;
-      if (calmMotion || !B.state.terrain) return;
+      if (calmMotion || GFX.low() || !B.state.terrain) return;
       // the fields of hot air: over every melt, and the desert's sun-baked stretches
       var fields = B.state.terrain.filter(function (r) { return r.kind === 'lava' && !r.wrecked; }).map(function (r) {
         return { foot: r.poly || [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]], rise: K * 2.2, amp: 1.3, k: 1 };
@@ -989,7 +991,7 @@
       });
       B.vc.liveOnView = lives.length > 0;
       // the dead and the wrecks stay where they fell
-      var now = now0, anyFire = false;
+      var anyFire = false;
       (B.vc.remains || []).forEach(function (r) {
         if (!onView(r.x, r.y)) return;
         if (r.kind === 'wreck') {
@@ -1005,7 +1007,7 @@
       // an aircraft's rotors, a deflector, a cloak: only worth redrawing for while one is in view
       B.vc.animOnView = order.some(function (it) { return it.draw === 'unit' && !it.unit.aboard && ISO.animates(it.unit); });
 
-      var held = heldWings(blockers), tNow = nowMs();
+      var held = heldWings(blockers), tNow = GFX.idleNow();
       B.vc.flagOnView = held.length > 0;
       blockers.forEach(function (b) { b.flag = null; });
       // a contested wing flies no flag
@@ -1022,7 +1024,7 @@
             if (it.pr.kind === 'beacon' && !it.pr.lz) it.pr.holder = holderPalette(B.state.objectives[it.pr.index]);
             // an Invasion's smoke is the attacker's colour: they are the ones coming down on it
             if (it.pr.kind === 'beacon' && it.pr.lz) it.pr.holder = holderPalette({ owner: B.state.sc && B.state.sc.attacker });
-            ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), now0);
+            ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), GFX.idleNow());
             return;
           }
           if (it.draw === 'body') {
@@ -1056,7 +1058,7 @@
             return;
           }
           if (it.draw === 'wreck') {
-            ISO.drawWreck(B.pctx, it.u, { x: it.r.x, y: it.r.y }, liftOf(it.r.x, it.r.y), now + it.r.t0);
+            ISO.drawWreck(B.pctx, it.u, { x: it.r.x, y: it.r.y }, liftOf(it.r.x, it.r.y), GFX.idleNow() + it.r.t0);
             return;
           }
           var u = shownAs(it.unit), ax = dispX(u), ay = dispY(u);

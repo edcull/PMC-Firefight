@@ -507,7 +507,8 @@
       prev = shown; shown = p;
       // the pass goes over the table it was started with: a table that changed
       // half way through would leave the pair flying over the next one
-      if (Math.random() < FLYBY) flyby();
+      // (none in low graphics: the menu stays still)
+      if (!(root.PMCGfx && root.PMCGfx.low()) && Math.random() < FLYBY) flyby();
       fadeAt = root.performance && root.performance.now ? root.performance.now() : Date.now();
       if (!raf) raf = root.requestAnimationFrame(paint);
       timer = setTimeout(next, EVERY);

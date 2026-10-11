@@ -161,7 +161,7 @@
     function flagged(kit) { return !!kit && /^(flagsmall|flagbig|flaghuge|banner)$/.test(kit.gun || ''); }
     function winged(kit) { return !!kit && !!kit.bug && !!kit.fly; }
     function brainy(kit) { return !!kit && ['watchlarva', 'immwatch', 'watcher', 'overmind'].indexOf(kit.bug) >= 0; }
-    function nowT() { return root.performance ? performance.now() : 0; }
+    function nowT() { return root.PMCGfx.idleNow(); }
     function shieldAnimated(kit) { return !!kit && kit.xeno === 'crock' && (kit.rank || 'beta') === 'beta'; }
     function cloakedKit(kit) { return !!kit && !!kit.xeno && !!kit.cloak; }
     /* A cloaked model fades in and out between whole and a quarter there, each at
