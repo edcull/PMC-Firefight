@@ -22,7 +22,7 @@
    the handler registered under its name (on(), below). */
 (function (root) {
   'use strict';
-  var R = root.PMC, SC = root.PMCScen, GEN = root.PMCGen, C = root.PMCCamp, SOLO = root.PMCSolo;
+  var R = root.PMC, SC = root.PMCScen, GEN = root.PMCGen, C = root.PMCCamp, SOLO = root.PMCSolo, CMP = root.PMCCompound;
 
   // the one list of colours, shared with the server (protocol.js)
   var COLOURS = root.PMCProto.COLOURS;
@@ -252,7 +252,7 @@
          or surrender, hold it as well — with nothing left to act, a step taken
          then would end the turn again and run the whole Rally phase once more. */
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
-        !state.martyrAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk && isAI(state.activeSide);
+        !state.martyrAsk && !state.oppAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk && isAI(state.activeSide);
     }
     function maybeAI() {
       if (draining || !canAI()) return;
@@ -263,7 +263,7 @@
       } finally { draining = false; }
     }
     function aiStep() {
-      if (!state || state.over || !isAI(state.activeSide) || state.martyrAsk) return false;
+      if (!state || state.over || !isAI(state.activeSide) || state.martyrAsk || state.oppAsk) return false;
       K.aiStands(state.activeSide);
       var list = eligible(state.activeSide);
       if (!list.length) { endActivation(); return true; }
@@ -330,8 +330,17 @@
     /* Terrain set-up (pp. 46-47): either the generator lays the whole table, or
        the players take the four areas in turn, roll for each and put the pieces
        down themselves. A demo is always generated. */
-    var manual = K.wantsManualTerrain(cfg);
-    var built = manual
+    /* Close Encounters (Appendix 1): the battle is fought inside a compound,
+       laid by its own generator in place of the world's table. */
+    var scenDef = SC.SCENARIOS[scenId] || {};
+    var manual = !scenDef.compound && K.wantsManualTerrain(cfg);
+    /* A compound the players laid out themselves (cfg.compoundPlan) where it fits
+       this table and can be fought in; the generator's otherwise. */
+    var handBuilt = scenDef.compound && cfg.compoundPlan ? CMP.build(cfg.compoundPlan, R.BOARD.w, R.BOARD.h) : null;
+    var built = handBuilt ? handBuilt
+      : scenDef.compound
+      ? CMP.generate(R.BOARD.w, R.BOARD.h, Math.random, { rooms: scenDef.rooms || 0, danger: scenDef.danger != null ? scenDef.danger : 0.15 })
+      : manual
       ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
       : GEN.generate({
         width: R.BOARD.w, height: R.BOARD.h, planet: cfg.planet,
@@ -341,6 +350,7 @@
       cfg: cfg,
       terrain: built.terrain,
       genCount: built.terrain.length,
+      compound: built.compound || null,
       // nothing is nominated until the table is set (the scenario places them)
       objectives: manual ? [] : OBJECTIVES().map(function (o) { return { x: o.x, y: o.y, owner: null }; }),
       units: [], turn: 0, phase: 'deploy', activeSide: 'A', initiative: null,
@@ -373,6 +383,13 @@
         var pick = R.splitPick(k);
         var entry = roster ? roster[i] : null;
         var prof = R.profile(pick.key);
+        /* "No vehicles or aircraft may be used" in a compound (p. 157): they stay
+           out of it — a campaign's stay home, and are not lost. */
+        if (scenDef.compound && (prof.cls || 'infantry') !== 'infantry') {
+          state.homeBound = state.homeBound || [];
+          state.homeBound.push({ side: side, key: pick.key, name: prof.name, pickIdx: i });
+          return;
+        }
         /* A Xenotripod turret set is one pick, but every turret in it stands on
            the table as a unit of its own, and counts as a Tier I unit for victory
            and the scenario (p. 130). */
@@ -402,10 +419,45 @@
         state.units.push(u);
       });
     });
+    /* Inside a compound "units with Markerlights/Pheromone Markers special rules
+       lose it, but get the Advanced Sensors/Sixth Sense special rule instead"
+       (Close Encounters, p. 157). */
+    if (scenDef.compound) state.units.forEach(function (u) {
+      u.rules = u.rules.map(function (r) { return r === 'Markerlights' ? 'Advanced Sensors' : r === 'Pheromone Markers' ? 'Sixth Sense' : r; });
+      // "in most scenarios taking place in complexes, units start the game hidden" (p. 158): as counters
+      if (scenDef.hidden && scenDef.hidden(u)) u.hidden = true;
+    });
+    /* An automated defence system (p. 160), where the players agreed to one: the
+       panel marked on the floor, and three guns that belong to neither side. */
+    if (scenDef.compound && R.opt(state, 'autoDefence')) {
+      var lay = K.defenceLayout(), gp = R.profile('adgun');
+      if (lay) {
+        state.adPanel = { x: lay.panel.x, y: lay.panel.y, by: null };
+        state.terrain.push({ kind: 'panel', x: lay.panel.x - 0.75, y: lay.panel.y - 0.75, w: 1.5, h: 1.5 });
+        lay.guns.forEach(function (g, n) {
+          var gu = makeUnit(gp, 'N', 'g' + n, null, false, null, false);
+          gu.label = gp.name + ' ' + (n + 1); gu.name = gu.label;
+          gu.x = g.x; gu.y = g.y; gu.facing = g.facing; gu.startSize = 1; gu.faction = 'neutral';
+          state.units.push(gu);
+        });
+        logLine('note', 'An automated defence system guards the ' + (K.sectionOf(lay.panel.x, lay.panel.y) || {}).name + ': a control panel and ' + lay.guns.length + ' automatic guns.');
+      }
+    }
+    // Close Encounters' special equipment (p. 159): what each side carries in, chosen or the standard set
+    if (scenDef.compound) {
+      state.kit = {};
+      ['A', 'B'].forEach(function (sd) {
+        var want = cfg.kit && cfg.kit[sd];
+        state.kit[sd] = want ? K.cleanKit(want, cfg.pl) : K.defaultKit(cfg.pl);
+      });
+    }
+    (state.homeBound || []).forEach(function (h) {
+      logLine('note', sideName(h.side) + ' — ' + h.name + ' stays outside the compound: no vehicles or aircraft in Close Encounters.');
+    });
     /* Complex Teleport Network (p. 141): a free set of Teleport turrets a
        Priority Level, of the Battle Tier — the sets run from Tier II to IV. */
     ['A', 'B'].forEach(function (side) {
-      if (docsOf(side).indexOf('XO1') < 0) return;
+      if (docsOf(side).indexOf('XO1') < 0 || scenDef.compound) return;
       var tt = Math.max(2, Math.min(4, cfg.tier || 1)), tprof = R.profile('xtturret' + tt);
       for (var np = 0; np < (cfg.pl || 1); np++) {
         for (var ts2 = 0; ts2 < tprof.turretSet; ts2++) {
@@ -449,6 +501,7 @@
         u.startSize = u.models;
         if (x.side === 'A') { u.owner = x.owner || 1; if (u.owner === 2) u.paint = 'C'; }
         if (x.vip) u.vip = true;
+        if (x.objective) u.soloObjective = true;
         if (x.civ) u.soloCiv = true;
         if (x.militia) u.soloMilitia = true;
         if (x.leader) u.soloLeader = true;
@@ -805,15 +858,27 @@
         note: 'Other Worlds (pp. 164-165): gravity, atmosphere and anomalies.',
         list: wl.length ? wl.map(function (x) { return { text: x.name + ' \u2014 ' + x.text }; }) : [{ text: 'Standard gravity, standard atmosphere, no anomalies.' }] });
     }
-    logLine('note', 'Terrain generator: ' + built.generator + '. ' +
-      built.rolls.map(function (r) { return r.area + ' D6 ' + r.roll; }).join(', ') + '.');
-    if (!built.manual) built.rolls.forEach(function (r) { logLine('terrain', r.area + ' — D6 ' + r.roll + ': ' + r.text); });
-    if (!built.manual) pushRes({
-      kind: 'Terrain', title: built.generator,
-      note: 'The table is divided into 2′ × 2′ areas; a D6 is rolled for each and the result placed in it.',
-      dice: built.rolls.map(function (r) { return { label: r.area, value: r.roll }; }),
-      list: built.rolls.map(function (r) { return { text: r.area + ' — ' + r.text }; })
-    });
+    if (state.compound) {
+      // a compound (Close Encounters): no areas, no dice — what it is made of
+      var secs = { corridor: 0, room: 0, hall: 0, door: 0, danger: 0 };
+      state.terrain.forEach(function (r) { if (secs[r.kind] != null) secs[r.kind]++; if (r.dangerous) secs.danger++; });
+      var made = secs.room + ' rooms, ' + secs.hall + ' hall' + (secs.hall === 1 ? '' : 's') + ', ' + secs.corridor + ' corridor sections and ' + secs.door + ' doors';
+      if (state.cfg.compoundPlan && !state.compound.built) logLine('note', 'The compound laid out by hand does not fit this table or cannot be fought in — the game has laid one out instead.');
+      logLine('note', (state.compound.built ? 'The compound, laid out by hand: ' : 'The compound: ') + made + (secs.danger ? '; ' + secs.danger + ' dangerous section' + (secs.danger === 1 ? '' : 's') : '') + '.');
+      pushRes({ kind: 'Terrain', title: 'A compound',
+        note: 'Close Encounters (p. 157): corridors, rooms and halls inside solid walls, with entry points on each long edge.',
+        list: [{ text: made + '.' }].concat(secs.danger ? [{ text: secs.danger + ' dangerous section' + (secs.danger === 1 ? '' : 's') + ' (fuel drums): fire into one may set it off.' }] : []) });
+    } else {
+      logLine('note', 'Terrain generator: ' + built.generator + '. ' +
+        built.rolls.map(function (r) { return r.area + ' D6 ' + r.roll; }).join(', ') + '.');
+      if (!built.manual) built.rolls.forEach(function (r) { logLine('terrain', r.area + ' — D6 ' + r.roll + ': ' + r.text); });
+      if (!built.manual) pushRes({
+        kind: 'Terrain', title: built.generator,
+        note: 'The table is divided into 2′ × 2′ areas; a D6 is rolled for each and the result placed in it.',
+        dice: built.rolls.map(function (r) { return { label: r.area, value: r.roll }; }),
+        list: built.rolls.map(function (r) { return { text: r.area + ' — ' + r.text }; })
+      });
+    }
     /* Open on a view that shows enough of the table to place a force in. On a
        phone the board now fills the screen, so a step above "the whole table" is
        readable; on a desktop it is a step above that again. */
@@ -842,6 +907,8 @@
 
   // vehicles and aircraft get +4" on a Move; everyone else +2"
   function moveBonus(u, action) {
+    // a hidden unit "may only move up to 6\" when activated" (Close Encounters, p. 158), whatever else it has
+    if (u && u.hidden) return 6 - u.move;
     var base = R.isMachine(u) ? 4 : 2;
     /* Riders take their Movement +4" whatever they are doing (p. 94), and a Human
        Wave moves the infantry M+4" on Move and Assault actions (p. 95) — in place
@@ -1027,6 +1094,8 @@
     state.phaseCount = null;
     state.streak = streakFor(state.activeSide);
     logLine('turn', 'Turn ' + state.turn + ' — initiative to ' + sideName(state.initiative) + ' (D10 ' + a + ' vs ' + b + ').');
+    // a compound's fires burn out, or burn on (Close Encounters, p. 159)
+    if (state.compound) K.hazardsBeginning();
     pushRes({
       kind: 'Initiative', title: 'Turn ' + state.turn,
       dice: [{ label: 'A', value: a, tone: a > b ? 'crit' : '' }, { label: 'B', value: b, tone: b > a ? 'crit' : '' }],
@@ -1040,6 +1109,8 @@
     whenIdle(function () {
       K.reservePhase(function () {
         function action() {
+          // the automated defence system's guns, "at the beginning of each Action phase" (p. 160)
+          if (state.compound) K.autoGuns();
           state.phaseCount = { A: unbroken('A'), B: unbroken('B') };
           /* A side that wins the initiative with nothing it can activate (all Broken,
              say) hands the phase to the other, which then goes on freely (p. 27);
@@ -1240,6 +1311,7 @@
 
   function endActivation(actor) {
     ui.lastActed = actor || ui.selected || null;
+    if (state && state.compound) K.revealSweep();
     // a hacked drone's borrowed activation is over: back to its owner, and it burns
     var hj = K.hijacked();
     if (hj && (ui.lastActed === hj || !hj.alive)) K.endHijack(hj);
@@ -1411,6 +1483,15 @@
 
   function specialsFor(u) {
     var out = [];
+    // a counter's one special action is to show itself (Close Encounters, p. 158)
+    if (u && u.hidden) return [{ id: 'reveal', label: 'Reveal' }];
+    if (u && K.canDetect(u)) out.push({ id: 'detect', label: 'Detect' });
+    if (u && state.compound && state.phase === 'battle') {
+      out.push({ id: 'cover', label: 'Covering Fire!' });
+      if (K.atPanel(u)) out.push({ id: 'controlguns', label: 'Control the Guns' });
+      // the special equipment the side still has (p. 159)
+      K.KIT.forEach(function (d) { if (K.kitLeft(u, d.key) > 0) out.push({ id: 'kit-' + d.key, label: d.name + ' (' + K.kitLeft(u, d.key) + ')' }); });
+    }
     /* Markerlights carry two different special actions (p. 58): Designate target
        calls up a gun that shoots without seeing, Mark the target calls up one that
        does see and fires as though at half range. Smoke Markers (p. 94) are the
@@ -1562,6 +1643,7 @@
     ['PMCEngineMoves', './moves.js'],
     ['PMCEngineAbilities', './abilities.js'],
     ['PMCEngineCombat', './combat.js'],
+    ['PMCEngineCounters', './counters.js'],
     ['PMCEngineMarks', './marks.js'],
     ['PMCEngineSave', './save.js']
   ];
@@ -1699,7 +1781,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk || state.nervousAsk || state.standAsk || state.faceAsk || state.endAsk) return false;   // an answer is owed first
+      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.oppAsk || state.kyfAsk || state.nervousAsk || state.standAsk || state.faceAsk || state.endAsk) return false;   // an answer is owed first
       if (state.relocating || state.placeAsk) return false;      // turn 1's relocations and fortifications come before the Action phase
       return state.activeSide === side;
     }
@@ -2082,6 +2164,13 @@
       var why = K.answerNervous(side, it.k === 'nervous');
       return why ? no(why) : yes;
     });
+    // Opportunity Fire (Close Encounters): the side whose unit could shoot says whether it does
+    on('opp noopp', null, function (side, it) {
+      var oa = state.oppAsk;
+      if (!oa || oa.side !== side || !ui.oppThen) return no('nothing to answer');
+      ui.oppThen(it.k === 'opp');
+      return yes;
+    });
     on('martyr nomartyr', null, function (side, it) {
       var ma = state.martyrAsk;
       if (!ma || ma.side !== side || !ui.martyrThen) return no('nothing to answer');
@@ -2146,6 +2235,8 @@
       else if (ui.mode === 'hack') K.doHack(t);
       else if (ui.mode === 'support') K.doSupport(t);
       else if (ui.mode === 'steady') K.doSteady(t);
+      else if (ui.mode === 'cover-by') K.coverBy(t);
+      else if (ui.mode === 'cover-at') K.coverAt(t);
       else K.doShoot(t);
       return yes;
     });
@@ -2242,7 +2333,8 @@
       if (!mayAct(side) || !selected(side)) return no('not your activation');
       var r = state.terrain[it.i];
       if (!r || ui.terrain.indexOf(r) < 0) return no('not a legal piece');
-      if (ui.mode === 'breach') K.doBreach(r); else K.doDemolish(r);
+      if (ui.mode === 'throw-at') K.doThrow(r);
+      else if (ui.mode === 'breach') K.doBreach(r); else K.doDemolish(r);
       return yes;
     });
     on('digface', null, function (side, it) {
@@ -2401,6 +2493,12 @@
         // the Rally phase's flight on its own, for the tests
         fleeBroken: acting(function () { K.fleeBroken(); }),
         rallyPhase: acting(function () { K.rallyPhase(); }),
+        // Close Encounters' fires and charges, the Beginning and End phase halves, for the tests
+        hazardsBeginning: acting(function () { K.hazardsBeginning(); }),
+        hazardsEnd: acting(function () { K.hazardsEnd(); }),
+        explodeSection: acting(function (r, why) { K.explodeSection(r, why); }),
+        setBurning: acting(function (r) { K.setBurning(r); }),
+        autoGuns: acting(function () { K.autoGuns(); }),
         beginningRites: acting(function () { beginningRites(); }),
         // the OpFor's pick of target for a Defensive or Neutral result (SOL-6), for the tests
         threatTarget: function (u) { return K.threatTarget(u, 'fire'); },
@@ -2409,6 +2507,7 @@
         greetArrival: acting(function (u) { return K.greetArrival(u); }),
         reservePhase: acting(function (done) { K.reservePhase(done || function () {}); }),
         aiAct: acting(function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); }),
+        aiCharge: acting(function (u, t) { ui.selected = u; K.aiCharge(u, t); }),
         specialsFor: function (u) { return specialsFor(u); },
         targetsFor: function (u, o) { return K.targetsFor(u, o); },
         eligible: function (s) { return eligible(s); },

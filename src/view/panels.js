@@ -17,7 +17,7 @@
     var doSteady = B.doSteady, doSupport = B.doSupport, drawBoard = B.drawBoard;
     var holdArrival = B.holdArrival, holdInsertion = B.holdInsertion;
     var hud = B.hud, inReserve = B.inReserve, insertionCard = B.insertionCard, isAI = B.isAI;
-    var kyfCard = B.kyfCard, liftOf = B.liftOf, loadBefore = B.loadBefore, martyrCard = B.martyrCard;
+    var kyfCard = B.kyfCard, liftOf = B.liftOf, loadBefore = B.loadBefore, martyrCard = B.martyrCard, oppCard = B.oppCard;
     var mineCard = B.mineCard, movePreviewCard = B.movePreviewCard, mySide = B.mySide, openMenu = B.openMenu;
     var pickToDeploy = B.pickToDeploy, placeCard = B.placeCard, placingSide = B.placingSide;
     var playerSide = B.playerSide, relocPick = B.relocPick, render = B.render, roleOf = B.roleOf;
@@ -227,6 +227,16 @@
         // while the other player is deploying there is nothing here to pick: no prompt to pick one
         box.innerHTML = othersDeploying() ? ''
           : '<p class="hint small">No unit selected. Stats, suppression and special rules appear here.</p>';
+        return;
+      }
+      /* An enemy counter (Close Encounters, p. 158): nothing is known of it but
+         where it is, until it is revealed. */
+      if (u.hidden && B.seats && B.seats.indexOf(u.side) < 0) {
+        box._html = null;
+        box.innerHTML = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.paint || u.side) + '>?</span>' +
+          '<div class="sh-text"><h2>Hidden counter</h2><span class="sub">' + esc(sideName(u.side)) + '</span></div></div>' +
+          '<p class="hint small">An enemy unit still hidden: what it is, how strong and how shaken are unknown until it is revealed — ' +
+          'when it comes into sight of one of yours, chooses to show itself, is charged, or is picked up by Detect.</p>';
         return;
       }
       if (R.isMachine(u)) { drawMachineStats(u, box); return; }
@@ -636,6 +646,8 @@
         if (ui.endShown !== ek) { ui.endShown = ek; if (window.innerWidth <= 1000 && B.setMTab) B.setMTab('act'); }
       }
       else if (B.state.martyrAsk && !isAI(B.state.martyrAsk.side)) html = martyrCard();
+      else if (B.state.oppAsk && !isAI(B.state.oppAsk.side)) html = atThisScreen(B.state.oppAsk.side) ? oppCard()
+        : '<div class="card"><h2>Opportunity Fire</h2><p class="sub"><b>' + esc(sideName(B.state.oppAsk.side)) + '</b> is deciding whether to open fire.</p></div>';
       else if (B.state.kyfAsk && !isAI(B.state.kyfAsk.side)) html = kyfCard();
       else if (B.state.nervousAsk && !isAI(B.state.nervousAsk.side) && !B.replaying() && !B.cardsPending()) html = atThisScreen(B.state.nervousAsk.side) ? nervousCard()
         : '<div class="card"><h2>Rally phase</h2><p class="sub"><b>' + esc(sideName(B.state.nervousAsk.side)) + '</b> is deciding whether the hive-mind steadies the swarm.</p></div>';
@@ -779,6 +791,12 @@
         var mine = B.state.units.filter(function (u) { return u.side === side && (!gp.owner || (u.owner || 1) === gp.owner); }).map(shownAs);
         mine.filter(function (u) { return u.alive; }).concat(mine.filter(function (u) { return !u.alive; })).forEach(function (u) {
           var st = u.alive ? R.status(u) : 'dead';
+          // an enemy counter (Close Encounters): a line, and nothing on it
+          if (u.alive && u.hidden && B.seats && B.seats.indexOf(u.side) < 0) {
+            h += '<li class="ru ready' + (ui.selected && ui.selected.id === u.id ? ' sel' : '') + '" data-unit="' + u.id + '"><span class="ru-code">?</span>' +
+              '<span class="ru-name">Hidden counter</span><span class="ru-num">?</span><span class="ru-sp">hidden</span></li>';
+            return;
+          }
           var gone = u.alive ? '' : u.fled ? 'fled' : R.isMachine(u) ? 'destroyed' : 'wiped out';
           h += '<li class="ru ' + st + (u.activated && u.alive ? ' done' : '') + (ui.selected && ui.selected.id === u.id ? ' sel' : '') +
             '" data-unit="' + u.id + '"><span class="ru-code">' + u.code + '</span>' +
@@ -788,7 +806,7 @@
             '<span class="ru-num">' + (R.isMachine(u)
               ? Math.max(0, u.str - u.damage) + '/' + u.str
               : u.models + '/' + u.size) + '</span>' +
-            '<span class="ru-sp">' + (u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (B.state.sc.counters ? 'hidden' : 'pool') : u.reserve ? 'reserve' : u.aboard ? 'aboard'
+            '<span class="ru-sp">' + (u.hidden && u.alive ? 'hidden' : u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (B.state.sc.counters ? 'hidden' : 'pool') : u.reserve && u.wave === 'objective' ? 'to find' : u.reserve ? 'reserve' : u.aboard ? 'aboard'
               : R.isMachine(u) ? u.damage + ' DP' : u.sp + ' SP') + '</span>') +
             (mayStand(u) ? '<button class="ru-stand" data-stand="' + u.id + '" title="Last Stand — shed all ' + u.sp + ' SP, once a battle, at any time">Last Stand</button>' : '') +
             '</li>';
@@ -1437,7 +1455,7 @@
           else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
           else if (a === 'deployready') { send({ k: 'deployready' }); return; }
-          else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'nervous' || a === 'nonervous' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
+          else if (a === 'martyr' || a === 'nomartyr' || a === 'opp' || a === 'noopp' || a === 'kyf' || a === 'nokyf' || a === 'nervous' || a === 'nonervous' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
           else if ((a === 'enddone' || a === 'surrender') && endBoth()) { endBothAnswer(a, b.getAttribute('data-side')); return; }
           else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
           else if (a === 'waveadd' || a === 'waveundo') { send({ k: a, key: b.getAttribute('data-key'), riders: b.getAttribute('data-riders') === '1' }); return; }

@@ -896,7 +896,26 @@
     // what a demolished piece leaves behind (p. 41-43)
     razed:     { name: 'Rubble of a wall', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, wreck: true },
     cutwire:   { name: 'Cut wire', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, wreck: true },
-    burning:   { name: 'Burning building', blocks: true, impassable: true, movePenalty: 0, cover: 0, fp: 0, wreck: true }
+    burning:   { name: 'Burning building', blocks: true, impassable: true, movePenalty: 0, cover: 0, fp: 0, wreck: true },
+    /* Close Encounters' compounds (Appendix 1, p. 157; rules/compound.js). The
+       floor — corridors, rooms and halls — is open terrain, each piece a section;
+       everything between is solid. A door is linear: it blocks sight and is
+       crossed freely while it works, barred while it is Locked (for one side or
+       both), and like any linear terrain it can be breached. `wallside` is the
+       floor too near a wall for a unit to stand on, which only a point's own
+       question asks (terrainAt). */
+    corridor:  { name: 'Corridor',    blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, floor: true },
+    room:      { name: 'Room',        blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, floor: true },
+    hall:      { name: 'Hall',        blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, floor: true },
+    bulkhead:  { name: 'Bulkhead',    blocks: true,  impassable: true,  movePenalty: 0, cover: 0, fp: 0, solid: true },
+    wallside:  { name: 'Against the wall', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
+    door:      { name: 'Door',        blocks: true,  impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear' },
+    doorlock:  { name: 'Locked door', blocks: true,  impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'both' },
+    doorlockA: { name: 'Door (locked to A)', blocks: true, impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'A' },
+    // the automated defence system's control panel (p. 160): "does not count as terrain", only marks the spot
+    panel:     { name: 'Control panel', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
+    breached:  { name: 'Breached door', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, wreck: true },
+    doorlockB: { name: 'Door (locked to B)', blocks: true, impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'B' }
   };
 
   /* ---- the table: in rules/space.js ---- */
@@ -935,6 +954,8 @@
   function turnPiece(t, k) { return (KIT_SPACE || kitSpace()).turnPiece(t, k); }
   function shapePiece(r, rand, family) { return (KIT_SPACE || kitSpace()).shapePiece(r, rand, family); }
   function terrainAt(state, x, y) { return (KIT_SPACE || kitSpace()).terrainAt(state, x, y); }
+  function walkField(state, gx, gy, side) { return (KIT_SPACE || kitSpace()).walkField(state, gx, gy, side); }
+  function nearestFree(state, x, y, u, pad, reach) { return (KIT_SPACE || kitSpace()).nearestFree(state, x, y, u, pad, reach); }
   /* Ground this unit may not be put down on: anything impassable, and for a
      Stationary Artillery gun shallow water too (p. 95). */
   function barredAt(state, u, x, y) {
@@ -1002,11 +1023,21 @@
     { key: 'bookkeeper', name: 'Bad, worse, the bookkeeper', page: 167,
       text: 'An army routs when the Tiers of its destroyed units add up to half its composition points, rather than when half its units are gone.' },
     { key: 'otherWorlds', name: 'Other Worlds', page: 164,
-      text: 'Gravity, atmosphere and anomalies rolled for the battle (for each contract, in a campaign): low or high gravity, no air, toxic air or fog, radiation, time anomalies or an unexplained weakness.' }
+      text: 'Gravity, atmosphere and anomalies rolled for the battle (for each contract, in a campaign): low or high gravity, no air, toxic air or fog, radiation, time anomalies or an unexplained weakness.' },
+    // a campaign sets how often its contracts are fought inside a compound instead (camp: false)
+    { key: 'autoDefence', name: 'Automated defence system', page: 160, camp: false,
+      text: 'In a Close Encounters battle: a control panel and three automatic guns in the middle of the compound, belonging to neither side, firing at the nearest unit of either at the start of every Action phase. A unit at the panel may take control of them.' },
+    { key: 'closeEncounters', name: 'Close Encounters', page: 157, camp: false,
+      text: 'Fighting inside compounds: corridors, rooms and doors, and no vehicles or aircraft. Adds the Close Encounters scenarios (Clearing out, Critical control) to the scenario list.' }
   ];
+  /* A campaign's Close Encounters (Appendix 1): how often a contract is fought
+     inside a compound — none (the key left out), 10% (low), half (mid) or all. */
+  var CE_FREQ = { low: 0.1, mid: 0.5, all: 1 };
+  var CE_FREQ_NAMES = { low: 'Close Encounters (1 contract in 10)', mid: 'Close Encounters (half the contracts)', all: 'Close Encounters (every contract)' };
   function cleanOptions(o) {
     var out = {};
     OPTIONS.forEach(function (d) { if (o && (o[d.key] === true || o[d.key] === 'true')) out[d.key] = true; });
+    if (o && CE_FREQ[o.ceFreq]) out.ceFreq = o.ceFreq;
     return out;
   }
   function opt(state, key) { return !!(state && state.cfg && state.cfg.options && state.cfg.options[key]); }
@@ -1097,7 +1128,8 @@
   }
   // the names of the options on, for a card or a log line
   function optionNames(o) {
-    return OPTIONS.filter(function (d) { return o && o[d.key]; }).map(function (d) { return d.name; });
+    return OPTIONS.filter(function (d) { return o && o[d.key]; }).map(function (d) { return d.name; })
+      .concat(o && CE_FREQ_NAMES[o.ceFreq] ? [CE_FREQ_NAMES[o.ceFreq]] : []);
   }
   // the bug groups an Evolutionary Pathway names (p. 124)
   function bugRanged(u) { return !!u && u.faction === 'bugs' && (u.group === 'Spore Bugs' || u.group === 'Flying Bugs'); }
@@ -1287,7 +1319,8 @@
     return 0;
   }
   var SP_MAX = 12;                 // the most Suppression a unit can carry
-  function addSP(u, n) { u.sp = Math.min(SP_MAX, u.sp + n); }
+  // a hidden unit "cannot become Suppressed or Broken" (Close Encounters, p. 158)
+  function addSP(u, n) { if (u.hidden) return; u.sp = Math.min(SP_MAX, u.sp + n); }
   function fmtPart(p) {
     if (p.label === 'D10') return 'D10 rolls ' + p.v;
     return p.label + ' ' + (p.v >= 0 ? '+' : '') + p.v;
@@ -1406,7 +1439,8 @@
        the wall, which left a squad standing just back from a wall in the open.
        Rubble and the like shelter only the men standing in them, which the
        lines above already give. */
-    var plunging = has(attacker, 'Indirect Fire');
+    // (inside a compound nothing lobs: Close Encounters, p. 157)
+    var plunging = has(attacker, 'Indirect Fire') && !state.compound;
     for (var i = 0; i < state.terrain.length; i++) {
       var r = state.terrain[i], t = TERRAIN[r.kind];
       if (r.kind !== 'barricade' || !behindWall(state, attacker, target, r)) continue;
@@ -1439,7 +1473,7 @@
   function behindWall(state, attacker, target, r) {
     if (!attacker || inRect(attacker.x, attacker.y, r)) return false;
     if (rectPointDist(r, target.x, target.y) > WALL_REACH + 1e-6) return false;
-    if (has(attacker, 'Indirect Fire')) return true;
+    if (has(attacker, 'Indirect Fire') && !state.compound) return true;
     var grown = r.w >= r.h ? { x: r.x - 0.5, y: r.y, w: r.w + 1, h: r.h } : { x: r.x, y: r.y - 0.5, w: r.w, h: r.h + 1 };
     return segRect(attacker.x, attacker.y, target.x, target.y, grown);
   }
@@ -1824,7 +1858,7 @@
   // what the assault kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
   function eAssault() {
     return {
-      thinAir: thinAir,
+      thinAir: thinAir, addSP: addSP,
       BOARD: BOARD, BY_KEY: BY_KEY, STEP: STEP, TERRAIN: TERRAIN, UNIT_R: UNIT_R, applyDamage: applyDamage,
       applyResult: applyResult, bugGround: bugGround, campFlag: campFlag, canShoot: canShoot, closestTwo: closestTwo,
       clampTo: clampTo, d10: d10, d3: d3, d6: d6, deathOrGlory: deathOrGlory, defenceAgainst: defenceAgainst,
@@ -2432,7 +2466,7 @@
     d10: d10, d6: d6, d3: d3, answering: answering, mayRoll: mayRoll, angleWrap: angleWrap, esc: esc,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, infamyPanic: infamyPanic, panicSweep: panicSweep, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
-    terrainAt: terrainAt, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
+    terrainAt: terrainAt, nearestFree: nearestFree, walkField: walkField, applyResult: applyResult, dmgMod: dmgMod, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
     groundLevel: groundLevel, levelOf: levelOf, heightUnder: heightUnder,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
     enterable: enterable, sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,
@@ -2454,7 +2488,7 @@
     enemyWithinRange: enemyWithinRange, onTable: onTable, swapAllowance: swapAllowance, steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
     hasExact: hasExact, antiTank: antiTank,
     campFlag: campFlag, doctrine: doctrine, unitDoc: unitDoc, credit: credit,
-    OPTIONS: OPTIONS, cleanOptions: cleanOptions, opt: opt, optionNames: optionNames, closestTwo: closestTwo,
+    OPTIONS: OPTIONS, CE_FREQ: CE_FREQ, cleanOptions: cleanOptions, opt: opt, optionNames: optionNames, closestTwo: closestTwo,
     rollWorld: rollWorld, cleanWorld: cleanWorld, worldOf: worldOf, worldLines: worldLines, thinAir: thinAir, worldStats: worldStats,
     isDestructible: isDestructible, destructibleKind: destructibleKind, shelterOf: shelterOf,
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,

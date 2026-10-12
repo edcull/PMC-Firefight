@@ -65,7 +65,19 @@
        Returns the scenario, and what is still the players' to settle:
          alt, altBy — a second scenario the holder (A or B) may take instead;
          fore       — both hold it: { dice, order, ignored } until two are ignored. */
-    function foresight(A, B, bAI) {
+    /* A campaign with Close Encounters on (`options.ceFreq`): at that rate the
+       contract is fought inside a compound — Clearing out or Critical control, an
+       even chance of each — instead of under the D6 table, and with no second
+       die for Foresighted Command to choose from. */
+    function closeEncounter(options) {
+      var p = root.PMC.CE_FREQ[(options || {}).ceFreq], SCN = root.PMCScen;
+      if (!p || !SCN || Math.random() >= p) return null;
+      var id = SCN.CE_ORDER[Math.floor(Math.random() * SCN.CE_ORDER.length)];
+      return { roll: 0, id: id, name: SCN.SCENARIOS[id].name, ce: true };
+    }
+    function foresight(A, B, bAI, options) {
+      var ce = closeEncounter(options);
+      if (ce) return { scenario: ce };
       var a = hasDoctrine(A, 'XO3'), b = !!B && hasDoctrine(B, 'XO3');
       var s1 = rollScenario(false);
       if (!a && !b) return { scenario: s1 };

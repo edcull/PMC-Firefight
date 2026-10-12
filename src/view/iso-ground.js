@@ -51,6 +51,11 @@
       lava: { ramp: CRUST, fleck: ['#d1541a', '#f08a22', '#1a1412'], rim: '#140f0c', hot: true },
       // a desert's crystal field: dark, scorched brown ground the crystals have grown through
       crystal: { ramp: ['#1f1510', '#2a1d15', '#35251a', '#40301f'], fleck: ['#5aff9a', '#1a110b', '#54402c'], rim: '#140d09' },
+      // a compound's floors (Close Encounters): steel deck plate, the rooms a shade lighter than the corridors
+      corridor: { ramp: ['#2a2e31', '#30353a', '#363c41', '#3c4248', '#434a50'], fleck: ['#1c1f22', '#555d64', '#6a5a2e'], rim: '#16191b' },
+      room: { ramp: ['#33383b', '#3a4044', '#41484c', '#495055', '#51595e'], fleck: ['#22262a', '#5e676d', '#3d4247'], rim: '#1a1d1f' },
+      hall: { ramp: ['#2f3436', '#363c3f', '#3d4447', '#454c50', '#4d5559'], fleck: ['#202427', '#5a6368', '#3a3f43'], rim: '#181b1d' },
+      breached: { ramp: ['#2a2e31', '#30353a', '#363c41', '#3c4248', '#434a50'], fleck: ['#1c1f22', '#6a6459'], rim: '#16191b' },
       // an arctic world's ice ravine: the floor far down in blue dark
       ravine: { ramp: ['#060d15', '#0a1622', '#0f2030', '#152a3e'], fleck: ['#1f3d57', '#081018'], rim: '#dfeef7' }
     };

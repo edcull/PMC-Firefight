@@ -35,6 +35,7 @@ src/
     scenarios.js     the six scenarios (pp. 48–55): objectives, deployment, reserves, victory
     solitaire.js     solitaire and co-op against the OpFor (pp. 146–156)
     gen.js           the terrain generators (pp. 46–48), a D6 for each 2′ × 2′ area
+    compound.js      Close Encounters' compounds (p. 157): corridors, rooms, halls and doors on a 3″ grid
     ruletext.js      each special rule in a sentence, for the tooltips
 
   engine/            the battle: every decision and every die roll

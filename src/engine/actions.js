@@ -116,6 +116,12 @@
         return { on: false, hint: 'Suppressed: it may only move into cover or out of sight, fire its Auxiliary weapons, or Pass/Regroup (p. 34).' };
       }
 
+      /* A hidden unit (Close Encounters, p. 158): "it may only move and nothing
+         more" — up to 6" — unless it reveals itself first, at the start of its
+         activation, and then acts as normal. */
+      if (u.hidden && ['move', 'reveal', 'skip'].indexOf(id) < 0) {
+        return { on: false, hint: 'Hidden: a counter may only move, up to 6" — or Reveal itself first and then act as normal (p. 158).' };
+      }
       /* A unit inside a building "may only exit it or make actions which do not
          require any movement (so it cannot Move, Advance, Assault, etc.)" (p. 41). */
       // (a Psychic Wave moves "up to" its Movement: from a building it goes out from where it stands)
@@ -229,6 +235,32 @@
           return { on: true, hint: 'End the Command Unit\u2019s chain here: ' + u.name + ' and the rest keep their activations for later, and play passes on.' };
         case 'skip':
           return { on: true, hint: 'Skip: ' + u.name + ' does nothing this turn — it stays where it is, its activation is spent, and play passes on.' };
+        case 'reveal':
+          if (!u.hidden) return { on: false, hint: 'Not hidden.' };
+          return { on: true, hint: 'Reveal: take the counter off and put the unit down where it is. It then acts as normal this activation (p. 158).' };
+        case 'kit-satchel': case 'kit-barrier': case 'kit-incendiary': case 'kit-vacuum': case 'kit-stun': {
+          var kk = id.slice(4), kd = E.KIT.filter(function (d) { return d.key === kk; })[0];
+          if (!E.kitUsable(u, kk)) return { on: false, hint: sup ? 'Suppressed: no special equipment.' : 'None left.' };
+          if (kk === 'satchel' && !E.sectionOf(u.x, u.y)) return { on: false, hint: 'Not in a section of the compound.' };
+          if (kk === 'stun') { var sa = actionState(u, 'assault'); if (!sa.on) return sa; }
+          if (kk === 'vacuum' && !E.state.terrain.some(function (r) { return r.burning; })) return { on: false, hint: 'Nothing is burning.' };
+          return { on: true, hint: kd.name + ': ' + kd.text + ' (' + E.kitLeft(u, kk) + ' left; once each).' };
+        }
+        case 'controlguns': {
+          if (!E.atPanel(u)) return { on: false, hint: 'Only a unit within 1" of the control panel.' };
+          if (sup) return { on: false, hint: 'Suppressed: no special actions.' };
+          return { on: true, hint: 'Control the Guns: D6, ' + (R.has(u, 'Hackers') ? '2+ (Hackers)' : '4+') + ' — the guns turn on the enemy, and any that cannot is blown up (p. 160).' };
+        }
+        case 'cover': {
+          if (u.covered === E.state.turn) return { on: false, hint: 'Already covered this activation.' };
+          var cv = E.coverers(u);
+          if (!cv.length) return { on: false, hint: 'Covering Fire!: no friend within 6" and in sight that is free to act and has an enemy to shoot.' };
+          return { on: true, hint: 'Covering Fire!: a friend within 6" and in sight fires first (its activation, no Fire! +1); then ' + u.name + ' acts (p. 158).' };
+        }
+        case 'detect':
+          if (!E.canDetect(u)) return { on: false, hint: 'Only Advanced Sensors or Sixth Sense can Detect, inside a compound.' };
+          if (sup) return { on: false, hint: 'Suppressed: no special actions.' };
+          return { on: true, hint: 'Detect: move up to ' + u.move + '", then every enemy counter within 12" is revealed, seen or not (p. 158).' };
         case 'regroup':
           if (machine) {
             return u.damage
@@ -445,6 +477,46 @@
         E.afterChain();
         return;
       }
+      if (id === 'reveal') {
+        E.revealUnit(u, 'it shows itself');
+        E.revealSweep();
+        setHint(null, u.name + ' is revealed: it may now act as normal.');
+        render();
+        return;
+      }
+      if (id === 'cover') { E.startCover(u); return; }
+      if (id === 'controlguns') { E.controlGuns(u); u.activated = true; endActivation(u); return; }
+      // Close Encounters' special equipment (p. 159)
+      if (id === 'kit-satchel') {
+        E.satchel(u);
+        ui.mode = 'kit-move'; ui.kitThen = null;
+        ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
+        setHint(null, 'Satchel Charges set: tap where ' + u.name + ' moves (up to ' + u.move + '"), or the unit itself to stay.');
+        render();
+        return;
+      }
+      if (id === 'kit-barrier') { E.barrier(u); u.activated = true; endActivation(u); return; }
+      if (id === 'kit-incendiary' || id === 'kit-vacuum') {
+        ui.mode = 'kit-move'; ui.kitThen = id.slice(4);
+        ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
+        setHint(null, (id === 'kit-vacuum' ? 'Vacuum Charges' : 'Incendiary Grenades') + ': tap where ' + u.name + ' moves (or the unit itself to stay), then the section.');
+        render();
+        return;
+      }
+      if (id === 'kit-stun') {
+        ui.mode = 'assault'; ui.noSap = false; ui.stun = true;
+        var mustS = forcedCharge(u);
+        ui.targets = mustS ? [mustS] : assaultables(u);
+        render();
+        return;
+      }
+      if (id === 'detect') {
+        ui.mode = 'detect-move';
+        ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
+        setHint(null, 'Detect: tap where ' + u.name + ' moves (or its own spot to stay); then every enemy counter within 12" is revealed.');
+        render();
+        return;
+      }
       if (id === 'skip') {
         u.activated = true;
         closeDrawer();
@@ -489,7 +561,7 @@
         wireNote(u);
       } else if (id === 'assault' || id === 'plainassault') {
         ui.mode = 'assault';
-        ui.noSap = id === 'plainassault';
+        ui.noSap = id === 'plainassault'; ui.stun = false;
         var must = forcedCharge(u);
         ui.targets = must ? [must] : assaultables(u);
       } else if (id === 'wave') {

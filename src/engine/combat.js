@@ -215,6 +215,8 @@
       soundFor(res.log);
       var card = fromLog('Shooting', u.name + ' → ' + target.name, u.side, res.log);
       playShooting(u, target, res, deathsSince(snap), function () { pushRes(card); });
+      // "We can't have any firing in there" (Close Encounters, p. 159)
+      if (E.state.compound) E.firingHazard(u, target, res.roll);
       u.activated = true;
       endActivation();
     }
@@ -233,8 +235,9 @@
       var u = ui.selected;
       martyrFirst(u, target, function (m) {
         var snap = snapshotAlive();
-        var res = abAssault(E.state, u, target, m, ui.noSap);
+        var res = abAssault(E.state, u, target, m, ui.noSap, ui.stun);
         ui.noSap = false;
+        if (ui.stun) { E.spendKit(u, 'stun'); ui.stun = false; }
         res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
         soundFor(res.log);
         var card = fromLog('Assault', u.name + ' → ' + target.name, u.side, res.log);

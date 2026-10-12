@@ -243,7 +243,7 @@
     }
 
     // the pieces that can stand between the camera and a squad, and hide it (see drawBoard)
-    var OPENS = { building: 1, bunker: 1, highwall: 1 };
+    var OPENS = { building: 1, bunker: 1, highwall: 1, bulkhead: 1 };
     function paintStructures() {
       B.vc.props = ISO.buildProps(B.state.terrain, B.state.objectives, B.state.seed, B.state.cfg.planet);
       var sg = B.vc.structs.getContext('2d');
@@ -767,6 +767,27 @@
     /* A unit that looks the same two frames running — a machine, or a squad standing
        still — is drawn once into a patch at the frame's scale and copied at whole
        pixels; anything moving, turning, smoking or alive by itself is drawn as ever. */
+    // the sides this screen plays (a hidden unit of theirs is shown to it)
+    function ownSide(side) { return (B.seats || []).indexOf(side) >= 0; }
+    /* A counter: a disc in its side's colours with a question mark, all the enemy
+       knows of a hidden unit. */
+    function drawCounter(u, x, y) {
+      var g = B.pctx, p = ISO.toScreen(x, y), l = liftOf(x, y);
+      var pal = (ISO.PALETTE && (ISO.PALETTE[u.paint] || ISO.PALETTE[u.side])) || {};
+      g.save();
+      g.fillStyle = 'rgba(8,10,14,.5)';
+      g.beginPath(); g.ellipse(p.x + 1, p.y - l + 2, K * 1.05, K * 0.55, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = pal.dark || '#3a3f46';
+      g.beginPath(); g.ellipse(p.x, p.y - l + K * 0.12, K, K * 0.5, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = pal.mid || '#7a828c';
+      g.beginPath(); g.ellipse(p.x, p.y - l, K, K * 0.5, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = pal.light || '#d8dee6'; g.lineWidth = Math.max(1, K * 0.07); g.stroke();
+      g.fillStyle = '#ffffff';
+      g.font = '700 ' + Math.max(8, Math.round(K * 0.75)) + 'px Oxanium, system-ui, sans-serif';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('?', p.x, p.y - l);
+      g.restore();
+    }
     function drawUnitOn(u, opts) {
       var g = B.pctx;
       if (opts.hop || opts.walk || opts.arc || u.aboard || ISO.animates(u) || ISO.smoking(u) ||
@@ -1055,6 +1076,13 @@
           var arr = arriving(u);
           if (u.burrow) arr = { lift: arr.lift + (u.burrow.lift || 0), pose: arr.pose, alpha: u.burrow.alpha, hidden: u.burrow.hidden };
           if (arr.hidden) return;                       // teleporting in, or under the ground: not here yet
+          /* A hidden unit (Close Encounters, p. 158): the enemy's is a counter and no
+             more; this screen's own shows faintly, over its counter. */
+          if (u.hidden) {
+            drawCounter(u, ax, ay);
+            if (!ownSide(u.side)) return;
+            B.pctx.save(); B.pctx.globalAlpha = 0.45;
+          }
           if (arr.alpha != null) { B.pctx.save(); B.pctx.globalAlpha = arr.alpha; }
           drawUnitOn(u, it.drawn = {
             at: { x: ax, y: ay },
@@ -1073,6 +1101,7 @@
             morale: R.currentMorale(u)
           });
           if (arr.alpha != null) B.pctx.restore();
+          if (u.hidden) B.pctx.restore();
         });
       seeThrough(order, blockers);
 
@@ -1439,7 +1468,8 @@
         });
         // pieces down since the table was last baked, as flat footprints until it is
         var TINT = { woods: '64,110,52', ruins: '120,112,100', crater: '110,96,80', barricade: '150,140,112', rocks: '118,112,104',
-          hill: '128,120,82', building: '150,138,120', bunker: '120,126,130', wall: '140,136,128', water: '70,110,140', deep: '40,70,110', lava: '200,80,30', crystal: '110,210,150', ravine: '170,210,235' };
+          hill: '128,120,82', building: '150,138,120', bunker: '120,126,130', wall: '140,136,128', water: '70,110,140', deep: '40,70,110', lava: '200,80,30', crystal: '110,210,150', ravine: '170,210,235',
+          bulkhead: '58,64,70', corridor: '72,80,86', room: '84,92,98', hall: '80,88,94', door: '200,170,60' };
         B.state.terrain.slice(B.vc.tsetBaked || 0).forEach(function (pc) {
           var sh = pc.parts ? pc.parts.map(function (r) { return [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]]; })
             : [pc.poly || [[pc.x, pc.y], [pc.x + pc.w, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x, pc.y + pc.h]]];
@@ -1857,20 +1887,22 @@
         if (arrivalQueued(u2)) return;                 // its arrival has not played yet: no label either
         // the label rides with the model as it is shown — mid-move, where the move has got to — not where the rules have put it
         var lx = dispX(u2), ly = dispY(u2);
-        var p = hud(lx, ly, liftOf(lx, ly) + ISO.headroom(u2.models, R.status(u2), u2) + ISO.K * 0.5);
-        var mark = terrainMark(u2);
-        var rec = labelIcons(u2), honoured = rec.star, scarred = rec.heart;
+        // an enemy counter (Close Encounters) is a question mark, standing low over its disc
+        var veiled = u2.hidden && !ownSide(u2.side), code = veiled ? '?' : u2.code;
+        var p = hud(lx, ly, liftOf(lx, ly) + (veiled ? ISO.K * 1.2 : ISO.headroom(u2.models, R.status(u2), u2) + ISO.K * 0.5));
+        var mark = veiled ? null : terrainMark(u2);
+        var rec = veiled ? {} : labelIcons(u2), honoured = rec.star, scarred = rec.heart;
         var icons = (honoured ? 1 : 0) + (scarred ? 1 : 0);
         // still to act this turn: a small arrow ahead of the code
         var toGo = B.state.phase === 'battle' && !B.state.over && !u2.activated;
-        var tw = B.ctx.measureText(u2.code).width;
+        var tw = B.ctx.measureText(code).width;
         var w = tw + 8 + icons * 11 + (mark ? 12 : 0) + (toGo ? 10 : 0);
         B.ctx.fillStyle = 'rgba(8,11,16,.72)';
         B.ctx.fillRect(p.x - w / 2, p.y - 10, w, 13);
         if (toGo) readyMark(p.x - w / 2 + 7, p.y - 3.5);
         B.ctx.fillStyle = sideInk(u2.paint || u2.side);  // a co-op's second commando in its own colours
         var tx = p.x - w / 2 + 4 + (toGo ? 10 : 0) + tw / 2;
-        B.ctx.fillText(u2.code, tx, p.y);
+        B.ctx.fillText(code, tx, p.y);
         var ix = tx + tw / 2 + 6.5;
         if (honoured) { chevron(ix, p.y - 4.5, 4.6); ix += 11; }
         if (scarred) heart(ix, p.y - 3.5, 4.2);

@@ -452,6 +452,21 @@
 
     function wireMuster() {
       ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).addEventListener('change', gateD3); });
+      ['sel-scen', 'sel-pl', 'sel-solo-scen'].forEach(function (id) { if (el(id)) el(id).addEventListener('change', drawKit); });
+      if (el('sel-compound')) {
+        try { if (localStorage.getItem('pmc-compound-mode') === 'hand') el('sel-compound').value = 'hand'; } catch (e) { }
+        el('sel-compound').addEventListener('change', function () {
+          try { localStorage.setItem('pmc-compound-mode', el('sel-compound').value); } catch (e) { }
+          drawCompound();
+        });
+      }
+      if (el('btn-compound')) el('btn-compound').addEventListener('click', function () {
+        var b = compoundBoard();
+        root.PMCCompoundEdit.open({ w: b.w, h: b.h, plan: savedPlan(b), onDone: function (plan) {
+          try { localStorage.setItem(planKey(b), JSON.stringify(plan)); } catch (e) { }
+          drawCompound();
+        } });
+      });
       gateD3();
       ['sel-tier', 'sel-pl', 'sel-faction'].forEach(function (id) {
         if (!el(id)) return;
@@ -732,9 +747,113 @@
         var on = {};
         try { on = JSON.parse(localStorage.getItem('pmc-options') || '{}') || {}; } catch (e) { }
         box.innerHTML = U.optionBoxes(R.cleanOptions(on));
-        box.addEventListener('change', function () { try { localStorage.setItem('pmc-options', JSON.stringify(U.readOptions(box))); } catch (e) { } });
+        box.addEventListener('change', function () {
+          try { localStorage.setItem('pmc-options', JSON.stringify(U.readOptions(box))); } catch (e) { }
+          offerCloseEncounters();
+        });
+        offerCloseEncounters();
       })();
       drawColourPick();
+    }
+    /* Close Encounters (Appendix 1) ticked: its scenarios are offered after the
+       six, in a group of their own; unticked, they go (and a choice of one with them). */
+    function offerCloseEncounters() {
+      var box = el('opt-boxes');
+      if (!box || !U) return;
+      var on = !!U.readOptions(box).closeEncounters;
+      // the competitive pair on the battlefield step, and Besieged among the solitaire ones
+      [[el('sel-scen'), SC.CE_ORDER], [el('sel-solo-scen'), SOLO && SOLO.CE_ORDER]].forEach(function (pair) {
+        var sel = pair[0], ids = pair[1] || [];
+        if (!sel || !ids.length) return;
+        var g = sel.querySelector('optgroup[data-ce]');
+        if (on && !g) {
+          g = document.createElement('optgroup');
+          g.label = 'Close Encounters (Appendix 1)';
+          g.setAttribute('data-ce', '1');
+          ids.forEach(function (id) {
+            var o = document.createElement('option');
+            o.value = id; o.textContent = SC.SCENARIOS[id].name;
+            g.appendChild(o);
+          });
+          sel.appendChild(g);
+        } else if (!on && g) {
+          if (ids.indexOf(sel.value) >= 0) sel.value = 'roll';
+          g.parentNode.removeChild(g);
+        }
+      });
+      drawKit();
+    }
+    /* Close Encounters' special equipment (p. 159): with a compound scenario chosen,
+       a row for each force the players muster — up to 4 pieces a Priority Level,
+       the standard set to start with. The computer's force takes the standard set. */
+    function kitSides() {
+      var k = muster.hot && muster.hot.kind;
+      return k === 'hotseat' ? ['A', 'B'] : k === 'ai' ? ['A'] : [];
+    }
+    /* The compound a Close Encounters battle is fought in (p. 157): laid out by the
+       game for each battle, or by hand (compound-edit.js, "set up the complex in
+       agreeable way", p. 163) — one kept on this device for each size of table. */
+    function compoundScen() {
+      var k = muster.hot && muster.hot.kind;
+      if (k === 'solo' || k === 'coop') return !!el('sel-solo-scen') && (SC.SCENARIOS[el('sel-solo-scen').value] || {}).compound === true;
+      return !!el('sel-scen') && /^ce_/.test(el('sel-scen').value);
+    }
+    function compoundBoard() {
+      var k = muster.hot && muster.hot.kind;
+      return k === 'solo' || k === 'coop' ? { w: 48, h: 48 } : R.boardFor(musterPL());
+    }
+    function planKey(b) { return 'pmc-compound-' + b.w + 'x' + b.h; }
+    function savedPlan(b) { try { return JSON.parse(localStorage.getItem(planKey(b)) || 'null'); } catch (e) { return null; } }
+    function drawCompound() {
+      var f = el('compound-field'), CMP = root.PMCCompound, k = muster.hot && muster.hot.kind;
+      if (!f || !CMP) return;
+      var on = compoundScen() && k !== 'net' && k !== 'build';
+      f.hidden = !on;
+      if (!on) return;
+      var b = compoundBoard(), plan = savedPlan(b), hand = el('sel-compound').value === 'hand';
+      var ck = plan ? CMP.checkPlan(plan, b.w, b.h) : null;
+      el('btn-compound').hidden = !hand;
+      el('btn-compound').textContent = plan ? 'Change it\u2026' : 'Lay it out\u2026';
+      el('compound-note').textContent = !hand ? 'A fresh compound for each battle: corridors, rooms and halls, with entry points on the two long edges.'
+        : !plan ? 'None laid out yet for a ' + b.w + '" \u00d7 ' + b.h + '" table.'
+        : ck.ok ? 'Yours, for a ' + b.w + '" \u00d7 ' + b.h + '" table: ' + ck.rooms + ' room' + (ck.rooms === 1 ? '' : 's') + ', ' + ck.halls + ' hall' + (ck.halls === 1 ? '' : 's') + ', ' + (ck.entries.L + ck.entries.R) + ' entry points.'
+        : 'Yours cannot be fought in yet: ' + ck.faults.join(' ');
+    }
+    // the plan to fight in, when one is wanted and fit (null: the game lays one out)
+    function chosenPlan() {
+      if (!compoundScen() || !el('sel-compound') || el('sel-compound').value !== 'hand') return null;
+      var b = compoundBoard(), p = savedPlan(b);
+      return p && root.PMCCompound.checkPlan(p, b.w, b.h).ok ? p : null;
+    }
+    function drawKit() {
+      drawCompound();
+      var f = el('kit-field'), box = el('kit-boxes'), sel = el('sel-scen');
+      var CMP = root.PMCCompound;
+      if (!f || !box || !CMP) return;
+      var on = !!sel && /^ce_/.test(sel.value) && kitSides().length > 0;
+      f.hidden = !on;
+      if (!on) return;
+      var pl = musterPL(), cap = 4 * pl, was = chosenKit() || {};
+      box.innerHTML = kitSides().map(function (sd) {
+        var have = was[sd] || CMP.defaultKit(pl);
+        return '<div class="kit-row" data-kit-side="' + sd + '"><span class="kit-who">' + (kitSides().length > 1 ? 'Player ' + (sd === 'A' ? 1 : 2) : 'Your force') + '</span>' +
+          CMP.KIT.map(function (d) {
+            var opts = '';
+            for (var n = 0; n <= cap; n++) opts += '<option value="' + n + '"' + ((have[d.key] || 0) === n ? ' selected' : '') + '>' + n + '</option>';
+            return '<label class="kit-pick" title="' + esc(d.text) + '">' + esc(d.name) + ' <select data-kit="' + d.key + '">' + opts + '</select></label>';
+          }).join('') + '</div>';
+      }).join('') + '<p class="hint small">Up to ' + cap + ' pieces in all (4 a Priority Level); each used once, by any unsuppressed unit.</p>';
+    }
+    // the equipment chosen, each force kept to its 4 a Priority Level; null where nobody chose
+    function chosenKit() {
+      var box = el('kit-boxes'), CMP = root.PMCCompound, out = null;
+      if (!box || !CMP || (el('kit-field') && el('kit-field').hidden)) return null;
+      Array.prototype.forEach.call(box.querySelectorAll('[data-kit-side]'), function (row) {
+        var k = {};
+        Array.prototype.forEach.call(row.querySelectorAll('select[data-kit]'), function (s) { k[s.getAttribute('data-kit')] = +s.value; });
+        (out = out || {})[row.getAttribute('data-kit-side')] = CMP.cleanKit(k, musterPL());
+      });
+      return out;
     }
     // the optional rules ticked on the battlefield step (none for a demo)
     function chosenOptions(kind) { return kind === 'demo' || !U ? {} : U.readOptions(el('opt-boxes')); }
@@ -1045,6 +1164,7 @@
       if (el('colour-hint')) el('colour-hint').textContent = step === 1 ? 'What ' + hotWho(1).replace(/^Your/, 'your') + '’s troops are painted in.'
           : 'What ' + hotWho(2).replace(/^The/, 'the') + '’s troops are painted in — anything but ' + hotWho(1).replace(/^Your/, 'your') + '’s colour.';
       if (step === 3) hotSum();
+      drawKit();
       drawColourPick();
     }
     /* The battlefield's forces, laid out as the campaign lobby's slots are: a
@@ -1341,6 +1461,8 @@
         if (h.opKeys && !opChosen) { opModal(true); return hotRefuse('The OpFor is not legal yet.'); }
         var scen = el('sel-solo-scen').value;
         if (scen === 'roll') scen = SOLO.ORDER[Math.floor(Math.random() * SOLO.ORDER.length)];
+        if (compoundScen() && el('sel-compound').value === 'hand' && !chosenPlan()) return hotRefuse('Lay out the compound first, or let the game lay one out.');
+        var soloPlan = chosenPlan();
         el('setup').hidden = true;
         hotEnd();
         begin({
@@ -1351,11 +1473,13 @@
           colourA: a.colour, colourC: coop ? b.colour : null,
           colourB: h.opColour && (coop ? [a.colour, b.colour] : [a.colour]).indexOf(h.opColour) < 0 ? h.opColour : foeColour(coop ? [a.colour, b.colour] : [a.colour]),
           tactics: { A: null, B: null }, mode: 'ai', planet: planet, terrainSetup: terrainSetup, options: chosenOptions(h.kind),
+          compoundPlan: soloPlan,
           solo: { coop: coop, faction: a.faction || 'pmc', opFaction: opFaction, names: coop ? [a.name, b.name] : [a.name],
             handPlace: !!el('sel-solo-place') && el('sel-solo-place').value === 'hand' }
         });
         return;
       }
+      if (compoundScen() && el('sel-compound').value === 'hand' && !chosenPlan()) return hotRefuse('Lay out the compound first, or let the game lay one out.');
       var pickScen = el('sel-scen') ? el('sel-scen').value : 'secure';
       if (pickScen === 'roll') pickScen = SC.ORDER[R.d6() - 1];
       else if (pickScen === 'rolld3') pickScen = SC.ORDER[(d3Allowed() ? R.d3() : R.d6()) - 1];
@@ -1371,6 +1495,8 @@
         styles: { A: (a.keys && a.keys.style) || null, B: (b.keys && b.keys.style) || null },
         temper: { A: hotTemper(a), B: hotTemper(b) },
         mode: mode, planet: planet, terrainSetup: terrainSetup, options: chosenOptions(h.kind),
+        kit: /^ce_/.test(pickScen) ? chosenKit() : null,
+        compoundPlan: /^ce_/.test(pickScen) ? chosenPlan() : null,
         secretSwaps: mode === 'hotseat'           // two players at one screen swap in turn, unseen
       });
     }

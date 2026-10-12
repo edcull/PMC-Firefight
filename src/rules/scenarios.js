@@ -280,7 +280,8 @@
        (p. 53). The circles are 4" apart, wider than a token, so no unit touches
        two. */
     if (o.r) return { r: o.r, strict: !!o.lz };
-    if (o.rect) return { rect: o.rect };
+    // a compound's control room: held only from inside it (Critical control, p. 162)
+    if (o.rect) return o.inside ? { rect: o.rect, strict: true } : { rect: o.rect };
     if (o.piece) return { rect: o.piece };
     return null;
   }
@@ -989,7 +990,113 @@
     }
   };
 
+  /* ================= Close Encounters (Appendix 1, pp. 157-163) =================
+     Fought inside a compound (rules/compound.js): corridors, rooms and halls,
+     with entry points on the two long edges. The engine lays the compound
+     instead of a world's table when the scenario is one of these (`compound`). */
+  var CE_ENTRY_TEXT = 'Nobody deploys before the battle: your units come in through the entry points on your own table edge in the Reserve phase of turn 1, a unit at a time in turn with the enemy, from the side with the initiative — anywhere along the corridor that opens onto the edge. A unit with no room left there comes in at the next Reserve phase.';
+  // "Before the battle, players randomize opposite table edges" (pp. 161-162): the compound's two long edges
+  function compoundEntries(state) {
+    var ent = state.compound ? state.compound.entries : { L: [], R: [] };
+    var swap = Math.random() < 0.5;
+    state.sc.entry = { A: (swap ? ent.R : ent.L).slice(), B: (swap ? ent.L : ent.R).slice() };
+    state.sc.zones = { A: state.sc.entry.A, B: state.sc.entry.B };
+  }
+  /* Who comes in this Reserve phase: everyone of the wave, from turn `from` on —
+     and anyone who found no room at the entry points the turn before. */
+  function compoundEntering(state, side, wave, from) {
+    if (state.turn < from) return [];
+    return state.units.filter(function (u) {
+      return u.side === side && u.alive && u.reserve && !u.aboard && (u.wave === wave || (u.wave === 1 && state.turn > 1));
+    });
+  }
+  function routCheck(state) {
+    var ra = routed(state, 'A'), rb = routed(state, 'B');
+    if (ra && rb) return { winner: null, text: 'Both companies are broken — a bloody draw.', routed: ['A', 'B'] };
+    if (rb) return { winner: 'A', text: 'A drives the enemy out of the compound — half their units are gone.', routed: ['B'] };
+    if (ra) return { winner: 'B', text: 'B drives the enemy out of the compound — half their units are gone.', routed: ['A'] };
+    return null;
+  }
+  /* Critical control's three rooms: the three rooms "a reasonable distance from
+     entry points of both sides" (p. 162) — the ones nearest the middle of the
+     compound, between the two long edges. */
+  function controlRooms(state) {
+    var mid = R.BOARD.w / 2;
+    return state.terrain.filter(function (r) { return r.kind === 'room'; })
+      .map(function (r) { return { r: r, d: Math.abs(r.x + r.w / 2 - mid) + Math.random() * 0.01 }; })
+      .sort(function (a, b) { return a.d - b.d; }).slice(0, 3).map(function (q) { return q.r; });
+  }
+
+  SCENARIOS.ce_clear = {
+    compound: true, hidden: function () { return true; },
+    id: 'ce_clear', name: 'Clearing out', page: 161,
+    blurb: 'The objective is simple — to drive the enemy out of the compound.',
+    win: 'Rout the enemy — destroy or drive off half their units.',
+    turns: 20,
+    objectives: function () { return []; },
+    entersTurn1: true,
+    deploy: function (state) { compoundEntries(state); },
+    reserves: function (state, side) { return compoundEntering(state, side, 1, 1); },
+    deployText: function () { return CE_ENTRY_TEXT; },
+    zoneFor: function (state, side) { return state.sc.zones[side]; },
+    hint: 'Inside a compound: corridors, rooms and doors. No objectives — break the other company to win.',
+    check: function (state) {
+      var r = routCheck(state);
+      if (r) return r;
+      if (state.turn >= 20) return { winner: null, text: 'Twenty turns and neither company is driven out — a draw.', timeout: true };
+    }
+  };
+  SCENARIOS.ce_control = {
+    compound: true, rooms: 3, hidden: function () { return true; },
+    groundTaking: true,
+    id: 'ce_control', name: 'Critical control', page: 162,
+    blurb: 'Secure and hold the compound\u2019s three main control rooms.',
+    win: 'Hold at least two of the three control rooms at the end of turn 20 — or all three at the end of any turn after the 5th.',
+    turns: 20,
+    // the rooms themselves are the objectives: held only by units inside them
+    objectives: function (state) {
+      state.sc.rooms = controlRooms(state);
+      state.sc.rooms.forEach(function (r) { r.control = true; });
+      return [];
+    },
+    entersTurn1: true,
+    deploy: function (state) {
+      compoundEntries(state);
+      state.objectives = state.sc.rooms.map(function (r) {
+        return { x: r.x + r.w / 2, y: r.y + r.h / 2, rect: rectOf(r), inside: true, name: r.name, owner: null };
+      });
+      // "Half of each player's counters enter ... The rest are held in reserve" (p. 162)
+      ['A', 'B'].forEach(function (side) {
+        var all = mine(state, side).filter(function (u) { return !u.reserve; });
+        var split = halve(all);
+        split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
+        noteSplit(state, side, 'hold', all, Math.floor(all.length / 2), Math.ceil(all.length / 2),
+          'Half the force comes in at once; the rest is held in reserve.');
+      });
+    },
+    // the first half in turn 1; the book says only "held in reserve": here they follow from turn 2
+    reserves: function (state, side) { return state.turn === 1 ? entering(state, side) : compoundEntering(state, side, 2, 2); },
+    deployText: function () { return CE_ENTRY_TEXT.replace('your units come in', 'the first half of your force comes in'); },
+    zoneFor: function (state, side) { return state.sc.zones[side]; },
+    hint: 'Three control rooms, marked on the table. A room is held by a unit standing inside it with no enemy inside. Hold all three at the end of a turn after the 5th and the battle is won; otherwise two of three at the end of turn 20.',
+    check: function (state) {
+      var held = { A: 0, B: 0 };
+      state.objectives.forEach(function (o) { if (o.owner) held[o.owner]++; });
+      if (state.turn > 5) {
+        if (held.A === 3) return { winner: 'A', text: 'A holds all three control rooms.' };
+        if (held.B === 3) return { winner: 'B', text: 'B holds all three control rooms.' };
+      }
+      if (state.turn >= 20) {
+        if (held.A >= 2) return { winner: 'A', text: 'A holds two of the control rooms at the end of turn 20.' };
+        if (held.B >= 2) return { winner: 'B', text: 'B holds two of the control rooms at the end of turn 20.' };
+        return { winner: null, text: 'Twenty turns, and nobody holds two of the control rooms — a draw.', timeout: true };
+      }
+    }
+  };
+
   var ORDER = ['meeting', 'secure', 'find', 'invasion', 'demolish', 'takeover'];
+  // the Close Encounters scenarios, offered as a group of their own
+  var CE_ORDER = ['ce_clear', 'ce_control'];
 
   /* Prepare a scenario for a fresh battle. Called once, after the terrain is
      generated and the units exist but before anything is deployed. */
@@ -1049,7 +1156,8 @@
     var pts = s.objectives(state) || [];
     state.objectives = pts.map(function (p) { return { x: p.x, y: p.y, owner: null }; });
     if (s.setupTerrain) s.setupTerrain(state);
-    separateTerrain(state);
+    // a compound's walls and floors are laid edge to edge on purpose
+    if (!state.compound) separateTerrain(state);
     if (s.fortify) s.fortify(state);
     return s;
   }
@@ -1202,7 +1310,7 @@
   }
 
   root.PMCScen = {
-    SCENARIOS: SCENARIOS, ORDER: ORDER,
+    SCENARIOS: SCENARIOS, ORDER: ORDER, CE_ORDER: CE_ORDER,
     begin: begin, deploy: deploy, lastStandBarricades: lastStandBarricades, lzOK: lzOK, lzSpots: lzSpots, autoLZs: autoLZs, setLZs: setLZs, zoneFor: zoneFor, deployOK: deployOK,
     reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
     gunRule: gunRule, freeToHold: freeToHold, holderOf: holderOf, areaOf: areaOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,

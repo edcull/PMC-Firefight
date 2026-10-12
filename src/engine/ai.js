@@ -128,9 +128,14 @@
 
     // an Overgrown bug charging from the AI's hands, when something is in reach
     function aiCharge(u, t) {
+      // in a compound, Stun Grenades go in with the charge while the side has any (p. 159)
+      var stun = !!(E.state.compound && E.kitUsable(u, 'stun'));
+      // without them, a friend's Covering Fire! first (p. 158)
+      if (E.state.compound && !stun && E.aiCover(u, t) && !t.alive) { u.activated = true; endActivation(u); return; }
       martyrFirst(u, t, function (m) {
         var snap = snapshotAlive();
-        var res = abAssault(E.state, u, t, m);
+        if (stun) E.spendKit(u, 'stun');
+        var res = abAssault(E.state, u, t, m, false, stun);
         res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
         soundFor(res.log);
         var card = fromLog('Assault', u.name + ' → ' + t.name, u.side, res.log);
@@ -520,8 +525,8 @@
 
     /* What the AI walks towards. Usually the objectives; in Find and secure, until
        the objective turns up, the locations nobody has checked yet. */
-    function goalPoints() {
-      if (E.state.scen.goals) return E.state.scen.goals(E.state);
+    function goalPoints(u) {
+      if (E.state.scen.goals) return E.state.scen.goals(E.state, u);
       if (E.state.objectives.length) return E.state.objectives;
       if (E.state.sc && E.state.sc.search && !E.state.sc.found) {
         return E.state.sc.search.filter(function (sp) { return !sp.checked; });
@@ -531,7 +536,7 @@
 
     function nearestObjective(u) {
       var best = null, bd = Infinity;
-      goalPoints().forEach(function (o) {
+      goalPoints(u).forEach(function (o) {
         var d = R.inches(u.x, u.y, o.x, o.y);
         if (d < bd) { bd = d; best = o; }
       });
@@ -802,6 +807,11 @@
         var bm = E.state.scen.behaviour(E.state, u) || {};
         if (bm.mod) { mods += bm.mod; why.push(bm.why || ((bm.mod > 0 ? '+' : '') + bm.mod)); }
       }
+      // the players' side run by the computer (a demo): a scenario against the clock pushes it on
+      if (E.state.solo && u.side === 'A' && E.state.scen.playerTemper) {
+        var pt = E.state.scen.playerTemper(E.state, u) || {};
+        if (pt.mod) { mods += pt.mod; why.push(pt.why); }
+      }
       // an AI company's personality: some hold back, some go in (campaign.js aiTemper)
       var tp = tableAI(u) && E.state.cfg.temper && E.state.cfg.temper[u.side];
       if (tp && tp.mod) { mods += tp.mod; why.push(tp.why); }
@@ -848,6 +858,15 @@
     function aiAct(u) {
       // Unreliable: the AI's units roll before acting, as a player's do (CMP-7)
       if (E.unreliableWasted(u)) return;
+      if (u.hidden) { aiHidden(u); return; }
+      // at the automated defence system's panel, and it is not yet this side's: take it (p. 160)
+      if (E.state.compound && E.atPanel(u) && E.state.adPanel.by !== u.side && R.status(u) === 'ready') {
+        E.controlGuns(u);
+        u.activated = true; endActivation(u);
+        return;
+      }
+      // the special equipment, where it is worth more than the unit's own shot
+      if (E.state.compound && E.aiKit(u, (bestTarget(u, 'fire') || {}).score || 0)) return;
       /* Decapitation: the OpFor's leaders "always act according to the Reasonably
          Defensive result and never Move nor Advance" (p. 152) — whatever state they
          are in, they shoot from where they are or keep their heads down. */
@@ -1109,28 +1128,83 @@
         if (s > bestScore) { bestScore = s; best = c; }
       });
       if (best) {
-        var d = R.inches(u.x, u.y, best.x, best.y);
         var path = R.pathTo(E.state, u, allowance, best);
-        faceAfter(u, path, best);
-        u.x = best.x; u.y = best.y;
-        logLine('move', u.label + (behaviour === 'flee' ? ' withdraws ' : noAdv ? ' moves ' : ' advances ') + d.toFixed(1) + '".');
-        crushAlong(u, path);
-        animateMove(u, path, true);
-        soloAfterMove(u);
-        if (u.x < 0) { u.activated = true; endActivation(u); return; }
-      }
-      if (behaviour !== 'flee' && !killAll && !noAdv && !R.campFlag(u, 'noAdvance')) {
-        // (the cautious OpFor engage the biggest threat after an Advance too, SOL-6)
-        var t2 = soloI && (behaviour === 'defensive' || behaviour === 'neutral') ? threatTarget(u, 'advance') : bestTarget(u, 'advance');
-        if (t2.t && t2.score > 0.2) {
-          whenIdle(function () { if (E.state && !E.state.over && u.alive) fire(u, t2.t, 'advance'); });
+        // Opportunity Fire (Close Encounters, p. 158): crossing an enemy's sight on the way, it may be shot there
+        var opp = E.oppCheck(u, path, best);
+        if (opp) {
+          E.oppFire(u, opp, function (stop) {
+            if (!u.alive) { u.activated = true; endActivation(u); return; }
+            if (moveTo(stop ? stop.at : best, stop ? stop.path : path, !!stop)) afterMove();
+          });
           return;
         }
+        if (!moveTo(best, path)) return;
       }
-      u.activated = true; endActivation(u);
+      afterMove();
+      // the move made; false if it took the unit off the table
+      function moveTo(to, route, pinned) {
+        var d = R.inches(u.x, u.y, to.x, to.y);
+        faceAfter(u, route, to);
+        u.x = to.x; u.y = to.y;
+        logLine('move', u.label + (behaviour === 'flee' ? ' withdraws ' : noAdv ? ' moves ' : ' advances ') + d.toFixed(1) + '".');
+        crushAlong(u, route);
+        animateMove(u, route, true);
+        soloAfterMove(u);
+        if (u.x < 0) { u.activated = true; endActivation(u); return false; }
+        if (pinned) { u.activated = true; endActivation(u); return false; }   // shot down on the way: no Advance shot
+        return true;
+      }
+      function afterMove() {
+        if (behaviour !== 'flee' && !killAll && !noAdv && !R.campFlag(u, 'noAdvance')) {
+          // (the cautious OpFor engage the biggest threat after an Advance too, SOL-6)
+          var t2 = soloI && (behaviour === 'defensive' || behaviour === 'neutral') ? threatTarget(u, 'advance') : bestTarget(u, 'advance');
+          if (t2.t && t2.score > 0.2) {
+            whenIdle(function () { if (E.state && !E.state.over && u.alive) fire(u, t2.t, 'advance'); });
+            return;
+          }
+        }
+        u.activated = true; endActivation(u);
+      }
     }
 
     function fire(u, t, mode) { resolveShot(u, t, mode, {}); }
+
+    /* A counter of the computer's (Close Encounters, p. 158). Close enough to an
+       enemy unit to charge it once it shows itself, it reveals itself and acts as
+       normal; otherwise it moves on as a counter, up to 6", round the walls
+       towards whatever it is after — and stops if it is seen. (Two counters either
+       side of a door would otherwise wait each other out all battle.) */
+    function aiHidden(u) {
+      var ne = closestFoe(u, function (t) {
+        var wf = R.walkField(E.state, u.x, u.y, u.side), w = wf ? wf(t.x, t.y) : Infinity;
+        return w < Infinity ? w : R.unitDist(u, t) + 30;
+      });
+      if (ne && ne.dist <= u.move + 4) {
+        E.revealUnit(u, 'it shows itself');
+        E.revealSweep();
+        aiAct(u);
+        return;
+      }
+      var goal = pickGoal(u, 'neutral'), allowance = u.move + moveBonus(u, 'move');
+      var look = R.groundLookup(E.state);
+      var best = null, bestScore = scoreSpot(u, { x: u.x, y: u.y }, goal, 'neutral', look) + 0.3;
+      R.reachable(E.state, u, allowance).forEach(function (c) {
+        if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)) return;
+        if (!canStand(u, c)) return;
+        var s = scoreSpot(u, c, goal, 'neutral', look);
+        if (s > bestScore) { bestScore = s; best = c; }
+      });
+      u.activated = true;
+      if (!best) { logLine('ai', 'A counter [' + u.side + '] waits where it is, unseen.'); endActivation(u); return; }
+      var hm = E.hiddenMove(u, R.pathTo(E.state, u, allowance, best), best);
+      faceAfter(u, hm.path, hm.at);
+      var d = R.inches(u.x, u.y, hm.at.x, hm.at.y);
+      u.x = hm.at.x; u.y = hm.at.y;
+      logLine('move', (hm.by ? u.label : 'A counter [' + u.side + ']') + ' moves ' + d.toFixed(1) + '"' + (hm.by ? '.' : ', unseen.'));
+      animateMove(u, hm.path, true);
+      E.afterHiddenMove(u, hm.by);
+      endActivation(u);
+    }
 
     // the Suppressed unit's Move: into the nearest cover (or a building), nearest the `toward` point if given
     function scrambleToCover(u, toward) {
@@ -1282,7 +1356,7 @@
     function objectivePull(u) {
       if (!companyAI(u) || R.isFlying(u) || R.status(u) !== 'ready') return null;
       if (!E.state.scen || !E.state.scen.groundTaking) return null;
-      var goals = goalPoints();
+      var goals = goalPoints(u);
       if (!goals.length || goals.some(function (o) { return objDist(u, o) <= objReach(o); })) return null;
       var o = pickGoal(u, 'neutral');
       return o && goals.indexOf(o) >= 0 && o.owner !== u.side ? o : null;
@@ -1297,7 +1371,7 @@
         var t = nearestEnemy(u);
         if (t) return { x: t.unit.x, y: t.unit.y };
       }
-      var goals = goalPoints();
+      var goals = goalPoints(u);
       var standing = goals.filter(function (o) { return objDist(u, o) <= objReach(o); })[0];
       if (standing && behaviour !== 'offensive') return standing;
       var best = null, bd = Infinity;
@@ -1334,7 +1408,10 @@
          outweighs the best cover; everyone else values cover first. */
       if (behaviour === 'offensive') { s += cover * 1.0; if (terr.fp) s += 4.5; }
       else { s += cover * 1.6; if (terr.fp) s += 2; }
-      s -= 0.6 * R.inches(c.x, c.y, goal.x, goal.y);
+      // inside a compound, the walk there round the walls (R.walkField), not the line through them
+      var wf = E.state.compound ? R.walkField(E.state, goal.x, goal.y, u.side) : null;
+      var gd = wf ? wf(c.x, c.y) : Infinity;
+      s -= 0.6 * (gd < Infinity ? gd : R.inches(c.x, c.y, goal.x, goal.y));
       /* Attacking a held position (assaultPlan): no further than 6" out in front of the
          force until it goes in; then the objective pulls, whatever else is near. */
       var ap = assaultPlan(u);
@@ -1375,7 +1452,7 @@
     return {
       threatTarget: threatTarget, aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
       gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
-      nearestEnemy: nearestEnemy, aiAct: aiAct, aiStands: aiStands, scoreSpot: scoreSpot
+      nearestEnemy: nearestEnemy, aiAct: aiAct, aiCharge: aiCharge, aiStands: aiStands, scoreSpot: scoreSpot
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineAI;

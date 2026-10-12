@@ -256,7 +256,7 @@
       }
       var tier = C.rollBattleTier(A, B);
       // a D6 across all six, whatever the Tier — and Foresighted Command's dice (camp-contract.js)
-      var fs = C.foresight(A, B, !hotseat());
+      var fs = C.foresight(A, B, !hotseat(), E.camp.options);
       var levels = C.levelsFor(A, B, tier.tier);
       E.contract = {
         // the highest Level both can fill in full, not merely field (camp: defaultLevel)
@@ -652,8 +652,10 @@
           // two players at one screen swap from their benches in turn, unseen, as a hotseat skirmish does (HC-8)
           secretSwaps: E.camp.mode === 'hotseat',
           planet: E.contract.planet,
-          options: E.camp.options || {},
-          world: E.contract.world || null           // Other Worlds, rolled with the contract             // the campaign's optional rules
+          options: E.camp.options || {},             // the campaign's optional rules
+          world: E.contract.world || null,           // Other Worlds, rolled with the contract
+          // a Close Encounters battle's compound: the campaign's own for this table, if it has one laid out by hand
+          compoundPlan: root.PMCCompound ? root.PMCCompound.planFor(E.camp.compounds, R.boardFor(E.contract.pl)) : null
         });
       }
     }

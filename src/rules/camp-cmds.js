@@ -171,7 +171,7 @@
         if (contractOf(camp)) return no('a contract is already being drawn up');
         const A = camp.companies.A, B = camp.companies.B;
         if (!(A.roster || []).length || !(B.roster || []).length) return no('both forces must be founded first');
-        const tier = C.rollBattleTier(A, B), fs = C.foresight(A, B, false), levels = C.levelsFor(A, B, tier.tier);
+        const tier = C.rollBattleTier(A, B), fs = C.foresight(A, B, false, camp.options), levels = C.levelsFor(A, B, tier.tier);
         const k = {
           tierRoll: tier, tier: tier.tier, levels: levels, pl: C.defaultLevel(A, B, tier.tier, levels),
           scenario: fs.scenario || fs.fore.dice[0], planet: 'random',

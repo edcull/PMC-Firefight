@@ -66,7 +66,9 @@
     var PALETTE = {
       A: COLOURS.ochre,
       B: COLOURS.steel,
-      C: COLOURS.steel
+      C: COLOURS.steel,
+      // the automated defence system's guns (Close Encounters), nobody's
+      N: COLOURS.hazard
     };
     /* The page's own side colours (--side-A, --side-B: the army pills, titles and
        marks round the board) follow the armies' colours. */

@@ -13,6 +13,11 @@
         pebble = S.pebble, poly = S.poly, rect = S.rect, rng = S.rng, shadowBlob = S.shadowBlob,
         toScreen = S.toScreen, vgrad = S.vgrad;
 
+    // a compound's plating, and its doors (Close Encounters)
+    var BULK = ['#1d2124', '#2a2f33', '#3a4146', '#4a535a', '#5c666e', '#76818a'];
+    var DOOR_OK = ['#2a2618', '#4a4122', '#7a6a2c', '#a68f34', '#c9ad44', '#e2c860'];
+    var DOOR_RED = ['#2a1412', '#4a1d18', '#7a2a22', '#9c352a', '#b8473a', '#d0675a'];
+    var DOOR_AMBER = ['#2a1e10', '#4a3418', '#7a5222', '#a06a2a', '#c08636', '#d9a456'];
     function drawKind(cutaway, g, lift, p, pr) {
       switch (pr.kind) {
         case 'tree': {
@@ -152,6 +157,35 @@
               'rgba(' + (60 - sm2 * 6) + ',' + (50 - sm2 * 5) + ',' + (46 - sm2 * 4) + ',' + (0.34 - sm2 * 0.055) + ')');
           }
           for (var em = 0; em < 3; em++) dot(g, p.x + (vr() - 0.5) * a(2), p.y - a(1 + vr() * 5), '#ffb040', 1);
+          break;
+        }
+        /* Fuel drums: a cluster of steel barrels, hazard-banded, in a compound's
+           dangerous section (Close Encounters). */
+        // a control console: a steel desk with a lit screen and a row of lamps
+        case 'console': {
+          var cl7 = lift || 0, cw7 = a(1.6), ch7 = a(1.4);
+          shadowBlob(g, { x: p.x + a(0.5), y: p.y - cl7 + a(0.3) }, a(1.8), a(0.8));
+          rect(g, p.x - cw7 / 2, p.y - cl7 - ch7, cw7, ch7, '#3a4148');
+          rect(g, p.x - cw7 / 2, p.y - cl7 - ch7, cw7, Math.max(1, a(0.25)), '#5c666e');
+          rect(g, p.x - cw7 * 0.38, p.y - cl7 - ch7 * 0.82, cw7 * 0.76, ch7 * 0.42, '#1a3a28');
+          rect(g, p.x - cw7 * 0.3, p.y - cl7 - ch7 * 0.74, cw7 * 0.6, ch7 * 0.26, '#4fd08a');
+          dot(g, p.x - cw7 * 0.3, p.y - cl7 - ch7 * 0.2, '#ff5a3a', 2);
+          dot(g, p.x, p.y - cl7 - ch7 * 0.2, '#ffb02e', 2);
+          dot(g, p.x + cw7 * 0.3, p.y - cl7 - ch7 * 0.2, '#7bdc6a', 2);
+          break;
+        }
+        case 'drums': {
+          var dr6 = rng(pr.seed), dl6 = lift || 0;
+          shadowBlob(g, { x: p.x + a(0.6), y: p.y - dl6 + a(0.3) }, a(2.2), a(0.9));
+          for (var di = 0; di < (pr.n || 2); di++) {
+            var ox = (di - ((pr.n || 2) - 1) / 2) * a(1.1) + (dr6() - 0.5) * a(0.4), oy = (dr6() - 0.5) * a(0.6);
+            var cx6 = p.x + ox, cy6 = p.y - dl6 + oy, rw = a(0.5), hh6 = a(1.5);
+            rect(g, cx6 - rw, cy6 - hh6, rw * 2, hh6, di % 2 ? '#8a3a1c' : '#9c4a20');
+            rect(g, cx6 - rw, cy6 - hh6 * 0.62, rw * 2, Math.max(1, a(0.22)), '#d9b13a');
+            rect(g, cx6 - rw, cy6 - hh6 * 0.32, rw * 2, Math.max(1, a(0.12)), '#2a1a12');
+            ellipse(g, cx6, cy6 - hh6, rw, rw * 0.5, '#b8603a');
+            ellipse(g, cx6, cy6 - hh6, rw * 0.6, rw * 0.3, '#5a2a14');
+          }
           break;
         }
         case 'scrap': {
@@ -577,6 +611,21 @@
           // the warning lamps, unlit: they flash over the table every frame (drawLive)
           dot(g, mx - 1, my - MH - a(6) - 1, '#5a2018', 3);
           dot(g, mx - 1, my - MH * 0.5, '#5a2018', 2);
+          break;
+        }
+        /* A compound's bulkhead: a low block of steel plate, riveted at the seams,
+           with a hazard-striped lip along the top of the faces you can see. */
+        case 'bulkhead': {
+          box(g, pr, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: lift || 0, cutaway: !!cutaway });
+          break;
+        }
+        /* A door: a steel slab across the doorway. Working, it is striped yellow and
+           black; locked to both sides, red; locked to one, amber. */
+        case 'door': {
+          var dpal = pr.lock === 'doorlock' ? DOOR_RED : pr.lock === 'door' ? DOOR_OK : DOOR_AMBER;
+          box(g, pr, dpal, { roof: dpal[4], roofEdge: dpal[5], windows: null, lift: lift || 0 });
+          var dl = lift || 0, dc = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
+          dot(g, dc.x - 1, dc.y - dl - pr.height - 2, pr.lock === 'door' ? '#7bdc6a' : pr.lock === 'doorlock' ? '#ff4a3a' : '#ffb02e', 3);
           break;
         }
         case 'building':

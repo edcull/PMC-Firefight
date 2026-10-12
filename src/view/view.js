@@ -663,9 +663,9 @@
           act.textContent = landHere ? 'Prepare to land' : entryHere ? 'Prepare to enter' : hotDone ? 'Ready to begin' : 'Deploy your force';
           act.className = 'pill ' + (hotDone ? '' : 'pill-A');
         }
-      } else if (B.state.phase === 'battle' && !B.replaying() && (ui.reservePick || B.state.kyfAsk || B.state.martyrAsk || B.state.nervousAsk || B.state.standAsk)) {
+      } else if (B.state.phase === 'battle' && !B.replaying() && (ui.reservePick || B.state.kyfAsk || B.state.martyrAsk || B.state.oppAsk || B.state.nervousAsk || B.state.standAsk)) {
         // a question put to one side, whoever's turn it is: the header names who is being asked (HB-7)
-        var qa = ui.reservePick || B.state.kyfAsk || B.state.martyrAsk || B.state.nervousAsk || B.state.standAsk;
+        var qa = ui.reservePick || B.state.kyfAsk || B.state.martyrAsk || B.state.oppAsk || B.state.nervousAsk || B.state.standAsk;
         act.textContent = 'Asking: ' + plainName(qa.side);
         act.className = 'pill pill-' + qa.side;
       } else if (ui.insertion) {

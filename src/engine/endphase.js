@@ -421,6 +421,8 @@
           list: tide.map(function (l) { return { text: l.text, side: l.unit.side }; }) });
       }
 
+      // a compound's fires, and the Satchel Charges set this turn (Close Encounters, p. 159)
+      if (E.state.compound) E.hazardsEnd();
       scoreObjectives();
       /* "+1 TP if the army was routed in battle or completely destroyed" (p. 86) is
          the rout the scenario counts — the objective of p. 49 where it has one, or a
@@ -445,6 +447,7 @@
     function objDist(u, o) {
       var a = SC.areaOf(o), d;
       // held only from inside (a landing zone): how far the token is from touching it
+      if (a && a.strict && a.rect) return R.rectPointDist(a.rect, u.x, u.y);   // a control room: only from inside it
       if (a && a.strict) return Math.max(0, R.inches(u.x, u.y, o.x, o.y) - a.r - UR);
       if (a && a.rect) d = R.rectPointDist(a.rect, u.x, u.y);
       else d = Math.max(0, R.inches(u.x, u.y, o.x, o.y) - (a && a.r || 0));

@@ -115,6 +115,8 @@
       '.lob-lines .said b{color:var(--ink)}',
       '.lob-lines .note{color:var(--ink-dim);font-style:italic}',
       '.lob-terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 10px}',
+      '.lob-terms .lob-cmp,.lob-terms .lob-opts{grid-column:1/-1}',
+      '.lob-cmp .lob-note{margin:2px 0 6px}',
       '.lob-foot{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}',
       '.lob-foot .start{margin:0;flex:1 1 auto}',
       // in a game, the actions and the forces stay put; the terms scroll; the talk keeps the foot
@@ -465,9 +467,9 @@
         { v: 'auto', t: optionText('sel-terrain', 'auto', 'Automatically place') },
         { v: 'manual', t: optionText('sel-terrain', 'manual', 'Manually place') }
       ], s.terrain || 'auto') +
-      publicBox('term-private', !s.private, ' data-term="private"' + d) +
-      // the optional rules; a campaign's battle is fought under the campaign's own
-      (s.campaign || !U || !U.optionBoxes ? '' :
+      publicBox('term-private', !s.private, ' data-term="private"' + d);
+    // the optional rules; a campaign's battle is fought under the campaign's own
+    var opts = (s.campaign || !U || !U.optionBoxes ? '' :
         '<div class="field lob-opts"><label>Optional rules</label>' + U.optionBoxes(s.options, ' data-term="options"' + d) + '</div>');
     // a cooperative game: commandos (Priority Level 1 each) under a solitaire scenario, against the OpFor
     if (coop) {
@@ -475,10 +477,11 @@
       return '<div class="lob-terms">' + tier + '</div>' +
         forcesHTML(mine, isHost) +
         '<div class="lob-terms">' +
-        sel('term-soloScen', 'Scenario', [{ v: 'roll', t: optionText('sel-solo-scen', 'roll', 'Randomise the scenario') }].concat((SOLO ? SOLO.ORDER : []).map(function (x) {
-          return { v: x, t: optionText('sel-solo-scen', x, (SOLO && SOLO.SCENARIOS[x] && SOLO.SCENARIOS[x].name) || x) };
+        // Besieged, the Close Encounters one, only with that option on (Appendix 1)
+        sel('term-soloScen', 'Scenario', [{ v: 'roll', t: optionText('sel-solo-scen', 'roll', 'Randomise the scenario') }].concat((SOLO ? SOLO.ORDER.concat((s.options && s.options.closeEncounters) || s.soloScen === 's_besieged' ? SOLO.CE_ORDER || [] : []) : []).map(function (x) {
+          return { v: x, t: optionText('sel-solo-scen', x, (SOLO && SOLO.SCENARIOS[x] && SOLO.SCENARIOS[x].name + (SOLO.SCENARIOS[x].compound ? ' (Close Encounters)' : '')) || x) };
         })), s.soloScen || 'roll') +
-        world +
+        world + compoundHTML(isHost) + opts +
         '<p class="lob-note">Cooperative: each of you musters a commando; the OpFor is the machine’s. You take turns, an activation each.</p>' +
         '</div>';
     }
@@ -487,11 +490,35 @@
       '</div>' +
       forcesHTML(mine, isHost) +
       '<div class="lob-terms">' +
-      sel('term-scenario', 'Scenario', P.SCENARIOS.filter(function (x) { return x !== 'rolld3'; }).map(function (x) {
-        return { v: x, t: optionText('sel-scen', x, x) };
+      // the Close Encounters scenarios only with that option on (Appendix 1)
+      sel('term-scenario', 'Scenario', P.SCENARIOS.filter(function (x) {
+        return x !== 'rolld3' && (!/^ce_/.test(x) || (s.options && s.options.closeEncounters) || s.scenario === x);
+      }).map(function (x) {
+        var SCN = root.PMCScen && root.PMCScen.SCENARIOS[x];
+        return { v: x, t: optionText('sel-scen', x, SCN ? SCN.name + (SCN.compound ? ' (Close Encounters)' : '') : x) };
       }), s.scenario) +
-      world +
+      // the scenario, the world and the table on a row; the compound and the optional rules each a row under them
+      world + compoundHTML(isHost) + opts +
       '</div>';
+  }
+  /* A Close Encounters battle's compound (p. 157): the game's, laid out for the
+     battle, or one the host lays out by hand ("set up the complex in agreeable
+     way", p. 163) on the editor the skirmish screen has (compound-edit.js). */
+  function roomBoard() {
+    var s = room.settings;
+    return s.kind === 'coop' ? { w: 48, h: 48 } : root.PMC.boardFor(s.pl);
+  }
+  function compoundHTML(isHost) {
+    var s = room.settings, CMP = root.PMCCompound;
+    var ce = s.kind === 'coop' ? s.soloScen === 's_besieged' : /^ce_/.test(s.scenario || '');
+    if (!ce || !CMP || s.campaign) return '';
+    var b = roomBoard(), p = s.compound, ck = p ? CMP.checkPlan(p, b.w, b.h) : null;
+    var line = !p ? 'Laid out by the game for the battle.'
+      : ck.ok ? 'Laid out by the host: ' + ck.rooms + ' room' + (ck.rooms === 1 ? '' : 's') + ', ' + ck.halls + ' hall' + (ck.halls === 1 ? '' : 's') + ', ' + (ck.entries.L + ck.entries.R) + ' entry points.'
+      : 'The host\u2019s layout does not fit a ' + b.w + '" \u00d7 ' + b.h + '" table: the game will lay one out.';
+    return '<div class="field lob-cmp"><label>Compound</label><p class="lob-note" id="lob-cmp-note">' + esc(line) + '</p>' +
+      (isHost ? '<div class="cmp-row"><button type="button" class="lnk" data-lob="cmpedit">' + (p ? 'Change it\u2026' : 'Lay it out by hand\u2026') + '</button>' +
+        (p ? '<button type="button" class="lnk" data-lob="cmpgen">Let the game lay it out</button>' : '') + '</div>' : '') + '</div>';
   }
 
   /* ---- the forces, a line each, as the campaign lobby's slots ----
@@ -618,6 +645,18 @@
     fault = '';
     switch (what) {
       case 'usermenu': userMenu(el('lobby-usermenu').hidden); return;
+      // the host lays the compound out by hand, starting from the room's (or the one kept on this device for the table)
+      case 'cmpedit': {
+        if (!room || !root.PMCCompoundEdit) return;
+        var bd = roomBoard(), keyB = 'pmc-compound-' + bd.w + 'x' + bd.h, kept = null;
+        try { kept = JSON.parse(localStorage.getItem(keyB) || 'null'); } catch (e2) { kept = null; }
+        root.PMCCompoundEdit.open({ w: bd.w, h: bd.h, plan: room.settings.compound || kept, onDone: function (plan) {
+          try { localStorage.setItem(keyB, JSON.stringify(plan)); } catch (e3) { }
+          if (net) net.send('game.settings', { patch: { compound: plan } });
+        } });
+        return;
+      }
+      case 'cmpgen': if (net) net.send('game.settings', { patch: { compound: null } }); return;
       case 'signout': userMenu(false); signOut(); return;
       // the main menu's account pane: what the server keeps for the player
       case 'account': userMenu(false); close(); if (root.PMCAccount) root.PMCAccount.show(); return;

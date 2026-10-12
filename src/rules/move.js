@@ -61,6 +61,8 @@
     }
     function terrainBars(u, kind) {
       var t = TERRAIN[kind];
+      // a compound's Locked door (p. 157): shut to one side, or to both
+      if (t.lockedFor && (t.lockedFor === 'both' || t.lockedFor === u.side)) return true;
       if (isFlying(u) || flyInf(u) || jumps(u)) return false;
       // Stationary Artillery counts shallow water as impassable (p. 95)
       if (t.shallow && hasOwn(u, 'Stationary Artillery')) return true;
@@ -120,7 +122,7 @@
       return state.terrain.length + ';' + state.terrain.map(function (r) { return [r.kind, r.x, r.y, r.w, r.h, r.gone ? 1 : 0].join(','); }).join(';');
     }
     function fieldKey(state, u, allowance, tk) {
-      var k = [u.id, u.key, u.cls, u.x, u.y, u.move, allowance, u.wireRoll, u.bld ? 1 : 0, (u.rules || []).join('/')];
+      var k = [u.id, u.side, u.key, u.cls, u.x, u.y, u.move, allowance, u.wireRoll, u.bld ? 1 : 0, (u.rules || []).join('/')];
       state.units.forEach(function (o) { if (o.alive && !o.aboard && o.side !== u.side && o.x >= 0) k.push(o.x, o.y, o.bld ? 1 : 0); });
       return k.join(',') + '|' + tk;
     }

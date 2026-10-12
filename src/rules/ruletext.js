@@ -117,6 +117,12 @@
     'Jammers':
       'Enemy units within 24" rally and repair on 5+ instead of 4+. Keeps working even while this unit is ' +
       'Suppressed or Broken.',
+    'Advanced Sensors':
+      'Inside a compound, in place of Markerlights (Close Encounters, p. 158): the Detect special action moves the unit ' +
+      'up to its Movement and reveals every hidden enemy counter within 12", seen or not.',
+    'Sixth Sense':
+      'Inside a compound, in place of Pheromone Markers (Close Encounters, p. 158): the Detect special action moves the ' +
+      'unit up to its Movement and reveals every hidden enemy counter within 12", seen or not.',
     'Keen-Eyed':
       'Sees through Stealth: targets get no Stealth bonus against its shots, and it can mark Stealth units ' +
       'at full range.',

@@ -281,6 +281,17 @@
         '<div class="acts"><button class="act" data-act="martyr"><span>Send one in</span><small>' + u.models + ' models, one of them goes</small></button>' +
         '<button class="act" data-act="nomartyr"><span>Hold back</span><small>Fight the assault as it stands</small></button></div></div>';
     }
+    // Opportunity Fire (Close Encounters, p. 158): asked of the side whose sight a moving unit crosses
+    function oppCard() {
+      var o = B.state.oppAsk, e = byId(o.shooter), u = byId(o.mover);
+      if (!e || !u) return '';
+      return '<div class="card">' + askWho(o.side) + '<h2>Opportunity Fire</h2>' +
+        '<p class="sub"><b>' + esc(u.name) + '</b> is crossing the line of sight of <b>' + esc(e.name) + '</b>, and will be out of it again when its move ends. ' +
+        esc(e.name) + ' may shoot it on the way — every modifier but the Fire! +1 — and that is its activation this turn. ' +
+        'If the shot leaves it Suppressed or worse, it stops where it was caught.</p>' +
+        '<div class="acts"><button class="act" data-act="opp"><span>Open fire</span><small>' + esc(e.name) + ' uses its activation</small></button>' +
+        '<button class="act" data-act="noopp"><span>Let it pass</span><small>Keep the activation for later</small></button></div></div>';
+    }
     function mineCard() {
       var mp = B.state.minePick;
       return '<div class="card">' + askWho(mp.side) + '<h2>Terrorist</h2>' +
@@ -423,7 +434,7 @@
       insertionMine: insertionMine,
       kyfCard: kyfCard,
       landUnit: landUnit,
-      martyrCard: martyrCard,
+      martyrCard: martyrCard, oppCard: oppCard,
       mineCard: mineCard,
       placeCard: placeCard,
       snapReach: snapReach,

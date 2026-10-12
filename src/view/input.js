@@ -540,7 +540,9 @@
         var mspot = moveSpotUnder(c);
         if (mspot) { doMarkMove(mspot); return; }
       }
-      if (ui.moves.length && (ui.mode === 'move' || ui.mode === 'advance-move' || ui.mode === 'carry-move' || ui.mode === 'carry-first')) {
+      // Detect (Close Encounters): the move, then the sweep — tapping the unit itself sweeps from where it stands
+      if (ui.moves.length && (ui.mode === 'detect-move' || ui.mode === 'kit-move') && hit === ui.selected) { doMove({ x: hit.x, y: hit.y }); return; }
+      if (ui.moves.length && (ui.mode === 'move' || ui.mode === 'advance-move' || ui.mode === 'carry-move' || ui.mode === 'carry-first' || ui.mode === 'detect-move' || ui.mode === 'kit-move')) {
         var spot = moveSpotUnder(c);
         if (spot) { previewMove(spot); return; }
         if (!hit) {

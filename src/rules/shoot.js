@@ -58,12 +58,20 @@
          Advance, its auxiliary weapons too; not the shots a reaction takes (defensive
          fire, the arrival shot: the owner's ruling), not Indirect Fire, and not a
          shot called in by a mark (the book excepts marking; the call is what it is for). */
-      if ((mode === 'fire' || mode === 'advance') && !(opts && opts.markKind) && !(has(a, 'Indirect Fire') && !dugIn(a))) return closestTwo(state, a, t);
+      if ((mode === 'fire' || mode === 'advance') && !(opts && opts.markKind) && !lobs(state, a)) return closestTwo(state, a, t);
       return true;
     }
+    /* Whether a unit fires its Indirect Fire as such: not a gun dug in over its
+       sights, and nobody inside a compound — "units may not use Indirect Fire, but
+       most of them may shoot normally" (Close Encounters, p. 157). Mortars there
+       "may not be fired even with LoS": they fire at Basic Firepower (shotMods). */
+    function lobs(state, a) { return has(a, 'Indirect Fire') && !dugIn(a) && !(state && state.compound); }
+    function mortar(a) { return /mortar/.test(a.art || ''); }
     function canShootAt(state, a, t, mode, opts) {
       opts = opts || {};
       if (!a.alive || !t.alive || a.side === t.side || a.fp === null) return false;
+      // a counter (Close Encounters, p. 158) only moves, and nobody draws a bead on one
+      if (a.hidden || t.hidden) return false;
       /* Only what is on the table can be shot at. A unit held in reserve is parked
          just off the table's corner at (-1, -1), and a unit riding inside a hull is
          not there at all; neither is a target, however close the numbers say. */
@@ -101,7 +109,7 @@
       }
       if (hasLoS(state, a, t)) return true;
       if (!senses || !tribeSees(state, a.side, t)) return false;
-      if (!opts.aux && has(a, 'Indirect Fire')) return true;
+      if (!opts.aux && has(a, 'Indirect Fire') && !(state && state.compound)) return true;
       return lineClear(state, a, t);
     }
 
@@ -125,7 +133,7 @@
         if (m.targets.indexOf(t) < 0) return null;
         kind = m.kind;
       }
-      if (kind === 'designate') return has(a, 'Indirect Fire') && !dugIn(a) ? 'designate' : null;
+      if (kind === 'designate') return lobs(state, a) ? 'designate' : null;
       return has(a, 'Indirect Fire') ? null : 'mark';
     }
 
@@ -143,7 +151,8 @@
       // a piece of terrain as the target (p. 57): only what the shooter brings counts
       var atT = !!opts.terrain;
       var basic = mode === 'defensive' || mode === 'basic' ||
-        (has(a, 'Always Basic Firepower') && !aux) || (has(a, 'Indirect Fire') && !aux && !dugIn(a) && !dualMode(state, a, t)) ||
+        (has(a, 'Always Basic Firepower') && !aux) || (lobs(state, a) && !aux && !dualMode(state, a, t)) ||
+        (!aux && !!(state && state.compound) && mortar(a)) ||   // a compound's mortars (p. 157)
         isFlying(a) || isFlying(t) ||                    // aircraft shoot, and are shot at, basic
         flyInf(a) || flyInf(t) ||                        // and so do Flying Infantry (p. 116)
         // Other Worlds: low gravity, "because of high recoil... only Basic Firepower on Advance! actions" (p. 164)
@@ -408,7 +417,7 @@
         var dres2 = resolveDamage(t, hits, pierce, dmgMod(state, a, t));
         log.push({ t: 'hits', text: dres2.rolls.join(' · ') });
         applyDamage(state, t, dres2.damage, log, a);
-        return { log: log, hits: hits, wreck: wreck };
+        return { log: log, roll: roll, hits: hits, wreck: wreck };
       }
       var medicId = null;
       if (hits > 0) {
@@ -460,7 +469,7 @@
         log.push({ t: 'hits', text: 'Horses shy under fire: +' + mountOf(t).shotSP + ' SP' });
       }
       // who answered a MEDIC! on this volley, so the board can show them at work
-      var out = medicId ? { log: log, hits: hits, medic: medicId } : { log: log, hits: hits };
+      var out = medicId ? { log: log, roll: roll, hits: hits, medic: medicId } : { log: log, roll: roll, hits: hits };
       if (wreck) out.wreck = wreck;                     // what the shot brought down, for the board to repaint
       return out;
     }

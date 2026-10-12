@@ -8,13 +8,24 @@
        how many, but not which, until they are all revealed at once;
      - the piece a side has quietly mined (Terrorist's Path), and the pieces it
        could choose from while it chooses;
-     - in a campaign, a force's bench: the units of its dossier not taking the field.
+     - in a campaign, a force's bench: the units of its dossier not taking the field;
+     - Close Encounters' counters (p. 158): an enemy unit still hidden is where it
+       is, and nothing more — what it is, how many, what it carries, left out.
    And before a battle, in its room: the other player's list (its units and any
    tactic), until it is on the table. */
 'use strict';
 
 const other = (sd) => (sd === 'A' ? 'B' : 'A');
 
+// an enemy counter, as the other side sees it: a stand-in of its army's, the same place and state
+const STAND_IN = { pmc: 'recruits', rebel: 'rciv', bugs: 'btiny', xeno: 'xeps1' };
+function veilCounter(u) {
+  return Object.assign({}, u, {
+    key: STAND_IN[u.faction] || 'recruits', name: 'Hidden counter', label: 'Counter [' + u.side + ']', code: '?',
+    group: '', rules: [], camp: null, honours: [], traumas: [], cargo: [], tier: 1, models: 1, startSize: 1,
+    fp: 0, range: 0, def: 0, assault: 0, morale: 0, sp: 0, art: null, pickIdx: null
+  });
+}
 // a side's swaps, as the other side sees them: how many are noted, none of what
 function veilSwaps(sa) {
   if (!sa) return sa;
@@ -37,6 +48,9 @@ function battleFor(snap, seat) {
   if (snap.swapAsk && !mine(snap.swapAsk.side)) out.swapAsk = veilSwaps(snap.swapAsk);
   if (snap.mined && !mine(snap.mined.side)) out.mined = null;
   if (snap.minePick && !mine(snap.minePick.side)) out.minePick = Object.assign({}, snap.minePick, { pool: [] });
+  if ((snap.units || []).some((u) => u.hidden && !mine(u.side))) {
+    out.units = snap.units.map((u) => (u.hidden && !mine(u.side) ? veilCounter(u) : u));
+  }
   if (snap.cfg && snap.cfg.bench) {
     out.cfg = Object.assign({}, snap.cfg, { bench: { A: mine('A') ? snap.cfg.bench.A : [], B: mine('B') ? snap.cfg.bench.B : [] } });
   }

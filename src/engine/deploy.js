@@ -152,6 +152,8 @@
         var a2 = ang + (Math.random() - 0.5) * 1.6, d2 = 1 + Math.random() * 3;
         fixed = R.clampBoard({ x: fixed.x + Math.cos(a2) * d2, y: fixed.y + Math.sin(a2) * d2 });
       }
+      // still on ground nobody can stand on (a compound's walls): the nearest place that is not
+      if (R.TERRAIN[R.terrainAt(E.state, fixed.x, fixed.y)].impassable || R.unitNear(E.state, fixed.x, fixed.y, u, 1)) fixed = R.nearestFree(E.state, fixed.x, fixed.y, u, 1) || fixed;
       u.x = fixed.x; u.y = fixed.y;
       logLine('note', u.label + ' inserts (D6 ' + die + ') and is shoved ' + drift + '" off the mark' +
         (foe ? ' — towards ' + foe.name + '.' : '.'));

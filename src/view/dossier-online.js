@@ -328,7 +328,7 @@
       var allReady = (L.slots || []).every(function (x) { return x.kind !== 'human' || x.ready; });
       h += '</div>';
       // the optional rules every battle of it is fought under: the host's to set, read by the rest
-      if (U.optionBoxes) h += '<div class="field olob-opts" id="olob-opts"><label>Optional rules</label>' + U.optionBoxes(L.options, host ? '' : ' disabled') + '</div>';
+      if (U.optionBoxes) h += '<div class="field olob-opts" id="olob-opts"><label>Optional rules</label>' + U.optionBoxes(L.options, host ? '' : ' disabled', true) + '</div>';
       /* as the skirmish room has it, above the chat: the way out a quiet link, and the
          one thing to do next the full-width button (ready, then the host's Start) */
       h += '<div class="lob-acts olob-acts"><button class="lnk" data-go="omulti">Leave</button>';
@@ -820,6 +820,15 @@
       if (go === 'ocoopoff') { coopSel = null; cmd('coopOff', {}, function () { E.view = 'hub'; }); return true; }
       // nothing of the campaign's file is this browser's to change
       if (/^(wipe|import|storeuse|storekeep|standard|hubside|export)$/.test(go || '')) return true;
+      // the host lays out a compound for one size of table, or lets the game lay them out
+      if (go === 'cmpedit' || go === 'cmpgen') {
+        var CMP = root.PMCCompound, size = attr('data-size'), tb = CMP && CMP.TABLES.filter(function (b) { return CMP.sizeKey(b) === size; })[0];
+        if (!tb) return true;
+        if (go === 'cmpgen') cmd('setCompound', { size: size, plan: null });
+        else root.PMCCompoundEdit.open({ w: tb.w, h: tb.h, plan: (E.camp && E.camp.compounds || {})[size] || null,
+          onDone: function (plan) { cmd('setCompound', { size: size, plan: plan }); } });
+        return true;
+      }
       // a force that can no longer fight takes its player out; or a player gives it up
       if (go === 'campend') { cmd('campEnd', {}); return true; }
       if (go === 'oconcede') {

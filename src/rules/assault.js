@@ -19,13 +19,16 @@
         reachable = E.reachable, rectPointDist = E.rectPointDist, resolveAssaultHits = E.resolveAssaultHits,
         resolveDamage = E.resolveDamage, sectionRect = E.sectionRect, shelterOf = E.shelterOf,
         shoot = E.shoot, sizeBonus = E.sizeBonus, status = E.status, terrainAt = E.terrainAt,
-        unitDist = E.unitDist, unitNear = E.unitNear, closestTwo = E.closestTwo, thinAir = E.thinAir;
+        unitDist = E.unitDist, unitNear = E.unitNear, closestTwo = E.closestTwo, thinAir = E.thinAir, addSP = E.addSP;
     /* ---------- assault ---------- */
     /* Vehicles and aircraft never charge; nothing can charge an aircraft. `state`,
        where the caller has the battle: "There can be only two!" (optional, p. 166)
        holds a charge to one of the two nearest enemy units. */
     function canAssault(a, t, state) {
       if (state && !closestTwo(state, a, t)) return false;
+      /* A counter (Close Encounters, p. 158) only moves; but it is on the table, and
+         a charge needs no line of sight (p. 33): it may be charged, and shows itself. */
+      if (a.hidden) return false;
       // Overgrown bugs follow vehicle and aircraft rules, but may still assault (p. 116)
       if (isMachine(a) && !isOvergrown(a)) return false;
       // an Assault of "-" (the Carrier bug's, p. 123) is no Assault at all, as a "-" Firepower is no shooting
@@ -116,6 +119,14 @@
     function assault(state, a, t, opts) {
       var log = [], wrecked = null;
       opts = opts || {};
+      if (t.hidden) { t.hidden = false; log.push({ t: 'note', text: t.label + ' is revealed — charged where it hid.' }); }
+      /* Stun Grenades (Close Encounters, p. 159): "The defending unit suffers D6-1
+         Suppression Points and may not shoot at the attackers during that Assault." */
+      if (opts.stun) {
+        var stunSp = Math.max(0, d6() - 1);
+        addSP(t, stunSp);
+        log.push({ t: 'note', text: 'Stun Grenades — ' + t.label + ' is dazed: ' + stunSp + ' SP, and no defensive fire.' });
+      }
       log.push({ t: 'assault', text: a.label + ' charges ' + t.label + ' — ' + unitDist(a, t).toFixed(1) + '" to contact.' });
 
       /* Martyrdom (Path of the Prophet, p. 113): before the first round is rolled,
@@ -157,7 +168,7 @@
          enters the range and LoS" (p. 33): so it is looked for all along the way
          in, and a charge that is stopped stops where it was shot. */
       var fireAt = null, fireAux = false;
-      if (t.alive && status(t) === 'ready' && t.fp !== null) {
+      if (t.alive && status(t) === 'ready' && t.fp !== null && !opts.stun) {
         var route = (opts.path || [{ x: a.x, y: a.y }]).slice();
         var x0 = a.x, y0 = a.y, walk = [];
         for (var wi = 0; wi < route.length; wi++) {
@@ -171,7 +182,8 @@
           var nIn = Math.ceil((cd - 2 * UNIT_R) / 0.5);
           for (var wk = 1; wk <= nIn; wk++) {
             var r0 = cd - (cd - 2 * UNIT_R) * wk / nIn;
-            walk.push({ x: t.x - (t.x - end.x) / cd * r0, y: t.y - (t.y - end.y) / cd * r0 });
+            var wx = t.x - (t.x - end.x) / cd * r0, wy = t.y - (t.y - end.y) / cd * r0;
+            if (!TERRAIN[terrainAt(state, wx, wy)].impassable) walk.push({ x: wx, y: wy });
           }
         }
         /* With its main weapon, or — where that cannot bear (inside its Minimum
@@ -213,8 +225,9 @@
         a.x = cx + ux / ul * (UNIT_R + 0.05); a.y = cy + uy / ul * (UNIT_R + 0.05);
       } else {
         var v = Math.hypot(t.x - a.x, t.y - a.y) || 1;
-        a.x = t.x - (t.x - a.x) / v * (2 * UNIT_R);
-        a.y = t.y - (t.y - a.y) / v * (2 * UNIT_R);
+        var bx = t.x - (t.x - a.x) / v * (2 * UNIT_R), by = t.y - (t.y - a.y) / v * (2 * UNIT_R);
+        // round a compound's corner the last inch may not go straight: it stops where it can stand, as close as that
+        if (!TERRAIN[terrainAt(state, bx, by)].impassable) { a.x = bx; a.y = by; }
       }
 
       martyr(a, t);
@@ -448,7 +461,7 @@
       reachable = L.reachable; rectPointDist = L.rectPointDist; resolveAssaultHits = L.resolveAssaultHits;
       resolveDamage = L.resolveDamage; sectionRect = L.sectionRect; shelterOf = L.shelterOf; shoot = L.shoot;
       sizeBonus = L.sizeBonus; status = L.status; terrainAt = L.terrainAt; unitDist = L.unitDist;
-      unitNear = L.unitNear;
+      unitNear = L.unitNear; addSP = L.addSP;
     }
 
     return {
