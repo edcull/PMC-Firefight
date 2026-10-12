@@ -2389,3 +2389,49 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .cmp-wrap { display: flex; justify-content: center; overflow: auto; touch-action: none; }
 .cmp-wrap canvas { display: block; touch-action: none; cursor: crosshair; border: 1px solid var(--line); }
 .cmp-key { margin: 6px 0 2px; }
+
+/* the star system a single-player campaign is fought across (dossier-system.js) */
+.sys-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; }
+.sys-head h2 { margin: 0; flex: 1 1 auto; min-width: 0; }
+.sys-crumb { color: var(--ink-faint); font: 500 12px var(--mono); }
+.sys-stage { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+.sys-view { position: relative; background: radial-gradient(ellipse at center, #121a28 0%, var(--ground) 70%); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.sys-svg { display: block; width: 100%; height: auto; }
+.sys-hint { position: absolute; left: 12px; bottom: 10px; color: var(--ink-faint); font-size: 12px; pointer-events: none; }
+.sys-card { padding: 14px; }
+.sys-card h4 { font: 600 11px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); margin: 14px 0 6px; }
+.sys-h { margin: 0 0 2px; }
+.sys-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.sys-cond, .sys-ev { color: var(--ink-faint); font-size: 12px; margin: 4px 0 0; }
+.sys-ev b { color: var(--warn); }
+.sys-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 10px 0 4px; background: var(--panel-3); }
+.sys-bar span { display: block; height: 100%; }
+.sys-bar .free { background: var(--panel-3); }
+.sys-hold { color: var(--ink-dim); font-size: 12px; }
+.sys-jobs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sys-jobs button { width: 100%; text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; cursor: pointer; display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; color: var(--ink); font: inherit; }
+.sys-jobs button:hover, .sys-jobs button.on { border-color: var(--ink-faint); background: var(--panel-3); }
+.sys-jobs .sw { width: 10px; height: 26px; border-radius: 2px; }
+.sys-jobs b { display: block; font-weight: 600; }
+.sys-jobs small { color: var(--ink-dim); }
+.sys-jobs .t { font: 500 12px var(--mono); color: var(--ink-dim); }
+.sys-card .start { width: 100%; margin-top: 12px; }
+.sys-planet, .sys-pin { cursor: pointer; }
+.sys-planet:focus, .sys-pin:focus { outline: none; }
+.sys-planet:focus-visible .ring, .sys-planet:hover .ring { stroke-opacity: .7; }
+.sys-planet.sel .ring { stroke: var(--alpha); stroke-opacity: 1; stroke-width: 2; }
+.sys-planet.dim { opacity: .45; }
+.sys-pin:hover .pinhead, .sys-pin:focus-visible .pinhead, .sys-pin.sel .pinhead { stroke: #fff; stroke-width: 2.5; }
+.sys-lbl { font: 600 12px var(--display); letter-spacing: .05em; fill: var(--ink); paint-order: stroke; stroke: rgba(8, 11, 16, .85); stroke-width: 3px; }
+.sys-lbl.small { font: 500 11px var(--body); fill: var(--ink-dim); letter-spacing: 0; }
+.sys-svg.narrow .sys-lbl { font-size: 18px; }
+.sys-badge circle { fill: var(--alpha); }
+.sys-badge text, .sys-event text { font: 600 11px var(--mono); fill: #10141c; }
+.sys-svg.narrow .sys-badge text, .sys-svg.narrow .sys-event text { font-size: 16px; }
+.sys-event circle { fill: var(--warn); }
+.sys-pintier { font: 600 12px var(--mono); fill: #0d1117; }
+.offer-site .good { color: var(--good); }
+.sys-view.zoomin .sys-svg { animation: sys-zoom .45s cubic-bezier(.2, .7, .2, 1); }
+@keyframes sys-zoom { from { transform: scale(.35); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sys-view.zoomin .sys-svg { animation: none; } }
+@media (max-width: 860px) { .sys-head h2 { flex-basis: 100%; } }

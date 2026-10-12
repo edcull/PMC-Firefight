@@ -31,7 +31,8 @@
       var offers = C.rollOffers(E.camp);
       var h = '<h2>Contracts on offer</h2>';
       offers.forEach(function (o, i) { h += offerPanel(o, i); });
-      h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+      h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button>' +
+        (E.camp.system ? ' <button class="lnk" data-go="offersys">The star system</button>' : '') + '</p>';
       return h;
     }
 
@@ -670,7 +671,7 @@
     }
 
     return {
-      offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
+      offersView: offersView, offerPanel: offerPanel, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
       forceBox: forceBox, scrollTop: scrollTop, byMark: byMark, pickOrder: pickOrder, groupHead: E.groupHead, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
       autoPick: autoPick, fight: fight, seatBack: seatBack
     };

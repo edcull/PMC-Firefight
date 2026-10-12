@@ -742,7 +742,7 @@
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
       get wantRivals() { return wantRivals; }, get wantRivalArmies() { return wantRivalArmies; }, get wantHotAi() { return wantHotAi; },
-      get wantColours() { return wantColours; }, get wantName() { return wantName; }, get wantOptions() { return wantOptions; },
+      get wantColours() { return wantColours; }, get wantName() { return wantName; }, get wantOptions() { return wantOptions; }, get wantSystem() { return wantSystem; },
       get wantRivalColours() { return wantRivalColours; }, get rivColourFor() { return rivColourFor; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
@@ -814,7 +814,20 @@
       get view() { return view; }, set view(v) { view = v; }
     }));
   }
-  function offersView() { return (KIT_CONTRACT || kitContract()).offersView(); }
+  /* ---- the star system, in place of the list of offers: in view/dossier-system.js ---- */
+  var KIT_SYSTEM = null, offerList = false;           // offerList: the plain list asked for, in a star-system campaign
+  function kitSystem() {
+    return KIT_SYSTEM || (KIT_SYSTEM = root.PMCDossierSystem({
+      C: C, R: R, esc: esc, ROMAN: ROMAN, colourOf: colourOf, get camp() { return camp; },
+      offerPanel: function (o, i) { return (KIT_CONTRACT || kitContract()).offerPanel(o, i); },
+      listView: function () { return (KIT_CONTRACT || kitContract()).offersView(); },
+      narrow: function () { return typeof window !== 'undefined' && window.innerWidth < 640; }
+    }));
+  }
+  function offersView() {
+    if (camp && camp.system && !offerList && root.PMCDossierSystem) return kitSystem().view();
+    return (KIT_CONTRACT || kitContract()).offersView();
+  }
   function beginContract() { return (KIT_CONTRACT || kitContract()).beginContract(); }
   function takeOffer(i) { return (KIT_CONTRACT || kitContract()).takeOffer(i); }
   function contractView() { return (KIT_CONTRACT || kitContract()).contractView(); }
@@ -1078,6 +1091,9 @@
   }
 
   function onClick(ev) {
+    // the star system's planets and pins (dossier-system.js): drawn parts, not buttons
+    var sysT = ev.target.closest('[data-sys]');
+    if (sysT && camp && camp.system && view === 'offers') { if (kitSystem().act(sysT)) render(); return; }
     var t = ev.target.closest('button');
     // the founding colours drop down under the chip: a tap anywhere else puts them away
     // an AI force's colours, popped up by its chip on the new-campaign page: a tap anywhere else puts them away
@@ -1527,7 +1543,20 @@
         if (camp.mode === 'hotseat') hubSide = (KIT_AFTER || kitAfter()).afterSide;
         hubPane = 'tier'; view = 'hub'; render(); return;
       case 'intel': view = 'intel'; render(); return;
-      case 'offers': if (camp.over) return; view = 'offers'; render(); return;
+      case 'offers': if (camp.over) return; view = 'offers'; offerList = false; if (KIT_SYSTEM) KIT_SYSTEM.reset(); render(); return;
+      // in a star-system campaign: the plain list of offers, and back to the system
+      case 'offerlist': offerList = true; render(); return;
+      case 'chartsys':
+        ask({ kind: 'confirm', title: 'Chart a star system?',
+          text: 'From now on the contracts are found across a star system: four to seven planets, each with conditions of its own, and your standing on each. Other Worlds is turned on for the campaign. This cannot be undone.',
+          okLabel: 'Chart it', onOk: function () {
+            chartSystem(true);
+            // this turn's offers stay the offers: each put on a planet of the new system (nothing rolled again)
+            if (camp.offers && camp.offersTurn === camp.turn) root.PMCSystem.placeOffers(camp, camp.offers);
+            save(); render();
+          } });
+        return;
+      case 'offersys': offerList = false; render(); return;
       case 'contract': if (camp.over) return; beginContract(); render(); return;
       // a force finished: the campaign is over, and says who outlasted whom (HC-14)
       case 'campend': {
@@ -1682,8 +1711,8 @@
   /* A single-player campaign fought across a star system (camp-system.js; the
      default — the new-campaign form may ask for the plain list of offers): its
      planets each have conditions of their own, so Other Worlds is on for it. */
-  function chartSystem() {
-    if (!camp || camp.mode !== 'solo' || camp.system || !wantSystem || !root.PMCSystem) return;
+  function chartSystem(now) {
+    if (!camp || camp.mode !== 'solo' || camp.system || !(wantSystem || now) || !root.PMCSystem) return;
     camp.system = root.PMCSystem.makeSystem(camp);
     camp.options = R.cleanOptions(Object.assign({}, camp.options || {}, { otherWorlds: true }));
   }
@@ -1771,6 +1800,12 @@
     // a unit's drives stay by their icon as the list under them scrolls
     host.addEventListener('scroll', function () { if (propFor !== null) placeDrives(el('camp-body')); if (rivColourFor !== null) placeRivPop(el('camp-body')); }, true);
     host.addEventListener('keydown', function (ev) {
+      // the star system's planets and pins: Enter or Space as a tap (they are drawn, not buttons)
+      if ((ev.key === 'Enter' || ev.key === ' ') && ev.target && ev.target.getAttribute && ev.target.getAttribute('data-sys') && ev.target.tagName !== 'BUTTON' && camp && camp.system) {
+        ev.preventDefault();
+        if (kitSystem().act(ev.target)) render();
+        return;
+      }
       // an online campaign's lobby chat: Enter sends the line
       if (ev.key === 'Enter' && ev.target && ev.target.id === 'olob-say' && !asking) {
         ev.preventDefault();
@@ -1795,6 +1830,7 @@
       else if (ev.target.id === 'camp-rivals') { wantRivals = +ev.target.value || 3; render(); }
       else if (ev.target.id === 'camp-hotai') { wantHotAi = +ev.target.value || 0; render(); }
       else if (ev.target.hasAttribute && ev.target.hasAttribute('data-opt') && ev.target.closest('#camp-opts')) { wantOptions = root.PMCUi.readOptions(el('camp-opts')); }
+      else if (ev.target.id === 'camp-system') { wantSystem = ev.target.value === 'system'; }
       else if (ev.target.classList && ev.target.classList.contains('rivarmy')) { wantRivalArmies[+ev.target.getAttribute('data-i')] = ev.target.value; }
       else if (ev.target.id === 'camp-pl') {
         var want = +ev.target.value;
