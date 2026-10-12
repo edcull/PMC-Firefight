@@ -420,6 +420,8 @@
        (Close Encounters, p. 157). */
     if (scenDef.compound) state.units.forEach(function (u) {
       u.rules = u.rules.map(function (r) { return r === 'Markerlights' ? 'Advanced Sensors' : r === 'Pheromone Markers' ? 'Sixth Sense' : r; });
+      // "in most scenarios taking place in complexes, units start the game hidden" (p. 158): as counters
+      if (scenDef.hidden && scenDef.hidden(u)) u.hidden = true;
     });
     (state.homeBound || []).forEach(function (h) {
       logLine('note', sideName(h.side) + ' — ' + h.name + ' stays outside the compound: no vehicles or aircraft in Close Encounters.');
@@ -864,6 +866,8 @@
 
   // vehicles and aircraft get +4" on a Move; everyone else +2"
   function moveBonus(u, action) {
+    // a hidden unit "may only move up to 6\" when activated" (Close Encounters, p. 158), whatever else it has
+    if (u && u.hidden) return 6 - u.move;
     var base = R.isMachine(u) ? 4 : 2;
     /* Riders take their Movement +4" whatever they are doing (p. 94), and a Human
        Wave moves the infantry M+4" on Move and Assault actions (p. 95) — in place
@@ -1262,6 +1266,7 @@
 
   function endActivation(actor) {
     ui.lastActed = actor || ui.selected || null;
+    if (state && state.compound) K.revealSweep();
     // a hacked drone's borrowed activation is over: back to its owner, and it burns
     var hj = K.hijacked();
     if (hj && (ui.lastActed === hj || !hj.alive)) K.endHijack(hj);
@@ -1433,6 +1438,9 @@
 
   function specialsFor(u) {
     var out = [];
+    // a counter's one special action is to show itself (Close Encounters, p. 158)
+    if (u && u.hidden) return [{ id: 'reveal', label: 'Reveal' }];
+    if (u && K.canDetect(u)) out.push({ id: 'detect', label: 'Detect' });
     /* Markerlights carry two different special actions (p. 58): Designate target
        calls up a gun that shoots without seeing, Mark the target calls up one that
        does see and fires as though at half range. Smoke Markers (p. 94) are the
@@ -1584,6 +1592,7 @@
     ['PMCEngineMoves', './moves.js'],
     ['PMCEngineAbilities', './abilities.js'],
     ['PMCEngineCombat', './combat.js'],
+    ['PMCEngineCounters', './counters.js'],
     ['PMCEngineMarks', './marks.js'],
     ['PMCEngineSave', './save.js']
   ];

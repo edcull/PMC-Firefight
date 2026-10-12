@@ -70,6 +70,8 @@
     function canShootAt(state, a, t, mode, opts) {
       opts = opts || {};
       if (!a.alive || !t.alive || a.side === t.side || a.fp === null) return false;
+      // a counter (Close Encounters, p. 158) only moves, and nobody draws a bead on one
+      if (a.hidden || t.hidden) return false;
       /* Only what is on the table can be shot at. A unit held in reserve is parked
          just off the table's corner at (-1, -1), and a unit riding inside a hull is
          not there at all; neither is a target, however close the numbers say. */

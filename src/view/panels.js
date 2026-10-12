@@ -229,6 +229,16 @@
           : '<p class="hint small">No unit selected. Stats, suppression and special rules appear here.</p>';
         return;
       }
+      /* An enemy counter (Close Encounters, p. 158): nothing is known of it but
+         where it is, until it is revealed. */
+      if (u.hidden && B.seats && B.seats.indexOf(u.side) < 0) {
+        box._html = null;
+        box.innerHTML = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.paint || u.side) + '>?</span>' +
+          '<div class="sh-text"><h2>Hidden counter</h2><span class="sub">' + esc(sideName(u.side)) + '</span></div></div>' +
+          '<p class="hint small">An enemy unit still hidden: what it is, how strong and how shaken are unknown until it is revealed — ' +
+          'when it comes into sight of one of yours, chooses to show itself, is charged, or is picked up by Detect.</p>';
+        return;
+      }
       if (R.isMachine(u)) { drawMachineStats(u, box); return; }
       var st = R.status(u), m = R.currentMorale(u);
       var h = statHead(u);
@@ -779,6 +789,12 @@
         var mine = B.state.units.filter(function (u) { return u.side === side && (!gp.owner || (u.owner || 1) === gp.owner); }).map(shownAs);
         mine.filter(function (u) { return u.alive; }).concat(mine.filter(function (u) { return !u.alive; })).forEach(function (u) {
           var st = u.alive ? R.status(u) : 'dead';
+          // an enemy counter (Close Encounters): a line, and nothing on it
+          if (u.alive && u.hidden && B.seats && B.seats.indexOf(u.side) < 0) {
+            h += '<li class="ru ready' + (ui.selected && ui.selected.id === u.id ? ' sel' : '') + '" data-unit="' + u.id + '"><span class="ru-code">?</span>' +
+              '<span class="ru-name">Hidden counter</span><span class="ru-num">?</span><span class="ru-sp">hidden</span></li>';
+            return;
+          }
           var gone = u.alive ? '' : u.fled ? 'fled' : R.isMachine(u) ? 'destroyed' : 'wiped out';
           h += '<li class="ru ' + st + (u.activated && u.alive ? ' done' : '') + (ui.selected && ui.selected.id === u.id ? ' sel' : '') +
             '" data-unit="' + u.id + '"><span class="ru-code">' + u.code + '</span>' +
@@ -788,7 +804,7 @@
             '<span class="ru-num">' + (R.isMachine(u)
               ? Math.max(0, u.str - u.damage) + '/' + u.str
               : u.models + '/' + u.size) + '</span>' +
-            '<span class="ru-sp">' + (u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (B.state.sc.counters ? 'hidden' : 'pool') : u.reserve ? 'reserve' : u.aboard ? 'aboard'
+            '<span class="ru-sp">' + (u.hidden && u.alive ? 'hidden' : u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (B.state.sc.counters ? 'hidden' : 'pool') : u.reserve ? 'reserve' : u.aboard ? 'aboard'
               : R.isMachine(u) ? u.damage + ' DP' : u.sp + ' SP') + '</span>') +
             (mayStand(u) ? '<button class="ru-stand" data-stand="' + u.id + '" title="Last Stand — shed all ' + u.sp + ' SP, once a battle, at any time">Last Stand</button>' : '') +
             '</li>';

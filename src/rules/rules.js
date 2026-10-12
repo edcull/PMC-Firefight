@@ -1309,7 +1309,8 @@
     return 0;
   }
   var SP_MAX = 12;                 // the most Suppression a unit can carry
-  function addSP(u, n) { u.sp = Math.min(SP_MAX, u.sp + n); }
+  // a hidden unit "cannot become Suppressed or Broken" (Close Encounters, p. 158)
+  function addSP(u, n) { if (u.hidden) return; u.sp = Math.min(SP_MAX, u.sp + n); }
   function fmtPart(p) {
     if (p.label === 'D10') return 'D10 rolls ' + p.v;
     return p.label + ' ' + (p.v >= 0 ? '+' : '') + p.v;

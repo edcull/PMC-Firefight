@@ -116,6 +116,12 @@
         return { on: false, hint: 'Suppressed: it may only move into cover or out of sight, fire its Auxiliary weapons, or Pass/Regroup (p. 34).' };
       }
 
+      /* A hidden unit (Close Encounters, p. 158): "it may only move and nothing
+         more" — up to 6" — unless it reveals itself first, at the start of its
+         activation, and then acts as normal. */
+      if (u.hidden && ['move', 'reveal', 'skip'].indexOf(id) < 0) {
+        return { on: false, hint: 'Hidden: a counter may only move, up to 6" — or Reveal itself first and then act as normal (p. 158).' };
+      }
       /* A unit inside a building "may only exit it or make actions which do not
          require any movement (so it cannot Move, Advance, Assault, etc.)" (p. 41). */
       // (a Psychic Wave moves "up to" its Movement: from a building it goes out from where it stands)
@@ -229,6 +235,13 @@
           return { on: true, hint: 'End the Command Unit\u2019s chain here: ' + u.name + ' and the rest keep their activations for later, and play passes on.' };
         case 'skip':
           return { on: true, hint: 'Skip: ' + u.name + ' does nothing this turn — it stays where it is, its activation is spent, and play passes on.' };
+        case 'reveal':
+          if (!u.hidden) return { on: false, hint: 'Not hidden.' };
+          return { on: true, hint: 'Reveal: take the counter off and put the unit down where it is. It then acts as normal this activation (p. 158).' };
+        case 'detect':
+          if (!E.canDetect(u)) return { on: false, hint: 'Only Advanced Sensors or Sixth Sense can Detect, inside a compound.' };
+          if (sup) return { on: false, hint: 'Suppressed: no special actions.' };
+          return { on: true, hint: 'Detect: move up to ' + u.move + '", then every enemy counter within 12" is revealed, seen or not (p. 158).' };
         case 'regroup':
           if (machine) {
             return u.damage
@@ -443,6 +456,20 @@
         logLine('note', 'The chain ends there; the rest keep their activations.');
         ui.selected = null; ui.mode = null; ui.moves = []; ui.targets = [];
         E.afterChain();
+        return;
+      }
+      if (id === 'reveal') {
+        E.revealUnit(u, 'it shows itself');
+        E.revealSweep();
+        setHint(null, u.name + ' is revealed: it may now act as normal.');
+        render();
+        return;
+      }
+      if (id === 'detect') {
+        ui.mode = 'detect-move';
+        ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
+        setHint(null, 'Detect: tap where ' + u.name + ' moves (or its own spot to stay); then every enemy counter within 12" is revealed.');
+        render();
         return;
       }
       if (id === 'skip') {

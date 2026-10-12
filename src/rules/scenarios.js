@@ -1028,7 +1028,7 @@
   }
 
   SCENARIOS.ce_clear = {
-    compound: true,
+    compound: true, hidden: function () { return true; },
     id: 'ce_clear', name: 'Clearing out', page: 161,
     blurb: 'The objective is simple — to drive the enemy out of the compound.',
     win: 'Rout the enemy — destroy or drive off half their units.',
@@ -1047,7 +1047,7 @@
     }
   };
   SCENARIOS.ce_control = {
-    compound: true, rooms: 3,
+    compound: true, rooms: 3, hidden: function () { return true; },
     groundTaking: true,
     id: 'ce_control', name: 'Critical control', page: 162,
     blurb: 'Secure and hold the compound\u2019s three main control rooms.',

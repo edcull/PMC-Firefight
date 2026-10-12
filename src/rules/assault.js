@@ -26,6 +26,9 @@
        holds a charge to one of the two nearest enemy units. */
     function canAssault(a, t, state) {
       if (state && !closestTwo(state, a, t)) return false;
+      /* A counter (Close Encounters, p. 158) only moves; but it is on the table, and
+         a charge needs no line of sight (p. 33): it may be charged, and shows itself. */
+      if (a.hidden) return false;
       // Overgrown bugs follow vehicle and aircraft rules, but may still assault (p. 116)
       if (isMachine(a) && !isOvergrown(a)) return false;
       // an Assault of "-" (the Carrier bug's, p. 123) is no Assault at all, as a "-" Firepower is no shooting
@@ -116,6 +119,7 @@
     function assault(state, a, t, opts) {
       var log = [], wrecked = null;
       opts = opts || {};
+      if (t.hidden) { t.hidden = false; log.push({ t: 'note', text: t.label + ' is revealed — charged where it hid.' }); }
       log.push({ t: 'assault', text: a.label + ' charges ' + t.label + ' — ' + unitDist(a, t).toFixed(1) + '" to contact.' });
 
       /* Martyrdom (Path of the Prophet, p. 113): before the first round is rolled,

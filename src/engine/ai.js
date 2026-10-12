@@ -848,6 +848,7 @@
     function aiAct(u) {
       // Unreliable: the AI's units roll before acting, as a player's do (CMP-7)
       if (E.unreliableWasted(u)) return;
+      if (u.hidden) { aiHidden(u); return; }
       /* Decapitation: the OpFor's leaders "always act according to the Reasonably
          Defensive result and never Move nor Advance" (p. 152) — whatever state they
          are in, they shoot from where they are or keep their heads down. */
@@ -1131,6 +1132,43 @@
     }
 
     function fire(u, t, mode) { resolveShot(u, t, mode, {}); }
+
+    /* A counter of the computer's (Close Encounters, p. 158). Close enough to an
+       enemy unit to charge it once it shows itself, it reveals itself and acts as
+       normal; otherwise it moves on as a counter, up to 6", round the walls
+       towards whatever it is after — and stops if it is seen. (Two counters either
+       side of a door would otherwise wait each other out all battle.) */
+    function aiHidden(u) {
+      var ne = closestFoe(u, function (t) {
+        var wf = R.walkField(E.state, u.x, u.y, u.side), w = wf ? wf(t.x, t.y) : Infinity;
+        return w < Infinity ? w : R.unitDist(u, t) + 30;
+      });
+      if (ne && ne.dist <= u.move + 4) {
+        E.revealUnit(u, 'it shows itself');
+        E.revealSweep();
+        aiAct(u);
+        return;
+      }
+      var goal = pickGoal(u, 'neutral'), allowance = u.move + moveBonus(u, 'move');
+      var look = R.groundLookup(E.state);
+      var best = null, bestScore = scoreSpot(u, { x: u.x, y: u.y }, goal, 'neutral', look) + 0.3;
+      R.reachable(E.state, u, allowance).forEach(function (c) {
+        if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)) return;
+        if (!canStand(u, c)) return;
+        var s = scoreSpot(u, c, goal, 'neutral', look);
+        if (s > bestScore) { bestScore = s; best = c; }
+      });
+      u.activated = true;
+      if (!best) { logLine('ai', 'A counter [' + u.side + '] waits where it is, unseen.'); endActivation(u); return; }
+      var hm = E.hiddenMove(u, R.pathTo(E.state, u, allowance, best), best);
+      faceAfter(u, hm.path, hm.at);
+      var d = R.inches(u.x, u.y, hm.at.x, hm.at.y);
+      u.x = hm.at.x; u.y = hm.at.y;
+      logLine('move', (hm.by ? u.label : 'A counter [' + u.side + ']') + ' moves ' + d.toFixed(1) + '"' + (hm.by ? '.' : ', unseen.'));
+      animateMove(u, hm.path, true);
+      E.afterHiddenMove(u, hm.by);
+      endActivation(u);
+    }
 
     // the Suppressed unit's Move: into the nearest cover (or a building), nearest the `toward` point if given
     function scrambleToCover(u, toward) {

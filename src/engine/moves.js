@@ -220,8 +220,9 @@
       var d = R.inches(u.x, u.y, pt.x, pt.y);
       var carryFirst = ui.mode === 'carry-first';
       // a Move action proper: not an Advance's move, a transport's, or Emergency Batteries' repair move
-      var plainMove = ui.mode !== 'advance-move' && ui.mode !== 'carry-move' && !carryFirst && !u.repairMove;
-      var allowance = ui.mode === 'advance-move' ? u.move : (ui.mode === 'carry-move' || carryFirst) ? Math.ceil(u.move / 2) : u.move + moveBonus(u);
+      var detect = ui.mode === 'detect-move';
+      var plainMove = ui.mode !== 'advance-move' && ui.mode !== 'carry-move' && !carryFirst && !u.repairMove && !detect;
+      var allowance = ui.mode === 'advance-move' || detect ? u.move : (ui.mode === 'carry-move' || carryFirst) ? Math.ceil(u.move / 2) : u.move + moveBonus(u);
       u.carrying = false;
       if (u.vortexNow) {
         // the Movement parameter doubled, the move bonus on top of it as usual
@@ -232,11 +233,35 @@
       // what the drive there costs, for what is left over to turn with at the end
       var spot = (ui.moves || []).filter(function (c) { return Math.abs(c.x - pt.x) < 0.01 && Math.abs(c.y - pt.y) < 0.01; })[0];
       var left = spot && spot.spent != null ? Math.max(0, allowance - spot.spent) : 0;
-      var path = R.pathTo(E.state, u, allowance, pt);
+      var path = d < 1e-6 ? [{ x: u.x, y: u.y }] : R.pathTo(E.state, u, allowance, pt);
+      /* A hidden unit stops the moment an enemy sees it (Close Encounters, p. 158):
+         the move ends there, and it is revealed. */
+      var seen = null;
+      if (u.hidden) {
+        var hm = E.hiddenMove(u, path, pt);
+        if (hm.by) { seen = hm.by; pt = hm.at; path = hm.path; d = R.inches(u.x, u.y, pt.x, pt.y); }
+      }
       faceAfter(u, path, pt);
       u.x = pt.x; u.y = pt.y; ui.vis = null; ui.visKey = '';
       crushAlong(u, path);
       animateMove(u, path);
+      if (detect) {
+        logLine('move', u.label + (d > 1e-6 ? ' moves ' + d.toFixed(1) + '" and' : '') + ' sweeps with its sensors (Detect).');
+        E.detectReveal(u);
+        u.activated = true;
+        scenarioMoveEnd(u);
+        endActivation(u);
+        return;
+      }
+      if (u.hidden || seen) {
+        // unseen, it is a counter in the log too: nobody is told which
+        logLine('move', (seen ? u.label : 'A counter [' + u.side + ']') + ' moves ' + d.toFixed(1) + '"' + (seen ? '.' : ', unseen.'));
+        u.activated = true;
+        scenarioMoveEnd(u);
+        E.afterHiddenMove(u, seen);
+        endActivation(u);
+        return;
+      }
       if (carryFirst) {
         /* Driven its half: now it loads or unloads where it stands (p. 36). If
            there is nobody to take on and nobody aboard, that is the end of it. */
