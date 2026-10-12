@@ -497,7 +497,7 @@ is in the first version, as below.
 - **Standing** is your own influence on a planet:
   - 0–24 Unknown, 25–49 Known, 50–74 Held, 75+ Favoured;
   - for show only: standing and holding a planet bring no benefit (owner's
-    ruling); only a Bounty event pays more;
+    ruling);
   - a win moves 12 points from that rival to you, and a loss moves 10 from you
     to it (a draw moves nothing);
   - the system view shows each planet's holder, and the planet card shows the
@@ -511,10 +511,11 @@ is in the first version, as below.
   - Gravitic anomaly: time anomalies, 2 turns;
   - Wasting sickness: unexplained weakness, 2 turns;
   - Uprising: the holder loses 20 influence there;
-  - Bounty: wins there pay +2 kUC, 2 turns.
 
   An event's condition overrides the planet's own while it lasts, and a
-  contract offered meanwhile carries it.
+  contract offered meanwhile carries it. No event reaches the campaign itself
+  (pay, recruits, the forces): only a planet's conditions and who holds it
+  (owner's ruling).
 
 ---
 
@@ -549,7 +550,7 @@ is in the first version, as below.
 
 | Part | State |
 |---|---|
-| A, E Rules | **Done** (`rules/camp-system.js`, `PMCSystem`). A system is charted when a single-player campaign is founded (`chartSystem` in dossier.js, after the rivals): a seeded star and 4–7 planets, each a kind of world and conditions rolled once (at least half out of the ordinary), a home for each rival (50–70) with a foothold or two, the company's base (35). `rollOffers` hands the turn's offers to `placeOffers`: a planet by the rival's influence there (4 + its share, spread out), a named site on its map, the planet's kind and conditions (events laid over them) as the offer's world. The pending battle carries its site; the aftermath (`afterBattle`) moves 12 of the rival's share to the company on a win and 10 back on a loss (standing and holding are for show: nothing is paid for them; a Bounty pays +2 kUC for a win), and says who holds the planet now. `newTurn`: a force that has left loses half its hold a turn, a new one is given a home, and one turn in six an event on a quiet planet (Reactor breach, Storm season, Chemical spill, Gravitic anomaly, Wasting sickness, Uprising, Bounty) for a few turns. Kept through a save and a load (`cleanSystem` in `rehydrate`). Other Worlds is on for such a campaign. |
+| A, E Rules | **Done** (`rules/camp-system.js`, `PMCSystem`). A system is charted when a single-player campaign is founded (`chartSystem` in dossier.js, after the rivals): a seeded star and 4–7 planets, each a kind of world and conditions rolled once (at least half out of the ordinary), a home for each rival (50–70) with a foothold or two, the company's base (35). `rollOffers` hands the turn's offers to `placeOffers`: a planet by the rival's influence there (4 + its share, spread out), a named site on its map, the planet's kind and conditions (events laid over them) as the offer's world. The pending battle carries its site; the aftermath (`afterBattle`) moves 12 of the rival's share to the company on a win and 10 back on a loss (standing and holding are for show: nothing is paid for them), and says who holds the planet now. `newTurn`: a force that has left loses half its hold a turn, a new one is given a home, and one turn in six an event on a quiet planet (Reactor breach, Storm season, Chemical spill, Gravitic anomaly, Wasting sickness, Uprising) for a few turns — a planet's conditions or its holder only, never the campaign itself. Kept through a save and a load (`cleanSystem` in `rehydrate`). Other Worlds is on for such a campaign. |
 | B, C Views | **Done** (`view/dossier-system.js`). Take a contract on the hub opens the system: the star, the orbits, each planet in its kind's colours with its atmosphere's haze, a ring in the colours of whoever holds it, a badge for its contracts and a mark for an event; the card lists the planets and the news. A planet: its conditions (with what each does), events, the shares of influence as a bar and the company's standing, and its contracts; Land on it (or a second tap) for its map, drawn from the seed in its kind's colours, with the contracts pinned at their sites in the rivals' colours. A pin opens the offer as the list has it (`offerPanel`, with the site and standing), and Take this contract takes it. The plain list is a tap away (List), with the way back. A phone gets a closer crop and larger planets. |
 | D Settings | **Done.** The new-campaign form's Contracts: across a star system (the default) or a plain list of offers. An older single-player campaign can have a system charted from its hub (its turn's offers kept, and placed on it). Single-player only; hotseat and online world campaigns keep their offers as they are. |
 

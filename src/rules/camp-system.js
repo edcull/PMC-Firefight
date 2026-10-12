@@ -18,7 +18,8 @@
    - Standing is the company's own share of influence on a planet: a win there
      moves 12 of the rival's to the company, a loss 10 the other way. For now it
      is for show — standing and holding a planet bring nothing in themselves
-     (the owner's ruling); only a Bounty event pays more. */
+     (the owner's ruling), and no event touches the campaign beyond the planet:
+     its conditions, and who holds it. */
 (function (root) {
   'use strict';
   var R = root.PMC;
@@ -49,15 +50,14 @@
   var COMPOUNDS = ['Mine', 'Bunker', 'Hab Block', 'Research Station', 'Vault', 'Reactor Hall'];
 
   /* ---- rare events: a condition for a few turns, a blow to whoever holds a
-     planet, or a bounty on its jobs ---- */
+     planet — nothing that reaches the campaign itself ---- */
   var EVENTS = [
     { kind: 'breach', title: 'Reactor breach', set: { anomaly: 'radiation' }, turns: 3, text: 'A reactor has breached: high radiation until it is contained.' },
     { kind: 'dust', title: 'Storm season', set: { atmosphere: 'foggy' }, turns: 2, text: 'Storms close in: nobody sees far.' },
     { kind: 'spill', title: 'Chemical spill', set: { atmosphere: 'toxic' }, turns: 3, text: 'Something has got into the air.' },
     { kind: 'gravitic', title: 'Gravitic anomaly', set: { anomaly: 'time' }, turns: 2, text: 'Time runs strangely near the anomaly.' },
     { kind: 'sickness', title: 'Wasting sickness', set: { anomaly: 'weakness' }, turns: 2, text: 'A sickness saps everyone who fights there.' },
-    { kind: 'uprising', title: 'Uprising', turns: 1, text: 'The locals rise against whoever holds the planet.' },
-    { kind: 'bounty', title: 'Bounty', turns: 2, text: 'A sponsor pays 2 kUC more for every battle won there.' }
+    { kind: 'uprising', title: 'Uprising', turns: 1, text: 'The locals rise against whoever holds the planet.' }
   ];
   var STANDING = [{ at: 75, name: 'Favoured' }, { at: 50, name: 'Held' }, { at: 25, name: 'Known' }, { at: 0, name: 'Unknown' }];
   var YOU = 'you';
@@ -212,7 +212,6 @@
       o.site = siteOn(sys, p, o, offers);
       o.planet = p.kind;
       o.world = conditions(sys, p);
-      if (activeEvents(sys, p).some(function (e) { return e.kind === 'bounty'; })) o.bounty = 2;
     });
     return offers;
   }
@@ -233,10 +232,8 @@
   function afterBattle(campaign, site, rivalName, winner) {
     var sys = campaign.system, p = sys && site && byId(sys, site.planet);
     if (!p) return null;
-    var was = holder(p), lines = [], bonus = 0;
+    var was = holder(p), lines = [];
     if (winner === 'A') {
-      // (standing pays nothing of itself: only a sponsor's bounty does)
-      if (activeEvents(sys, p).some(function (e) { return e.kind === 'bounty'; })) bonus = 2;
       var moved = Math.min(12, p.influence[rivalName] || 0);
       take(p, rivalName, moved); give(p, YOU, 12);
       lines.push('Your standing on ' + p.name + ' rises to ' + standing(sys, p) + ' (' + standingName(standing(sys, p)) + ').');
@@ -248,10 +245,9 @@
     if (now !== was) {
       lines.push(now === YOU ? 'You hold ' + p.name + ' now.' : now ? now + ' holds ' + p.name + ' now.' : p.name + ' is contested now.');
     }
-    if (bonus) lines.push('The bounty on ' + p.name + ' pays ' + bonus + ' kUC more.');
     lines.forEach(function (t) { sys.news.push({ turn: campaign.turn, text: t }); });
     sys.news = sys.news.slice(-12);
-    return { planet: p.id, lines: lines, bonus: bonus, standing: standing(sys, p) };
+    return { planet: p.id, lines: lines, standing: standing(sys, p) };
   }
 
   // a system as it came from a save or a file, made safe to read (null if it is no system)
@@ -265,7 +261,7 @@
       return { id: p.id, name: String(p.name || p.id).slice(0, 30), kind: kinds[p.kind] ? p.kind : 'sparse', world: R.cleanWorld(p.world) || { gravity: 'standard', atmosphere: 'standard', anomaly: 'none' },
         orbit: +p.orbit || 1, angle: +p.angle || 0, size: +p.size || 1, home: typeof p.home === 'string' ? p.home : null, base: !!p.base, influence: inf };
     });
-    s.events = Array.isArray(s.events) ? s.events.filter(function (e) { return e && typeof e.planet === 'string'; }) : [];
+    s.events = Array.isArray(s.events) ? s.events.filter(function (e) { return e && typeof e.planet === 'string' && e.kind !== 'bounty'; }) : [];
     s.news = Array.isArray(s.news) ? s.news.slice(-12) : [];
     return s.planets.length ? s : null;
   }

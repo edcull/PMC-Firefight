@@ -70,8 +70,7 @@
       var SYS = root.PMCSystem, sys = E.camp && E.camp.system, sp = SYS && sys && job.site ? SYS.byId(sys, job.site.planet) : null;
       if (sp) {
         var st = SYS.standing(sys, sp);
-        h += '<div class="cpstat offer-site">' + esc(job.site.name) + ', <b>' + esc(sp.name) + '</b> \u00b7 your standing ' + st + ' (' + SYS.standingName(st) + ')' +
-          (job.bounty ? ' \u00b7 <span class="good">a bounty: +' + job.bounty + ' kUC for a win</span>' : '') + '</div>';
+        h += '<div class="cpstat offer-site">' + esc(job.site.name) + ', <b>' + esc(sp.name) + '</b> \u00b7 your standing ' + st + ' (' + SYS.standingName(st) + ')' + '</div>';
       }
       // Other Worlds: the conditions rolled with the job, each a pill with what it does in its tip
       if (job.world) {
@@ -319,8 +318,8 @@
         roles: o.roles, alt: o.alt || null, altRoles: o.altRoles || null, altBy: o.alt ? 'A' : null,
         fore: o.fore ? JSON.parse(JSON.stringify(o.fore)) : null, foreNote: o.foreNote || null,
         picks: [], terms: {}, caught: o.caught,
-        // where in the star system it is fought, and a sponsor's bounty there (camp-system.js)
-        site: o.site || null, bounty: o.bounty || 0
+        // where in the star system it is fought (camp-system.js)
+        site: o.site || null
       };
       save();
       E.view = 'contract';
