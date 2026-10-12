@@ -228,6 +228,8 @@ sightlines.js      seen by one soldier, seen by the whole unit: lines past part 
 wallshelter.js     behind a wall: the cover, the Destructive Weapon and the Sappers, one test
 lowscen.js         scenario fixes: picking the search site, landing zones, Invasion's guns and tows,
                    the last-turn wipe-out, the forced swap for guns a split cannot carry
+options.js         the optional rules: the list, cfg.options from the setup and the online room to the
+                   engine; "There can be only two!" and "Bad, worse, the bookkeeper"
 ```
 
 **The battle, the engine and the AI**

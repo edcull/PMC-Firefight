@@ -169,7 +169,8 @@
           tactics: { A: null, B: tacticB }, askTactics: true,
           temper: { B: C.aiTemper(B) },
           campaign: true, mode: 'ai',
-          planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto'
+          planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto',
+          options: R.cleanOptions(W.options)
         }
       };
     }
@@ -189,7 +190,8 @@
           // each player's tactic is chosen at the table, as in a skirmish
           tactics: { A: null, B: null }, askTactics: true,
           campaign: true, mode: 'hotseat', readyUp: true,
-          planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto'
+          planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto',
+          options: R.cleanOptions(W.options)
         }
       };
     }
@@ -362,13 +364,14 @@
           you: j === i, host: j === 0, out: !!s.out, force: W.forces[j] && founded(W.forces[j]) ? W.forces[j].name : null
         }));
         const out = { phase: W.phase, name: W.name, slot: i, host: i === 0, slots: slots, invite: row && W.phase === 'lobby' ? row.invite : null,
-          listed: !!(row && row.listed), chat: (W.chat || []).slice(-60), waiting: waitingOn(W, i), over: W.over || null };
+          listed: !!(row && row.listed), chat: (W.chat || []).slice(-60), waiting: waitingOn(W, i), over: W.over || null,
+          options: R.cleanOptions(W.options) };
         if (W.phase === 'lobby') return out;
         const p = W.players[i] || {};
         const v = viewOf(W, i, p.contract ? p.contract.vs : p.pending ? p.pending.vs : p.post ? p.post.vs : null);
         // the other players' forces after the AI ones, marked, for the hub to show as it shows a rival
         const others = humanSlots(W).filter((j) => j !== i).map((j) => Object.assign({}, W.forces[j], { human: true, slot: j, player: W.slots[j].name, out: !!W.slots[j].out, busy: busy(W, j) }));
-        const camp = Object.assign({}, v, { rivals: v.rivals.concat(others), post: p.post || null, pending: p.pending || null });
+        const camp = Object.assign({}, v, { rivals: v.rivals.concat(others), post: p.post || null, pending: p.pending || null, options: R.cleanOptions(W.options) });
         camp.online = {
           slot: i,
           contract: p.contract ? Object.assign({}, p.contract) : null,
@@ -461,6 +464,12 @@
           if (!t) return no('give it a name');
           W.name = t;
           return { ok: true, relist: true };
+        },
+        // the host: the optional rules every battle of the campaign is fought under (R.OPTIONS)
+        lobbyOptions(W, i, a) {
+          if (i !== 0) return no('the host sets the optional rules');
+          W.options = R.cleanOptions(a.options);
+          return { ok: true };
         },
         lobbyChat(W, i, a) {
           const t = text(a.text, 300);
@@ -902,7 +911,7 @@
           };
           // the odd one out fights the locals, and that is rolled
           if (!x || !y || !offTable) return settle(null);
-          try { offTable.play(x, y, { planet: f.planet || 'random' }, settle); } catch (e) { settle(null); }
+          try { offTable.play(x, y, { planet: f.planet || 'random', options: R.cleanOptions(W.options) }, settle); } catch (e) { settle(null); }
         };
         setTimeout(next, 0);
       }

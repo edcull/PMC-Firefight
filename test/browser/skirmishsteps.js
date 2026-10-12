@@ -58,9 +58,17 @@ const { ROOT, SHOTS, seedDice } = require('../where.js');
     !(await shown('cat')));
   check('...summing up both forces', /Task Force Ironhold[\s\S]*The Hive/.test(await p.evaluate(() => document.getElementById('hot-sum').innerText)));
   await p.locator('#setup .sheet').screenshot({ path: path.join(SHOTS, 'skirmish-battlefield.png') });
+  // the optional rules, a box each on the battlefield, off to begin with
+  const boxes = await p.evaluate(() => Array.from(document.querySelectorAll('#opt-boxes input[data-opt]')).map((i) => i.getAttribute('data-opt') + (i.checked ? '+' : '-')));
+  check('the optional rules are on the battlefield, a box each, all off', await shown('opts-field') && boxes.join() === 'onlyTwo-,bookkeeper-', boxes.join());
+  await p.evaluate(() => { const i = document.querySelector('#opt-boxes input[data-opt="onlyTwo"]'); i.checked = true; i.dispatchEvent(new Event('change', { bubbles: true })); });
   await setVal('sel-scen', 'meeting');
   await next();
   await p.waitForTimeout(600);
+  const opts = await p.evaluate(() => JSON.stringify(window.PMC_STATE().cfg.options));
+  check('...and the battle is fought under the one ticked', opts === '{"onlyTwo":true}', opts);
+  const brief = await p.evaluate(() => document.getElementById('obj-box').innerText);
+  check('...which the briefing names', /Optional rules[\s\S]*There can be only two/.test(brief), brief.slice(-160).replace(/\s+/g, ' '));
   const hs = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, b: s.cfg.nameB, scen: s.cfg.scenario, ca: s.cfg.colourA, cb: s.cfg.colourB, bf: s.units.filter(u => u.side === 'B').every(u => u.faction === 'bugs') }; });
   check('the battle is the one both players built', hs.mode === 'hotseat' && hs.a === 'Task Force Ironhold' && hs.b === 'The Hive' && hs.scen === 'meeting' && hs.bf && hs.ca !== hs.cb,
     JSON.stringify(hs));

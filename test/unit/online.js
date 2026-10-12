@@ -90,6 +90,8 @@ function ok(name, cond, note) {
   cmd(brann, 'lobbyReady', {}); cmd(cole, 'lobbyReady', {});
   ok('only the host renames it', !cmd(brann, 'lobbyName', { name: 'Mine now' }).ok && cmd(ash, 'lobbyName', { name: 'The Long War' }).ok &&
     view(brann).name === 'The Long War' && online.list(brann).some((c) => c.name === 'The Long War'));
+  ok('only the host sets the optional rules', !cmd(brann, 'lobbyOptions', { options: { onlyTwo: true } }).ok &&
+    cmd(ash, 'lobbyOptions', { options: { onlyTwo: true, bogus: true } }).ok && JSON.stringify(view(brann).options) === '{"onlyTwo":true}', JSON.stringify(view(brann).options));
   ok('only the host starts it', !cmd(brann, 'lobbyStart').ok);
   ok('...and not before saying they are ready too', /Ash is not ready/.test(cmd(ash, 'lobbyStart').why));
   cmd(ash, 'lobbyReady', {});
@@ -146,6 +148,7 @@ function ok(name, cond, note) {
   ok('ready a second time (a double press, a retry) is refused, and makes no second battle', !again.ok && /already made/.test(again.why) && lobby.rooms.size === roomsAt, again.why);
   const room = lobby.rooms.get(go.battle);
   ok('a private room: the player’s seat held, the AI’s side with nobody in it', room && room.settings.private && room.seats.A.id === 'u' + ash.userId && !room.seats.B);
+  ok('...fought under the campaign\u2019s optional rules', room && room.table.engine.state().cfg.options.onlyTwo === true && !room.table.engine.state().cfg.options.bogus);
   ok('...the table set for the AI to play side B, against the AI force’s own list', room && room.table.cfg.mode === 'ai' && room.table.cfg.nameB === aiName && room.table.cfg.armyB.length > 0 && room.table.engine.state().cfg.aiSides.indexOf('B') >= 0);
   ok('the force holds while it is fought', /battle is being fought/.test(cmd(ash, 'recruit', { key: 'recruits' }).why));
   ok('...but the others play on meanwhile (Brann takes a contract of their own)', (() => {
@@ -225,6 +228,7 @@ function ok(name, cond, note) {
   ok('both ready: the battle is made, both told where it is', dgo.ok && dgo.battle && told.slice(n1).filter((t) => t[1] === 'camp.battle' && t[3] === dgo.battle).length === 2, JSON.stringify(dgo).slice(0, 100));
   const droom = lobby.rooms.get(dgo.battle);
   ok('...both seats held for the two players', droom && droom.seats.A.id === 'u' + ash.userId && droom.seats.B.id === 'u' + brann.userId && droom.table.cfg.mode === 'hotseat');
+  ok('...a duel fought under the campaign\u2019s optional rules too', droom && droom.table.engine.state().cfg.options.onlyTwo === true);
   ok('...the rebel\u2019s tactic asked at the table, not on the contract', droom.table.cfg.askTactics && droom.table.cfg.tactics.B === null && !!droom.table.engine.state().tacticAsk, JSON.stringify(droom.table.engine.state().tacticAsk && droom.table.engine.state().tacticAsk.order));
   ok('Cole fights an AI force meanwhile, picked from the other forces (an offer rolled for it if it had none): battles side by side', (() => {
     const co = camp(cole), nAi = co.rivals.filter((r) => !r.human).length;

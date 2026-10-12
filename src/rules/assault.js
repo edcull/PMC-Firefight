@@ -19,10 +19,13 @@
         reachable = E.reachable, rectPointDist = E.rectPointDist, resolveAssaultHits = E.resolveAssaultHits,
         resolveDamage = E.resolveDamage, sectionRect = E.sectionRect, shelterOf = E.shelterOf,
         shoot = E.shoot, sizeBonus = E.sizeBonus, status = E.status, terrainAt = E.terrainAt,
-        unitDist = E.unitDist, unitNear = E.unitNear;
+        unitDist = E.unitDist, unitNear = E.unitNear, closestTwo = E.closestTwo;
     /* ---------- assault ---------- */
-    // Vehicles and aircraft never charge; nothing can charge an aircraft.
-    function canAssault(a, t) {
+    /* Vehicles and aircraft never charge; nothing can charge an aircraft. `state`,
+       where the caller has the battle: "There can be only two!" (optional, p. 166)
+       holds a charge to one of the two nearest enemy units. */
+    function canAssault(a, t, state) {
+      if (state && !closestTwo(state, a, t)) return false;
       // Overgrown bugs follow vehicle and aircraft rules, but may still assault (p. 116)
       if (isMachine(a) && !isOvergrown(a)) return false;
       // an Assault of "-" (the Carrier bug's, p. 123) is no Assault at all, as a "-" Firepower is no shooting

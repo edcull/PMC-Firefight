@@ -184,11 +184,33 @@
     pop.style.left = left + 'px'; pop.style.top = top + 'px'; pop.style.visibility = 'visible';
   }
 
+  /* ---------- the optional rules (R.OPTIONS) ----------
+     A box each, the rule's name with what it does under it. `on` is the options
+     switched on; `attrs` goes on every box (' disabled' where they may only be
+     read). readOptions reads them back off the element holding them. */
+  function optionBoxes(on, attrs) {
+    return '<div class="opt-list">' + root.PMC.OPTIONS.map(function (d) {
+      return '<label class="opt-row"><input type="checkbox" data-opt="' + d.key + '"' + (on && on[d.key] ? ' checked' : '') + (attrs || '') + '>' +
+        '<span><b>' + esc(d.name) + '</b> <small class="opt-pg">p. ' + d.page + '</small><small class="opt-txt">' + esc(d.text) + '</small></span></label>';
+    }).join('') + '</div>';
+  }
+  function readOptions(box) {
+    var o = {};
+    if (box) Array.prototype.forEach.call(box.querySelectorAll('input[data-opt]'), function (i) { if (i.checked) o[i.getAttribute('data-opt')] = true; });
+    return o;
+  }
+  // the options on, in a line: for a card that only shows them
+  function optionsLine(on) {
+    var n = root.PMC.optionNames(on);
+    return n.length ? n.map(esc).join(' \u00b7 ') : 'None';
+  }
+
   root.PMCUi = {
     fill: fill, face: face, swatch: swatch, chip: chip, chipButton: chipButton, chipStill: chipStill, colourPop: colourPop,
     ARMIES: ARMIES, ARMY_NAMES: ARMY_NAMES, armySelect: armySelect, armyStill: armyStill,
     FORCE_NOUN: FORCE_NOUN, forceName: forceName, isForceName: isForceName, personaName: personaName, isPersonaName: isPersonaName,
     tip: tip, mark: mark, ruleMarks: ruleMarks, unitRow: unitRow, freeMark: freeMark, limitsLine: limitsLine, backButton: backButton,
-    DRIVE_ICON: DRIVE_ICON, CREW_ICON: CREW_ICON, DRONE_ICON: DRONE_ICON, placePop: placePop
+    DRIVE_ICON: DRIVE_ICON, CREW_ICON: CREW_ICON, DRONE_ICON: DRONE_ICON, placePop: placePop,
+    optionBoxes: optionBoxes, readOptions: readOptions, optionsLine: optionsLine
   };
 })(window);

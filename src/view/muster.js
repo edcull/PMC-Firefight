@@ -723,8 +723,19 @@
         try { var v = localStorage.getItem('pmc-terrainsetup'); if (v) st.value = v; } catch (e) { }
         st.addEventListener('change', function () { try { localStorage.setItem('pmc-terrainsetup', st.value); } catch (e) { } });
       })();
+      /* The optional rules: a box each, remembered as the terrain choice is. */
+      (function () {
+        var box = el('opt-boxes');
+        if (!box || !U) return;
+        var on = {};
+        try { on = JSON.parse(localStorage.getItem('pmc-options') || '{}') || {}; } catch (e) { }
+        box.innerHTML = U.optionBoxes(R.cleanOptions(on));
+        box.addEventListener('change', function () { try { localStorage.setItem('pmc-options', JSON.stringify(U.readOptions(box))); } catch (e) { } });
+      })();
       drawColourPick();
     }
+    // the optional rules ticked on the battlefield step (none for a demo)
+    function chosenOptions(kind) { return kind === 'demo' || !U ? {} : U.readOptions(el('opt-boxes')); }
 
     /* ---- a two-force skirmish, mustered in three steps ----
        Hotseat, co-op and demo all build two forces on this screen in turn, and
@@ -1262,7 +1273,7 @@
           // each commando in its own colour; the OpFor in the one picked on its line (one neither is wearing)
           colourA: a.colour, colourC: coop ? b.colour : null,
           colourB: h.opColour && (coop ? [a.colour, b.colour] : [a.colour]).indexOf(h.opColour) < 0 ? h.opColour : foeColour(coop ? [a.colour, b.colour] : [a.colour]),
-          tactics: { A: null, B: null }, mode: 'ai', planet: planet, terrainSetup: terrainSetup,
+          tactics: { A: null, B: null }, mode: 'ai', planet: planet, terrainSetup: terrainSetup, options: chosenOptions(h.kind),
           solo: { coop: coop, faction: a.faction || 'pmc', opFaction: opFaction, names: coop ? [a.name, b.name] : [a.name] }
         });
         return;
@@ -1281,7 +1292,7 @@
         // the personality each force was rolled to (R.rollArmy), for the AI's tactic and its temper in battle
         styles: { A: (a.keys && a.keys.style) || null, B: (b.keys && b.keys.style) || null },
         temper: { A: hotTemper(a), B: hotTemper(b) },
-        mode: mode, planet: planet, terrainSetup: terrainSetup,
+        mode: mode, planet: planet, terrainSetup: terrainSetup, options: chosenOptions(h.kind),
         secretSwaps: mode === 'hotseat'           // two players at one screen swap in turn, unseen
       });
     }

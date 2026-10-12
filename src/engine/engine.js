@@ -310,6 +310,7 @@
        made desert or arctic. Everything after — the table, the look of it on
        every screen — reads the one name this leaves in the config. */
     cfg.planet = GEN.resolvePlanet(cfg.planet, Math.random);
+    cfg.options = R.cleanOptions(cfg.options);          // the optional rules switched on (R.OPTIONS)
     var scenId = cfg.scenario && SC.SCENARIOS[cfg.scenario] ? cfg.scenario : 'secure';
     // a solitaire / cooperative game only runs the solitaire scenarios, and they only run in one
     if (cfg.solo && !(SC.SCENARIOS[scenId] || {}).solo) scenId = 's_crush';

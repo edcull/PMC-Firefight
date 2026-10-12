@@ -19,7 +19,7 @@
         ruleValue = E.ruleValue, sectionHigh = E.sectionHigh, sectionRect = E.sectionRect,
         shelterOf = E.shelterOf, sightRange = E.sightRange, sizeBonus = E.sizeBonus, status = E.status,
         tribeSees = E.tribeSees, undisciplined = E.undisciplined, unitDist = E.unitDist,
-        xenoSenses = E.xenoSenses;
+        xenoSenses = E.xenoSenses, closestTwo = E.closestTwo;
     /* ---------- shooting ---------- */
     /* "Dig in!" (p. 94): the crew drag the trails round and shoot over open sights.
        The piece loses its reach and its all-round traverse, and gains everything a
@@ -53,6 +53,15 @@
     function shotMinRange(a) { return dugIn(a) ? 6 : ruleValue(a, 'Minimum Range'); }
 
     function canShoot(state, a, t, mode, opts) {
+      if (!canShootAt(state, a, t, mode, opts)) return false;
+      /* "There can be only two!" (optional, p. 166) binds the unit's own Fire! and
+         Advance, its auxiliary weapons too; not the shots a reaction takes (defensive
+         fire, the arrival shot: the owner's ruling), not Indirect Fire, and not a
+         shot called in by a mark (the book excepts marking; the call is what it is for). */
+      if ((mode === 'fire' || mode === 'advance') && !(opts && opts.markKind) && !(has(a, 'Indirect Fire') && !dugIn(a))) return closestTwo(state, a, t);
+      return true;
+    }
+    function canShootAt(state, a, t, mode, opts) {
       opts = opts || {};
       if (!a.alive || !t.alive || a.side === t.side || a.fp === null) return false;
       /* Only what is on the table can be shot at. A unit held in reserve is parked

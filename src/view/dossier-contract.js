@@ -643,7 +643,8 @@
           mode: E.camp.mode === 'hotseat' ? 'hotseat' : 'ai',
           // two players at one screen swap from their benches in turn, unseen, as a hotseat skirmish does (HC-8)
           secretSwaps: E.camp.mode === 'hotseat',
-          planet: E.contract.planet
+          planet: E.contract.planet,
+          options: E.camp.options || {}             // the campaign's optional rules
         });
       }
     }

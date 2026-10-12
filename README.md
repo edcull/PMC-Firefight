@@ -68,6 +68,21 @@ scenario and world, then tap each force's card to muster it. Mustering spends
 composition points, with the book's limits checked as you go. A force can be
 named, saved, and saved to or loaded from a file (`.pmcforce.json`).
 
+### Optional rules
+
+The book's optional rules can be switched on for a battle: on the battlefield
+step of a skirmish, in an online room's terms, or for a whole campaign when it
+is raised (an online campaign's host sets them in its lobby). The battle's
+briefing lists the ones in play.
+
+- **"There can be only two!"** (p. 166): a unit may attack only one of the two
+  enemy units nearest to it. Vehicles, aircraft and infantry are each counted
+  among their own kind. Indirect fire, marking, and reactions (defensive fire,
+  the arrival shot) are not bound by it.
+- **"Bad, worse, the bookkeeper"** (p. 167): an army routs when the Tiers of its
+  destroyed units add up to half its composition points, rather than when half
+  its units are gone.
+
 ### Setting up
 
 - **Terrain** is rolled from the book's generators, or laid by hand: tap to place
@@ -201,10 +216,8 @@ The full file layout and every test are described in [docs/DEVELOPMENT.md](docs/
 
 Planned in [docs/roadmap.md](docs/roadmap.md):
 
-- **Optional rules (v0.3):**
-  - Appendix 2, Other Worlds (gravity, atmosphere, anomalies); for now the world
-    only chooses the terrain;
-  - from Appendix 3, "There can be only two!" and "Bad, worse, the bookkeeper".
+- **Optional rules (v0.3):** Appendix 2, Other Worlds (gravity, atmosphere,
+  anomalies); for now the world only chooses the terrain.
 - **Priority Level 3 on a 6′ × 4′ table (v0.3).** Battles are Priority Level 1–2
   on 4′ × 4′.
 - **Co-op battles in a campaign (v0.3).** Co-op is played as a one-off battle

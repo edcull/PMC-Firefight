@@ -324,6 +324,8 @@
       // everyone says they are ready, the host too; then the host has Start
       var allReady = (L.slots || []).every(function (x) { return x.kind !== 'human' || x.ready; });
       h += '</div>';
+      // the optional rules every battle of it is fought under: the host's to set, read by the rest
+      if (U.optionBoxes) h += '<div class="field olob-opts" id="olob-opts"><label>Optional rules</label>' + U.optionBoxes(L.options, host ? '' : ' disabled') + '</div>';
       /* as the skirmish room has it, above the chat: the way out a quiet link, and the
          one thing to do next the full-width button (ready, then the host's Start) */
       h += '<div class="lob-acts olob-acts"><button class="lnk" data-go="omulti">Leave</button>';
@@ -835,6 +837,7 @@
         return true;
       }
       if (target.id === 'olob-pub') { cmd('lobbyListed', { on: !!target.checked }); return true; }
+      if (target.hasAttribute('data-opt') && target.closest('#olob-opts')) { cmd('lobbyOptions', { options: U.readOptions(document.getElementById('olob-opts')) }); return true; }
       if (target.hasAttribute('data-olob-ai')) { cmd('lobbySlot', { i: +target.getAttribute('data-olob-ai'), kind: target.checked ? 'ai' : 'open' }); return true; }
       if (target.hasAttribute('data-olob-army')) { cmd('lobbyFaction', { i: +target.getAttribute('data-olob-army'), faction: target.value }); return true; }
       if (target.hasAttribute('data-olob-colour')) { cmd('lobbyColour', { i: +target.getAttribute('data-olob-colour'), colour: target.value }); return true; }

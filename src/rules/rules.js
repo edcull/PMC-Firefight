@@ -982,6 +982,42 @@
       state.doctrines[side].indexOf(id) >= 0);
   }
   function unitDoc(state, u, id) { return !!u && doctrine(state, u.side, id); }
+  /* Optional rules (Appendix 3, p. 166 on): off unless a battle, or the campaign
+     it is fought for, switches them on. `cfg.options` holds the ones on, cleaned
+     at the start of the battle; a battle or campaign saved before there were any
+     reads as all off. */
+  var OPTIONS = [
+    { key: 'onlyTwo', name: '\u201cThere can be only two!\u201d', page: 166,
+      text: 'A unit may attack only one of the two enemy units closest to it (vehicles, aircraft and infantry each counted apart; indirect fire and marking excepted).' },
+    { key: 'bookkeeper', name: 'Bad, worse, the bookkeeper', page: 167,
+      text: 'An army routs when the Tiers of its destroyed units add up to half its composition points, rather than when half its units are gone.' }
+  ];
+  function cleanOptions(o) {
+    var out = {};
+    OPTIONS.forEach(function (d) { if (o && (o[d.key] === true || o[d.key] === 'true')) out[d.key] = true; });
+    return out;
+  }
+  function opt(state, key) { return !!(state && state.cfg && state.cfg.options && state.cfg.options[key]); }
+  /* "There can be only two!" (optional, p. 166): an attack may go only at one of
+     the two enemy units nearest the attacker. Vehicles, aircraft and infantry are
+     each counted among their own kind (the book's exception for vehicles and
+     aircraft, and so for infantry too); a unit level with the second nearest is as
+     near. Every enemy on the table counts, seen or not. True whenever the option
+     is off. Which attacks it binds is the caller's to say (canShoot, canAssault). */
+  function attackKind(u) { return isFlying(u) ? 'air' : isMachine(u) ? 'machine' : 'troops'; }
+  function closestTwo(state, a, t) {
+    if (!opt(state, 'onlyTwo') || !a || !t || !state.units) return true;
+    var kind = attackKind(t), dt = unitDist(a, t), nearer = 0;
+    state.units.forEach(function (e) {
+      if (e === t || e === a.of || e.side === a.side || !onTable(e) || attackKind(e) !== kind) return;
+      if (unitDist(a, e) < dt - 1e-6) nearer++;
+    });
+    return nearer < 2;
+  }
+  // the names of the options on, for a card or a log line
+  function optionNames(o) {
+    return OPTIONS.filter(function (d) { return o && o[d.key]; }).map(function (d) { return d.name; });
+  }
   // the bug groups an Evolutionary Pathway names (p. 124)
   function bugRanged(u) { return !!u && u.faction === 'bugs' && (u.group === 'Spore Bugs' || u.group === 'Flying Bugs'); }
   function bugGround(u) { return !!u && u.faction === 'bugs' && (u.group === 'Lesser Bugs' || u.group === 'Underground Bugs'); }
@@ -1565,7 +1601,7 @@
       resolveDamage: resolveDamage, resolveShootingHits: resolveShootingHits, shotRelief: shotRelief, ruleValue: ruleValue,
       sectionHigh: sectionHigh, sectionRect: sectionRect, shelterOf: shelterOf, sightRange: sightRange,
       sizeBonus: sizeBonus, status: status, tribeSees: tribeSees, undisciplined: undisciplined,
-      unitDist: unitDist, xenoSenses: xenoSenses
+      unitDist: unitDist, xenoSenses: xenoSenses, closestTwo: closestTwo
     };
   }
   function kitShoot() {
@@ -1705,7 +1741,7 @@
   function eAssault() {
     return {
       BOARD: BOARD, BY_KEY: BY_KEY, STEP: STEP, TERRAIN: TERRAIN, UNIT_R: UNIT_R, applyDamage: applyDamage,
-      applyResult: applyResult, bugGround: bugGround, campFlag: campFlag, canShoot: canShoot,
+      applyResult: applyResult, bugGround: bugGround, campFlag: campFlag, canShoot: canShoot, closestTwo: closestTwo,
       clampTo: clampTo, d10: d10, d3: d3, d6: d6, deathOrGlory: deathOrGlory, defenceAgainst: defenceAgainst,
       destroyTerrain: destroyTerrain, destructibleKind: destructibleKind, dmgMod: dmgMod, doctrine: doctrine,
       drives: drives, canGarrison: canGarrison, enterBuilding: enterBuilding, enterable: enterable, field: field, flyInf: flyInf,
@@ -1720,7 +1756,7 @@
   function kitAssault() {
     return KIT_ASSAULT || (KIT_ASSAULT = (root.PMCAssault || require('./assault.js'))(eAssault()));
   }
-  function canAssault(a, t) { return (KIT_ASSAULT || kitAssault()).canAssault(a, t); }
+  function canAssault(a, t, state) { return (KIT_ASSAULT || kitAssault()).canAssault(a, t, state); }
   function chargeReach(state, a, allowance) { return (KIT_ASSAULT || kitAssault()).chargeReach(state, a, allowance); }
   function chargeRoute(state, a, t, allowance) { return (KIT_ASSAULT || kitAssault()).chargeRoute(state, a, t, allowance); }
   function canMartyr(state, u, foe) { return (KIT_ASSAULT || kitAssault()).canMartyr(state, u, foe); }
@@ -2333,6 +2369,7 @@
     enemyWithinRange: enemyWithinRange, onTable: onTable, swapAllowance: swapAllowance, steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
     hasExact: hasExact, antiTank: antiTank,
     campFlag: campFlag, doctrine: doctrine, unitDoc: unitDoc, credit: credit,
+    OPTIONS: OPTIONS, cleanOptions: cleanOptions, opt: opt, optionNames: optionNames, closestTwo: closestTwo,
     isDestructible: isDestructible, destructibleKind: destructibleKind, shelterOf: shelterOf,
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,

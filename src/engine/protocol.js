@@ -14,7 +14,7 @@
    game.join    { id }                          take the free seat, or watch
    game.leave   { }
    game.kick    { playerId }                    host only
-   game.settings{ patch }                       host only: tier, pl, planet, scenario, campaign
+   game.settings{ patch }                       host only: tier, pl, planet, scenario, campaign, options
    game.seat    { seat }                        take A, B or 'watch'
    game.force   { force }                       your own faction, tactic, list, colour, name
    game.ready   { ready }
@@ -91,7 +91,8 @@
       kind: 'skirmish',      // or 'coop': both players' commandos against the OpFor
       soloScen: 'roll',      // a cooperative game's scenario: one of the solitaire ones, or rolled
       opFaction: 'pmc',      // ...and the army the OpFor is raised from
-      opColour: null         // ...and the colours it wears, or null for ones the players do not
+      opColour: null,        // ...and the colours it wears, or null for ones the players do not
+      options: {}            // the optional rules switched on (R.OPTIONS); a campaign's battle takes the campaign's
     };
   }
 
@@ -100,6 +101,14 @@
      able to change the tier. */
   // the solitaire scenarios a cooperative game is fought under (solitaire.js ORDER), or rolled
   var SOLO_SCENARIOS = ['roll', 's_crush', 's_vip', 's_decap', 's_evac', 's_sabotage', 's_ambush'];
+  // only the optional rules the rules know of, each on or off (R.OPTIONS)
+  function cleanOptions(o) {
+    var R = root.PMC, out = {};
+    if (!o || typeof o !== 'object') return out;
+    if (R && R.cleanOptions) return R.cleanOptions(o);
+    Object.keys(o).slice(0, 16).forEach(function (k) { if (/^[a-zA-Z]{1,24}$/.test(k) && o[k] === true) out[k] = true; });
+    return out;
+  }
   function cleanSettings(patch, onto) {
     var s = onto || defaultSettings();
     if (!patch || typeof patch !== 'object') return s;
@@ -114,6 +123,7 @@
     if ('kind' in patch) s.kind = oneOf(patch.kind, ['skirmish', 'coop'], s.kind || 'skirmish');
     if ('soloScen' in patch) s.soloScen = oneOf(patch.soloScen, SOLO_SCENARIOS, s.soloScen || 'roll');
     if ('opFaction' in patch) s.opFaction = oneOf(patch.opFaction, FACTIONS, s.opFaction || 'pmc');
+    if ('options' in patch) s.options = cleanOptions(patch.options);
     if ('opColour' in patch) s.opColour = patch.opColour == null ? null : oneOf(patch.opColour, COLOURS, s.opColour || null);
     return s;
   }

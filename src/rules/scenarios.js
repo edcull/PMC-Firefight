@@ -295,6 +295,11 @@
      than from the army list. Units still in reserve count as perfectly fine
      (p. 49): they are part of the tally and not losses. */
   function routed(state, side) {
+    /* "Bad, worse, the bookkeeper" (optional, p. 167): the Tiers of the units
+       destroyed against half the army's composition points — read as the points
+       its units are worth (a unit costs its Tier), so the same units are in the
+       tally as below, a free or spawned one included. */
+    var book = R.opt(state, 'bookkeeper');
     var started = 0, left = 0;
     state.units.forEach(function (u) {
       if (u.side !== side) return;
@@ -304,8 +309,9 @@
       /* Expendable troops, "when destroyed ... do not count as a casualty for
          the purposes of victory conditions" (p. 57) — however they went. */
       if (!u.alive && (u.expended || R.has(u, 'Expendable'))) return;
-      started++;
-      if (u.alive) left++;
+      var worth = book ? (u.tier || 1) : 1;
+      started += worth;
+      if (u.alive) left += worth;
     });
     return (started - left) >= Math.ceil(started / 2);
   }

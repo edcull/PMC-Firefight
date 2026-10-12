@@ -357,7 +357,7 @@
           if (wq && wq.n >= 2) { doWave(u, wq.pt); return; }
         }
         var prey = nearestEnemy(u);
-        if (prey && R.status(u) === 'ready' && R.canAssault(u, prey.unit) && prey.dist <= chargeAllow(u) && canReachCharge(u, prey.unit) &&
+        if (prey && R.status(u) === 'ready' && R.canAssault(u, prey.unit, E.state) && prey.dist <= chargeAllow(u) && canReachCharge(u, prey.unit) &&
           (u.fp == null || u.assault >= u.fp || !shot.t)) { aiCharge(u, prey.unit); return; }
       }
 
@@ -402,7 +402,7 @@
           // "Whenever an OpFor unit can attack the VIP unit, it will do so" (p. 152): a hull shoots it
           if (E.state.scen.mustTarget && shot.forced && shot.t) { fire(u, shot.t, 'fire'); return; }
           var prey2 = nearestEnemy(u);
-          if (R.isOvergrown(u) && prey2 && R.status(u) === 'ready' && R.canAssault(u, prey2.unit) &&
+          if (R.isOvergrown(u) && prey2 && R.status(u) === 'ready' && R.canAssault(u, prey2.unit, E.state) &&
             prey2.dist <= chargeAllow(u) && canReachCharge(u, prey2.unit)) { aiCharge(u, prey2.unit); return; }
           return aiRoll(u, prey2, false, { close: true, noShoot: true });
         }
@@ -692,7 +692,7 @@
       E.state.units.forEach(function (o) {
         if (!o.alive || o.side !== side || !onTable(o)) return;
         var e = t.fp != null ? Math.max(0, expectedHits(t, o, 'fire')) : 0;
-        if (t.assault > 0 && R.canAssault(t, o) && R.unitDist(t, o) <= (t.move || 0) + 2) e += 0.15 * t.assault;
+        if (t.assault > 0 && R.canAssault(t, o, E.state) && R.unitDist(t, o) <= (t.move || 0) + 2) e += 0.15 * t.assault;
         if (e > worst) worst = e;
       });
       var onObj = pts.some(function (p) { return R.inches(t.x, t.y, p.x, p.y) <= 4 + R.UNIT_R; });
@@ -814,7 +814,7 @@
          Kill Them All! is a charge at one in reach, else an Advance that shoots. */
       if (ap && !ap.push && behaviour === 'assault') {
         var near = nearestEnemy(u);
-        if (!(near && R.canAssault(u, near.unit) && near.dist <= chargeAllow(u))) behaviour = 'offensive';
+        if (!(near && R.canAssault(u, near.unit, E.state) && near.dist <= chargeAllow(u))) behaviour = 'offensive';
       }
       // units with Cumbersome Weapons count 4-7 as Reasonably Neutral (p. 147)
       if (R.has(u, 'Cumbersome Weapon') && total >= 4 && total <= 7) behaviour = 'neutral';
@@ -872,7 +872,7 @@
          rule, and the Suppression falls away as the charge starts. */
       if (R.status(u) === 'suppressed' && R.deathOrGlory(E.state, u) && !R.has(u, 'Cumbersome Weapon')) {
         var dogT = nearestEnemy(u);
-        if (dogT && R.canAssault(u, dogT.unit) && dogT.dist <= chargeAllow(u) && canReachCharge(u, dogT.unit)) {
+        if (dogT && R.canAssault(u, dogT.unit, E.state) && dogT.dist <= chargeAllow(u) && canReachCharge(u, dogT.unit)) {
           martyrFirst(u, dogT.unit, function (m) {
             var dsnap = snapshotAlive();
             var dres = abAssault(E.state, u, dogT.unit, m);
@@ -1050,13 +1050,13 @@
       // the VIP draws the charge too, when it is in reach
       if (behaviour === 'assault' && E.state.scen.mustTarget && u.side === 'B') {
         var vipA = E.state.scen.mustTarget(E.state, u);
-        if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA) && canReachCharge(u, vipA)) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
+        if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA, E.state) && canReachCharge(u, vipA)) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
         /* "Whenever an OpFor unit can attack the VIP unit, it will do so" (p. 152): one
            that cannot charge it but can shoot it does that, rather than charging
            someone else or only moving (a hull on 7+ included). */
         else if (shot.forced && shot.t) { fire(u, shot.t, 'fire'); return; }
       }
-      if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon')) {
+      if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit, E.state) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon')) {
         var nt = ne.unit;
         martyrFirst(u, nt, function (m) {
           var snap = snapshotAlive();
