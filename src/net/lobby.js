@@ -115,7 +115,7 @@
       '.lob-lines .said b{color:var(--ink)}',
       '.lob-lines .note{color:var(--ink-dim);font-style:italic}',
       '.lob-terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 10px}',
-      '.lob-terms .lob-cmp{grid-column:1/-1}',
+      '.lob-terms .lob-cmp,.lob-terms .lob-opts{grid-column:1/-1}',
       '.lob-cmp .lob-note{margin:2px 0 6px}',
       '.lob-foot{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}',
       '.lob-foot .start{margin:0;flex:1 1 auto}',
@@ -467,9 +467,9 @@
         { v: 'auto', t: optionText('sel-terrain', 'auto', 'Automatically place') },
         { v: 'manual', t: optionText('sel-terrain', 'manual', 'Manually place') }
       ], s.terrain || 'auto') +
-      publicBox('term-private', !s.private, ' data-term="private"' + d) +
-      // the optional rules; a campaign's battle is fought under the campaign's own
-      (s.campaign || !U || !U.optionBoxes ? '' :
+      publicBox('term-private', !s.private, ' data-term="private"' + d);
+    // the optional rules; a campaign's battle is fought under the campaign's own
+    var opts = (s.campaign || !U || !U.optionBoxes ? '' :
         '<div class="field lob-opts"><label>Optional rules</label>' + U.optionBoxes(s.options, ' data-term="options"' + d) + '</div>');
     // a cooperative game: commandos (Priority Level 1 each) under a solitaire scenario, against the OpFor
     if (coop) {
@@ -481,8 +481,7 @@
         sel('term-soloScen', 'Scenario', [{ v: 'roll', t: optionText('sel-solo-scen', 'roll', 'Randomise the scenario') }].concat((SOLO ? SOLO.ORDER.concat((s.options && s.options.closeEncounters) || s.soloScen === 's_besieged' ? SOLO.CE_ORDER || [] : []) : []).map(function (x) {
           return { v: x, t: optionText('sel-solo-scen', x, (SOLO && SOLO.SCENARIOS[x] && SOLO.SCENARIOS[x].name + (SOLO.SCENARIOS[x].compound ? ' (Close Encounters)' : '')) || x) };
         })), s.soloScen || 'roll') +
-        compoundHTML(isHost) +
-        world +
+        world + compoundHTML(isHost) + opts +
         '<p class="lob-note">Cooperative: each of you musters a commando; the OpFor is the machine’s. You take turns, an activation each.</p>' +
         '</div>';
     }
@@ -498,8 +497,8 @@
         var SCN = root.PMCScen && root.PMCScen.SCENARIOS[x];
         return { v: x, t: optionText('sel-scen', x, SCN ? SCN.name + (SCN.compound ? ' (Close Encounters)' : '') : x) };
       }), s.scenario) +
-      compoundHTML(isHost) +
-      world +
+      // the scenario, the world and the table on a row; the compound and the optional rules each a row under them
+      world + compoundHTML(isHost) + opts +
       '</div>';
   }
   /* A Close Encounters battle's compound (p. 157): the game's, laid out for the
