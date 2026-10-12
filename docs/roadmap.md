@@ -1,0 +1,418 @@
+# Roadmap: v0.2 and v0.3
+
+`package.json` is already at 0.2.0. This plan names what v0.2 is (the game as
+it stands) and what v0.3 adds: the parts of the rulebook not yet in the game,
+most of them as options a player switches on.
+
+Book references are to the rulebook's markdown text (line numbers) and its
+pages. Code references are as of `1612ccc`.
+
+---
+
+## v0.2 — the README brought up to date
+
+**Goal:** the README describes the game as it plays today, and calls it v0.2.
+
+1. **Title and version.** "PMC 2670 — Firefight v0.2", with one paragraph on what
+   v0.2 is.
+2. **What's in.** Replace the opening summary with a short feature list:
+   - all four armies, six standard scenarios, six solitaire scenarios;
+   - single player against the AI, hotseat, and online play;
+   - campaigns:
+     - single player against AI rivals;
+     - hotseat (two players, with or without AI forces: 0/2/4/6/8);
+     - online "world" campaigns (lobby, AI slots, contracts against the AI,
+       duels between players);
+   - co-op against the OpFor, on one device or online;
+   - accounts (sign-in, guests, email activation, password reset), "your move"
+     badges and emails;
+   - the unit viewer, with its admin Weapon tab.
+3. **Running it.**
+   - Drop "(not finished)" from online play.
+   - Point to SERVER.md and deploy/pi/README.md for hosting.
+4. **User guide.**
+   - Update the main-menu table (Multiplayer is no longer "not finished"; add
+     the online campaign and co-op).
+   - Add a short section each on **online play** (lobby, rooms, joining by
+     code) and on **campaign kinds**.
+5. **Not implemented.** Rewrite it from the rules review, and link to this
+   roadmap:
+   - Appendix 1, Close Encounters;
+   - Appendix 2, Other Worlds;
+   - Appendix 3: "There can be only two!" and "Bad, worse, the bookkeeper";
+   - co-op battles in a campaign;
+   - Priority Level 3 and up, and larger tables;
+   - multi-battle contracts (the book names them but never defines them);
+   - the solitaire simplifications (rolled OpFor, set-up placed by the game,
+     PMC militia);
+   - the two open review findings, VEH-6 and BAT-5.
+6. **Rules readings.** One line pointing to `docs/rules-review-57a1b3d.md` for
+   what was checked and the owner's rulings on ambiguous rules.
+
+**Size:** small, documentation only. Optionally tag `v0.2.0` on main after merging.
+
+---
+
+## v0.3 — the rest of the book, as options
+
+### 0. Groundwork: a game-options object (do first)
+
+Nothing like this exists today. `state.cfg` is ad hoc (`planet`,
+`terrainSetup`, `solo`, `tactics`…), and online settings are whitelisted in
+`cleanSettings` (`src/engine/protocol.js:80-118`).
+
+- **`cfg.options`:** add it to the config: `{ onlyTwo, bookkeeper, otherWorlds,
+  closeEncounters, … }`, with defaults off. Read it through one helper
+  (`R.opt(state, 'onlyTwo')`).
+- **Battle setup:** an **Optional rules** fold-out on the battle setup form
+  (`index.html` ~230-320, `src/view/muster.js`) and in the online room terms
+  (`src/net/lobby.js:445-490`); whitelisted in `cleanSettings`.
+- **Campaign:** `campaign.options`, set when the campaign is created
+  (`dossier-hub.js:55-72`, `dossier-found.js`, the world lobby
+  `dossier-online.js:296-322`), shown read-only on the hub. Every battle built
+  from the campaign copies them into `cfg.options` (`aiBattleConfig`,
+  `duelBattleConfig` in `camp-world.js`, and the local contract path).
+- **Saves:** an old save without `options` reads as all off.
+- **Tests:** options reach the engine in skirmish, hotseat, online and campaign
+  battles.
+
+**Size:** small to medium. Every later item depends on it.
+
+### 1. "There can be only two!" (option)
+
+Book l.5414: an attacker may target only one of the two enemy units closest to
+it.
+
+**Exceptions:**
+- vehicles may pick from the two closest vehicles, aircraft from the two
+  closest aircraft, infantry from the two closest infantry units;
+- indirect fire is exempt;
+- so is Markerlights' Mark the target.
+
+**Code:**
+- One filter, `R.closestTwo(state, a, t)`.
+- Shooting: called from `canShoot` (`shoot.js:55`), which feeds the player's
+  target list, the AI's `bestTarget`, marks and input.
+- Assault: from `canAssault` (`assault.js:25`), which needs `state` passed in.
+- Opportunity, defensive and arrival fire: decide whether they count as
+  "attacking". The book says "any other action", so defensive fire probably
+  doesn't; noted in the code.
+- UI: the targets left out are greyed with the reason.
+
+**Size:** small.
+
+### 2. "Bad, worse, the bookkeeper" (option)
+
+Book l.5475: for the rout check, add up the Tiers of destroyed units and
+compare that with half the army's composition points, instead of half the
+unit count.
+
+**Code:**
+- One function, `routed()` (`scenarios.js:297-311`). Everything else calls it.
+- Composition points per side need recording at the start of the battle (they
+  are known at muster).
+- The Objectives panel and end card show the count used.
+
+**Size:** small.
+
+### 3. Other Worlds (option)
+
+Book l.5337-5409. Before the battle, roll a D10 three times: gravity,
+atmosphere, anomalies. In a campaign, roll before the contract.
+
+| Condition | Effect |
+|---|---|
+| Low gravity | Infantry +6" and vehicles +8" on Move; turning costs 1" more; Advance at Basic Firepower only |
+| High gravity | Infantry Defence +1; Move −1 (−2 vehicles, −4 aircraft) |
+| No atmosphere | +1 on hits against infantry (a 1 still ignored); all ranges +6" |
+| Toxic atmosphere | +1 on hits against infantry (a 1 still ignored) |
+| Foggy atmosphere | Line of sight at most 18" |
+| Foggy and toxic | Both of the above |
+| High radiation | Everyone counts as Jammed; drone vehicles need 2+ to move |
+| Time anomalies | After an activation, a 5+ lets the same player activate again |
+| Unexplained weakness | Non-drones −1 Move, Firepower, Assault, Morale; +1 Trauma point in a campaign |
+
+**Code:**
+- **Where it's stored:** `cfg.world = { gravity, atmosphere, anomaly }`, rolled
+  at battle start, or on the contract (`k.world`) in a campaign. The existing
+  `planet` stays the terrain choice.
+- **Where each effect goes:** each is a modifier in an existing choke point:
+  - movement in `moveBonus` and turn costs;
+  - Defence in `defenceAgainst`;
+  - the hit tables in `resolveShootingHits`;
+  - range in `shotRange`;
+  - line of sight in `sightRange` and `hasLoS`;
+  - jamming;
+  - drone activation;
+  - the activation hand-off for time anomalies (engine turn order, with
+    Overwhelming numbers);
+  - profile reductions;
+  - campaign trauma in the aftermath.
+- **Shown to the player:**
+  - a "Conditions" card at set-up and in the Objectives panel;
+  - the odds card and hints include the modifiers;
+  - fog drawn on the table, a tinted sky, and so on (cosmetic, optional).
+- **AI:** mostly free, because it reads the same rules functions. Check that
+  time anomalies and the AI's turn loop work together.
+
+**Size:** medium, mostly breadth. Each effect is small but touches a
+different rule.
+
+### 4. Priority Level 3 on a 6′×4′ table
+
+The book (l.1136): triple the PL1 composition numbers for PL3; tables are
+4′×4′ for PL1–2 and 6′×4′ for PL3–4.
+
+**Table size** (the main work). Today one constant `BOARD = {w:48,h:48}`
+(`rules.js:11`) is copied at load into module `W`/`H` in `engine.js:80`,
+`game.js:6`, `solitaire.js:29` and `scenarios.js:18`. On top of that are:
+- literals in `iso.js:13`, `engine.js:29` (objectives) and `scenarios.js:57`;
+- solitaire grids, scaled by `W/48` at `solitaire.js:990`.
+
+The changes:
+1. Make the board per-game: `state.board = {w, h}`, read through a function.
+   Replace the load-time copies.
+2. Make the isometric projection and camera take the board's size.
+3. Rework each scenario's deployment zones and objectives for 72×48: which
+   edges are the long ones, and objectives placed by fraction of the table, not
+   at fixed inches.
+4. The terrain generators already take a width and height
+   (`gen.generate(opts.width/height)`). Scale the piece counts by area: the
+   book's terrain tables are written for 4′×4′, and the review noted that the
+   larger-table counts were left out.
+5. Xenotripod Detailed Terrain Knowledge moves three pieces on 6′×4′ (l.4610).
+
+**Unlocking PL3:**
+- The PL pickers and limits are `index.html:240`, `protocol.js:45`,
+  `lobby.js:483`, `camp-contract.js:36-40`, `camp-world.js:594`,
+  `dossier-contract.js:465` and `dossier-online.js:528`.
+- Composition checks already scale with `pl`.
+- Campaign pay already uses Tier × PL dice.
+
+**Other checks:**
+- AI performance: half again as many units and more terrain. Time a PL3 AI
+  battle; it may need pruning in `scoreSpot`.
+- Phone layout: a wider table at minimum zoom.
+- Tests: a balance run at PL3, and a browser test of a PL3 skirmish.
+
+**Size:** large. Most of the risk is in scenarios and deployment.
+
+### 5. Solitaire options
+
+- **Hand-placed terrain.**
+  - Manual terrain already exists (`terrainsetup.js`, `cfg.terrainSetup ===
+    'manual'`) and isn't blocked for solo. Check that it works there and offer
+    it on the solitaire form.
+  - Each scenario's `setupTerrain` hook must then skip what it would otherwise
+    lay out, or the layout must be validated (for example, Evacuation's
+    reinforced homes).
+- **Hand-placed counters and objectives.**
+  - A new set-up step after terrain: the player places the scenario's counters
+    (Crush, Decapitation, Sabotage) and leaders.
+  - The book's spacing rules are checked as you place (12" apart, half within
+    12" of a leader, and so on).
+  - "Place the rest" falls back to the current `placeCounters`.
+- **Choose the OpFor.**
+  - Today `SOLO.rollOpFor` (`solitaire.js:233`) rolls the pool.
+  - Option: "Rolled" (default) or "Chosen". "Chosen" opens a muster for the
+    OpFor, checked against the OpFor composition table
+    (`solitaire.js:68-102`).
+- **Evacuation militia as written.**
+  - Book l.5015: "one free 'militia' unit per Priority Level… the parameters of
+    a single standard unit of Tier equal to the Battle Tier".
+  - Today `militiaProfile` (`solitaire.js:787-793`) always uses PMC infantry.
+  - Change it to the player's own faction's standard infantry unit of that
+    Tier. This needs a per-faction table of what a "standard unit" is (decision
+    below). It isn't an option; it's a rules fix.
+- **Territorial pay.**
+  - Book l.4555: the Xenotripod payment adjustment applies "including
+    solitaire/coop scenarios".
+  - Already implemented for campaigns (`territorial()`,
+    `camp-contract.js:134-141`).
+  - It can only matter once co-op or solitaire battles exist in a campaign, so
+    it comes with item 6 rather than separately.
+
+**Size:**
+- terrain and OpFor choice: small;
+- counters: medium;
+- militia: small.
+
+### 6. Co-op battles in multiplayer campaigns (option)
+
+Book l.4889: "Players may agree to play cooperative games during a campaign.
+Before each battle, all involved players should decide whether they want to
+play a cooperative scenario. All currency and EXP points gained in such games
+are halved." Book l.4854: for each additional player, the Priority Level goes
+up by 1.
+
+**Where it goes:**
+- The world campaign (`camp-world.js`) has duels (`duelAsk`, `duelAccept`,
+  `duel` at :665-702), built by `duelBattleConfig`.
+- Add a **co-op contract** next to the duel:
+  - one player offers, the other accepts;
+  - the OpFor is rolled at PL+1;
+  - the battle is built like `coopConfig` (`server/table.js:215-251`: `netCoop`,
+    `solo.coop`, both seats on side A).
+- Hotseat campaigns get the same offer on the hub.
+
+**What it changes:**
+- **Contract:**
+  - Battle Tier capped by the weaker company;
+  - scenario from the solitaire list;
+  - each player picks their own commando from their own dossier.
+- **Aftermath:**
+  - pay and EXP for each player from their own units, then halved;
+  - Xenotripod territorial pay applies (item 5);
+  - trauma, casualties and promotions per player as now.
+- **AI rivals:** may not take part.
+
+**Option:** "Allow co-op contracts" on the campaign (item 0).
+
+**Size:** medium to large. It mostly reuses the online co-op battle and the
+duel flow, but the aftermath has to handle two companies on one side.
+
+### 7. Close Encounters (option, with campaign support)
+
+Book l.5119-5336. This is close to a separate game mode inside compounds.
+
+**A. Compound terrain.**
+- New terrain kinds:
+  - corridor (up to 3" wide, sections up to 12"; a unit fills its width and
+    blocks LoS; no side by side);
+  - room (up to 9", one section);
+  - hall;
+  - door (Operational, Locked or Breached; linear, blocks LoS, destructible;
+    may be locked for one side only).
+- A **compound generator**: rooms and halls joined by corridors and doors,
+  with entry points on given edges, placed out of the enemy edge's sight.
+  Hand-built compounds through the manual terrain editor.
+- **Drawing:** the isometric renderer needs floors, walls and doors. This is
+  the biggest visual piece.
+
+**B. Rule changes inside a compound.**
+- no +2 for shooting at units below;
+- no vehicles or aircraft;
+- no Indirect Fire, and mortars can't fire;
+- Markerlights become Advanced Sensors (Detect: move, then reveal hidden
+  units within 12").
+
+**C. Hidden movement.**
+- Units start as counters. A hidden unit:
+  - moves up to 6" only;
+  - can't be suppressed;
+  - has no special rules.
+- It is revealed on its owner's choice, or on coming into an enemy's line of
+  sight (it stops there).
+- When revealed, its models are placed within 4".
+- Hotseat and online need the counters truly hidden from the other player.
+  The per-seat snapshots (Phase 4) already hide lists, so extend them.
+
+**D. Reaction fire** (new interrupts, the same kind of work as defensive fire):
+- **Covering Fire!**: a friendly unit within 6" fires before the covered
+  unit's declared action.
+- **Fire at Will!**: when a hidden unit is revealed, the enemy that saw it
+  shoots, and the revealed unit shoots back.
+- **Opportunity Fire**: shoot at a unit crossing line of sight during its move.
+  It counts as the shooter's activation.
+
+**E. Section hazards.**
+- dangerous sections, which may explode:
+  - firing into one explodes it on 7+;
+  - firing from inside one explodes it on a 0;
+  - an explosion is FP10 inside, and FP6 within 6" and in sight;
+- burning sections: block LoS, D6 4+ to burn out, FP6 at the End phase.
+
+**F. Special equipment.** Up to 4 per PL, each used once:
+- Satchel Charges
+- Ballistic Barrier
+- Stun Grenades
+- Incendiary Grenades
+- Vacuum Charges
+
+**G. Automated defence systems.**
+- A neutral control panel plus three guns. The guns shoot the nearest unit at
+  the start of each Action phase.
+- Control the Guns: 2+ with Hackers, 4+ without.
+- Optional swap in one-off games.
+
+**H. Scenarios.**
+- Clearing out: rout the enemy, 20 turns.
+- Critical control: hold 2 of 3 rooms, or all 3 after turn 5.
+- Besieged: solitaire. Rescue the cut-off unit:
+  - counters 1-2 nothing, 3-5 an enemy, 6 the objective;
+  - the D6 timer from turn 6;
+  - aggressive OpFor that uses Fire at Will!.
+
+**I. AI.**
+- Movement through corridors and doors.
+- Using and respecting hidden units.
+- When to take reaction fire.
+- Equipment.
+- The Besieged OpFor script.
+
+**J. Skirmish and campaign.**
+- **Skirmish:** the scenario picker gets a "Close Encounters" group when the
+  option is on.
+- **Campaign:** with the campaign option on, a contract's scenario roll can
+  come up as a Close Encounters scenario (proposal: a fixed chance, or one of
+  the scenario slots). Units that can't take part (vehicles, aircraft) stay
+  home. Pay and aftermath as normal.
+
+**Suggested internal order:**
+1. A (terrain and generator, drawn plainly);
+2. B and H (Clearing out first);
+3. C;
+4. D;
+5. E and F;
+6. G;
+7. Besieged;
+8. AI depth;
+9. campaign hook.
+
+**Size:** very large, several releases' worth. It could ship as v0.3 (Clearing
+out, hidden movement, reaction fire) and v0.4 (hazards, equipment, defence
+systems, Besieged, campaign).
+
+---
+
+## Suggested order for v0.3
+
+| Step | Item | Why here |
+|---|---|---|
+| 1 | 0 Game options | everything depends on it |
+| 2 | 1 Only two!, 2 Bookkeeper | small, prove the options path end to end |
+| 3 | 5 Solitaire options (militia fix, terrain, OpFor choice, counters) | small, self-contained |
+| 4 | 3 Other Worlds | medium, breadth not depth |
+| 5 | 4 PL3 and 6′×4′ | large refactor; better done before Close Encounters adds terrain kinds |
+| 6 | 6 Co-op campaign contracts (+ territorial pay) | builds on online co-op and duels |
+| 7 | 7 Close Encounters | largest; may span v0.3 and v0.4 |
+
+Each step is its own PR, with unit tests per rule, a browser test of the UI,
+and a balance or simulation run where the AI is affected.
+
+---
+
+## Decisions needed
+
+1. **Evacuation militia:** what is each faction's "standard unit" of a given
+   Tier? Proposal:
+   - PMC: as now (recruits, rookie, regular, veterans, rangers);
+   - Rebels: their line infantry by Tier;
+   - Bugs: warrior bugs by Tier;
+   - Xenotripods: the Tier's basic tribe squad.
+2. **"Only two!" and reactions:** do defensive fire, arrival shots and
+   Opportunity Fire obey it? Proposal: no. Only the unit's own attack actions
+   do, which is what "making a Fire!, Advance, Assault or any other action"
+   suggests.
+3. **Other Worlds in a campaign:** roll per contract, as the book says, or fix
+   the conditions per planet for the whole campaign? Proposal: per contract.
+4. **PL4:** the book puts PL4 on 6′×4′ too. Unlock PL3 only, or 3 and 4
+   together? Proposal: both, once 6′×4′ works.
+5. **Co-op in campaigns:** online world campaigns only, or hotseat campaigns
+   as well? Proposal: both, since the hotseat hub already has two players.
+6. **Close Encounters in a campaign:** how often a contract comes up as one.
+   Proposal: on a campaign with the option on, the scenario roll includes
+   them with the same weight as a standard scenario.
+7. **Close Encounters scope for v0.3:** all of it, or the core (compound,
+   hidden movement, reaction fire, Clearing out, Critical control) with the
+   rest in v0.4?
