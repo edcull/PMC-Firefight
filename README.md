@@ -1,22 +1,50 @@
-# PMC 2670 — Firefight
+# PMC 2670 — Firefight · v0.2
 
 A browser-based digital skirmish of **PMC 2670**, the sci-fi miniatures wargame by
 Marcin Gerkowicz (Assault Publishing). It plays the book's rules on a 4′ × 4′
 isometric table, with movement, range and line of sight measured in real inches,
-edge to edge. All four armies (PMC, Rebels, Space Bugs, Xenotripods), the six
-scenarios, solitaire and co-op, and the campaign are in.
+edge to edge.
+
+## What's in v0.2
+
+- **All four armies:** PMC, Rebels, Space Bugs and Xenotripods, with their army
+  rules, doctrines, tactics and every unit profile.
+- **The six standard scenarios and the six solitaire scenarios.** The solitaire
+  OpFor is run by the book's behaviour table.
+- **Ways to play:**
+  - against the AI;
+  - solitaire;
+  - online against another player;
+  - co-op against the OpFor, online.
+- **Campaigns:**
+  - single player against AI rival forces;
+  - online "world" campaigns: a lobby with player and AI slots, contracts
+    against the AI, and duels between players.
+- **Accounts on a game server:** sign-in or guest play, email activation and
+  password resets, campaigns kept on the server, and "your move" badges and
+  emails.
+- **A force builder and a unit viewer.**
+
+The rules were last checked against the rulebook in
+[docs/rules-review-57a1b3d.md](docs/rules-review-57a1b3d.md), which also records
+the readings taken where the book is ambiguous. What is still to come is in
+[docs/roadmap.md](docs/roadmap.md).
 
 ## Running it
 
 - **Play:** open `index.html` in any modern browser. No server, build or install
-  is needed. GitHub Pages serves the same page.
+  is needed. GitHub Pages serves the same page. Opened this way, everything
+  except online play works.
 - **One file:** `npm run build` writes `build/firefight.html`, the whole game in a
   single self-contained page.
-- **Online against someone else (not finished):** `node server.js`, then open
-  http://localhost:8787 and choose **Multiplayer**. See [SERVER.md](SERVER.md).
+- **Online play:** `node server.js`, then open http://localhost:8787 and choose
+  **Multiplayer**. See [SERVER.md](SERVER.md) for the server's settings, and
+  [deploy/pi/README.md](deploy/pi/README.md) to host one, for example on a
+  Raspberry Pi behind nginx.
 
-Games are saved in the browser (a battle in progress, forces and campaigns). A
-campaign can also be exported to a file and read back.
+Games are saved in the browser (a battle in progress, forces and campaigns).
+Signed in to a server, campaigns are also kept in your account. A campaign can
+be exported to a file and read back.
 
 ## User guide
 
@@ -26,10 +54,14 @@ The main menu offers:
 
 | | |
 |---|---|
+| **Continue** | Every game under way, on this device or on the server, to pick up |
 | **Single player** | A skirmish against the AI, solitaire (your commando against the OpFor), or a campaign |
-| **Hotseat** | Two players on one screen: a skirmish, co-op against the OpFor, or a campaign |
-| **Multiplayer** | Two players online (needs the server; not finished yet) |
+| **Multiplayer** | The online lobby (needs the game server): a skirmish, co-op or a campaign |
+| **Force builder** | Build and save a skirmish force, or a campaign's starting company |
 | **Unit viewer** | Every profile in all four armies, walking and firing |
+
+Along the foot of the menu are sound, graphics (low for phones that struggle), an
+AI-against-AI demo, and your account.
 
 A skirmish opens on **the battlefield**: pick the Battle Tier, Priority Level,
 scenario and world, then tap each force's card to muster it. Mustering spends
@@ -41,7 +73,7 @@ named, saved, and saved to or loaded from a file (`.pmcforce.json`).
 - **Terrain** is rolled from the book's generators, or laid by hand: tap to place
   a piece, and turn it with **Turn it**, <kbd>R</kbd> or a right-click.
 - **Modifying the armies:** once the table is known, each side may swap units,
-  in secret in a hotseat game.
+  in secret from the other player.
 - **Deployment:** tap a unit in the order of battle, then tap inside your zone.
   **Auto-deploy** places the rest. Units with Battlefield Insertion may be held
   back to arrive later.
@@ -88,6 +120,21 @@ Drag or scroll to pan, pinch or <kbd>+</kbd> / <kbd>−</kbd> to zoom, <kbd>F</k
 or <kbd>0</kbd> to see the whole table, and the arrow keys to nudge. **Follow**
 keeps the camera on the action; demos can be paused.
 
+### Online play
+
+**Multiplayer** opens the lobby: sign in, or play as a guest.
+
+- **Create a game:** a skirmish, co-op or a campaign. Campaigns need an account.
+- **Listing:** list the game for anyone to join, or keep it private and share
+  its code. **Join** takes a game or campaign code.
+- **In the room:** each player takes a seat and musters their force. The host
+  sets the terms (Battle Tier, Priority Level, scenario and world). The battle
+  starts when both are ready.
+- **Hidden information:** each seat sees only its own lists and secret choices,
+  and a watcher sees the table only.
+- **Dropped connections:** if someone drops, their seat is held for them.
+  Leaving a battle forfeits it.
+
 ### The campaign
 
 Found a force (company, revolt, swarm or tribe), then take contracts on the hub.
@@ -95,6 +142,13 @@ Each contract fixes the scenario, the Battle Tier and the pay. Choose who fights
 play the battle, and read the aftermath: pay, experience, trauma, casualties by
 name, promotions and upgrades. The other forces on the world fight their own
 battles between yours.
+
+There are two kinds:
+
+| | |
+|---|---|
+| **Single player** | You against AI rival forces |
+| **Online** | A world on the server: players and AI forces in slots, contracts against the AI, and duels between players, played at each player's own pace |
 
 ### The unit viewer
 
@@ -123,7 +177,7 @@ src/css/      the stylesheets
 server/       the multiplayer server (started by server.js)
 scripts/      the build, the unit sheet and the test runner
 test/         unit tests (Node) and browser tests (Playwright)
-docs/         development notes (file layout, build, tests), the hotseat and multiplayer plans, and the latest rules review
+docs/         development notes (file layout, build, tests), the roadmap, the hotseat and multiplayer plans, and the latest rules review
 build/        what the build and the tests write (not kept in git)
 ```
 
@@ -132,7 +186,8 @@ builds the published site into one minified bundle (`scripts/bundle.js`).
 
 ```
 npm test              # unit tests, plain Node
-npm run test:quick    # plus the quicker browser tests (Playwright + Chromium)
+npm run test:browser  # the browser tests (Playwright + Chromium)
+npm run test:quick    # unit tests plus the quicker browser tests
 npm run test:all      # everything, including whole battles and campaigns
 npm run build         # build/firefight.html, build/viewer.html, build/units.html
 ```
@@ -144,11 +199,30 @@ The full file layout and every test are described in [docs/DEVELOPMENT.md](docs/
 
 ## Not implemented
 
-- Online multiplayer is not fully implemented or tested yet
-- Appendix 1, Close Encounters (corridors, doors, hidden movement, opportunity fire)
-- Appendix 2, Other Worlds (gravity, atmosphere, anomalies); worlds only choose the terrain
-- From Appendix 3: "There can be only two!" and bookkeeper rout counting
-- The co-op campaign
+Planned in [docs/roadmap.md](docs/roadmap.md):
+
+- **Optional rules (v0.3):**
+  - Appendix 2, Other Worlds (gravity, atmosphere, anomalies); for now the world
+    only chooses the terrain;
+  - from Appendix 3, "There can be only two!" and "Bad, worse, the bookkeeper".
+- **Priority Level 3 on a 6′ × 4′ table (v0.3).** Battles are Priority Level 1–2
+  on 4′ × 4′.
+- **Co-op battles in a campaign (v0.3).** Co-op is played as a one-off battle
+  for now.
+- **Solitaire (v0.3):**
+  - the OpFor is rolled, not chosen;
+  - counters and objectives are placed by the game;
+  - Evacuation's militia is always PMC infantry.
+- **Appendix 1, Close Encounters (v0.4):** corridors, doors, hidden movement,
+  reaction fire and its scenarios.
+
+Not planned:
+
+- **Multi-battle contracts:** the book names them but never defines them.
+- **Two open rules-review findings:**
+  - VEH-6: the crew bailing out of a knocked-out vehicle is placed by the game;
+  - BAT-5: scenario reserves and Battlefield Insertion arrive in two separate
+    alternations.
 
 Where the book leaves a choice open, the reading taken is noted in the code
 beside the rule, with its page.

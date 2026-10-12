@@ -305,6 +305,7 @@ app.drain(4);
   const pane = (id) => { const m = page.match(new RegExp('id="menu-' + id + '"[\\s\\S]*?(data-menu="main">|id="menu-single")')); return m ? m[0] : ''; };
   ok('...with a skirmish, solitaire and the campaign on it',
     /data-skirmish="ai"/.test(pane('single')) && /data-skirmish="solo"/.test(pane('single')) && /id="btn-campaign"/.test(pane('single')));
+  ok('Hotseat is on the main menu, switched off for now', /id="btn-hotseat"[^>]*disabled/.test(pane('main')));
   W.PMCMenu.show('hotseat');
   ok('Hotseat opens its own list', byId('menu-hotseat').hidden === false && byId('menu-single').hidden === true);
   ok('...with a skirmish, co-op and the campaign on it', /data-skirmish="hotseat"/.test(pane('hotseat')) &&
