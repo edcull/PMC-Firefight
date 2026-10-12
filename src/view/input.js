@@ -349,6 +349,28 @@
         if (!B.seats || B.seats.indexOf(B.state.relocating.side) >= 0) relocTap(p);
         return;
       }
+      /* Solitaire with the counters by hand: a tap on a counter or an objective
+         picks it up, the next tap puts it down (the engine says if it may go there). */
+      var SOLO = window.PMCSolo;
+      if (B.state.phase === 'deploy' && SOLO && SOLO.handPlaced(B.state) && (!B.seats || B.seats.indexOf('A') >= 0)) {
+        var mk = null, md = 1.6;
+        [['target', B.state.sc.targets || []], ['counter', B.state.sc.counters || []]].forEach(function (pair) {
+          pair[1].forEach(function (c, i) { var d = R.inches(c.x, c.y, p.x, p.y); if (d < md) { md = d; mk = { kind: pair[0], i: i }; } });
+        });
+        if (ui.markerPick) {
+          var was = ui.markerPick;
+          ui.markerPick = null;
+          if (!(mk && mk.kind === was.kind && mk.i === was.i)) send({ k: 'marker', kind: was.kind, i: was.i, x: p.x, y: p.y });
+          else { setHint(null, null); render(); }
+          return;
+        }
+        if (mk) {
+          ui.markerPick = mk;
+          setHint(null, 'Tap where this ' + (mk.kind === 'target' ? 'objective' : 'counter') + ' should go \u2014 or tap it again to leave it.');
+          render();
+          return;
+        }
+      }
       if (B.state.phase === 'deploy') {
         var pending = deployNext();
         // before continuing to the deployment, the table is looked over, not placed on

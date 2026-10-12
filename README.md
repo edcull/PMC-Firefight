@@ -83,6 +83,22 @@ briefing lists the ones in play.
   destroyed units add up to half its composition points, rather than when half
   its units are gone.
 
+### Solitaire
+
+Your commando against the OpFor, which the book's behaviour table runs. On the
+battlefield step:
+
+- **The OpFor** is rolled when the battle starts, as the book has it. Tap its
+  line to choose it yourself instead, from its army's list and under the OpFor
+  table. Roll one gives you a legal pool to start from.
+- **Counters and objectives** are placed by the game. Choose to move them
+  yourself, and while you deploy you can tap a counter (or a Sabotage objective)
+  to pick it up, then tap where it should go. The scenario's spacing is checked
+  as you go.
+- **Terrain** can be laid by hand, as in a skirmish.
+
+Evacuation's militia is a line unit of your own army, at the Battle Tier.
+
 ### Setting up
 
 - **Terrain** is rolled from the book's generators, or laid by hand: tap to place
@@ -222,10 +238,6 @@ Planned in [docs/roadmap.md](docs/roadmap.md):
   on 4′ × 4′.
 - **Co-op battles in a campaign (v0.3).** Co-op is played as a one-off battle
   for now.
-- **Solitaire (v0.3):**
-  - the OpFor is rolled, not chosen;
-  - counters and objectives are placed by the game;
-  - Evacuation's militia is always PMC infantry.
 - **Appendix 1, Close Encounters (v0.4):** corridors, doors, hidden movement,
   reaction fire and its scenarios.
 

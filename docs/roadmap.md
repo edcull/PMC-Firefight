@@ -378,6 +378,7 @@ Book l.5119-5336. This is close to a separate game mode inside compounds.
 | 0 Game options | **Done.** `R.OPTIONS`, `cfg.options` (cleaned at the start of a battle), `R.opt`. Boxes on the skirmish battlefield step, the online room's terms and the new-campaign form; an online campaign's host sets them in its lobby (`lobbyOptions`). Every campaign battle (single-player contracts, world contracts and duels, battles elsewhere) takes the campaign's. Shown in the battle's briefing and on the campaign hub. |
 | 1 "There can be only two!" | **Done.** `R.closestTwo`, applied in `canShoot` for Fire!, Advance and auxiliary fire and in `canAssault`; not reactions, Indirect Fire or a shot called in by a mark. |
 | 2 "Bad, worse, the bookkeeper" | **Done.** `routed()` weighs each unit by its Tier. |
+| 3 Solitaire options | **Done.** Evacuation's militia from the player's army (`militiaProfile`, by owner in co-op); the OpFor chosen by hand (`SOLO.checkOpFor`, the OpFor-line window on the battlefield step; the answer to the players' machines a warning, as a rolled pool can lack one); counters and Sabotage's objectives moved by hand while deploying (`cfg.solo.handPlace`, the `marker` intent, each scenario's `markers` rules, the whole-set check in `startBlock`); hand-laid terrain already worked in solitaire. Not yet for online co-op (rolled OpFor, game-placed counters there). |
 
 ## Suggested order for v0.3
 

@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=ffdbe0fc94">
-<link rel="stylesheet" href="src/css/game.css?v=b142dcd184">
+<link rel="stylesheet" href="src/css/game.css?v=f340ecd310">
 
 <div class="wrap">
   <header>
@@ -168,7 +168,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.2.0.2610121219</p>
+    <p class="menu-ver" id="menu-ver">v0.2.0.2610121302</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -357,6 +357,14 @@
           <option value="s_ambush">Ambush!</option>
         </select>
       </div>
+      <!-- the OpFor's counters (and Sabotage's objectives): where the game puts them, or moved by hand while deploying -->
+      <div class="field hot-field">
+        <label for="sel-solo-place">Counters and objectives</label>
+        <select id="sel-solo-place">
+          <option value="auto" selected>Placed by the game</option>
+          <option value="hand">Placed by the game, moved by you while you deploy</option>
+        </select>
+      </div>
     </div>
     <!-- the optional rules (Appendix 3): a box each, filled from R.OPTIONS by muster.js -->
     <div class="field hot-field" id="opts-field">
@@ -372,6 +380,9 @@
     <button class="start" id="btn-start">Take the field</button>
   </div>
 </div>
+
+<!-- the OpFor chosen by hand, over the battlefield (muster.js opModal) -->
+<div class="cmodal" id="op-modal" hidden></div>
 
 <div class="overlay" id="camp" hidden>
   <!-- on a desktop the campaign sits over a table, as a new battle's set-up does -->
@@ -543,7 +554,7 @@
 <script src="src/rules/camp-rivals.js?v=4714a24336"></script>
 <script src="src/rules/campaign.js?v=fe7cfed3fe"></script>
 <script src="src/rules/scenarios.js?v=aedb5d95c2"></script>
-<script src="src/rules/solitaire.js?v=0df6b261a6"></script>
+<script src="src/rules/solitaire.js?v=c2ae308c03"></script>
 <script src="src/view/sfx.js?v=f850c7718d"></script>
 <script src="src/rules/gen.js?v=f653855fa7"></script>
 <script src="src/view/iso-gfx.js?v=164a307a38"></script>
@@ -584,7 +595,7 @@
 <script src="src/engine/deploy.js?v=98e5fbad50"></script>
 <script src="src/engine/terrainsetup.js?v=aa9f0d6867"></script>
 <script src="src/engine/swaps.js?v=82a84b49b0"></script>
-<script src="src/engine/engine.js?v=37cf85573f"></script>
+<script src="src/engine/engine.js?v=1dd62eeb5b"></script>
 <script src="src/engine/offtable.js?v=d19552b405"></script>
 <script src="src/rules/camp-cmds.js?v=186755c223"></script>
 <script src="src/rules/camp-world.js?v=5412862bc2"></script>
@@ -599,13 +610,13 @@
 <script src="src/view/testhooks.js?v=b93832add8"></script>
 <script src="src/view/play.js?v=2002f2e81d"></script>
 <script src="src/view/terrainset.js?v=bb0ea483d0"></script>
-<script src="src/view/input.js?v=5fe234357a"></script>
+<script src="src/view/input.js?v=599d86b1ba"></script>
 <script src="src/view/arrive.js?v=1534291c02"></script>
 <script src="src/view/actions.js?v=3413a0bcd9"></script>
-<script src="src/view/draw.js?v=5e1f037ed2"></script>
+<script src="src/view/draw.js?v=0ab2461244"></script>
 <script src="src/view/view.js?v=f1eba3fe06"></script>
 <script src="src/view/panels.js?v=f441b8a185"></script>
-<script src="src/view/muster.js?v=6e89a9202e"></script>
+<script src="src/view/muster.js?v=c55d941214"></script>
 <script src="src/view/game.js?v=dc2821adc6"></script>
 <script src="src/view/dossier-hub.js?v=b8df1934a7"></script>
 <script src="src/view/dossier-found.js?v=474888940f"></script>

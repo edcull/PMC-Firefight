@@ -683,7 +683,9 @@
           if (t.hasAttribute('data-hotcolour')) { var ci = hotLine(t.getAttribute('data-hotcolour')); hotColourFor(h && h.colourFor === ci ? null : ci); return; }
           if (t.hasAttribute('data-hotcol')) { if (h && h.colourFor != null) hotColour(h.colourFor, t.getAttribute('data-hotcol')); return; }
           if (t.hasAttribute('data-hotside')) hotEdit(+t.getAttribute('data-hotside'));
+          if (t.hasAttribute('data-hotop')) opModal(true);
         });
+        if (el('op-modal')) el('op-modal').addEventListener('click', opClick);
         el('hot-sum').addEventListener('change', function (ev) {
           var s = ev.target.closest && ev.target.closest('[data-hotarmy]');
           if (s) hotArmy(hotLine(s.getAttribute('data-hotarmy')), s.value);
@@ -798,6 +800,7 @@
       var s = el('setup');
       if (s) { delete s.dataset.hot; delete s.dataset.kind; delete s.dataset.quick; }
       catModal(false);
+      if (el('op-modal')) el('op-modal').hidden = true;
       ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).disabled = false; });
       el('btn-start').textContent = 'Take the field';
       var fl = document.querySelector('label[for="sel-faction"]');
@@ -1061,6 +1064,75 @@
       return taken;
     }
     function hotWhoOf(i) { return i === 'op' ? 'The OpFor' : hotWho(i + 1); }
+    /* ---- the OpFor, chosen by hand (an option: the book rolls it, p. 148) ----
+       A window over the battlefield: what the pool holds, the OpFor table's limits
+       and what is wrong with it, and the army's list to add from. `h.opKeys` null
+       is the book's way, rolled when the battle starts. */
+    function opTerms() {
+      var h = muster.hot, keys = [], need = { ground: false, air: false };
+      (h ? h.sides : []).forEach(function (sd) { (sd && sd.keys || []).forEach(function (k) { keys.push(k); }); });
+      keys.forEach(function (k) { var p = R.profile(R.splitPick(k).key); if (!p || p.cls === 'infantry') return; if (p.cls === 'aircraft') need.air = true; else need.ground = true; });
+      return { tier: musterTier(), pl: musterPL() + (h && h.kind === 'coop' ? 1 : 0), faction: el('sel-solo-op') ? el('sel-solo-op').value : 'rebel', need: need };
+    }
+    function opModal(on) {
+      var m = el('op-modal');
+      if (!m) return;
+      m.hidden = !on;
+      if (on) drawOpModal();
+    }
+    function drawOpModal() {
+      var h = muster.hot, m = el('op-modal');
+      if (!h || !m) return;
+      var T = opTerms(), keys = h.opKeys || [];
+      var c = SOLO.checkOpFor(keys, T.tier, T.pl, T.faction, T.need);
+      var room = function (p) { return SOLO.checkOpFor(keys.concat([p.key]), T.tier, T.pl, T.faction, false).faults.filter(function (f) { return !/^Needs at least/.test(f); }).length === 0; };
+      var body = '<p class="hint small">The book rolls the OpFor when the battle starts. Choose it here instead, from the ' +
+        escHtml(U.ARMY_NAMES ? (U.ARMY_NAMES[T.faction] || T.faction) : T.faction) + ' list, under the OpFor table: Battle Tier ' + R.ROMAN[T.tier] + ', Priority Level ' + T.pl + '.</p>' +
+        '<p class="limits"><b' + (c.spent > c.budget ? ' class="short"' : '') + '>' + c.spent + ' / ' + c.budget + '</b> pts \u00b7 ' + U.limitsLine(c.limits, c.counts) + '</p>' +
+        '<p class="faults' + (h.opKeys && c.ok ? ' ok' : '') + '">' + escHtml(!h.opKeys ? 'Rolled when the battle starts.' : c.ok ? 'A legal OpFor pool.' + (c.warnings.length ? ' ' + c.warnings.join(' ') : '') : c.faults.join(' ')) + '</p>' +
+        '<div class="chosen op-chosen">' + keys.map(function (k, i) {
+          var p = R.profile(R.splitPick(k).key);
+          return p ? '<button type="button" class="opk" data-opdrop="' + i + '" title="Take it out"><span class="ct">' + R.ROMAN[p.tier] + '</span> ' + escHtml(p.name) + ' \u2715</button>' : '';
+        }).join('') + '</div>' +
+        '<div class="cat cmodal-scroll">' + (function () {
+          var groups = [], seen = {};
+          SOLO.catalogue(T.faction).forEach(function (p) { if (!seen[p.group]) { seen[p.group] = []; groups.push(p.group); } seen[p.group].push(p); });
+          return groups.map(function (g) {
+            return '<h4>' + escHtml(g) + '</h4>' + seen[g].map(function (p) {
+              var ok = room(p);
+              return U.unitRow('type="button" class="cu" data-opadd="' + p.key + '"' + (ok ? '' : ' disabled') + ' title="' + (ok ? escHtml(p.rules.join(', ') || 'No special rules') : 'No room left \u2014 over points, or at a limit') + '"',
+                p.tier, escHtml(p.name), statLine(p) + (p.rules.length ? ' \u00b7 ' + escHtml(p.rules.join(', ')) : ''), null);
+            }).join('');
+          }).join('');
+        })() + '</div>';
+      var acts = '<button type="button" class="lnk" data-opact="roll">Roll one</button>' +
+        '<button type="button" class="lnk" data-opact="clear">Clear</button>' +
+        '<button type="button" class="lnk" data-opact="rolled">Leave it to the dice</button>' +
+        '<button type="button" class="start" data-opact="done">Done</button>';
+      m.innerHTML = '<div class="cmodal-box" role="dialog" aria-modal="true" aria-label="The OpFor"><div class="cmodal-head"><h3>The OpFor</h3>' +
+        '<button type="button" class="xclose" data-opact="done" title="Close" aria-label="Close">\u2715</button></div>' + body + '<div class="askrow">' + acts + '</div></div>';
+    }
+    function opClick(ev) {
+      var h = muster.hot, t = ev.target.closest && ev.target.closest('button');
+      if (!h) return;
+      if (!t) { if (ev.target === el('op-modal')) opModal(false); return; }
+      if (t.disabled) return;
+      var T = opTerms();
+      if (t.hasAttribute('data-opadd')) {
+        var p = R.profile(t.getAttribute('data-opadd'));
+        var drive = p && R.defaultDrive ? R.defaultDrive(p) : null;
+        h.opKeys = (h.opKeys || []).concat([drive && R.propsFor(p).length ? R.joinPick(p.key, drive) : p.key]);
+      } else if (t.hasAttribute('data-opdrop')) {
+        h.opKeys = (h.opKeys || []).filter(function (k, i) { return i !== +t.getAttribute('data-opdrop'); });
+      } else {
+        var a = t.getAttribute('data-opact');
+        if (a === 'roll') h.opKeys = SOLO.rollOpFor(T.tier, T.pl, T.faction, T.need);
+        else if (a === 'clear') h.opKeys = [];
+        else if (a === 'rolled') { h.opKeys = null; opModal(false); hotSum(); return; }
+        else if (a === 'done') { if (h.opKeys && !h.opKeys.length) h.opKeys = null; opModal(false); hotSum(); return; }
+      }
+      drawOpModal(); hotSum();
+    }
     function hotSum() {
       var h = muster.hot, box = el('hot-sum');
       if (!h || !box) return;
@@ -1103,8 +1175,10 @@
       // the OpFor: its army drives the hidden "The OpFor" choice the battle reads
       if (cmd) {
         var opPL = musterPL() + (h.kind === 'coop' ? 1 : 0);
+        // rolled when the battle starts (the book's way), or chosen here by hand: its name opens it
+        var opDesc = h.opKeys ? h.opKeys.length + ' units, chosen \u00b7 change' : 'rolled at Priority Level ' + opPL + ' \u00b7 tap to choose it';
         html += '<div class="olob-slot">' + chipBtn('op') +
-          '<span class="olob-who"><b>OpFor</b><small>rolled at Priority Level ' + opPL + '</small></span>' +
+          '<button type="button" class="olob-who hot-who" data-hotop="1"><b>OpFor</b><small>' + opDesc + '</small></button>' +
           armySel('op', el('sel-solo-op') ? el('sel-solo-op').value : 'rebel') + '</div>';
       }
       html += '</div>';
@@ -1168,7 +1242,7 @@
       var h = muster.hot;
       if (!h || HOT_FACTIONS.indexOf(f) < 0) return;
       h.colourFor = null;
-      if (i === 'op') { if (el('sel-solo-op')) el('sel-solo-op').value = f; hotSum(); return; }
+      if (i === 'op') { if (el('sel-solo-op')) el('sel-solo-op').value = f; h.opKeys = null; hotSum(); return; }
       var sd = h.sides[i];
       if (!sd) return;
       sd.faction = f;
@@ -1262,19 +1336,23 @@
         // what the OpFor must be able to answer: the players' hulls, and their aircraft
         var machines = { ground: false, air: false };
         armyA.forEach(function (k) { var p = R.profile(R.splitPick(k).key); if (!p || p.cls === 'infantry') return; if (p.cls === 'aircraft') machines.air = true; else machines.ground = true; });
+        // an OpFor chosen by hand goes in as it is, once it is legal; otherwise it is rolled now
+        var opChosen = h.opKeys && SOLO.checkOpFor(h.opKeys, tier, gamePL, opFaction, machines).ok ? h.opKeys.slice() : null;
+        if (h.opKeys && !opChosen) { opModal(true); return hotRefuse('The OpFor is not legal yet.'); }
         var scen = el('sel-solo-scen').value;
         if (scen === 'roll') scen = SOLO.ORDER[Math.floor(Math.random() * SOLO.ORDER.length)];
         el('setup').hidden = true;
         hotEnd();
         begin({
           tier: tier, pl: gamePL, scenario: scen,
-          armyA: armyA, armyB: SOLO.rollOpFor(tier, gamePL, opFaction, machines), ownersA: ownersA,
+          armyA: armyA, armyB: opChosen || SOLO.rollOpFor(tier, gamePL, opFaction, machines), ownersA: ownersA,
           nameA: coop ? a.name + ' & ' + b.name : a.name, nameB: 'OpFor',
           // each commando in its own colour; the OpFor in the one picked on its line (one neither is wearing)
           colourA: a.colour, colourC: coop ? b.colour : null,
           colourB: h.opColour && (coop ? [a.colour, b.colour] : [a.colour]).indexOf(h.opColour) < 0 ? h.opColour : foeColour(coop ? [a.colour, b.colour] : [a.colour]),
           tactics: { A: null, B: null }, mode: 'ai', planet: planet, terrainSetup: terrainSetup, options: chosenOptions(h.kind),
-          solo: { coop: coop, faction: a.faction || 'pmc', opFaction: opFaction, names: coop ? [a.name, b.name] : [a.name] }
+          solo: { coop: coop, faction: a.faction || 'pmc', opFaction: opFaction, names: coop ? [a.name, b.name] : [a.name],
+            handPlace: !!el('sel-solo-place') && el('sel-solo-place').value === 'hand' }
         });
         return;
       }

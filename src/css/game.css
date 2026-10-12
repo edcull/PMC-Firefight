@@ -2362,3 +2362,10 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .opt-row b { font-weight: 600; }
 .opt-row .opt-pg { color: var(--ink-dim); font-family: var(--mono); font-size: 11px; }
 .opt-row .opt-txt { display: block; color: var(--ink-dim); font-size: 12px; line-height: 1.35; }
+
+/* the OpFor chosen by hand (muster.js opModal): the pool as small tags, tapped to take one out */
+.op-chosen { display: flex; flex-wrap: wrap; gap: 4px; }
+.opk { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; color: var(--ink); font-size: 12px; padding: 3px 7px; cursor: pointer; }
+.opk .ct { font-family: var(--mono); color: var(--ink-dim); }
+#op-modal .askrow { flex-wrap: wrap; gap: 8px; }
+#op-modal .limits { white-space: normal; overflow: visible; text-overflow: clip; }

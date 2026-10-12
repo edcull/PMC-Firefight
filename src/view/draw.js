@@ -1187,6 +1187,12 @@
         if (!t.destroyed) label(t.x + 1.6, t.y + 1.6, 'TARGET', '#e8c15a');
       });
       // the counters: a token each, still hiding a unit from the pool
+      // one picked up to move (solitaire, counters by hand): ringed
+      var pick = ui && ui.markerPick;
+      if (pick) {
+        var pm = (pick.kind === 'target' ? sc.targets : sc.counters || [])[pick.i];
+        if (pm) { B.ctx.lineWidth = 3; B.ctx.strokeStyle = '#ffffff'; isoRing(pm.x, pm.y, 2, liftOf(pm.x, pm.y)); B.ctx.stroke(); }
+      }
       (sc.counters || []).forEach(function (c) {
         var p = hud(c.x, c.y, liftOf(c.x, c.y)), rx = Math.max(6, 0.9 * K * z * Math.SQRT2), ry = rx / 2;
         B.ctx.beginPath(); B.ctx.ellipse(p.x, p.y + 2, rx, ry, 0, 0, Math.PI * 2);

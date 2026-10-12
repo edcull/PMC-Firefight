@@ -1124,7 +1124,10 @@
      ground the game will actually accept rather than a remembered rule. */
   function deployWhere(side) {
     var sc = state.sc || {};
-    if (state.scen.deployText) return state.scen.deployText(state, side);
+    if (state.scen.deployText) {
+      return state.scen.deployText(state, side) + (SOLO && SOLO.handPlaced(state)
+        ? ' Tap a counter' + (state.sc.targets ? ' or an objective' : '') + ' to pick it up, then where it should go.' : '');
+    }
     if (sc.defCircle && sc.defender === side) {
       return 'Place each unit inside the shaded circle — within ' + sc.defCircle.r +
         '" of the objective.';
@@ -1946,6 +1949,16 @@
       state.mined = mi >= 0 ? { side: side, piece: state.terrain[mi] } : null;
       state.minePick = null;
       logLine('note', sideName(side) + (mi >= 0 ? ' has quietly mined a piece of the table.' : ' leaves the charges in the crates.'));
+      render();
+      return yes;
+    });
+    /* Solitaire, the counters and objectives by hand (an option): one picked up and
+       put down elsewhere while the force deploys, inside the scenario's rules. */
+    on('marker', null, function (side, it) {
+      if (state.phase !== 'deploy' || !SOLO || !SOLO.handPlaced(state)) return no('nothing to move now');
+      if (side !== 'A') return no('the players place them');
+      var r = SOLO.moveMarker(state, it.kind === 'target' ? 'target' : 'counter', +it.i, +it.x, +it.y);
+      if (!r.ok) { setHint(null, r.why); render(); return no(r.why); }
       render();
       return yes;
     });

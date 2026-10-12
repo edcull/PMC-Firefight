@@ -247,6 +247,63 @@
     return k || [];
   }
 
+  /* A pool chosen by hand rather than rolled (the owner's option): the same
+     OpFor table and the same rules rollOpFor keeps — the points and each Tier's
+     share, three machines a Priority Level and none above the Battle Tier at
+     Priority Level 1, aircraft from Battle Tier II and one a Priority Level, a
+     single Leader Bug, each unit's own limits — and the answer to the players'
+     hulls and aircraft (p. 148) when they bring any. The shape of R.checkArmy's
+     answer, so the screen shows it the same way. */
+  function checkOpFor(picks, bt, pl, faction, playersHaveMachines) {
+    pl = pl || 1;
+    var keys = (picks || []).map(function (e) { return R.splitPick(e).key; });
+    var budget = OPFOR[bt].points * pl, lim = limitsAt(OPFOR, bt, pl);
+    var faults = [], counts = [0, 0, 0, 0, 0, 0], spent = 0, perKey = {}, perGroup = {};
+    var machines = 0, aircraft = 0, leaders = 0, factions = {};
+    keys.forEach(function (k) {
+      var p = R.profile(k);
+      if (!p) return;
+      spent += p.tier; counts[p.tier]++;
+      perKey[k] = (perKey[k] || 0) + 1;
+      perGroup[p.group] = (perGroup[p.group] || 0) + 1;
+      factions[p.faction || 'pmc'] = 1;
+      if (p.leaderBug) leaders++;
+      if (!usable(p)) faults.push(p.name + ' has no place in an OpFor pool.');
+      if (p.cls !== 'infantry') {
+        machines++;
+        if (pl === 1 && p.tier > bt) faults.push('No vehicle or aircraft above the Battle Tier at Priority Level 1.');
+        if (p.cls === 'aircraft') aircraft++;
+      }
+    });
+    if (Object.keys(factions).length > 1 || (keys.length && faction && !factions[faction])) faults.push('An OpFor is drawn from one army list.');
+    if (spent > budget) faults.push('Over budget: ' + spent + ' of ' + budget + ' composition points.');
+    for (var t = 1; t <= 5; t++) {
+      if (counts[t] < lim[t - 1][0]) faults.push('Needs at least ' + lim[t - 1][0] + ' Tier ' + R.ROMAN[t] + ' units (has ' + counts[t] + ').');
+      if (counts[t] > lim[t - 1][1]) faults.push('At most ' + lim[t - 1][1] + ' Tier ' + R.ROMAN[t] + ' units (has ' + counts[t] + ').');
+    }
+    if (machines > 3 * pl) faults.push('No more than ' + (3 * pl) + ' vehicles or aircraft \u2014 three per Priority Level.');
+    if (aircraft && bt < 2) faults.push('Aircraft only from Battle Tier II.');
+    if (aircraft > pl) faults.push('No more than ' + pl + ' aircraft \u2014 one per Priority Level.');
+    if (leaders > 1) faults.push('One Leader Bug at most.');
+    Object.keys(perKey).forEach(function (k) {
+      var p = R.profile(k);
+      if (p.cap && perKey[k] > p.cap) faults.push('Max ' + p.cap + ' \u00d7 ' + p.name + '.');
+      if (p.capPL && perKey[k] > p.capPL * pl) faults.push('Max ' + (p.capPL * pl) + ' \u00d7 ' + p.name + '.');
+      if (p.groupCap && perGroup[p.group] > p.groupCap && faults.indexOf('Max ' + p.groupCap + ' ' + p.group + ' units.') < 0) {
+        faults.push('Max ' + p.groupCap + ' ' + p.group + ' units.');
+      }
+    });
+    /* The answer to the players' machines is a "should" (p. 148), and a rolled pool
+       goes without where the army has none to give: a warning, not a fault. */
+    var need = threatOf(playersHaveMachines || false), warnings = [];
+    if (keys.length && !answersMachines(picks, bt, need)) {
+      warnings.push('The players bring ' + (need.ground && need.air ? 'hulls and aircraft' : need.air ? 'aircraft' : 'hulls') +
+        ': the OpFor needs ' + (need.ground && need.air ? 'an answer to each' : 'an answer') + ' \u2014 an Anti-tank or Anti-aircraft unit, or a machine of the Battle Tier.');
+    }
+    if (!keys.length) faults.push('No units yet.');
+    return { ok: !faults.length, faults: faults, warnings: warnings, counts: counts, spent: spent, budget: budget, limits: lim };
+  }
+
   /* ---------------------------------------------------------- scenario kit */
 
   // how far a point is from the nearest edge of a terrain rectangle (0 inside it)
@@ -459,6 +516,8 @@
       hint: ''
     };
     for (var k in o) s[k] = o[k];
+    var own = s.startBlock;
+    s.startBlock = function (state) { return (own && own(state)) || markersBlock(state) || null; };
     return s;
   }
 
@@ -487,11 +546,45 @@
   };
   function extend(o, extra) { for (var k in extra) o[k] = extra[k]; return o; }
 
+  /* ---- the counters and objectives put where the player wants them ----
+     An option (the owner's: the book has the player place them, the game does it
+     for them unless asked): the game lays them out as ever, and while the force
+     deploys the player may pick any up and put it down elsewhere, inside the
+     scenario's rules — each move checked as it is made, and what holds only of the
+     whole set (half the Decapitation counters near a leader, a third of the
+     Sabotage ones near an objective) when the battle is started. */
+  function handPlaced(state) { return !!(state && state.cfg && state.cfg.solo && state.cfg.solo.handPlace && state.scen && state.scen.markers); }
+  function markerList(state, kind) { return kind === 'target' ? state.sc.targets || [] : state.sc.counters || []; }
+  function moveMarker(state, kind, i, x, y) {
+    var rules = handPlaced(state) && state.scen.markers;
+    if (!rules || !rules[kind]) return { ok: false, why: 'Nothing of that kind to move here.' };
+    var list = markerList(state, kind), m = list[i], rule = rules[kind];
+    if (!m || m.destroyed) return { ok: false, why: 'No such ' + (kind === 'target' ? 'objective' : 'counter') + '.' };
+    if (!isFinite(x) || !isFinite(y)) return { ok: false, why: 'Somewhere on the table.' };
+    var edge = rule.edge || 3;
+    if (x < edge || y < edge || x > W - edge || y > H - edge) return { ok: false, why: 'At least ' + edge + '" from the table edges.' };
+    if (!passable(state, x, y)) return { ok: false, why: 'Not on impassable ground.' };
+    var apart = rule.apart(state);
+    for (var j = 0; j < list.length; j++) {
+      if (j !== i && dist(x, y, list[j].x, list[j].y) < apart - 1e-6) return { ok: false, why: (kind === 'target' ? 'Objectives' : 'Counters') + ' go at least ' + apart + '" apart.' };
+    }
+    if (rule.corners && CORNERS.some(function (c) { return dist(x, y, c.x, c.y) < rule.corners; })) return { ok: false, why: 'At least ' + rule.corners + '" from the table corners.' };
+    m.x = x; m.y = y;
+    return { ok: true };
+  }
+  // what the whole set still needs before the battle starts (null when nothing)
+  function markersBlock(state) {
+    var rules = handPlaced(state) && state.scen.markers;
+    return rules && rules.whole ? rules.whole(state) : null;
+  }
+
   /* ---------------------------------------------------------- the scenarios */
   var SOLO = {};
 
   /* ---- Crushing the Resistance (p. 150) ---- */
   SOLO.s_crush = base(extend({
+    // counters by hand: 6" apart, as the game lays them (p. 150)
+    markers: { counter: { apart: function () { return 6; } } },
     id: 's_crush', deployText: function () { return "Nothing deploys: your commando drops into the landing zone you nominate, in the first Reserve phase."; }, name: 'Crushing the Resistance', page: 150,
     blurb: 'Your commando drops into hostile ground with a simple task: eliminate all enemy resistance.',
     win: 'Rout the OpFor without being routed yourself.',
@@ -661,6 +754,17 @@
 
   /* ---- Decapitation (p. 152) ---- */
   SOLO.s_decap = base({
+    /* counters by hand (p. 152): 6" apart and 12" from the corners, and at least half
+       of them within 12" of a leader */
+    markers: {
+      counter: { apart: function () { return 6; }, corners: 12 },
+      whole: function (state) {
+        var ls = state.units.filter(function (u) { return u.side === 'B' && u.soloLeader && u.alive && u.x >= 0; });
+        var cs = state.sc.counters || [], half = Math.ceil(cs.length / 2);
+        var near = cs.filter(function (c) { return ls.some(function (l) { return dist(c.x, c.y, l.x, l.y) <= 12; }); }).length;
+        return near >= half ? null : 'At least half the counters (' + half + ') go within 12" of an enemy leader \u2014 ' + near + ' are.';
+      }
+    },
     id: 's_decap', deployText: function () { return "Nothing deploys: your commando comes on at a random table corner in the first Reserve phase."; }, name: 'Decapitation', page: 152,
     blurb: 'Get in, find the enemy leaders and kill them before they can call for help.',
     win: 'Destroy every OpFor Command Unit without being routed, within 12 turns.',
@@ -785,12 +889,36 @@
   });
 
   /* ---- Evacuation (p. 153) ---- */
-  function militiaProfile(bt) {
-    var k = { 1: 'recruits', 2: 'rookie', 3: 'regular', 4: 'veterans', 5: 'rangers' }[bt] || 'regular';
+  /* "one free 'militia' unit per Priority Level... the parameters of a single
+     standard unit of Tier equal to the Battle Tier" (p. 153): the player's own
+     army's line infantry of that Tier (the owner's ruling) — its statline, not its
+     special rules, but a bug is still a bug (Animal Behaviour, Determined). The
+     Fire beetle is the Lesser Bugs' Tier V entry and a hull, so a Tier V swarm
+     sends Oversized attack forms. */
+  var MILITIA = {
+    pmc: ['recruits', 'rookie', 'regular', 'veterans', 'rangers'],
+    rebel: ['rciv', 'rmilitia', 'rinsurgents', 'rhardened', 'rguard'],
+    bugs: ['btiny', 'bsmall', 'battack', 'boversized', 'boversized'],
+    xeno: ['xeps1', 'xeps2', 'xeps3', 'xeps4', 'xeps5']
+  };
+  var MILITIA_KEEPS = ['Animal Behaviour', 'Determined'];
+  function militiaProfile(bt, faction) {
+    var list = MILITIA[faction] || MILITIA.pmc, k = list[Math.max(1, Math.min(5, bt || 3)) - 1];
     var src = R.profile(k), p = {};
     for (var f in src) p[f] = src[f];
-    p.key = 'solomilitia'; p.code = 'MIL'; p.name = 'Militia'; p.rules = []; p.group = 'Militia';
+    p.key = 'solomilitia'; p.code = 'MIL'; p.name = 'Militia (' + src.name + ')'; p.group = 'Militia';
+    p.rules = faction === 'bugs' ? src.rules.filter(function (r) { return MILITIA_KEEPS.indexOf(r) >= 0; }) : [];
     return p;
+  }
+  // the army a player in the game is fighting with: their own units' faction (a co-op player's may differ)
+  function ownerFaction(state, owner) {
+    var cfg = state.cfg, keys = cfg.armyA || [], owners = cfg.ownersA || [];
+    for (var i = 0; i < keys.length; i++) {
+      if (owners.length && owners[i] !== owner) continue;
+      var p = R.profile(R.splitPick(keys[i]).key);
+      if (p && p.faction) return p.faction;
+    }
+    return (cfg.solo && cfg.solo.faction) || 'pmc';
   }
   var CIVILIANS = {
     key: 'solociv', code: 'CIV', name: 'Civilian group', group: 'Civilians', art: 'civilian', faction: 'pmc',
@@ -813,7 +941,10 @@
       var pl = state.cfg.pl || 1, own = owners(state), out = [];
       for (var i = 0; i < 4 * pl; i++) out.push({ profile: CIVILIANS, side: 'A', owner: own[0], civ: true });
       // one free militia unit a Priority Level, shared out between the players
-      for (var m = 0; m < pl; m++) out.push({ profile: militiaProfile(state.cfg.tier), side: 'A', owner: own[m % own.length], militia: true });
+      for (var m = 0; m < pl; m++) {
+        var who = own[m % own.length];
+        out.push({ profile: militiaProfile(state.cfg.tier, ownerFaction(state, who)), side: 'A', owner: who, militia: true });
+      }
       return out;
     },
     setupTerrain: function (state) {
@@ -972,6 +1103,21 @@
 
   /* ---- Sabotage (p. 155) ---- */
   SOLO.s_sabotage = base(extend({
+    /* objectives and counters by hand (p. 155): the objectives 12" apart and 12" from
+       the edges (or as close as the game had to put them); the counters 6" apart, a
+       third of them within 12" of an objective and the rest inside the 12" border */
+    markers: {
+      target: { edge: 12, apart: function (state) { return state.sc.targetApart || 12; } },
+      counter: { apart: function () { return 6; } },
+      whole: function (state) {
+        var tg = state.sc.targets || [], cs = state.sc.counters || [], third = Math.ceil(cs.length / 3);
+        var nearT = function (c) { return tg.some(function (t) { return dist(c.x, c.y, t.x, t.y) <= 13; }); };
+        var near = cs.filter(nearT).length;
+        if (near < third) return 'At least a third of the counters (' + third + ') go within 12" of an objective \u2014 ' + near + ' are.';
+        var out = cs.filter(function (c) { return !nearT(c) && (c.x < 12 || c.y < 12 || c.x > W - 12 || c.y > H - 12); }).length;
+        return out ? 'A counter that is not near an objective goes at least 12" from the table edges \u2014 ' + out + (out === 1 ? ' is' : ' are') + ' not.' : null;
+      }
+    },
     id: 's_sabotage', deployText: function () { return "Nothing deploys: your commando drops into the landing zone you nominate, in the first Reserve phase."; }, name: 'Sabotage', page: 155,
     blurb: 'Destroy every one of the targets without losing too many people doing it.',
     win: 'Destroy all the objectives without being routed.',
@@ -1012,6 +1158,10 @@
         }
       }
       state.sc.targets = out.map(function (p, i) { return { x: p.x, y: p.y, id: i, destroyed: false }; });
+      // the gap they went down at, for one moved by hand (12", unless the table would not take it)
+      var gap = 12;
+      out.forEach(function (p, i) { out.forEach(function (q, j) { if (j > i) gap = Math.min(gap, dist(p.x, p.y, q.x, q.y)); }); });
+      state.sc.targetApart = Math.floor(gap);
       return [];
     },
     deploy: function (state) {
@@ -1175,7 +1325,8 @@
 
   root.PMCSolo = {
     COMMANDO: COMMANDO, OPFOR: OPFOR, ORDER: ORDER, SCENARIOS: SOLO,
-    checkCommando: checkCommando, rollCommando: rollCommando, rollOpFor: rollOpFor,
+    checkCommando: checkCommando, rollCommando: rollCommando, rollOpFor: rollOpFor, checkOpFor: checkOpFor,
+    handPlaced: handPlaced, moveMarker: moveMarker, markersBlock: markersBlock,
     catalogue: catalogue, usable: usable, lzLegal: lzLegal, lzSpots: lzSpots, autoLZ: autoLZ,
     pool: pool
   };
