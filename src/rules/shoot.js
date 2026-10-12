@@ -417,7 +417,7 @@
         var dres2 = resolveDamage(t, hits, pierce, dmgMod(state, a, t));
         log.push({ t: 'hits', text: dres2.rolls.join(' · ') });
         applyDamage(state, t, dres2.damage, log, a);
-        return { log: log, hits: hits, wreck: wreck };
+        return { log: log, roll: roll, hits: hits, wreck: wreck };
       }
       var medicId = null;
       if (hits > 0) {
@@ -469,7 +469,7 @@
         log.push({ t: 'hits', text: 'Horses shy under fire: +' + mountOf(t).shotSP + ' SP' });
       }
       // who answered a MEDIC! on this volley, so the board can show them at work
-      var out = medicId ? { log: log, hits: hits, medic: medicId } : { log: log, hits: hits };
+      var out = medicId ? { log: log, roll: roll, hits: hits, medic: medicId } : { log: log, roll: roll, hits: hits };
       if (wreck) out.wreck = wreck;                     // what the shot brought down, for the board to repaint
       return out;
     }

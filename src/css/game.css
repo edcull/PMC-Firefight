@@ -2373,3 +2373,9 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 /* Other Worlds on a job: the conditions rolled with it, a pill each (dossier-contract.js jobCard) */
 .offer-world { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 2px; }
 .worldpill { border-color: color-mix(in srgb, var(--warn, #d9a441) 50%, var(--line)); color: var(--ink); }
+
+/* Close Encounters' special equipment (p. 159): a row of five pickers for each force */
+.kit-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 4px 0; }
+.kit-row .kit-who { font-weight: 600; min-width: 92px; }
+.field .kit-pick, .kit-pick { display: inline-flex; gap: 4px; align-items: center; margin: 0; text-transform: none; letter-spacing: 0; font-size: 12px; }
+.kit-pick select { width: auto; padding: 2px 4px; }

@@ -159,6 +159,22 @@
           for (var em = 0; em < 3; em++) dot(g, p.x + (vr() - 0.5) * a(2), p.y - a(1 + vr() * 5), '#ffb040', 1);
           break;
         }
+        /* Fuel drums: a cluster of steel barrels, hazard-banded, in a compound's
+           dangerous section (Close Encounters). */
+        case 'drums': {
+          var dr6 = rng(pr.seed), dl6 = lift || 0;
+          shadowBlob(g, { x: p.x + a(0.6), y: p.y - dl6 + a(0.3) }, a(2.2), a(0.9));
+          for (var di = 0; di < (pr.n || 2); di++) {
+            var ox = (di - ((pr.n || 2) - 1) / 2) * a(1.1) + (dr6() - 0.5) * a(0.4), oy = (dr6() - 0.5) * a(0.6);
+            var cx6 = p.x + ox, cy6 = p.y - dl6 + oy, rw = a(0.5), hh6 = a(1.5);
+            rect(g, cx6 - rw, cy6 - hh6, rw * 2, hh6, di % 2 ? '#8a3a1c' : '#9c4a20');
+            rect(g, cx6 - rw, cy6 - hh6 * 0.62, rw * 2, Math.max(1, a(0.22)), '#d9b13a');
+            rect(g, cx6 - rw, cy6 - hh6 * 0.32, rw * 2, Math.max(1, a(0.12)), '#2a1a12');
+            ellipse(g, cx6, cy6 - hh6, rw, rw * 0.5, '#b8603a');
+            ellipse(g, cx6, cy6 - hh6, rw * 0.6, rw * 0.3, '#5a2a14');
+          }
+          break;
+        }
         case 'scrap': {
           // a twisted girder or a torn plate half-buried in the rubble
           var sr5 = rng(pr.seed), ang5 = sr5() * Math.PI, ln5 = a(3 + sr5() * 3);

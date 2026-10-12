@@ -220,9 +220,9 @@
       var d = R.inches(u.x, u.y, pt.x, pt.y);
       var carryFirst = ui.mode === 'carry-first';
       // a Move action proper: not an Advance's move, a transport's, or Emergency Batteries' repair move
-      var detect = ui.mode === 'detect-move';
-      var plainMove = ui.mode !== 'advance-move' && ui.mode !== 'carry-move' && !carryFirst && !u.repairMove && !detect;
-      var allowance = ui.mode === 'advance-move' || detect ? u.move : (ui.mode === 'carry-move' || carryFirst) ? Math.ceil(u.move / 2) : u.move + moveBonus(u);
+      var detect = ui.mode === 'detect-move', kitMove = ui.mode === 'kit-move', kitThen = ui.kitThen;
+      var plainMove = ui.mode !== 'advance-move' && ui.mode !== 'carry-move' && !carryFirst && !u.repairMove && !detect && !kitMove;
+      var allowance = ui.mode === 'advance-move' || detect || kitMove ? u.move : (ui.mode === 'carry-move' || carryFirst) ? Math.ceil(u.move / 2) : u.move + moveBonus(u);
       u.carrying = false;
       if (u.vortexNow) {
         // the Movement parameter doubled, the move bonus on top of it as usual
@@ -259,6 +259,16 @@
         u.x = pt.x; u.y = pt.y; ui.vis = null; ui.visKey = '';
         crushAlong(u, path);
         animateMove(u, path);
+        // the move a piece of special equipment comes with (Close Encounters, p. 159)
+        if (kitMove) {
+          ui.kitThen = null;
+          if (d > 1e-6) logLine('move', u.label + ' moves ' + d.toFixed(1) + '".');
+          scenarioMoveEnd(u);
+          if (kitThen && E.afterKitMove(u, kitThen)) return;
+          u.activated = true;
+          endActivation(u);
+          return;
+        }
         if (detect) {
           logLine('move', u.label + (d > 1e-6 ? ' moves ' + d.toFixed(1) + '" and' : '') + ' sweeps with its sensors (Detect).');
           E.detectReveal(u);

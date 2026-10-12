@@ -452,6 +452,7 @@
 
     function wireMuster() {
       ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).addEventListener('change', gateD3); });
+      ['sel-scen', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).addEventListener('change', drawKit); });
       gateD3();
       ['sel-tier', 'sel-pl', 'sel-faction'].forEach(function (id) {
         if (!el(id)) return;
@@ -760,6 +761,43 @@
         if (/^ce_/.test(sel.value)) sel.value = 'roll';
         g.parentNode.removeChild(g);
       }
+      drawKit();
+    }
+    /* Close Encounters' special equipment (p. 159): with a compound scenario chosen,
+       a row for each force the players muster — up to 4 pieces a Priority Level,
+       the standard set to start with. The computer's force takes the standard set. */
+    function kitSides() {
+      var k = muster.hot && muster.hot.kind;
+      return k === 'hotseat' ? ['A', 'B'] : k === 'ai' ? ['A'] : [];
+    }
+    function drawKit() {
+      var f = el('kit-field'), box = el('kit-boxes'), sel = el('sel-scen');
+      var CMP = root.PMCCompound;
+      if (!f || !box || !CMP) return;
+      var on = !!sel && /^ce_/.test(sel.value) && kitSides().length > 0;
+      f.hidden = !on;
+      if (!on) return;
+      var pl = musterPL(), cap = 4 * pl, was = chosenKit() || {};
+      box.innerHTML = kitSides().map(function (sd) {
+        var have = was[sd] || CMP.defaultKit(pl);
+        return '<div class="kit-row" data-kit-side="' + sd + '"><span class="kit-who">' + (kitSides().length > 1 ? 'Player ' + (sd === 'A' ? 1 : 2) : 'Your force') + '</span>' +
+          CMP.KIT.map(function (d) {
+            var opts = '';
+            for (var n = 0; n <= cap; n++) opts += '<option value="' + n + '"' + ((have[d.key] || 0) === n ? ' selected' : '') + '>' + n + '</option>';
+            return '<label class="kit-pick" title="' + esc(d.text) + '">' + esc(d.name) + ' <select data-kit="' + d.key + '">' + opts + '</select></label>';
+          }).join('') + '</div>';
+      }).join('') + '<p class="hint small">Up to ' + cap + ' pieces in all (4 a Priority Level); each used once, by any unsuppressed unit.</p>';
+    }
+    // the equipment chosen, each force kept to its 4 a Priority Level; null where nobody chose
+    function chosenKit() {
+      var box = el('kit-boxes'), CMP = root.PMCCompound, out = null;
+      if (!box || !CMP || (el('kit-field') && el('kit-field').hidden)) return null;
+      Array.prototype.forEach.call(box.querySelectorAll('[data-kit-side]'), function (row) {
+        var k = {};
+        Array.prototype.forEach.call(row.querySelectorAll('select[data-kit]'), function (s) { k[s.getAttribute('data-kit')] = +s.value; });
+        (out = out || {})[row.getAttribute('data-kit-side')] = CMP.cleanKit(k, musterPL());
+      });
+      return out;
     }
     // the optional rules ticked on the battlefield step (none for a demo)
     function chosenOptions(kind) { return kind === 'demo' || !U ? {} : U.readOptions(el('opt-boxes')); }
@@ -1070,6 +1108,7 @@
       if (el('colour-hint')) el('colour-hint').textContent = step === 1 ? 'What ' + hotWho(1).replace(/^Your/, 'your') + '’s troops are painted in.'
           : 'What ' + hotWho(2).replace(/^The/, 'the') + '’s troops are painted in — anything but ' + hotWho(1).replace(/^Your/, 'your') + '’s colour.';
       if (step === 3) hotSum();
+      drawKit();
       drawColourPick();
     }
     /* The battlefield's forces, laid out as the campaign lobby's slots are: a
@@ -1396,6 +1435,7 @@
         styles: { A: (a.keys && a.keys.style) || null, B: (b.keys && b.keys.style) || null },
         temper: { A: hotTemper(a), B: hotTemper(b) },
         mode: mode, planet: planet, terrainSetup: terrainSetup, options: chosenOptions(h.kind),
+        kit: /^ce_/.test(pickScen) ? chosenKit() : null,
         secretSwaps: mode === 'hotseat'           // two players at one screen swap in turn, unseen
       });
     }

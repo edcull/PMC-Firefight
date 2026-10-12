@@ -1848,7 +1848,7 @@
   // what the assault kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
   function eAssault() {
     return {
-      thinAir: thinAir,
+      thinAir: thinAir, addSP: addSP,
       BOARD: BOARD, BY_KEY: BY_KEY, STEP: STEP, TERRAIN: TERRAIN, UNIT_R: UNIT_R, applyDamage: applyDamage,
       applyResult: applyResult, bugGround: bugGround, campFlag: campFlag, canShoot: canShoot, closestTwo: closestTwo,
       clampTo: clampTo, d10: d10, d3: d3, d6: d6, deathOrGlory: deathOrGlory, defenceAgainst: defenceAgainst,
@@ -2456,7 +2456,7 @@
     d10: d10, d6: d6, d3: d3, answering: answering, mayRoll: mayRoll, angleWrap: angleWrap, esc: esc,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, infamyPanic: infamyPanic, panicSweep: panicSweep, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
-    terrainAt: terrainAt, nearestFree: nearestFree, walkField: walkField, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
+    terrainAt: terrainAt, nearestFree: nearestFree, walkField: walkField, applyResult: applyResult, dmgMod: dmgMod, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
     groundLevel: groundLevel, levelOf: levelOf, heightUnder: heightUnder,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
     enterable: enterable, sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,

@@ -35,6 +35,12 @@ function ok(name, cond, note) {
   const group = await p.evaluate(() => { const g = document.querySelector('#sel-scen optgroup[data-ce]'); return g ? g.label : null; });
   ok('ticked, Clearing out and Critical control join them, in a group', list.indexOf('ce_clear') >= 0 && list.indexOf('ce_control') >= 0 && /Close Encounters/.test(group || ''), group);
   await p.evaluate(() => { const s = document.getElementById('sel-scen'); s.value = 'ce_control'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+  const kit = await p.evaluate(() => {
+    const f = document.getElementById('kit-field');
+    return { shown: !f.hidden, rows: f.querySelectorAll('[data-kit-side]').length, picks: f.querySelectorAll('select[data-kit]').length,
+      satchel: (f.querySelector('select[data-kit="satchel"]') || {}).value, pl: document.getElementById('sel-pl').value };
+  });
+  ok('a compound scenario: the special equipment to choose, the standard set (one of each a Priority Level) to start', kit.shown && kit.rows === 1 && kit.picks === 5 && kit.satchel === kit.pl, JSON.stringify(kit));
   await tick(false);
   const after = await p.evaluate(() => document.getElementById('sel-scen').value);
   ok('unticked, they go, and a choice of one with them', !(await scens()).some((v) => /^ce_/.test(v)) && after === 'roll', after);

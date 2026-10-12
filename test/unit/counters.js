@@ -128,8 +128,10 @@ for (const answer of ['opp', 'noopp']) {
   const log = st.log.map((l) => l.text).join('\n');
   if (answer === 'opp') {
     ok('Open fire: it shoots the mover where it crossed, and that is its activation', r2.ok && /Opportunity Fire — /.test(log) && b.activated && !st.oppAsk);
-    ok('...the mover goes on, or stops where it was caught if pinned', R.status(a) === 'ready' ? Math.abs(a.x - x1) < 0.6 : a.x < x1 && a.x >= lo - 0.5,
-      R.status(a) + ' at ' + a.x.toFixed(1));
+    // (pinned, it may have rallied again by now, if the turn has gone on to the Rally phase)
+    const pinned = /goes to ground where it was caught/.test(log);
+    ok('...the mover goes on, or stops where it was caught if pinned', pinned ? a.x < x1 && a.x >= lo - 0.5 : Math.abs(a.x - x1) < 0.6,
+      (pinned ? 'pinned' : 'went on') + ', at ' + a.x.toFixed(1));
   } else {
     ok('Let it pass: the move goes on, the enemy keeps its activation', r2.ok && Math.abs(a.x - x1) < 0.6 && !b.activated && !/Opportunity Fire — /.test(log));
   }

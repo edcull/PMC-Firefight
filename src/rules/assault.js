@@ -19,7 +19,7 @@
         reachable = E.reachable, rectPointDist = E.rectPointDist, resolveAssaultHits = E.resolveAssaultHits,
         resolveDamage = E.resolveDamage, sectionRect = E.sectionRect, shelterOf = E.shelterOf,
         shoot = E.shoot, sizeBonus = E.sizeBonus, status = E.status, terrainAt = E.terrainAt,
-        unitDist = E.unitDist, unitNear = E.unitNear, closestTwo = E.closestTwo, thinAir = E.thinAir;
+        unitDist = E.unitDist, unitNear = E.unitNear, closestTwo = E.closestTwo, thinAir = E.thinAir, addSP = E.addSP;
     /* ---------- assault ---------- */
     /* Vehicles and aircraft never charge; nothing can charge an aircraft. `state`,
        where the caller has the battle: "There can be only two!" (optional, p. 166)
@@ -120,6 +120,13 @@
       var log = [], wrecked = null;
       opts = opts || {};
       if (t.hidden) { t.hidden = false; log.push({ t: 'note', text: t.label + ' is revealed — charged where it hid.' }); }
+      /* Stun Grenades (Close Encounters, p. 159): "The defending unit suffers D6-1
+         Suppression Points and may not shoot at the attackers during that Assault." */
+      if (opts.stun) {
+        var stunSp = Math.max(0, d6() - 1);
+        addSP(t, stunSp);
+        log.push({ t: 'note', text: 'Stun Grenades — ' + t.label + ' is dazed: ' + stunSp + ' SP, and no defensive fire.' });
+      }
       log.push({ t: 'assault', text: a.label + ' charges ' + t.label + ' — ' + unitDist(a, t).toFixed(1) + '" to contact.' });
 
       /* Martyrdom (Path of the Prophet, p. 113): before the first round is rolled,
@@ -161,7 +168,7 @@
          enters the range and LoS" (p. 33): so it is looked for all along the way
          in, and a charge that is stopped stops where it was shot. */
       var fireAt = null, fireAux = false;
-      if (t.alive && status(t) === 'ready' && t.fp !== null) {
+      if (t.alive && status(t) === 'ready' && t.fp !== null && !opts.stun) {
         var route = (opts.path || [{ x: a.x, y: a.y }]).slice();
         var x0 = a.x, y0 = a.y, walk = [];
         for (var wi = 0; wi < route.length; wi++) {
@@ -454,7 +461,7 @@
       reachable = L.reachable; rectPointDist = L.rectPointDist; resolveAssaultHits = L.resolveAssaultHits;
       resolveDamage = L.resolveDamage; sectionRect = L.sectionRect; shelterOf = L.shelterOf; shoot = L.shoot;
       sizeBonus = L.sizeBonus; status = L.status; terrainAt = L.terrainAt; unitDist = L.unitDist;
-      unitNear = L.unitNear;
+      unitNear = L.unitNear; addSP = L.addSP;
     }
 
     return {

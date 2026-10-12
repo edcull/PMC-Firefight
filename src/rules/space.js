@@ -556,7 +556,8 @@
     function lineClearAt(state, a, b, ax, ay, bx, by) {
       for (var i = 0; i < state.terrain.length; i++) {
         var r = state.terrain[i], t = TERRAIN[r.kind];
-        if (!t.blocks && !t.hill) continue;
+        // a compound's burning section "counts as passable area terrain which blocks line of sight" (p. 159): as a wood does
+        if (!t.blocks && !t.hill && !r.burning) continue;
         var aIn = inRect(a.x, a.y, r), bIn = inRect(b.x, b.y, r);
         /* A hill that rises in two steps: the upper step is a hill standing on a
            hill, and it blocks sight across it the same way — for everyone but a

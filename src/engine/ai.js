@@ -130,7 +130,10 @@
     function aiCharge(u, t) {
       martyrFirst(u, t, function (m) {
         var snap = snapshotAlive();
-        var res = abAssault(E.state, u, t, m);
+        // in a compound, Stun Grenades go in with the charge while the side has any (p. 159)
+        var stun = !!(E.state.compound && E.kitUsable(u, 'stun'));
+        if (stun) E.spendKit(u, 'stun');
+        var res = abAssault(E.state, u, t, m, false, stun);
         res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
         soundFor(res.log);
         var card = fromLog('Assault', u.name + ' → ' + t.name, u.side, res.log);

@@ -238,6 +238,14 @@
         case 'reveal':
           if (!u.hidden) return { on: false, hint: 'Not hidden.' };
           return { on: true, hint: 'Reveal: take the counter off and put the unit down where it is. It then acts as normal this activation (p. 158).' };
+        case 'kit-satchel': case 'kit-barrier': case 'kit-incendiary': case 'kit-vacuum': case 'kit-stun': {
+          var kk = id.slice(4), kd = E.KIT.filter(function (d) { return d.key === kk; })[0];
+          if (!E.kitUsable(u, kk)) return { on: false, hint: sup ? 'Suppressed: no special equipment.' : 'None left.' };
+          if (kk === 'satchel' && !E.sectionOf(u.x, u.y)) return { on: false, hint: 'Not in a section of the compound.' };
+          if (kk === 'stun') { var sa = actionState(u, 'assault'); if (!sa.on) return sa; }
+          if (kk === 'vacuum' && !E.state.terrain.some(function (r) { return r.burning; })) return { on: false, hint: 'Nothing is burning.' };
+          return { on: true, hint: kd.name + ': ' + kd.text + ' (' + E.kitLeft(u, kk) + ' left; once each).' };
+        }
         case 'cover': {
           if (u.covered === E.state.turn) return { on: false, hint: 'Already covered this activation.' };
           var cv = E.coverers(u);
@@ -472,6 +480,30 @@
         return;
       }
       if (id === 'cover') { E.startCover(u); return; }
+      // Close Encounters' special equipment (p. 159)
+      if (id === 'kit-satchel') {
+        E.satchel(u);
+        ui.mode = 'kit-move'; ui.kitThen = null;
+        ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
+        setHint(null, 'Satchel Charges set: tap where ' + u.name + ' moves (up to ' + u.move + '"), or the unit itself to stay.');
+        render();
+        return;
+      }
+      if (id === 'kit-barrier') { E.barrier(u); u.activated = true; endActivation(u); return; }
+      if (id === 'kit-incendiary' || id === 'kit-vacuum') {
+        ui.mode = 'kit-move'; ui.kitThen = id.slice(4);
+        ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
+        setHint(null, (id === 'kit-vacuum' ? 'Vacuum Charges' : 'Incendiary Grenades') + ': tap where ' + u.name + ' moves (or the unit itself to stay), then the section.');
+        render();
+        return;
+      }
+      if (id === 'kit-stun') {
+        ui.mode = 'assault'; ui.noSap = false; ui.stun = true;
+        var mustS = forcedCharge(u);
+        ui.targets = mustS ? [mustS] : assaultables(u);
+        render();
+        return;
+      }
       if (id === 'detect') {
         ui.mode = 'detect-move';
         ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });
@@ -523,7 +555,7 @@
         wireNote(u);
       } else if (id === 'assault' || id === 'plainassault') {
         ui.mode = 'assault';
-        ui.noSap = id === 'plainassault';
+        ui.noSap = id === 'plainassault'; ui.stun = false;
         var must = forcedCharge(u);
         ui.targets = must ? [must] : assaultables(u);
       } else if (id === 'wave') {

@@ -2,7 +2,8 @@
    (Appendix 1, p. 158): units that start the battle as counters, what reveals
    them, the Fire at Will! exchange when one walks into an enemy's sight, the
    Detect special action of Advanced Sensors and Sixth Sense, Covering Fire!
-   and Opportunity Fire.
+   and Opportunity Fire; dangerous and burning sections (p. 159), and the
+   special equipment each side carries in (p. 159).
 
    Made once by engine.js, the first time it is wanted. E is what it needs of
    engine.js: what never changes bound here once, and what does (the battle
@@ -14,7 +15,8 @@
     var R = E.R, logLine = E.logLine, pushRes = E.pushRes, onTable = E.onTable,
         abShoot = E.abShoot, snapshotAlive = E.snapshotAlive, deathsSince = E.deathsSince,
         playShooting = E.playShooting, fromLog = E.fromLog, soundFor = E.soundFor,
-        isAI = E.isAI, ui = E.ui, setHint = E.setHint, revealConsole = E.revealConsole, render = E.render;
+        isAI = E.isAI, ui = E.ui, setHint = E.setHint, revealConsole = E.revealConsole, render = E.render,
+        repaintTerrain = E.repaintTerrain, UR = E.UR;
 
     /* The enemy unit nearest a point that sees a unit of u's standing there (u
        itself out of the way), or null. A counter is a unit on the table: hidden
@@ -78,6 +80,7 @@
       var snap = snapshotAlive();
       var res = abShoot(E.state, a, t, 'react', {});
       res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+      firingHazard(a, t, res.roll);
       soundFor(res.log);
       var card = fromLog(title, a.name + ' → ' + t.name, a.side, res.log);
       playShooting(a, t, res, deathsSince(snap), function () { pushRes(card); });
@@ -255,7 +258,204 @@
       render();
     }
 
+    /* ---- sections (p. 159) ---- */
+    var FLOORS = { corridor: 1, room: 1, hall: 1 };
+    function sectionOf(x, y) {
+      var ts = E.state.terrain;
+      for (var i = 0; i < ts.length; i++) {
+        var r = ts[i];
+        if (FLOORS[r.kind] && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return r;
+      }
+      return null;
+    }
+    function secName(r) { return r.name ? r.name.toLowerCase() : r.kind === 'corridor' ? 'corridor section' : r.kind; }
+    function inside(u, r) { return u.alive && onTable(u) && !u.aboard && u.x >= r.x && u.x <= r.x + r.w && u.y >= r.y && u.y <= r.y + r.h; }
+    // whether a unit sees into a section: to the nearest point of it, a little way in
+    function seesInto(u, r) {
+      var x = Math.max(r.x + 0.3, Math.min(r.x + r.w - 0.3, u.x)), y = Math.max(r.y + 0.3, Math.min(r.y + r.h - 0.3, u.y));
+      return R.lineClear(E.state, u, { x: x, y: y });
+    }
+    /* A shooting attack with no shooter (an explosion, a fire): "Firepower X and
+       no Defence bonuses" — the D10 and the Firepower against the unit's own
+       Defence, an unmodified 0 a miss and a 9 at least a hit, as any shot. */
+    function blast(u, fp, what, log) {
+      var a = { id: 'blast', label: what, name: what, side: null, fp: fp, rules: [], x: u.x, y: u.y, alive: true, cls: 'infantry', models: 1 };
+      var roll = R.d10(), total = roll + fp, def = u.def;
+      var hits = roll === 0 ? 0 : roll === 9 ? Math.max(1, total - def) : Math.max(0, total - def);
+      log.push({ t: 'shoot', text: what + ' catches ' + u.label + '.', math: 'D10 ' + roll + ', Firepower ' + fp + ' = ' + total + ' vs Defence ' + def + ' (no bonuses) → ' + hits + ' hit' + (hits === 1 ? '' : 's') });
+      if (!hits) return;
+      if (R.isMachine(u)) {
+        var dm = R.resolveDamage(u, hits, false, 0);
+        log.push({ t: 'hits', text: dm.rolls.join(' · ') });
+        R.applyDamage(E.state, u, dm.damage, log, a);
+      } else {
+        var hr = R.resolveShootingHits(E.state, u, hits, 0, a);
+        log.push({ t: 'hits', text: hr.rolls.join(' · ') });
+        R.applyResult(E.state, u, hr, log, a);
+      }
+    }
+    function tell(title, side, log, note) {
+      log.forEach(function (l) { logLine(l.t, l.text, l.math); });
+      pushRes(fromLog(title, note || '', side || null, log));
+    }
+    /* Exploding sections (p. 159): "all units inside suffer a shooting attack with
+       Firepower 10 and no Defence bonuses. Additionally, any unit which has the
+       exploding sector in its line of sight and is within 6" of that sector
+       suffers a shooting firing attack with Firepower 6." A dangerous section
+       goes up once a battle. */
+    function explodeSection(r, why) {
+      if (!r) return;
+      var log = [{ t: 'note', text: 'The ' + secName(r) + ' explodes' + (why ? ' — ' + why : '') + '!' }];
+      r.dangerous = false; r.blown = true;
+      var near = E.state.units.filter(function (u) {
+        return u.alive && onTable(u) && !u.aboard && !inside(u, r) && Math.max(0, R.rectPointDist(r, u.x, u.y) - UR) <= 6 && seesInto(u, r);
+      });
+      E.state.units.filter(function (u) { return inside(u, r); }).forEach(function (u) { blast(u, 10, 'The explosion', log); });
+      near.forEach(function (u) { if (u.alive) blast(u, 6, 'The blast', log); });
+      tell('Explosion', null, log, 'The ' + secName(r));
+      if (E.addFx) E.addFx({ kind: 'collapse', x: r.x + r.w / 2, y: r.y + r.h / 2, r: Math.max(2, Math.max(r.w, r.h) * 0.6), dur: 1100 });
+      repaintTerrain([{ piece: r }]);
+    }
+    // a section set on fire; a dangerous one "starts to burn, it explodes immediately"
+    function setBurning(r, by) {
+      if (!r || r.burning) return;
+      r.burning = E.state.turn; r.burnRolled = false;
+      logLine('note', 'The ' + secName(r) + ' is on fire' + (by ? ' — ' + by : '') + '.');
+      repaintTerrain([{ piece: r }]);
+      if (r.dangerous) explodeSection(r, 'the fire reaches what is stored there');
+    }
+    function putOut(r, how) {
+      if (!r || !r.burning) return;
+      r.burning = null; r.burnRolled = false;
+      logLine('note', 'The fire in the ' + secName(r) + ' ' + how + '.');
+      repaintTerrain([{ piece: r }]);
+    }
+    /* "We can't have any firing in there" (p. 159): firing at a target inside a
+       dangerous section sets it off on a Firing roll of 7+; a unit inside one
+       firing out sets it off on a 0. `roll` is the shot's D10 as it fell. */
+    function firingHazard(a, t, roll) {
+      if (!E.state || !E.state.compound || roll == null || !a || !t) return;
+      var rt = sectionOf(t.x, t.y), ra = a.x >= 0 ? sectionOf(a.x, a.y) : null;
+      if (rt && rt.dangerous && roll >= 7) explodeSection(rt, 'a stray round from ' + a.label);
+      else if (ra && ra.dangerous && roll === 0) explodeSection(ra, a.label + '’s own fire');
+    }
+    /* Beginning phase: "roll a D6; on 4+ the fire burns out or is extinguished and
+       has no further effects. If the section had been burning in previous turns,
+       the fire burns out automatically." */
+    function hazardsBeginning() {
+      if (!E.state.compound) return;
+      E.state.terrain.forEach(function (r) {
+        if (!r.burning || r.burning >= E.state.turn) return;
+        if (r.burnRolled) { putOut(r, 'burns itself out'); return; }
+        r.burnRolled = true;
+        var d = R.d6();
+        if (d >= 4) putOut(r, 'dies down (D6 ' + d + ')');
+        else logLine('note', 'The ' + secName(r) + ' burns on (D6 ' + d + ').');
+      });
+    }
+    /* End phase: "each unit inside a burning section suffers a Firepower 6 shooting
+       attack with no Defence bonuses"; and the Satchel Charges set this turn go off. */
+    function hazardsEnd() {
+      if (!E.state.compound) return;
+      E.state.terrain.forEach(function (r) {
+        if (!r.burning) return;
+        var log = [];
+        E.state.units.filter(function (u) { return inside(u, r); }).forEach(function (u) { blast(u, 6, 'The fire', log); });
+        if (log.length) tell('Fire', null, log, 'The ' + secName(r));
+      });
+      (E.state.charges || []).forEach(function (c) {
+        var r = E.state.terrain[c.sec], d = R.d6(), tot = d + (c.sappers ? 1 : 0);
+        if (tot >= 3) explodeSection(r, 'Satchel Charges (D6 ' + d + (c.sappers ? '+1' : '') + ')');
+        else logLine('note', 'Satchel Charges in the ' + secName(r) + ' — D6 ' + d + (c.sappers ? '+1' : '') + ': duds, or found and disarmed.');
+      });
+      E.state.charges = [];
+    }
+
+    /* ---- special equipment (p. 159): the list and the choosing in rules/compound.js ---- */
+    var KIT = root.PMCCompound.KIT, cleanKit = root.PMCCompound.cleanKit, defaultKit = root.PMCCompound.defaultKit;
+    function kitLeft(u, key) { var k = E.state.kit && E.state.kit[u.side]; return k ? k[key] || 0 : 0; }
+    function spend(u, key) { E.state.kit[u.side][key] -= 1; }
+    // may this unit use that piece now: unsuppressed, on the table, revealed, in a compound
+    function kitUsable(u, key) {
+      return !!(E.state.compound && u && !u.hidden && onTable(u) && !u.aboard && R.status(u) === 'ready' && kitLeft(u, key) > 0);
+    }
+    // the sections an incendiary (or vacuum) charge may go into from where the unit stands
+    function throwTargets(u, burningOnly) {
+      return E.state.terrain.filter(function (r) {
+        if (!FLOORS[r.kind] || (burningOnly && !r.burning) || (!burningOnly && r.burning)) return false;
+        if (inside(u, r)) return true;
+        return Math.max(0, R.rectPointDist(r, u.x, u.y) - UR) <= 6 && seesInto(u, r);
+      });
+    }
+    function satchel(u) {
+      var r = sectionOf(u.x, u.y);
+      spend(u, 'satchel');
+      E.state.charges = E.state.charges || [];
+      E.state.charges.push({ sec: E.state.terrain.indexOf(r), side: u.side, sappers: R.has(u, 'Sappers') });
+      logLine('note', u.label + ' plants Satchel Charges in the ' + secName(r) + ' — they go off in the End phase.');
+    }
+    /* Ballistic Barrier: a low wall up to 6" long within 1" of the unit. Put across
+       the way the nearest enemy (as the walk goes) would come: across a corridor,
+       wall to wall; in a room, 6" wide, and kept inside it. */
+    function barrier(u) {
+      var r = sectionOf(u.x, u.y);
+      var foes = E.state.units.filter(function (e) { return e.alive && e.side !== u.side && onTable(e) && !e.aboard; });
+      var wf = R.walkField(E.state, u.x, u.y, u.side);
+      var foe = foes.sort(function (a2, b2) { return (wf ? wf(a2.x, a2.y) : 0) - (wf ? wf(b2.x, b2.y) : 0) || R.unitDist(u, a2) - R.unitDist(u, b2); })[0];
+      var dx = foe ? foe.x - u.x : 1, dy = foe ? foe.y - u.y : 0;
+      var along = r && r.axis ? r.axis : Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
+      // within 1" of it, and near enough to shelter behind (the low wall's 1.5" to the middle)
+      var T = 0.6, gap = UR + 0.3, piece;
+      if (along === 'h') {
+        var x = u.x + (dx >= 0 ? gap : -gap - T), y0 = r ? r.y : u.y - 3, h = r ? Math.min(6, r.h) : 6;
+        if (r && r.h > 6) y0 = Math.max(r.y, Math.min(r.y + r.h - 6, u.y - 3));
+        piece = { kind: 'barricade', x: x, y: y0, w: T, h: h, kit: true };
+      } else {
+        var y = u.y + (dy >= 0 ? gap : -gap - T), x0 = r ? r.x : u.x - 3, w = r ? Math.min(6, r.w) : 6;
+        if (r && r.w > 6) x0 = Math.max(r.x, Math.min(r.x + r.w - 6, u.x - 3));
+        piece = { kind: 'barricade', x: x0, y: y, w: w, h: T, kit: true };
+      }
+      spend(u, 'barrier');
+      E.state.terrain.push(piece);
+      logLine('note', u.label + ' throws up a Ballistic Barrier — a low wall ' + Math.max(piece.w, piece.h).toFixed(0) + '" long' + (foe ? ', facing ' + foe.label : '') + '.');
+      repaintTerrain([{ piece: piece }]);
+    }
+    // after the move an incendiary or vacuum charge comes with: the section, picked off the board
+    function afterKitMove(u, key) {
+      var tg = throwTargets(u, key === 'vacuum');
+      if (!tg.length) {
+        logLine('note', u.label + ' finds nowhere within 6" to use its ' + (key === 'vacuum' ? 'Vacuum Charges' : 'Incendiary Grenades') + ' and keeps them.');
+        return false;
+      }
+      ui.mode = 'throw-at'; ui.throwKey = key; ui.terrain = tg; ui.moves = []; ui.targets = [];
+      setHint(null, 'Tap the section ' + u.name + ' throws its ' + (key === 'vacuum' ? 'Vacuum Charges' : 'Incendiary Grenades') + ' into.');
+      render();
+      return true;
+    }
+    function doThrow(r) {
+      var u = ui.selected, key = ui.throwKey;
+      ui.mode = 'idle'; ui.terrain = []; ui.throwKey = null;
+      throwAt(u, r, key);
+      u.activated = true;
+      E.endActivation(u);
+    }
+    function throwAt(u, r, key) {
+      spend(u, key);
+      var d = R.d6();
+      if (key === 'incendiary') {
+        if (d === 1) logLine('note', u.label + '’s Incendiary Grenades fizzle in the ' + secName(r) + ' (D6 1).');
+        else setBurning(r, u.label + '’s Incendiary Grenades (D6 ' + d + ')');
+      } else {
+        if (d === 1) logLine('note', u.label + '’s Vacuum Charges fail to smother the fire in the ' + secName(r) + ' (D6 1).');
+        else putOut(r, 'is smothered by ' + u.label + '’s Vacuum Charges (D6 ' + d + ')');
+      }
+    }
+
     return {
+      sectionOf: sectionOf, explodeSection: explodeSection, setBurning: setBurning, putOut: putOut, firingHazard: firingHazard,
+      hazardsBeginning: hazardsBeginning, hazardsEnd: hazardsEnd,
+      KIT: KIT, cleanKit: cleanKit, defaultKit: defaultKit, kitLeft: kitLeft, kitUsable: kitUsable, throwTargets: throwTargets,
+      satchel: satchel, barrier: barrier, throwAt: throwAt, spendKit: spend, doThrow: doThrow, afterKitMove: afterKitMove,
       seerOf: seerOf, hiddenStop: hiddenStop, hiddenMove: hiddenMove, afterHiddenMove: afterHiddenMove,
       revealUnit: revealUnit, revealSweep: revealSweep, fireAtWill: fireAtWill, reactShot: reactShot,
       detectReveal: detectReveal, canDetect: canDetect,

@@ -232,6 +232,10 @@
       var p = { kind: kind, x: b.i0 * CELL, y: b.j0 * CELL, w: (b.i1 - b.i0 + 1) * CELL, h: (b.j1 - b.j0 + 1) * CELL, sec: s };
       if (kind === 'corridor') p.axis = g.axisOf[s] || null;
       else p.name = (kind === 'hall' ? 'Hall ' : 'Room ') + names[kind];
+      /* "Some sections may be designated as dangerous due to the presence of
+         explosive materials, toxic chemicals, fragile tanks" (p. 158): the odd room
+         or hall of the compound, at the chance asked for (opts.danger). */
+      if (kind !== 'corridor' && opts.danger && rand() < opts.danger) p.dangerous = true;
       out.push(p);
     });
     // the solid cells, gathered into as few blocks as will cover them
@@ -300,14 +304,15 @@
   }
 
   /* A compound for a table `w` x `h` inches. `opts.rooms`: at least so many
-     rooms (not counting halls); `opts.entries`: entry points on each long edge. */
+     rooms (not counting halls); `opts.entries`: entry points on each long edge;
+     `opts.danger`: the chance a room or hall is a dangerous section. */
   function generate(w, h, rand, opts) {
     rand = rand || Math.random;
     opts = opts || {};
     for (var t = 0; t < 200; t++) {
       var g = attempt(w, h, rand, opts);
       if (!g) continue;
-      var laid = piecesOf(g, rand, { w: w, h: h });
+      var laid = piecesOf(g, rand, { w: w, h: h, danger: opts.danger || 0 });
       return {
         terrain: laid.terrain,
         compound: { cell: CELL, cols: g.cols, rows: g.rows, entries: laid.entries },
@@ -316,6 +321,30 @@
     }
     throw new Error('no compound could be laid on a ' + w + '" x ' + h + '" table');
   }
+
+  /* ---- special equipment (p. 159) ----
+     "Before the game, players may select up to 4 pieces of special equipment per
+     Priority Level ... Each piece may be used once per game by any unsuppressed
+     friendly unit." Chosen on the battlefield step (cfg.kit), or, if not, a set
+     of the four that need no fire to work with for each Priority Level. */
+  var KIT = [
+    { key: 'satchel', name: 'Satchel Charges', text: 'Plant them where the unit stands, then move up to its Movement. In the End phase, D6: 1-2 duds, 3-6 the section explodes (+1 with Sappers).' },
+    { key: 'barrier', name: 'Ballistic Barrier', text: 'Put down a low wall up to 6" long within 1" of the unit, towards the nearest enemy.' },
+    { key: 'stun', name: 'Stun Grenades', text: 'With an Assault: the defender takes D6-1 SP and cannot fire at the attackers in that Assault.' },
+    { key: 'incendiary', name: 'Incendiary Grenades', text: 'Move up to Movement, then a section it stands in or sees within 6": D6 2-6 sets it on fire.' },
+    { key: 'vacuum', name: 'Vacuum Charges', text: 'Move up to Movement, then a burning section it stands in or sees within 6": D6 2-6 puts the fire out.' }
+  ];
+  // a side's choice, kept to what there is and to 4 a Priority Level in all
+  function cleanKit(k, pl) {
+    var cap = 4 * Math.max(1, pl || 1), out = {}, n = 0;
+    KIT.forEach(function (d) {
+      var v = Math.max(0, Math.floor(+((k || {})[d.key]) || 0));
+      v = Math.min(v, cap - n);
+      if (v) { out[d.key] = v; n += v; }
+    });
+    return out;
+  }
+  function defaultKit(pl) { var n = Math.max(1, pl || 1); return { satchel: n, barrier: n, stun: n, incendiary: n }; }
 
   var KINDS = ['corridor', 'room', 'hall', 'bulkhead', 'door'];
   function isCompound(state) { return !!(state && state.compound); }
@@ -329,6 +358,6 @@
     return null;
   }
 
-  root.PMCCompound = { CELL: CELL, KINDS: KINDS, generate: generate, isCompound: isCompound, sectionAt: sectionAt };
+  root.PMCCompound = { CELL: CELL, KINDS: KINDS, generate: generate, isCompound: isCompound, sectionAt: sectionAt, KIT: KIT, cleanKit: cleanKit, defaultKit: defaultKit };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCCompound;
 })(typeof window !== 'undefined' ? window : global);
