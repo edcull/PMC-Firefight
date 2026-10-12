@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   root.PMCEngineDeploy = function (E) {
-    var H = E.H, R = E.R, SC = E.SC, UR = E.UR, W = E.W, abShoot = E.abShoot,
+    var R = E.R, SC = E.SC, UR = E.UR, abShoot = E.abShoot,
         beginTurn = E.beginTurn, boardableFor = E.boardableFor, byId = E.byId,
         focusUnit = E.focusUnit, isAI = E.isAI,
         loadBefore = E.loadBefore, logLine = E.logLine, lookAtDeployment = E.lookAtDeployment,
@@ -27,7 +27,7 @@
 
     // the scenario may use a circle rather than a strip
     function deployOK(side, x, y, u) {
-      if (x < UR || y < UR || x > W - UR || y > H - UR) return false;
+      if (x < UR || y < UR || x > R.BOARD.w - UR || y > R.BOARD.h - UR) return false;
       var say = SC.deployOK(E.state, side, x, y, u);
       if (say !== null) return say;
       var bx = boxesFor(side, u);
@@ -46,8 +46,8 @@
 
     function pointInBox(b) {
       return {
-        x: Math.max(UR, Math.min(W - UR, b.x + Math.random() * b.w)),
-        y: Math.max(UR, Math.min(H - UR, b.y + Math.random() * b.h))
+        x: Math.max(UR, Math.min(R.BOARD.w - UR, b.x + Math.random() * b.w)),
+        y: Math.max(UR, Math.min(R.BOARD.h - UR, b.y + Math.random() * b.h))
       };
     }
 
@@ -86,7 +86,7 @@
     // Battlefield Insertion: 12" from any objective, 4" in from the edge
     function insertionLegal(p) {
       if (SC.noInsertion(E.state)) return false;
-      if (p.x < 4 || p.y < 4 || p.x > W - 4 || p.y > H - 4) return false;
+      if (p.x < 4 || p.y < 4 || p.x > R.BOARD.w - 4 || p.y > R.BOARD.h - 4) return false;
       for (var i = 0; i < E.state.objectives.length; i++) {
         if (R.inches(p.x, p.y, E.state.objectives[i].x, E.state.objectives[i].y) < 12) return false;
       }
@@ -126,7 +126,7 @@
           for (var sy = Math.floor(u.y - drift); sy <= u.y + drift; sy += 1) {
             var sp = { x: sx, y: sy };
             if (R.inches(sp.x, sp.y, u.x, u.y) > drift) continue;
-            if (sp.x < UR || sp.y < UR || sp.x > W - UR || sp.y > H - UR) continue;
+            if (sp.x < UR || sp.y < UR || sp.x > R.BOARD.w - UR || sp.y > R.BOARD.h - UR) continue;
             if (R.TERRAIN[R.terrainAt(E.state, sp.x, sp.y)].impassable) continue;
             if (R.unitNear(E.state, sp.x, sp.y, u, 1)) continue;
             shoves.push(sp);
@@ -237,9 +237,9 @@
             var pb = pointInBox(now[bi]);
             x = pb.x; y = pb.y;
           } else if (z) {
-            y = 3 + ((i * 5.2 + attempt * 0.7) % (H - 6));
+            y = 3 + ((i * 5.2 + attempt * 0.7) % (R.BOARD.h - 6));
             x = side === 'A' ? z[0] + 1 + (i % 3) * 1.6 : z[1] - 1 - (i % 3) * 1.6;
-            if (z[0] > UR + 1 && z[1] < W - UR - 1) x = z[0] + ((i * 3.1 + attempt) % (z[1] - z[0]));
+            if (z[0] > UR + 1 && z[1] < R.BOARD.w - UR - 1) x = z[0] + ((i * 3.1 + attempt) % (z[1] - z[0]));
           } else {
             break;                                   // nothing deploys: it arrives by drop
           }
@@ -256,7 +256,7 @@
           for (var k = 0; k < 24; k++) {
             var ang = k / 24 * Math.PI * 2 + i;
             var px = mid.x + Math.cos(ang) * rad, py = mid.y + Math.sin(ang) * rad;
-            if (px < UR || py < UR || px > W - UR || py > H - UR) continue;
+            if (px < UR || py < UR || px > R.BOARD.w - UR || py > R.BOARD.h - UR) continue;
             if (!deployOK(side, px, py, u)) continue;
             if (R.barredAt(E.state, u, px, py)) continue;
             if (R.unitNear(E.state, px, py, u, 0.6)) continue;
@@ -268,7 +268,7 @@
       });
     }
 
-    function clampY(v) { return Math.max(UR, Math.min(H - UR, v)); }
+    function clampY(v) { return Math.max(UR, Math.min(R.BOARD.h - UR, v)); }
 
     // the building section under a point, if any
     function garrisonAt(x, y) {
@@ -312,8 +312,8 @@
       var bx = boxesFor(side);
       if (bx && bx.length) return { x: bx[0].x + bx[0].w / 2, y: bx[0].y + bx[0].h / 2 };
       var z = zoneFor(side);
-      if (!z) return { x: W / 2, y: H / 2 };
-      return { x: (z[0] + z[1]) / 2, y: H / 2 };
+      if (!z) return { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
+      return { x: (z[0] + z[1]) / 2, y: R.BOARD.h / 2 };
     }
 
     /* ---- which way a vehicle faces ----
@@ -341,7 +341,7 @@
        zone, a defender's circle), it faces the enemy as a hull does. */
     function faceInward(u, from) {
       var p = from || u;
-      var e = [[p.x, 0], [W - p.x, Math.PI], [p.y, Math.PI / 2], [H - p.y, -Math.PI / 2]].sort(function (a, b) { return a[0] - b[0]; })[0];
+      var e = [[p.x, 0], [R.BOARD.w - p.x, Math.PI], [p.y, Math.PI / 2], [R.BOARD.h - p.y, -Math.PI / 2]].sort(function (a, b) { return a[0] - b[0]; })[0];
       return e[0] <= 12 ? e[1] : faceDefault(u);
     }
     // the facing a machine is given as it comes on: a hull the enemy's way, an aircraft in from its edge

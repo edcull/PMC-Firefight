@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   root.PMCEngineEndPhase = function (E) {
-    var H = E.H, R = E.R, SC = E.SC, SFX = E.SFX, UR = E.UR, V = E.V, W = E.W, abRally = E.abRally,
+    var R = E.R, SC = E.SC, SFX = E.SFX, UR = E.UR, V = E.V, abRally = E.abRally,
         abRepair = E.abRepair, activeUnits = E.activeUnits, addFx = E.addFx, animateMove = E.animateMove,
         beginTurn = E.beginTurn, canStand = E.canStand, focusUnit = E.focusUnit, logLine = E.logLine,
         nearestEnemy = E.nearestEnemy, onTable = E.onTable, pushRes = E.pushRes, render = E.render,
@@ -30,9 +30,9 @@
       if (n < 1e-6) return Infinity;
       dx /= n; dy /= n;
       var t = Infinity;
-      if (dx > 1e-6) t = Math.min(t, (W - c.x + UR) / dx);
+      if (dx > 1e-6) t = Math.min(t, (R.BOARD.w - c.x + UR) / dx);
       if (dx < -1e-6) t = Math.min(t, (c.x + UR) / -dx);
-      if (dy > 1e-6) t = Math.min(t, (H - c.y + UR) / dy);
+      if (dy > 1e-6) t = Math.min(t, (R.BOARD.h - c.y + UR) / dy);
       if (dy < -1e-6) t = Math.min(t, (c.y + UR) / -dy);
       return t;
     }
@@ -491,6 +491,8 @@
           wiped: !R.isMachine(u) && u.models <= 0,
           fled: !!u.fled,
           aboardDowned: !!u.lostAboard,
+          weakened: !!u.weakened,
+          owner: u.owner || null,             // co-op: whose unit it was (a campaign's co-op contract splits by it)             // Other Worlds: an unexplained weakness (+1 TP in a campaign)
           lostAboard: u.lostAboard || null,
           drugged: !!u.drugged,            // Drug Dealer: the comedown comes after
           // the swarm's own bookkeeping (p. 124): its low point, and what it ate

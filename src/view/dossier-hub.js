@@ -63,6 +63,8 @@
               note: by === 'player' ? ' — a player wears it' : by === 'ai' ? ' — an AI force wears it, and will take another' : '' };
           });
         }
+        // the optional rules every battle of the campaign is fought under (R.OPTIONS), set now for good
+        if (U.optionBoxes) h += '<div class="field camp-opts" id="camp-opts"><label>Optional rules</label>' + U.optionBoxes(E.wantOptions) + '</div>';
         // one line: how many AI forces (an odd number: with yours, the forces pair off for each round), a save file to load instead, and Raise the force
         // (hotseat: none, or an even number — with the two players, the forces pair off)
         h += '<div class="olob-bar"><label class="olob-n">AI forces <select id="' + (hot ? 'camp-hotai' : 'camp-rivals') + '">' + (hot ? [0, 2, 4, 6, 8] : [1, 3, 5, 7, 9]).map(function (n) {
@@ -129,6 +131,8 @@
         '<button type="button" class="lnk ico danger" data-go="wipe" title="Abandon the campaign — every dossier goes (it asks first)" aria-label="Abandon the campaign">' + ICON_ABANDON + '</button>') +
         '</div>' +
         '</div>';
+      // the optional rules it is fought under, when any are on (set when it was raised)
+      if (U.optionsLine && root.PMC.optionNames(E.camp.options).length) h += '<p class="dnote hubopts">Optional rules: ' + U.optionsLine(E.camp.options) + '</p>';
       h += companyPanel(cur, hs, hubBar(), manageHtml);
       // recruiting: a window over the dossier, drawn only while open
       if (E.openModal === 'recruit') h += cmodal('recruit', C.words(cur).recruit + ' \u2014 ' + cur.kUC + ' ' + C.money(cur), '<div class="cmodal-scroll">' + recruitList(cur) + '</div>');
@@ -470,13 +474,15 @@
       if (co.regrouping) return off('Regrouping this turn');
       // alone: the job they offer this turn (or one rolled for them), then the contract screen
       if (!E.online) return '<button class="start" data-rivcontract="' + ri + '">Contract</button>';
-      if (on.contract || on.duel) return off('Something else is under way');
+      if (on.contract || on.duel || on.coop) return off('Something else is under way');
       if (co.human) {
         if (co.out) return off('Out of the campaign');
         if (!(co.roster || []).length) return off('Not founded yet');
-        if ((on.challenges || []).some(function (c) { return (c.mine && c.to === co.slot) || (!c.mine && c.from === co.slot); })) return off('Challenge waiting');
         if (co.busy) return off('Fighting someone else');
-        return '<button class="start" data-ochallenge="' + co.slot + '">Challenge</button>';
+        var between = function (list) { return (list || []).some(function (c) { return (c.mine && c.to === co.slot) || (!c.mine && c.from === co.slot); }); };
+        // against them (a challenge), or alongside them against the OpFor (a co-operative contract, p. 150)
+        return (between(on.challenges) ? off('Challenge waiting') : '<button class="start" data-ochallenge="' + co.slot + '">Challenge</button>') +
+          (between(on.coopAsks) ? off('Co-op offered') : '<button class="start" data-ocoopask="' + co.slot + '" title="The two of you against the OpFor: pay and experience halved">Offer co-op</button>');
       }
       if ((on.busyAi || []).indexOf(ri) >= 0) return off('Fighting someone else');
       return '<button class="start" data-oaicontract="' + ri + '">Contract</button>';

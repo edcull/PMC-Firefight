@@ -8,8 +8,8 @@
   'use strict';
   root.PMCArrive = function (B) {
     var addFx = B.addFx, animateMove = B.animateMove, arrivalWhere = B.arrivalWhere, byId = B.byId;
-    var nowMs = B.nowMs, sfName = B.sfName, sideName = B.sideName, soloOwnerName = B.soloOwnerName, H = B.H;
-    var ISO = B.ISO, R = B.R, SFX = B.SFX, W = B.W, cam = B.cam, ui = B.ui;
+    var nowMs = B.nowMs, sfName = B.sfName, sideName = B.sideName, soloOwnerName = B.soloOwnerName;
+    var ISO = B.ISO, R = B.R, SFX = B.SFX, cam = B.cam, ui = B.ui;
     // from modules installed after this one: looked up when called
     function esc() { return B.esc.apply(this, arguments); }
     function escHtml() { return B.escHtml.apply(this, arguments); }
@@ -88,9 +88,9 @@
        nearest edge (or from `start`, where the scenario says it came out) to
        where it was put. */
     function walkOn(u, start) {
-      var dl = u.x, dr = W - u.x, dt = u.y, db = H - u.y, m = Math.min(dl, dr, dt, db);
-      var from = start ? { x: start.x, y: start.y } : m === dl ? { x: 0.2, y: u.y } : m === dr ? { x: W - 0.2, y: u.y }
-        : m === dt ? { x: u.x, y: 0.2 } : { x: u.x, y: H - 0.2 };
+      var dl = u.x, dr = R.BOARD.w - u.x, dt = u.y, db = R.BOARD.h - u.y, m = Math.min(dl, dr, dt, db);
+      var from = start ? { x: start.x, y: start.y } : m === dl ? { x: 0.2, y: u.y } : m === dr ? { x: R.BOARD.w - 0.2, y: u.y }
+        : m === dt ? { x: u.x, y: 0.2 } : { x: u.x, y: R.BOARD.h - 0.2 };
       focusUnit(u, false, true);
       animateMove(u, [from, { x: u.x, y: u.y }], false);
       /* Arriving within 12" of the enemy invites a free shot (p. 30). The engine

@@ -1146,7 +1146,7 @@ button.cstat:hover { border-color: rgba(255,255,255,.22); background: rgba(255,2
 #setup[data-hot="3"] .hot-sum { display: block; }
 #setup[data-hot] .hot-intro { display: block; }
 /* a demo names its own forces, from their colour and kind, always lays the table itself, and needs no explaining */
-#setup[data-kind="demo"] #terrain-field, #setup[data-quick] .hot-intro, #setup[data-kind="net"] .hot-intro { display: none !important; }
+#setup[data-kind="demo"] #terrain-field, #setup[data-kind="demo"] #opts-field, #setup[data-quick] .hot-intro, #setup[data-kind="net"] .hot-intro { display: none !important; }
 /* nor does it pick colours or hand-build: its forces are rolled, each in a colour of its own, and the
    Battle Tier and Priority Level are set once, for both, on the battlefield step */
 #setup[data-quick] .muster-btns { display: none !important; }
@@ -2352,3 +2352,24 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .ae-pairin em { font-style: normal; color: var(--ink-faint); }
 .ae-notes { margin: 8px 0 4px; padding: 8px 10px; border-left: 3px solid var(--alpha); background: var(--panel); font-size: 12.5px; line-height: 1.45; white-space: pre-wrap; }
 .ae-notes b { display: block; font-family: var(--display); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 2px; }
+
+/* the optional rules: a box each, the name with what it does beneath (ui-parts.js optionBoxes) */
+.opt-list { display: flex; flex-direction: column; gap: 6px; }
+.field .opt-row, .opt-row { display: flex; gap: 8px; align-items: flex-start; margin: 0; text-transform: none; letter-spacing: 0;
+  font-family: inherit; font-size: 13px; color: var(--ink); cursor: pointer; }
+.opt-row input { margin-top: 3px; flex: none; }
+.opt-row input:disabled { cursor: default; }
+.opt-row b { font-weight: 600; }
+.opt-row .opt-pg { color: var(--ink-dim); font-family: var(--mono); font-size: 11px; }
+.opt-row .opt-txt { display: block; color: var(--ink-dim); font-size: 12px; line-height: 1.35; }
+
+/* the OpFor chosen by hand (muster.js opModal): the pool as small tags, tapped to take one out */
+.op-chosen { display: flex; flex-wrap: wrap; gap: 4px; }
+.opk { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; color: var(--ink); font-size: 12px; padding: 3px 7px; cursor: pointer; }
+.opk .ct { font-family: var(--mono); color: var(--ink-dim); }
+#op-modal .askrow { flex-wrap: wrap; gap: 8px; }
+#op-modal .limits { white-space: normal; overflow: visible; text-overflow: clip; }
+
+/* Other Worlds on a job: the conditions rolled with it, a pill each (dossier-contract.js jobCard) */
+.offer-world { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 2px; }
+.worldpill { border-color: color-mix(in srgb, var(--warn, #d9a441) 50%, var(--line)); color: var(--ink); }

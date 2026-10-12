@@ -26,7 +26,7 @@
 (function (root) {
   'use strict';
   var R = root.PMC, SC = root.PMCScen;
-  var W = R.BOARD.w, H = R.BOARD.h, UR = R.UNIT_R;
+  var UR = R.UNIT_R;
   function d6() { return R.d6(); }
   function d3() { return R.d3(); }
   function dist(a, b, c, d) { return R.inches(a, b, c, d); }
@@ -247,6 +247,63 @@
     return k || [];
   }
 
+  /* A pool chosen by hand rather than rolled (the owner's option): the same
+     OpFor table and the same rules rollOpFor keeps — the points and each Tier's
+     share, three machines a Priority Level and none above the Battle Tier at
+     Priority Level 1, aircraft from Battle Tier II and one a Priority Level, a
+     single Leader Bug, each unit's own limits — and the answer to the players'
+     hulls and aircraft (p. 148) when they bring any. The shape of R.checkArmy's
+     answer, so the screen shows it the same way. */
+  function checkOpFor(picks, bt, pl, faction, playersHaveMachines) {
+    pl = pl || 1;
+    var keys = (picks || []).map(function (e) { return R.splitPick(e).key; });
+    var budget = OPFOR[bt].points * pl, lim = limitsAt(OPFOR, bt, pl);
+    var faults = [], counts = [0, 0, 0, 0, 0, 0], spent = 0, perKey = {}, perGroup = {};
+    var machines = 0, aircraft = 0, leaders = 0, factions = {};
+    keys.forEach(function (k) {
+      var p = R.profile(k);
+      if (!p) return;
+      spent += p.tier; counts[p.tier]++;
+      perKey[k] = (perKey[k] || 0) + 1;
+      perGroup[p.group] = (perGroup[p.group] || 0) + 1;
+      factions[p.faction || 'pmc'] = 1;
+      if (p.leaderBug) leaders++;
+      if (!usable(p)) faults.push(p.name + ' has no place in an OpFor pool.');
+      if (p.cls !== 'infantry') {
+        machines++;
+        if (pl === 1 && p.tier > bt) faults.push('No vehicle or aircraft above the Battle Tier at Priority Level 1.');
+        if (p.cls === 'aircraft') aircraft++;
+      }
+    });
+    if (Object.keys(factions).length > 1 || (keys.length && faction && !factions[faction])) faults.push('An OpFor is drawn from one army list.');
+    if (spent > budget) faults.push('Over budget: ' + spent + ' of ' + budget + ' composition points.');
+    for (var t = 1; t <= 5; t++) {
+      if (counts[t] < lim[t - 1][0]) faults.push('Needs at least ' + lim[t - 1][0] + ' Tier ' + R.ROMAN[t] + ' units (has ' + counts[t] + ').');
+      if (counts[t] > lim[t - 1][1]) faults.push('At most ' + lim[t - 1][1] + ' Tier ' + R.ROMAN[t] + ' units (has ' + counts[t] + ').');
+    }
+    if (machines > 3 * pl) faults.push('No more than ' + (3 * pl) + ' vehicles or aircraft \u2014 three per Priority Level.');
+    if (aircraft && bt < 2) faults.push('Aircraft only from Battle Tier II.');
+    if (aircraft > pl) faults.push('No more than ' + pl + ' aircraft \u2014 one per Priority Level.');
+    if (leaders > 1) faults.push('One Leader Bug at most.');
+    Object.keys(perKey).forEach(function (k) {
+      var p = R.profile(k);
+      if (p.cap && perKey[k] > p.cap) faults.push('Max ' + p.cap + ' \u00d7 ' + p.name + '.');
+      if (p.capPL && perKey[k] > p.capPL * pl) faults.push('Max ' + (p.capPL * pl) + ' \u00d7 ' + p.name + '.');
+      if (p.groupCap && perGroup[p.group] > p.groupCap && faults.indexOf('Max ' + p.groupCap + ' ' + p.group + ' units.') < 0) {
+        faults.push('Max ' + p.groupCap + ' ' + p.group + ' units.');
+      }
+    });
+    /* The answer to the players' machines is a "should" (p. 148), and a rolled pool
+       goes without where the army has none to give: a warning, not a fault. */
+    var need = threatOf(playersHaveMachines || false), warnings = [];
+    if (keys.length && !answersMachines(picks, bt, need)) {
+      warnings.push('The players bring ' + (need.ground && need.air ? 'hulls and aircraft' : need.air ? 'aircraft' : 'hulls') +
+        ': the OpFor needs ' + (need.ground && need.air ? 'an answer to each' : 'an answer') + ' \u2014 an Anti-tank or Anti-aircraft unit, or a machine of the Battle Tier.');
+    }
+    if (!keys.length) faults.push('No units yet.');
+    return { ok: !faults.length, faults: faults, warnings: warnings, counts: counts, spent: spent, budget: budget, limits: lim };
+  }
+
   /* ---------------------------------------------------------- scenario kit */
 
   // how far a point is from the nearest edge of a terrain rectangle (0 inside it)
@@ -258,7 +315,7 @@
   var onTable = R.onTable;
   function players(state) { return state.units.filter(function (u) { return u.side === 'A' && onTable(u); }); }
   function passable(state, x, y) {
-    if (x < UR || y < UR || x > W - UR || y > H - UR) return false;
+    if (x < UR || y < UR || x > R.BOARD.w - UR || y > R.BOARD.h - UR) return false;
     return !R.TERRAIN[R.terrainAt(state, x, y)].impassable;
   }
   function open(state, x, y) { return passable(state, x, y) && R.terrainAt(state, x, y) === 'open'; }
@@ -276,13 +333,13 @@
     var len = 3 + rnd(4);
     state.terrain.push({
       kind: 'barricade',
-      x: clamp(horiz ? x - len / 2 : x - 0.5, 1, W - (horiz ? len : 1) - 1),
-      y: clamp(horiz ? y - 0.5 : y - len / 2, 1, H - (horiz ? 1 : len) - 1),
+      x: clamp(horiz ? x - len / 2 : x - 0.5, 1, R.BOARD.w - (horiz ? len : 1) - 1),
+      y: clamp(horiz ? y - 0.5 : y - len / 2, 1, R.BOARD.h - (horiz ? 1 : len) - 1),
       w: horiz ? len : 1, h: horiz ? 1 : len
     });
   }
   function scatterBarricades(state, n) {
-    for (var i = 0; i < n; i++) barricade(state, 6 + Math.random() * (W - 12), 6 + Math.random() * (H - 12), Math.random() < 0.5);
+    for (var i = 0; i < n; i++) barricade(state, 6 + Math.random() * (R.BOARD.w - 12), 6 + Math.random() * (R.BOARD.h - 12), Math.random() < 0.5);
   }
 
   /* Every OpFor unit starts in the pool; a counter on the table stands for one
@@ -302,7 +359,7 @@
     var out = [];
     for (var guard = 0; guard < 6000 && out.length < n; guard++) {
       var loose = guard > 4000;                 // give up on `want` before giving up on the count
-      var p = { x: 3 + Math.random() * (W - 6), y: 3 + Math.random() * (H - 6) };
+      var p = { x: 3 + Math.random() * (R.BOARD.w - 6), y: 3 + Math.random() * (R.BOARD.h - 6) };
       if (!passable(state, p.x, p.y)) continue;
       if (want && !loose && !want(p, out)) continue;
       if (!out.every(function (q) { return dist(p.x, p.y, q.x, q.y) >= apart; })) continue;
@@ -316,7 +373,7 @@
         out.forEach(function (q) { if (q !== p) { var d = dist(p.x, p.y, q.x, q.y); if (d < nd) { nd = d; near = q; } } });
         if (!near || nd > 16) return;
         var nx = p.x + (p.x - near.x) / (nd || 1) * 0.8, ny = p.y + (p.y - near.y) / (nd || 1) * 0.8;
-        nx = clamp(nx, 4, W - 4); ny = clamp(ny, 4, H - 4);
+        nx = clamp(nx, 4, R.BOARD.w - 4); ny = clamp(ny, 4, R.BOARD.h - 4);
         // (judged against the others, as when it was put down: counted among them at its old spot,
         // a counter that had to be near a leader could drift away from it, SOL-14)
         if (passable(state, nx, ny) && (!want || want({ x: nx, y: ny }, out.filter(function (q) { return q !== p; })))) { p.x = nx; p.y = ny; }
@@ -337,7 +394,7 @@
         if (dd > r * r) continue;
         var score = Math.sqrt(dd) + Math.random() * 1.2;     // the jitter keeps them from lining up
         if (score >= bs) continue;
-        var g = { x: clamp(x + gx, UR, W - UR), y: clamp(y + gy, UR, H - UR) };
+        var g = { x: clamp(x + gx, UR, R.BOARD.w - UR), y: clamp(y + gy, UR, R.BOARD.h - UR) };
         if (!passable(state, g.x, g.y) || R.unitNear(state, g.x, g.y, u, 1) || (avoid && avoid(g))) continue;
         best = g; bs = score;
       }
@@ -390,7 +447,7 @@
      centre is at least 16" in — and in a cooperative game 18" from any other. */
   // `loose`: a table with no clear 8" circle anywhere takes the middle in the open and the rest passable
   function lzLegal(state, p, owner, loose) {
-    if (p.x < 16 || p.y < 16 || p.x > W - 16 || p.y > H - 16) return false;
+    if (p.x < 16 || p.y < 16 || p.x > R.BOARD.w - 16 || p.y > R.BOARD.h - 16) return false;
     if (!open(state, p.x, p.y)) return false;
     // the whole circle in the open (p. 150), not only its middle: rings at 2" and 4" (SOL-16)
     for (var ring = 2; ring <= 4; ring += 2) {
@@ -406,7 +463,7 @@
   function lzSpots(state, owner) {
     var out = [];
     for (var loose = 0; loose < 2 && !out.length; loose++) {
-      for (var x = 16; x <= W - 16; x += 1) for (var y = 16; y <= H - 16; y += 1) {
+      for (var x = 16; x <= R.BOARD.w - 16; x += 1) for (var y = 16; y <= R.BOARD.h - 16; y += 1) {
         if (lzLegal(state, { x: x, y: y }, owner, !!loose)) out.push({ x: x, y: y });
       }
     }
@@ -425,15 +482,16 @@
   function autoLZ(state, owner) {
     var s = lzSpots(state, owner);
     if (!s.length) {                        // a crowded table: relax the open-ground test
-      for (var x = 16; x <= W - 16; x += 2) for (var y = 16; y <= H - 16; y += 2) {
+      for (var x = 16; x <= R.BOARD.w - 16; x += 2) for (var y = 16; y <= R.BOARD.h - 16; y += 2) {
         if (passable(state, x, y)) s.push({ x: x, y: y });
       }
     }
-    return s.length ? s[rnd(s.length)] : { x: W / 2, y: H / 2 };
+    return s.length ? s[rnd(s.length)] : { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
   }
 
   // the corners, clockwise from the near one
-  var CORNERS = [{ x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }];
+  // the table's four corners, as it is now (its size is the battle's own)
+  function CORNERS() { return [{ x: 0, y: 0 }, { x: R.BOARD.w, y: 0 }, { x: R.BOARD.w, y: R.BOARD.h }, { x: 0, y: R.BOARD.h }]; }
 
   function owners(state) { return (state.solo && state.solo.owners) || [1]; }
 
@@ -459,6 +517,8 @@
       hint: ''
     };
     for (var k in o) s[k] = o[k];
+    var own = s.startBlock;
+    s.startBlock = function (state) { return (own && own(state)) || markersBlock(state) || null; };
     return s;
   }
 
@@ -487,11 +547,45 @@
   };
   function extend(o, extra) { for (var k in extra) o[k] = extra[k]; return o; }
 
+  /* ---- the counters and objectives put where the player wants them ----
+     An option (the owner's: the book has the player place them, the game does it
+     for them unless asked): the game lays them out as ever, and while the force
+     deploys the player may pick any up and put it down elsewhere, inside the
+     scenario's rules — each move checked as it is made, and what holds only of the
+     whole set (half the Decapitation counters near a leader, a third of the
+     Sabotage ones near an objective) when the battle is started. */
+  function handPlaced(state) { return !!(state && state.cfg && state.cfg.solo && state.cfg.solo.handPlace && state.scen && state.scen.markers); }
+  function markerList(state, kind) { return kind === 'target' ? state.sc.targets || [] : state.sc.counters || []; }
+  function moveMarker(state, kind, i, x, y) {
+    var rules = handPlaced(state) && state.scen.markers;
+    if (!rules || !rules[kind]) return { ok: false, why: 'Nothing of that kind to move here.' };
+    var list = markerList(state, kind), m = list[i], rule = rules[kind];
+    if (!m || m.destroyed) return { ok: false, why: 'No such ' + (kind === 'target' ? 'objective' : 'counter') + '.' };
+    if (!isFinite(x) || !isFinite(y)) return { ok: false, why: 'Somewhere on the table.' };
+    var edge = rule.edge || 3;
+    if (x < edge || y < edge || x > R.BOARD.w - edge || y > R.BOARD.h - edge) return { ok: false, why: 'At least ' + edge + '" from the table edges.' };
+    if (!passable(state, x, y)) return { ok: false, why: 'Not on impassable ground.' };
+    var apart = rule.apart(state);
+    for (var j = 0; j < list.length; j++) {
+      if (j !== i && dist(x, y, list[j].x, list[j].y) < apart - 1e-6) return { ok: false, why: (kind === 'target' ? 'Objectives' : 'Counters') + ' go at least ' + apart + '" apart.' };
+    }
+    if (rule.corners && CORNERS().some(function (c) { return dist(x, y, c.x, c.y) < rule.corners; })) return { ok: false, why: 'At least ' + rule.corners + '" from the table corners.' };
+    m.x = x; m.y = y;
+    return { ok: true };
+  }
+  // what the whole set still needs before the battle starts (null when nothing)
+  function markersBlock(state) {
+    var rules = handPlaced(state) && state.scen.markers;
+    return rules && rules.whole ? rules.whole(state) : null;
+  }
+
   /* ---------------------------------------------------------- the scenarios */
   var SOLO = {};
 
   /* ---- Crushing the Resistance (p. 150) ---- */
   SOLO.s_crush = base(extend({
+    // counters by hand: 6" apart, as the game lays them (p. 150)
+    markers: { counter: { apart: function () { return 6; } } },
     id: 's_crush', deployText: function () { return "Nothing deploys: your commando drops into the landing zone you nominate, in the first Reserve phase."; }, name: 'Crushing the Resistance', page: 150,
     blurb: 'Your commando drops into hostile ground with a simple task: eliminate all enemy resistance.',
     win: 'Rout the OpFor without being routed yourself.',
@@ -552,7 +646,7 @@
       return [{ profile: p, side: 'A', owner: own[rnd(own.length)], vip: true }];
     },
     setupTerrain: function (state) {
-      var c = { x: W / 2, y: H / 2 };
+      var c = { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
       state.sc.evac = c;
       state.terrain = state.terrain.filter(function (t) { return rectGap(t, c.x, c.y) > 4; });
       var n = d6() + 3;
@@ -565,7 +659,7 @@
       state.sc.entries = [];
       for (var e = 0; e < 6; e++) {
         var ang = start + e / 6 * Math.PI * 2;
-        state.sc.entries.push({ x: clamp(c.x + Math.cos(ang) * 18, 3, W - 3), y: clamp(c.y + Math.sin(ang) * 18, 3, H - 3), id: 'E' + (e + 1) });
+        state.sc.entries.push({ x: clamp(c.x + Math.cos(ang) * 18, 3, R.BOARD.w - 3), y: clamp(c.y + Math.sin(ang) * 18, 3, R.BOARD.h - 3), id: 'E' + (e + 1) });
       }
     },
     deploy: function (state) {
@@ -661,6 +755,17 @@
 
   /* ---- Decapitation (p. 152) ---- */
   SOLO.s_decap = base({
+    /* counters by hand (p. 152): 6" apart and 12" from the corners, and at least half
+       of them within 12" of a leader */
+    markers: {
+      counter: { apart: function () { return 6; }, corners: 12 },
+      whole: function (state) {
+        var ls = state.units.filter(function (u) { return u.side === 'B' && u.soloLeader && u.alive && u.x >= 0; });
+        var cs = state.sc.counters || [], half = Math.ceil(cs.length / 2);
+        var near = cs.filter(function (c) { return ls.some(function (l) { return dist(c.x, c.y, l.x, l.y) <= 12; }); }).length;
+        return near >= half ? null : 'At least half the counters (' + half + ') go within 12" of an enemy leader \u2014 ' + near + ' are.';
+      }
+    },
     id: 's_decap', deployText: function () { return "Nothing deploys: your commando comes on at a random table corner in the first Reserve phase."; }, name: 'Decapitation', page: 152,
     blurb: 'Get in, find the enemy leaders and kill them before they can call for help.',
     win: 'Destroy every OpFor Command Unit without being routed, within 12 turns.',
@@ -691,10 +796,10 @@
            then ruins, craters and woods); else behind a low wall (the scenario's own barricades
            included); and only failing all of that, open ground. Each 12" from the table edges
            and from the other leaders (SOL-10). */
-        var inBounds = function (x, y) { return x >= 12 && x <= W - 12 && y >= 12 && y <= H - 12 && placed.every(function (p) { return dist(p.x, p.y, x, y) >= 12; }); };
+        var inBounds = function (x, y) { return x >= 12 && x <= R.BOARD.w - 12 && y >= 12 && y <= R.BOARD.h - 12 && placed.every(function (p) { return dist(p.x, p.y, x, y) >= 12; }); };
         var q = null, mid = function (t) { return { x: t.x + t.w / 2, y: t.y + t.h / 2 }; };
         var was = { x: u.x, y: u.y };
-        u.x = W / 2; u.y = H / 2;                                  // (on the table, for canGarrison)
+        u.x = R.BOARD.w / 2; u.y = R.BOARD.h / 2;                                  // (on the table, for canGarrison)
         if (R.canGarrison(u)) {
           var homes = shuffle(state.terrain.filter(function (t) { return R.enterable(t) && inBounds(mid(t).x, mid(t).y); }))
             .sort(function (a, b) { return (b.kind === 'bunker') - (a.kind === 'bunker'); });
@@ -725,11 +830,11 @@
         }
         if (!q) {
           for (var g = 0; g < 400 && !q; g++) {
-            var c = { x: 12 + Math.random() * (W - 24), y: 12 + Math.random() * (H - 24) };
+            var c = { x: 12 + Math.random() * (R.BOARD.w - 24), y: 12 + Math.random() * (R.BOARD.h - 24) };
             if (passable(state, c.x, c.y) && placed.every(function (p) { return dist(p.x, p.y, c.x, c.y) >= 12; })) q = c;
           }
         }
-        q = q || { x: W / 2, y: H / 2 };
+        q = q || { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
         u.x = q.x; u.y = q.y; u.reserve = false; u.wave = 0;
         placed.push(q);
       });
@@ -738,7 +843,7 @@
       // at least half within 12" of a leader; the rest scattered, 12" from the corners
       state.sc.counters = placeCounters(state, n, 6, function (p, sofar) {
         var nearCU = placed.some(function (c) { return dist(p.x, p.y, c.x, c.y) <= 12; });
-        var clear = CORNERS.every(function (c) { return dist(p.x, p.y, c.x, c.y) >= 12; });
+        var clear = CORNERS().every(function (c) { return dist(p.x, p.y, c.x, c.y) >= 12; });
         if (!clear) return false;
         var near = sofar.filter(function (q) { return placed.some(function (c) { return dist(q.x, q.y, c.x, c.y) <= 12; }); }).length;
         return near < half ? nearCU : true;
@@ -746,20 +851,20 @@
       // the players come on at a random corner — each player a different one
       var corners = shuffle([0, 1, 2, 3]);
       state.sc.entryCorner = {};
-      owners(state).forEach(function (o, i) { state.sc.entryCorner[o] = CORNERS[corners[i]]; });
+      owners(state).forEach(function (o, i) { state.sc.entryCorner[o] = CORNERS()[corners[i]]; });
       mine(state, 'A').forEach(function (u) { u.reserve = true; u.wave = 1; u.x = -1; u.y = -1; });
       made = n;
     },
     arrivalPoint: function (state, u) {
       var c = state.sc.entryCorner[u.owner || 1];
-      var q = spotNear(state, clamp(c.x, 3, W - 3), clamp(c.y, 3, H - 3), 6 - UR, u,
+      var q = spotNear(state, clamp(c.x, 3, R.BOARD.w - 3), clamp(c.y, 3, R.BOARD.h - 3), 6 - UR, u,
         function (p) { return dist(p.x, p.y, c.x, c.y) > 6; });
       return q ? { x: q.x, y: q.y, why: 'at its table corner' } : null;
     },
     arriveHow: function (state, u) {
       if (u.side !== 'A') return null;
       var c = state.sc.entryCorner[u.owner || 1];
-      return { x: clamp(c.x, 0.2, W - 0.2), y: clamp(c.y, 0.2, H - 0.2) };
+      return { x: clamp(c.x, 0.2, R.BOARD.w - 0.2), y: clamp(c.y, 0.2, R.BOARD.h - 0.2) };
     },
     autoArrive: true,
     behaviour: function (state, u) {
@@ -785,12 +890,36 @@
   });
 
   /* ---- Evacuation (p. 153) ---- */
-  function militiaProfile(bt) {
-    var k = { 1: 'recruits', 2: 'rookie', 3: 'regular', 4: 'veterans', 5: 'rangers' }[bt] || 'regular';
+  /* "one free 'militia' unit per Priority Level... the parameters of a single
+     standard unit of Tier equal to the Battle Tier" (p. 153): the player's own
+     army's line infantry of that Tier (the owner's ruling) — its statline, not its
+     special rules, but a bug is still a bug (Animal Behaviour, Determined). The
+     Fire beetle is the Lesser Bugs' Tier V entry and a hull, so a Tier V swarm
+     sends Oversized attack forms. */
+  var MILITIA = {
+    pmc: ['recruits', 'rookie', 'regular', 'veterans', 'rangers'],
+    rebel: ['rciv', 'rmilitia', 'rinsurgents', 'rhardened', 'rguard'],
+    bugs: ['btiny', 'bsmall', 'battack', 'boversized', 'boversized'],
+    xeno: ['xeps1', 'xeps2', 'xeps3', 'xeps4', 'xeps5']
+  };
+  var MILITIA_KEEPS = ['Animal Behaviour', 'Determined'];
+  function militiaProfile(bt, faction) {
+    var list = MILITIA[faction] || MILITIA.pmc, k = list[Math.max(1, Math.min(5, bt || 3)) - 1];
     var src = R.profile(k), p = {};
     for (var f in src) p[f] = src[f];
-    p.key = 'solomilitia'; p.code = 'MIL'; p.name = 'Militia'; p.rules = []; p.group = 'Militia';
+    p.key = 'solomilitia'; p.code = 'MIL'; p.name = 'Militia (' + src.name + ')'; p.group = 'Militia';
+    p.rules = faction === 'bugs' ? src.rules.filter(function (r) { return MILITIA_KEEPS.indexOf(r) >= 0; }) : [];
     return p;
+  }
+  // the army a player in the game is fighting with: their own units' faction (a co-op player's may differ)
+  function ownerFaction(state, owner) {
+    var cfg = state.cfg, keys = cfg.armyA || [], owners = cfg.ownersA || [];
+    for (var i = 0; i < keys.length; i++) {
+      if (owners.length && owners[i] !== owner) continue;
+      var p = R.profile(R.splitPick(keys[i]).key);
+      if (p && p.faction) return p.faction;
+    }
+    return (cfg.solo && cfg.solo.faction) || 'pmc';
   }
   var CIVILIANS = {
     key: 'solociv', code: 'CIV', name: 'Civilian group', group: 'Civilians', art: 'civilian', faction: 'pmc',
@@ -813,12 +942,15 @@
       var pl = state.cfg.pl || 1, own = owners(state), out = [];
       for (var i = 0; i < 4 * pl; i++) out.push({ profile: CIVILIANS, side: 'A', owner: own[0], civ: true });
       // one free militia unit a Priority Level, shared out between the players
-      for (var m = 0; m < pl; m++) out.push({ profile: militiaProfile(state.cfg.tier), side: 'A', owner: own[m % own.length], militia: true });
+      for (var m = 0; m < pl; m++) {
+        var who = own[m % own.length];
+        out.push({ profile: militiaProfile(state.cfg.tier, ownerFaction(state, who)), side: 'A', owner: who, militia: true });
+      }
       return out;
     },
     setupTerrain: function (state) {
-      var ci = rnd(4), c = CORNERS[ci], o = CORNERS[(ci + 2) % 4];
-      function inward(corner, d) { return { x: corner.x === 0 ? d : W - d, y: corner.y === 0 ? d : H - d }; }
+      var ci = rnd(4), c = CORNERS()[ci], o = CORNERS()[(ci + 2) % 4];
+      function inward(corner, d) { return { x: corner.x === 0 ? d : R.BOARD.w - d, y: corner.y === 0 ? d : R.BOARD.h - d }; }
       var sz = inward(c, 0);
       state.sc.safe = { x: sz.x, y: sz.y, r: 12 };
       state.terrain = state.terrain.filter(function (t) {
@@ -828,10 +960,10 @@
       state.sc.safeBuilding = { kind: 'building', x: bc.x - 2.5, y: bc.y - 2.5, w: 5, h: 5, safe: true };
       state.terrain.push(state.sc.safeBuilding);
       // three reinforced buildings within 12" of the opposite corner
-      var spots = [inward(o, 5), { x: o.x === 0 ? 10 : W - 10, y: o.y === 0 ? 3.5 : H - 3.5 }, { x: o.x === 0 ? 3.5 : W - 3.5, y: o.y === 0 ? 10 : H - 10 }];
-      spots = [{ x: (o.x === 0 ? 4 : W - 4), y: (o.y === 0 ? 4 : H - 4) },
-        { x: (o.x === 0 ? 11 : W - 11), y: (o.y === 0 ? 4 : H - 4) },
-        { x: (o.x === 0 ? 4 : W - 4), y: (o.y === 0 ? 11 : H - 11) }];
+      var spots = [inward(o, 5), { x: o.x === 0 ? 10 : R.BOARD.w - 10, y: o.y === 0 ? 3.5 : R.BOARD.h - 3.5 }, { x: o.x === 0 ? 3.5 : R.BOARD.w - 3.5, y: o.y === 0 ? 10 : R.BOARD.h - 10 }];
+      spots = [{ x: (o.x === 0 ? 4 : R.BOARD.w - 4), y: (o.y === 0 ? 4 : R.BOARD.h - 4) },
+        { x: (o.x === 0 ? 11 : R.BOARD.w - 11), y: (o.y === 0 ? 4 : R.BOARD.h - 4) },
+        { x: (o.x === 0 ? 4 : R.BOARD.w - 4), y: (o.y === 0 ? 11 : R.BOARD.h - 11) }];
       state.sc.homes = spots.map(function (p) {
         var b = { kind: 'bunker', x: p.x - 2, y: p.y - 2, w: 4, h: 4, home: true };
         state.terrain.push(b);
@@ -851,9 +983,9 @@
       }
       [12, 10, 8, 6].forEach(function (sep) {
         for (var g = 0; g < 3000 && state.sc.entries.length < 6; g++) {
-          var e = { x: 2 + Math.random() * (W - 4), y: 2 + Math.random() * (H - 4) };
+          var e = { x: 2 + Math.random() * (R.BOARD.w - 4), y: 2 + Math.random() * (R.BOARD.h - 4) };
           // entry points on the edges read as roads in; inland ones as tunnels
-          if (Math.random() < 0.6) { if (Math.random() < 0.5) e.x = e.x < W / 2 ? 1.5 : W - 1.5; else e.y = e.y < H / 2 ? 1.5 : H - 1.5; }
+          if (Math.random() < 0.6) { if (Math.random() < 0.5) e.x = e.x < R.BOARD.w / 2 ? 1.5 : R.BOARD.w - 1.5; else e.y = e.y < R.BOARD.h / 2 ? 1.5 : R.BOARD.h - 1.5; }
           if (!fits(e, sep)) continue;
           state.sc.entries.push({ x: e.x, y: e.y, id: 'E' + (state.sc.entries.length + 1) });
         }
@@ -870,7 +1002,7 @@
           // anywhere at least 12" from the table edges
           var q = null;
           for (var g = 0; g < 400 && !q; g++) {
-            var c = { x: 12 + Math.random() * (W - 24), y: 12 + Math.random() * (H - 24) };
+            var c = { x: 12 + Math.random() * (R.BOARD.w - 24), y: 12 + Math.random() * (R.BOARD.h - 24) };
             if (passable(state, c.x, c.y) && !R.unitNear(state, c.x, c.y, u, 1)) q = c;
           }
           if (q) { u.x = q.x; u.y = q.y; }
@@ -881,7 +1013,7 @@
     },
     deployOK: function (state, side, x, y, u) {
       if (side !== 'A') return false;
-      if (u && u.soloMilitia) return x >= 12 && y >= 12 && x <= W - 12 && y <= H - 12;
+      if (u && u.soloMilitia) return x >= 12 && y >= 12 && x <= R.BOARD.w - 12 && y <= R.BOARD.h - 12;
       return inSafeZone(state, x, y);
     },
     /* "The player may decide to keep some of their units in reserve. These units
@@ -972,6 +1104,21 @@
 
   /* ---- Sabotage (p. 155) ---- */
   SOLO.s_sabotage = base(extend({
+    /* objectives and counters by hand (p. 155): the objectives 12" apart and 12" from
+       the edges (or as close as the game had to put them); the counters 6" apart, a
+       third of them within 12" of an objective and the rest inside the 12" border */
+    markers: {
+      target: { edge: 12, apart: function (state) { return state.sc.targetApart || 12; } },
+      counter: { apart: function () { return 6; } },
+      whole: function (state) {
+        var tg = state.sc.targets || [], cs = state.sc.counters || [], third = Math.ceil(cs.length / 3);
+        var nearT = function (c) { return tg.some(function (t) { return dist(c.x, c.y, t.x, t.y) <= 13; }); };
+        var near = cs.filter(nearT).length;
+        if (near < third) return 'At least a third of the counters (' + third + ') go within 12" of an objective \u2014 ' + near + ' are.';
+        var out = cs.filter(function (c) { return !nearT(c) && (c.x < 12 || c.y < 12 || c.x > R.BOARD.w - 12 || c.y > R.BOARD.h - 12); }).length;
+        return out ? 'A counter that is not near an objective goes at least 12" from the table edges \u2014 ' + out + (out === 1 ? ' is' : ' are') + ' not.' : null;
+      }
+    },
     id: 's_sabotage', deployText: function () { return "Nothing deploys: your commando drops into the landing zone you nominate, in the first Reserve phase."; }, name: 'Sabotage', page: 155,
     blurb: 'Destroy every one of the targets without losing too many people doing it.',
     win: 'Destroy all the objectives without being routed.',
@@ -988,13 +1135,13 @@
         // seven (at Level 2) only fit on the 12" grid's points, nudged where they can be
         if (apart === 12 && n > 5) {
           var grid = shuffle([12, 24, 36].reduce(function (a, gx) { return a.concat([[gx, 12], [gx, 24], [gx, 36]]); }, []))
-            .map(function (q) { return { x: q[0] * W / 48, y: q[1] * H / 48 }; })
+            .map(function (q) { return { x: q[0] * R.BOARD.w / 48, y: q[1] * R.BOARD.h / 48 }; })
             .filter(function (q) { return !state || passable(state, q.x, q.y); }).slice(0, n);
           if (grid.length === n) {
             grid.forEach(function (q) {
               for (var t = 0; t < 30; t++) {
                 var m = { x: q.x + (Math.random() - 0.5) * 4, y: q.y + (Math.random() - 0.5) * 4 };
-                if (m.x < 12 || m.y < 12 || m.x > W - 12 || m.y > H - 12 || (state && !passable(state, m.x, m.y))) continue;
+                if (m.x < 12 || m.y < 12 || m.x > R.BOARD.w - 12 || m.y > R.BOARD.h - 12 || (state && !passable(state, m.x, m.y))) continue;
                 if (grid.every(function (o) { return o === q || dist(m.x, m.y, o.x, o.y) >= 12; })) { q.x = m.x; q.y = m.y; }
               }
             });
@@ -1005,13 +1152,17 @@
         for (var restart = 0; restart < 120 && out.length < n; restart++) {
           out = [];
           for (var g = 0; g < 600 && out.length < n; g++) {
-            var p = { x: 12 + Math.random() * (W - 24), y: 12 + Math.random() * (H - 24) };
+            var p = { x: 12 + Math.random() * (R.BOARD.w - 24), y: 12 + Math.random() * (R.BOARD.h - 24) };
             if (state && !passable(state, p.x, p.y)) continue;
             if (out.every(function (q) { return dist(p.x, p.y, q.x, q.y) >= apart; })) out.push(p);
           }
         }
       }
       state.sc.targets = out.map(function (p, i) { return { x: p.x, y: p.y, id: i, destroyed: false }; });
+      // the gap they went down at, for one moved by hand (12", unless the table would not take it)
+      var gap = 12;
+      out.forEach(function (p, i) { out.forEach(function (q, j) { if (j > i) gap = Math.min(gap, dist(p.x, p.y, q.x, q.y)); }); });
+      state.sc.targetApart = Math.floor(gap);
       return [];
     },
     deploy: function (state) {
@@ -1022,7 +1173,7 @@
         var near = tg.some(function (t) { return dist(p.x, p.y, t.x, t.y) <= 13; });
         var nNear = sofar.filter(function (q) { return tg.some(function (t) { return dist(q.x, q.y, t.x, t.y) <= 13; }); }).length;
         if (nNear < third) return near;
-        return p.x >= 12 && p.y >= 12 && p.x <= W - 12 && p.y <= H - 12;
+        return p.x >= 12 && p.y >= 12 && p.x <= R.BOARD.w - 12 && p.y <= R.BOARD.h - 12;
       });
       mine(state, 'A').forEach(function (u) { u.reserve = true; u.wave = 1; u.x = -1; u.y = -1; });
       state.sc.lz = {};
@@ -1065,10 +1216,10 @@
     hint: 'Split your force either side of the road, within 12" of it. Each unit then shifts a little as it finds its hiding place. OpFor units shot at in the first turn take an extra D3 SP.',
     setupTerrain: function (state) {
       // a straight road through the middle of the table: nothing stands on it
-      var y0 = H / 2 - 2, y1 = H / 2 + 2;
+      var y0 = R.BOARD.h / 2 - 2, y1 = R.BOARD.h / 2 + 2;
       state.sc.road = { y0: y0, y1: y1 };
       state.terrain = state.terrain.filter(function (t) { return t.y + t.h < y0 - 0.5 || t.y > y1 + 0.5; });
-      state.terrain.push({ kind: 'road', x: 0, y: y0, w: W, h: y1 - y0 });
+      state.terrain.push({ kind: 'road', x: 0, y: y0, w: R.BOARD.w, h: y1 - y0 });
     },
     deploy: function (state) {
       /* The column on the road, "no closer than 1" and no further than 3"" apart
@@ -1077,7 +1228,7 @@
          an inch apart. */
       var col = shuffle(mine(state, 'B').slice());
       var dir = Math.random() < 0.5 ? 1 : -1;
-      var room = W - 2 * UR - 2;                       // centre to centre, an inch clear of each edge
+      var room = R.BOARD.w - 2 * UR - 2;                       // centre to centre, an inch clear of each edge
       var files = 1;
       while (files < 3 && (Math.ceil(col.length / files) - 1) * (2 * UR + 1) > room) files++;
       var per = Math.ceil(col.length / files);
@@ -1092,8 +1243,8 @@
           var over = len() - room, k = spare > 0 ? Math.max(0, 1 - over / spare) : 0;
           gaps = gaps.map(function (g) { return 1 + (g - 1) * k; });
         }
-        var fy = H / 2 + (f - (files - 1) / 2) * (2 * UR + 1);
-        var x = dir > 0 ? Math.min(4, W - UR - 1 - len()) : Math.max(W - 4, UR + 1 + len());
+        var fy = R.BOARD.h / 2 + (f - (files - 1) / 2) * (2 * UR + 1);
+        var x = dir > 0 ? Math.min(4, R.BOARD.w - UR - 1 - len()) : Math.max(R.BOARD.w - 4, UR + 1 + len());
         file.forEach(function (u, i) {
           u.soloFixed = true;
           u.x = x; u.y = fy + (files === 1 ? (Math.random() - 0.5) : 0);
@@ -1102,7 +1253,7 @@
           if (i < gaps.length) x += dir * (2 * UR + gaps[i]);
         });
       }
-      state.sc.boxes = { A: [{ x: 0, y: H / 2 - 14, w: W, h: 12 }, { x: 0, y: H / 2 + 2, w: W, h: 12 }] };
+      state.sc.boxes = { A: [{ x: 0, y: R.BOARD.h / 2 - 14, w: R.BOARD.w, h: 12 }, { x: 0, y: R.BOARD.h / 2 + 2, w: R.BOARD.w, h: 12 }] };
     },
     /* "The player splits his army into two more or less equal forces, which are
        deployed on each side of the road, within 12" of it and at least 6" from each
@@ -1113,11 +1264,11 @@
     evenBoxes: true,
     deployOK: function (state, side, x, y, u) {
       if (side !== 'A') return false;
-      var d = Math.abs(y - H / 2);
+      var d = Math.abs(y - R.BOARD.h / 2);
       if (d < 2 + UR || d > 14) return false;
-      var north = y < H / 2;
+      var north = y < R.BOARD.h / 2;
       return !state.units.some(function (o) {
-        return o !== u && o.side === 'A' && o.alive && o.x >= 0 && !o.aboard && (o.y < H / 2) !== north &&
+        return o !== u && o.side === 'A' && o.alive && o.x >= 0 && !o.aboard && (o.y < R.BOARD.h / 2) !== north &&
           dist(o.x, o.y, x, y) - 2 * UR < 6;
       });
     },
@@ -1125,7 +1276,7 @@
       var mine = state.units.filter(function (u) { return u.side === 'A' && u.alive && !u.aboard && !u.reserve; });
       // said once everything is down: until then the other half may still be to come (a co-op's second commando)
       if (mine.some(function (u) { return u.x < 0; })) return null;
-      var n = mine.filter(function (u) { return u.y < H / 2; }).length, s2 = mine.length - n;
+      var n = mine.filter(function (u) { return u.y < R.BOARD.h / 2; }).length, s2 = mine.length - n;
       if (Math.abs(n - s2) <= 1) return null;
       return (state.solo && state.solo.coop ? 'Between the two commandos, split' : 'Split') +
         ' the force more or less equally either side of the road: ' + n + ' to the north, ' + s2 + ' to the south.';
@@ -1138,11 +1289,11 @@
         if (u.side !== 'A' || !onTable(u)) return;
         var r = d6();
         if (r >= 3 && r <= 4) { out.push({ text: u.label + ': D6 ' + r + ' — stays put.' }); return; }
-        var n = d6(), toward = r <= 2, sgn = u.y < H / 2 ? 1 : -1;
+        var n = d6(), toward = r <= 2, sgn = u.y < R.BOARD.h / 2 ? 1 : -1;
         var ny = u.y + (toward ? sgn : -sgn) * n;
         // it never ends up on the road, or off the table
-        if (toward) ny = sgn > 0 ? Math.min(ny, H / 2 - 2 - UR) : Math.max(ny, H / 2 + 2 + UR);
-        ny = clamp(ny, UR, H - UR);
+        if (toward) ny = sgn > 0 ? Math.min(ny, R.BOARD.h / 2 - 2 - UR) : Math.max(ny, R.BOARD.h / 2 + 2 + UR);
+        ny = clamp(ny, UR, R.BOARD.h - UR);
         if (passable(state, u.x, ny) && !R.unitNear(state, u.x, ny, u, 1)) {
           out.push({ text: u.label + ': D6 ' + r + ' — ' + (toward ? 'creeps ' : 'pulls back ') + Math.abs(ny - u.y).toFixed(1) + '" ' + (toward ? 'towards' : 'away from') + ' the road.' });
           u.y = ny;
@@ -1175,7 +1326,8 @@
 
   root.PMCSolo = {
     COMMANDO: COMMANDO, OPFOR: OPFOR, ORDER: ORDER, SCENARIOS: SOLO,
-    checkCommando: checkCommando, rollCommando: rollCommando, rollOpFor: rollOpFor,
+    checkCommando: checkCommando, rollCommando: rollCommando, rollOpFor: rollOpFor, checkOpFor: checkOpFor,
+    handPlaced: handPlaced, moveMarker: moveMarker, markersBlock: markersBlock,
     catalogue: catalogue, usable: usable, lzLegal: lzLegal, lzSpots: lzSpots, autoLZ: autoLZ,
     pool: pool
   };

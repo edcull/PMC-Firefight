@@ -45,7 +45,8 @@
         dossier: { A: a.picks, B: b.picks },
         doctrines: { A: (coA.doctrines || []).slice(), B: (coB.doctrines || []).slice() },
         tactics: { A: tacA, B: tacB },
-        campaign: true, mode: 'demo', planet: opts.planet || 'random'
+        campaign: true, mode: 'demo', planet: opts.planet || 'random',
+        options: opts.options || {}                       // the campaign's optional rules
       }
     };
   }

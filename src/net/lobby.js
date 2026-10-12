@@ -465,7 +465,10 @@
         { v: 'auto', t: optionText('sel-terrain', 'auto', 'Automatically place') },
         { v: 'manual', t: optionText('sel-terrain', 'manual', 'Manually place') }
       ], s.terrain || 'auto') +
-      publicBox('term-private', !s.private, ' data-term="private"' + d);
+      publicBox('term-private', !s.private, ' data-term="private"' + d) +
+      // the optional rules; a campaign's battle is fought under the campaign's own
+      (s.campaign || !U || !U.optionBoxes ? '' :
+        '<div class="field lob-opts"><label>Optional rules</label>' + U.optionBoxes(s.options, ' data-term="options"' + d) + '</div>');
     // a cooperative game: commandos (Priority Level 1 each) under a solitaire scenario, against the OpFor
     if (coop) {
       var SOLO = root.PMCSolo;
@@ -480,7 +483,7 @@
         '</div>';
     }
     return '<div class="lob-terms">' + tier +
-      sel('term-pl', 'Priority Level', [{ v: 1, t: '1' }, { v: 2, t: '2' }], s.pl) +
+      sel('term-pl', 'Priority Level', [{ v: 1, t: '1' }, { v: 2, t: '2' }, { v: 3, t: '3 \u2014 6\u2032 \u00d7 4\u2032 table' }], s.pl) +
       '</div>' +
       forcesHTML(mine, isHost) +
       '<div class="lob-terms">' +
@@ -740,7 +743,8 @@
     }
     if (!k || !net) return;
     var patch = {};
-    patch[k] = k === 'tier' || k === 'pl' ? +box.value : k === 'private' ? !box.checked : box.value;
+    patch[k] = k === 'tier' || k === 'pl' ? +box.value : k === 'private' ? !box.checked
+      : k === 'options' ? U.readOptions(box.closest('.opt-list')) : box.value;
     if (k === 'campaign' && !box.value) patch.campaign = null;
     net.send('game.settings', { patch: patch });
   }

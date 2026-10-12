@@ -21,7 +21,7 @@
     var markReach = B.markReach, mySide = B.mySide, nowMs = B.nowMs, placeInsertion = B.placeInsertion;
     var placingSide = B.placingSide, restoreCanvases = B.restoreCanvases, select = B.select, send = B.send;
     var specialsFor = B.specialsFor, startBattle = B.startBattle, terrainAct = B.terrainAct;
-    var wireNet = B.wireNet, FX = B.FX, H = B.H, ISO = B.ISO, R = B.R, W = B.W, anims = B.anims, cam = B.cam;
+    var wireNet = B.wireNet, FX = B.FX, ISO = B.ISO, R = B.R, anims = B.anims, cam = B.cam;
     var el = B.el, fx = B.fx, idleCbs = B.idleCbs, resQueue = B.resQueue, show = B.show, ui = B.ui;
     // from modules installed after this one: looked up when called
     function addFx() { return B.addFx.apply(this, arguments); }
@@ -240,8 +240,8 @@
       var u = deployNext();
       if (!u) return null;
       var got = [];
-      for (var x = 1; x < W; x += 1.5) {
-        for (var y = 1; y < H; y += 1.5) {
+      for (var x = 1; x < R.BOARD.w; x += 1.5) {
+        for (var y = 1; y < R.BOARD.h; y += 1.5) {
           if (!deployOK(u.side, x, y, u)) continue;
           if (R.TERRAIN[R.terrainAt(B.state, x, y)].impassable) continue;
           if (R.unitNear(B.state, x, y, u, 1)) continue;

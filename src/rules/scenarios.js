@@ -15,7 +15,6 @@
 (function (root) {
   'use strict';
   var R = root.PMC;
-  var W = R.BOARD.w, H = R.BOARD.h;
   function d6() { return R.d6(); }
   /* A reserve die for `side`: Coordinated Hive (p. 124) re-rolls one that
      failed, and the re-rolls are counted for the log. */
@@ -43,25 +42,25 @@
   function spread3(state) {
     /* A deploys along the low-x edge, B along the high-x edge; every objective
        stays in the middle half of the table, clear of the quarter at either end */
-    var lo = W * 0.25, hi = W * 0.75;
-    var bands = [[lo, lo + 3], [W / 2 - 2.5, W / 2 + 2.5], [hi - 3, hi]];
+    var lo = R.BOARD.w * 0.25, hi = R.BOARD.w * 0.75;
+    var bands = [[lo, lo + 3], [R.BOARD.w / 2 - 2.5, R.BOARD.w / 2 + 2.5], [hi - 3, hi]];
     function ok(p) { return !(state && R.TERRAIN[R.terrainAt(state, p.x, p.y)].impassable); }
     for (var guard = 0; guard < 4000; guard++) {
-      var out = bands.map(function (bd) { return { x: bd[0] + Math.random() * (bd[1] - bd[0]), y: 8 + Math.random() * (H - 16) }; });
+      var out = bands.map(function (bd) { return { x: bd[0] + Math.random() * (bd[1] - bd[0]), y: 8 + Math.random() * (R.BOARD.h - 16) }; });
       if (!out.every(ok)) continue;
       var apart = true;
       for (var i = 0; i < 3; i++) for (var j = i + 1; j < 3; j++) if (dist(out[i].x, out[i].y, out[j].x, out[j].y) < 12) apart = false;
       if (apart) return out;
     }
     // a table with no room left: fall back on the corners-and-centre layout
-    return [{ x: lo, y: 36 }, { x: W / 2, y: 24 }, { x: hi, y: 12 }];
+    return [{ x: lo, y: R.BOARD.h * 0.75 }, { x: R.BOARD.w / 2, y: R.BOARD.h / 2 }, { x: hi, y: R.BOARD.h * 0.25 }];
   }
   /* Bands along the table edges, `depth` inches deep — "any table edge", which is
      what Hostile takeover gives its attacker (p. 55). */
   function edgeBands(depth) {
     return [
-      { x: 0, y: 0, w: W, h: depth }, { x: 0, y: H - depth, w: W, h: depth },
-      { x: 0, y: 0, w: depth, h: H }, { x: W - depth, y: 0, w: depth, h: H }
+      { x: 0, y: 0, w: R.BOARD.w, h: depth }, { x: 0, y: R.BOARD.h - depth, w: R.BOARD.w, h: depth },
+      { x: 0, y: 0, w: depth, h: R.BOARD.h }, { x: R.BOARD.w - depth, y: 0, w: depth, h: R.BOARD.h }
     ];
   }
   /* Points within `rad` of the centre, at least `apart` from each other, and — when
@@ -74,7 +73,7 @@
       for (var guard = 0; guard < 20000 && out.length < n; guard++) {
         var a = Math.random() * Math.PI * 2, r = 4 + Math.random() * (rad - 4);
         // objectives stay in the middle half of the table's width, clear of both deployment ends
-        var p = { x: clamp(cx + Math.cos(a) * r, Math.max(8, W * 0.25), Math.min(W - 8, W * 0.75)), y: clamp(cy + Math.sin(a) * r, 8, H - 8) };
+        var p = { x: clamp(cx + Math.cos(a) * r, Math.max(8, R.BOARD.w * 0.25), Math.min(R.BOARD.w - 8, R.BOARD.w * 0.75)), y: clamp(cy + Math.sin(a) * r, 8, R.BOARD.h - 8) };
         if (want && !want(p)) continue;
         if (out.every(function (q) { return dist(p.x, p.y, q.x, q.y) >= apart; })) out.push(p);
       }
@@ -146,13 +145,13 @@
       var foe = side === 'A' ? 'B' : 'A', n = 4 * (state.cfg.pl || 1);
       // the rebels' own ground, sampled every 2"
       var home = [];
-      for (var gx = 1; gx < W; gx += 2) for (var gy = 1; gy < H; gy += 2) if (inZone(state, side, gx, gy)) home.push([gx, gy]);
+      for (var gx = 1; gx < R.BOARD.w; gx += 2) for (var gy = 1; gy < R.BOARD.h; gy += 2) if (inZone(state, side, gx, gy)) home.push([gx, gy]);
       var nearHome = function (x, y) { return home.some(function (q) { return dist(q[0], q[1], x, y) <= 12; }); };
       for (var i = 0; i < n; i++) {
         var len = 3 + Math.floor(Math.random() * 4);   // no section over 6"
         for (var tries = 0; tries < 300; tries++) {
           var horiz = Math.random() < 0.5;
-          var x = 2 + Math.random() * (W - 4 - (horiz ? len : 1)), y = 2 + Math.random() * (H - 4 - (horiz ? 1 : len));
+          var x = 2 + Math.random() * (R.BOARD.w - 4 - (horiz ? len : 1)), y = 2 + Math.random() * (R.BOARD.h - 4 - (horiz ? 1 : len));
           var pc = { kind: 'barricade', x: x, y: y, w: horiz ? len : 1, h: horiz ? 1 : len, lastStand: side };
           var pts = [[pc.x, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x + pc.w / 2, pc.y + pc.h / 2]];
           if (pts.some(function (q) { return inZone(state, foe, q[0], q[1]); })) continue;
@@ -183,7 +182,7 @@
     }).sort(function (a, b) { return a.rank - b.rank || a.i - b.i; });
     var kept = [];
     function free(p) {
-      if (p.x < 0.5 || p.y < 0.5 || p.x + p.w > W - 0.5 || p.y + p.h > H - 0.5) return false;
+      if (p.x < 0.5 || p.y < 0.5 || p.x + p.w > R.BOARD.w - 0.5 || p.y + p.h > R.BOARD.h - 0.5) return false;
       for (var k = 0; k < kept.length; k++) {
         // a piece standing on a hill overlaps it by design (p. 42)
         if (p.onHill && kept[k].kind === 'hill' && clashes(p, kept[k])) continue;
@@ -295,6 +294,11 @@
      than from the army list. Units still in reserve count as perfectly fine
      (p. 49): they are part of the tally and not losses. */
   function routed(state, side) {
+    /* "Bad, worse, the bookkeeper" (optional, p. 167): the Tiers of the units
+       destroyed against half the army's composition points — read as the points
+       its units are worth (a unit costs its Tier), so the same units are in the
+       tally as below, a free or spawned one included. */
+    var book = R.opt(state, 'bookkeeper');
     var started = 0, left = 0;
     state.units.forEach(function (u) {
       if (u.side !== side) return;
@@ -304,8 +308,9 @@
       /* Expendable troops, "when destroyed ... do not count as a casualty for
          the purposes of victory conditions" (p. 57) — however they went. */
       if (!u.alive && (u.expended || R.has(u, 'Expendable'))) return;
-      started++;
-      if (u.alive) left++;
+      var worth = book ? (u.tier || 1) : 1;
+      started += worth;
+      if (u.alive) left += worth;
     });
     return (started - left) >= Math.ceil(started / 2);
   }
@@ -334,7 +339,7 @@
 
   /* A strip on one table edge. */
   function strip(side, depth) {
-    return side === 'A' ? [R.UNIT_R, depth] : [W - depth, W - R.UNIT_R];
+    return side === 'A' ? [R.UNIT_R, depth] : [R.BOARD.w - depth, R.BOARD.w - R.UNIT_R];
   }
 
   /* The scenarios where both companies enter in turn 1's Reserve phase (pp. 50-52):
@@ -344,7 +349,7 @@
   var ENTRY_TEXT = 'Nobody deploys before the battle: your units enter from your own table edge in the Reserve phase of turn 1, a unit at a time in turn with the enemy, from the side with the initiative — within 4\" of the edge and 12\" clear of the enemy where the ground allows.';
   function entryEdges(state) {
     state.sc.zones = { A: strip('A', 4), B: strip('B', 4) };
-    state.sc.entry = { A: [{ x: 0, y: 0, w: 4, h: H }], B: [{ x: W - 4, y: 0, w: 4, h: H }] };
+    state.sc.entry = { A: [{ x: 0, y: 0, w: 4, h: R.BOARD.h }], B: [{ x: R.BOARD.w - 4, y: 0, w: 4, h: R.BOARD.h }] };
   }
   // the units held to enter in turn 1 (wave 1): a hull brings whoever is aboard it
   function entering(state, side) {
@@ -359,11 +364,12 @@
      is two rectangles a corner, `depth` inches deep. */
   function cornerBands(c, run, depth) {
     return [
-      { x: c.x === 0 ? 0 : W - run, y: c.y === 0 ? 0 : H - depth, w: run, h: depth },
-      { x: c.x === 0 ? 0 : W - depth, y: c.y === 0 ? 0 : H - run, w: depth, h: run }
+      { x: c.x === 0 ? 0 : R.BOARD.w - run, y: c.y === 0 ? 0 : R.BOARD.h - depth, w: run, h: depth },
+      { x: c.x === 0 ? 0 : R.BOARD.w - depth, y: c.y === 0 ? 0 : R.BOARD.h - run, w: depth, h: run }
     ];
   }
-  var CORNERS = [{ x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }];
+  // the table's four corners, as it is now (its size is the battle's own)
+  function CORNERS() { return [{ x: 0, y: 0 }, { x: R.BOARD.w, y: 0 }, { x: R.BOARD.w, y: R.BOARD.h }, { x: 0, y: R.BOARD.h }]; }
   function inBoxes(boxes, x, y) {
     return !!boxes && boxes.some(function (b) {
       return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
@@ -386,7 +392,7 @@
      terrain and of any troops. */
   function fortWhy(state, r) {
     var c = state.sc.centre;
-    if (r.x < 0.5 || r.y < 0.5 || r.x + r.w > W - 0.5 || r.y + r.h > H - 0.5) return 'Not so close to the edge.';
+    if (r.x < 0.5 || r.y < 0.5 || r.x + r.w > R.BOARD.w - 0.5 || r.y + r.h > R.BOARD.h - 0.5) return 'Not so close to the edge.';
     var far = [[r.x, r.y], [r.x + r.w, r.y], [r.x, r.y + r.h], [r.x + r.w, r.y + r.h]].some(function (q) { return dist(q[0], q[1], c.x, c.y) > FORT_REACH; });
     if (far) return 'All of it within 12" of the objective.';
     if (R.rectPointDist(r, c.x, c.y) < 2) return 'Not on the objective itself.';
@@ -517,7 +523,7 @@
            (p. 52). They go on the table as real pieces — 4" across, passable, no
            cover, no line of sight blocked, indestructible — because the players have
            to be able to see what there is to search. */
-        var spots = clusterAt(W / 2, H / 2, 3, 12, 12);
+        var spots = clusterAt(R.BOARD.w / 2, R.BOARD.h / 2, 3, 12, 12);
         state.sc.search = spots.map(function (p, i) {
           var piece = {
             kind: 'searchsite', x: p.x - 2, y: p.y - 2, w: 4, h: 4,
@@ -655,7 +661,7 @@
         noteSplit(state, atk, 'wave', atks, Math.floor(atks.length / 2), Math.ceil(atks.length / 2),
           'The force comes down in two waves: the first on turn 1, the second from turn 4 on a roll.');
         state.sc.zones = {};
-        state.sc.zones[def] = [6, W - 6];         // anywhere 6" in from the edges
+        state.sc.zones[def] = [6, R.BOARD.w - 6];         // anywhere 6" in from the edges
         state.sc.zones[atk] = null;               // the attacker never deploys: it lands
         state.sc.inset = 6;
         /* "the unit enters the table from a random table edge (but from a point
@@ -670,7 +676,7 @@
          table edges" (p. 53) — all four edges, not just the two behind him. */
       deployOK: function (state, side, x, y) {
         if (side === state.sc.attacker) return false;   // the attacker lands, it never deploys
-        return x >= 6 && y >= 6 && x <= W - 6 && y <= H - 6;
+        return x >= 6 && y >= 6 && x <= R.BOARD.w - 6 && y <= R.BOARD.h - 6;
       },
       hint: 'Three landing zones. The attacker has to hold two of the three at the end, or rout the defender; the defender only has to stop them. A zone is held only by units standing at least partly in its circle. While the defender holds all three, the second wave cannot land — and once the first wave is gone with all three held, the landing has failed and the battle ends.',
       reserves: function (state, side) {
@@ -755,8 +761,8 @@
       objectives: function (state) {
         // the defender sets it within 4" of the table centre
         var a = Math.random() * Math.PI * 2, r = Math.random() * 4;
-        var cx = clamp(W / 2 + Math.cos(a) * r, 10, W - 10);
-        var cy = clamp(H / 2 + Math.sin(a) * r, 10, H - 10);
+        var cx = clamp(R.BOARD.w / 2 + Math.cos(a) * r, 10, R.BOARD.w - 10);
+        var cy = clamp(R.BOARD.h / 2 + Math.sin(a) * r, 10, R.BOARD.h - 10);
         state.sc.target = { kind: 'objective', x: cx - 2, y: cy - 2, w: 4, h: 4, cx: cx, cy: cy };
         // whatever stood there is moved off it (separateTerrain), not taken away
         state.terrain.push(state.sc.target);
@@ -767,7 +773,7 @@
         var t = state.sc.target;
         // the table edges within 12" of the corner nearest the objective are the
         // defender's; everything else belongs to the attacker
-        var corner = CORNERS.slice().sort(function (p, q) {
+        var corner = CORNERS().slice().sort(function (p, q) {
           return dist(p.x, p.y, t.cx, t.cy) - dist(q.x, q.y, t.cx, t.cy);
         })[0];
         state.sc.corner = corner;
@@ -797,7 +803,7 @@
         /* The table edges within 12" of the corner nearest the objective are the
            defender's; the edges around every other corner are the attacker's. */
         var atkBands = [];
-        CORNERS.forEach(function (c) {
+        CORNERS().forEach(function (c) {
           if (c.x === corner.x && c.y === corner.y) return;
           // reserves come on "up to 4" from the table border" (p. 27): the whole base inside 4"
           atkBands = atkBands.concat(cornerBands(c, 12, 4 - R.UNIT_R));
@@ -881,7 +887,7 @@
         defender: 'As the defender you put up to ten trench, wall and wire sections and a bunker within 12" of the objective, then set up within 12" of it.'
       },
       objectives: function (state) {
-        var cx = W / 2, cy = H / 2;
+        var cx = R.BOARD.w / 2, cy = R.BOARD.h / 2;
         state.sc.centre = { x: cx, y: cy };
         return [{ x: cx, y: cy }];
       },
@@ -1059,7 +1065,7 @@
   var LZ_R = 4;
   function lzOK(state, p, chosen) {
     var m = 8 + LZ_R;
-    if (p.x < m || p.y < m || p.x > W - m || p.y > H - m) return false;
+    if (p.x < m || p.y < m || p.x > R.BOARD.w - m || p.y > R.BOARD.h - m) return false;
     if (R.terrainAt(state, p.x, p.y) !== 'open') return false;
     for (var ring = 1; ring <= 2; ring++) {
       for (var k = 0; k < 12; k++) {
@@ -1071,7 +1077,7 @@
   }
   function lzSpots(state, chosen) {
     var out = [];
-    for (var x = 8 + LZ_R; x <= W - 8 - LZ_R; x += 1) for (var y = 8 + LZ_R; y <= H - 8 - LZ_R; y += 1) {
+    for (var x = 8 + LZ_R; x <= R.BOARD.w - 8 - LZ_R; x += 1) for (var y = 8 + LZ_R; y <= R.BOARD.h - 8 - LZ_R; y += 1) {
       if (lzOK(state, { x: x, y: y }, chosen)) out.push({ x: x, y: y });
     }
     return out;
@@ -1084,12 +1090,12 @@
     var chosen = [];
     for (var n = 0; n < 3; n++) {
       var spots = lzSpots(state, chosen);
-      if (!spots.length) spots = clusterAt(W / 2, H / 2, 1, 20, 0, null).filter(function (p) { return lzOK(state, p, []); });
-      if (!spots.length) spots = [{ x: W / 2 + (n - 1) * 12, y: H / 2 }];
+      if (!spots.length) spots = clusterAt(R.BOARD.w / 2, R.BOARD.h / 2, 1, 20, 0, null).filter(function (p) { return lzOK(state, p, []); });
+      if (!spots.length) spots = [{ x: R.BOARD.w / 2 + (n - 1) * 12, y: R.BOARD.h / 2 }];
       var best = null, bs = -Infinity;
       spots.forEach(function (p) {
         var near = foes.reduce(function (m, f) { return Math.min(m, dist(p.x, p.y, f.x, f.y)); }, 36);
-        var mid = dist(p.x, p.y, W / 2, H / 2);
+        var mid = dist(p.x, p.y, R.BOARD.w / 2, R.BOARD.h / 2);
         var sc = Math.min(near, 30) - mid * 0.35 + Math.random() * 2;
         if (sc > bs) { bs = sc; best = p; }
       });

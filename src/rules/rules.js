@@ -8,7 +8,16 @@
   'use strict';
   var DATA = root.PMCData || require('./data.js');     // the tables
 
-  var BOARD = { w: 48, h: 48 };   // 4' x 4', the book's recommended table for PL1-2
+  /* The table, in inches: 4' x 4' for Priority Levels 1-2 and 6' x 4' for 3-4 (p. 45).
+     A 6' x 4' table's long edges are the players' (they deploy along x = 0 and
+     x = w), so it is 48" across and 72" along. One object, changed in place for
+     each battle (setBoard) — every rule reads it as it is now; the engine puts
+     its own battle's size back before anything of it is worked out. */
+  var BOARD = { w: 48, h: 48 };
+  function boardFor(pl) { return (pl || 1) >= 3 ? { w: 48, h: 72 } : { w: 48, h: 48 }; }
+  // Detailed Terrain Knowledge (p. 141): two pieces on 4' x 4', three on 6' x 4' (four on anything bigger)
+  function dtkPieces() { var a = BOARD.w * BOARD.h; return a > 48 * 72 ? 4 : a > 48 * 48 ? 3 : 2; }
+  function setBoard(b) { if (b && b.w > 0 && b.h > 0) { BOARD.w = b.w; BOARD.h = b.h; } return BOARD; }
   var UNIT_R = 1.0;          // token radius in inches
   var STEP = 0.5;            // movement lattice resolution in inches
 
@@ -895,6 +904,7 @@
   // what the space kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
   function eSpace() {
     return {
+      worldOf: worldOf,
       BOARD: BOARD, SHAPED: SHAPED, STEP: STEP, TERRAIN: TERRAIN, UNIT_R: UNIT_R, angleWrap: angleWrap,
       hasOwn: hasOwn, isFlying: isFlying, nearestClear: nearestClear, sightRange: sightRange, status: status
     };
@@ -982,6 +992,113 @@
       state.doctrines[side].indexOf(id) >= 0);
   }
   function unitDoc(state, u, id) { return !!u && doctrine(state, u.side, id); }
+  /* Optional rules (Appendix 3, p. 166 on): off unless a battle, or the campaign
+     it is fought for, switches them on. `cfg.options` holds the ones on, cleaned
+     at the start of the battle; a battle or campaign saved before there were any
+     reads as all off. */
+  var OPTIONS = [
+    { key: 'onlyTwo', name: '\u201cThere can be only two!\u201d', page: 166,
+      text: 'A unit may attack only one of the two enemy units closest to it (vehicles, aircraft and infantry each counted apart; indirect fire and marking excepted).' },
+    { key: 'bookkeeper', name: 'Bad, worse, the bookkeeper', page: 167,
+      text: 'An army routs when the Tiers of its destroyed units add up to half its composition points, rather than when half its units are gone.' },
+    { key: 'otherWorlds', name: 'Other Worlds', page: 164,
+      text: 'Gravity, atmosphere and anomalies rolled for the battle (for each contract, in a campaign): low or high gravity, no air, toxic air or fog, radiation, time anomalies or an unexplained weakness.' }
+  ];
+  function cleanOptions(o) {
+    var out = {};
+    OPTIONS.forEach(function (d) { if (o && (o[d.key] === true || o[d.key] === 'true')) out[d.key] = true; });
+    return out;
+  }
+  function opt(state, key) { return !!(state && state.cfg && state.cfg.options && state.cfg.options[key]); }
+  /* "There can be only two!" (optional, p. 166): an attack may go only at one of
+     the two enemy units nearest the attacker. Vehicles, aircraft and infantry are
+     each counted among their own kind (the book's exception for vehicles and
+     aircraft, and so for infantry too); a unit level with the second nearest is as
+     near. Every enemy on the table counts, seen or not. True whenever the option
+     is off. Which attacks it binds is the caller's to say (canShoot, canAssault). */
+  function attackKind(u) { return isFlying(u) ? 'air' : isMachine(u) ? 'machine' : 'troops'; }
+  function closestTwo(state, a, t) {
+    if (!opt(state, 'onlyTwo') || !a || !t || !state.units) return true;
+    var kind = attackKind(t), dt = unitDist(a, t), nearer = 0;
+    state.units.forEach(function (e) {
+      if (e === t || e === a.of || e.side === a.side || !onTable(e) || attackKind(e) !== kind) return;
+      if (unitDist(a, e) < dt - 1e-6) nearer++;
+    });
+    return nearer < 2;
+  }
+  /* ---- Other Worlds (optional, Appendix 2, pp. 164-165) ----
+     Three D10s before the battle, a column each (0-5 standard on every one):
+       6  low gravity    no atmosphere           no anomalies
+       7  low gravity    toxic atmosphere        high radiation
+       8  high gravity   foggy atmosphere        time anomalies
+       9  high gravity   foggy and toxic         unexplained weakness
+     `cfg.world` holds what was rolled; worldOf reads it only while the option is on. */
+  var WORLD_ROLL = {
+    gravity: ['standard', 'standard', 'standard', 'standard', 'standard', 'standard', 'low', 'low', 'high', 'high'],
+    atmosphere: ['standard', 'standard', 'standard', 'standard', 'standard', 'standard', 'none', 'toxic', 'foggy', 'foggytoxic'],
+    anomaly: ['none', 'none', 'none', 'none', 'none', 'none', 'none', 'radiation', 'time', 'weakness']
+  };
+  var WORLD_TEXT = {
+    gravity: {
+      standard: null,
+      low: ['Low gravity', 'Infantry move M+6" and ground vehicles M+8" on a Move; turning costs 1" more; an Advance fires at Basic Firepower.'],
+      high: ['High gravity', 'Infantry +1 Defence; a Move is 1" shorter (2" for ground vehicles, 4" for aircraft).']
+    },
+    atmosphere: {
+      standard: null,
+      none: ['No atmosphere', '+1 when resolving hits against infantry (a 1 is still ignored); every weapon\u2019s Range +6".'],
+      toxic: ['Toxic atmosphere', '+1 when resolving hits against infantry (a 1 is still ignored).'],
+      foggy: ['Foggy atmosphere', 'Nobody sees further than 18".'],
+      foggytoxic: ['Foggy and toxic atmosphere', 'Nobody sees further than 18"; +1 when resolving hits against infantry (a 1 is still ignored).']
+    },
+    anomaly: {
+      none: null,
+      radiation: ['High radiation', 'Everyone counts as jammed; a drone-controlled vehicle needs a 2+ at the start of its activation or cannot move.'],
+      time: ['Time anomalies', 'After a side\u2019s activation, a D6 of 5+ lets it activate another unit.'],
+      weakness: ['Unexplained weakness', 'Every unit but a drone has \u22121 Movement, Firepower, Assault and Morale; in a campaign, +1 Trauma point each.']
+    }
+  };
+  function rollWorld() {
+    return { gravity: WORLD_ROLL.gravity[d10()], atmosphere: WORLD_ROLL.atmosphere[d10()], anomaly: WORLD_ROLL.anomaly[d10()] };
+  }
+  function cleanWorld(w) {
+    if (!w || typeof w !== 'object') return null;
+    var ok = function (k, v) { return WORLD_ROLL[k].indexOf(v) >= 0 ? v : WORLD_ROLL[k][0]; };
+    return { gravity: ok('gravity', w.gravity), atmosphere: ok('atmosphere', w.atmosphere), anomaly: ok('anomaly', w.anomaly) };
+  }
+  function worldOf(state) { return opt(state, 'otherWorlds') && state.cfg.world ? state.cfg.world : null; }
+  // what is out of the ordinary, a name and what it does each: none at all on a world like home
+  function worldLines(w) {
+    if (!w) return [];
+    return ['gravity', 'atmosphere', 'anomaly'].map(function (k) { return WORLD_TEXT[k][w[k]]; }).filter(Boolean)
+      .map(function (x) { return { name: x[0], text: x[1] }; });
+  }
+  // the +1 against infantry of an airless or toxic world (pp. 164-165)
+  function thinAir(state, t) {
+    var w = worldOf(state);
+    return !!w && /^(none|toxic|foggytoxic)$/.test(w.atmosphere) && !!t && !isMachine(t);
+  }
+  /* What the world does to a unit's own numbers, once, as it is made for the battle:
+     an unexplained weakness, high gravity's Defence, an airless world's Range, low
+     gravity's turning. (Its Move and the rest are where they are used.) */
+  function worldStats(u, w) {
+    if (!w || !u) return u;
+    if (w.anomaly === 'weakness' && !(hasOwn(u, 'Drone unit') || u.drone)) {
+      u.move = Math.max(0, (u.move || 0) - 1);
+      if (u.fp != null && u.fp > 0) u.fp -= 1;
+      u.assault = Math.max(0, (u.assault || 0) - 1);
+      u.morale = Math.max(1, (u.morale || 1) - 1);
+      u.weakened = true;
+    }
+    if (w.gravity === 'high' && !isMachine(u)) { u.def += 1; if (u.defPierced != null) u.defPierced += 1; }
+    if (/^(none)$/.test(w.atmosphere) && u.range > 0) u.range += 6;
+    if (w.gravity === 'low' && isMachine(u) && !isFlying(u) && u.turn != null) u.turn += 1;
+    return u;
+  }
+  // the names of the options on, for a card or a log line
+  function optionNames(o) {
+    return OPTIONS.filter(function (d) { return o && o[d.key]; }).map(function (d) { return d.name; });
+  }
   // the bug groups an Evolutionary Pathway names (p. 124)
   function bugRanged(u) { return !!u && u.faction === 'bugs' && (u.group === 'Spore Bugs' || u.group === 'Flying Bugs'); }
   function bugGround(u) { return !!u && u.faction === 'bugs' && (u.group === 'Lesser Bugs' || u.group === 'Underground Bugs'); }
@@ -1403,6 +1520,7 @@
   // what the damage kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
   function eDamage() {
     return {
+      worldOf: worldOf, thinAir: thinAir,
       TERRAIN: TERRAIN, UNIT_R: UNIT_R, addSP: addSP, campFlag: campFlag, clampBoard: clampBoard,
       credit: credit, currentMorale: currentMorale, d3: d3, d6: d6, doctrine: doctrine, droneUnit: droneUnit,
       has: has, hasOwn: hasOwn, infamyPanic: infamyPanic, isFlying: isFlying, isMachine: isMachine,
@@ -1417,7 +1535,7 @@
   function medicNearby(state, target) { return (KIT_DAMAGE || kitDamage()).medicNearby(state, target); }
   function resolveShootingHits(state, target, hits, mod, atk, later) { return (KIT_DAMAGE || kitDamage()).resolveShootingHits(state, target, hits, mod, atk, later); }
   function shotRelief(state, target, out) { return (KIT_DAMAGE || kitDamage()).shotRelief(state, target, out); }
-  function resolveAssaultHits(target, hits, mod, atk) { return (KIT_DAMAGE || kitDamage()).resolveAssaultHits(target, hits, mod, atk); }
+  function resolveAssaultHits(target, hits, mod, atk, thin) { return (KIT_DAMAGE || kitDamage()).resolveAssaultHits(target, hits, mod, atk, thin); }
   function applyResult(state, target, res, log, atk) { return (KIT_DAMAGE || kitDamage()).applyResult(state, target, res, log, atk); }
   function dmgMod(state, a, t) { return (KIT_DAMAGE || kitDamage()).dmgMod(state, a, t); }
   function resolveDamage(target, hits, pierce, mod) { return (KIT_DAMAGE || kitDamage()).resolveDamage(target, hits, pierce, mod); }
@@ -1555,6 +1673,7 @@
   // what the shoot kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
   function eShoot() {
     return {
+      worldOf: worldOf,
       TERRAIN: TERRAIN, UNIT_R: UNIT_R, angleWrap: angleWrap, antiTank: antiTank, applyDamage: applyDamage,
       applyResult: applyResult, arcOf: arcOf, bugRanged: bugRanged, campFlag: campFlag,
       canDemolish: canDemolish, centreDist: centreDist, d10: d10, defenceAgainst: defenceAgainst,
@@ -1565,7 +1684,7 @@
       resolveDamage: resolveDamage, resolveShootingHits: resolveShootingHits, shotRelief: shotRelief, ruleValue: ruleValue,
       sectionHigh: sectionHigh, sectionRect: sectionRect, shelterOf: shelterOf, sightRange: sightRange,
       sizeBonus: sizeBonus, status: status, tribeSees: tribeSees, undisciplined: undisciplined,
-      unitDist: unitDist, xenoSenses: xenoSenses
+      unitDist: unitDist, xenoSenses: xenoSenses, closestTwo: closestTwo
     };
   }
   function kitShoot() {
@@ -1587,6 +1706,7 @@
   // what the xeno kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
   function eXeno() {
     return {
+      worldOf: worldOf,
       BOARD: BOARD, BY_KEY: BY_KEY, TERRAIN: TERRAIN, UNIT_R: UNIT_R, addSP: addSP, campFlag: campFlag,
       centreDist: centreDist, currentMorale: currentMorale, d6: d6, doctrine: doctrine, hasLoS: hasLoS,
       hasOwn: hasOwn, isFlying: isFlying, isMachine: isMachine, lineClear: lineClear, ruleValue: ruleValue,
@@ -1704,8 +1824,9 @@
   // what the assault kit is made from: the stubs until every kit is made, then the functions themselves (linkKits)
   function eAssault() {
     return {
+      thinAir: thinAir,
       BOARD: BOARD, BY_KEY: BY_KEY, STEP: STEP, TERRAIN: TERRAIN, UNIT_R: UNIT_R, applyDamage: applyDamage,
-      applyResult: applyResult, bugGround: bugGround, campFlag: campFlag, canShoot: canShoot,
+      applyResult: applyResult, bugGround: bugGround, campFlag: campFlag, canShoot: canShoot, closestTwo: closestTwo,
       clampTo: clampTo, d10: d10, d3: d3, d6: d6, deathOrGlory: deathOrGlory, defenceAgainst: defenceAgainst,
       destroyTerrain: destroyTerrain, destructibleKind: destructibleKind, dmgMod: dmgMod, doctrine: doctrine,
       drives: drives, canGarrison: canGarrison, enterBuilding: enterBuilding, enterable: enterable, field: field, flyInf: flyInf,
@@ -1720,7 +1841,7 @@
   function kitAssault() {
     return KIT_ASSAULT || (KIT_ASSAULT = (root.PMCAssault || require('./assault.js'))(eAssault()));
   }
-  function canAssault(a, t) { return (KIT_ASSAULT || kitAssault()).canAssault(a, t); }
+  function canAssault(a, t, state) { return (KIT_ASSAULT || kitAssault()).canAssault(a, t, state); }
   function chargeReach(state, a, allowance) { return (KIT_ASSAULT || kitAssault()).chargeReach(state, a, allowance); }
   function chargeRoute(state, a, t, allowance) { return (KIT_ASSAULT || kitAssault()).chargeRoute(state, a, t, allowance); }
   function canMartyr(state, u, foe) { return (KIT_ASSAULT || kitAssault()).canMartyr(state, u, foe); }
@@ -2299,7 +2420,7 @@
   })();
 
   root.PMC = {
-    BOARD: BOARD, UNIT_R: UNIT_R, STEP: STEP, SP_MAX: SP_MAX,
+    BOARD: BOARD, boardFor: boardFor, setBoard: setBoard, dtkPieces: dtkPieces, UNIT_R: UNIT_R, STEP: STEP, SP_MAX: SP_MAX,
     CATALOGUE: CATALOGUE, PRESETS: PRESETS, PRESETS_REBEL: PRESETS_REBEL,
     COMPOSITION: COMPOSITION, COMPOSITION_BUGS: COMPOSITION_BUGS, compFor: compFor, isOvergrown: isOvergrown, ROMAN: ROMAN, tierLean: tierLean, FACTIONS: FACTIONS, TACTICS: TACTICS,
     presetsFor: presetsFor, listFor: listFor, factionOf: factionOf, tacticById: tacticById,
@@ -2333,6 +2454,8 @@
     enemyWithinRange: enemyWithinRange, onTable: onTable, swapAllowance: swapAllowance, steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
     hasExact: hasExact, antiTank: antiTank,
     campFlag: campFlag, doctrine: doctrine, unitDoc: unitDoc, credit: credit,
+    OPTIONS: OPTIONS, cleanOptions: cleanOptions, opt: opt, optionNames: optionNames, closestTwo: closestTwo,
+    rollWorld: rollWorld, cleanWorld: cleanWorld, worldOf: worldOf, worldLines: worldLines, thinAir: thinAir, worldStats: worldStats,
     isDestructible: isDestructible, destructibleKind: destructibleKind, shelterOf: shelterOf,
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,

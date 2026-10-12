@@ -50,6 +50,12 @@
       out.payment = payment(report.battleTier, report.pl, coA, coB, report.winner,
         report.attackDefend != null ? report.attackDefend : ATTACK_DEFEND.indexOf(report.scenario) >= 0,
         { dice: opts.dice, plunder: opts.plunder, neg: opts.neg });
+      /* A cooperative game in a campaign (p. 150): "All currency and EXP points gained
+         in such games are halved" — rounded up, as the book rounds (p. 27). */
+      if (opts.halve) {
+        out.payment.halved = { A: out.payment.A, B: out.payment.B };
+        out.payment.A = Math.ceil(out.payment.A / 2); out.payment.B = Math.ceil(out.payment.B / 2);
+      }
       coA.kUC += out.payment.A;
       coB.kUC += out.payment.B;
 
@@ -164,6 +170,10 @@
             consecutive: entry.lastBattle === campaign.turn && campaign.turn > 0
           };
           var exp = expFor(line, ctx);
+          if (opts.halve && exp.total > 0) {
+            var hx = Math.ceil(exp.total / 2);
+            exp = { total: hx, lines: exp.lines.concat([{ text: 'Co-operative — halved, ' + exp.total + ' to ' + hx, n: hx - exp.total }]) };
+          }
           var tp = rolled[entry.rid] || tpFor(line, ctx);
           delete entry.drugged;                       // spent — chosen again next battle
           if (halveTP && tp.total > 0) {

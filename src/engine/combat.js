@@ -34,7 +34,7 @@
     function assaultables(u, reach) {
       var within = u.bld ? null : R.chargeReach(E.state, u, reach == null ? chargeAllow(u) : reach);
       return activeUnits().filter(function (e) {
-        if (e.side === u.side || !R.canAssault(u, e)) return false;
+        if (e.side === u.side || !R.canAssault(u, e, E.state)) return false;
         if (u.bld) return e.bld === u.bld && R.unitDist(u, e) <= 0.6;
         return !!within(e);
       });

@@ -371,6 +371,18 @@ Book l.5119-5336. This is close to a separate game mode inside compounds.
 
 ---
 
+## Progress
+
+| Step | State |
+|---|---|
+| 0 Game options | **Done.** `R.OPTIONS`, `cfg.options` (cleaned at the start of a battle), `R.opt`. Boxes on the skirmish battlefield step, the online room's terms and the new-campaign form; an online campaign's host sets them in its lobby (`lobbyOptions`). Every campaign battle (single-player contracts, world contracts and duels, battles elsewhere) takes the campaign's. Shown in the battle's briefing and on the campaign hub. |
+| 1 "There can be only two!" | **Done.** `R.closestTwo`, applied in `canShoot` for Fire!, Advance and auxiliary fire and in `canAssault`; not reactions, Indirect Fire or a shot called in by a mark. |
+| 2 "Bad, worse, the bookkeeper" | **Done.** `routed()` weighs each unit by its Tier. |
+| 3 Solitaire options | **Done.** Evacuation's militia from the player's army (`militiaProfile`, by owner in co-op); the OpFor chosen by hand (`SOLO.checkOpFor`, the OpFor-line window on the battlefield step; the answer to the players' machines a warning, as a rolled pool can lack one); counters and Sabotage's objectives moved by hand while deploying (`cfg.solo.handPlace`, the `marker` intent, each scenario's `markers` rules, the whole-set check in `startBlock`); hand-laid terrain already worked in solitaire. Not yet for online co-op (rolled OpFor, game-placed counters there). |
+| 4 Other Worlds | **Done.** `R.rollWorld`, `cfg.world` (rolled at the start, or the contract's), `R.worldOf`; unit numbers in `R.worldStats` (weakness, high gravity's Defence, no air's Range, low gravity's turning); the Move in `moveBonus`; low gravity's Basic Advance in `shotMods`; +1 against infantry (a 1 still ignored) in the hit tables; fog in `hasLoS` and the tribe's sight; radiation in `jammedNearby` and the drone link (`radioDown`, player and AI); time anomalies in `afterChain` (not in solitaire, where the players have no alternation); the campaign's roll on each offer and contract, its pills on the job card, and the weakness's Trauma point. |
+| 5 PL3 on 6′×4′ | **Done.** The table goes with the battle (`cfg.board`, `R.boardFor`: 48″ across × 72″ along, the long edges the players'), set in `R.BOARD` by the engine before every intent, snapshot, load and query, so a server's battles of different sizes keep apart; every load-time copy of the size made live; the default objectives by fraction of the table; six 2′ × 2′ terrain areas (NW, NE, W, E, SW, SE); Detailed Terrain Knowledge three pieces; the isometric projection resized (`ISO.setBoard`) and the board's plates, zooms and camera redone when a battle on another table is drawn; PL3 offered in skirmish, online rooms and campaign contracts. PL4 not yet. |
+| 6 Co-op contracts | **Done** for world campaigns, online and kept on one device (a hotseat campaign with AI forces): `coopAsk`/`coopAccept`/`coopPick`/`coopReady`/`coopOff` (camp-world.js), the battle as a network co-op one (both seats side A, `netCoop`; at one screen the two take turns), the report's lines carrying each unit's owner, each player's aftermath from their own units with pay and EXP halved (`C.aftermath` `halve`) and Xenotripod territorial pay; the offer beside Challenge on the other forces, the co-op contract screen, the hub's notes. Not in the older two-player hotseat campaign without AI forces (its menu is switched off). |
+
 ## Suggested order for v0.3
 
 | Step | Item | Why here |

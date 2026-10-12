@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/css/base.css?v=ffdbe0fc94">
-<link rel="stylesheet" href="src/css/game.css?v=42e823b401">
+<link rel="stylesheet" href="src/css/game.css?v=f7797635f1">
 
 <div class="wrap">
   <header>
@@ -168,7 +168,7 @@
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->
-    <p class="menu-ver" id="menu-ver">v0.2.0.2610121055</p>
+    <p class="menu-ver" id="menu-ver">v0.2.0.2610121521</p>
   </div>
 </div>
 <div class="overlay" id="setup" hidden>
@@ -241,6 +241,7 @@
         <select id="sel-pl">
           <option value="1" selected>1</option>
           <option value="2">2</option>
+          <option value="3">3 — 6′ × 4′ table</option>
         </select>
       </div>
     </div>
@@ -357,6 +358,19 @@
           <option value="s_ambush">Ambush!</option>
         </select>
       </div>
+      <!-- the OpFor's counters (and Sabotage's objectives): where the game puts them, or moved by hand while deploying -->
+      <div class="field hot-field">
+        <label for="sel-solo-place">Counters and objectives</label>
+        <select id="sel-solo-place">
+          <option value="auto" selected>Placed by the game</option>
+          <option value="hand">Placed by the game, moved by you while you deploy</option>
+        </select>
+      </div>
+    </div>
+    <!-- the optional rules (Appendix 3): a box each, filled from R.OPTIONS by muster.js -->
+    <div class="field hot-field" id="opts-field">
+      <label>Optional rules</label>
+      <div id="opt-boxes"></div>
     </div>
     <!-- the colours, a square each as the unit viewer has them; in a stepped skirmish they sit under the force's name -->
     <div class="field hot-force hot-colour" id="colour-wrap">
@@ -367,6 +381,9 @@
     <button class="start" id="btn-start">Take the field</button>
   </div>
 </div>
+
+<!-- the OpFor chosen by hand, over the battlefield (muster.js opModal) -->
+<div class="cmodal" id="op-modal" hidden></div>
 
 <div class="overlay" id="camp" hidden>
   <!-- on a desktop the campaign sits over a table, as a new battle's set-up does -->
@@ -522,27 +539,27 @@
 </div>
 
 <script src="src/rules/move.js?v=83a6d4bd0c"></script>
-<script src="src/rules/assault.js?v=e59066cd65"></script>
-<script src="src/rules/shoot.js?v=91ef620e8c"></script>
-<script src="src/rules/xeno.js?v=7c66d7be1e"></script>
+<script src="src/rules/assault.js?v=9dfafc1f82"></script>
+<script src="src/rules/shoot.js?v=84fa98cb85"></script>
+<script src="src/rules/xeno.js?v=57b3e060d6"></script>
 <script src="src/rules/destruct.js?v=3e196d4dbd"></script>
-<script src="src/rules/damage.js?v=b6d3a2fb1b"></script>
-<script src="src/rules/space.js?v=323e449712"></script>
+<script src="src/rules/damage.js?v=ad97236be2"></script>
+<script src="src/rules/space.js?v=89060bf733"></script>
 <script src="src/rules/data.js?v=8bd7048ad1"></script>
-<script src="src/rules/rules.js?v=6d28af46bd"></script>
+<script src="src/rules/rules.js?v=bc516697c4"></script>
 <script src="src/rules/ruletext.js?v=0ac202d919"></script>
 <script src="src/net/weapons.js?v=f2a12804ed"></script>
 <script src="src/rules/camp-company.js?v=209cb1122b"></script>
-<script src="src/rules/camp-contract.js?v=1b38c71f1e"></script>
-<script src="src/rules/camp-aftermath.js?v=8e0bf34dff"></script>
-<script src="src/rules/camp-rivals.js?v=4714a24336"></script>
-<script src="src/rules/campaign.js?v=fe7cfed3fe"></script>
-<script src="src/rules/scenarios.js?v=3ee2e7f852"></script>
-<script src="src/rules/solitaire.js?v=0df6b261a6"></script>
+<script src="src/rules/camp-contract.js?v=f6d5805ceb"></script>
+<script src="src/rules/camp-aftermath.js?v=ddea53ac0c"></script>
+<script src="src/rules/camp-rivals.js?v=857fd5271c"></script>
+<script src="src/rules/campaign.js?v=65c8e07987"></script>
+<script src="src/rules/scenarios.js?v=f89a766b2d"></script>
+<script src="src/rules/solitaire.js?v=b1c8813f42"></script>
 <script src="src/view/sfx.js?v=f850c7718d"></script>
-<script src="src/rules/gen.js?v=f653855fa7"></script>
+<script src="src/rules/gen.js?v=8459e11ce4"></script>
 <script src="src/view/iso-gfx.js?v=164a307a38"></script>
-<script src="src/view/iso-ground.js?v=bbcea46ce3"></script>
+<script src="src/view/iso-ground.js?v=2eed5b926b"></script>
 <script src="src/view/iso-props.js?v=7c4f8f316e"></script>
 <script src="src/view/iso-troops.js?v=b7c1744db2"></script>
 <script src="src/view/iso-aliens.js?v=0905122c2d"></script>
@@ -559,54 +576,54 @@
 <script src="src/view/iso-bugs.js?v=9f58157099"></script>
 <script src="src/view/iso-propkinds.js?v=076f7c8e81"></script>
 <script src="src/view/iso-xenomachines.js?v=a62ea91a9c"></script>
-<script src="src/view/iso.js?v=147dd068e8"></script>
+<script src="src/view/iso.js?v=395afe0182"></script>
 <script src="src/view/fx.js?v=472fafa48a"></script>
 <script src="src/view/fire.js?v=efe67c1485"></script>
 <script src="src/view/motion.js?v=823a5c18f7"></script>
 <script src="src/view/tips.js?v=d9ad8fa292"></script>
-<script src="src/view/ui-parts.js?v=9643695e1f"></script>
-<script src="src/engine/protocol.js?v=4faa7824f8"></script>
-<script src="src/engine/ai.js?v=1102967ed3"></script>
+<script src="src/view/ui-parts.js?v=bd36a60276"></script>
+<script src="src/engine/protocol.js?v=ae22273533"></script>
+<script src="src/engine/ai.js?v=09495dc3fb"></script>
 <script src="src/engine/save.js?v=b7930e7b5a"></script>
 <script src="src/engine/marks.js?v=fc3be2d5aa"></script>
-<script src="src/engine/combat.js?v=58d17880b5"></script>
+<script src="src/engine/combat.js?v=3ea4ff6628"></script>
 <script src="src/engine/abilities.js?v=2e488628ab"></script>
 <script src="src/engine/moves.js?v=e2e7626e0b"></script>
-<script src="src/engine/actions.js?v=a1f2ed78fb"></script>
-<script src="src/engine/endphase.js?v=4351ae30c0"></script>
+<script src="src/engine/actions.js?v=780f4f7eb8"></script>
+<script src="src/engine/endphase.js?v=d02fd9f45c"></script>
 <script src="src/engine/solo.js?v=f82cbdc2b5"></script>
-<script src="src/engine/arrivals.js?v=4403335c50"></script>
-<script src="src/engine/deploy.js?v=98e5fbad50"></script>
-<script src="src/engine/terrainsetup.js?v=aa9f0d6867"></script>
+<script src="src/engine/arrivals.js?v=2a9ced322e"></script>
+<script src="src/engine/deploy.js?v=0821abe667"></script>
+<script src="src/engine/terrainsetup.js?v=b7dc045a85"></script>
 <script src="src/engine/swaps.js?v=82a84b49b0"></script>
-<script src="src/engine/engine.js?v=3164695a7b"></script>
-<script src="src/engine/offtable.js?v=4ccda080d8"></script>
-<script src="src/rules/camp-cmds.js?v=186755c223"></script>
-<script src="src/rules/camp-world.js?v=84cc997aa9"></script>
-<script src="src/net/localworld.js?v=2d2b2e670e"></script>
+<script src="src/engine/engine.js?v=b818c1b10b"></script>
+<script src="src/engine/offtable.js?v=d19552b405"></script>
+<script src="src/rules/camp-cmds.js?v=c362752280"></script>
+<script src="src/rules/camp-world.js?v=97272bc7fc"></script>
+<script src="src/net/localworld.js?v=8fcfa961d8"></script>
 <script src="src/net/net.js?v=ff07222312"></script>
 <script src="src/net/account.js?v=33efe0d577"></script>
 <script src="src/net/archedit.js?v=e25d424301"></script>
 <script src="src/net/forces.js?v=26417cca9a"></script>
-<script src="src/net/lobby.js?v=129ea09f8a"></script>
+<script src="src/net/lobby.js?v=bd668f4fd8"></script>
 <script src="src/view/replay.js?v=e460256ea5"></script>
 <script src="src/view/hooks.js?v=10ee198650"></script>
-<script src="src/view/testhooks.js?v=b93832add8"></script>
+<script src="src/view/testhooks.js?v=af70edbeb9"></script>
 <script src="src/view/play.js?v=2002f2e81d"></script>
-<script src="src/view/terrainset.js?v=bb0ea483d0"></script>
-<script src="src/view/input.js?v=5fe234357a"></script>
-<script src="src/view/arrive.js?v=1534291c02"></script>
+<script src="src/view/terrainset.js?v=cdcc2f3cc3"></script>
+<script src="src/view/input.js?v=599d86b1ba"></script>
+<script src="src/view/arrive.js?v=be712381b2"></script>
 <script src="src/view/actions.js?v=3413a0bcd9"></script>
-<script src="src/view/draw.js?v=5e1f037ed2"></script>
-<script src="src/view/view.js?v=31e4ca651d"></script>
+<script src="src/view/draw.js?v=e5bba979ce"></script>
+<script src="src/view/view.js?v=a0b7a1cca8"></script>
 <script src="src/view/panels.js?v=f441b8a185"></script>
-<script src="src/view/muster.js?v=76355e5efe"></script>
-<script src="src/view/game.js?v=dc2821adc6"></script>
-<script src="src/view/dossier-hub.js?v=fc35bb6a92"></script>
+<script src="src/view/muster.js?v=c55d941214"></script>
+<script src="src/view/game.js?v=7063061fac"></script>
+<script src="src/view/dossier-hub.js?v=f5e859576f"></script>
 <script src="src/view/dossier-found.js?v=474888940f"></script>
 <script src="src/view/dossier-roster.js?v=0043b92b0f"></script>
-<script src="src/view/dossier-contract.js?v=77ede09101"></script>
-<script src="src/view/dossier-after.js?v=a05c0572e0"></script>
-<script src="src/view/dossier-online.js?v=81cf514631"></script>
-<script src="src/view/dossier.js?v=9b3d76f1a7"></script>
-<script src="src/view/menu.js?v=d8f7054aaf"></script>
+<script src="src/view/dossier-contract.js?v=4bfc640993"></script>
+<script src="src/view/dossier-after.js?v=41cc013a6e"></script>
+<script src="src/view/dossier-online.js?v=3cf077e123"></script>
+<script src="src/view/dossier.js?v=857ba10034"></script>
+<script src="src/view/menu.js?v=825d55d247"></script>

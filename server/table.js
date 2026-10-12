@@ -208,7 +208,9 @@ class Table {
       // each player modifies their army, or goes on, before either deploys (neither sees the other's first unit go down)
       readyUp: true,
       planet: s.planet === 'random' ? null : s.planet,
-      terrainSetup: s.terrain === 'manual' ? 'manual' : 'auto'
+      terrainSetup: s.terrain === 'manual' ? 'manual' : 'auto',
+      // the optional rules: a campaign's own, or the room's
+      options: camp ? (camp.options || {}) : (s.options || {})
     };
   }
 
@@ -247,6 +249,7 @@ class Table {
       mode: 'ai', netCoop: true,
       planet: s.planet === 'random' ? null : s.planet,
       terrainSetup: s.terrain === 'manual' ? 'manual' : 'auto',
+      options: s.options || {},
       solo: { coop: true, faction: a.faction || 'pmc', opFaction: opFaction, names: [a.name, b.name] }
     };
   }

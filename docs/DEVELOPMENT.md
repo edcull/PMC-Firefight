@@ -228,6 +228,12 @@ sightlines.js      seen by one soldier, seen by the whole unit: lines past part 
 wallshelter.js     behind a wall: the cover, the Destructive Weapon and the Sappers, one test
 lowscen.js         scenario fixes: picking the search site, landing zones, Invasion's guns and tows,
                    the last-turn wipe-out, the forced swap for guns a split cannot carry
+bigtable.js        Priority Level 3 on 6' x 4': the table with the battle, every scenario on it, two sizes side by side
+otherworlds.js     Other Worlds: the three D10s and what each condition does, the campaign's Trauma point
+soloopts.js        solitaire options: Evacuation's militia by army, the OpFor chosen by hand, counters
+                   and objectives moved while deploying, hand-laid terrain in each scenario
+options.js         the optional rules: the list, cfg.options from the setup and the online room to the
+                   engine; "There can be only two!" and "Bad, worse, the bookkeeper"
 ```
 
 **The battle, the engine and the AI**
@@ -247,7 +253,7 @@ battlesave.js      the battle kept in the browser: a run of picks kept as one, a
 auth.js            accounts and sessions on a database in memory: hashing, renewal, guests, limits
 serverrestart.js   a battle kept through a server restart, put away and brought back, a forfeit
 online.js          online campaigns as a world: the lobby (slots, AI armies, colours, chat, ready, start), founding, an AI contract fought
-                   on the server and its aftermath, a duel challenged, accepted, fought and settled for both, whose move, retiring
+                   on the server and its aftermath, a duel challenged, accepted, fought and settled for both, a co-op contract (halved, split by owner), whose move, retiring
 coopnet.js         a cooperative game over the network: one side of both players' commandos, each seat its own units and its own go
 expectedshot.js    the average shot worked out (the unit viewer's Fire!): hits off the D10, each hit off the hit table, Damage on machines
 admingames.js      the console's battles and campaigns: listed, shown, removed (asked first), old ones cleared

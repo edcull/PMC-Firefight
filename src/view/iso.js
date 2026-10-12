@@ -10,6 +10,8 @@
   var ELEV = 30;                // height of a hill, in buffer pixels
   var TOP = 208, BOT = 112, SIDE = 52, LIP = 40;
   function a(n) { return Math.max(1, Math.round(n * A)); }
+  /* The table, 48" x 48" until a battle says otherwise (6' x 4' is 48" x 72", R.boardFor):
+     the projection and the buffer it is painted into follow it (setBoard). */
   var W = 48, H = 48;
   var OX = H * K + SIDE;
   var OY = TOP;
@@ -1043,18 +1045,30 @@
   /* ---------- iso-ground.js: the ground ----------
      The board it borrows from: getters for what changes as the game runs,
      and the functions and fixed values it uses. */
-  var ISOGROUND = window.PMCIsoGround({
+  var GROUND_E = {
     a: a, boulder: boulder, clamp01: clamp01, dot: dot, edgeLine: edgeLine, fbm: fbm, hash: hash, poly: poly,
     rect: rect, rng: rng, toScreen: toScreen, toWorld: toWorld, vnoise: vnoise, A: A, BAYER: BAYER,
     CRUST: CRUST, DEEPW: DEEPW, ELEV: ELEV, GLOW: GLOW, GROUNDS: GROUNDS, H: H, K: K, LIP: LIP, OX: OX,
     OY: OY, PIXH: PIXH, PIXW: PIXW, STONE: STONE, W: W, WATER: WATER
-  });
+  };
+  var ISOGROUND = window.PMCIsoGround(GROUND_E);
   var R0 = ISOGROUND.R0, bakeGround = ISOGROUND.bakeGround, bakeGroundSliced = ISOGROUND.bakeGroundSliced, depthIn = ISOGROUND.depthIn;
   var hex3 = ISOGROUND.hex3, pebble = ISOGROUND.pebble, sp2 = ISOGROUND.sp2, spotIn = ISOGROUND.spotIn;
   var vgrad = ISOGROUND.vgrad;
 
 
+  /* A table of another size: the projection, the buffer, and every copy of them handed
+     out (the ground's, and this module's own), changed in place. True if it changed. */
+  function setBoard(w, h) {
+    if (!(w > 0 && h > 0) || (w === W && h === H)) return false;
+    W = w; H = h; OX = H * K + SIDE;
+    PIXW = (W + H) * K + SIDE * 2; PIXH = (W + H) * K / 2 + TOP + BOT;
+    [GROUND_E, root.PMCIso].forEach(function (o) { o.W = W; o.H = H; o.OX = OX; o.PIXW = PIXW; o.PIXH = PIXH; });
+    return true;
+  }
+
   root.PMCIso = {
+    setBoard: setBoard, OX: OX,
     MAX_FIGS: MAX_FIGS,
     formationTable: formationTable,
     spSegments: spSegments, strSegments: strSegments,

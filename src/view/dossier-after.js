@@ -99,7 +99,7 @@
       }
       // the odd one out, if there is one, fights the locals, and that is rolled
       if (!x || !y || !root.PMCOffTable) { setTimeout(function () { settle(null); }, 0); return; }
-      root.PMCOffTable.play(x, y, { planet: fr.planet || 'random' }, settle, function (turn) {
+      root.PMCOffTable.play(x, y, { planet: fr.planet || 'random', options: E.camp.options || {} }, settle, function (turn) {
         var t = root.document && root.document.getElementById('front-turn');
         if (t) t.textContent = turn ? 'Turn ' + turn : 'Deploying';
       });

@@ -142,9 +142,10 @@
         seen(af.n);
         if (at >= 0) { E.showPast(at); E.view = 'aftermath'; return; }
       }
-      if (fresh && ['ocontract', 'aftermath', 'offers'].indexOf(E.view) < 0) E.view = 'hub';
+      if (fresh && ['ocontract', 'ocoop', 'aftermath', 'offers'].indexOf(E.view) < 0) E.view = 'hub';
       // a contract that has gone (called off, fought) takes its screen with it
       if (E.view === 'ocontract' && !activeContract()) E.view = 'hub';
+      if (E.view === 'ocoop' && !onl().coop) E.view = 'hub';
     }
     // the last aftermath this browser has shown, per campaign
     function seen(n) {
@@ -221,7 +222,7 @@
     /* ================= the battle ================= */
     function battleCode() {
       var on = onl();
-      return (on.battle && on.battle.code) || (on.duel && on.duel.battle && on.duel.battle.code) || null;
+      return (on.battle && on.battle.code) || (on.duel && on.duel.battle && on.duel.battle.code) || (on.coop && on.coop.battle && on.coop.battle.code) || null;
     }
     function goBattle(code) {
       if (E.online && E.online.local) { localBattle(code); return; }
@@ -241,6 +242,8 @@
       if (!b || !root.PMC_NEWGAME) { E.note('No battle here', 'That battle is not kept on this device.'); return; }
       var cfg = Object.assign({}, b.cfg, { localBattle: code, campLid: null });
       if (cfg.mode === 'hotseat') { cfg.readyUp = false; cfg.secretSwaps = true; }
+      // a co-operative battle at one screen: the two take turns there, as a co-op skirmish does
+      if (cfg.netCoop) cfg.netCoop = false;
       fighting = code;
       E.hide();
       root.PMC_NEWGAME(cfg);
@@ -324,6 +327,8 @@
       // everyone says they are ready, the host too; then the host has Start
       var allReady = (L.slots || []).every(function (x) { return x.kind !== 'human' || x.ready; });
       h += '</div>';
+      // the optional rules every battle of it is fought under: the host's to set, read by the rest
+      if (U.optionBoxes) h += '<div class="field olob-opts" id="olob-opts"><label>Optional rules</label>' + U.optionBoxes(L.options, host ? '' : ' disabled') + '</div>';
       /* as the skirmish room has it, above the chat: the way out a quiet link, and the
          one thing to do next the full-width button (ready, then the host's Start) */
       h += '<div class="lob-acts olob-acts"><button class="lnk" data-go="omulti">Leave</button>';
@@ -393,6 +398,21 @@
         h += '<div class="cpan onote"><div class="cpstat">A contract with <b>' + esc(d.foeName) + '</b> (' + esc(d.player) + ') — ' + duelLine(d) + '</div>' +
           '<button class="start" data-go="ocontract">Open the contract</button></div>';
       }
+      if (!b && on.coop) {
+        var cpc = on.coop.contract || {};
+        h += '<div class="cpan onote"><div class="cpstat">A co-operative contract with <b>' + esc(on.coop.mateName) + '</b> (' + esc(on.coop.player) + ') against the OpFor \u2014 ' +
+          (cpc.ready && cpc.ready[on.coop.side] ? 'you are ready' : cpc.pick ? 'you have picked your commando' : 'pick your commando') + '; they are ' +
+          (on.coop.mateReady ? 'ready' : on.coop.matePicked ? 'picking' : 'not picked yet') + '.</div><button class="start" data-go="ocoop">Open the contract</button></div>';
+      }
+      (on.coopAsks || []).forEach(function (c) {
+        var other = forceOfSlot(c.mine ? c.to : c.from);
+        if (!other) return;
+        h += c.mine
+          ? '<div class="cpan onote"><div class="cpstat">You have offered <b>' + esc(other.name) + '</b> (' + esc(other.player) + ') a co-operative contract. Waiting for them to answer.</div>' +
+            '<button class="start" data-ocoopcancel="' + c.id + '">Withdraw the offer</button></div>'
+          : '<div class="cpan onote"><div class="cpstat"><b>' + esc(other.name) + '</b> (' + esc(other.player) + ') offers you a co-operative contract: the two of you against the OpFor, pay and experience halved.</div>' +
+            '<div class="cacts"><button class="start cdrop" data-ocoopcancel="' + c.id + '">Turn it down</button><button class="start" data-ocoopaccept="' + c.id + '">Accept</button></div></div>';
+      });
       (on.challenges || []).forEach(function (c) {
         var other = forceOfSlot(c.mine ? c.to : c.from);
         if (!other) return;
@@ -411,6 +431,40 @@
       var mineSay = k.ready[me] ? 'you are ready' : k.picks[me] ? 'you have picked' : 'you have not picked your force yet';
       var theirSay = k.ready[them] ? 'ready' : k.picks[them] ? 'picking' : 'not picked yet';
       return mineSay + '; they are ' + theirSay + '.';
+    }
+
+    /* ================= a co-operative contract (p. 150) =================
+       The terms rolled when it was accepted; each player picks a commando from their
+       own dossier (the commando table, p. 147), sends it, and says ready. */
+    var coopSel = null;          // the units picked here so far (rids), until sent
+    function coopView() {
+      var cp = onl().coop, co = myCo(), SOLO = root.PMCSolo;
+      var h = '<h2>Co-operative contract</h2>';
+      if (!cp) return h + '<p class="lede">There is no co-operative contract just now.</p>' + backFoot();
+      var k = cp.contract || {}, sc = SOLO && SOLO.SCENARIOS[k.scenario];
+      if (!coopSel) coopSel = k.pick ? k.pick.rids.slice() : [];
+      h += '<div class="cpan"><div class="offer-job"><div class="offer-scen"><b>' + esc(sc ? sc.name : k.scenario) + '</b>' +
+        '<span class="mk">with ' + esc(cp.mateName) + '</span></div>' +
+        '<div class="offer-size"><span>Battle Tier <b>' + ROMAN[k.tier || 1] + '</b></span><span>The OpFor: <b>' + esc((U.ARMY_NAMES || {})[k.opFaction] || k.opFaction) + '</b></span></div>' +
+        (k.world ? '<div class="offer-world">' + R.worldLines(k.world).map(function (x) { return '<span class="mk worldpill" title="' + esc(x.text) + '">' + esc(x.name) + '</span>'; }).join('') + '</div>' : '') +
+        (sc ? '<p class="dnote">' + esc(sc.blurb || '') + ' ' + esc(sc.win || '') + '</p>' : '') +
+        '<p class="dnote">Each of you brings a commando (Priority Level 1); the OpFor is rolled at Priority Level 2. Pay and experience are halved afterwards.</p></div></div>';
+      var keys = coopSel.map(function (rid) { var e = C.byRid(co, rid); return e ? R.entryPick(e) : null; }).filter(Boolean);
+      var chk = SOLO.checkCommando(keys, k.tier || 1, 1, co.faction);
+      h += '<div class="cpan"><div class="cphead"><b>Your commando</b><span class="ctier">' + (chk.spent || 0) + ' / ' + (chk.budget || 0) + ' pts</span></div>' +
+        '<p class="faults' + (chk.ok ? ' ok' : '') + '">' + esc(!keys.length ? 'Pick the units to send.' : chk.ok ? 'A legal commando.' : chk.faults.join(' ')) + '</p>' +
+        '<div class="olob-slots">' + co.roster.map(function (e) {
+          var p = R.profile(e.key), on = coopSel.indexOf(e.rid) >= 0, rest = e.restUntil > 0;
+          return '<button type="button" class="olob-slot' + (on ? ' mine' : '') + '" data-ocoopunit="' + esc(e.rid) + '"' + (rest ? ' disabled' : '') + '>' +
+            '<span class="ct">' + ROMAN[p ? p.tier : 1] + '</span><span class="olob-who"><b>' + esc(e.name) + '</b><small>' + esc(p ? p.name : e.key) + (rest ? ' \u00b7 resting' : on ? ' \u00b7 picked' : '') + '</small></span></button>';
+        }).join('') + '</div></div>';
+      var sent = k.pick && k.pick.rids.slice().sort().join() === coopSel.slice().sort().join();
+      var ready = k.ready && k.ready[cp.side];
+      h += '<div class="cacts"><button class="start cdrop" data-go="ocoopoff">Call it off</button>' +
+        (ready ? '<button class="start" data-go="ocoopunready">Not ready after all</button>'
+          : '<button class="start" data-go="ocoopready"' + (chk.ok ? '' : ' disabled') + '>' + (sent ? 'Ready' : 'Send this commando, ready') + '</button>') + '</div>' +
+        '<p class="dnote">' + esc(cp.mateName) + ' is ' + (cp.mateReady ? 'ready.' : cp.matePicked ? 'picking.' : 'yet to pick.') + '</p>';
+      return h + backFoot();
     }
 
     /* ================= the contracts on offer, online ================= */
@@ -436,7 +490,10 @@
           (founded(p) ? E.statRow(p, true) : '<div class="cpstat">Not founded yet.</div>') +
           (asked ? '<div class="cpstat">' + (asked.mine ? 'You have challenged them.' : 'They have challenged you — answer it on the campaign’s page.') + '</div>'
             : p.busy ? '<button class="start" disabled title="Fighting someone else just now">Fighting someone else just now</button>'
-            : founded(p) && founded(myCo()) ? '<button class="start" data-ochallenge="' + p.slot + '">Challenge them</button>' : '') +
+            : founded(p) && founded(myCo()) ? '<div class="cacts"><button class="start" data-ochallenge="' + p.slot + '">Challenge them</button>' +
+              ((on.coopAsks || []).some(function (c) { return (c.mine && c.to === p.slot) || (!c.mine && c.from === p.slot); })
+                ? '<button class="start" disabled>Co-op offered</button>'
+                : '<button class="start" data-ocoopask="' + p.slot + '" title="The two of you against the OpFor: pay and experience halved (p. 150)">Offer co-op</button>') + '</div>' : '') +
           '</div>';
       });
       return h.replace(foot, '') + ch + foot;
@@ -525,7 +582,7 @@
       else if (!ctx.ai && mineWant && mineWant !== k.pl) plNote = 'You want Priority Level ' + mineWant + ' \u2014 waiting for ' + esc(ctx.foeName) + ' to agree. It stays at ' + k.pl + ' until then.';
       else if (!ctx.ai) plNote = 'Both of you choose; it changes only when you agree.';
       h += '<div class="field plrow"><div><label for="oc-pl">Priority Level</label>' +
-        '<select id="oc-pl"' + (lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2].map(function (n) {
+        '<select id="oc-pl"' + (lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2, 3].map(function (n) {
           var can = lv.indexOf(n) >= 0;
           return '<option value="' + n + '"' + (shownPl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + '</option>';
         }).join('') + '</select>' + (plNote ? '<p class="dnote">' + plNote + '</p>' : '') + '</div></div>';
@@ -747,6 +804,20 @@
       if (attr('data-oaicontract')) { cmd('aiContract', { r: +attr('data-oaicontract') }, function () { E.closeModal(); E.view = 'ocontract'; }); return true; }
       if (attr('data-ochaccept')) { cmd('duelAccept', { id: +attr('data-ochaccept') }, function () { E.view = 'ocontract'; }); return true; }
       if (attr('data-ochcancel')) { cmd('duelCancel', { id: +attr('data-ochcancel') }); return true; }
+      // a co-operative contract: offered, answered, picked for, readied, called off
+      if (attr('data-ocoopask')) { cmd('coopAsk', { to: +attr('data-ocoopask') }, function () { E.closeModal(); E.view = 'hub'; }); return true; }
+      if (attr('data-ocoopaccept')) { coopSel = null; cmd('coopAccept', { id: +attr('data-ocoopaccept') }, function () { E.view = 'ocoop'; }); return true; }
+      if (attr('data-ocoopcancel')) { cmd('coopCancel', { id: +attr('data-ocoopcancel') }); return true; }
+      if (go === 'ocoop') { coopSel = null; E.view = 'ocoop'; E.render(); return true; }
+      if (attr('data-ocoopunit')) {
+        var cr = attr('data-ocoopunit');
+        coopSel = coopSel || [];
+        coopSel = coopSel.indexOf(cr) >= 0 ? coopSel.filter(function (x) { return x !== cr; }) : coopSel.concat([cr]);
+        E.render(); return true;
+      }
+      if (go === 'ocoopready') { var rids = (coopSel || []).slice(); cmd('coopPick', { rids: rids }, function () { cmd('coopReady', {}); }); return true; }
+      if (go === 'ocoopunready') { cmd('coopReady', { ready: false }); return true; }
+      if (go === 'ocoopoff') { coopSel = null; cmd('coopOff', {}, function () { E.view = 'hub'; }); return true; }
       // nothing of the campaign's file is this browser's to change
       if (/^(wipe|import|storeuse|storekeep|standard|hubside|export)$/.test(go || '')) return true;
       // a force that can no longer fight takes its player out; or a player gives it up
@@ -835,6 +906,7 @@
         return true;
       }
       if (target.id === 'olob-pub') { cmd('lobbyListed', { on: !!target.checked }); return true; }
+      if (target.hasAttribute('data-opt') && target.closest('#olob-opts')) { cmd('lobbyOptions', { options: U.readOptions(document.getElementById('olob-opts')) }); return true; }
       if (target.hasAttribute('data-olob-ai')) { cmd('lobbySlot', { i: +target.getAttribute('data-olob-ai'), kind: target.checked ? 'ai' : 'open' }); return true; }
       if (target.hasAttribute('data-olob-army')) { cmd('lobbyFaction', { i: +target.getAttribute('data-olob-army'), faction: target.value }); return true; }
       if (target.hasAttribute('data-olob-colour')) { cmd('lobbyColour', { i: +target.getAttribute('data-olob-colour'), colour: target.value }); return true; }
@@ -842,7 +914,7 @@
     }
 
     return {
-      enterList: toMulti, lobbyView: lobbyView, offersView: offersView, contractView: contractView, postView: postView, hubNote: hubNote,
+      enterList: toMulti, lobbyView: lobbyView, offersView: offersView, contractView: contractView, coopView: coopView, postView: postView, hubNote: hubNote,
       click: click, change: change, steer: function () { if (E.online && E.camp) steer(false); },
       afterBattle: afterBattle, fighting: function () { return fighting; },
       leave: leaveCampaign, local: function () { return stashed ? localCamp : E.camp; },

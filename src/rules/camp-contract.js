@@ -30,11 +30,10 @@
     }
     /* Which Priority Levels this pairing could actually fight at the given Tier. */
     // "players can choose to play bigger ones as long as they can compose legal armies" (p. 84)
-    /* Priority Levels 1 and 2 only: the table is the book's 4'x4', its size for
-       those two (p. 45); a 3 or 4 wants a 6'x4' table and a bigger battle than
-       the game is made for. */
+    /* Priority Levels 1 to 3: 1-2 on the book's 4'x4' table, 3 on a 6'x4' one
+       (p. 45, R.boardFor). Level 4 is not offered yet. */
     function levelsFor(coA, coB, tier) {
-      return [1, 2].filter(function (pl) {
+      return [1, 2, 3].filter(function (pl) {
         return canFieldArmy(coA, tier, pl, true) && canFieldArmy(coB, tier, pl, true);
       });
     }
@@ -282,6 +281,8 @@
       if (ctx.routed && !hasDoctrine(ctx.company, 'S5')) out.push({ text: 'The army was routed', n: 1 });
       if (ctx.consecutive) out.push({ text: 'A second battle in a row', n: 1 });
       if (line.aboardDowned) out.push({ text: 'Was aboard an aircraft that was shot down', n: 5 });
+      // Other Worlds: "in a campaign, all these units get an additional Trauma point" (p. 165)
+      if (line.weakened) out.push({ text: 'Unexplained weakness on that world', n: 1 });
       // Drug Dealer: whatever they were given, they pay for afterwards
       if (line.drugged) out.push({ text: 'Drug Dealer — the comedown', n: d6() + 1 });
       var tot = sum(out.map(function (o) { return o.n; }));

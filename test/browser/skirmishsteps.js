@@ -58,9 +58,18 @@ const { ROOT, SHOTS, seedDice } = require('../where.js');
     !(await shown('cat')));
   check('...summing up both forces', /Task Force Ironhold[\s\S]*The Hive/.test(await p.evaluate(() => document.getElementById('hot-sum').innerText)));
   await p.locator('#setup .sheet').screenshot({ path: path.join(SHOTS, 'skirmish-battlefield.png') });
+  // the optional rules, a box each on the battlefield, off to begin with
+  const boxes = await p.evaluate(() => Array.from(document.querySelectorAll('#opt-boxes input[data-opt]')).map((i) => i.getAttribute('data-opt') + (i.checked ? '+' : '-')));
+  const want = await p.evaluate(() => window.PMC.OPTIONS.map((d) => d.key + '-').join());
+  check('the optional rules are on the battlefield, a box each, all off', await shown('opts-field') && boxes.join() === want, boxes.join());
+  await p.evaluate(() => { const i = document.querySelector('#opt-boxes input[data-opt="onlyTwo"]'); i.checked = true; i.dispatchEvent(new Event('change', { bubbles: true })); });
   await setVal('sel-scen', 'meeting');
   await next();
   await p.waitForTimeout(600);
+  const opts = await p.evaluate(() => JSON.stringify(window.PMC_STATE().cfg.options));
+  check('...and the battle is fought under the one ticked', opts === '{"onlyTwo":true}', opts);
+  const brief = await p.evaluate(() => document.getElementById('obj-box').innerText);
+  check('...which the briefing names', /Optional rules[\s\S]*There can be only two/.test(brief), brief.slice(-160).replace(/\s+/g, ' '));
   const hs = await p.evaluate(() => { const s = window.PMC_STATE(); return { mode: s.cfg.mode, a: s.cfg.nameA, b: s.cfg.nameB, scen: s.cfg.scenario, ca: s.cfg.colourA, cb: s.cfg.colourB, bf: s.units.filter(u => u.side === 'B').every(u => u.faction === 'bugs') }; });
   check('the battle is the one both players built', hs.mode === 'hotseat' && hs.a === 'Task Force Ironhold' && hs.b === 'The Hive' && hs.scen === 'meeting' && hs.bf && hs.ca !== hs.cb,
     JSON.stringify(hs));
@@ -88,8 +97,23 @@ const { ROOT, SHOTS, seedDice } = require('../where.js');
   h = await hot();
   check('...player 2 painted in a colour player 1 is not wearing', h.sides[1].colour !== h.sides[0].colour, h.sides.map(sd => sd.colour).join(' / '));
   await setVal('sel-solo-scen', 's_crush');
+  // the OpFor chosen by hand: its line opens a window of the army's list under the OpFor table
+  await p.evaluate(() => document.querySelector('#hot-sum [data-hotop]').click()); await p.waitForTimeout(150);
+  check('the OpFor\u2019s line opens a window to choose it, rolled by default', !(await p.evaluate(() => document.getElementById('op-modal').hidden)) &&
+    /Rolled when the battle starts/.test(await p.evaluate(() => document.getElementById('op-modal').innerText)));
+  await p.evaluate(() => document.querySelector('[data-opact="clear"]').click()); await p.waitForTimeout(100);
+  await p.evaluate(() => document.querySelector('#op-modal [data-opadd]:not([disabled])').click()); await p.waitForTimeout(100);
+  const opOne = await p.evaluate(() => document.querySelector('#op-modal .faults').innerText);
+  check('...one unit is not a legal pool, and it says why', /Needs at least|No units/.test(opOne), opOne);
+  await p.evaluate(() => document.querySelector('[data-opact="roll"]').click()); await p.waitForTimeout(100);
+  const chosenOp = await p.evaluate(() => window.__hot().opKeys.slice());
+  check('...Roll one fills it with a legal pool', /legal OpFor pool/.test(await p.evaluate(() => document.querySelector('#op-modal .faults').innerText)) && chosenOp.length > 0);
+  await p.evaluate(() => document.querySelector('[data-opact="done"]').click()); await p.waitForTimeout(100);
+  check('...and its line says it is chosen', /units, chosen/.test(await p.evaluate(() => document.querySelector('#hot-sum [data-hotop]').innerText)));
   await next();
   await p.waitForTimeout(600);
+  const opB = await p.evaluate(() => window.PMC_STATE().cfg.armyB);
+  check('the battle\u2019s OpFor is the one chosen', JSON.stringify(opB) === JSON.stringify(chosenOp), opB.join(','));
   const cs = await p.evaluate(() => { const s = window.PMC_STATE(); return { coop: !!(s.solo && s.solo.coop), names: s.solo && s.solo.names, scen: s.cfg.scenario,
     colours: [s.cfg.colourA, s.cfg.colourC, s.cfg.colourB],
     owners: [...new Set(s.units.filter(u => u.side === 'A' && !u.extra).map(u => u.owner))].sort().join(),

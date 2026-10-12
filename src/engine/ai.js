@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   root.PMCEngineAI = function (E) {
-    var H = E.H, R = E.R, SC = E.SC, SFX = E.SFX, UR = E.UR, W = E.W, abAssault = E.abAssault,
+    var R = E.R, SC = E.SC, SFX = E.SFX, UR = E.UR, abAssault = E.abAssault,
         abRally = E.abRally, abRepair = E.abRepair, activeUnits = E.activeUnits, alreadySafe = E.alreadySafe,
         animateMove = E.animateMove, assaultables = E.assaultables, boardAnim = E.boardAnim,
         canAnswerMark = E.canAnswerMark, canReachCharge = E.canReachCharge, chargeAllow = E.chargeAllow,
@@ -65,14 +65,14 @@
       var want = null, wd = Infinity;
       E.state.objectives.forEach(function (o) {
         var held = o.owner && o.owner !== u.side ? -6 : 0;
-        var d = held + R.inches(o.x, o.y, W / 2, H / 2);
+        var d = held + R.inches(o.x, o.y, R.BOARD.w / 2, R.BOARD.h / 2);
         if (d < wd) { wd = d; want = o; }
       });
       var foes = E.state.units.filter(function (e) { return e.alive && e.side !== u.side && onTable(e) && !husk(e); });
       var focus = want || (foes.length ? {
         x: foes.reduce(function (s, e) { return s + e.x; }, 0) / foes.length,
         y: foes.reduce(function (s, e) { return s + e.y; }, 0) / foes.length
-      } : { x: W / 2, y: H / 2 });
+      } : { x: R.BOARD.w / 2, y: R.BOARD.h / 2 });
       var friends = E.state.units.filter(function (f) { return f.alive && f !== u && f.side === u.side && onTable(f) && !f.aboard; });
       var best = null, bs = -Infinity;
       var ec = foes.length ? { x: foes.reduce(function (t, e) { return t + e.x; }, 0) / foes.length, y: foes.reduce(function (t, e) { return t + e.y; }, 0) / foes.length } : focus;
@@ -81,7 +81,7 @@
       for (var k = 0; k < 360; k++) {
         // most of the search close round the focus, some of it anywhere on the table
         var p = k % 3 ? (function () { var ang = Math.random() * Math.PI * 2, rad = 10 + Math.random() * 16; return { x: focus.x + Math.cos(ang) * rad, y: focus.y + Math.sin(ang) * rad }; })()
-          : { x: 6 + Math.random() * (W - 12), y: 6 + Math.random() * (H - 12) };
+          : { x: 6 + Math.random() * (R.BOARD.w - 12), y: 6 + Math.random() * (R.BOARD.h - 12) };
         if (!insertionLegal(p) || R.unitNear(E.state, p.x, p.y, u, 1)) continue;
         var gap = foeGap({ x: p.x, y: p.y, side: u.side });
         if (gap < 10) continue;                            // in the enemy's lap: shot or charged before it can act
@@ -357,7 +357,7 @@
           if (wq && wq.n >= 2) { doWave(u, wq.pt); return; }
         }
         var prey = nearestEnemy(u);
-        if (prey && R.status(u) === 'ready' && R.canAssault(u, prey.unit) && prey.dist <= chargeAllow(u) && canReachCharge(u, prey.unit) &&
+        if (prey && R.status(u) === 'ready' && R.canAssault(u, prey.unit, E.state) && prey.dist <= chargeAllow(u) && canReachCharge(u, prey.unit) &&
           (u.fp == null || u.assault >= u.fp || !shot.t)) { aiCharge(u, prey.unit); return; }
       }
 
@@ -402,7 +402,7 @@
           // "Whenever an OpFor unit can attack the VIP unit, it will do so" (p. 152): a hull shoots it
           if (E.state.scen.mustTarget && shot.forced && shot.t) { fire(u, shot.t, 'fire'); return; }
           var prey2 = nearestEnemy(u);
-          if (R.isOvergrown(u) && prey2 && R.status(u) === 'ready' && R.canAssault(u, prey2.unit) &&
+          if (R.isOvergrown(u) && prey2 && R.status(u) === 'ready' && R.canAssault(u, prey2.unit, E.state) &&
             prey2.dist <= chargeAllow(u) && canReachCharge(u, prey2.unit)) { aiCharge(u, prey2.unit); return; }
           return aiRoll(u, prey2, false, { close: true, noShoot: true });
         }
@@ -692,7 +692,7 @@
       E.state.units.forEach(function (o) {
         if (!o.alive || o.side !== side || !onTable(o)) return;
         var e = t.fp != null ? Math.max(0, expectedHits(t, o, 'fire')) : 0;
-        if (t.assault > 0 && R.canAssault(t, o) && R.unitDist(t, o) <= (t.move || 0) + 2) e += 0.15 * t.assault;
+        if (t.assault > 0 && R.canAssault(t, o, E.state) && R.unitDist(t, o) <= (t.move || 0) + 2) e += 0.15 * t.assault;
         if (e > worst) worst = e;
       });
       var onObj = pts.some(function (p) { return R.inches(t.x, t.y, p.x, p.y) <= 4 + R.UNIT_R; });
@@ -814,7 +814,7 @@
          Kill Them All! is a charge at one in reach, else an Advance that shoots. */
       if (ap && !ap.push && behaviour === 'assault') {
         var near = nearestEnemy(u);
-        if (!(near && R.canAssault(u, near.unit) && near.dist <= chargeAllow(u))) behaviour = 'offensive';
+        if (!(near && R.canAssault(u, near.unit, E.state) && near.dist <= chargeAllow(u))) behaviour = 'offensive';
       }
       // units with Cumbersome Weapons count 4-7 as Reasonably Neutral (p. 147)
       if (R.has(u, 'Cumbersome Weapon') && total >= 4 && total <= 7) behaviour = 'neutral';
@@ -851,12 +851,14 @@
       /* Decapitation: the OpFor's leaders "always act according to the Reasonably
          Defensive result and never Move nor Advance" (p. 152) — whatever state they
          are in, they shoot from where they are or keep their heads down. */
-      if (E.state.scen.noMove && E.state.scen.noMove(E.state, u)) {
+      // high radiation: a drone vehicle whose link is down fires from where it is, as a leader that never moves does
+      var linkDown = E.radioDown(u);
+      if (linkDown || (E.state.scen.noMove && E.state.scen.noMove(E.state, u))) {
         /* Reasonably Defensive: the biggest threat (SOL-6); Suppressed, its Auxiliary
            weapons — the one shot a pinned unit has (p. 34; rules review a119ac2 SOL-8) */
         var pinned = R.status(u) !== 'ready';
         var still = threatTarget(u, 'fire', pinned ? { aux: true } : undefined);
-        logLine('ai', u.label + ' holds its position (Reasonably Defensive).');
+        logLine('ai', u.label + (linkDown ? ' cannot move (its link is down) and holds its position.' : ' holds its position (Reasonably Defensive).'));
         if (still.t) { resolveShot(u, still.t, 'fire', pinned ? { aux: true } : {}); return; }
         if (u.sp) {
           var rr0 = abRally(E.state, u, { regroup: true });
@@ -872,7 +874,7 @@
          rule, and the Suppression falls away as the charge starts. */
       if (R.status(u) === 'suppressed' && R.deathOrGlory(E.state, u) && !R.has(u, 'Cumbersome Weapon')) {
         var dogT = nearestEnemy(u);
-        if (dogT && R.canAssault(u, dogT.unit) && dogT.dist <= chargeAllow(u) && canReachCharge(u, dogT.unit)) {
+        if (dogT && R.canAssault(u, dogT.unit, E.state) && dogT.dist <= chargeAllow(u) && canReachCharge(u, dogT.unit)) {
           martyrFirst(u, dogT.unit, function (m) {
             var dsnap = snapshotAlive();
             var dres = abAssault(E.state, u, dogT.unit, m);
@@ -1050,13 +1052,13 @@
       // the VIP draws the charge too, when it is in reach
       if (behaviour === 'assault' && E.state.scen.mustTarget && u.side === 'B') {
         var vipA = E.state.scen.mustTarget(E.state, u);
-        if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA) && canReachCharge(u, vipA)) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
+        if (vipA && vipA.alive && onTable(vipA) && R.canAssault(u, vipA, E.state) && canReachCharge(u, vipA)) ne = { unit: vipA, dist: R.unitDist(u, vipA) };
         /* "Whenever an OpFor unit can attack the VIP unit, it will do so" (p. 152): one
            that cannot charge it but can shoot it does that, rather than charging
            someone else or only moving (a hull on 7+ included). */
         else if (shot.forced && shot.t) { fire(u, shot.t, 'fire'); return; }
       }
-      if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon')) {
+      if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit, E.state) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon')) {
         var nt = ne.unit;
         martyrFirst(u, nt, function (m) {
           var snap = snapshotAlive();
@@ -1289,7 +1291,7 @@
     function pickGoal(u, behaviour) {
       if (behaviour === 'flee') {
         var ne = nearestEnemy(u);
-        return ne ? { x: u.x + (u.x - ne.unit.x), y: u.y + (u.y - ne.unit.y) } : { x: u.side === 'A' ? 1 : W - 1, y: u.y };
+        return ne ? { x: u.x + (u.x - ne.unit.x), y: u.y + (u.y - ne.unit.y) } : { x: u.side === 'A' ? 1 : R.BOARD.w - 1, y: u.y };
       }
       if (behaviour === 'assault') {
         var t = nearestEnemy(u);
@@ -1309,7 +1311,7 @@
       if (best) return best;
       // nothing to hold and nothing to find: the enemy is the objective
       var foe = nearestEnemy(u);
-      return foe ? { x: foe.unit.x, y: foe.unit.y } : { x: W / 2, y: H / 2 };
+      return foe ? { x: foe.unit.x, y: foe.unit.y } : { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
     }
 
     function scoreSpot(u, c, goal, behaviour, look) {

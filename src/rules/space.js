@@ -515,6 +515,9 @@
     // and by intervening units.
     function hasLoS(state, a, b) {
       if (unitDist(a, b) > sightRange(a)) return false;
+      // Other Worlds: a foggy atmosphere, "maximum LoS distance is reduced to 18"" (p. 164)
+      var w = E.worldOf && E.worldOf(state);
+      if (w && /^foggy/.test(w.atmosphere) && unitDist(a, b) > 18) return false;
       return lineClear(state, a, b);
     }
     /* The line itself, however far: terrain that blocks and units standing in the way.

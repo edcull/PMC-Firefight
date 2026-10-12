@@ -143,7 +143,7 @@ console.log('\nCampaign battles stay at Priority Level 1 or 2, the 4\'x4\' table
   R.rollArmy(3, 4, null, 'pmc').forEach((k) => { const sp = R.splitPick(k); a.roster.push(C.newEntry(sp.key)); b.roster.push(C.newEntry(sp.key)); });
   a.tier = b.tier = 3;
   const lv = C.levelsFor(a, b, 3);
-  ok('a contract offers no Priority Level above 2, whatever the companies could field', lv.length > 0 && lv.every((n) => n <= 2), lv.join(','));
+  ok('a contract offers Priority Level 3 (6′ × 4′) at most, whatever the companies could field', lv.length > 0 && lv.every((n) => n <= 3) && lv.indexOf(3) >= 0, lv.join(','));
 })();
 
 console.log('\nA landing zone is held only by a token over its circle (house rule, SCN-1)');

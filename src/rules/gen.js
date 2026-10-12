@@ -142,7 +142,8 @@
     var aw = W / cols, ah = H / rowsN, out = [];
     for (var j = 0; j < rowsN; j++) for (var i = 0; i < cols; i++) {
       out.push({
-        name: (rowsN === 1 ? '' : (j === 0 ? 'N' : 'S')) + (cols === 1 ? '' : (i === 0 ? 'W' : 'E')) || 'Area',
+        // (a 6' x 4' table's middle row is plain W and E: NW, NE, W, E, SW, SE)
+        name: (rowsN === 1 ? '' : (j === 0 ? 'N' : j === rowsN - 1 ? 'S' : '')) + (cols === 1 ? '' : (i === 0 ? 'W' : i === cols - 1 ? 'E' : 'C')) || 'Middle',
         x: i * aw, y: j * ah, w: aw, h: ah
       });
     }

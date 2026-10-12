@@ -2,7 +2,7 @@
 
 A browser-based digital skirmish of **PMC 2670**, the sci-fi miniatures wargame by
 Marcin Gerkowicz (Assault Publishing). It plays the book's rules on a 4′ × 4′
-isometric table, with movement, range and line of sight measured in real inches,
+isometric table (6′ × 4′ at Priority Level 3), with movement, range and line of sight measured in real inches,
 edge to edge.
 
 ## What's in v0.2
@@ -67,6 +67,46 @@ A skirmish opens on **the battlefield**: pick the Battle Tier, Priority Level,
 scenario and world, then tap each force's card to muster it. Mustering spends
 composition points, with the book's limits checked as you go. A force can be
 named, saved, and saved to or loaded from a file (`.pmcforce.json`).
+
+### Optional rules
+
+The book's optional rules can be switched on for a battle: on the battlefield
+step of a skirmish, in an online room's terms, or for a whole campaign when it
+is raised (an online campaign's host sets them in its lobby). The battle's
+briefing lists the ones in play.
+
+- **"There can be only two!"** (p. 166): a unit may attack only one of the two
+  enemy units nearest to it. Vehicles, aircraft and infantry are each counted
+  among their own kind. Indirect fire, marking, and reactions (defensive fire,
+  the arrival shot) are not bound by it.
+- **"Bad, worse, the bookkeeper"** (p. 167): an army routs when the Tiers of its
+  destroyed units add up to half its composition points, rather than when half
+  its units are gone.
+- **Other Worlds** (Appendix 2, pp. 164-165): three D10s for the planet's
+  gravity, atmosphere and anomalies, rolled at the start of the battle (in a
+  campaign, with each contract, and shown on the offer). Low gravity lengthens
+  a Move and makes an Advance fire at Basic Firepower; high gravity shortens it
+  and toughens infantry. No air adds 6" to every Range; no air or toxic air is +1
+  against infantry; fog limits sight to 18". High radiation jams everyone and can
+  cut a drone vehicle's link; time anomalies let a side act again on a 5+; an
+  unexplained weakness takes 1 off Movement, Firepower, Assault and Morale (and
+  costs a Trauma point in a campaign).
+
+### Solitaire
+
+Your commando against the OpFor, which the book's behaviour table runs. On the
+battlefield step:
+
+- **The OpFor** is rolled when the battle starts, as the book has it. Tap its
+  line to choose it yourself instead, from its army's list and under the OpFor
+  table. Roll one gives you a legal pool to start from.
+- **Counters and objectives** are placed by the game. Choose to move them
+  yourself, and while you deploy you can tap a counter (or a Sabotage objective)
+  to pick it up, then tap where it should go. The scenario's spacing is checked
+  as you go.
+- **Terrain** can be laid by hand, as in a skirmish.
+
+Evacuation's militia is a line unit of your own army, at the Battle Tier.
 
 ### Setting up
 
@@ -148,7 +188,13 @@ There are two kinds:
 | | |
 |---|---|
 | **Single player** | You against AI rival forces |
-| **Online** | A world on the server: players and AI forces in slots, contracts against the AI, and duels between players, played at each player's own pace |
+| **Online** | A world on the server: players and AI forces in slots, contracts against the AI, duels between players, and co-operative contracts, played at each player's own pace |
+
+A **co-operative contract** (p. 150) is offered to another player from the
+other forces, as a challenge is: once they accept, a Battle Tier, a solitaire
+scenario and the OpFor's army are rolled, each of you picks a commando from your
+own dossier, and you fight side by side against the OpFor. Pay and experience
+are halved afterwards, each company's from its own units.
 
 ### The unit viewer
 
@@ -201,18 +247,6 @@ The full file layout and every test are described in [docs/DEVELOPMENT.md](docs/
 
 Planned in [docs/roadmap.md](docs/roadmap.md):
 
-- **Optional rules (v0.3):**
-  - Appendix 2, Other Worlds (gravity, atmosphere, anomalies); for now the world
-    only chooses the terrain;
-  - from Appendix 3, "There can be only two!" and "Bad, worse, the bookkeeper".
-- **Priority Level 3 on a 6′ × 4′ table (v0.3).** Battles are Priority Level 1–2
-  on 4′ × 4′.
-- **Co-op battles in a campaign (v0.3).** Co-op is played as a one-off battle
-  for now.
-- **Solitaire (v0.3):**
-  - the OpFor is rolled, not chosen;
-  - counters and objectives are placed by the game;
-  - Evacuation's militia is always PMC infantry.
 - **Appendix 1, Close Encounters (v0.4):** corridors, doors, hidden movement,
   reaction fire and its scenarios.
 

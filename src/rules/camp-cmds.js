@@ -175,6 +175,7 @@
         const k = {
           tierRoll: tier, tier: tier.tier, levels: levels, pl: C.defaultLevel(A, B, tier.tier, levels),
           scenario: fs.scenario || fs.fore.dice[0], planet: 'random',
+          world: camp.options && camp.options.otherWorlds ? R.rollWorld() : null,      // Other Worlds (p. 165)
           alt: fs.alt || null, altBy: fs.altBy || (fs.alt ? 'A' : null), altUsed: false,
           fore: fs.fore || null, foreNote: fs.note || null,
           roles: null, terms: {}, picks: { A: null, B: null }, ready: { A: false, B: false }, turn: camp.turn || 0

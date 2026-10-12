@@ -7,6 +7,7 @@
 (function (root) {
   'use strict';
   root.PMCDamage = function (E) {
+    var worldOf = E.worldOf, thinAir = E.thinAir;
     var TERRAIN = E.TERRAIN, UNIT_R = E.UNIT_R, addSP = E.addSP, campFlag = E.campFlag,
         clampBoard = E.clampBoard, credit = E.credit, currentMorale = E.currentMorale, d3 = E.d3, d6 = E.d6,
         doctrine = E.doctrine, droneUnit = E.droneUnit, has = E.has, hasOwn = E.hasOwn,
@@ -52,8 +53,11 @@
       var medic = medicFor(state, target), medics = !!medic;
       var drugs = doctrine(state, target.side, 'T1');      // Combat Drugs
       var suicidal = campFlag(target, 'suicidal');         // Suicidal Tendencies
+      // Other Worlds: no air, or toxic air, is +1 against infantry — "but result 1 is still ignored" (pp. 164-165)
+      var thin = thinAir(state, target);
+      if (thin) out.notes.push('Thin or toxic air: +1 against infantry, a 1 still ignored');
       for (var i = 0; i < hits; i++) {
-        var raw = d6(), r = raw + mod, tag, down = false;
+        var raw = d6(), r = raw + mod + (thin && raw > 1 ? 1 : 0), tag, down = false;
         if (suicidal && !(medics && r >= 6)) {
           // ignores hits on 1-2, but goes down on a 5-6 — a 6 near Field Medics is still MEDIC! (CMP-13)
           if (r <= 2) tag = 'Steady, boys!';
@@ -96,12 +100,13 @@
       return later ? out : shotRelief(state, target, out);
     }
 
-    function resolveAssaultHits(target, hits, mod, atk) {
+    // `thin`: Other Worlds' +1 against infantry, a 1 still ignored (pp. 164-165)
+    function resolveAssaultHits(target, hits, mod, atk, thin) {
       mod = (mod || 0) + (droneUnit(target) ? 1 : 0);          // drone units, p. 40
       var out = { casualties: 0, sp: 0, rolls: [], notes: [] };
       var nbk = campFlag(atk, 'nbk');                     // Natural Born Killers
       for (var i = 0; i < hits; i++) {
-        var raw = d6(), r = raw + mod, tag;
+        var raw = d6(), r = raw + mod + (thin && raw > 1 ? 1 : 0), tag;
         var down = false;
         if (target && has(target, 'Animal Behaviour')) {
           if (r <= 3) tag = 'QUEKKK! (ignored)';
@@ -325,6 +330,9 @@
     /* Jammers is a penalty, so it bites from a unit that is suppressed or broken;
        Counter-jamming is a bonus, so it does not (p. 28). */
     function jammedNearby(state, u) {
+      // Other Worlds: high radiation, "all troops count as being affected by Jammers" (p. 165)
+      var w = worldOf(state);
+      if (w && w.anomaly === 'radiation') return true;
       var jammed = false;
       for (var i = 0; i < state.units.length; i++) {
         var e = state.units[i];

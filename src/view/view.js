@@ -765,6 +765,18 @@
       }
       if (sc.hint) h += '<p class="hint small">' + esc(sc.hint) + '</p>';
       if (sc.turns) h += '<p class="hint small">At most ' + sc.turns + ' turns.</p>';
+      // Other Worlds: what the planet does to this battle
+      var wo = R.worldOf(B.state);
+      if (wo) {
+        var wl = R.worldLines(wo);
+        h += '<p class="hint small"><b>Conditions on this world:</b>' + (wl.length ? '' : ' standard gravity and air, no anomalies.') + '</p>' +
+          (wl.length ? '<ul class="hint small">' + wl.map(function (x) { return '<li><b>' + esc(x.name) + '</b> \u2014 ' + esc(x.text) + '</li>'; }).join('') + '</ul>' : '');
+      }
+      // the optional rules the battle is fought under (Appendix 3), each with what it does
+      var opts = R.OPTIONS.filter(function (d) { return R.opt(B.state, d.key); });
+      if (opts.length) h += '<p class="hint small"><b>Optional rules:</b></p><ul class="hint small">' + opts.map(function (d) {
+        return '<li><b>' + esc(d.name) + '</b> \u2014 ' + esc(d.text) + '</li>';
+      }).join('') + '</ul>';
       return h + '<div class="askrow"><button type="button" class="start" id="obj-done">Done</button></div>';
     }
     function openObjectives(quiet) {

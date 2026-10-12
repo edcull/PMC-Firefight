@@ -26,12 +26,16 @@
 
   // the one list of colours, shared with the server (protocol.js)
   var COLOURS = root.PMCProto.COLOURS;
-  var OBJECTIVES = [{ x: 12, y: 36 }, { x: 24, y: 24 }, { x: 36, y: 12 }];
+  // the three objective spots the generator keeps clear by default: on the diagonal, a quarter in from each end
+  function OBJECTIVES() {
+    var w = R.BOARD.w, h = R.BOARD.h;
+    return [{ x: w * 0.25, y: h * 0.75 }, { x: w / 2, y: h / 2 }, { x: w * 0.75, y: h * 0.25 }];
+  }
   /* The objectives the generator keeps its clearings round, and the ground a
      scenario wants left bare: Hostile takeover's 12" round the centre, which is
      the defender's to fortify (p. 55). */
   function genObjectives(scenId) {
-    var list = OBJECTIVES.slice();
+    var list = OBJECTIVES();
     if (scenId === 'takeover') list.clear = [{ x: R.BOARD.w / 2, y: R.BOARD.h / 2, r: 12 }];
     return list;
   }
@@ -77,7 +81,7 @@
 
   function create(view) {
     var V = Object.assign(nullView(), view || {});
-    var W = R.BOARD.w, H = R.BOARD.h, UR = R.UNIT_R;
+    var UR = R.UNIT_R;
     var state = null;
 
     /* The interaction the game itself cares about: who is selected, what action
@@ -302,6 +306,8 @@
     }
     // a campaign unit carries its dossier on its back: name, honours, traumas, upgrades
     if (entry && C) C.applyEntry(u, entry, state && state.doctrines ? state.doctrines[side] : null);
+    // the world it is fought on (Other Worlds): what that does to the unit's own numbers
+    if (state) R.worldStats(u, R.worldOf(state));
     return u;
   }
 
@@ -309,7 +315,14 @@
     /* The world is settled here, once: a random one picked, and a barren one
        made desert or arctic. Everything after — the table, the look of it on
        every screen — reads the one name this leaves in the config. */
+    /* The table: 4' x 4' at Priority Level 1-2, 6' x 4' (48" x 72") at 3 and up (p. 45);
+       a solitaire or co-op game is always fought on 4' x 4'. */
+    cfg.board = cfg.solo ? { w: 48, h: 48 } : (cfg.board && cfg.board.w ? { w: +cfg.board.w, h: +cfg.board.h } : R.boardFor(cfg.pl));
+    R.setBoard(cfg.board);
     cfg.planet = GEN.resolvePlanet(cfg.planet, Math.random);
+    cfg.options = R.cleanOptions(cfg.options);          // the optional rules switched on (R.OPTIONS)
+    // Other Worlds: the conditions a campaign rolled for the contract, or rolled now (pp. 164-165)
+    cfg.world = cfg.options.otherWorlds ? (R.cleanWorld(cfg.world) || R.rollWorld()) : null;
     var scenId = cfg.scenario && SC.SCENARIOS[cfg.scenario] ? cfg.scenario : 'secure';
     // a solitaire / cooperative game only runs the solitaire scenarios, and they only run in one
     if (cfg.solo && !(SC.SCENARIOS[scenId] || {}).solo) scenId = 's_crush';
@@ -321,7 +334,7 @@
     var built = manual
       ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
       : GEN.generate({
-        width: W, height: H, planet: cfg.planet,
+        width: R.BOARD.w, height: R.BOARD.h, planet: cfg.planet,
         objectives: genObjectives(scenId)   // keeps the generator's clearings roughly central (and a scenario's ground bare)
       });
     state = {
@@ -329,7 +342,7 @@
       terrain: built.terrain,
       genCount: built.terrain.length,
       // nothing is nominated until the table is set (the scenario places them)
-      objectives: manual ? [] : OBJECTIVES.map(function (o) { return { x: o.x, y: o.y, owner: null }; }),
+      objectives: manual ? [] : OBJECTIVES().map(function (o) { return { x: o.x, y: o.y, owner: null }; }),
       units: [], turn: 0, phase: 'deploy', activeSide: 'A', initiative: null,
       streak: 0, chain: null, rush: null, log: [], over: null,
       campaign: cfg.campaign || null,
@@ -709,7 +722,7 @@
     ['A', 'B'].forEach(function (side) {
       if (docsOf(side).indexOf('XO4') < 0) return;
       if (!byHand(side)) K.terrainKnowledge(side);
-      else state.placeQueue.push({ side: side, kind: 'move', why: 'terrain', left: 2, total: 2 });
+      else state.placeQueue.push({ side: side, kind: 'move', why: 'terrain', left: R.dtkPieces(), total: R.dtkPieces() });
     });
     /* Hostile takeover (p. 55): up to ten sections and a bunker within 12" of
        the objective, put down by the defender after the roles are known. */
@@ -771,7 +784,7 @@
     var scen = state.scen;
     logLine('note', 'Battle Tier ' + R.ROMAN[cfg.tier] + ', Priority Level ' + cfg.pl +
       ' — ' + (R.COMPOSITION[cfg.tier].points * cfg.pl) + ' composition points a side. ' +
-      scen.name + ' (p. ' + scen.page + ') on a 4′ × 4′ table.');
+      scen.name + ' (p. ' + scen.page + ') on a ' + (R.BOARD.h > 48 ? '6′ × 4′' : '4′ × 4′') + ' table.');
     logLine('note', scen.blurb + ' ' + scen.win);
     if (state.sc.attacker) logLine('note', roleSentence());
     pushRes({
@@ -784,6 +797,14 @@
               { text: sideName('B') + ' — ' + deployWhere('B') }])
     });
     logLine('note', cfg.nameA + ' [A] against ' + cfg.nameB + ' [B].');
+    // Other Worlds: what the planet does to this battle
+    if (cfg.world) {
+      var wl = R.worldLines(cfg.world);
+      logLine('note', 'Other Worlds: ' + (wl.length ? wl.map(function (x) { return x.name; }).join(', ') : 'conditions much like home') + '.');
+      pushRes({ kind: 'World', title: wl.length ? wl.map(function (x) { return x.name; }).join(' \u00b7 ') : 'Standard conditions',
+        note: 'Other Worlds (pp. 164-165): gravity, atmosphere and anomalies.',
+        list: wl.length ? wl.map(function (x) { return { text: x.name + ' \u2014 ' + x.text }; }) : [{ text: 'Standard gravity, standard atmosphere, no anomalies.' }] });
+    }
     logLine('note', 'Terrain generator: ' + built.generator + '. ' +
       built.rolls.map(function (r) { return r.area + ' D6 ' + r.roll; }).join(', ') + '.');
     if (!built.manual) built.rolls.forEach(function (r) { logLine('terrain', r.area + ' — D6 ' + r.roll + ': ' + r.text); });
@@ -828,6 +849,13 @@
     if (R.has(u, 'Riders')) base = Math.max(base, 4);
     if (u.tactic === 'wave' && u.cls === 'infantry' &&
       (action === 'move' || action === 'assault' || !action)) base = Math.max(base, 4);
+    /* Other Worlds (p. 164), on a Move: low gravity M+6" for infantry and M+8" for
+       ground vehicles; high gravity 1" less (2" for ground vehicles, 4" for aircraft). */
+    var w = state && R.worldOf(state);
+    if (w && (action === 'move' || !action)) {
+      if (w.gravity === 'low' && !R.isFlying(u)) base = Math.max(base, R.isMachine(u) ? 8 : 6);
+      if (w.gravity === 'high') base -= R.isFlying(u) ? 4 : R.isMachine(u) ? 2 : 1;
+    }
     if (!C || !state) return base;
     return C.moveBonus(u, base, action || 'move', state.doctrines ? state.doctrines[u.side] : null);
   }
@@ -962,12 +990,12 @@
     var placed = 0;
     mine.forEach(function (u) {
       if (placed >= 4) return;
-      var aim = foe.length ? foe.reduce(function (b, e) { return !b || R.unitDist(u, e) < R.unitDist(u, b) ? e : b; }, null) : { x: W / 2, y: H / 2 };
+      var aim = foe.length ? foe.reduce(function (b, e) { return !b || R.unitDist(u, e) < R.unitDist(u, b) ? e : b; }, null) : { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
       var dx = aim.x - u.x, dy = aim.y - u.y, d = Math.hypot(dx, dy) || 1;
       var cx = u.x + dx / d * 1.8, cy = u.y + dy / d * 1.8;
       var along = Math.abs(dx) > Math.abs(dy);
       var r = along ? { kind: 'barricade', x: cx - 0.3, y: cy - 1.5, w: 0.6, h: 3 } : { kind: 'barricade', x: cx - 1.5, y: cy - 0.3, w: 3, h: 0.6 };
-      if (r.x < 0 || r.y < 0 || r.x + r.w > W || r.y + r.h > H) return;
+      if (r.x < 0 || r.y < 0 || r.x + r.w > R.BOARD.w || r.y + r.h > R.BOARD.h) return;
       var clash = state.terrain.some(function (o) { return r.x < o.x + o.w && r.x + r.w > o.x && r.y < o.y + o.h && r.y + r.h > o.y; }) ||
         state.units.some(function (o) { return o.alive && o.x >= 0 && o.x > r.x - 1 && o.x < r.x + r.w + 1 && o.y > r.y - 1 && o.y < r.y + r.h + 1; });
       if (clash) return;
@@ -1123,7 +1151,10 @@
      ground the game will actually accept rather than a remembered rule. */
   function deployWhere(side) {
     var sc = state.sc || {};
-    if (state.scen.deployText) return state.scen.deployText(state, side);
+    if (state.scen.deployText) {
+      return state.scen.deployText(state, side) + (SOLO && SOLO.handPlaced(state)
+        ? ' Tap a counter' + (state.sc.targets ? ' or an objective' : '') + ' to pick it up, then where it should go.' : '');
+    }
     if (sc.defCircle && sc.defender === side) {
       return 'Place each unit inside the shaded circle — within ' + sc.defCircle.r +
         '" of the objective.';
@@ -1139,7 +1170,7 @@
       return 'Place each unit inside the shaded box — anywhere at least ' + sc.inset +
         '" in from every table edge.';
     }
-    var depth = side === 'A' ? z[1] : W - z[0];
+    var depth = side === 'A' ? z[1] : R.BOARD.w - z[0];
     return 'Place each unit inside your own ' + Math.round(depth) +
       '" strip — the shaded band on your table edge.';
   }
@@ -1356,6 +1387,17 @@
   function afterChain() {
     if (state.solo) { K.soloNext(); return; }
     state.streak -= 1;
+    /* Other Worlds, time anomalies (p. 165): with the side's activations done (all
+       of an Overwhelming streak), a D6 of 5+ gives it one more — and the roll again after that. */
+    var tw = R.worldOf(state);
+    if (state.streak <= 0 && tw && tw.anomaly === 'time' && eligible(state.activeSide).length > 0) {
+      var tr = R.d6();
+      if (tr >= 5) {
+        state.streak = 1;
+        logLine('note', 'Time anomalies: D6 ' + tr + ' \u2014 ' + sideName(state.activeSide) + ' activates another unit.');
+        pushRes({ kind: 'World', title: 'Time anomalies', side: state.activeSide, note: sideName(state.activeSide) + ' acts again.', dice: [{ label: 'D6', value: tr }] });
+      }
+    }
     if (state.streak > 0 && eligible(state.activeSide).length > 0) { render(); maybeAI(); return; }
 
     var next = other(state.activeSide);
@@ -1526,7 +1568,6 @@
   function kitContext() {
     var own = {
       GEN: GEN,
-      H: H,
       OBJECTIVES: OBJECTIVES,
       genObjectives: function () { return genObjectives(state && state.cfg && state.cfg.scenario); },
       PIECE_NOUN: PIECE_NOUN,
@@ -1537,7 +1578,6 @@
       SOLO: SOLO,
       UR: UR,
       V: V,
-      W: W,
       addFx: addFx,
       afterChain: afterChain,
       afterTerrain: afterTerrain,
@@ -1948,6 +1988,16 @@
       render();
       return yes;
     });
+    /* Solitaire, the counters and objectives by hand (an option): one picked up and
+       put down elsewhere while the force deploys, inside the scenario's rules. */
+    on('marker', null, function (side, it) {
+      if (state.phase !== 'deploy' || !SOLO || !SOLO.handPlaced(state)) return no('nothing to move now');
+      if (side !== 'A') return no('the players place them');
+      var r = SOLO.moveMarker(state, it.kind === 'target' ? 'target' : 'counter', +it.i, +it.x, +it.y);
+      if (!r.ok) { setHint(null, r.why); render(); return no(r.why); }
+      render();
+      return yes;
+    });
     on('start', null, function (side, it) {
       if (state.phase !== 'deploy') return no('already under way');
       if (state.minePick) return no('the mined piece has not been chosen');
@@ -2320,7 +2370,12 @@
 
     makeKits();
 
-    return {
+    /* The table is this battle's size before anything of it is worked out: one
+       process runs many battles on a server, each its own size (R.setBoard). */
+    // (a battle saved before tables had sizes was fought on 4' x 4')
+    function syncBoard() { if (state && state.cfg) R.setBoard(state.cfg.board || { w: 48, h: 48 }); }
+    function onBoard(fn) { return typeof fn !== 'function' ? fn : function () { syncBoard(); var r = fn.apply(this, arguments); syncBoard(); return r; }; }
+    var api = {
       start: start,
       intent: intent,
       snapshot: K.snapshot,
@@ -2430,6 +2485,9 @@
       STANDARD: STANDARD,
       SPECIAL_SLOTS: SPECIAL_SLOTS
     };
+    ['intent', 'snapshot', 'load', 'concede'].forEach(function (k) { api[k] = onBoard(api[k]); });
+    Object.keys(api.query).forEach(function (k) { api.query[k] = onBoard(api.query[k]); });
+    return api;
   }
 
   root.PMCEngine = {
