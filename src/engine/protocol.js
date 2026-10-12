@@ -42,7 +42,7 @@
   'use strict';
 
   var TIERS = [1, 2, 3, 4, 5];
-  var PLS = [1, 2];
+  var PLS = [1, 2, 3];             // Priority Level 3 on a 6' x 4' table (R.boardFor)
   /* The worlds on offer. Desert and arctic are the book's one barren table in
      two looks; 'barren' is still accepted, from an older client or an old
      campaign, and is settled into one of the two when the battle is set up. */

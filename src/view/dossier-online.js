@@ -527,7 +527,7 @@
       else if (!ctx.ai && mineWant && mineWant !== k.pl) plNote = 'You want Priority Level ' + mineWant + ' \u2014 waiting for ' + esc(ctx.foeName) + ' to agree. It stays at ' + k.pl + ' until then.';
       else if (!ctx.ai) plNote = 'Both of you choose; it changes only when you agree.';
       h += '<div class="field plrow"><div><label for="oc-pl">Priority Level</label>' +
-        '<select id="oc-pl"' + (lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2].map(function (n) {
+        '<select id="oc-pl"' + (lv.length > 1 && !k.ready[me] ? '' : ' disabled') + '>' + [1, 2, 3].map(function (n) {
           var can = lv.indexOf(n) >= 0;
           return '<option value="' + n + '"' + (shownPl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + '</option>';
         }).join('') + '</select>' + (plNote ? '<p class="dnote">' + plNote + '</p>' : '') + '</div></div>';

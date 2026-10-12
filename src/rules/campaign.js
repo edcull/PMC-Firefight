@@ -243,7 +243,7 @@
     { id: 'XO3', cat: 'Organisational', name: 'Foresighted Command',
       text: 'The scenario is rolled with an extra die, and the tribe chooses which to keep.' },
     { id: 'XO4', cat: 'Organisational', name: 'Detailed Terrain Knowledge',
-      text: 'After the battlefield is set up, the tribe moves two terrain pieces up to 12".' },
+      text: 'After the battlefield is set up, the tribe moves two terrain pieces up to 12" (three on a 6′ × 4′ table).' },
     { id: 'XO5', cat: 'Organisational', name: 'Fortify and Strike!',
       text: 'After deploying in the first turn, the tribe places four field fortifications (low walls) in its deployment zone.' },
     { id: 'XO6', cat: 'Organisational', name: 'Know Your Foe!',

@@ -10,8 +10,9 @@
     var a = B.a, boulder = B.boulder, clamp01 = B.clamp01, dot = B.dot, edgeLine = B.edgeLine, fbm = B.fbm;
     var hash = B.hash, poly = B.poly, rect = B.rect, rng = B.rng, toScreen = B.toScreen, toWorld = B.toWorld;
     var vnoise = B.vnoise, A = B.A, BAYER = B.BAYER, CRUST = B.CRUST, DEEPW = B.DEEPW, ELEV = B.ELEV;
-    var GLOW = B.GLOW, GROUNDS = B.GROUNDS, H = B.H, K = B.K, LIP = B.LIP, OX = B.OX, OY = B.OY;
-    var PIXH = B.PIXH, PIXW = B.PIXW, STONE = B.STONE, W = B.W, WATER = B.WATER;
+    var GLOW = B.GLOW, GROUNDS = B.GROUNDS, K = B.K, LIP = B.LIP, OY = B.OY;
+    var STONE = B.STONE, WATER = B.WATER;
+    // the table's size and the buffer's, read as they are now (iso.js setBoard)
 
     /* ---------- ground ----------
        The rules read terrain as rectangles, so the art paints those rectangles:
@@ -84,7 +85,7 @@
     };
     // `box`, when given: the only part of the table (inches) anything will be read from
     function groundFit(terrain, seed, box) {
-      var STEP = 0.5, cw = Math.ceil(W / STEP) + 2, ch = Math.ceil(H / STEP) + 2;
+      var STEP = 0.5, cw = Math.ceil(B.W / STEP) + 2, ch = Math.ceil(B.H / STEP) + 2;
       var P = new Float32Array(cw * ch), D = new Float32Array(cw * ch), N = new Float32Array(cw * ch);
       // and a colour the ground is pulled towards, with how hard: TW the weight, TR/TG/TB the colour
       var TW = new Float32Array(cw * ch), TR = new Float32Array(cw * ch), TG = new Float32Array(cw * ch), TB = new Float32Array(cw * ch);
@@ -186,10 +187,10 @@
     var CLIP = null;                                 // the patch a clipped bake is painting (paintFloor reads it)
     function bakeGround(terrain, seed, planet, clip) {
       var GP = GROUNDS[planet] || GROUNDS.sparse;
-      var cx0 = 0, cy0 = 0, cx1 = PIXW, cy1 = PIXH;
+      var cx0 = 0, cy0 = 0, cx1 = B.PIXW, cy1 = B.PIXH;
       if (clip) {
         cx0 = Math.max(0, Math.floor(clip.x0)); cy0 = Math.max(0, Math.floor(clip.y0));
-        cx1 = Math.min(PIXW, Math.ceil(clip.x1)); cy1 = Math.min(PIXH, Math.ceil(clip.y1));
+        cx1 = Math.min(B.PIXW, Math.ceil(clip.x1)); cy1 = Math.min(B.PIXH, Math.ceil(clip.y1));
       }
       CLIP = clip ? { x0: cx0, y0: cy0, x1: cx1, y1: cy1 } : null;
       try { return bakeIn(terrain, seed, planet, GP, cx0, cy0, cx1, cy1, null); } finally { CLIP = null; }
@@ -201,10 +202,10 @@
        one-go bake paints. */
     function bakeGroundSliced(terrain, seed, planet, clip, done) {
       var GP = GROUNDS[planet] || GROUNDS.sparse;
-      var cx0 = 0, cy0 = 0, cx1 = PIXW, cy1 = PIXH;
+      var cx0 = 0, cy0 = 0, cx1 = B.PIXW, cy1 = B.PIXH;
       if (clip) {
         cx0 = Math.max(0, Math.floor(clip.x0)); cy0 = Math.max(0, Math.floor(clip.y0));
-        cx1 = Math.min(PIXW, Math.ceil(clip.x1)); cy1 = Math.min(PIXH, Math.ceil(clip.y1));
+        cx1 = Math.min(B.PIXW, Math.ceil(clip.x1)); cy1 = Math.min(B.PIXH, Math.ceil(clip.y1));
       }
       CLIP = clip ? { x0: cx0, y0: cy0, x1: cx1, y1: cy1 } : null;
       try { bakeIn(terrain, seed, planet, GP, cx0, cy0, cx1, cy1, done); } finally { CLIP = null; }
@@ -223,13 +224,13 @@
       }
       mine();
       var cv = document.createElement('canvas');
-      cv.width = PIXW; cv.height = PIXH;
+      cv.width = B.PIXW; cv.height = B.PIXH;
       var g = cv.getContext('2d');
-      var img = g.createImageData(PIXW, PIXH), d = img.data;
+      var img = g.createImageData(B.PIXW, B.PIXH), d = img.data;
 
       /* --- noise on a coarse lattice, read back per pixel --- */
       var LAT = 4;                                   // lattice spacing, buffer px
-      var gw = Math.ceil(PIXW / LAT) + 2, gh = Math.ceil(PIXH / LAT) + 2;
+      var gw = Math.ceil(B.PIXW / LAT) + 2, gh = Math.ceil(B.PIXH / LAT) + 2;
       /* a clipped bake reads the ground's fit to the terrain only under the clip:
          the world box of its corners, and a lattice step to spare */
       var fitBox = null;
@@ -272,13 +273,13 @@
       function soilRows(ya, yb) {
       for (var by = ya; by < yb; by++) {
         var v0 = (by - OY) * INV_HK;
-        var wx = ((cx0 - OX) * INV_K + v0) / 2, wy = (v0 - (cx0 - OX) * INV_K) / 2;
+        var wx = ((cx0 - B.OX) * INV_K + v0) / 2, wy = (v0 - (cx0 - B.OX) * INV_K) / 2;
         var dx = INV_K / 2, dy = -INV_K / 2;
-        var row = by * PIXW * 4, br = (by & 3);
+        var row = by * B.PIXW * 4, br = (by & 3);
         // the lattice row this pixel row reads between, worked out once a row
         var lv = by / LAT, lj0 = lv | 0, lfv = lv - lj0, lrow = lj0 * gw;
         for (var bx = cx0; bx < cx1; bx++, wx += dx, wy += dy) {
-          if (wx < 0 || wy < 0 || wx > W || wy > H) continue;
+          if (wx < 0 || wy < 0 || wx > B.W || wy > B.H) continue;
           /* lat(), four fields at once: the same bilinear read, sharing the
              corner it reads from (the soil pass is millions of pixels) */
           var lu = bx / LAT, li0 = lu | 0, lfu = lu - li0, a0 = lrow + li0, a1 = a0 + gw;
@@ -350,7 +351,7 @@
       terrain.forEach(function (r, ri) { if (r.kind === 'lava' || r.kind === 'ravine') lavaWalls(g, r, seed + ri * 131, r.kind); });
 
       // the board itself: a slab with a lit top edge and a shadowed lip
-      var n0 = toScreen(0, 0), nE = toScreen(W, 0), nS = toScreen(W, H), nWt = toScreen(0, H);
+      var n0 = toScreen(0, 0), nE = toScreen(B.W, 0), nS = toScreen(B.W, B.H), nWt = toScreen(0, B.H);
       poly(g, [[nWt.x, nWt.y], [nS.x, nS.y], [nS.x, nS.y + LIP], [nWt.x, nWt.y + LIP]], '#221b13');
       // (the far edges are hidden behind the table's own surface, so only the two near faces are drawn)
       poly(g, [[nE.x, nE.y], [nS.x, nS.y], [nS.x, nS.y + LIP], [nE.x, nE.y + LIP]], '#181309');
@@ -368,11 +369,11 @@
 
       // tracks worn across the open ground
       for (var t2 = 0; t2 < 7; t2++) {
-        var x = rand() * W, y = rand() * H, ang = rand() * Math.PI * 2;
+        var x = rand() * B.W, y = rand() * B.H, ang = rand() * Math.PI * 2;
         for (var s2 = 0; s2 < 40 + rand() * 60; s2++) {
           ang += (rand() - 0.5) * 0.3;
           x += Math.cos(ang) * 0.5; y += Math.sin(ang) * 0.5;
-          if (x < 0 || y < 0 || x > W || y > H) break;
+          if (x < 0 || y < 0 || x > B.W || y > B.H) break;
           if (busy(x, y)) continue;
           var p = toScreen(x, y);
           dot(g, p.x, p.y, rand() > 0.5 ? GP.track[0] : GP.track[1], 1);
@@ -386,19 +387,19 @@
       /* The plate's rows a set of pieces can paint, raised by `lift`: the hill
          floors are painted into a read-back of just those rows, not the plate. */
       function rowsOf(rs, lift2) {
-        var P = Math.ceil(K * 0.9) + 3, lo = PIXH, hi = 0;
+        var P = Math.ceil(K * 0.9) + 3, lo = B.PIXH, hi = 0;
         rs.forEach(function (r) {
           [toScreen(r.x, r.y), toScreen(r.x + r.w, r.y), toScreen(r.x + r.w, r.y + r.h), toScreen(r.x, r.y + r.h)].forEach(function (c) {
             lo = Math.min(lo, Math.floor(c.y) - P - lift2); hi = Math.max(hi, Math.ceil(c.y) + P - lift2);
           });
         });
-        lo = Math.max(0, lo); hi = Math.min(PIXH, hi + 1);
+        lo = Math.max(0, lo); hi = Math.min(B.PIXH, hi + 1);
         return hi > lo ? { y0: lo, y1: hi } : null;
       }
       if (hills.length) {
         var onHillFloors = terrain.filter(function (r) { return r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker'; });
         var hb = rowsOf(hills.concat(onHillFloors), ELEV);
-        var top = g.getImageData(0, hb.y0, PIXW, hb.y1 - hb.y0), td = top.data;
+        var top = g.getImageData(0, hb.y0, B.PIXW, hb.y1 - hb.y0), td = top.data;
         hills.forEach(function (r, ri) {
           paintFloor(td, r, HILLC.floor, seed + ri * 419, lat, fN, fD, ELEV, null, hb);
         });
@@ -417,7 +418,7 @@
         steps.forEach(function (u2) { hillSlopes(g, u2, seed + 7, ELEV); });
         if (steps.length) {
           var sb = rowsOf(steps, ELEV * 2);
-          var top2 = g.getImageData(0, sb.y0, PIXW, sb.y1 - sb.y0), td2 = top2.data;
+          var top2 = g.getImageData(0, sb.y0, B.PIXW, sb.y1 - sb.y0), td2 = top2.data;
           steps.forEach(function (u2, ri) { paintFloor(td2, u2, HILLC.floor, seed + ri * 431 + 9, lat, fN, fD, ELEV * 2, null, sb); });
           g.putImageData(top2, 0, sb.y0);
           steps.forEach(function (u2) { hillCrest(g, u2, seed + 7, ELEV); });
@@ -453,7 +454,7 @@
 
       // scatter: tufts of grass and stones over open ground only
       for (var s3 = 0; s3 < 3400; s3++) {
-        var gx2 = rand() * W, gy2 = rand() * H;
+        var gx2 = rand() * B.W, gy2 = rand() * B.H;
         if (busy(gx2, gy2)) continue;
         var p2 = toScreen(gx2, gy2), roll = rand();
         // how much of the scatter is grass depends on the world; the rest is stone
@@ -473,7 +474,7 @@
     function bowl(g, cx, cy, R, rnd) {
       var rx = R * 1.3, ry = rx / 2;
       var x0 = Math.max(0, Math.floor(cx - rx - 2)), y0 = Math.max(0, Math.floor(cy - ry - 2));
-      var x1 = Math.min(PIXW, Math.ceil(cx + rx + 2)), y1 = Math.min(PIXH, Math.ceil(cy + ry + 2));
+      var x1 = Math.min(B.PIXW, Math.ceil(cx + rx + 2)), y1 = Math.min(B.PIXH, Math.ceil(cy + ry + 2));
       if (x1 <= x0 || y1 <= y0) return;
       var im = g.getImageData(x0, y0, x1 - x0, y1 - y0), d = im.data, iw = x1 - x0;
       var seed = (rnd() * 9999) | 0;
@@ -575,9 +576,9 @@
       var c3 = toScreen(r.x + r.w, r.y + r.h), c4 = toScreen(r.x, r.y + r.h);
       var pad = spec.hot ? Math.ceil(K * 0.9) : 3;     // lava scorches the ground round it
       var x0 = Math.max(0, Math.floor(Math.min(c1.x, c2.x, c3.x, c4.x)) - pad);
-      var x1 = Math.min(PIXW - 1, Math.ceil(Math.max(c1.x, c2.x, c3.x, c4.x)) + pad);
+      var x1 = Math.min(B.PIXW - 1, Math.ceil(Math.max(c1.x, c2.x, c3.x, c4.x)) + pad);
       var y0 = Math.max(0, Math.floor(Math.min(c1.y, c2.y, c3.y, c4.y)) - pad - lift);
-      var y1 = Math.min(PIXH - 1, Math.ceil(Math.max(c1.y, c2.y, c3.y, c4.y)) + pad - lift);
+      var y1 = Math.min(B.PIXH - 1, Math.ceil(Math.max(c1.y, c2.y, c3.y, c4.y)) + pad - lift);
       if (band) { y0 = Math.max(y0, band.y0); y1 = Math.min(y1, band.y1 - 1); }
       // a clipped bake paints nothing it was not asked for
       if (CLIP) { x0 = Math.max(x0, CLIP.x0); x1 = Math.min(x1, CLIP.x1 - 1); y0 = Math.max(y0, CLIP.y0); y1 = Math.min(y1, CLIP.y1 - 1); }
@@ -600,11 +601,11 @@
 
       for (var by = y0; by <= y1; by++) {
         var v0 = (by + lift - OY) * INV_HK;
-        var wx = ((x0 - OX) * INV_K + v0) / 2, wy = (v0 - (x0 - OX) * INV_K) / 2;
+        var wx = ((x0 - B.OX) * INV_K + v0) / 2, wy = (v0 - (x0 - B.OX) * INV_K) / 2;
         var dx = INV_K / 2, dy = -INV_K / 2;
-        var row = (by - bandY) * PIXW * 4, br = by & 3;
+        var row = (by - bandY) * B.PIXW * 4, br = by & 3;
         for (var bx = x0; bx <= x1; bx++, wx += dx, wy += dy) {
-          if (wx < 0 || wy < 0 || wx > W || wy > H) continue;
+          if (wx < 0 || wy < 0 || wx > B.W || wy > B.H) continue;
           if (mask && !mask(wx, wy)) continue;
           // distance inside the piece — its outline, or its rectangle — in inches
           var din;
@@ -787,7 +788,7 @@
           var ang = Math.atan2(uy, ux) + (lr() - 0.5) * 1.1;
           ux = Math.cos(ang); uy = Math.sin(ang);
           x += ux * seg; y += uy * seg;
-          if (x < 0.2 || y < 0.2 || x > W - 0.2 || y > H - 0.2) break;
+          if (x < 0.2 || y < 0.2 || x > B.W - 0.2 || y > B.H - 0.2) break;
           pts.push(sp2(x, y));
           if (lr() < 0.22 && len > 0.8) crackLine(x, y, Math.cos(ang + (lr() < 0.5 ? 0.8 : -0.8)), Math.sin(ang + (lr() < 0.5 ? 0.8 : -0.8)), len * 0.4, 1, false);
         }

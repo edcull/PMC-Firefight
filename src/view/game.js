@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var R = window.PMC, ISO = window.PMCIso, C = window.PMCCamp, SC = window.PMCScen;
-  var W = R.BOARD.w, H = R.BOARD.h, UR = R.UNIT_R;
+  var UR = R.UNIT_R;
   var K = ISO.K;
   var VIEW_W = 900, VIEW_H = 540;                 // the window onto the table, in screen px
   /* The board used to be drawn at one canvas pixel per CSS pixel, whatever the
@@ -549,7 +549,7 @@
     if (whole) {
       cam.z = ZOOMS[0];
       zoomLabel();
-      var mid = ISO.toScreen(W / 2, H / 2);
+      var mid = ISO.toScreen(R.BOARD.w / 2, R.BOARD.h / 2);
       cam.x = cam.tx = mid.x; cam.y = cam.ty = mid.y;
       clampCam();
     } else {
@@ -720,9 +720,13 @@
     canvas.width = bw2; canvas.height = bh2;
     if (first) cam.z = 0;                    // the first view is the whole table
     canvas.style.maxWidth = VIEW_W + 'px';
-    /* ZOOMS[0] is "the whole table"; the rest are real magnifications, and any
-       that would show less than the fit level are dropped so the ladder always
-       climbs. */
+    zoomLadder();
+    return true;
+  }
+  /* ZOOMS[0] is "the whole table"; the rest are real magnifications, and any
+     that would show less than the fit level are dropped so the ladder always
+     climbs. Worked out again for a table of another size (newTableSize). */
+  function zoomLadder() {
     var fit = Math.floor(Math.min(VIEW_W / ISO.PIXW, VIEW_H / ISO.PIXH) * 100) / 100;
     ZOOMS.length = 0;
     ZOOMS.push(fit);
@@ -730,8 +734,9 @@
     if (cam.z <= fit) cam.z = fit;
     // (a zoom still easing to a step, framing a shot, is left to get there)
     if (ZOOMS.indexOf(cam.z) < 0 && cam.zGoal == null) cam.z = nearestZoom(cam.z);
-    return true;
   }
+  // the battle on the table is on a table of another size (6' x 4'): the zooms, and the whole of it in view
+  function newTableSize() { zoomLadder(); VIEW.fitView(); }
 
   /* ================= boot ================= */
   function boot() {
@@ -1007,7 +1012,7 @@
     joinBattle: joinBattle, liftOf: liftOf, markReach: markReach, mySide: mySide, nowMs: nowMs,
     placeInsertion: placeInsertion, placingSide: placingSide, restoreCanvases: restoreCanvases,
     select: select, send: send, specialsFor: specialsFor, startBattle: startBattle, terrainAct: terrainAct,
-    wireNet: wireNet, FX: FX, H: H, ISO: ISO, R: R, W: W, anims: anims, cam: cam, el: el, fx: fx,
+    wireNet: wireNet, FX: FX, ISO: ISO, R: R, anims: anims, cam: cam, el: el, fx: fx,
     idleCbs: idleCbs, resQueue: resQueue, show: show, ui: ui,
     // (the tests) a side walking away from a battle played on this device
     /* A side walking away on this device's table: the engine ends it there and
@@ -1047,7 +1052,7 @@
     get clampCam() { return clampCam; }, get drawBoard() { return drawBoard; }, get esc() { return esc; },
     get render() { return render; }, curArea: curArea, isAI: isAI, swapAskHere: swapAskHere, pieceNoun: pieceNoun,
     placedSummary: placedSummary, placingSide: placingSide, sideName: sideName, specRange: specRange,
-    zoneCentre: zoneCentre, H: H, ISO: ISO, K: K, R: R, W: W, cam: cam, ui: ui
+    zoneCentre: zoneCentre, ISO: ISO, K: K, R: R, cam: cam, ui: ui
   });
   var PIECE_NOUN = TERRAINSET.PIECE_NOUN, lookAtDeployment = TERRAINSET.lookAtDeployment;
   var queueBake = TERRAINSET.queueBake, terrainCard = TERRAINSET.terrainCard;
@@ -1091,7 +1096,7 @@
     get watching() { return watching; }, get esc() { return esc; }, get escHtml() { return escHtml; },
     get focusUnit() { return focusUnit; }, get render() { return render; }, addFx: addFx,
     animateMove: animateMove, arrivalWhere: arrivalWhere, byId: byId, nowMs: nowMs, sfName: sfName,
-    sideName: sideName, swapAskHere: swapAskHere, soloOwnerName: soloOwnerName, H: H, ISO: ISO, R: R, SFX: SFX, W: W, cam: cam, ui: ui
+    sideName: sideName, swapAskHere: swapAskHere, soloOwnerName: soloOwnerName, ISO: ISO, R: R, SFX: SFX, cam: cam, ui: ui
   });
   var anyArriving = ARRIVE.anyArriving, arriving = ARRIVE.arriving;
   var boardAnim = ARRIVE.boardAnim, cmdOfferCard = ARRIVE.cmdOfferCard, insertionCard = ARRIVE.insertionCard;
@@ -1133,8 +1138,8 @@
     addFx: addFx, arrivalQueued: arrivalQueued, arriving: arriving, boxesFor: boxesFor,
     clonePiece: clonePiece, curArea: curArea, dispX: dispX, dispY: dispY, drawFx: drawFx, fitGhost: fitGhost, heldBy: heldBy,
     insertionMine: insertionMine, isAI: isAI, swapAskHere: swapAskHere, liftOf: liftOf, nowMs: nowMs, onTable: onTable,
-    placingSide: placingSide, shownAs: shownAs, unitById: unitById, zoneFor: zoneFor, FX: FX, H: H, ISO: ISO,
-    K: K, R: R, SFX: SFX, UR: UR, W: W, cam: cam, ui: ui
+    placingSide: placingSide, shownAs: shownAs, unitById: unitById, zoneFor: zoneFor, FX: FX, ISO: ISO,
+    K: K, R: R, SFX: SFX, UR: UR, cam: cam, ui: ui, newTableSize: function () { newTableSize(); }
   });
   var DIG_NAMES = DRAW.DIG_NAMES, buildScene = DRAW.buildScene, digFacings = DRAW.digFacings;
   var digPreview = DRAW.digPreview, drawBoard = DRAW.drawBoard, dropHaze = DRAW.dropHaze, hull = DRAW.hull;

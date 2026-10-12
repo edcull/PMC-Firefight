@@ -100,7 +100,7 @@
     }
 
     function autoArea(a) {
-      var got = GEN.fillArea(remainingAlt(a), a, E.state.terrain, E.genObjectives ? E.genObjectives() : OBJECTIVES, Math.random, R.BOARD.w, R.BOARD.h);
+      var got = GEN.fillArea(remainingAlt(a), a, E.state.terrain, E.genObjectives ? E.genObjectives() : OBJECTIVES(), Math.random, R.BOARD.w, R.BOARD.h);
       got.forEach(function (p) { E.state.terrain.push(p); a.placed.push(p); });
       completeArea(a);
     }
@@ -284,8 +284,8 @@
       afterTerrain({ terrain: E.state.terrain, rolls: ts.rolls, generator: ts.gen.name, manual: true });
     }
 
-    /* Detailed Terrain Knowledge (p. 141): the tribe moves two terrain pieces up to
-       12" after the table is set. It pulls cover toward the middle of its own half,
+    /* Detailed Terrain Knowledge (p. 141): the tribe moves two terrain pieces (three on a
+       6' x 4' table, R.dtkPieces) up to 12" after the table is set. It pulls cover toward the middle of its own half,
        where its troops will want it, keeping clear of objectives and other pieces. */
     function terrainKnowledge(side) {
       var mid = side === 'A' ? { x: R.BOARD.w * 0.3, y: R.BOARD.h * 0.5 } : { x: R.BOARD.w * 0.7, y: R.BOARD.h * 0.5 };
@@ -296,7 +296,7 @@
         return R.inches(b.x + b.w / 2, b.y + b.h / 2, mid.x, mid.y) - R.inches(a.x + a.w / 2, a.y + a.h / 2, mid.x, mid.y);
       });
       var moved = [];
-      for (var i = 0; i < pieces.length && moved.length < 2; i++) {
+      for (var i = 0; i < pieces.length && moved.length < R.dtkPieces(); i++) {
         var r = pieces[i], cx = r.x + r.w / 2, cy = r.y + r.h / 2;
         var dx = mid.x - cx, dy = mid.y - cy, d = Math.hypot(dx, dy);
         if (d < 3) continue;

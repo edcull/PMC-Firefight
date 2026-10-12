@@ -367,6 +367,9 @@
     function bake(done) {
       var planet = WORLDS[world++ % WORLDS.length];
       var seed = (Math.random() * 100000) | 0;
+      /* always a 4' x 4' table behind the menu, whatever the last battle was fought on
+         (the battle's own comes back with it when it is drawn again, draw.js) */
+      if (R.BOARD.w !== 48 || R.BOARD.h !== 48) { R.setBoard({ w: 48, h: 48 }); ISO.setBoard(48, 48); }
       var terrain = GEN.generate({ width: R.BOARD.w, height: R.BOARD.h, planet: planet }).terrain;
       var sn = seen();
       // only the middle of the table is ever on screen behind the menu: that is all that is baked

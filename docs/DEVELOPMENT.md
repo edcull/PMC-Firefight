@@ -228,6 +228,7 @@ sightlines.js      seen by one soldier, seen by the whole unit: lines past part 
 wallshelter.js     behind a wall: the cover, the Destructive Weapon and the Sappers, one test
 lowscen.js         scenario fixes: picking the search site, landing zones, Invasion's guns and tows,
                    the last-turn wipe-out, the forced swap for guns a split cannot carry
+bigtable.js        Priority Level 3 on 6' x 4': the table with the battle, every scenario on it, two sizes side by side
 otherworlds.js     Other Worlds: the three D10s and what each condition does, the campaign's Trauma point
 soloopts.js        solitaire options: Evacuation's militia by army, the OpFor chosen by hand, counters
                    and objectives moved while deploying, hand-laid terrain in each scenario

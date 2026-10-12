@@ -26,12 +26,16 @@
 
   // the one list of colours, shared with the server (protocol.js)
   var COLOURS = root.PMCProto.COLOURS;
-  var OBJECTIVES = [{ x: 12, y: 36 }, { x: 24, y: 24 }, { x: 36, y: 12 }];
+  // the three objective spots the generator keeps clear by default: on the diagonal, a quarter in from each end
+  function OBJECTIVES() {
+    var w = R.BOARD.w, h = R.BOARD.h;
+    return [{ x: w * 0.25, y: h * 0.75 }, { x: w / 2, y: h / 2 }, { x: w * 0.75, y: h * 0.25 }];
+  }
   /* The objectives the generator keeps its clearings round, and the ground a
      scenario wants left bare: Hostile takeover's 12" round the centre, which is
      the defender's to fortify (p. 55). */
   function genObjectives(scenId) {
-    var list = OBJECTIVES.slice();
+    var list = OBJECTIVES();
     if (scenId === 'takeover') list.clear = [{ x: R.BOARD.w / 2, y: R.BOARD.h / 2, r: 12 }];
     return list;
   }
@@ -311,6 +315,10 @@
     /* The world is settled here, once: a random one picked, and a barren one
        made desert or arctic. Everything after — the table, the look of it on
        every screen — reads the one name this leaves in the config. */
+    /* The table: 4' x 4' at Priority Level 1-2, 6' x 4' (48" x 72") at 3 and up (p. 45);
+       a solitaire or co-op game is always fought on 4' x 4'. */
+    cfg.board = cfg.solo ? { w: 48, h: 48 } : (cfg.board && cfg.board.w ? { w: +cfg.board.w, h: +cfg.board.h } : R.boardFor(cfg.pl));
+    R.setBoard(cfg.board);
     cfg.planet = GEN.resolvePlanet(cfg.planet, Math.random);
     cfg.options = R.cleanOptions(cfg.options);          // the optional rules switched on (R.OPTIONS)
     // Other Worlds: the conditions a campaign rolled for the contract, or rolled now (pp. 164-165)
@@ -334,7 +342,7 @@
       terrain: built.terrain,
       genCount: built.terrain.length,
       // nothing is nominated until the table is set (the scenario places them)
-      objectives: manual ? [] : OBJECTIVES.map(function (o) { return { x: o.x, y: o.y, owner: null }; }),
+      objectives: manual ? [] : OBJECTIVES().map(function (o) { return { x: o.x, y: o.y, owner: null }; }),
       units: [], turn: 0, phase: 'deploy', activeSide: 'A', initiative: null,
       streak: 0, chain: null, rush: null, log: [], over: null,
       campaign: cfg.campaign || null,
@@ -714,7 +722,7 @@
     ['A', 'B'].forEach(function (side) {
       if (docsOf(side).indexOf('XO4') < 0) return;
       if (!byHand(side)) K.terrainKnowledge(side);
-      else state.placeQueue.push({ side: side, kind: 'move', why: 'terrain', left: 2, total: 2 });
+      else state.placeQueue.push({ side: side, kind: 'move', why: 'terrain', left: R.dtkPieces(), total: R.dtkPieces() });
     });
     /* Hostile takeover (p. 55): up to ten sections and a bunker within 12" of
        the objective, put down by the defender after the roles are known. */
@@ -776,7 +784,7 @@
     var scen = state.scen;
     logLine('note', 'Battle Tier ' + R.ROMAN[cfg.tier] + ', Priority Level ' + cfg.pl +
       ' — ' + (R.COMPOSITION[cfg.tier].points * cfg.pl) + ' composition points a side. ' +
-      scen.name + ' (p. ' + scen.page + ') on a 4′ × 4′ table.');
+      scen.name + ' (p. ' + scen.page + ') on a ' + (R.BOARD.h > 48 ? '6′ × 4′' : '4′ × 4′') + ' table.');
     logLine('note', scen.blurb + ' ' + scen.win);
     if (state.sc.attacker) logLine('note', roleSentence());
     pushRes({
@@ -2362,7 +2370,12 @@
 
     makeKits();
 
-    return {
+    /* The table is this battle's size before anything of it is worked out: one
+       process runs many battles on a server, each its own size (R.setBoard). */
+    // (a battle saved before tables had sizes was fought on 4' x 4')
+    function syncBoard() { if (state && state.cfg) R.setBoard(state.cfg.board || { w: 48, h: 48 }); }
+    function onBoard(fn) { return typeof fn !== 'function' ? fn : function () { syncBoard(); var r = fn.apply(this, arguments); syncBoard(); return r; }; }
+    var api = {
       start: start,
       intent: intent,
       snapshot: K.snapshot,
@@ -2472,6 +2485,9 @@
       STANDARD: STANDARD,
       SPECIAL_SLOTS: SPECIAL_SLOTS
     };
+    ['intent', 'snapshot', 'load', 'concede'].forEach(function (k) { api[k] = onBoard(api[k]); });
+    Object.keys(api.query).forEach(function (k) { api.query[k] = onBoard(api.query[k]); });
+    return api;
   }
 
   root.PMCEngine = {

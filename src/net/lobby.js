@@ -483,7 +483,7 @@
         '</div>';
     }
     return '<div class="lob-terms">' + tier +
-      sel('term-pl', 'Priority Level', [{ v: 1, t: '1' }, { v: 2, t: '2' }], s.pl) +
+      sel('term-pl', 'Priority Level', [{ v: 1, t: '1' }, { v: 2, t: '2' }, { v: 3, t: '3 \u2014 6\u2032 \u00d7 4\u2032 table' }], s.pl) +
       '</div>' +
       forcesHTML(mine, isHost) +
       '<div class="lob-terms">' +

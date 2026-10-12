@@ -75,8 +75,8 @@
     var dispY = B.dispY, drawFx = B.drawFx, fitGhost = B.fitGhost, insertionMine = B.insertionMine;
     var GFX = window.PMCGfx;
     var isAI = B.isAI, liftOf = B.liftOf, nowMs = B.nowMs, onTable = B.onTable, placingSide = B.placingSide;
-    var shownAs = B.shownAs, unitById = B.unitById, zoneFor = B.zoneFor, FX = B.FX, H = B.H, ISO = B.ISO;
-    var K = B.K, R = B.R, SFX = B.SFX, UR = B.UR, W = B.W, cam = B.cam, ui = B.ui;
+    var shownAs = B.shownAs, unitById = B.unitById, zoneFor = B.zoneFor, FX = B.FX, ISO = B.ISO;
+    var K = B.K, R = B.R, SFX = B.SFX, UR = B.UR, cam = B.cam, ui = B.ui;
     // from modules installed after this one: looked up when called
     function drawOdds() { return B.drawOdds.apply(this, arguments); }
     function edgedStroke() { return B.edgedStroke.apply(this, arguments); }
@@ -564,6 +564,15 @@
     }
     function drawBoard() {
       if (!B.state) return;
+      /* The battle's own table (6' x 4' at Priority Level 3): the rules and the
+         projection set to it, and on a change the plates baked afresh and the view refitted. */
+      if (B.state.cfg) {
+        R.setBoard(B.state.cfg.board || { w: 48, h: 48 });      // (one saved before tables had sizes: 4' x 4')
+        if (ISO.setBoard(R.BOARD.w, R.BOARD.h)) {
+          B.vc.scene = null; B.vc.ground = null; B.vc.structs = null; B.vc.opened = null;
+          if (B.newTableSize) { B.newTableSize(); return; }
+        }
+      }
       /* Choosing a facing to dig in on: the gun is shown turned to it while the
          player looks round, and put back after. */
       var dg = faceAsked() || (ui.mode === 'digface' && ui.selected && B.state && B.state.phase === 'battle' ? ui.selected : null), keep = null;
@@ -1211,7 +1220,7 @@
        quarter of a circle in a corner, not the rest hanging in the air. Call
        inside a save()/restore(). */
     function clipTable() {
-      var c = [hud(0, 0), hud(W, 0), hud(W, H), hud(0, H)];
+      var c = [hud(0, 0), hud(R.BOARD.w, 0), hud(R.BOARD.w, R.BOARD.h), hud(0, R.BOARD.h)];
       B.ctx.beginPath();
       c.forEach(function (q, n) { if (n === 0) B.ctx.moveTo(q.x, q.y); else B.ctx.lineTo(q.x, q.y); });
       B.ctx.closePath(); B.ctx.clip();
@@ -1243,7 +1252,7 @@
         var dx = Math.cos(a), dy = Math.sin(a), last = 0;
         for (var d = 0.5; d <= radius; d += 0.5) {
           var x = from.x + dx * d, y = from.y + dy * d;
-          if (x < 0 || y < 0 || x > W || y > H) break;
+          if (x < 0 || y < 0 || x > R.BOARD.w || y > R.BOARD.h) break;
           var blocked = false;
           for (var i = 0; i < B.state.terrain.length; i++) {
             var r = B.state.terrain[i];
@@ -1354,7 +1363,7 @@
       g.clearRect(0, 0, darkCanvas.width, darkCanvas.height);
       g.setTransform(B.DPR, 0, 0, B.DPR, 0, 0);
       // the table, darkened...
-      var corners = [hud(0, 0), hud(W, 0), hud(W, H), hud(0, H)];
+      var corners = [hud(0, 0), hud(R.BOARD.w, 0), hud(R.BOARD.w, R.BOARD.h), hud(0, R.BOARD.h)];
       g.beginPath();
       corners.forEach(function (c, n) { if (n === 0) g.moveTo(c.x, c.y); else g.lineTo(c.x, c.y); });
       g.closePath();
@@ -1496,8 +1505,8 @@
             var ins = (B.state.sc && B.state.sc.inset && B.state.sc.defender === side) ? B.state.sc.inset : 0;
             /* the strip is kept a model's radius in from the edge so a unit's centre
                stays on the table, but the ground it covers runs right to the edge */
-            var zx0 = z[0] <= UR + 0.01 ? 0 : z[0], zx1 = z[1] >= W - UR - 0.01 ? W : z[1];
-            var a = hud(zx0, ins), b = hud(zx1, ins), c = hud(zx1, H - ins), d = hud(zx0, H - ins);
+            var zx0 = z[0] <= UR + 0.01 ? 0 : z[0], zx1 = z[1] >= R.BOARD.w - UR - 0.01 ? R.BOARD.w : z[1];
+            var a = hud(zx0, ins), b = hud(zx1, ins), c = hud(zx1, R.BOARD.h - ins), d = hud(zx0, R.BOARD.h - ins);
             B.ctx.beginPath();
             B.ctx.moveTo(a.x, a.y); B.ctx.lineTo(b.x, b.y); B.ctx.lineTo(c.x, c.y); B.ctx.lineTo(d.x, d.y);
             B.ctx.closePath();
@@ -1583,7 +1592,7 @@
         var lift = liftOf(u.x, u.y);
         // keep the auras on the table
         B.ctx.save();
-        var corners = [hud(0, 0), hud(W, 0), hud(W, H), hud(0, H)];
+        var corners = [hud(0, 0), hud(R.BOARD.w, 0), hud(R.BOARD.w, R.BOARD.h), hud(0, R.BOARD.h)];
         B.ctx.beginPath();
         corners.forEach(function (c, n) { if (n === 0) B.ctx.moveTo(c.x, c.y); else B.ctx.lineTo(c.x, c.y); });
         B.ctx.closePath(); B.ctx.clip();

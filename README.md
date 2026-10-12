@@ -2,7 +2,7 @@
 
 A browser-based digital skirmish of **PMC 2670**, the sci-fi miniatures wargame by
 Marcin Gerkowicz (Assault Publishing). It plays the book's rules on a 4′ × 4′
-isometric table, with movement, range and line of sight measured in real inches,
+isometric table (6′ × 4′ at Priority Level 3), with movement, range and line of sight measured in real inches,
 edge to edge.
 
 ## What's in v0.2
@@ -241,8 +241,6 @@ The full file layout and every test are described in [docs/DEVELOPMENT.md](docs/
 
 Planned in [docs/roadmap.md](docs/roadmap.md):
 
-- **Priority Level 3 on a 6′ × 4′ table (v0.3).** Battles are Priority Level 1–2
-  on 4′ × 4′.
 - **Co-op battles in a campaign (v0.3).** Co-op is played as a one-off battle
   for now.
 - **Appendix 1, Close Encounters (v0.4):** corridors, doors, hidden movement,

@@ -547,7 +547,7 @@
           const vs = aiSlots(W)[o.rival];
           if (vs == null || !W.forces[vs]) return no('that force is gone');
           if (aiBusy(W, vs)) return no(W.forces[vs].name + ' is fighting someone else just now — take another, or try again later');
-          const lv = o.levels.filter((n) => n <= 2);
+          const lv = o.levels.filter((n) => n <= 3);
           p.contract = {
             vs: vs, tierRoll: o.tierRoll, tier: o.tier, levels: lv, pl: C.defaultLevel(W.forces[i], W.forces[vs], o.tier, lv),
             scenario: o.scenario, planet: o.planet || 'random', world: o.world || null, roles: o.roles || null,
@@ -600,7 +600,7 @@
           const was = k.tier;
           k.tier = Math.max(1, Math.min(k.tierRoll.cap, k.tier + dir));
           if (k.tier !== was) {
-            k.levels = C.levelsFor(W.forces[i], W.forces[k.vs], k.tier).filter((n) => n <= 2);
+            k.levels = C.levelsFor(W.forces[i], W.forces[k.vs], k.tier).filter((n) => n <= 3);
             if (k.levels.indexOf(k.pl) < 0) k.pl = C.defaultLevel(W.forces[i], W.forces[k.vs], k.tier, k.levels);
             k.picks.A = null; k.ready.A = false;
           }

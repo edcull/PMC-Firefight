@@ -8,7 +8,16 @@
   'use strict';
   var DATA = root.PMCData || require('./data.js');     // the tables
 
-  var BOARD = { w: 48, h: 48 };   // 4' x 4', the book's recommended table for PL1-2
+  /* The table, in inches: 4' x 4' for Priority Levels 1-2 and 6' x 4' for 3-4 (p. 45).
+     A 6' x 4' table's long edges are the players' (they deploy along x = 0 and
+     x = w), so it is 48" across and 72" along. One object, changed in place for
+     each battle (setBoard) — every rule reads it as it is now; the engine puts
+     its own battle's size back before anything of it is worked out. */
+  var BOARD = { w: 48, h: 48 };
+  function boardFor(pl) { return (pl || 1) >= 3 ? { w: 48, h: 72 } : { w: 48, h: 48 }; }
+  // Detailed Terrain Knowledge (p. 141): two pieces on 4' x 4', three on 6' x 4' (four on anything bigger)
+  function dtkPieces() { var a = BOARD.w * BOARD.h; return a > 48 * 72 ? 4 : a > 48 * 48 ? 3 : 2; }
+  function setBoard(b) { if (b && b.w > 0 && b.h > 0) { BOARD.w = b.w; BOARD.h = b.h; } return BOARD; }
   var UNIT_R = 1.0;          // token radius in inches
   var STEP = 0.5;            // movement lattice resolution in inches
 
@@ -2411,7 +2420,7 @@
   })();
 
   root.PMC = {
-    BOARD: BOARD, UNIT_R: UNIT_R, STEP: STEP, SP_MAX: SP_MAX,
+    BOARD: BOARD, boardFor: boardFor, setBoard: setBoard, dtkPieces: dtkPieces, UNIT_R: UNIT_R, STEP: STEP, SP_MAX: SP_MAX,
     CATALOGUE: CATALOGUE, PRESETS: PRESETS, PRESETS_REBEL: PRESETS_REBEL,
     COMPOSITION: COMPOSITION, COMPOSITION_BUGS: COMPOSITION_BUGS, compFor: compFor, isOvergrown: isOvergrown, ROMAN: ROMAN, tierLean: tierLean, FACTIONS: FACTIONS, TACTICS: TACTICS,
     presetsFor: presetsFor, listFor: listFor, factionOf: factionOf, tacticById: tacticById,

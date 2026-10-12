@@ -9,7 +9,7 @@
   root.PMCTerrainSet = function (B) {
     var curArea = B.curArea, isAI = B.isAI, pieceNoun = B.pieceNoun, placedSummary = B.placedSummary;
     var placingSide = B.placingSide, sideName = B.sideName, specRange = B.specRange;
-    var zoneCentre = B.zoneCentre, H = B.H, ISO = B.ISO, K = B.K, R = B.R, W = B.W, cam = B.cam, ui = B.ui;
+    var zoneCentre = B.zoneCentre, ISO = B.ISO, K = B.K, R = B.R, cam = B.cam, ui = B.ui;
     // from modules installed after this one: looked up when called
     function buildScene() { return B.buildScene.apply(this, arguments); }
     function clampCam() { return B.clampCam.apply(this, arguments); }
@@ -158,7 +158,7 @@
           row.forEach(function (q) {
             var p = JSON.parse(JSON.stringify(q.p));
             var half = (p.w + p.h) / 4;
-            var cx = W / 2 + depth + (t + half), cy = H / 2 + depth - (t + half);
+            var cx = R.BOARD.w / 2 + depth + (t + half), cy = R.BOARD.h / 2 + depth - (t + half);
             R.placePiece(p, cx - p.w / 2, cy - p.h / 2, p.w, p.h);
             laid.push({ p: p, next: q.next });
             t += half * 2 + GAP;
@@ -227,7 +227,7 @@
 
     function lookAtDeployment(forSide) {
       var side = forSide || placingSide();
-      var at = side ? zoneCentre(side) : { x: W / 2, y: H / 2 };
+      var at = side ? zoneCentre(side) : { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
       var mid = ISO.toScreen(at.x, at.y);
       cam.x = cam.tx = mid.x; cam.y = cam.ty = mid.y;
       clampCam();

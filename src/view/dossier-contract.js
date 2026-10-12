@@ -302,7 +302,7 @@
       if (!o) return;
       C.faceRival(E.camp, o.rival);
       // an offer saved before Priority Level was capped at 2 may still carry a 3 or 4
-      var lvls = o.levels.filter(function (n) { return n <= 2; });
+      var lvls = o.levels.filter(function (n) { return n <= 3; });
       E.contract = {
         // the highest Level both can fill in full, not merely field (camp: defaultLevel)
         pl: lvls.length ? C.defaultLevel(E.camp.companies.A, E.camp.companies.B, o.tier, lvls) : 1,
@@ -470,10 +470,10 @@
       // only offer a Priority Level both forces could actually fill
       var lv = E.contract.levels || [1, 2];
       h += '<div class="field plrow"><div><label for="camp-pl">Priority Level</label>' +
-        '<select id="camp-pl"' + (E.contract.standard || second ? ' disabled' : '') + '>' + [1, 2].map(function (n) {
+        '<select id="camp-pl"' + (E.contract.standard || second ? ' disabled' : '') + '>' + [1, 2, 3].map(function (n) {
           var can = lv.indexOf(n) >= 0;
           return '<option value="' + n + '"' + (E.contract.pl === n ? ' selected' : '') +
-            (can ? '' : ' disabled') + '>' + n +
+            (can ? '' : ' disabled') + '>' + n + (n === 3 ? ' \u2014 6\u2032 \u00d7 4\u2032 table' : '') +
             (can ? '' : ' (neither force can fill it)') + '</option>';
         }).join('') + '</select></div></div>';   // the world was rolled with the job, and shown on the offer
 

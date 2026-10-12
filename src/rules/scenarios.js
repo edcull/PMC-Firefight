@@ -53,7 +53,7 @@
       if (apart) return out;
     }
     // a table with no room left: fall back on the corners-and-centre layout
-    return [{ x: lo, y: 36 }, { x: R.BOARD.w / 2, y: 24 }, { x: hi, y: 12 }];
+    return [{ x: lo, y: R.BOARD.h * 0.75 }, { x: R.BOARD.w / 2, y: R.BOARD.h / 2 }, { x: hi, y: R.BOARD.h * 0.25 }];
   }
   /* Bands along the table edges, `depth` inches deep — "any table edge", which is
      what Hostile takeover gives its attacker (p. 55). */
