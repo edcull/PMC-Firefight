@@ -77,7 +77,7 @@
 
   function create(view) {
     var V = Object.assign(nullView(), view || {});
-    var W = R.BOARD.w, H = R.BOARD.h, UR = R.UNIT_R;
+    var UR = R.UNIT_R;
     var state = null;
 
     /* The interaction the game itself cares about: who is selected, what action
@@ -326,7 +326,7 @@
     var built = manual
       ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
       : GEN.generate({
-        width: W, height: H, planet: cfg.planet,
+        width: R.BOARD.w, height: R.BOARD.h, planet: cfg.planet,
         objectives: genObjectives(scenId)   // keeps the generator's clearings roughly central (and a scenario's ground bare)
       });
     state = {
@@ -982,12 +982,12 @@
     var placed = 0;
     mine.forEach(function (u) {
       if (placed >= 4) return;
-      var aim = foe.length ? foe.reduce(function (b, e) { return !b || R.unitDist(u, e) < R.unitDist(u, b) ? e : b; }, null) : { x: W / 2, y: H / 2 };
+      var aim = foe.length ? foe.reduce(function (b, e) { return !b || R.unitDist(u, e) < R.unitDist(u, b) ? e : b; }, null) : { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
       var dx = aim.x - u.x, dy = aim.y - u.y, d = Math.hypot(dx, dy) || 1;
       var cx = u.x + dx / d * 1.8, cy = u.y + dy / d * 1.8;
       var along = Math.abs(dx) > Math.abs(dy);
       var r = along ? { kind: 'barricade', x: cx - 0.3, y: cy - 1.5, w: 0.6, h: 3 } : { kind: 'barricade', x: cx - 1.5, y: cy - 0.3, w: 3, h: 0.6 };
-      if (r.x < 0 || r.y < 0 || r.x + r.w > W || r.y + r.h > H) return;
+      if (r.x < 0 || r.y < 0 || r.x + r.w > R.BOARD.w || r.y + r.h > R.BOARD.h) return;
       var clash = state.terrain.some(function (o) { return r.x < o.x + o.w && r.x + r.w > o.x && r.y < o.y + o.h && r.y + r.h > o.y; }) ||
         state.units.some(function (o) { return o.alive && o.x >= 0 && o.x > r.x - 1 && o.x < r.x + r.w + 1 && o.y > r.y - 1 && o.y < r.y + r.h + 1; });
       if (clash) return;
@@ -1162,7 +1162,7 @@
       return 'Place each unit inside the shaded box — anywhere at least ' + sc.inset +
         '" in from every table edge.';
     }
-    var depth = side === 'A' ? z[1] : W - z[0];
+    var depth = side === 'A' ? z[1] : R.BOARD.w - z[0];
     return 'Place each unit inside your own ' + Math.round(depth) +
       '" strip — the shaded band on your table edge.';
   }
@@ -1560,7 +1560,6 @@
   function kitContext() {
     var own = {
       GEN: GEN,
-      H: H,
       OBJECTIVES: OBJECTIVES,
       genObjectives: function () { return genObjectives(state && state.cfg && state.cfg.scenario); },
       PIECE_NOUN: PIECE_NOUN,
@@ -1571,7 +1570,6 @@
       SOLO: SOLO,
       UR: UR,
       V: V,
-      W: W,
       addFx: addFx,
       afterChain: afterChain,
       afterTerrain: afterTerrain,

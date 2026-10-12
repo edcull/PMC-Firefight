@@ -7,8 +7,8 @@
 (function (root) {
   'use strict';
   root.PMCEngineTerrainSetup = function (E) {
-    var GEN = E.GEN, H = E.H, OBJECTIVES = E.OBJECTIVES, PIECE_NOUN = E.PIECE_NOUN, R = E.R, SFX = E.SFX,
-        V = E.V, W = E.W, afterTerrain = E.afterTerrain, deployOK = E.deployOK, fitView = E.fitView,
+    var GEN = E.GEN, OBJECTIVES = E.OBJECTIVES, PIECE_NOUN = E.PIECE_NOUN, R = E.R, SFX = E.SFX,
+        V = E.V, afterTerrain = E.afterTerrain, deployOK = E.deployOK, fitView = E.fitView,
         isAI = E.isAI, logLine = E.logLine, other = E.other, paintStructures = E.paintStructures, pushRes = E.pushRes, queueBake = E.queueBake,
         render = E.render, revealConsole = E.revealConsole, setHint = E.setHint, sideName = E.sideName,
         startBattle = E.startBattle, ui = E.ui;
@@ -34,7 +34,7 @@
       E.state.phase = 'terrain';
       E.state.tset = {
         gen: gen, memo: {}, i: -1, rolls: built.rolls, starter: starter, ghost: null, baked: 0,
-        areas: GEN.areasOf(W, H).map(function (a, n) {
+        areas: GEN.areasOf(R.BOARD.w, R.BOARD.h).map(function (a, n) {
           a.side = E.state.solo ? 'A' : (n % 2 === 0 ? starter : other(starter));
           a.placed = []; a.count = []; a.spec = 0; a.alt = null;
           return a;
@@ -100,7 +100,7 @@
     }
 
     function autoArea(a) {
-      var got = GEN.fillArea(remainingAlt(a), a, E.state.terrain, E.genObjectives ? E.genObjectives() : OBJECTIVES, Math.random, W, H);
+      var got = GEN.fillArea(remainingAlt(a), a, E.state.terrain, E.genObjectives ? E.genObjectives() : OBJECTIVES, Math.random, R.BOARD.w, R.BOARD.h);
       got.forEach(function (p) { E.state.terrain.push(p); a.placed.push(p); });
       completeArea(a);
     }
@@ -174,8 +174,8 @@
     function fitGhost(a, cx, cy) {
       var g = E.state.tset.ghost;
       if (!g) return null;
-      var x0 = Math.max(a.x, 0.5), x1 = Math.min(a.x + a.w, W - 0.5) - g.w;
-      var y0 = Math.max(a.y, 0.5), y1 = Math.min(a.y + a.h, H - 0.5) - g.h;
+      var x0 = Math.max(a.x, 0.5), x1 = Math.min(a.x + a.w, R.BOARD.w - 0.5) - g.w;
+      var y0 = Math.max(a.y, 0.5), y1 = Math.min(a.y + a.h, R.BOARD.h - 0.5) - g.h;
       if (x1 < x0 || y1 < y0) return null;
       /* Tapped on a hill: a wood, a ruin, rubble, rocks or a building may stand
          on it (p. 42) — inside its crest, clear of anything else up there. */
@@ -288,7 +288,7 @@
        12" after the table is set. It pulls cover toward the middle of its own half,
        where its troops will want it, keeping clear of objectives and other pieces. */
     function terrainKnowledge(side) {
-      var mid = side === 'A' ? { x: W * 0.3, y: H * 0.5 } : { x: W * 0.7, y: H * 0.5 };
+      var mid = side === 'A' ? { x: R.BOARD.w * 0.3, y: R.BOARD.h * 0.5 } : { x: R.BOARD.w * 0.7, y: R.BOARD.h * 0.5 };
       var pieces = E.state.terrain.filter(function (r) {
         var t = R.TERRAIN[r.kind];
         return t && (t.cover || t.blocks) && !t.impassable && t.destructible !== 'target' && r.w * r.h < 40 && !r.fixed && !r.dtkMoved;
@@ -301,7 +301,7 @@
         var dx = mid.x - cx, dy = mid.y - cy, d = Math.hypot(dx, dy);
         if (d < 3) continue;
         var step = Math.min(12, d - 2), nx = r.x + dx / d * step, ny = r.y + dy / d * step;
-        if (nx < 0 || ny < 0 || nx + r.w > W || ny + r.h > H) continue;
+        if (nx < 0 || ny < 0 || nx + r.w > R.BOARD.w || ny + r.h > R.BOARD.h) continue;
         var clash = E.state.terrain.some(function (o) {
           return o !== r && nx < o.x + o.w + 0.5 && nx + r.w + 0.5 > o.x && ny < o.y + o.h + 0.5 && ny + r.h + 0.5 > o.y;
         }) || E.state.objectives.some(function (o) {
@@ -332,7 +332,7 @@
     }
     // may a barricade stand here? on the table, clear of terrain and troops, in the right ground
     function placeOK(pa, r) {
-      if (r.x < 0.5 || r.y < 0.5 || r.x + r.w > W - 0.5 || r.y + r.h > H - 0.5) return 'Not so close to the edge.';
+      if (r.x < 0.5 || r.y < 0.5 || r.x + r.w > R.BOARD.w - 0.5 || r.y + r.h > R.BOARD.h - 0.5) return 'Not so close to the edge.';
       var cx = r.x + r.w / 2, cy = r.y + r.h / 2;
       if (pa.why === 'fortify' && !deployOK(pa.side, cx, cy)) return 'Field fortifications go in your own deployment zone.';
       if (pa.why === 'laststand' && deployOK(other(pa.side), cx, cy)) return 'Not in the enemy deployment zone.';
@@ -382,7 +382,7 @@
         if (R.inRect(x, y, q)) { pa.pick = null; render(); return null; }      // tap it again to put it down
         if (Math.hypot(x - ocx, y - ocy) > 12) return 'Up to 12" from where it stands.';
         var nx = x - q.w / 2, ny = y - q.h / 2;
-        if (nx < 0 || ny < 0 || nx + q.w > W || ny + q.h > H) return 'It would go off the table.';
+        if (nx < 0 || ny < 0 || nx + q.w > R.BOARD.w || ny + q.h > R.BOARD.h) return 'It would go off the table.';
         var clash = E.state.terrain.some(function (o) {
           return o !== q && nx < o.x + o.w + 0.5 && nx + q.w + 0.5 > o.x && ny < o.y + o.h + 0.5 && ny + q.h + 0.5 > o.y;
         }) || E.state.objectives.some(function (o) { return o.x > nx - 3 && o.x < nx + q.w + 3 && o.y > ny - 3 && o.y < ny + q.h + 3; });

@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   root.PMCEngineAI = function (E) {
-    var H = E.H, R = E.R, SC = E.SC, SFX = E.SFX, UR = E.UR, W = E.W, abAssault = E.abAssault,
+    var R = E.R, SC = E.SC, SFX = E.SFX, UR = E.UR, abAssault = E.abAssault,
         abRally = E.abRally, abRepair = E.abRepair, activeUnits = E.activeUnits, alreadySafe = E.alreadySafe,
         animateMove = E.animateMove, assaultables = E.assaultables, boardAnim = E.boardAnim,
         canAnswerMark = E.canAnswerMark, canReachCharge = E.canReachCharge, chargeAllow = E.chargeAllow,
@@ -65,14 +65,14 @@
       var want = null, wd = Infinity;
       E.state.objectives.forEach(function (o) {
         var held = o.owner && o.owner !== u.side ? -6 : 0;
-        var d = held + R.inches(o.x, o.y, W / 2, H / 2);
+        var d = held + R.inches(o.x, o.y, R.BOARD.w / 2, R.BOARD.h / 2);
         if (d < wd) { wd = d; want = o; }
       });
       var foes = E.state.units.filter(function (e) { return e.alive && e.side !== u.side && onTable(e) && !husk(e); });
       var focus = want || (foes.length ? {
         x: foes.reduce(function (s, e) { return s + e.x; }, 0) / foes.length,
         y: foes.reduce(function (s, e) { return s + e.y; }, 0) / foes.length
-      } : { x: W / 2, y: H / 2 });
+      } : { x: R.BOARD.w / 2, y: R.BOARD.h / 2 });
       var friends = E.state.units.filter(function (f) { return f.alive && f !== u && f.side === u.side && onTable(f) && !f.aboard; });
       var best = null, bs = -Infinity;
       var ec = foes.length ? { x: foes.reduce(function (t, e) { return t + e.x; }, 0) / foes.length, y: foes.reduce(function (t, e) { return t + e.y; }, 0) / foes.length } : focus;
@@ -81,7 +81,7 @@
       for (var k = 0; k < 360; k++) {
         // most of the search close round the focus, some of it anywhere on the table
         var p = k % 3 ? (function () { var ang = Math.random() * Math.PI * 2, rad = 10 + Math.random() * 16; return { x: focus.x + Math.cos(ang) * rad, y: focus.y + Math.sin(ang) * rad }; })()
-          : { x: 6 + Math.random() * (W - 12), y: 6 + Math.random() * (H - 12) };
+          : { x: 6 + Math.random() * (R.BOARD.w - 12), y: 6 + Math.random() * (R.BOARD.h - 12) };
         if (!insertionLegal(p) || R.unitNear(E.state, p.x, p.y, u, 1)) continue;
         var gap = foeGap({ x: p.x, y: p.y, side: u.side });
         if (gap < 10) continue;                            // in the enemy's lap: shot or charged before it can act
@@ -1291,7 +1291,7 @@
     function pickGoal(u, behaviour) {
       if (behaviour === 'flee') {
         var ne = nearestEnemy(u);
-        return ne ? { x: u.x + (u.x - ne.unit.x), y: u.y + (u.y - ne.unit.y) } : { x: u.side === 'A' ? 1 : W - 1, y: u.y };
+        return ne ? { x: u.x + (u.x - ne.unit.x), y: u.y + (u.y - ne.unit.y) } : { x: u.side === 'A' ? 1 : R.BOARD.w - 1, y: u.y };
       }
       if (behaviour === 'assault') {
         var t = nearestEnemy(u);
@@ -1311,7 +1311,7 @@
       if (best) return best;
       // nothing to hold and nothing to find: the enemy is the objective
       var foe = nearestEnemy(u);
-      return foe ? { x: foe.unit.x, y: foe.unit.y } : { x: W / 2, y: H / 2 };
+      return foe ? { x: foe.unit.x, y: foe.unit.y } : { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
     }
 
     function scoreSpot(u, c, goal, behaviour, look) {

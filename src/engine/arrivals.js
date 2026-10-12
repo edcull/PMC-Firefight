@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   root.PMCEngineArrivals = function (E) {
-    var H = E.H, R = E.R, SC = E.SC, SNAP_NEAR = E.SNAP_NEAR, SOLO = E.SOLO, UR = E.UR, W = E.W,
+    var R = E.R, SC = E.SC, SNAP_NEAR = E.SNAP_NEAR, SOLO = E.SOLO, UR = E.UR,
         aiInsert = E.aiInsert, byId = E.byId, docsOf = E.docsOf, fitView = E.fitView,
         focusUnit = E.focusUnit, inReserve = E.inReserve, insertionLegal = E.insertionLegal, isAI = E.isAI,
         landUnit = E.landUnit, logLine = E.logLine, other = E.other, pushRes = E.pushRes, render = E.render,
@@ -356,8 +356,8 @@
             // which band — which table edge, which corner — is chosen fresh each time
             var b = entry[Math.floor(Math.random() * entry.length)];
             var q = {
-              x: Math.max(UR, Math.min(W - UR, b.x + Math.random() * b.w)),
-              y: Math.max(UR, Math.min(H - UR, b.y + Math.random() * b.h))
+              x: Math.max(UR, Math.min(R.BOARD.w - UR, b.x + Math.random() * b.w)),
+              y: Math.max(UR, Math.min(R.BOARD.h - UR, b.y + Math.random() * b.h))
             };
             if (R.TERRAIN[R.terrainAt(E.state, q.x, q.y)].impassable) continue;
             if (R.unitNear(E.state, q.x, q.y, u, 1)) continue;
@@ -367,9 +367,9 @@
         }
         return null;
       }
-      var edge = u.side === 'A' ? UR + 0.5 : W - UR - 0.5;
+      var edge = u.side === 'A' ? UR + 0.5 : R.BOARD.w - UR - 0.5;
       for (var pass2 = 0; pass2 < 2; pass2++) for (var k = 0; k < 400; k++) {
-        var y = UR + Math.random() * (H - 2 * UR);
+        var y = UR + Math.random() * (R.BOARD.h - 2 * UR);
         var x = edge + (Math.random() - 0.5) * 2;
         if (R.TERRAIN[R.terrainAt(E.state, x, y)].impassable) continue;
         if (R.unitNear(E.state, x, y, u, 1)) continue;
@@ -418,7 +418,7 @@
       return zones.length ? zones : all;
     }
     function arrivalLegal(u, p) {
-      if (p.x < UR || p.y < UR || p.x > W - UR || p.y > H - UR) return false;
+      if (p.x < UR || p.y < UR || p.x > R.BOARD.w - UR || p.y > R.BOARD.h - UR) return false;
       if (E.state.scen.arrivalLegal) return E.state.scen.arrivalLegal(E.state, u, p) && !R.unitNear(E.state, p.x, p.y, u, 1);
       if (R.TERRAIN[R.terrainAt(E.state, p.x, p.y)].impassable) return false;
       if (R.unitNear(E.state, p.x, p.y, u, 1)) return false;
@@ -436,7 +436,7 @@
             p.y >= b.y - 0.5 && p.y <= b.y + b.h + 0.5;
         });
       }
-      var edge = u.side === 'A' ? UR + 0.5 : W - UR - 0.5;
+      var edge = u.side === 'A' ? UR + 0.5 : R.BOARD.w - UR - 0.5;
       return Math.abs(p.x - edge) <= 1.5;
     }
 
@@ -455,8 +455,8 @@
     }
     function arrivalSpots(u) {
       var out = [];
-      for (var x = 1; x <= W - 1; x += 1) {
-        for (var y = 1; y <= H - 1; y += 1) {
+      for (var x = 1; x <= R.BOARD.w - 1; x += 1) {
+        for (var y = 1; y <= R.BOARD.h - 1; y += 1) {
           var p = { x: x, y: y };
           if (arrivalLegal(u, p)) out.push(p);
         }
@@ -475,8 +475,8 @@
     function insertionSpots(u) {
       var out = [];
       if (SC.noInsertion(E.state)) return out;
-      for (var x = 4; x <= W - 4; x += 2) {
-        for (var y = 4; y <= H - 4; y += 2) {
+      for (var x = 4; x <= R.BOARD.w - 4; x += 2) {
+        for (var y = 4; y <= R.BOARD.h - 4; y += 2) {
           var p = { x: x, y: y };
           if (!insertionLegal(p)) continue;
           if (R.unitNear(E.state, x, y, u, 1)) continue;
