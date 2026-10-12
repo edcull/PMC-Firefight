@@ -221,3 +221,4 @@ phases and co-op alternation, OpFor activation order; behaviour table bands and 
 | CMP-13 Suicidal Tendencies switch off Field Medics | **Fixed** (owner: a 6 is still MEDIC!): 1-2 ignored, 3-4 Get down!, 5 Man down!, and a 6 near medics goes to the medic as usual. | `damage.js` (`resolveShootingHits`); test `review57.js` |
 | XEN-18 Markerlights mark through blocking terrain | **Fixed** (owner: needs LoS): past the marker's own 12" the tribe's sight still needs a clear line from the marker. | `marks.js` (`markTargets`); test `review57.js` |
 | SCN-4, PMC-4, CMP-10, REB-10, BUG-10, BUG-12, XEN-19, XEN-20 | **Kept** (owner). BUG-12: the Carrier bug is Overgrown. XEN-20: Psychic and morale rules are for troops; machines run on Structure and damage. BUG-10: kept for now. | — |
+| SPR-6 No +1 on a breach against a vehicle | **Kept** (owner): the wall still comes down, but a vehicle takes no cover from it, so its hits get no +1. This is how the code already works. | — |
