@@ -806,7 +806,7 @@
             '<span class="ru-num">' + (R.isMachine(u)
               ? Math.max(0, u.str - u.damage) + '/' + u.str
               : u.models + '/' + u.size) + '</span>' +
-            '<span class="ru-sp">' + (u.hidden && u.alive ? 'hidden' : u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (B.state.sc.counters ? 'hidden' : 'pool') : u.reserve ? 'reserve' : u.aboard ? 'aboard'
+            '<span class="ru-sp">' + (u.hidden && u.alive ? 'hidden' : u.safe ? 'safe' : u.reserve && u.wave === 'pool' ? (B.state.sc.counters ? 'hidden' : 'pool') : u.reserve && u.wave === 'objective' ? 'to find' : u.reserve ? 'reserve' : u.aboard ? 'aboard'
               : R.isMachine(u) ? u.damage + ' DP' : u.sp + ' SP') + '</span>') +
             (mayStand(u) ? '<button class="ru-stand" data-stand="' + u.id + '" title="Last Stand — shed all ' + u.sp + ' SP, once a battle, at any time">Last Stand</button>' : '') +
             '</li>';

@@ -160,5 +160,39 @@ console.log('\nSpecial equipment (p. 159)');
   ok('Vacuum Charges put it out again', !room.burning && st.kit.A.vacuum === 0);
 }
 
+console.log('\nAutomated defence system (p. 160)');
+{
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 'ce_clear', armyA: ['regular', 'ew'], armyB: ['regular'], nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel',
+    mode: 'demo', planet: 'sparse', options: { autoDefence: true } });
+  const st = e.state(), guns = st.units.filter((u) => u.side === 'N');
+  const wf = R.walkField(st, st.adPanel.x, st.adPanel.y, 'N');
+  ok('with the option: a control panel and three guns, belonging to neither side', !!st.adPanel && guns.length === 3 && guns.every((g) => g.key === 'adgun' && g.cls === 'vehicle'));
+  ok('...each within 12" of the panel, 6" apart', guns.every((g) => wf(g.x, g.y) <= 12.5) && guns.every((g, i) => guns.every((h, j) => i === j || R.inches(g.x, g.y, h.x, h.y) >= 6)));
+  ok('...as an Automatic defence system has them: Tier III, FP 6, Range 18", Defence 11, Structure 3, a limited arc, going nowhere',
+    guns.every((g) => g.tier === 3 && g.fp === 6 && g.range === 18 && g.def === 11 && g.str === 3 && R.has(g, 'Limited Fire Arc') && g.move === 0));
+  ok('without the option, none', (() => { const f = Engine.create(); f.start({ tier: 3, pl: 1, scenario: 'ce_clear', armyA: ['regular'], armyB: ['regular'], nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse' }); return !f.state().units.some((u) => u.side === 'N') && !f.state().adPanel; })());
+}
+{
+  const { e, st } = stage(['regular', 'ew'], ['regular'], { options: { autoDefence: true } });
+  const [a, h] = st.units.filter((u) => u.side === 'A'), b = st.units.find((u) => u.side === 'B');
+  // one gun at the corridor's end facing back along it, the panel in the room
+  const g = st.units.find((u) => u.side === 'N');
+  st.units.filter((u) => u.side === 'N' && u !== g).forEach((u) => { u.alive = false; });
+  put(g, 34, 22.5); g.facing = Math.PI; g.damage = 0;
+  st.adPanel = { x: 19.5, y: 28, by: null };
+  put(a, 22, 22.5); put(b, 8, 22.5); put(h, 19.5, 29.5);
+  // the guns fire at the start of the Action phase: at the nearest in sight, arc and range, whoever it is
+  e.query.autoGuns();
+  ok('at the start of the Action phase each gun fires at the nearest unit in its sight, arc and range, whoever it is',
+    new RegExp(g.label + ' fires at ' + a.label.replace(/[[\]]/g, '\\$&')).test(text(st)), (text(st).match(/Automatic gun[^\n]*/g) || []).join(' | '));
+  ok('...and either side may shoot it', R.canShoot(st, a, g, 'fire', {}) && !R.canShoot(st, g, h, 'react', {}));
+  e.intent('A', { k: 'select', id: h.id });
+  ok('Control the Guns: a unit within 1" of the panel has it on its bar', e.query.actionState(h, 'controlguns').on);
+  dice(0.3, () => e.intent('A', { k: 'action', id: 'controlguns' }));          // D6 2: enough for Hackers
+  ok('...Hackers take it on 2+, and the guns turn on the enemy', st.adPanel.by === 'A' && Math.abs(g.facing - Math.PI) < 0.2 && /takes the automated defence system/.test(text(st)),
+    'facing ' + g.facing.toFixed(2));
+}
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -291,6 +291,9 @@
     { key: 'xshieldb', code: 'BSG', name: 'Basic shield generator craft', group: 'Support Aviation', faction: 'xeno', cls: 'aircraft', art: 'xshieldcraft', tier: 3, size: 1, move: 18, fp: 3, range: 12, def: 11, assault: 0, str: 4, rules: ['Flying unit', 'Shield Generator (1)', 'Molecular Reconstruction'] },
     { key: 'xshield', code: 'SGC', name: 'Shield generator craft', group: 'Support Aviation', faction: 'xeno', cls: 'aircraft', art: 'xshieldcraft', tier: 4, size: 1, move: 18, fp: 3, range: 12, def: 11, assault: 0, str: 4, rules: ['Flying unit', 'Stealth', 'Shield Generator (1)', 'Molecular Reconstruction'] },
     { key: 'xshieldhp', code: 'HSG', name: 'High-power shield generator craft', group: 'Support Aviation', faction: 'xeno', cls: 'aircraft', art: 'xshieldcraft', tier: 5, size: 1, move: 18, fp: 3, range: 12, def: 12, assault: 0, str: 4, rules: ['Flying unit', 'Stealth', 'Shield Generator (1)', 'Counter-jamming', 'Molecular Reconstruction'] },
+    /* Close Encounters' Automatic defence system (p. 160): three guns that belong to
+       neither side, put down by the automated defence option. No army takes them. */
+    { key: 'adgun', code: 'ADS', name: 'Automatic gun', group: 'Automated defence', faction: 'neutral', cls: 'vehicle', art: 'xturret', tier: 3, size: 1, move: 0, turn: 0, fp: 6, range: 18, def: 11, assault: 1, str: 3, rules: ['Limited Fire Arc', 'Immobile'] },
     { key: 'xdturret1', code: 'DT', name: 'Defensive turret', group: 'Defensive Turrets', faction: 'xeno', cls: 'vehicle', art: 'xturret', tier: 1, size: 1, move: 0, turn: 0, fp: 6, range: 24, def: 11, assault: 1, str: 3, turretSet: 1, groupCap: 1, rules: ['Turret', 'Drone Control', 'Indirect Fire', 'Battlefield Insertion'] },
     { key: 'xdturret2', code: 'DT', name: 'Defensive turrets pair', group: 'Defensive Turrets', faction: 'xeno', cls: 'vehicle', art: 'xturret', tier: 2, size: 1, move: 0, turn: 0, fp: 6, range: 24, def: 11, assault: 1, str: 3, turretSet: 2, groupCap: 1, rules: ['Turret', 'Drone Control', 'Indirect Fire', 'Battlefield Insertion'] },
     { key: 'xdturret3', code: 'DT', name: 'Defensive turrets trio', group: 'Defensive Turrets', faction: 'xeno', cls: 'vehicle', art: 'xturret', tier: 3, size: 1, move: 0, turn: 0, fp: 6, range: 24, def: 11, assault: 1, str: 3, turretSet: 3, groupCap: 1, rules: ['Turret', 'Drone Control', 'Indirect Fire', 'Battlefield Insertion'] },
@@ -547,6 +550,7 @@
     xstrike4: { p: 'orb', n: 3 }, xstrike5: { p: 'orb', n: 4 },
     xrecon: { p: 'energy' }, xtelecraft: { p: 'energy', n: 2 },
     xshieldb: { p: 'energy', n: 2 }, xshield: { p: 'energy', n: 2 }, xshieldhp: { p: 'energy', n: 2 },
+    adgun: { p: 'chain', n: 1 },
     xdturret1: { p: 'orb', n: 3 }, xdturret2: { p: 'orb', n: 3 }, xdturret3: { p: 'orb', n: 3 },
     xdturret4: { p: 'orb', n: 3 }, xdturret5: { p: 'orb', n: 3 },
     xtturret2: { p: 'none' }, xtturret3: { p: 'none' }, xtturret4: { p: 'none' },

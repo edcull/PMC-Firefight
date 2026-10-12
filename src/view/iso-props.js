@@ -219,6 +219,8 @@
         var rr2 = rng(seed + ri * 419 + 77);
         /* A compound's section (Close Encounters, p. 159): fuel drums where it is
            dangerous, scorched wreckage where it went up, fire where it burns. */
+        // the automated defence system's control panel (Close Encounters, p. 160)
+        if (r.kind === 'panel') { props.push({ kind: 'console', x: r.x + r.w / 2, y: r.y + r.h / 2, seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'corridor' || r.kind === 'room' || r.kind === 'hall') {
           var sa = r.w * r.h;
           if (r.dangerous) {

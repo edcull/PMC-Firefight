@@ -912,6 +912,8 @@
     door:      { name: 'Door',        blocks: true,  impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear' },
     doorlock:  { name: 'Locked door', blocks: true,  impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'both' },
     doorlockA: { name: 'Door (locked to A)', blocks: true, impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'A' },
+    // the automated defence system's control panel (p. 160): "does not count as terrain", only marks the spot
+    panel:     { name: 'Control panel', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     breached:  { name: 'Breached door', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, wreck: true },
     doorlockB: { name: 'Door (locked to B)', blocks: true, impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'B' }
   };
@@ -1023,6 +1025,8 @@
     { key: 'otherWorlds', name: 'Other Worlds', page: 164,
       text: 'Gravity, atmosphere and anomalies rolled for the battle (for each contract, in a campaign): low or high gravity, no air, toxic air or fog, radiation, time anomalies or an unexplained weakness.' },
     // a campaign sets how often its contracts are fought inside a compound instead (camp: false)
+    { key: 'autoDefence', name: 'Automated defence system', page: 160, camp: false,
+      text: 'In a Close Encounters battle: a control panel and three automatic guns in the middle of the compound, belonging to neither side, firing at the nearest unit of either at the start of every Action phase. A unit at the panel may take control of them.' },
     { key: 'closeEncounters', name: 'Close Encounters', page: 157, camp: false,
       text: 'Fighting inside compounds: corridors, rooms and doors, and no vehicles or aircraft. Adds the Close Encounters scenarios (Clearing out, Critical control) to the scenario list.' }
   ];

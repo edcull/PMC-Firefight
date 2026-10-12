@@ -523,8 +523,8 @@
 
     /* What the AI walks towards. Usually the objectives; in Find and secure, until
        the objective turns up, the locations nobody has checked yet. */
-    function goalPoints() {
-      if (E.state.scen.goals) return E.state.scen.goals(E.state);
+    function goalPoints(u) {
+      if (E.state.scen.goals) return E.state.scen.goals(E.state, u);
       if (E.state.objectives.length) return E.state.objectives;
       if (E.state.sc && E.state.sc.search && !E.state.sc.found) {
         return E.state.sc.search.filter(function (sp) { return !sp.checked; });
@@ -534,7 +534,7 @@
 
     function nearestObjective(u) {
       var best = null, bd = Infinity;
-      goalPoints().forEach(function (o) {
+      goalPoints(u).forEach(function (o) {
         var d = R.inches(u.x, u.y, o.x, o.y);
         if (d < bd) { bd = d; best = o; }
       });
@@ -805,6 +805,11 @@
         var bm = E.state.scen.behaviour(E.state, u) || {};
         if (bm.mod) { mods += bm.mod; why.push(bm.why || ((bm.mod > 0 ? '+' : '') + bm.mod)); }
       }
+      // the players' side run by the computer (a demo): a scenario against the clock pushes it on
+      if (E.state.solo && u.side === 'A' && E.state.scen.playerTemper) {
+        var pt = E.state.scen.playerTemper(E.state, u) || {};
+        if (pt.mod) { mods += pt.mod; why.push(pt.why); }
+      }
       // an AI company's personality: some hold back, some go in (campaign.js aiTemper)
       var tp = tableAI(u) && E.state.cfg.temper && E.state.cfg.temper[u.side];
       if (tp && tp.mod) { mods += tp.mod; why.push(tp.why); }
@@ -852,6 +857,12 @@
       // Unreliable: the AI's units roll before acting, as a player's do (CMP-7)
       if (E.unreliableWasted(u)) return;
       if (u.hidden) { aiHidden(u); return; }
+      // at the automated defence system's panel, and it is not yet this side's: take it (p. 160)
+      if (E.state.compound && E.atPanel(u) && E.state.adPanel.by !== u.side && R.status(u) === 'ready') {
+        E.controlGuns(u);
+        u.activated = true; endActivation(u);
+        return;
+      }
       /* Decapitation: the OpFor's leaders "always act according to the Reasonably
          Defensive result and never Move nor Advance" (p. 152) — whatever state they
          are in, they shoot from where they are or keep their heads down. */
@@ -1341,7 +1352,7 @@
     function objectivePull(u) {
       if (!companyAI(u) || R.isFlying(u) || R.status(u) !== 'ready') return null;
       if (!E.state.scen || !E.state.scen.groundTaking) return null;
-      var goals = goalPoints();
+      var goals = goalPoints(u);
       if (!goals.length || goals.some(function (o) { return objDist(u, o) <= objReach(o); })) return null;
       var o = pickGoal(u, 'neutral');
       return o && goals.indexOf(o) >= 0 && o.owner !== u.side ? o : null;
@@ -1356,7 +1367,7 @@
         var t = nearestEnemy(u);
         if (t) return { x: t.unit.x, y: t.unit.y };
       }
-      var goals = goalPoints();
+      var goals = goalPoints(u);
       var standing = goals.filter(function (o) { return objDist(u, o) <= objReach(o); })[0];
       if (standing && behaviour !== 'offensive') return standing;
       var best = null, bd = Infinity;

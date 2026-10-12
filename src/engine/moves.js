@@ -142,6 +142,8 @@
     function scenarioMoveEnd(u) {
       soloAfterMove(u);
       samCheck(u);
+      // Besieged's counters, turned over where the move brought them into sight
+      if (E.state && E.state.solo && E.state.compound && u && u.side === 'A') E.soloSpot();
     }
     /* Demolish's SAM system (p. 54) fires on "any aircraft finishing its move"
        within 12" — a Move, an Advance, a strafing run, the AI's own flying or an

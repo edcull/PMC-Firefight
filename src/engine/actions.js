@@ -246,6 +246,11 @@
           if (kk === 'vacuum' && !E.state.terrain.some(function (r) { return r.burning; })) return { on: false, hint: 'Nothing is burning.' };
           return { on: true, hint: kd.name + ': ' + kd.text + ' (' + E.kitLeft(u, kk) + ' left; once each).' };
         }
+        case 'controlguns': {
+          if (!E.atPanel(u)) return { on: false, hint: 'Only a unit within 1" of the control panel.' };
+          if (sup) return { on: false, hint: 'Suppressed: no special actions.' };
+          return { on: true, hint: 'Control the Guns: D6, ' + (R.has(u, 'Hackers') ? '2+ (Hackers)' : '4+') + ' — the guns turn on the enemy, and any that cannot is blown up (p. 160).' };
+        }
         case 'cover': {
           if (u.covered === E.state.turn) return { on: false, hint: 'Already covered this activation.' };
           var cv = E.coverers(u);
@@ -480,6 +485,7 @@
         return;
       }
       if (id === 'cover') { E.startCover(u); return; }
+      if (id === 'controlguns') { E.controlGuns(u); u.activated = true; endActivation(u); return; }
       // Close Encounters' special equipment (p. 159)
       if (id === 'kit-satchel') {
         E.satchel(u);

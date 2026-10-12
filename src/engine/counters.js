@@ -72,7 +72,27 @@
         if (e) out.push({ h: h, e: e });
       });
       out.forEach(function (q) { revealUnit(q.h, 'in sight of ' + q.e.label); });
+      soloSpot();
       return out.map(function (q) { return q.h; });
+    }
+    /* A solitaire scenario's counters (Besieged, p. 163) turned over by what the
+       players' units now see, or by a Detect (`detect`, the unit). Each enemy that
+       stands up trades fire with them at once: "OpFor units automatically use
+       Fire at Will!". */
+    function soloSpot(detect) {
+      var st = E.state;
+      if (!st || !st.solo || !st.scen.spot || st.over) return [];
+      var news = st.scen.spot(st, detect || null) || [];
+      if (!news.length) return news;
+      news.forEach(function (l) {
+        logLine('note', l.text);
+        if (l.unit) E.stepOff(l.unit, null);
+      });
+      pushRes({ kind: 'Counters', title: news.length === 1 ? 'A counter is turned over' : news.length + ' counters are turned over',
+        list: news.map(function (l) { return { text: l.text, side: l.unit ? l.unit.side : null }; }) });
+      news.forEach(function (l) { if (l.unit && l.unit.side === 'B' && l.unit.alive) fireAtWill(l.unit); });
+      render();
+      return news;
     }
 
     // a shot that is no activation: Fire at Will! (and Opportunity Fire, Covering Fire!, later)
@@ -96,7 +116,7 @@
       if (!u || !u.alive || u.hidden || !onTable(u)) return null;
       var shooter = null, bd = Infinity;
       E.state.units.forEach(function (e) {
-        if (!e.alive || e.hidden || e.side === u.side || !onTable(e) || e.aboard || R.status(e) !== 'ready' || e.fp === null) return;
+        if (!e.alive || e.hidden || e.side === u.side || e.side === 'N' || !onTable(e) || e.aboard || R.status(e) !== 'ready' || e.fp === null) return;
         if (!R.canShoot(E.state, e, u, 'react', {})) return;
         var d = R.unitDist(e, u);
         if (d < bd) { bd = d; shooter = e; }
@@ -120,7 +140,8 @@
         return h.alive && h.hidden && h.side !== u.side && onTable(h) && !h.aboard && R.unitDist(u, h) <= 12;
       });
       out.forEach(function (h) { revealUnit(h, 'picked up by ' + u.label + '’s sensors'); });
-      if (!out.length) logLine('note', u.label + ' sweeps the corridors: no enemy counter within 12".');
+      var found = soloSpot(u).length;
+      if (!out.length && !found) logLine('note', u.label + ' sweeps the corridors: no enemy counter within 12".');
       return out;
     }
     function canDetect(u) {
@@ -221,7 +242,7 @@
       }
       var start = Object.assign({}, u, { of: u }), end = Object.assign({}, u, { x: to.x, y: to.y, of: u });
       var foes = E.state.units.filter(function (e) {
-        return e.alive && e.side !== u.side && onTable(e) && !e.aboard && !e.hidden && !e.activated &&
+        return e.alive && e.side !== u.side && e.side !== 'N' && onTable(e) && !e.aboard && !e.hidden && !e.activated &&
           R.status(e) === 'ready' && e.fp !== null && !R.hasLoS(E.state, e, start) && !R.hasLoS(E.state, e, end);
       });
       if (!foes.length) return null;
@@ -451,14 +472,88 @@
       }
     }
 
+    /* ---- Automated defence systems (p. 160) ----
+       "one control panel (which does not count as terrain, but should be marked
+       with a counter) and three guns placed up to 12" of the panel. Automated
+       defence systems do not belong to any of the players' forces; they attack and
+       can be attacked by both sides." The guns are units of a side of their own,
+       N, that never activates. Put down here in the room or hall nearest the
+       middle of the compound, the guns within 12" of the panel by the walk and 6"
+       apart, each facing away from it. */
+    function defenceLayout() {
+      var st = E.state, mx = R.BOARD.w / 2, my = R.BOARD.h / 2;
+      var rooms = st.terrain.filter(function (r) { return r.kind === 'room' || r.kind === 'hall'; })
+        .sort(function (a, b) { return R.inches(a.x + a.w / 2, a.y + a.h / 2, mx, my) - R.inches(b.x + b.w / 2, b.y + b.h / 2, mx, my); });
+      var room = rooms[0];
+      if (!room) return null;
+      var px = room.x + room.w / 2, py = room.y + room.h / 2;
+      var wf = R.walkField(st, px, py, 'N'), guns = [];
+      var cands = [];
+      for (var x = 1.5; x < R.BOARD.w; x += 1.5) for (var y = 1.5; y < R.BOARD.h; y += 1.5) {
+        var w = wf ? wf(x, y) : R.inches(x, y, px, py);
+        if (w > 12 || w < 3 || R.TERRAIN[R.terrainAt(st, x, y)].impassable) continue;
+        cands.push({ x: x, y: y, w: w });
+      }
+      cands.sort(function (a, b) { return b.w - a.w; });              // furthest out first: they guard the way in
+      cands.forEach(function (c) {
+        if (guns.length < 3 && guns.every(function (g) { return R.inches(g.x, g.y, c.x, c.y) >= 6; })) guns.push(c);
+      });
+      guns = guns.map(function (g) { return { x: g.x, y: g.y, facing: Math.atan2(g.y - py, g.x - px) }; });
+      return { panel: { x: px, y: py }, guns: guns };
+    }
+    // the guns, each at the nearest unit it can see in its arc and range, either side's
+    function autoGuns() {
+      var guns = E.state.units.filter(function (g) { return g.side === 'N' && g.alive && onTable(g); });
+      guns.forEach(function (g) {
+        var best = null, bd = Infinity;
+        E.state.units.forEach(function (t) {
+          if (t.side === 'N' || !t.alive || !onTable(t) || t.aboard || t.hidden) return;
+          if (!R.canShoot(E.state, g, t, 'react', {})) return;
+          var d = R.unitDist(g, t);
+          if (d < bd) { bd = d; best = t; }
+        });
+        if (best) reactShot(g, best, 'Automated defence');
+      });
+    }
+    // "Any unit within 1" of the control panel may control the system using the Control the Guns special action"
+    function atPanel(u) {
+      var p = E.state.adPanel;
+      return !!(p && u && !u.hidden && onTable(u) && u.side !== 'N' && Math.max(0, R.inches(u.x, u.y, p.x, p.y) - UR) <= 1);
+    }
+    /* "the action is successful on 2+ if the unit has the Hackers special rule and
+       on 4+ if it doesn't. If the action is successful, the player controls all
+       guns ... and can either self-destruct one or more guns ... or rotate them in
+       any direction". Here: each gun turned on the nearest enemy of the side that
+       now holds the panel, and one that cannot be turned on any, but would cover a
+       friend of theirs, blown up. */
+    function controlGuns(u) {
+      var need = R.has(u, 'Hackers') ? 2 : 4, d = R.d6();
+      if (d < need) { logLine('note', u.label + ' fails to take the automated defence system (D6 ' + d + ', needs ' + need + '+).'); return false; }
+      E.state.adPanel.by = u.side;
+      var log = [];
+      E.state.units.filter(function (g) { return g.side === 'N' && g.alive; }).forEach(function (g) {
+        var foe = null, fd = Infinity;
+        E.state.units.forEach(function (t) {
+          if (!t.alive || !onTable(t) || t.side === 'N' || t.side === u.side) return;
+          var dd = R.unitDist(g, t);
+          if (dd < fd) { fd = dd; foe = t; }
+        });
+        if (foe) { g.facing = Math.atan2(foe.y - g.y, foe.x - g.x); log.push(g.label + ' swings onto ' + foe.label + '.'); }
+        else { g.alive = false; log.push(g.label + ' is blown up from the panel.'); }
+      });
+      logLine('note', u.label + ' takes the automated defence system (D6 ' + d + '): ' + log.join(' '));
+      return true;
+    }
+
     return {
+      defenceLayout: defenceLayout, autoGuns: autoGuns, atPanel: atPanel, controlGuns: controlGuns,
       sectionOf: sectionOf, explodeSection: explodeSection, setBurning: setBurning, putOut: putOut, firingHazard: firingHazard,
       hazardsBeginning: hazardsBeginning, hazardsEnd: hazardsEnd,
       KIT: KIT, cleanKit: cleanKit, defaultKit: defaultKit, kitLeft: kitLeft, kitUsable: kitUsable, throwTargets: throwTargets,
       satchel: satchel, barrier: barrier, throwAt: throwAt, spendKit: spend, doThrow: doThrow, afterKitMove: afterKitMove,
       seerOf: seerOf, hiddenStop: hiddenStop, hiddenMove: hiddenMove, afterHiddenMove: afterHiddenMove,
       revealUnit: revealUnit, revealSweep: revealSweep, fireAtWill: fireAtWill, reactShot: reactShot,
-      detectReveal: detectReveal, canDetect: canDetect,
+      detectReveal: detectReveal, canDetect: canDetect, soloSpot: soloSpot,
       coverers: coverers, startCover: startCover, coverBy: coverBy, coverAt: coverAt,
       oppCheck: oppCheck, oppFire: oppFire
     };

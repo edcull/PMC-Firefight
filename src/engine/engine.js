@@ -423,6 +423,22 @@
       // "in most scenarios taking place in complexes, units start the game hidden" (p. 158): as counters
       if (scenDef.hidden && scenDef.hidden(u)) u.hidden = true;
     });
+    /* An automated defence system (p. 160), where the players agreed to one: the
+       panel marked on the floor, and three guns that belong to neither side. */
+    if (scenDef.compound && R.opt(state, 'autoDefence')) {
+      var lay = K.defenceLayout(), gp = R.profile('adgun');
+      if (lay) {
+        state.adPanel = { x: lay.panel.x, y: lay.panel.y, by: null };
+        state.terrain.push({ kind: 'panel', x: lay.panel.x - 0.75, y: lay.panel.y - 0.75, w: 1.5, h: 1.5 });
+        lay.guns.forEach(function (g, n) {
+          var gu = makeUnit(gp, 'N', 'g' + n, null, false, null, false);
+          gu.label = gp.name + ' ' + (n + 1); gu.name = gu.label;
+          gu.x = g.x; gu.y = g.y; gu.facing = g.facing; gu.startSize = 1; gu.faction = 'neutral';
+          state.units.push(gu);
+        });
+        logLine('note', 'An automated defence system guards the ' + (K.sectionOf(lay.panel.x, lay.panel.y) || {}).name + ': a control panel and ' + lay.guns.length + ' automatic guns.');
+      }
+    }
     // Close Encounters' special equipment (p. 159): what each side carries in, chosen or the standard set
     if (scenDef.compound) {
       state.kit = {};
@@ -481,6 +497,7 @@
         u.startSize = u.models;
         if (x.side === 'A') { u.owner = x.owner || 1; if (u.owner === 2) u.paint = 'C'; }
         if (x.vip) u.vip = true;
+        if (x.objective) u.soloObjective = true;
         if (x.civ) u.soloCiv = true;
         if (x.militia) u.soloMilitia = true;
         if (x.leader) u.soloLeader = true;
@@ -1087,6 +1104,8 @@
     whenIdle(function () {
       K.reservePhase(function () {
         function action() {
+          // the automated defence system's guns, "at the beginning of each Action phase" (p. 160)
+          if (state.compound) K.autoGuns();
           state.phaseCount = { A: unbroken('A'), B: unbroken('B') };
           /* A side that wins the initiative with nothing it can activate (all Broken,
              say) hands the phase to the other, which then goes on freely (p. 27);
@@ -1464,6 +1483,7 @@
     if (u && K.canDetect(u)) out.push({ id: 'detect', label: 'Detect' });
     if (u && state.compound && state.phase === 'battle') {
       out.push({ id: 'cover', label: 'Covering Fire!' });
+      if (K.atPanel(u)) out.push({ id: 'controlguns', label: 'Control the Guns' });
       // the special equipment the side still has (p. 159)
       K.KIT.forEach(function (d) { if (K.kitLeft(u, d.key) > 0) out.push({ id: 'kit-' + d.key, label: d.name + ' (' + K.kitLeft(u, d.key) + ')' }); });
     }
@@ -2473,6 +2493,7 @@
         hazardsEnd: acting(function () { K.hazardsEnd(); }),
         explodeSection: acting(function (r, why) { K.explodeSection(r, why); }),
         setBurning: acting(function (r) { K.setBurning(r); }),
+        autoGuns: acting(function () { K.autoGuns(); }),
         beginningRites: acting(function () { beginningRites(); }),
         // the OpFor's pick of target for a Defensive or Neutral result (SOL-6), for the tests
         threatTarget: function (u) { return K.threatTarget(u, 'fire'); },

@@ -161,6 +161,19 @@
         }
         /* Fuel drums: a cluster of steel barrels, hazard-banded, in a compound's
            dangerous section (Close Encounters). */
+        // a control console: a steel desk with a lit screen and a row of lamps
+        case 'console': {
+          var cl7 = lift || 0, cw7 = a(1.6), ch7 = a(1.4);
+          shadowBlob(g, { x: p.x + a(0.5), y: p.y - cl7 + a(0.3) }, a(1.8), a(0.8));
+          rect(g, p.x - cw7 / 2, p.y - cl7 - ch7, cw7, ch7, '#3a4148');
+          rect(g, p.x - cw7 / 2, p.y - cl7 - ch7, cw7, Math.max(1, a(0.25)), '#5c666e');
+          rect(g, p.x - cw7 * 0.38, p.y - cl7 - ch7 * 0.82, cw7 * 0.76, ch7 * 0.42, '#1a3a28');
+          rect(g, p.x - cw7 * 0.3, p.y - cl7 - ch7 * 0.74, cw7 * 0.6, ch7 * 0.26, '#4fd08a');
+          dot(g, p.x - cw7 * 0.3, p.y - cl7 - ch7 * 0.2, '#ff5a3a', 2);
+          dot(g, p.x, p.y - cl7 - ch7 * 0.2, '#ffb02e', 2);
+          dot(g, p.x + cw7 * 0.3, p.y - cl7 - ch7 * 0.2, '#7bdc6a', 2);
+          break;
+        }
         case 'drums': {
           var dr6 = rng(pr.seed), dl6 = lift || 0;
           shadowBlob(g, { x: p.x + a(0.6), y: p.y - dl6 + a(0.3) }, a(2.2), a(0.9));

@@ -744,23 +744,29 @@
     /* Close Encounters (Appendix 1) ticked: its scenarios are offered after the
        six, in a group of their own; unticked, they go (and a choice of one with them). */
     function offerCloseEncounters() {
-      var sel = el('sel-scen'), box = el('opt-boxes');
-      if (!sel || !box || !U) return;
-      var on = !!U.readOptions(box).closeEncounters, g = sel.querySelector('optgroup[data-ce]');
-      if (on && !g) {
-        g = document.createElement('optgroup');
-        g.label = 'Close Encounters (Appendix 1)';
-        g.setAttribute('data-ce', '1');
-        (SC.CE_ORDER || []).forEach(function (id) {
-          var o = document.createElement('option');
-          o.value = id; o.textContent = SC.SCENARIOS[id].name;
-          g.appendChild(o);
-        });
-        sel.appendChild(g);
-      } else if (!on && g) {
-        if (/^ce_/.test(sel.value)) sel.value = 'roll';
-        g.parentNode.removeChild(g);
-      }
+      var box = el('opt-boxes');
+      if (!box || !U) return;
+      var on = !!U.readOptions(box).closeEncounters;
+      // the competitive pair on the battlefield step, and Besieged among the solitaire ones
+      [[el('sel-scen'), SC.CE_ORDER], [el('sel-solo-scen'), SOLO && SOLO.CE_ORDER]].forEach(function (pair) {
+        var sel = pair[0], ids = pair[1] || [];
+        if (!sel || !ids.length) return;
+        var g = sel.querySelector('optgroup[data-ce]');
+        if (on && !g) {
+          g = document.createElement('optgroup');
+          g.label = 'Close Encounters (Appendix 1)';
+          g.setAttribute('data-ce', '1');
+          ids.forEach(function (id) {
+            var o = document.createElement('option');
+            o.value = id; o.textContent = SC.SCENARIOS[id].name;
+            g.appendChild(o);
+          });
+          sel.appendChild(g);
+        } else if (!on && g) {
+          if (ids.indexOf(sel.value) >= 0) sel.value = 'roll';
+          g.parentNode.removeChild(g);
+        }
+      });
       drawKit();
     }
     /* Close Encounters' special equipment (p. 159): with a compound scenario chosen,

@@ -1321,11 +1321,172 @@
     }
   });
 
+  /* ---- Besieged (Close Encounters, p. 163) ----
+     A solitaire battle inside a compound: rescue an important unit cut off
+     somewhere in it, and bring it out through an entry point. Readings:
+     - the player's entry points are those on the compound's left edge (it has
+       two or three on each long edge); half the commando comes in on turn 1,
+       the rest on turn 2, through them, as in Critical control;
+     - a counter is revealed, as any hidden unit is (p. 158), the moment one of
+       the player's units sees it — the end of a move or an activation, or the
+       Beginning phase — or a Detect finds it within 12";
+     - the important unit belongs to the player who uncovered it, from then on;
+     - "moved out through one of the entry points": it stands in an entry
+       point's corridor, at the table edge (either long edge). */
+  function besiegedObjective(state) { return state.units.filter(function (u) { return u.soloObjective; })[0] || null; }
+  function objectiveHidden(state) { var o = besiegedObjective(state); return !!(o && o.alive && o.reserve && o.wave === 'objective'); }
+  function besiegedReveal(state, c, why, out) {
+    var obj = besiegedObjective(state), last = state.sc.counters.length === 1;
+    var roll = d6();
+    // "Last possible counter is always the objective"; a 6 is, while it is still to be found
+    if (objectiveHidden(state) && (roll === 6 || last)) {
+      var q = spotNear(state, c.x, c.y, 2, obj) || spotNear(state, c.x, c.y, 5, obj) || spotNear(state, c.x, c.y, 10, obj);
+      if (!q) { out.push({ text: 'Counter ' + c.id + ' ' + why + ', but there is no room there yet.' }); return null; }
+      state.sc.counters.splice(state.sc.counters.indexOf(c), 1);
+      var ps = players(state), near = null, nd = Infinity;
+      ps.forEach(function (p) { var d = dist(p.x, p.y, c.x, c.y); if (d < nd) { nd = d; near = p; } });
+      obj.x = q.x; obj.y = q.y; obj.reserve = false; obj.wave = 0;
+      obj.owner = (near && near.owner) || 1;
+      if (obj.owner === 2) obj.paint = 'C';
+      if (near) { obj.facing = Math.atan2(near.y - obj.y, near.x - obj.x); obj.faceL = near.x < obj.x; }
+      state.sc.found = state.turn;
+      out.push({ text: 'Counter ' + c.id + ' ' + why + (last && roll !== 6 ? ' — the last of them' : ' (D6 ' + roll + ')') + ': it is ' + obj.name + '! Get them out before the end of turn 16.', unit: obj, revealed: true, objective: true });
+      return obj;
+    }
+    if (roll >= 3 && pool(state).length) {
+      var u = reveal(state, c, why + ' (D6 ' + roll + ')', out);
+      return u;
+    }
+    state.sc.counters.splice(state.sc.counters.indexOf(c), 1);
+    out.push({ text: 'Counter ' + c.id + ' ' + why + ' (D6 ' + roll + '): nothing there.' });
+    return null;
+  }
+  // the objective standing in an entry point's corridor at either long edge: out
+  function objectiveOut(state) {
+    var o = besiegedObjective(state);
+    if (!o || !o.alive || o.reserve || !onTable(o) || !state.compound) return false;
+    var ent = state.compound.entries;
+    return ent.L.concat(ent.R).some(function (b) {
+      return o.x >= b.x - 0.5 && o.x <= b.x + b.w + 0.5 && o.y >= b.y - 0.5 && o.y <= b.y + b.h + 0.5 &&
+        (o.x <= UR + 1 || o.x >= R.BOARD.w - UR - 1);
+    });
+  }
+  SOLO.s_besieged = base({
+    id: 's_besieged', name: 'Besieged', page: 163, compound: true, closeEncounters: true,
+    blurb: 'Rescue an important unit cut off within the complex. Better hurry — time is critical!',
+    win: 'Find the important unit among the counters and bring it out through an entry point before the end of turn 16. Not found by turn 6, the game may end any turn: a 6, then 5+, 4+ and so on.',
+    hint: 'The OpFor waits in the compound as counters, twice as many as its units. A counter is turned over when your units see it: 1-2 nothing, 3-5 an enemy, 6 the unit you came for. Revealed enemies are aggressive, go for the important unit before anything else, and trade fire the moment they are found.',
+    deployText: function () { return 'Nobody deploys before the battle: half your commando comes in through the entry points on the left edge in the Reserve phase of turn 1, the rest in turn 2 — anywhere along the corridor that opens onto the edge.'; },
+    entersTurn1: true,
+    extraUnits: function (state) {
+      // "use the parameters of HQ unit with Unit Tier equal to Battle Tier, but without special rules"
+      var bt = state.cfg.tier, faction = state.solo.faction || 'pmc';
+      var cu = leaderOf(faction, bt) || leaderOf('pmc', bt);
+      var p = {};
+      for (var k in cu) p[k] = cu[k];
+      p.key = 'soloobj'; p.code = 'OBJ'; p.name = 'Important unit'; p.rules = []; p.command = false;
+      return [{ profile: p, side: 'A', owner: 1, objective: true }];
+    },
+    deploy: function (state) {
+      toPool(state);
+      var ent = state.compound ? state.compound.entries : { L: [], R: [] };
+      state.sc.entry = { A: ent.L.slice(), B: [] };
+      state.sc.zones = { A: state.sc.entry.A, B: [] };
+      var obj = besiegedObjective(state);
+      if (obj) { obj.reserve = true; obj.wave = 'objective'; obj.x = -1; obj.y = -1; }
+      /* "a number of counters equal to twice the number of OpFor units ... scattered
+         within the complex": 6" apart where they fit, out of sight of the entries */
+      var n = pool(state).length * 2, unseen = function (p) {
+        return p.x > 12 && !state.sc.entry.A.some(function (b) { return R.hasLoS(state, { x: b.x + b.w / 2, y: b.y + b.h / 2, alive: true }, { x: p.x, y: p.y, alive: true }); });
+      };
+      // a small compound holds fewer 6" apart: closer, then, rather than fewer
+      for (var apart = 6; apart >= 2; apart -= 2) {
+        state.sc.counters = placeCounters(state, n, apart, unseen);
+        if (state.sc.counters.length >= n) break;
+      }
+      var mineA = state.units.filter(function (u) { return u.side === 'A' && u.alive && !u.soloObjective; });
+      var first = Math.ceil(mineA.length / 2);
+      mineA.forEach(function (u, i) { u.reserve = true; u.wave = i < first ? 1 : 2; u.x = -1; u.y = -1; u.hidden = false; });
+      state.sc.found = 0;
+    },
+    zoneFor: function (state, side) { return side === 'A' ? state.sc.zones.A : null; },
+    reserves: function (state, side) {
+      if (side !== 'A') return [];
+      return state.units.filter(function (u) {
+        return u.side === 'A' && u.alive && u.reserve && !u.soloObjective && (u.wave === state.turn || (typeof u.wave === 'number' && u.wave < state.turn));
+      });
+    },
+    /* Where the players' units make for (the AI's, in a demo): the counters still
+       to be turned over; once it is found, the important unit for the way out at
+       the nearest entry point, and the rest for it. The OpFor goes for the enemy. */
+    goals: function (state, u) {
+      if (u && u.side !== 'A') return [];
+      var o = besiegedObjective(state);
+      if (o && o.alive && !o.reserve && onTable(o)) {
+        if (u && u !== o) return [{ x: o.x, y: o.y }];
+        var ent = state.compound ? state.compound.entries : { L: [], R: [] };
+        return ent.L.concat(ent.R).map(function (b) {
+          return { x: b.x < R.BOARD.w / 2 ? UR : R.BOARD.w - UR, y: b.y + b.h / 2, exit: true };
+        });
+      }
+      return (state.sc.counters || []).map(function (c) { return { x: c.x, y: c.y }; });
+    },
+    // "Revealed OpFor units show aggressive (+2) behaviour"
+    behaviour: function () { return { mod: 2, why: 'aggressive +2' }; },
+    // the commando in a demo, run by the behaviour table: the clock is running
+    playerTemper: function () { return { mod: 2, why: 'time is critical +2' }; },
+    // "If there is a possibility of attacking the objective unit in any way, OpFor will do so"
+    mustTarget: function (state) {
+      var o = besiegedObjective(state);
+      return o && o.alive && !o.reserve && onTable(o) ? o : null;
+    },
+    beginning: function (state) {
+      var out = [];
+      state.sc.counters.slice().forEach(function (c) {
+        if (state.sc.counters.indexOf(c) >= 0 && seen(state, c, 99)) besiegedReveal(state, c, 'is spotted', out);
+      });
+      return out;
+    },
+    // asked after each move and activation: counters a player's unit now sees; `detect`, a Detect's 12" sweep
+    spot: function (state, detect) {
+      var out = [];
+      (state.sc.counters || []).slice().forEach(function (c) {
+        if (state.sc.counters.indexOf(c) < 0) return;
+        if (detect && detect.alive && dist(detect.x, detect.y, c.x, c.y) - UR <= 12) besiegedReveal(state, c, 'is picked up by ' + detect.label + '’s sensors', out);
+        else if (seen(state, c, 99)) besiegedReveal(state, c, 'is spotted', out);
+      });
+      return out;
+    },
+    sudden: function (state) {
+      var o = besiegedObjective(state);
+      if (o && !o.alive) return { winner: 'B', text: 'The important unit is dead — the mission has failed.' };
+      if (objectiveOut(state)) return { winner: 'A', text: o.name + ' is brought out of the compound — mission accomplished.' };
+      return null;
+    },
+    check: function (state) {
+      var o = besiegedObjective(state);
+      if (o && !o.alive) return { winner: 'B', text: 'The important unit is dead — the mission has failed.' };
+      if (objectiveOut(state)) return { winner: 'A', text: o.name + ' is brought out of the compound — mission accomplished.' };
+      var left = state.units.some(function (u) { return u.side === 'A' && u.alive && !u.soloObjective; });
+      if (!left) return { winner: 'B', text: 'The commando is gone — nobody is coming for them now.' };
+      if (objectiveHidden(state)) {
+        // "If the Objective unit is not revealed after the 6th turn ... a roll of 6 ... +1 to each subsequent roll"
+        if (rollEnd(state, 6)) return { winner: 'B', text: 'Too late — the important unit was never found (D6 ' + state.sc.lastEndRoll.roll + ', needed ' + state.sc.lastEndRoll.need + '+).' };
+        return null;
+      }
+      if (state.turn >= 16) return { winner: 'B', text: 'The end of turn 16 and the important unit is still inside — the mission has failed.' };
+      return null;
+    }
+  });
+
   var ORDER = ['s_crush', 's_vip', 's_decap', 's_evac', 's_sabotage', 's_ambush'];
   ORDER.forEach(function (id) { SC.SCENARIOS[id] = SOLO[id]; });
+  // the Close Encounters solitaire scenario, offered with that option
+  var CE_ORDER = ['s_besieged'];
+  CE_ORDER.forEach(function (id) { SC.SCENARIOS[id] = SOLO[id]; });
 
   root.PMCSolo = {
-    COMMANDO: COMMANDO, OPFOR: OPFOR, ORDER: ORDER, SCENARIOS: SOLO,
+    COMMANDO: COMMANDO, OPFOR: OPFOR, ORDER: ORDER, CE_ORDER: CE_ORDER, SCENARIOS: SOLO,
     checkCommando: checkCommando, rollCommando: rollCommando, rollOpFor: rollOpFor, checkOpFor: checkOpFor,
     handPlaced: handPlaced, moveMarker: moveMarker, markersBlock: markersBlock,
     catalogue: catalogue, usable: usable, lzLegal: lzLegal, lzSpots: lzSpots, autoLZ: autoLZ,
