@@ -1,8 +1,8 @@
 # Roadmap: v0.2 and v0.3
 
 `package.json` is already at 0.2.0. This plan names what v0.2 is (the game as
-it stands) and what v0.3 adds: the parts of the rulebook not yet in the game,
-most of them as options a player switches on.
+it stands), what v0.3 adds (the rulebook's remaining parts, most of them as
+options a player switches on) and what v0.4 adds (Close Encounters).
 
 Book references are to the rulebook's markdown text (line numbers) and its
 pages. Code references are as of `1612ccc`.
@@ -118,7 +118,7 @@ unit count.
 ### 3. Other Worlds (option)
 
 Book l.5337-5409. Before the battle, roll a D10 three times: gravity,
-atmosphere, anomalies. In a campaign, roll before the contract.
+atmosphere, anomalies. In a campaign, roll before each contract (decision 3).
 
 | Condition | Effect |
 |---|---|
@@ -222,8 +222,7 @@ The changes:
     a single standard unit of Tier equal to the Battle Tier".
   - Today `militiaProfile` (`solitaire.js:787-793`) always uses PMC infantry.
   - Change it to the player's own faction's standard infantry unit of that
-    Tier. This needs a per-faction table of what a "standard unit" is (decision
-    below). It isn't an option; it's a rules fix.
+    Tier, from the table in decision 1. It isn't an option; it's a rules fix.
 - **Territorial pay.**
   - Book l.4555: the Xenotripod payment adjustment applies "including
     solitaire/coop scenarios".
@@ -271,7 +270,7 @@ up by 1.
 **Size:** medium to large. It mostly reuses the online co-op battle and the
 duel flow, but the aftermath has to handle two companies on one side.
 
-### 7. Close Encounters (option, with campaign support)
+### 7. Close Encounters (option, with campaign support) — v0.4
 
 Book l.5119-5336. This is close to a separate game mode inside compounds.
 
@@ -353,10 +352,9 @@ Book l.5119-5336. This is close to a separate game mode inside compounds.
 **J. Skirmish and campaign.**
 - **Skirmish:** the scenario picker gets a "Close Encounters" group when the
   option is on.
-- **Campaign:** with the campaign option on, a contract's scenario roll can
-  come up as a Close Encounters scenario (proposal: a fixed chance, or one of
-  the scenario slots). Units that can't take part (vehicles, aircraft) stay
-  home. Pay and aftermath as normal.
+- **Campaign:** a campaign setting (decision 6) sets how often a contract is a
+  Close Encounters battle: Off, Low (10%), Mid (50%) or All. Units that can't
+  take part (vehicles, aircraft) stay home. Pay and aftermath as normal.
 
 **Suggested internal order:**
 1. A (terrain and generator, drawn plainly);
@@ -369,9 +367,7 @@ Book l.5119-5336. This is close to a separate game mode inside compounds.
 8. AI depth;
 9. campaign hook.
 
-**Size:** very large, several releases' worth. It could ship as v0.3 (Clearing
-out, hidden movement, reaction fire) and v0.4 (hazards, equipment, defence
-systems, Besieged, campaign).
+**Size:** very large; all of it is v0.4.
 
 ---
 
@@ -385,34 +381,35 @@ systems, Besieged, campaign).
 | 4 | 3 Other Worlds | medium, breadth not depth |
 | 5 | 4 PL3 and 6′×4′ | large refactor; better done before Close Encounters adds terrain kinds |
 | 6 | 6 Co-op campaign contracts (+ territorial pay) | builds on online co-op and duels |
-| 7 | 7 Close Encounters | largest; may span v0.3 and v0.4 |
+| — | 7 Close Encounters | **v0.4** (decision 7) |
 
 Each step is its own PR, with unit tests per rule, a browser test of the UI,
 and a balance or simulation run where the AI is affected.
 
 ---
 
-## Decisions needed
+## Decisions (owner, 2026-10-12)
 
-1. **Evacuation militia:** what is each faction's "standard unit" of a given
-   Tier? Proposal:
-   - PMC: as now (recruits, rookie, regular, veterans, rangers);
-   - Rebels: their line infantry by Tier;
-   - Bugs: warrior bugs by Tier;
-   - Xenotripods: the Tier's basic tribe squad.
-2. **"Only two!" and reactions:** do defensive fire, arrival shots and
-   Opportunity Fire obey it? Proposal: no. Only the unit's own attack actions
-   do, which is what "making a Fire!, Advance, Assault or any other action"
-   suggests.
-3. **Other Worlds in a campaign:** roll per contract, as the book says, or fix
-   the conditions per planet for the whole campaign? Proposal: per contract.
-4. **PL4:** the book puts PL4 on 6′×4′ too. Unlock PL3 only, or 3 and 4
-   together? Proposal: both, once 6′×4′ works.
-5. **Co-op in campaigns:** online world campaigns only, or hotseat campaigns
-   as well? Proposal: both, since the hotseat hub already has two players.
-6. **Close Encounters in a campaign:** how often a contract comes up as one.
-   Proposal: on a campaign with the option on, the scenario roll includes
-   them with the same weight as a standard scenario.
-7. **Close Encounters scope for v0.3:** all of it, or the core (compound,
-   hidden movement, reaction fire, Clearing out, Critical control) with the
-   rest in v0.4?
+1. **Evacuation militia:** the player's faction's line unit of the Battle Tier.
+   - PMC: Recruits at Tier I, then Rifle infantry (Rookie, Regular, Veterans,
+     Rangers).
+   - Rebels: Freedom Warriors (Armed civilians, Militia, Organized insurgents,
+     Hardened insurgents, Revolutionary guard).
+   - Bugs: Lesser Bugs (Tiny swarms, Small bugs, Attack forms, Oversized attack
+     forms). At Tier V the Lesser Bugs entry is the Fire beetle, a vehicle, so
+     Tier V uses Oversized attack forms.
+   - Xenotripods: Epsilon troopers (`xeps1`–`xeps5`).
+2. **"Only two!":** limits only the unit's own attack actions. Defensive fire,
+   arrival shots and Opportunity Fire are not limited.
+3. **Other Worlds in a campaign:** rolled per contract, as the book says.
+   *Later idea:* generate a star system at the start of a campaign (a set of
+   planets, each with fixed conditions), and have contracts name a planet from
+   it.
+4. **Priority Level:** unlock PL3 only, on 6′×4′. PL4 later.
+5. **Co-op contracts:** in online world campaigns and in hotseat campaigns.
+6. **Close Encounters in a campaign:** a campaign setting with four levels:
+   - Off;
+   - Low: 10% of contracts;
+   - Mid: 50%;
+   - All.
+7. **Close Encounters moves to v0.4** as a whole. v0.3 is items 0–6.
