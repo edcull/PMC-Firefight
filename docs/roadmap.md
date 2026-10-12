@@ -387,6 +387,8 @@ against, the scenario, Tier, Priority Levels and roles are all still
 `rollOffers`. The offers are still rolled once a campaign turn and kept. Only
 where each one is fought changes, and what the screen looks like.
 
+A clickable mockup of B and C, with made-up data: `docs/mockups/star-system.html`.
+
 ### A. The system (rules: `src/rules/camp-system.js`)
 
 - `campaign.system` is made once, when the campaign is founded, from a seed kept
