@@ -35,9 +35,14 @@
       return out;
     }
     function tribeSees(state, side, t) { return tribeSeers(state, side, t).length > 0; }
-    // Dual-mode Weapons (p. 142): Indirect Fire at full modifiers on a target in sight
+    /* Dual-mode Weapons (p. 142): Indirect Fire at full modifiers on a target "in LoS". By
+       Mental Projection an enemy seen by one unbroken Xenotripod is visible to the whole army,
+       so a target the tribe sees counts, at any range, so long as the shooter's own line to it
+       is clear; a shot through blocking terrain is still Indirect Fire, at Basic Firepower
+       (owner's reading, XEN-16). */
     function dualMode(state, a, t) {
-      return !!state && doctrine(state, a.side, 'XT6') && !isFlying(a) && !!t && hasLoS(state, a, t);
+      if (!state || !doctrine(state, a.side, 'XT6') || isFlying(a) || !t) return false;
+      return hasLoS(state, a, t) || (tribeSees(state, a.side, t) && lineClear(state, a, t));
     }
     // Shield Generator (p. 130): +2 from a turret, +1 from a craft, the best one only
     function shieldFor(state, attacker, target) {

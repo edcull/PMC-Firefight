@@ -678,16 +678,42 @@
       var placed = [];
       cus.forEach(function (u) {
         u.soloFixed = true; u.noBreak = true;
-        // a defensive position: a building or a reinforced building if there is one, else cover
-        var shelters = state.terrain.filter(function (t) {
-          return (t.kind === 'building' || t.kind === 'bunker' || t.kind === 'ruins' || t.kind === 'woods') &&
-            t.x + t.w / 2 >= 12 && t.x + t.w / 2 <= W - 12 && t.y + t.h / 2 >= 12 && t.y + t.h / 2 <= H - 12 &&
-            placed.every(function (p) { return dist(p.x, p.y, t.x + t.w / 2, t.y + t.h / 2) >= 12; });
-        }).sort(function (a, b) { return (R.TERRAIN[b.kind].cover - R.TERRAIN[a.kind].cover) || (Math.random() - 0.5); });
-        var q = null;
-        for (var s = 0; s < shelters.length && !q; s++) {
-          var t = shelters[s];
-          q = spotNear(state, t.x + t.w / 2, t.y + t.h / 2, Math.min(t.w, t.h) / 2, u);
+        /* A defensive position "(e.g. in buildings or trenches)": a garrison in a building
+           or bunker if it is a unit that can garrison one; else inside cover (a trench first,
+           then ruins, craters and woods); else behind a low wall (the scenario's own barricades
+           included); and only failing all of that, open ground. Each 12" from the table edges
+           and from the other leaders (SOL-10). */
+        var inBounds = function (x, y) { return x >= 12 && x <= W - 12 && y >= 12 && y <= H - 12 && placed.every(function (p) { return dist(p.x, p.y, x, y) >= 12; }); };
+        var q = null, mid = function (t) { return { x: t.x + t.w / 2, y: t.y + t.h / 2 }; };
+        var was = { x: u.x, y: u.y };
+        u.x = W / 2; u.y = H / 2;                                  // (on the table, for canGarrison)
+        if (R.canGarrison(u)) {
+          var homes = shuffle(state.terrain.filter(function (t) { return R.enterable(t) && inBounds(mid(t).x, mid(t).y); }))
+            .sort(function (a, b) { return (b.kind === 'bunker') - (a.kind === 'bunker'); });
+          for (var h = 0; h < homes.length && !q; h++) {
+            var secs = R.sectionsOf(homes[h]);
+            for (var si = 0; si < secs.length && !q; si++) {
+              if (R.occupant(state, homes[h], si) || !inBounds(mid(secs[si]).x, mid(secs[si]).y)) continue;
+              q = R.enterBuilding(state, u, homes[h], si);
+              q = { x: u.x, y: u.y };
+            }
+          }
+        }
+        if (q) { u.reserve = false; u.wave = 0; placed.push(q); return; }    // (garrisoned: where enterBuilding put it)
+        u.x = was.x; u.y = was.y;
+        var rank = { trench: 0, ruins: 1, crater: 1, woods: 2 };
+        var covers = shuffle(state.terrain.filter(function (t) { return rank[t.kind] != null && inBounds(mid(t).x, mid(t).y); }))
+          .sort(function (a, b) { return rank[a.kind] - rank[b.kind]; });
+        for (var s = 0; s < covers.length && !q; s++) {
+          var t = covers[s];
+          q = spotNear(state, mid(t).x, mid(t).y, Math.max(1, Math.min(t.w, t.h) / 2), u,
+            function (p) { return R.coverAt(state, p.x, p.y, u) === 0 || !inBounds(p.x, p.y); });
+        }
+        var walls = shuffle(state.terrain.filter(function (t) { return t.kind === 'barricade' && inBounds(mid(t).x, mid(t).y); }));
+        for (var wi = 0; wi < walls.length && !q; wi++) {
+          var wl = walls[wi];
+          q = spotNear(state, mid(wl).x, mid(wl).y, Math.max(wl.w, wl.h) / 2 + 1.5, u,
+            function (p) { return R.rectPointDist(wl, p.x, p.y) > 1.2 || R.inRect(p.x, p.y, wl) || !inBounds(p.x, p.y); });
         }
         if (!q) {
           for (var g = 0; g < 400 && !q; g++) {

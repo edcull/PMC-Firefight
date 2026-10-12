@@ -280,7 +280,10 @@
           const p = R.profile(key);
           if (!p || p.faction !== (co.faction || 'pmc') || !(C.isTurretP(p) || p.noSlot) || !(p.tier <= k.tier || k.pl > 1)) return no('that cannot be fielded');
         }
-        const tactic = co.faction === 'rebel' && a.tactic && R.TACTICS.some((t) => t.id === a.tactic) ? a.tactic : null;
+        /* A rebel's tactic is chosen at the table when the battle begins (camp-world.js askTactics),
+           so the pick is checked without one, whatever is sent: a tactic taken here as well would
+           let Human Wave's free units be claimed on the contract and again at the table (REB-6). */
+        const tactic = null;
         const pick = { rids: rids, field: field, tactic: tactic, drugs: [] };
         const units = pickEntries(co, pick);
         const chk = R.checkArmy(units.map((e) => R.entryPick(e)), k.tier, k.pl, co.doctrines, tactic, co.faction);

@@ -145,5 +145,18 @@ ok('and comes out within 4" of the other pad', tr.ok && R.unitDist(sq, p2) <= 4,
 ok('it has not used its activation', sq.activated, false);
 ok('but it will not go back through this turn', R.teleportFrom(st7, p2).indexOf(sq) >= 0, false);
 
+head('Dual-mode Weapons (XT6): full modifiers on a target the tribe sees, with a clear line (XEN-16)');
+(function () {
+  // a Gamma squad, its target 20" off down a clear line, a Beta 5" from the target who sees it
+  var g = mk('xgamma3', 'A', 5, 5), t = mk('regular', 'B', 5, 25), b = mk('xbeta3', 'A', 12, 22);
+  var st = world([g, t, b]); st.doctrines = { A: ['XT6'], B: [] };
+  ok('20" off, seen by the tribe: full modifiers', R.shotMods(st, g, t, 'fire').basic, false);
+  st.terrain = [{ kind: 'building', x: 3, y: 12, w: 4, h: 4 }];
+  ok('...through a building: still Indirect Fire, Basic', R.shotMods(st, g, t, 'fire').basic, true);
+  ok('...which it may still fire', R.canShoot(st, g, t, 'fire'), true);
+  st.terrain = []; st.doctrines.A = [];
+  ok('without the doctrine: Basic', R.shotMods(st, g, t, 'fire').basic, true);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

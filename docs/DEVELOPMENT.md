@@ -115,7 +115,7 @@ test/
   where.js           shared paths and helpers for the tests
   hotseat.js         a hotseat battle played to the end through the board, as two players
 
-docs/                this file, and the hotseat and multiplayer plans
+docs/                this file, the hotseat and multiplayer plans, and the latest rules review
 build/               what the build and the tests write (not kept in git)
 ```
 

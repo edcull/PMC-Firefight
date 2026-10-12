@@ -259,7 +259,7 @@
     { id: 'XT5', cat: 'Technological', name: 'Mind Amplifiers',
       text: 'The range of Psychic Support is increased to 12".' },
     { id: 'XT6', cat: 'Technological', name: 'Dual-mode Weapons',
-      text: 'Units with Indirect Fire shooting at a target in their own sight get every modifier, not Basic Firepower. Not aircraft.' }
+      text: 'Units with Indirect Fire shooting at a target the tribe sees, down a clear line, get every modifier, not Basic Firepower. Over blocking terrain it is still Basic. Not aircraft.' }
   ];
   var ADVANCEMENT_GROUPS = ['Social', 'Organisational', 'Technological'];
   var BY_ADVANCEMENT = {};

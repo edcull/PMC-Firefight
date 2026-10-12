@@ -123,7 +123,7 @@ src/css/      the stylesheets
 server/       the multiplayer server (started by server.js)
 scripts/      the build, the unit sheet and the test runner
 test/         unit tests (Node) and browser tests (Playwright)
-docs/         development notes (file layout, build, tests) and the hotseat and multiplayer plans
+docs/         development notes (file layout, build, tests), the hotseat and multiplayer plans, and the latest rules review
 build/        what the build and the tests write (not kept in git)
 ```
 
