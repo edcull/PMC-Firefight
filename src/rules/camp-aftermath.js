@@ -59,10 +59,10 @@
       coA.kUC += out.payment.A;
       coB.kUC += out.payment.B;
       /* A star-system campaign (camp-system.js): the shares of the planet move with
-         the result, and the company is paid for its standing there going in. */
+         the result, and a sponsor's bounty there pays more. */
       if (campaign.system && report.site && root.PMCSystem) {
         out.system = root.PMCSystem.afterBattle(campaign, report.site, coB.name, report.winner);
-        if (out.system && out.system.bonus) { coA.kUC += out.system.bonus; out.payment.A += out.system.bonus; out.payment.standing = out.system.bonus; }
+        if (out.system && out.system.bonus) { coA.kUC += out.system.bonus; out.payment.A += out.system.bonus; out.payment.bounty = out.system.bonus; }
       }
 
       ['A', 'B'].forEach(function (side) {

@@ -445,7 +445,7 @@
         (E.after.winner
           ? 'The winner takes the higher, ' + p.high + '; the loser the lower, ' + p.low + '.'
           : 'A draw, so both companies take the lower, ' + p.low + '.') +
-        (me === 'A' && p.standing ? ' And ' + p.standing + ' ' + coin() + ' more for your standing on the planet.' : '') +
+        (me === 'A' && p.bounty ? ' And ' + p.bounty + ' ' + coin() + ' more from the bounty on the planet.' : '') +
         (p['neg' + me] ? ' Tough Negotiators re-rolled ' + p['neg' + me].swapped.length +
           (p['neg' + me].swapped.length === 1 ? ' die.' : ' dice.') : '') +
         '</div><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +

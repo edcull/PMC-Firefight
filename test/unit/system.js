@@ -75,20 +75,23 @@ console.log('\nStanding');
   const before = p.influence[foe];
   const won = S.afterBattle(camp, { planet: p.id }, foe, 'A');
   ok('a battle won: 12 of the rival\'s share moves to the company', p.influence.you === 42 && p.influence[foe] === before - 12, JSON.stringify(p.influence));
-  ok('...paid 1 kUC for each full 25 of standing going in', won.bonus === 1);
+  ok('...and nothing more paid for it: standing is for show', won.bonus === 0);
   ok('...and named', S.standingName(42) === 'Known' && S.standingName(50) === 'Held' && S.standingName(80) === 'Favoured' && S.standingName(3) === 'Unknown');
   S.afterBattle(camp, { planet: p.id }, foe, 'B');
   ok('a battle lost: 10 back the other way', p.influence.you === 32);
   p.influence = { you: 45, [foe]: 20 };
   const take = S.afterBattle(camp, { planet: p.id }, foe, 'A');
   ok('to 50 or more: the company holds the planet, and is told so', S.holder(p) === 'you' && take.lines.some((l) => /You hold/.test(l)), take.lines.join(' | '));
-  // through the campaign's aftermath: the bonus paid with the rest
+  // through the campaign's aftermath: the shares moved, and only a bounty paid on top
   const coA = camp.companies.A, k0 = coA.kUC;
   p.influence = { you: 60, [foe]: 30 };
   C.faceRival(camp, 0);
   const report = { winner: 'A', battleTier: 1, pl: 1, scenario: 'meeting', units: [], site: { planet: p.id } };
   const out = C.aftermath(camp, report, { dice: { A: [3], B: [3] } });
-  ok('the aftermath moves the shares and pays the standing bonus with the rest', out.system && out.system.bonus === 2 && out.payment.standing === 2 && coA.kUC === k0 + out.payment.A, JSON.stringify(out.payment));
+  ok('the aftermath moves the shares, with nothing paid for holding the planet', out.system && p.influence.you === 72 && !out.payment.bounty && coA.kUC === k0 + out.payment.A, JSON.stringify(out.payment));
+  camp.system.events.push({ kind: 'bounty', title: 'Bounty', text: '', planet: p.id, from: camp.turn, until: camp.turn + 1 });
+  const k1 = coA.kUC, out2 = C.aftermath(camp, Object.assign({}, report), { dice: { A: [3], B: [3] } });
+  ok('...a bounty on it pays 2 kUC more for the win', out2.system.bonus === 2 && out2.payment.bounty === 2 && coA.kUC === k1 + out2.payment.A, JSON.stringify(out2.payment));
 }
 
 console.log('\nEvents');

@@ -15,9 +15,10 @@
    - The book's dice leave about half the worlds like home. So that a system is
      worth looking at, at least half its planets carry a condition: the dice are
      rolled again for the rest until they do.
-   - Standing is the company's own share of influence on a planet. A battle won
-     there pays 1 kUC more for each full 25 of it (going in); a win moves 12 of
-     the rival's to the company, a loss 10 the other way. */
+   - Standing is the company's own share of influence on a planet: a win there
+     moves 12 of the rival's to the company, a loss 10 the other way. For now it
+     is for show — standing and holding a planet bring nothing in themselves
+     (the owner's ruling); only a Bounty event pays more. */
 (function (root) {
   'use strict';
   var R = root.PMC;
@@ -232,10 +233,10 @@
   function afterBattle(campaign, site, rivalName, winner) {
     var sys = campaign.system, p = sys && site && byId(sys, site.planet);
     if (!p) return null;
-    var before = standing(sys, p), was = holder(p), lines = [], bonus = 0;
+    var was = holder(p), lines = [], bonus = 0;
     if (winner === 'A') {
-      bonus = Math.floor(before / 25);
-      if (activeEvents(sys, p).some(function (e) { return e.kind === 'bounty'; })) bonus += 2;
+      // (standing pays nothing of itself: only a sponsor's bounty does)
+      if (activeEvents(sys, p).some(function (e) { return e.kind === 'bounty'; })) bonus = 2;
       var moved = Math.min(12, p.influence[rivalName] || 0);
       take(p, rivalName, moved); give(p, YOU, 12);
       lines.push('Your standing on ' + p.name + ' rises to ' + standing(sys, p) + ' (' + standingName(standing(sys, p)) + ').');
@@ -247,7 +248,7 @@
     if (now !== was) {
       lines.push(now === YOU ? 'You hold ' + p.name + ' now.' : now ? now + ' holds ' + p.name + ' now.' : p.name + ' is contested now.');
     }
-    if (bonus) lines.push('Paid ' + bonus + ' kUC more for the work on ' + p.name + '.');
+    if (bonus) lines.push('The bounty on ' + p.name + ' pays ' + bonus + ' kUC more.');
     lines.forEach(function (t) { sys.news.push({ turn: campaign.turn, text: t }); });
     sys.news = sys.news.slice(-12);
     return { planet: p.id, lines: lines, bonus: bonus, standing: standing(sys, p) };
