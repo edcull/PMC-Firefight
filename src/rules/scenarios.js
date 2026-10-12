@@ -126,27 +126,42 @@
     sorted.forEach(function (u, i) { (i % 2 ? second : first).push(u); });
     return { first: first, second: second };
   }
-  /* Last Stand (p. 95): four barricades a Priority Level, anywhere but the enemy's
-     deployment zone. They go down before the battle, so this runs once the scenario
-     has settled its zones — thrown up across the rebels' own half of the table. */
+  /* Last Stand (p. 95): four barricades a Priority Level, "anywhere on the table with
+     the exception of the enemy deployment zone". They go down before the battle, once
+     the scenario has settled its zones (engine finishSetup, after SC.deploy): no part of a piece in the enemy's zone — as
+     the scenario draws it, a circle, boxes or a strip — and, where there is room, within
+     12" of the rebels' own zone, where they will fight from them (REB-8). */
+  function inZone(state, side, x, y) {
+    var say = deployOK(state, side, x, y);
+    if (say !== null) return !!say;
+    var bx = state.scen && state.scen.boxes ? state.scen.boxes(state, side) : (state.sc && state.sc.boxes && state.sc.boxes[side]);
+    if (bx) return inBoxes(bx, x, y);
+    var z = zoneFor(state, side);
+    return !!z && x >= z[0] && x <= z[1];
+  }
   function lastStandBarricades(state) {
     ['A', 'B'].forEach(function (side) {
       if (!state.tactics || state.tactics[side] !== 'laststand') return;
       if (state.manualLaststand && state.manualLaststand[side]) return;   // a player puts theirs down by hand
-      var n = 4 * (state.cfg.pl || 1);
-      var near = side === 'A';                      // A holds the low edge, B the high
+      var foe = side === 'A' ? 'B' : 'A', n = 4 * (state.cfg.pl || 1);
+      // the rebels' own ground, sampled every 2"
+      var home = [];
+      for (var gx = 1; gx < W; gx += 2) for (var gy = 1; gy < H; gy += 2) if (inZone(state, side, gx, gy)) home.push([gx, gy]);
+      var nearHome = function (x, y) { return home.some(function (q) { return dist(q[0], q[1], x, y) <= 12; }); };
       for (var i = 0; i < n; i++) {
         var len = 3 + Math.floor(Math.random() * 4);   // no section over 6"
-        var horiz = Math.random() < 0.5;
-        var band = 8 + Math.random() * 12;             // 8-20" in from their own edge
-        var along = 4 + Math.random() * (W - 8 - len);
-        var across = near ? band : H - band;
-        state.terrain.push({
-          kind: 'barricade',
-          x: clamp(horiz ? along : across, 2, W - len - 2),
-          y: clamp(horiz ? across : along, 2, H - len - 2),
-          w: horiz ? len : 1, h: horiz ? 1 : len
-        });
+        for (var tries = 0; tries < 300; tries++) {
+          var horiz = Math.random() < 0.5;
+          var x = 2 + Math.random() * (W - 4 - (horiz ? len : 1)), y = 2 + Math.random() * (H - 4 - (horiz ? 1 : len));
+          var pc = { kind: 'barricade', x: x, y: y, w: horiz ? len : 1, h: horiz ? 1 : len, lastStand: side };
+          var pts = [[pc.x, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x + pc.w / 2, pc.y + pc.h / 2]];
+          if (pts.some(function (q) { return inZone(state, foe, q[0], q[1]); })) continue;
+          // on open ground, clear of other pieces and of any unit already standing there
+          if (pts.some(function (q) { return R.terrainAt(state, q[0], q[1]) !== 'open' || R.unitNear(state, q[0], q[1], null, 1.5); })) continue;
+          if (tries < 200 && home.length && !nearHome(pc.x + pc.w / 2, pc.y + pc.h / 2)) continue;
+          state.terrain.push(pc);
+          break;
+        }
       }
     });
   }
@@ -1028,7 +1043,6 @@
     var pts = s.objectives(state) || [];
     state.objectives = pts.map(function (p) { return { x: p.x, y: p.y, owner: null }; });
     if (s.setupTerrain) s.setupTerrain(state);
-    lastStandBarricades(state);
     separateTerrain(state);
     if (s.fortify) s.fortify(state);
     return s;
@@ -1183,7 +1197,7 @@
 
   root.PMCScen = {
     SCENARIOS: SCENARIOS, ORDER: ORDER,
-    begin: begin, deploy: deploy, lzOK: lzOK, lzSpots: lzSpots, autoLZs: autoLZs, setLZs: setLZs, zoneFor: zoneFor, deployOK: deployOK,
+    begin: begin, deploy: deploy, lastStandBarricades: lastStandBarricades, lzOK: lzOK, lzSpots: lzSpots, autoLZs: autoLZs, setLZs: setLZs, zoneFor: zoneFor, deployOK: deployOK,
     reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
     gunRule: gunRule, freeToHold: freeToHold, holderOf: holderOf, areaOf: areaOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
     rollRoles: rollRoles, bestDefence: bestDefence,

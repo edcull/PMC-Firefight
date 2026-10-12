@@ -317,7 +317,9 @@
         if (!near || nd > 16) return;
         var nx = p.x + (p.x - near.x) / (nd || 1) * 0.8, ny = p.y + (p.y - near.y) / (nd || 1) * 0.8;
         nx = clamp(nx, 4, W - 4); ny = clamp(ny, 4, H - 4);
-        if (passable(state, nx, ny) && (!want || want({ x: nx, y: ny }, out))) { p.x = nx; p.y = ny; }
+        // (judged against the others, as when it was put down: counted among them at its old spot,
+        // a counter that had to be near a leader could drift away from it, SOL-14)
+        if (passable(state, nx, ny) && (!want || want({ x: nx, y: ny }, out.filter(function (q) { return q !== p; })))) { p.x = nx; p.y = ny; }
       });
     }
     return out.map(function (p, i) { return { x: p.x, y: p.y, id: 'C' + (i + 1) }; });
@@ -386,12 +388,16 @@
   /* ---- landing zones (Crushing the Resistance, Sabotage) ----
      An 8" circle in open ground, no closer than 12" to any table edge — so its
      centre is at least 16" in — and in a cooperative game 18" from any other. */
-  function lzLegal(state, p, owner) {
+  // `loose`: a table with no clear 8" circle anywhere takes the middle in the open and the rest passable
+  function lzLegal(state, p, owner, loose) {
     if (p.x < 16 || p.y < 16 || p.x > W - 16 || p.y > H - 16) return false;
     if (!open(state, p.x, p.y)) return false;
-    for (var k = 0; k < 8; k++) {
-      var a = k / 8 * Math.PI * 2;
-      if (!passable(state, p.x + Math.cos(a) * 3, p.y + Math.sin(a) * 3)) return false;
+    // the whole circle in the open (p. 150), not only its middle: rings at 2" and 4" (SOL-16)
+    for (var ring = 2; ring <= 4; ring += 2) {
+      for (var k = 0; k < 12; k++) {
+        var a = k / 12 * Math.PI * 2, rx = p.x + Math.cos(a) * ring, ry = p.y + Math.sin(a) * ring;
+        if (loose ? ring === 2 && !passable(state, rx, ry) : !open(state, rx, ry)) return false;
+      }
     }
     var lz = state.sc.lz || {};
     for (var o in lz) if (String(o) !== String(owner) && dist(lz[o].x, lz[o].y, p.x, p.y) < 18) return false;
@@ -399,8 +405,10 @@
   }
   function lzSpots(state, owner) {
     var out = [];
-    for (var x = 16; x <= W - 16; x += 1) for (var y = 16; y <= H - 16; y += 1) {
-      if (lzLegal(state, { x: x, y: y }, owner)) out.push({ x: x, y: y });
+    for (var loose = 0; loose < 2 && !out.length; loose++) {
+      for (var x = 16; x <= W - 16; x += 1) for (var y = 16; y <= H - 16; y += 1) {
+        if (lzLegal(state, { x: x, y: y }, owner, !!loose)) out.push({ x: x, y: y });
+      }
     }
     /* In a cooperative game the first zone must leave the other player
        somewhere legal to land, 18" away — so only spots that do are offered. */
@@ -973,12 +981,34 @@
          written (the owner's ruling, rules review a119ac2 SOL-5): 5 at Priority Level 1,
          7 at 2. They go 12" apart; only if the table cannot take that many does the gap close. */
       var n = 3 + 2 * (state.cfg.pl || 1), out = [];
+      /* Points dropped one at a time can box each other in, so a set that does not fit is
+         started again, many times over, before the gap is closed (SOL-13): the 24" square
+         inside the 12" border holds nine points 12" apart. */
       for (var apart = 12; apart >= 6 && out.length < n; apart -= 2) {
-        out = [];
-        for (var g = 0; g < 8000 && out.length < n; g++) {
-          var p = { x: 12 + Math.random() * (W - 24), y: 12 + Math.random() * (H - 24) };
-          if (state && !passable(state, p.x, p.y)) continue;
-          if (out.every(function (q) { return dist(p.x, p.y, q.x, q.y) >= apart; })) out.push(p);
+        // seven (at Level 2) only fit on the 12" grid's points, nudged where they can be
+        if (apart === 12 && n > 5) {
+          var grid = shuffle([12, 24, 36].reduce(function (a, gx) { return a.concat([[gx, 12], [gx, 24], [gx, 36]]); }, []))
+            .map(function (q) { return { x: q[0] * W / 48, y: q[1] * H / 48 }; })
+            .filter(function (q) { return !state || passable(state, q.x, q.y); }).slice(0, n);
+          if (grid.length === n) {
+            grid.forEach(function (q) {
+              for (var t = 0; t < 30; t++) {
+                var m = { x: q.x + (Math.random() - 0.5) * 4, y: q.y + (Math.random() - 0.5) * 4 };
+                if (m.x < 12 || m.y < 12 || m.x > W - 12 || m.y > H - 12 || (state && !passable(state, m.x, m.y))) continue;
+                if (grid.every(function (o) { return o === q || dist(m.x, m.y, o.x, o.y) >= 12; })) { q.x = m.x; q.y = m.y; }
+              }
+            });
+            out = grid;
+            break;
+          }
+        }
+        for (var restart = 0; restart < 120 && out.length < n; restart++) {
+          out = [];
+          for (var g = 0; g < 600 && out.length < n; g++) {
+            var p = { x: 12 + Math.random() * (W - 24), y: 12 + Math.random() * (H - 24) };
+            if (state && !passable(state, p.x, p.y)) continue;
+            if (out.every(function (q) { return dist(p.x, p.y, q.x, q.y) >= apart; })) out.push(p);
+          }
         }
       }
       state.sc.targets = out.map(function (p, i) { return { x: p.x, y: p.y, id: i, destroyed: false }; });

@@ -150,15 +150,23 @@
           if (R.has(u, 'Turret')) return { on: false, hint: 'A turret is a stationary ground vehicle: it stays where it was teleported in.' };
           if (machine) return { on: true, hint: 'Drive up to Movement +4" — ' + (u.move + 4) + '". The hull ends up facing the way it travelled.' };
           if (sup && alreadySafe(u)) return { on: false, hint: 'Suppressed, and already in cover or out of sight: it cannot move to another such place (p. 34).' };
+          // (Riders, a Human Wave, Runners and T3 move Movement +4": the bonus as the move itself takes it, BAT-4)
+          var mb = moveBonus(u, 'move');
           return sup
-            ? { on: true, hint: 'Suppressed: may only move into cover or out of sight, up to ' + (u.move + 2) + '".' }
-            : { on: true, hint: 'Move up to Movement +2" — ' + (u.move + 2) + '". Ends the activation.' };
+            ? { on: true, hint: 'Suppressed: may only move into cover or out of sight, up to ' + (u.move + mb) + '".' }
+            : { on: true, hint: 'Move up to Movement +' + mb + '" — ' + (u.move + mb) + '". Ends the activation.' };
         case 'fire': {
           if (sup) return { on: false, hint: 'Suppressed units may only fire auxiliary weapons.' };
           if (u.fp === null) return { on: false, hint: 'This unit has no Firepower.' };
           var t = targetsFor(u, {});
+          /* A unit that fires at Basic Firepower at every target (an aircraft, Indirect Fire,
+             Always Basic Firepower) gets neither bonus; half range is of the range it fires at
+             now (a dug-in gun's 24"), rounded up as the shot rounds it (VEH-8). */
+          var allBasic = t.length && t.every(function (x) { return R.shotMods(E.state, u, x, 'fire').basic; });
+          var tn = t.length + ' target' + (t.length > 1 ? 's' : '') + ' in range.';
           return t.length
-            ? { on: true, hint: 'Stand and shoot: +1 to the firing roll, +2 inside ' + (u.range / 2) + '". ' + t.length + ' target' + (t.length > 1 ? 's' : '') + ' in range.' }
+            ? { on: true, hint: allBasic ? 'Stand and shoot at Basic Firepower: only Firepower and models count. ' + tn
+              : 'Stand and shoot: +1 to the firing roll, +2 inside ' + Math.ceil(R.shotRange(u) / 2) + '". ' + tn }
             : { on: false, hint: 'No enemy within ' + u.range + '" and line of sight.' };
         }
         case 'fireconc': {
@@ -440,6 +448,8 @@
         endActivation(u);
         return;
       }
+      // Unreliable (p. 89): searching and sabotage are actions too (CMP-7)
+      if (['embark', 'disembark'].indexOf(id) < 0 && unreliableWasted(u)) return;
       if (id === 'checkarea') {
         // two locations in reach: the player says which one is searched
         var sites = SC.searchSpots(E.state, u);
@@ -453,21 +463,6 @@
         doCheckArea(u); return;
       }
       if (id === 'sabotage') { doSabotage(u); return; }
-      // Unreliable: a D6 before any action, and on a 1 the unit simply stands there
-      if (R.campFlag(u, 'unreliable') && ['embark', 'disembark'].indexOf(id) < 0) {
-        var ur = R.d6();
-        if (ur === 1) {
-          logLine('note', u.label + ' — Unreliable: D6 1, the order is not carried out.');
-          pushRes({
-            kind: 'Trauma', title: 'Unreliable', side: u.side,
-            note: u.label + ' fails to move off. The action is wasted.',
-            dice: [{ label: 'D6', value: ur }]
-          });
-          u.activated = true;
-          endActivation(u);
-          return;
-        }
-      }
 
       if (id === 'move') {
         ui.mode = 'move';
@@ -607,7 +602,26 @@
       return spots.length ? spots : [{ x: u.x, y: u.y, cost: 0 }];
     }
 
+    /* Unreliable (p. 89): "Before any action, the unit has to roll a D6: on a 1, the action
+       is wasted and the unit does nothing." True if it was: the activation is over. The
+       player's actions roll it (chooseAction), and so does the AI's turn (aiAct, CMP-7). */
+    function unreliableWasted(u) {
+      if (!R.campFlag(u, 'unreliable')) return false;
+      var ur = R.d6();
+      if (ur !== 1) return false;
+      logLine('note', u.label + ' — Unreliable: D6 1, the order is not carried out.');
+      pushRes({
+        kind: 'Trauma', title: 'Unreliable', side: u.side,
+        note: u.label + ' fails to move off. The action is wasted.',
+        dice: [{ label: 'D6', value: ur }]
+      });
+      u.activated = true;
+      endActivation(u);
+      return true;
+    }
+
     return {
+      unreliableWasted: unreliableWasted,
       actionState: actionState, chooseAction: chooseAction, dropFor: dropFor, nextOff: nextOff
     };
   };

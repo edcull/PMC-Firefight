@@ -47,3 +47,24 @@ variables, passed through to every world:
   more. Seeded battles diverge with any code change, so compare runs of the same size.
 - A world records each battle (`log`), the companies' Tier each turn (`tiers`), their
   state at the end (`end`) and any engine errors (`errors`).
+
+## What the scenarios themselves do to the attacker
+
+Checked in October 2026 (AI against AI, the same two forces played with the roles
+swapped, PMC against PMC at Tier II, 120 battles a line). In the campaign worlds the
+attacker wins Demolish about 64% of the time and Hostile takeover about 30%.
+
+| Hostile takeover, as the rules stand and with changes tried | Attacker wins |
+|---|---|
+| As it stands | 22% |
+| The attacker going in at once | 14% |
+| The attacker holding back until the push | 7% |
+| No surrender (attacker or defender) | 23% |
+| No fortifications for the defender | 28% |
+| The attacker's whole force on in turn 1 | 33% |
+| Both of the last two | 44% |
+
+The AI's attack plan (ai.js `assaultPlan`) did better than every other plan tried; what
+holds the attacker back is the scenario (p. 55): half the force on in turn 1 and the
+rest from turn 3 against a defender already dug in round the centre, with the
+fortifications on top. Those are the book's rules, so they stay.

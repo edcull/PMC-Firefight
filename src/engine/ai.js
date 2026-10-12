@@ -846,6 +846,8 @@
     }
 
     function aiAct(u) {
+      // Unreliable: the AI's units roll before acting, as a player's do (CMP-7)
+      if (E.unreliableWasted(u)) return;
       /* Decapitation: the OpFor's leaders "always act according to the Reasonably
          Defensive result and never Move nor Advance" (p. 152) — whatever state they
          are in, they shoot from where they are or keep their heads down. */
@@ -1221,16 +1223,26 @@
          Against Hostile takeover's dug-in position it waits for the defenders to be
          pinned first (or the attack to go in): twenty turns leave time to wear them down. */
       var ap = assaultPlan(u), bound = ap && ap.ahead <= 6 && (ap.demolish || ap.push || ap.supp >= 0.5);
+      /* "...but will leave the cover to shoot from half range AND with the Firepower bonus
+         from terrain" (p. 147, SOL-15): ground with a Firepower bonus from which an enemy
+         is within half range, whatever its cover. */
+      var half = Math.ceil(R.shotRange(u) / 2), foes = E.state.units.filter(function (e) {
+        return e.alive && e.side !== u.side && e.x >= 0 && !e.aboard && !husk(e);
+      });
+      var fpHalf = function (c) {
+        if (!(R.TERRAIN[R.terrainAt(E.state, c.x, c.y)] || {}).fp) return false;
+        return foes.some(function (e) { return R.inches(c.x, c.y, e.x, e.y) - 2 * UR <= half; });
+      };
       var cands = R.reachable(E.state, u, u.move).filter(function (c) {
         if (!canStand(u, c)) return false;
         c.cv = R.coverAt(E.state, c.x, c.y, u);
-        if (!bound) return c.cv > here;
+        if (!bound) { c.fpHalf = fpHalf(c); return c.cv > here || c.fpHalf; }
         c.od = R.inches(c.x, c.y, ap.o.x, ap.o.y);
         return c.cv >= here && c.cv > 0 && c.od <= ap.myD - 2 && ap.medD - c.od <= 6;
       });
       if (bound) hereScore = 0;
       // the best cover first, the nearest of it first (an attacker's: the nearest the objective)
-      cands.sort(function (a, b) { return (b.cv - a.cv) || (bound ? a.od - b.od : (a.cost || 0) - (b.cost || 0)); });
+      cands.sort(function (a, b) { return (!!b.fpHalf - !!a.fpHalf) || (b.cv - a.cv) || (bound ? a.od - b.od : (a.cost || 0) - (b.cost || 0)); });
       var pick = null, pickShot = null, ox = u.x, oy = u.y;
       for (var i = 0; i < cands.length && i < 16 && !pick; i++) {
         u.x = cands[i].x; u.y = cands[i].y;
@@ -1243,7 +1255,7 @@
         faceAfter(u, path, pick);
         var d = R.inches(u.x, u.y, pick.x, pick.y);
         u.x = pick.x; u.y = pick.y;
-        logLine('move', u.label + ' advances ' + d.toFixed(1) + '" into cover.');
+        logLine('move', u.label + ' advances ' + d.toFixed(1) + '"' + (pick.fpHalf ? ' to a firing position.' : ' into cover.'));
         crushAlong(u, path);
         animateMove(u, path, true);
         soloAfterMove(u);
@@ -1301,6 +1313,17 @@
     }
 
     function scoreSpot(u, c, goal, behaviour, look) {
+      /* Run for Your Lives! (p. 147): "moving as far as possible away from any
+         player-controlled units" — the distance from the nearest enemy is all that
+         counts; cover and the goal do not come into it (SOL-12). */
+      if (behaviour === 'flee') {
+        var far = Infinity;
+        E.state.units.forEach(function (e) {
+          if (!e.alive || e.side === u.side || e.x < 0 || e.aboard || husk(e)) return;
+          far = Math.min(far, R.inches(c.x, c.y, e.x, e.y));
+        });
+        return far === Infinity ? 0 : far;
+      }
       var s = 0;
       var terr = R.TERRAIN[look ? look.at(c.x, c.y) : R.terrainAt(E.state, c.x, c.y)];
       var cover = look ? R.TERRAIN[look.under(c.x, c.y)].cover || 0 : R.coverAt(E.state, c.x, c.y, u);
@@ -1342,8 +1365,7 @@
         });
         s += led * 1.5 - exposure * 1.2;
       }
-      if (behaviour === 'flee') s -= exposure * 3;
-      else if (behaviour === 'defensive') s += opportunity * 1.2 - exposure * 0.9;
+      if (behaviour === 'defensive') s += opportunity * 1.2 - exposure * 0.9;
       else s += opportunity * 1.6 - exposure * 0.3;
       return s;
     }

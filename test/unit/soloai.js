@@ -68,7 +68,10 @@ console.log('\nReasonably Neutral holds its position (p. 147)');
         // a step can run on into the Rally phase: a unit that broke and fled there made no Neutral move
         if (st.log.slice(j).some((l) => (l.text || '').indexOf(u.label + ' is broken and flees') === 0 || (l.text || '').indexOf(u.label + ' falls back') === 0)) continue;
         moves++;
-        if (R.coverAt(st, u.x, u.y, u) > R.coverAt(st, pos[u.id].x, pos[u.id].y, u)) intoCover++;
+        // into better cover — or, as the book allows (SOL-15), on to Firepower ground within half range of an enemy
+        // (read off the log: the enemy may have moved on since, in the same step)
+        const fpHalf = st.log.slice(j, j + 3).some((l) => (l.text || '').indexOf(u.label + ' advances') === 0 && /to a firing position/.test(l.text));
+        if (R.coverAt(st, u.x, u.y, u) > R.coverAt(st, pos[u.id].x, pos[u.id].y, u) || fpHalf) intoCover++;
         else {
           const foes = st.units.filter((v) => v.side === 'A' && v.alive && v.x >= 0);
           const nd = (p) => Math.min.apply(null, foes.map((f) => R.inches(f.x, f.y, p.x, p.y)));
@@ -77,7 +80,7 @@ console.log('\nReasonably Neutral holds its position (p. 147)');
       }
     }
   }
-  ok('a Neutral unit that moves goes into better cover', moves >= 3 && intoCover === moves, intoCover + ' of ' + moves + ' moves into cover');
+  ok('a Neutral unit that moves goes into better cover, or to a firing position', moves >= 3 && intoCover === moves, intoCover + ' of ' + moves + ' moves');
   ok('...and never closes on the players in the open', closer === 0, closer + '');
 })();
 

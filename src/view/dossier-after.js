@@ -287,9 +287,12 @@
       var tot = function (d) { return (d || []).reduce(function (a, b) { return a + b; }, 0); };
       var mine = tot(pre.dice[side]), theirs = tot(pre.dice[foe]);
       if (!pre.dice[foe]) return '';
-      var won = rep.winner === side, pay = won ? Math.max(mine, theirs) : Math.min(mine, theirs);
+      // PR Masters counts a draw as a victory for its pay (camp-contract.js payment, CMP-11)
+      var pr = rep.winner === null && C.hasDoctrine(co, 'S5');
+      var won = rep.winner === side || pr, pay = won ? Math.max(mine, theirs) : Math.min(mine, theirs);
       return '<p class="cpstat">' + esc((fco && fco.name) || 'The other side') + ' rolled <b>' + theirs + '</b>. ' +
-        (won ? 'As the winner you are paid the higher roll' : rep.winner === null ? 'In a draw both are paid the lower roll' : 'As the loser you are paid the lower roll') +
+        (pr ? 'PR Masters counts the draw as a win: you are paid the higher roll' : won ? 'As the winner you are paid the higher roll'
+          : rep.winner === null ? 'In a draw both are paid the lower roll' : 'As the loser you are paid the lower roll') +
         ': <b>' + pay + ' ' + C.money(co) + '</b> as the dice stand.</p>';
     }
     // the post-battle decisions, one to a screen

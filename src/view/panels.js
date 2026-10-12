@@ -511,11 +511,14 @@
       }
       // each kind a toggle: tapped, it is called up; tapped again, sent back
       h += '<div class="targets">';
-      pool.forEach(function (p) {
-        var on = called.some(function (u) { return u.key === p.key; });
-        h += '<button class="tgt' + (on ? ' sel' : '') + '" data-act="' + (on ? 'waveundo' : 'waveadd') + '" data-key="' + esc(p.key) + '" aria-pressed="' + on + '"' +
-          (on || w.left ? '' : ' disabled') + '><b>' + (on ? '\u2713 ' : '') + esc(p.name) +
-          '</b><span>' + p.size + ' models \u00b7 Move ' + p.move + ' \u00b7 FP ' + p.fp + ' \u00b7 Def ' + p.def + ' \u00b7 Morale ' + p.morale + '</span></button>';
+      // each kind on foot, and again as Riders where it may take the upgrade (REB-9)
+      var kinds = [];
+      pool.forEach(function (p) { kinds.push({ p: p, rd: false }); if (R.canRide(p)) kinds.push({ p: p, rd: true }); });
+      kinds.forEach(function (k) {
+        var p = k.p, on = called.some(function (u) { return u.key === p.key && !!u.riders === k.rd; });
+        h += '<button class="tgt' + (on ? ' sel' : '') + '" data-act="' + (on ? 'waveundo' : 'waveadd') + '" data-key="' + esc(p.key) + '" data-riders="' + (k.rd ? 1 : 0) + '" aria-pressed="' + on + '"' +
+          (on || (w.left && (!w.keys || w.keys.indexOf(p.key) >= 0)) ? '' : ' disabled') + '><b>' + (on ? '\u2713 ' : '') + esc(p.name) + (k.rd ? ' (Riders)' : '') +
+          '</b><span>' + (k.rd ? Math.ceil(p.size / 2) : p.size) + ' models \u00b7 Move ' + (k.rd ? 10 : p.move) + ' \u00b7 FP ' + p.fp + ' \u00b7 Def ' + p.def + ' \u00b7 Morale ' + p.morale + '</span></button>';
       });
       h += '</div><div class="acts">' +
         (w.left ? '<button class="act" data-act="waveauto"><span>Call them up for me</span><small>Fills the wave at random</small></button>' : '') +
@@ -1437,8 +1440,7 @@
           else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'nervous' || a === 'nonervous' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
           else if ((a === 'enddone' || a === 'surrender') && endBoth()) { endBothAnswer(a, b.getAttribute('data-side')); return; }
           else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
-          else if (a === 'waveadd') { send({ k: 'waveadd', key: b.getAttribute('data-key') }); return; }
-          else if (a === 'waveundo') { send({ k: a, key: b.getAttribute('data-key') }); return; }
+          else if (a === 'waveadd' || a === 'waveundo') { send({ k: a, key: b.getAttribute('data-key'), riders: b.getAttribute('data-riders') === '1' }); return; }
           else if (a === 'waveauto' || a === 'wavedone') { send({ k: a }); return; }
           else if (a === 'tactic') { send({ k: 'tactic', tactic: b.getAttribute('data-alt') || null }); return; }
           else if (a === 'droppick') { send({ k: 'droppick', id: b.getAttribute('data-id') }); return; }

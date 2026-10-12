@@ -17,7 +17,7 @@
       'and infantry assaulting it do not get the usual +4 against a vehicle.',
     'Aggressive':
       'Must charge the closest enemy it can reach whenever it activates, unless a friendly Overmind ' +
-      'within 18" is holding it back.',
+      'within 18" (24" with Increased Control) is holding it back.',
     'Always Basic Firepower':
       'Its main weapon always fires at Basic Firepower: no +1 for a stationary Fire!, no half-range, ' +
       'Crossfire, height or Markerlight bonuses.',
@@ -56,10 +56,10 @@
       'May not Advance or Assault, and cannot fire its main weapon from shallow water or on the turn it got ' +
       'off a vehicle.',
     'Death or Glory, Comrades!':
-      'A friendly unit within 12" (not Broken, not two Tiers higher) sheds all its Suppression as it launches ' +
+      'A friendly unit within 12" (not Broken, not another unit with this rule, not two Tiers higher) sheds all its Suppression as it launches ' +
       'an Assault, which also lets a Suppressed unit charge at all.',
     'Destructive Weapon':
-      'Can Demolish walls and buildings: a final 15+ or an unmodified 9 brings the piece down. Shooting at a ' +
+      'Can Demolish low and high walls and buildings (not reinforced ones): a final 15+ or an unmodified 9 brings the piece down. Shooting at a ' +
       'unit in or behind such a piece, the same roll blows the cover away — no cover bonus, and +1 on the hit table.',
     'Determined':
       'Its Morale never drops as the unit loses models.',
@@ -72,7 +72,7 @@
       'Robots: Determined, and loses all its Suppression in the Rally phase. Hits on it add 1 to the roll. ' +
       'No more Drone units than other units in the army, and no Experience or Trauma in a campaign.',
     'Endless Tide':
-      'In the End phase, an unbroken unit below its starting size with an unsuppressed Overmind in reach ' +
+      'In the End phase, an unbroken unit below its starting size with an unsuppressed Overmind within 18" (24" with Increased Control) ' +
       'gets D3 lost bugs back.',
     'Expendable':
       'The moment it becomes Broken the collars go off: every man left is killed and the unit is removed. Penal ' +
@@ -145,10 +145,10 @@
     'Overgrown Flying Bug':
       'A bug the size of an aircraft: it follows the aircraft rules, but can still assault.',
     'Overmind':
-      'Animal Behaviour bugs of its Tier or lower within 18" take cover and lose all Suppression in the Rally phase. ' +
-      'Any bug within 18", whatever its Tier, is not forced to charge by Aggressive, and Endless Tide works within 18" of an unsuppressed Overmind.',
+      'Animal Behaviour bugs of its Tier or lower within 18" (24" with Increased Control) take cover and lose all Suppression in the Rally phase. ' +
+      'Any bug in that reach, whatever its Tier, is not forced to charge by Aggressive, and Endless Tide works in it while the Overmind is unsuppressed.',
     'Pheromone Markers':
-      'Friendly Animal Behaviour bugs attacking a target within 18" of this unit get +1 to shoot and assault it, ' +
+      'Friendly Animal Behaviour bugs attacking a target within 18" (24" with Strong Pheromones) of this unit get +1 to shoot and assault it, ' +
       'up to +3 from several marker units.',
     'Psychic Support':
       'Counts as Field Medics: friendly units within 6" use the kinder medic hit table. The Psychic Bond ' +
@@ -190,7 +190,7 @@
       'and never rides in a transport. What it rides changes that: a motorbike may be carried but loses 6" to rough ground, ' +
       'a grav bike ignores the ground at \u22121 Defence, and a horse jumps walls but takes 1 more SP every time it is shot at.',
     'Sappers':
-      'Breach: carry charges against any wall or building, +4, bringing it down on a final 15+ or an unmodified 9 ' +
+      'Breach: carry charges against a low or high wall or a building (not reinforced ones), +4, bringing it down on a final 15+ or an unmodified 9 ' +
       '(a failed attempt falls back 2"). In the first round of an assault on a unit in cover they get +4, and the ' +
       'same roll blows the cover in.',
     'Shield Generator (X)':

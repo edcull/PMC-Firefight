@@ -54,8 +54,8 @@
       var suicidal = campFlag(target, 'suicidal');         // Suicidal Tendencies
       for (var i = 0; i < hits; i++) {
         var raw = d6(), r = raw + mod, tag, down = false;
-        if (suicidal) {
-          // ignores hits on 1-2, but goes down on a 5-6
+        if (suicidal && !(medics && r >= 6)) {
+          // ignores hits on 1-2, but goes down on a 5-6 — a 6 near Field Medics is still MEDIC! (CMP-13)
           if (r <= 2) tag = 'Steady, boys!';
           else if (r <= 4) { tag = 'Get down! (1 SP)'; out.sp += 1; }
           else { tag = 'Man down! (1 model, 2 SP)'; down = true; }
@@ -204,6 +204,12 @@
       var how;
       if (isFlying(t)) {
         how = 'shot out of the sky';
+        /* A Lifter's load is a vehicle, and the troops riding in that vehicle go down with
+           it too: "All troops on-board are killed" (p. 38, VEH-4). */
+        crew.slice().forEach(function (v) {
+          (v.cargo || []).forEach(function (w) { crew.push(w); });
+          v.cargo = [];
+        });
         crew.forEach(function (u) {
           u.alive = false; u.models = 0; u.aboard = null;
           /* In a campaign a downed aircraft makes an emergency landing on a 4+ and

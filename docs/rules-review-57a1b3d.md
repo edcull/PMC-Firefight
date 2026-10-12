@@ -188,4 +188,37 @@ phases and co-op alternation, OpFor activation order; behaviour table bands and 
 | SOL-9 Reasonably Defensive does not seek cover | **Fixed.** A Defensive OpFor unit first takes the best cover within its Movement, from where it can still shoot if there is such a spot (an Advance and a shot), else the best cover there is; only with no better cover in reach does it fire from where it stands. | `ai.js` (`defensiveHold`); test `soloai.js` |
 | SOL-10 Decapitation leaders placed in the open | **Fixed.** A leader that can garrison takes a building or bunker section; else a trench, ruins, crater or woods; else a spot behind a low wall (the scenario's barricades included); open ground only failing all of those. Every spot is 12" from the edges and the other leaders. In 274 leaders over eight planets: 67 garrisoned, 139 in cover, 41 behind a wall, 27 in the open (was 176 of 288), none near an edge or each other. | `solitaire.js` (`s_decap.deploy`); test `soloai.js` |
 | SOL-11 Advancing Defensive/Neutral OpFor shoot the easiest target | **Fixed** with SOL-9: after an Advance they engage the biggest threat too. | `ai.js` (`neutralHold`, `defensiveHold`, the move-then-shoot) |
-
+| BAT-4 Move hint says +2" | **Fixed.** The hint gives the Movement bonus the move itself takes (+4" for Riders, a Human Wave, Runners, T3). | `actions.js` |
+| BAT-5 Reserves and insertion alternate separately | Open: needs the Reserve phase's two arrival flows merged into one alternation (owner to decide). | |
+| VEH-4 Troops in a Lifter's load survive | **Fixed.** A downed Lifter takes the troops in the vehicle it carries with it. | `damage.js`; test `review57.js` |
+| VEH-6 Bailing out placed by the computer | Open: needs the owner asked mid-shot, on the other player's turn (owner to decide). | |
+| VEH-8 Fire! hint for Basic Firepower | **Fixed.** A unit that fires Basic at every target is told so; half range is of the range it fires at now, rounded up. | `actions.js` |
+| SCN-5 Move preview says 1" for a vehicle | **Fixed.** The preview gives what the unit pays (2" for a hull or Riders). | `input.js` |
+| SCN-6 Landing zone tooltip | **Fixed.** Over a landing zone the tooltip gives the house rule: held from over the circle. | `input.js` |
+| SPR-5 Breach gives Stealth back | **Fixed.** The breach strips the cover and keeps everything else, a marked target's Stealth still ignored. | `shoot.js`; test `review57.js` |
+| SPR-7 Sappers / Destructive Weapon tooltips | **Fixed.** Not reinforced walls or buildings. | `ruletext.js` |
+| CMP-7 Unreliable not rolled for the AI | **Fixed.** Rolled before every AI activation, and before a player's search or sabotage. | `actions.js` (`unreliableWasted`), `ai.js`; test `review57.js` |
+| CMP-8 Tactical Dumbness keeps hill and building Firepower | **Fixed.** No terrain bonuses at all. | `shoot.js`; test `review57.js` |
+| CMP-11 PR Masters card on a draw | **Fixed.** The card says a PR Masters company is paid the higher roll on a draw. | `dossier-after.js` |
+| CMP-12 Surrounded, but Steady card | **Fixed.** "in the Rally phase". | `campaign.js` |
+| REB-7 Human Wave ignores caps | **Fixed.** Only kinds the army's caps still allow are offered and accepted; the AI's call-up likewise. | `engine.js` (`waveChoices`), `panels.js`; test `review57.js` |
+| REB-8 Last Stand barricades in the enemy zone | **Fixed.** Placed once the zones are known (after the scenario's deployment set-up), never in the enemy's zone, near the rebels' own where there is room, on open ground clear of units. In 72 games none landed in the enemy's zone (was 64 of 64 attacking in Invasion). | `scenarios.js`, `engine.js` (`finishSetup`); test `review57.js` |
+| REB-9 Wave cannot take Riders | **Fixed.** Each kind that may ride is offered on foot and as Riders. | `engine.js` (`waveAdd`), `panels.js`; test `review57.js` |
+| REB-11 Death or Glory tooltip | **Fixed.** Names the other-leaders exclusion. | `ruletext.js` |
+| BUG-11 Bug tooltips at 18" | **Fixed.** They give the 24" of Increased Control and Strong Pheromones. | `ruletext.js` |
+| XEN-17 Infamy of Panic twice | **Fixed.** A Broken friend fleeing off the table is not answered again. | `xeno.js`; test `review57.js` |
+| XEN-21 Rite of Knowledge card | **Fixed.** Teleport Turrets, a 1–2. | `campaign.js` |
+| XEN-22 Time Vortex card | **Fixed.** A Move or an Advance. | `campaign.js` |
+| SOL-12 Run for Your Lives! | **Fixed.** As far as possible from the nearest enemy; cover does not come into it. | `ai.js` (`scoreSpot`); test `review57.js` |
+| SOL-13 Sabotage objectives too close | **Fixed.** Fresh attempts before the gap closes, and the 12" grid for seven: 0 of 80 tables too close (was 18 of 40 and 40 of 40). | `solitaire.js`; test `review57.js` |
+| SOL-14 Decapitation counters | **Fixed.** The spreading pass keeps half within 12" of a leader: 0 of 200 tables short (was about 60%). | `solitaire.js` (`placeCounters`); test `review57.js` |
+| SOL-15 Neutral never leaves cover | **Fixed.** It moves to Firepower ground within half range of an enemy, as the book allows. | `ai.js` (`neutralHold`); test `review57.js` |
+| SOL-16 Landing zone partly in cover | **Fixed.** The whole 8" circle in the open; a table with no such spot falls back to the looser test. | `solitaire.js` (`lzLegal`, `lzSpots`); test `review57.js` |
+| SOL-17 Civilians back into the homes | **Fixed.** A civilian group cannot enter the reinforced buildings. | `space.js` (`enterTargets`); test `review57.js` |
+| VEH-5 Tier III+ hull through a high wall for free | **Fixed** (owner: the crushing move is "still subject to penalties"): 2" for the section, as a low wall. | `move.js` (`terrainCost`); test `review57.js` |
+| VEH-7 Martyrdom on a machine off the shooting table | **Fixed** (owner: unambiguous, it is an assault): the assault table, 1 / 2-3 / 4-6 D3. | `assault.js` (`machineAssaultHits`); test `review57.js` |
+| CMP-9 Rapid Relocation rounds up | **Fixed** (owner: round down): up to half the units on the table, rounded down, as the other "up to" shares. | `engine.js` (`relocCap`); test `review57.js` |
+| CMP-13 Suicidal Tendencies switch off Field Medics | **Fixed** (owner: a 6 is still MEDIC!): 1-2 ignored, 3-4 Get down!, 5 Man down!, and a 6 near medics goes to the medic as usual. | `damage.js` (`resolveShootingHits`); test `review57.js` |
+| XEN-18 Markerlights mark through blocking terrain | **Fixed** (owner: needs LoS): past the marker's own 12" the tribe's sight still needs a clear line from the marker. | `marks.js` (`markTargets`); test `review57.js` |
+| SCN-4, PMC-4, CMP-10, REB-10, BUG-10, BUG-12, XEN-19, XEN-20 | **Kept** (owner). BUG-12: the Carrier bug is Overgrown. XEN-20: Psychic and morale rules are for troops; machines run on Structure and damage. BUG-10: kept for now. | — |
+| SPR-6 No +1 on a breach against a vehicle | **Kept** (owner): the wall still comes down, but a vehicle takes no cover from it, so its hits get no +1. This is how the code already works. | — |
