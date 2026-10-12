@@ -238,6 +238,12 @@
         case 'reveal':
           if (!u.hidden) return { on: false, hint: 'Not hidden.' };
           return { on: true, hint: 'Reveal: take the counter off and put the unit down where it is. It then acts as normal this activation (p. 158).' };
+        case 'cover': {
+          if (u.covered === E.state.turn) return { on: false, hint: 'Already covered this activation.' };
+          var cv = E.coverers(u);
+          if (!cv.length) return { on: false, hint: 'Covering Fire!: no friend within 6" and in sight that is free to act and has an enemy to shoot.' };
+          return { on: true, hint: 'Covering Fire!: a friend within 6" and in sight fires first (its activation, no Fire! +1); then ' + u.name + ' acts (p. 158).' };
+        }
         case 'detect':
           if (!E.canDetect(u)) return { on: false, hint: 'Only Advanced Sensors or Sixth Sense can Detect, inside a compound.' };
           if (sup) return { on: false, hint: 'Suppressed: no special actions.' };
@@ -465,6 +471,7 @@
         render();
         return;
       }
+      if (id === 'cover') { E.startCover(u); return; }
       if (id === 'detect') {
         ui.mode = 'detect-move';
         ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });

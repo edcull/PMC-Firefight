@@ -1,7 +1,8 @@
-/* PMC 2670 — Firefight : Close Encounters' hidden movement (Appendix 1, p. 158):
-   units that start the battle as counters, what reveals them, the Fire at Will!
-   exchange when one walks into an enemy's sight, and the Detect special action
-   of Advanced Sensors and Sixth Sense.
+/* PMC 2670 — Firefight : Close Encounters' hidden movement and reaction fire
+   (Appendix 1, p. 158): units that start the battle as counters, what reveals
+   them, the Fire at Will! exchange when one walks into an enemy's sight, the
+   Detect special action of Advanced Sensors and Sixth Sense, Covering Fire!
+   and Opportunity Fire.
 
    Made once by engine.js, the first time it is wanted. E is what it needs of
    engine.js: what never changes bound here once, and what does (the battle
@@ -12,7 +13,8 @@
   root.PMCEngineCounters = function (E) {
     var R = E.R, logLine = E.logLine, pushRes = E.pushRes, onTable = E.onTable,
         abShoot = E.abShoot, snapshotAlive = E.snapshotAlive, deathsSince = E.deathsSince,
-        playShooting = E.playShooting, fromLog = E.fromLog, soundFor = E.soundFor;
+        playShooting = E.playShooting, fromLog = E.fromLog, soundFor = E.soundFor,
+        isAI = E.isAI, ui = E.ui, setHint = E.setHint, revealConsole = E.revealConsole, render = E.render;
 
     /* The enemy unit nearest a point that sees a unit of u's standing there (u
        itself out of the way), or null. A counter is a unit on the table: hidden
@@ -141,10 +143,124 @@
       } else revealSweep();
     }
 
+    /* ---- Covering Fire! (p. 158) ----
+       "made by a non-active unit (the 'covering unit') as soon as a friendly unit
+       (the 'covered unit') within 6" and in line of sight is activated and
+       assigned an action. The covering unit remains in place and fires ... at
+       an enemy unit in line of sight and within Range ... may shoot through the
+       covered unit (but not through other friendly units). All standard bonuses
+       apply except from the +1 bonus for making a Fire! action. Covering Fire!
+       counts as an activation, and the attack is resolved BEFORE the covered
+       unit makes its action." Here it is taken from the covered unit's bar, at
+       the start of its activation: the cover first, then whatever it does. */
+    // a shot by `a` that may pass through `through` (the unit it covers)
+    function through(a, past, fn) {
+      var was = a.of;
+      a.of = past;
+      try { return fn(); } finally { if (was === undefined) delete a.of; else a.of = was; }
+    }
+    function coverTargets(f, u) {
+      return E.state.units.filter(function (t) {
+        return t.alive && t.side !== f.side && onTable(t) && !t.aboard && !t.hidden &&
+          through(f, u, function () { return R.canShoot(E.state, f, t, 'react', {}); });
+      });
+    }
+    function coverers(u) {
+      if (!E.state || !E.state.compound || !u || u.hidden || u.covered === E.state.turn) return [];
+      return E.state.units.filter(function (f) {
+        if (f === u || !f.alive || f.side !== u.side || !onTable(f) || f.aboard || f.hidden || f.activated) return false;
+        if (R.status(f) !== 'ready' || f.fp === null || R.unitDist(f, u) > 6 || !R.hasLoS(E.state, f, u)) return false;
+        return coverTargets(f, u).length > 0;
+      });
+    }
+    function startCover(u) {
+      ui.mode = 'cover-by';
+      ui.targets = coverers(u); ui.moves = []; ui.terrain = [];
+      setHint(null, 'Covering Fire! — tap the friend within 6" that fires first for ' + u.name + '.');
+      render();
+    }
+    function coverBy(f) {
+      var u = ui.selected;
+      ui.cover = { by: f.id };
+      ui.mode = 'cover-at';
+      ui.targets = coverTargets(f, u);
+      setHint(null, 'Covering Fire! — tap the enemy ' + f.name + ' fires at.');
+      render();
+    }
+    function coverAt(t) {
+      var u = ui.selected, f = ui.cover && E.byId(ui.cover.by);
+      ui.cover = null; ui.mode = 'idle'; ui.targets = [];
+      if (!u || !f) { render(); return; }
+      logLine('note', 'Covering Fire! — ' + f.label + ' opens up on ' + t.label + ' before ' + u.label + ' goes.');
+      through(f, u, function () { reactShot(f, t, 'Covering Fire!'); });
+      f.activated = true;                                // its activation, spent on the cover
+      u.covered = E.state.turn;
+      setHint(null, f.name + ' has fired: now ' + u.name + '’s action.');
+      render();
+    }
+
+    /* ---- Opportunity Fire (p. 158) ----
+       "When a unit enters an enemy unit's Line of Sight while moving, but ends the
+       move outside that unit's LoS (e.g. when crossing a corridor junction), the
+       enemy unit may react and shoot at the moving unit during it's move action,
+       thus interrupting it's activation. The moving unit must be in Range ... All
+       standard shooting modifiers are applied except the +1 bonus for the Fire!
+       action. Opportunity Fire counts as an activation." The enemy that could: one
+       not yet activated, steady, out of sight of the mover where it starts and
+       where it ends, with it in sight and in range somewhere on the way. The first
+       place along the route any of them could fire is where it is caught. */
+    function oppCheck(u, path, to) {
+      if (!E.state.compound || u.hidden || !path || path.length < 2) return null;
+      var pts = [];
+      for (var i = 1; i < path.length; i++) {
+        var a = path[i - 1], b = path[i], len = Math.hypot(b.x - a.x, b.y - a.y), n = Math.max(1, Math.ceil(len / 0.5));
+        for (var k = 1; k <= n; k++) pts.push({ x: a.x + (b.x - a.x) * k / n, y: a.y + (b.y - a.y) * k / n });
+      }
+      var start = Object.assign({}, u, { of: u }), end = Object.assign({}, u, { x: to.x, y: to.y, of: u });
+      var foes = E.state.units.filter(function (e) {
+        return e.alive && e.side !== u.side && onTable(e) && !e.aboard && !e.hidden && !e.activated &&
+          R.status(e) === 'ready' && e.fp !== null && !R.hasLoS(E.state, e, start) && !R.hasLoS(E.state, e, end);
+      });
+      if (!foes.length) return null;
+      for (var j = 0; j < pts.length - 1; j++) {
+        var g = Object.assign({}, u, { x: pts[j].x, y: pts[j].y, of: u });
+        for (var f = 0; f < foes.length; f++) {
+          if (R.canShoot(E.state, foes[f], g, 'react', {})) return { e: foes[f], at: pts[j], path: [path[0]].concat(pts.slice(0, j + 1)) };
+        }
+      }
+      return null;
+    }
+    /* Put to the enemy (the AI always fires); `done(stop)` carries on with the
+       move — `stop` the place and route it ends at if the shot pinned it there,
+       or null to go on to where it was going. */
+    function oppFire(u, opp, done) {
+      var e = opp.e, p = opp.at, x0 = u.x, y0 = u.y;
+      function answer(yes) {
+        E.state.oppAsk = null; ui.oppThen = null;
+        if (!yes || !e.alive || !u.alive) { done(null); return; }
+        u.x = p.x; u.y = p.y;
+        logLine('note', 'Opportunity Fire — ' + e.label + ' catches ' + u.label + ' crossing its line of sight.');
+        reactShot(e, u, 'Opportunity Fire');
+        e.activated = true;
+        var pinned = !u.alive || R.status(u) !== 'ready';
+        u.x = x0; u.y = y0;
+        if (pinned && u.alive) logLine('note', u.label + ' goes to ground where it was caught.');
+        done(pinned ? { at: p, path: opp.path } : null);
+      }
+      if (isAI(e.side)) { answer(true); return; }
+      E.state.oppAsk = { side: e.side, shooter: e.id, mover: u.id, x: p.x, y: p.y };
+      ui.oppThen = answer;
+      setHint(null, 'Opportunity Fire — ' + u.name + ' is crossing ' + e.name + '’s line of sight.');
+      revealConsole();
+      render();
+    }
+
     return {
       seerOf: seerOf, hiddenStop: hiddenStop, hiddenMove: hiddenMove, afterHiddenMove: afterHiddenMove,
       revealUnit: revealUnit, revealSweep: revealSweep, fireAtWill: fireAtWill, reactShot: reactShot,
-      detectReveal: detectReveal, canDetect: canDetect
+      detectReveal: detectReveal, canDetect: canDetect,
+      coverers: coverers, startCover: startCover, coverBy: coverBy, coverAt: coverAt,
+      oppCheck: oppCheck, oppFire: oppFire
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineCounters;

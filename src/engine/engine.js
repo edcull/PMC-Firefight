@@ -252,7 +252,7 @@
          or surrender, hold it as well — with nothing left to act, a step taken
          then would end the turn again and run the whole Rally phase once more. */
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
-        !state.martyrAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk && isAI(state.activeSide);
+        !state.martyrAsk && !state.oppAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk && isAI(state.activeSide);
     }
     function maybeAI() {
       if (draining || !canAI()) return;
@@ -263,7 +263,7 @@
       } finally { draining = false; }
     }
     function aiStep() {
-      if (!state || state.over || !isAI(state.activeSide) || state.martyrAsk) return false;
+      if (!state || state.over || !isAI(state.activeSide) || state.martyrAsk || state.oppAsk) return false;
       K.aiStands(state.activeSide);
       var list = eligible(state.activeSide);
       if (!list.length) { endActivation(); return true; }
@@ -1441,6 +1441,7 @@
     // a counter's one special action is to show itself (Close Encounters, p. 158)
     if (u && u.hidden) return [{ id: 'reveal', label: 'Reveal' }];
     if (u && K.canDetect(u)) out.push({ id: 'detect', label: 'Detect' });
+    if (u && state.compound && state.phase === 'battle') out.push({ id: 'cover', label: 'Covering Fire!' });
     /* Markerlights carry two different special actions (p. 58): Designate target
        calls up a gun that shoots without seeing, Mark the target calls up one that
        does see and fires as though at half range. Smoke Markers (p. 94) are the
@@ -1730,7 +1731,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.kyfAsk || state.nervousAsk || state.standAsk || state.faceAsk || state.endAsk) return false;   // an answer is owed first
+      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.oppAsk || state.kyfAsk || state.nervousAsk || state.standAsk || state.faceAsk || state.endAsk) return false;   // an answer is owed first
       if (state.relocating || state.placeAsk) return false;      // turn 1's relocations and fortifications come before the Action phase
       return state.activeSide === side;
     }
@@ -2113,6 +2114,13 @@
       var why = K.answerNervous(side, it.k === 'nervous');
       return why ? no(why) : yes;
     });
+    // Opportunity Fire (Close Encounters): the side whose unit could shoot says whether it does
+    on('opp noopp', null, function (side, it) {
+      var oa = state.oppAsk;
+      if (!oa || oa.side !== side || !ui.oppThen) return no('nothing to answer');
+      ui.oppThen(it.k === 'opp');
+      return yes;
+    });
     on('martyr nomartyr', null, function (side, it) {
       var ma = state.martyrAsk;
       if (!ma || ma.side !== side || !ui.martyrThen) return no('nothing to answer');
@@ -2177,6 +2185,8 @@
       else if (ui.mode === 'hack') K.doHack(t);
       else if (ui.mode === 'support') K.doSupport(t);
       else if (ui.mode === 'steady') K.doSteady(t);
+      else if (ui.mode === 'cover-by') K.coverBy(t);
+      else if (ui.mode === 'cover-at') K.coverAt(t);
       else K.doShoot(t);
       return yes;
     });

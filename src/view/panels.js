@@ -17,7 +17,7 @@
     var doSteady = B.doSteady, doSupport = B.doSupport, drawBoard = B.drawBoard;
     var holdArrival = B.holdArrival, holdInsertion = B.holdInsertion;
     var hud = B.hud, inReserve = B.inReserve, insertionCard = B.insertionCard, isAI = B.isAI;
-    var kyfCard = B.kyfCard, liftOf = B.liftOf, loadBefore = B.loadBefore, martyrCard = B.martyrCard;
+    var kyfCard = B.kyfCard, liftOf = B.liftOf, loadBefore = B.loadBefore, martyrCard = B.martyrCard, oppCard = B.oppCard;
     var mineCard = B.mineCard, movePreviewCard = B.movePreviewCard, mySide = B.mySide, openMenu = B.openMenu;
     var pickToDeploy = B.pickToDeploy, placeCard = B.placeCard, placingSide = B.placingSide;
     var playerSide = B.playerSide, relocPick = B.relocPick, render = B.render, roleOf = B.roleOf;
@@ -646,6 +646,8 @@
         if (ui.endShown !== ek) { ui.endShown = ek; if (window.innerWidth <= 1000 && B.setMTab) B.setMTab('act'); }
       }
       else if (B.state.martyrAsk && !isAI(B.state.martyrAsk.side)) html = martyrCard();
+      else if (B.state.oppAsk && !isAI(B.state.oppAsk.side)) html = atThisScreen(B.state.oppAsk.side) ? oppCard()
+        : '<div class="card"><h2>Opportunity Fire</h2><p class="sub"><b>' + esc(sideName(B.state.oppAsk.side)) + '</b> is deciding whether to open fire.</p></div>';
       else if (B.state.kyfAsk && !isAI(B.state.kyfAsk.side)) html = kyfCard();
       else if (B.state.nervousAsk && !isAI(B.state.nervousAsk.side) && !B.replaying() && !B.cardsPending()) html = atThisScreen(B.state.nervousAsk.side) ? nervousCard()
         : '<div class="card"><h2>Rally phase</h2><p class="sub"><b>' + esc(sideName(B.state.nervousAsk.side)) + '</b> is deciding whether the hive-mind steadies the swarm.</p></div>';
@@ -1453,7 +1455,7 @@
           else if (a === 'swapback') { send({ k: 'swappick', id: null }); return; }
           else if (a === 'swapopen') { send({ k: 'swapopen' }); return; }
           else if (a === 'deployready') { send({ k: 'deployready' }); return; }
-          else if (a === 'martyr' || a === 'nomartyr' || a === 'kyf' || a === 'nokyf' || a === 'nervous' || a === 'nonervous' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
+          else if (a === 'martyr' || a === 'nomartyr' || a === 'opp' || a === 'noopp' || a === 'kyf' || a === 'nokyf' || a === 'nervous' || a === 'nonervous' || a === 'stand' || a === 'nostand') { send({ k: a }); return; }
           else if ((a === 'enddone' || a === 'surrender') && endBoth()) { endBothAnswer(a, b.getAttribute('data-side')); return; }
           else if (a === 'enddone' || a === 'surrender') { send({ k: a }); return; }
           else if (a === 'waveadd' || a === 'waveundo') { send({ k: a, key: b.getAttribute('data-key'), riders: b.getAttribute('data-riders') === '1' }); return; }

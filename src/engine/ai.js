@@ -1110,25 +1110,43 @@
         if (s > bestScore) { bestScore = s; best = c; }
       });
       if (best) {
-        var d = R.inches(u.x, u.y, best.x, best.y);
         var path = R.pathTo(E.state, u, allowance, best);
-        faceAfter(u, path, best);
-        u.x = best.x; u.y = best.y;
-        logLine('move', u.label + (behaviour === 'flee' ? ' withdraws ' : noAdv ? ' moves ' : ' advances ') + d.toFixed(1) + '".');
-        crushAlong(u, path);
-        animateMove(u, path, true);
-        soloAfterMove(u);
-        if (u.x < 0) { u.activated = true; endActivation(u); return; }
-      }
-      if (behaviour !== 'flee' && !killAll && !noAdv && !R.campFlag(u, 'noAdvance')) {
-        // (the cautious OpFor engage the biggest threat after an Advance too, SOL-6)
-        var t2 = soloI && (behaviour === 'defensive' || behaviour === 'neutral') ? threatTarget(u, 'advance') : bestTarget(u, 'advance');
-        if (t2.t && t2.score > 0.2) {
-          whenIdle(function () { if (E.state && !E.state.over && u.alive) fire(u, t2.t, 'advance'); });
+        // Opportunity Fire (Close Encounters, p. 158): crossing an enemy's sight on the way, it may be shot there
+        var opp = E.oppCheck(u, path, best);
+        if (opp) {
+          E.oppFire(u, opp, function (stop) {
+            if (!u.alive) { u.activated = true; endActivation(u); return; }
+            if (moveTo(stop ? stop.at : best, stop ? stop.path : path, !!stop)) afterMove();
+          });
           return;
         }
+        if (!moveTo(best, path)) return;
       }
-      u.activated = true; endActivation(u);
+      afterMove();
+      // the move made; false if it took the unit off the table
+      function moveTo(to, route, pinned) {
+        var d = R.inches(u.x, u.y, to.x, to.y);
+        faceAfter(u, route, to);
+        u.x = to.x; u.y = to.y;
+        logLine('move', u.label + (behaviour === 'flee' ? ' withdraws ' : noAdv ? ' moves ' : ' advances ') + d.toFixed(1) + '".');
+        crushAlong(u, route);
+        animateMove(u, route, true);
+        soloAfterMove(u);
+        if (u.x < 0) { u.activated = true; endActivation(u); return false; }
+        if (pinned) { u.activated = true; endActivation(u); return false; }   // shot down on the way: no Advance shot
+        return true;
+      }
+      function afterMove() {
+        if (behaviour !== 'flee' && !killAll && !noAdv && !R.campFlag(u, 'noAdvance')) {
+          // (the cautious OpFor engage the biggest threat after an Advance too, SOL-6)
+          var t2 = soloI && (behaviour === 'defensive' || behaviour === 'neutral') ? threatTarget(u, 'advance') : bestTarget(u, 'advance');
+          if (t2.t && t2.score > 0.2) {
+            whenIdle(function () { if (E.state && !E.state.over && u.alive) fire(u, t2.t, 'advance'); });
+            return;
+          }
+        }
+        u.activated = true; endActivation(u);
+      }
     }
 
     function fire(u, t, mode) { resolveShot(u, t, mode, {}); }

@@ -94,6 +94,60 @@ console.log('\nCounters');
     'near ' + R.unitDist(fo, b2).toFixed(1) + '" ' + (b2.hidden ? 'hidden' : 'revealed') + ', far ' + R.unitDist(fo, b1).toFixed(1) + '" ' + (b1.hidden ? 'hidden' : 'revealed'));
 }
 
+console.log('\nReaction fire');
+// a room off the corridor at x 15-24, y 24-33: the enemy in it sees a stretch of the corridor and no more
+function roomTable(st) {
+  st.terrain = [
+    { kind: 'corridor', x: 0, y: 21, w: 36, h: 3, axis: 'h' }, { kind: 'room', x: 15, y: 24, w: 9, h: 9 },
+    { kind: 'bulkhead', x: 0, y: 0, w: 48, h: 21 }, { kind: 'bulkhead', x: 36, y: 21, w: 12, h: 3 },
+    { kind: 'bulkhead', x: 0, y: 24, w: 15, h: 24 }, { kind: 'bulkhead', x: 24, y: 24, w: 24, h: 24 }, { kind: 'bulkhead', x: 15, y: 33, w: 9, h: 15 }
+  ];
+}
+for (const answer of ['opp', 'noopp']) {
+  const { e, st } = stage(['regular'], ['regular']);
+  roomTable(st);
+  const a = st.units.find((u) => u.side === 'A'), b = st.units.find((u) => u.side === 'B');
+  put(b, 19.5, 31, false);
+  const sees = (x) => R.hasLoS(st, b, Object.assign({}, a, { x, y: 22.5, of: a }));
+  // the stretch of corridor it sees: the dash starts short of it and ends past it
+  let lo = null, hi = null;
+  for (let x = 2; x <= 34; x += 0.5) if (sees(x)) { if (lo === null) lo = x; hi = x; }
+  const x0 = lo - 1.5, x1 = hi + 1.5;
+  put(a, x0, 22.5, false);
+  a.move = Math.ceil(x1 - x0);                       // a long dash across the doorway
+  e.intent('A', { k: 'select', id: a.id });
+  e.intent('A', { k: 'action', id: 'move' });
+  const r = e.intent('A', { k: 'move', x: x1, y: 22.5 });
+  const asked = st.oppAsk;
+  if (answer === 'opp') {
+    ok('crossing the enemy\'s sight and out again, the move waits on the enemy', r.ok && asked && asked.side === 'B' && asked.shooter === b.id && !sees(x0) && !sees(x1),
+      'seen from ' + lo + ' to ' + hi + '; ' + JSON.stringify(asked));
+    ok('...whose player is asked, and nobody else may act meanwhile', !e.intent('A', { k: 'select', id: a.id }).ok || !!st.oppAsk);
+  }
+  const r2 = e.intent('B', { k: answer });
+  const log = st.log.map((l) => l.text).join('\n');
+  if (answer === 'opp') {
+    ok('Open fire: it shoots the mover where it crossed, and that is its activation', r2.ok && /Opportunity Fire — /.test(log) && b.activated && !st.oppAsk);
+    ok('...the mover goes on, or stops where it was caught if pinned', R.status(a) === 'ready' ? Math.abs(a.x - x1) < 0.6 : a.x < x1 && a.x >= lo - 0.5,
+      R.status(a) + ' at ' + a.x.toFixed(1));
+  } else {
+    ok('Let it pass: the move goes on, the enemy keeps its activation', r2.ok && Math.abs(a.x - x1) < 0.6 && !b.activated && !/Opportunity Fire — /.test(log));
+  }
+}
+{
+  const { e, st } = stage(['regular', 'regular'], ['regular']);
+  roomTable(st);
+  const [u, f] = st.units.filter((x) => x.side === 'A'), b = st.units.find((x) => x.side === 'B');
+  put(u, 17, 26, false); put(f, 21, 27, false); put(b, 19.5, 22.5, false);
+  e.intent('A', { k: 'select', id: u.id });
+  ok('Covering Fire! is on the bar of a unit with a friend in reach', e.intent('A', { k: 'action', id: 'cover' }).ok);
+  ok('...pick the friend', e.intent('A', { k: 'target', id: f.id }).ok);
+  ok('...then the enemy it fires at', e.intent('A', { k: 'target', id: b.id }).ok);
+  const log = st.log.map((l) => l.text).join('\n');
+  ok('the friend fires first, and has spent its activation', /Covering Fire! — /.test(log) && f.activated && !u.activated && u.covered === st.turn);
+  ok('...and the covered unit then acts', e.intent('A', { k: 'action', id: 'move' }).ok);
+}
+
 console.log('\nOnline');
 {
   const { e, st } = stage(['regular'], ['veterans']);

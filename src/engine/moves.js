@@ -241,74 +241,91 @@
         var hm = E.hiddenMove(u, path, pt);
         if (hm.by) { seen = hm.by; pt = hm.at; path = hm.path; d = R.inches(u.x, u.y, pt.x, pt.y); }
       }
-      faceAfter(u, path, pt);
-      u.x = pt.x; u.y = pt.y; ui.vis = null; ui.visKey = '';
-      crushAlong(u, path);
-      animateMove(u, path);
-      if (detect) {
-        logLine('move', u.label + (d > 1e-6 ? ' moves ' + d.toFixed(1) + '" and' : '') + ' sweeps with its sensors (Detect).');
-        E.detectReveal(u);
-        u.activated = true;
-        scenarioMoveEnd(u);
-        endActivation(u);
-        return;
-      }
-      if (u.hidden || seen) {
-        // unseen, it is a counter in the log too: nobody is told which
-        logLine('move', (seen ? u.label : 'A counter [' + u.side + ']') + ' moves ' + d.toFixed(1) + '"' + (seen ? '.' : ', unseen.'));
-        u.activated = true;
-        scenarioMoveEnd(u);
-        E.afterHiddenMove(u, seen);
-        endActivation(u);
-        return;
-      }
-      if (carryFirst) {
-        /* Driven its half: now it loads or unloads where it stands (p. 36). If
-           there is nobody to take on and nobody aboard, that is the end of it. */
-        logLine('move', u.label + ' drives ' + d.toFixed(1) + '" before loading.');
-        scenarioMoveEnd(u);
-        u.carryMoved = true; u.activated = false;
-        ui.mode = 'idle'; ui.moves = []; ui.targets = []; ui.preview = null;
-        var canLoad = (u.transport - (u.cargo || []).length) > 0 &&
-          activeUnits(u.side).some(function (t2) { return R.canEmbark(E.state, u, t2); });
-        if (!canLoad && !(u.cargo || []).length) { stayPut(u); return; }
-        render();
-        return;
-      }
-      if (ui.mode === 'advance-move') {
-        /* Moved, and not yet shot: the unit is half-way through its Advance. It
-           has used its move, so all that is left to it is the Advance's shot. */
-        u.advancing = true;
-        ui.mode = 'advance-fire'; ui.moves = [];
-        // what it may shoot at: the enemy, and (NOT ONE STEP BACKWARDS!) a friend carrying Suppression
-        ui.targets = targetsFor(u, {}).concat(R.steadyTargets(E.state, u));
-        logLine('move', u.label + ' advances ' + d.toFixed(1) + '".');
-        soloAfterMove(u);
-        samCheck(u);
-        if (!u.alive || u.x < 0) { u.activated = true; endActivation(); return; }
-        pivotThen(u, left, function () {
-          ui.targets = targetsFor(u, {}).concat(R.steadyTargets(E.state, u));   // its arc may have swung
-          if (!ui.targets.length) { u.activated = true; endActivation(); } else render();
+      /* Opportunity Fire (Close Encounters, p. 158): an enemy whose sight it
+         crosses on the way may shoot it there, and the move waits on the answer. */
+      var opp = !u.hidden && !seen ? E.oppCheck(u, path, pt) : null, pinned = false;
+      if (opp) {
+        var x0 = u.x, y0 = u.y;
+        E.oppFire(u, opp, function (stop) {
+          if (stop) { pt = stop.at; path = stop.path; d = R.inches(x0, y0, pt.x, pt.y); pinned = true; }
+          if (!u.alive) { u.activated = true; endActivation(u); return; }
+          place();
         });
         return;
       }
-      var terr = R.TERRAIN[R.kindsUnder(E.state, u)[0]];
-      logLine('move', u.label + ' moves ' + d.toFixed(1) + '"' + (terr.cover ? ' into ' + terr.name.toLowerCase() + '.' : '.'));
-      u.activated = true;
-      scenarioMoveEnd(u);
-      if (!u.alive || u.x < 0) { endActivation(); return; }
-      /* Advanced Control System (p. 143): "When making a Move action, the aircraft can
-         turn up to 90° after moving" — a player is asked, the AI swings at the nearest
-         enemy (rules review a119ac2 XEN-13). */
-      if (plainMove && u.cls === 'aircraft' && R.campFlag(u, 'advControl')) {
-        if (isAI(u.side)) { flightTurn(u); endActivation(); return; }
-        E.state.faceAsk = { side: u.side, ids: [u.id], dir: u.facing, swing: { from: u.facing } };
-        ui.faceThen = function () { endActivation(); };
-        setHint(null, 'Advanced Control System: ' + u.name + ' may turn up to 90\u00b0 after its move. Keep its facing if it need not turn.');
-        render();
-        return;
+      place();
+      function place() {
+        faceAfter(u, path, pt);
+        u.x = pt.x; u.y = pt.y; ui.vis = null; ui.visKey = '';
+        crushAlong(u, path);
+        animateMove(u, path);
+        if (detect) {
+          logLine('move', u.label + (d > 1e-6 ? ' moves ' + d.toFixed(1) + '" and' : '') + ' sweeps with its sensors (Detect).');
+          E.detectReveal(u);
+          u.activated = true;
+          scenarioMoveEnd(u);
+          endActivation(u);
+          return;
+        }
+        if (u.hidden || seen) {
+          // unseen, it is a counter in the log too: nobody is told which
+          logLine('move', (seen ? u.label : 'A counter [' + u.side + ']') + ' moves ' + d.toFixed(1) + '"' + (seen ? '.' : ', unseen.'));
+          u.activated = true;
+          scenarioMoveEnd(u);
+          E.afterHiddenMove(u, seen);
+          endActivation(u);
+          return;
+        }
+        if (carryFirst) {
+          /* Driven its half: now it loads or unloads where it stands (p. 36). If
+             there is nobody to take on and nobody aboard, that is the end of it. */
+          logLine('move', u.label + ' drives ' + d.toFixed(1) + '" before loading.');
+          scenarioMoveEnd(u);
+          u.carryMoved = true; u.activated = false;
+          ui.mode = 'idle'; ui.moves = []; ui.targets = []; ui.preview = null;
+          var canLoad = (u.transport - (u.cargo || []).length) > 0 &&
+            activeUnits(u.side).some(function (t2) { return R.canEmbark(E.state, u, t2); });
+          if (!canLoad && !(u.cargo || []).length) { stayPut(u); return; }
+          render();
+          return;
+        }
+        // pinned down on the way by Opportunity Fire: the activation is over where it was caught
+        if (pinned && ui.mode === 'advance-move') { logLine('move', u.label + ' advances ' + d.toFixed(1) + '".'); u.activated = true; endActivation(); return; }
+        if (ui.mode === 'advance-move') {
+          /* Moved, and not yet shot: the unit is half-way through its Advance. It
+             has used its move, so all that is left to it is the Advance's shot. */
+          u.advancing = true;
+          ui.mode = 'advance-fire'; ui.moves = [];
+          // what it may shoot at: the enemy, and (NOT ONE STEP BACKWARDS!) a friend carrying Suppression
+          ui.targets = targetsFor(u, {}).concat(R.steadyTargets(E.state, u));
+          logLine('move', u.label + ' advances ' + d.toFixed(1) + '".');
+          soloAfterMove(u);
+          samCheck(u);
+          if (!u.alive || u.x < 0) { u.activated = true; endActivation(); return; }
+          pivotThen(u, left, function () {
+            ui.targets = targetsFor(u, {}).concat(R.steadyTargets(E.state, u));   // its arc may have swung
+            if (!ui.targets.length) { u.activated = true; endActivation(); } else render();
+          });
+          return;
+        }
+        var terr = R.TERRAIN[R.kindsUnder(E.state, u)[0]];
+        logLine('move', u.label + ' moves ' + d.toFixed(1) + '"' + (terr.cover ? ' into ' + terr.name.toLowerCase() + '.' : '.'));
+        u.activated = true;
+        scenarioMoveEnd(u);
+        if (!u.alive || u.x < 0) { endActivation(); return; }
+        /* Advanced Control System (p. 143): "When making a Move action, the aircraft can
+           turn up to 90° after moving" — a player is asked, the AI swings at the nearest
+           enemy (rules review a119ac2 XEN-13). */
+        if (plainMove && u.cls === 'aircraft' && R.campFlag(u, 'advControl')) {
+          if (isAI(u.side)) { flightTurn(u); endActivation(); return; }
+          E.state.faceAsk = { side: u.side, ids: [u.id], dir: u.facing, swing: { from: u.facing } };
+          ui.faceThen = function () { endActivation(); };
+          setHint(null, 'Advanced Control System: ' + u.name + ' may turn up to 90\u00b0 after its move. Keep its facing if it need not turn.');
+          render();
+          return;
+        }
+        pivotThen(u, left, function () { endActivation(); });
       }
-      pivotThen(u, left, function () { endActivation(); });
     }
 
     /* "Vehicles may make turns by reducing the range of their movement" (p. 35) —

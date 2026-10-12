@@ -184,7 +184,7 @@
        commando, so in the battle it is this screen's go only when its player's is. */
     var sides = coopNet() ? ['A'] : seats;
     if (coopNet() && state.phase === 'battle' && state.activeSide === 'A' && state.activeOwner && state.activeOwner !== myOwner() &&
-      !(state.kyfAsk || state.martyrAsk || state.nervousAsk || state.standAsk || state.endAsk)) return null;
+      !(state.kyfAsk || state.martyrAsk || state.oppAsk || state.nervousAsk || state.standAsk || state.endAsk)) return null;
     /* In the battle, nothing is this screen's to do while what has already
        happened is still being drawn: the rules may have moved on to its turn,
        but a tap now would be resolved before the other side's move is shown.
@@ -195,7 +195,7 @@
       return sides.indexOf(s) >= 0 ? s : null;
     }
     // a question put to one side, whoever's turn it is: that side answers it (HB-1, HB-2)
-    var ask = ui.reservePick || state.kyfAsk || state.martyrAsk || state.nervousAsk || state.standAsk || state.endAsk || state.faceAsk;
+    var ask = ui.reservePick || state.kyfAsk || state.martyrAsk || state.oppAsk || state.nervousAsk || state.standAsk || state.endAsk || state.faceAsk;
     if (ask && ask.side) return sides.indexOf(ask.side) >= 0 ? ask.side : null;
     // before the battle, as the transport decides who answers (net.js seatNow): the secret swaps, relocating, pieces placed, the mine
     var want = state.tacticAsk ? state.tacticAsk.order[state.tacticAsk.step]
@@ -1101,7 +1101,7 @@
   var anyArriving = ARRIVE.anyArriving, arriving = ARRIVE.arriving;
   var boardAnim = ARRIVE.boardAnim, cmdOfferCard = ARRIVE.cmdOfferCard, insertionCard = ARRIVE.insertionCard;
   var insertionMine = ARRIVE.insertionMine, kyfCard = ARRIVE.kyfCard, landUnit = ARRIVE.landUnit;
-  var martyrCard = ARRIVE.martyrCard, mineCard = ARRIVE.mineCard, placeCard = ARRIVE.placeCard;
+  var martyrCard = ARRIVE.martyrCard, oppCard = ARRIVE.oppCard, mineCard = ARRIVE.mineCard, placeCard = ARRIVE.placeCard;
   var snapReach = ARRIVE.snapReach, stepOff = ARRIVE.stepOff, swapCard = ARRIVE.swapCard;
   var walkOn = ARRIVE.walkOn;
 
@@ -1207,7 +1207,7 @@
     doSteady: doSteady, doSupport: doSupport, drawBoard: drawBoard,
     holdArrival: holdArrival, holdInsertion: holdInsertion, hud: hud, inReserve: inReserve,
     insertionCard: insertionCard, isAI: isAI, swapAskHere: swapAskHere, kyfCard: kyfCard, liftOf: liftOf, loadBefore: loadBefore,
-    martyrCard: martyrCard, mineCard: mineCard, movePreviewCard: movePreviewCard, mySide: mySide,
+    martyrCard: martyrCard, oppCard: oppCard, mineCard: mineCard, movePreviewCard: movePreviewCard, mySide: mySide,
     openMenu: openMenu, pickToDeploy: pickToDeploy, placeCard: placeCard, placingSide: placingSide,
     playerSide: playerSide, relocPick: relocPick, render: render, roleOf: roleOf, roleSentence: roleSentence,
     select: select, send: send, shownAs: shownAs, sideName: sideName, soloOwnerName: soloOwnerName,
