@@ -1610,6 +1610,20 @@
         Store.clear().then(function () { camp = null; view = 'hub'; render(); });
         return;
       case 'menu': toMenu(); return;
+      // a compound laid out by hand for one size of table, kept with the campaign (or let go)
+      case 'cmpedit': case 'cmpgen': {
+        var CMP = root.PMCCompound, size = t.getAttribute('data-size'), tb = CMP && CMP.TABLES.filter(function (b) { return CMP.sizeKey(b) === size; })[0];
+        if (!tb || !camp) return;
+        var keep = function (plan) {
+          var all = Object.assign({}, camp.compounds || {});
+          if (plan) all[size] = plan; else delete all[size];
+          camp.compounds = CMP.cleanCompounds(all);
+          save(); render();
+        };
+        if (go === 'cmpgen') keep(null);
+        else root.PMCCompoundEdit.open({ w: tb.w, h: tb.h, plan: (camp.compounds || {})[size] || null, onDone: keep });
+        return;
+      }
       case 'export': if (openModal === 'manage') { openModal = null; render(); } doExport(); return;
       case 'import': if (openModal === 'manage') { openModal = null; render(); } el('camp-file').click(); return;
       case 'wipe':

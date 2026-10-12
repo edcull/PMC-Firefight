@@ -94,7 +94,7 @@
       const ai = aiSlots(W), rivals = ai.map((s) => W.forces[s]);
       const facing = faced != null ? Math.max(0, ai.indexOf(faced)) : 0;
       return {
-        mode: 'solo', world: true, turn: p.turn || 0, created: 0, name: W.name, options: R.cleanOptions(W.options),
+        mode: 'solo', world: true, turn: p.turn || 0, created: 0, name: W.name, options: R.cleanOptions(W.options), compounds: W.compounds || {},
         companies: { A: W.forces[i], B: rivals[facing] || null }, rivals: rivals, facing: facing,
         offers: p.offers || null, offersTurn: p.offersTurn == null ? null : p.offersTurn, log: p.log || []
       };
@@ -126,7 +126,7 @@
     // a two-player camp of the shape the contract commands and the hotseat aftermath want
     function pairOf(W, d) {
       const A = W.forces[d.a], B = W.forces[d.b];
-      return { mode: 'hotseat', companies: { A: A, B: B }, rivals: [B], facing: 0, turn: (W.players[d.a] || {}).turn || 0, log: [], options: R.cleanOptions(W.options),
+      return { mode: 'hotseat', companies: { A: A, B: B }, rivals: [B], facing: 0, turn: (W.players[d.a] || {}).turn || 0, log: [], options: R.cleanOptions(W.options), compounds: W.compounds || {},
         online: { contract: d.contract || null }, pending: d.pending || null, post: d.post || null };
     }
 
@@ -144,6 +144,13 @@
         A: pA.map((e) => e.rid), B: pB.map((e) => e.rid),
         drugged: pA.concat(pB).filter((e) => e.drugged).map((e) => e.rid)
       };
+    }
+    /* The compound a Close Encounters battle of the world is fought in: the one the
+       host laid out by hand for that size of table (W.compounds), or null for the
+       generator's. */
+    function compoundFor(W, b) {
+      const CMP = root.PMCCompound;
+      return CMP ? CMP.planFor(CMP.cleanCompounds(W.compounds), b) : null;
     }
     // a contract with an AI force: the AI's list picked here, as the single-player dossier's fight() picks it
     function aiBattleConfig(W, i, k) {
@@ -172,7 +179,8 @@
           temper: { B: C.aiTemper(B) },
           campaign: true, mode: 'ai',
           planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto',
-          options: R.cleanOptions(W.options), world: k.world || null
+          options: R.cleanOptions(W.options), world: k.world || null,
+          compoundPlan: compoundFor(W, R.boardFor(k.pl))
         }
       };
     }
@@ -193,7 +201,8 @@
           tactics: { A: null, B: null }, askTactics: true,
           campaign: true, mode: 'hotseat', readyUp: true,
           planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto',
-          options: R.cleanOptions(W.options), world: k.world || null
+          options: R.cleanOptions(W.options), world: k.world || null,
+          compoundPlan: compoundFor(W, R.boardFor(k.pl))
         }
       };
     }
@@ -222,6 +231,7 @@
           campaign: true, mode: 'ai', netCoop: true,
           planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto',
           options: R.cleanOptions(W.options), world: k.world || null,
+          compoundPlan: compoundFor(W, { w: 48, h: 48 }),
           solo: { coop: true, faction: A.faction || 'pmc', opFaction: k.opFaction, names: [A.name, B.name] }
         }
       };
@@ -434,13 +444,13 @@
         }));
         const out = { phase: W.phase, name: W.name, slot: i, host: i === 0, slots: slots, invite: row && W.phase === 'lobby' ? row.invite : null,
           listed: !!(row && row.listed), chat: (W.chat || []).slice(-60), waiting: waitingOn(W, i), over: W.over || null,
-          options: R.cleanOptions(W.options) };
+          options: R.cleanOptions(W.options), compounds: W.compounds || {} };
         if (W.phase === 'lobby') return out;
         const p = W.players[i] || {};
         const v = viewOf(W, i, p.contract ? p.contract.vs : p.pending ? p.pending.vs : p.post ? p.post.vs : null);
         // the other players' forces after the AI ones, marked, for the hub to show as it shows a rival
         const others = humanSlots(W).filter((j) => j !== i).map((j) => Object.assign({}, W.forces[j], { human: true, slot: j, player: W.slots[j].name, out: !!W.slots[j].out, busy: busy(W, j) }));
-        const camp = Object.assign({}, v, { rivals: v.rivals.concat(others), post: p.post || null, pending: p.pending || null, options: R.cleanOptions(W.options) });
+        const camp = Object.assign({}, v, { rivals: v.rivals.concat(others), post: p.post || null, pending: p.pending || null, options: R.cleanOptions(W.options), compounds: W.compounds || {} });
         camp.online = {
           slot: i,
           contract: p.contract ? Object.assign({}, p.contract) : null,
@@ -546,6 +556,22 @@
         lobbyOptions(W, i, a) {
           if (i !== 0) return no('the host sets the optional rules');
           W.options = R.cleanOptions(a.options);
+          return { ok: true };
+        },
+        /* the host: a compound laid out by hand for one size of table ('WxH'), or
+           none (null) for the generator's — in the lobby or at any time after */
+        setCompound(W, i, a) {
+          if (i !== 0) return no('the host lays out the compounds');
+          const CMP = root.PMCCompound, table = CMP && CMP.TABLES.filter((b) => CMP.sizeKey(b) === a.size)[0];
+          if (!table) return no('no table of that size');
+          const all = Object.assign({}, W.compounds || {});
+          if (a.plan == null) delete all[a.size];
+          else {
+            const plan = CMP.cleanPlan(a.plan), ck = CMP.checkPlan(plan, table.w, table.h);
+            if (!ck.ok) return no(ck.faults[0] || 'that compound cannot be fought in');
+            all[a.size] = plan;
+          }
+          W.compounds = CMP.cleanCompounds(all);
           return { ok: true };
         },
         lobbyChat(W, i, a) {
@@ -1032,6 +1058,7 @@
         }
         if (W.phase === 'over') return no('the campaign is over');
         if (cmd === 'lobbyChat') return LOBBY.lobbyChat(W, i, a || {});
+        if (cmd === 'setCompound') return LOBBY.setCompound(W, i, a || {});
         if (!playing(W, i)) return no('you are out of this campaign');
         if (FORCE.indexOf(cmd) >= 0) return forceCmd(W, i, cmd, a || {});
         if (Object.prototype.hasOwnProperty.call(AI, cmd)) return AI[cmd](W, i, a || {}, ctx);

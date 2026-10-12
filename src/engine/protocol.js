@@ -92,7 +92,8 @@
       soloScen: 'roll',      // a cooperative game's scenario: one of the solitaire ones, or rolled
       opFaction: 'pmc',      // ...and the army the OpFor is raised from
       opColour: null,        // ...and the colours it wears, or null for ones the players do not
-      options: {}            // the optional rules switched on (R.OPTIONS); a campaign's battle takes the campaign's
+      options: {},           // the optional rules switched on (R.OPTIONS); a campaign's battle takes the campaign's
+      compound: null         // a Close Encounters compound laid out by the host (rules/compound.js plan), or null for the generator's
     };
   }
 
@@ -100,7 +101,7 @@
      unknown key is dropped rather than refused: an older client should still be
      able to change the tier. */
   // the solitaire scenarios a cooperative game is fought under (solitaire.js ORDER), or rolled
-  var SOLO_SCENARIOS = ['roll', 's_crush', 's_vip', 's_decap', 's_evac', 's_sabotage', 's_ambush'];
+  var SOLO_SCENARIOS = ['roll', 's_crush', 's_vip', 's_decap', 's_evac', 's_sabotage', 's_ambush', 's_besieged'];
   // only the optional rules the rules know of, each on or off (R.OPTIONS)
   function cleanOptions(o) {
     var R = root.PMC, out = {};
@@ -124,6 +125,8 @@
     if ('soloScen' in patch) s.soloScen = oneOf(patch.soloScen, SOLO_SCENARIOS, s.soloScen || 'roll');
     if ('opFaction' in patch) s.opFaction = oneOf(patch.opFaction, FACTIONS, s.opFaction || 'pmc');
     if ('options' in patch) s.options = cleanOptions(patch.options);
+    // a plan that is no plan at all is dropped; one that cannot be fought in is kept, and the engine lays its own (it says so)
+    if ('compound' in patch) s.compound = patch.compound && root.PMCCompound ? root.PMCCompound.cleanPlan(patch.compound) : null;
     if ('opColour' in patch) s.opColour = patch.opColour == null ? null : oneOf(patch.opColour, COLOURS, s.opColour || null);
     return s;
   }

@@ -92,6 +92,12 @@ function ok(name, cond, note) {
     view(brann).name === 'The Long War' && online.list(brann).some((c) => c.name === 'The Long War'));
   ok('only the host sets the optional rules', !cmd(brann, 'lobbyOptions', { options: { onlyTwo: true } }).ok &&
     cmd(ash, 'lobbyOptions', { options: { onlyTwo: true, otherWorlds: true, bogus: true } }).ok && JSON.stringify(view(brann).options) === '{"onlyTwo":true,"otherWorlds":true}', JSON.stringify(view(brann).options));
+  // a compound laid out by hand for the 4' x 4' table: the host's to lay out, and only one that can be fought in
+  const CMP = global.PMCCompound, plan44 = CMP.generatedPlan(48, 48);
+  ok('only the host lays out a compound for the campaign', !cmd(brann, 'setCompound', { size: '48x48', plan: plan44 }).ok &&
+    cmd(ash, 'setCompound', { size: '48x48', plan: plan44 }).ok && view(brann).compounds['48x48'].cells === plan44.cells);
+  ok('...not one that cannot be fought in, nor for a table that is not one', !cmd(ash, 'setCompound', { size: '48x48', plan: CMP.blankPlan(48, 48) }).ok &&
+    !cmd(ash, 'setCompound', { size: '60x60', plan: plan44 }).ok && view(ash).compounds['48x48'].cells === plan44.cells);
   ok('only the host starts it', !cmd(brann, 'lobbyStart').ok);
   ok('...and not before saying they are ready too', /Ash is not ready/.test(cmd(ash, 'lobbyStart').why));
   cmd(ash, 'lobbyReady', {});
@@ -149,6 +155,8 @@ function ok(name, cond, note) {
   const room = lobby.rooms.get(go.battle);
   ok('a private room: the player’s seat held, the AI’s side with nobody in it', room && room.settings.private && room.seats.A.id === 'u' + ash.userId && !room.seats.B);
   ok('...fought under the campaign\u2019s optional rules', room && room.table.engine.state().cfg.options.onlyTwo === true && !room.table.engine.state().cfg.options.bogus);
+  ok('...in the compound the host laid out for its table, if it is a 4\u2032 \u00d7 4\u2032 one', room && (room.table.cfg.pl >= 3 ? room.table.cfg.compoundPlan === null
+    : room.table.cfg.compoundPlan && room.table.cfg.compoundPlan.cells === plan44.cells), 'PL ' + (room && room.table.cfg.pl));
   ok('...on the world the contract was offered with (Other Worlds, rolled before the contract)', room && !!room.table.engine.state().cfg.world &&
     JSON.stringify(room.table.engine.state().cfg.world) === JSON.stringify(room.table.cfg.world), JSON.stringify(room.table.cfg.world));
   ok('...the table set for the AI to play side B, against the AI force’s own list', room && room.table.cfg.mode === 'ai' && room.table.cfg.nameB === aiName && room.table.cfg.armyB.length > 0 && room.table.engine.state().cfg.aiSides.indexOf('B') >= 0);

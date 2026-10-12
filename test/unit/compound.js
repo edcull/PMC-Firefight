@@ -211,6 +211,18 @@ console.log('\nHand-built compounds (p. 163: "set up the complex in agreeable wa
   ok('a battle given the plan is fought in it', s1.compound.built && s1.terrain.some((r) => r.kind === 'room' && r.x === 18 && r.y === 18) && /laid out by hand/.test(s1.log.map((l) => l.text).join()));
   const f = Engine.create();
   f.start({ tier: 3, pl: 3, scenario: 'ce_clear', armyA: ['regular'], armyB: ['regular'], nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', compoundPlan: base() });
+  // an online room: the host's plan in the terms, cleaned, and handed to the battle
+  const { Table } = require('../../server/table.js');
+  const seat = (name, colour) => ({ name: name, force: { faction: 'pmc', keys: [], name: name, colour: colour }, send() { }, sock: null });
+  const roomOf = (settings) => ({ id: 'CE1', settings: settings, seats: { A: seat('Ash', 'ochre'), B: seat('Brann', 'steel') }, everyone() { return []; }, broadcast() { } });
+  const ts = P.cleanSettings({ scenario: 'ce_clear', compound: base() });
+  ok('a room\u2019s terms keep the host\u2019s compound', ts.compound && ts.compound.cells === base().cells && P.cleanSettings({ compound: null }, Object.assign({}, ts)).compound === null &&
+    P.cleanSettings({ compound: 'rubbish' }).compound === null);
+  const rc = new Table(roomOf(ts), null, {}).buildConfig();
+  ok('...and the battle is fought in it', rc.compoundPlan && rc.compoundPlan.cells === base().cells, JSON.stringify(rc.compoundPlan).slice(0, 80) + ' / ' + rc.scenario);
+  const cs = P.cleanSettings({ kind: 'coop', soloScen: 's_besieged', compound: base() });
+  const cc = new Table(roomOf(cs), null, {}).buildConfig();
+  ok('a cooperative room may fight Besieged, in the host\u2019s compound', cs.soloScen === 's_besieged' && cc.scenario === 's_besieged' && cc.compoundPlan && cc.compoundPlan.cells === base().cells);
   ok('...one that does not fit the table is set aside for a generated one, and said so', !f.state().compound.built && /does not fit/.test(f.state().log.map((l) => l.text).join()));
 }
 

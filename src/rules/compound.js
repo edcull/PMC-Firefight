@@ -480,10 +480,26 @@
   function cleanPlan(p) {
     if (!p || typeof p !== 'object') return null;
     var keys = function (l) { return Array.isArray(l) ? l.filter(function (k) { return typeof k === 'string' && /^\d+\|\d+$/.test(k); }) : []; };
-    return { cols: p.cols | 0, rows: p.rows | 0, cells: typeof p.cells === 'string' ? p.cells.replace(/[^.cr]/g, '.') : '',
-      walls: keys(p.walls), doors: keys(p.doors),
-      danger: Array.isArray(p.danger) ? p.danger.filter(function (c) { return typeof c === 'number' && c >= 0; }) : [] };
+    // (no table here is more than 24 cells a side: a longer plan is nonsense, and is cut down to be refused)
+    return { cols: p.cols | 0, rows: p.rows | 0, cells: typeof p.cells === 'string' ? p.cells.slice(0, 24 * 24 + 1).replace(/[^.cr]/g, '.') : '',
+      walls: keys(p.walls).slice(0, 1200), doors: keys(p.doors).slice(0, 1200),
+      danger: Array.isArray(p.danger) ? p.danger.filter(function (c) { return typeof c === 'number' && c >= 0 && c < 24 * 24; }).slice(0, 100) : [] };
   }
+  /* The compounds a room or a campaign keeps, one for each size of table
+     ('WxH'), each one that can be fought in on that table; and the one for a
+     battle's table, or null for the generator's. */
+  var TABLES = [{ w: 48, h: 48 }, { w: 48, h: 72 }];
+  function sizeKey(b) { return b.w + 'x' + b.h; }
+  function cleanCompounds(m) {
+    var out = {};
+    if (!m || typeof m !== 'object') return out;
+    TABLES.forEach(function (b) {
+      var p = cleanPlan(m[sizeKey(b)]);
+      if (p && checkPlan(p, b.w, b.h).ok) out[sizeKey(b)] = p;
+    });
+    return out;
+  }
+  function planFor(compounds, b) { return (compounds && b && compounds[sizeKey(b)]) || null; }
   function checkPlan(plan, w, h) {
     plan = cleanPlan(plan);
     var sz = planSize(w, h);
@@ -576,6 +592,6 @@
     return null;
   }
 
-  root.PMCCompound = { CELL: CELL, KINDS: KINDS, generate: generate, blankPlan: blankPlan, cleanPlan: cleanPlan, layout: function (plan) { return gridOf(cleanPlan(plan)).g; }, checkPlan: checkPlan, build: build, generatedPlan: generatedPlan, planSize: planSize, isCompound: isCompound, sectionAt: sectionAt, KIT: KIT, cleanKit: cleanKit, defaultKit: defaultKit };
+  root.PMCCompound = { CELL: CELL, KINDS: KINDS, generate: generate, blankPlan: blankPlan, cleanPlan: cleanPlan, TABLES: TABLES, sizeKey: sizeKey, cleanCompounds: cleanCompounds, planFor: planFor, layout: function (plan) { return gridOf(cleanPlan(plan)).g; }, checkPlan: checkPlan, build: build, generatedPlan: generatedPlan, planSize: planSize, isCompound: isCompound, sectionAt: sectionAt, KIT: KIT, cleanKit: cleanKit, defaultKit: defaultKit };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCCompound;
 })(typeof window !== 'undefined' ? window : global);

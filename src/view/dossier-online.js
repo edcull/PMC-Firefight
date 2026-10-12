@@ -820,6 +820,15 @@
       if (go === 'ocoopoff') { coopSel = null; cmd('coopOff', {}, function () { E.view = 'hub'; }); return true; }
       // nothing of the campaign's file is this browser's to change
       if (/^(wipe|import|storeuse|storekeep|standard|hubside|export)$/.test(go || '')) return true;
+      // the host lays out a compound for one size of table, or lets the game lay them out
+      if (go === 'cmpedit' || go === 'cmpgen') {
+        var CMP = root.PMCCompound, size = attr('data-size'), tb = CMP && CMP.TABLES.filter(function (b) { return CMP.sizeKey(b) === size; })[0];
+        if (!tb) return true;
+        if (go === 'cmpgen') cmd('setCompound', { size: size, plan: null });
+        else root.PMCCompoundEdit.open({ w: tb.w, h: tb.h, plan: (E.camp && E.camp.compounds || {})[size] || null,
+          onDone: function (plan) { cmd('setCompound', { size: size, plan: plan }); } });
+        return true;
+      }
       // a force that can no longer fight takes its player out; or a player gives it up
       if (go === 'campend') { cmd('campEnd', {}); return true; }
       if (go === 'oconcede') {

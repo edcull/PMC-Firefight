@@ -133,6 +133,7 @@
         '</div>';
       // the optional rules it is fought under, when any are on (set when it was raised)
       if (U.optionsLine && root.PMC.optionNames(E.camp.options).length) h += '<p class="dnote hubopts">Optional rules: ' + U.optionsLine(E.camp.options) + '</p>';
+      h += compoundsLine();
       h += companyPanel(cur, hs, hubBar(), manageHtml);
       // recruiting: a window over the dossier, drawn only while open
       if (E.openModal === 'recruit') h += cmodal('recruit', C.words(cur).recruit + ' \u2014 ' + cur.kUC + ' ' + C.money(cur), '<div class="cmodal-scroll">' + recruitList(cur) + '</div>');
@@ -219,6 +220,20 @@
       return '<div class="hubbar">' + seat +
         '<button class="lnk" data-go="roster">Dossier</button>' +
         manage + go + '</div>';
+    }
+    /* The compounds its Close Encounters battles are fought in (p. 157), one for each
+       size of table: the game's, laid out for each battle, or one laid out by hand
+       (compound-edit.js) — by whoever keeps the campaign; online, by its host. */
+    function compoundsLine() {
+      var o = E.camp.options || {}, CMP = root.PMCCompound;
+      if (!CMP || !(o.ceFreq || o.closeEncounters)) return '';
+      var keeper = !E.online || !!E.online.host;
+      return '<p class="dnote hubcmp">Close Encounters compounds \u2014 ' + CMP.TABLES.map(function (b) {
+        var k = CMP.sizeKey(b), p = (E.camp.compounds || {})[k];
+        return '<span class="hubcmp-t">' + (b.h > 48 ? '6\u2032 \u00d7 4\u2032' : '4\u2032 \u00d7 4\u2032') + ': ' + (p ? 'laid out by hand' : 'the game\u2019s') +
+          (keeper ? ' <button type="button" class="lnk" data-go="cmpedit" data-size="' + k + '">' + (p ? 'change' : 'lay one out') + '</button>' +
+            (p ? ' <button type="button" class="lnk" data-go="cmpgen" data-size="' + k + '">use the game\u2019s</button>' : '') : '') + '</span>';
+      }).join(' \u00b7 ') + '</p>';
     }
     function companyPanel(co, side, bar, manage) {
       // the force being managed (the one with the bar) fills the screen, whichever side it is

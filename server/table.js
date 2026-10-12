@@ -15,6 +15,9 @@ const P = require('../src/engine/protocol.js');
 const Hidden = require('./hidden.js');
 const Rules = require('./rules.js');
 const { R, SC, C, Engine } = Rules;
+const CMP = global.PMCCompound;
+// a compound plan as the engine is handed it (it checks it fits the table itself), or null
+const compoundOf = (p) => (p && CMP ? CMP.cleanPlan(p) : null);
 
 /* How many events one intent may produce before we stop collecting. A quiet
    turn is a handful; a rally phase across thirty units with a Psychic Wave in
@@ -210,7 +213,9 @@ class Table {
       planet: s.planet === 'random' ? null : s.planet,
       terrainSetup: s.terrain === 'manual' ? 'manual' : 'auto',
       // the optional rules: a campaign's own, or the room's
-      options: camp ? (camp.options || {}) : (s.options || {})
+      options: camp ? (camp.options || {}) : (s.options || {}),
+      // a compound laid out by hand: the room's, or the campaign's for this table (a battle elsewhere has the generator's)
+      compoundPlan: compoundOf(camp ? CMP.planFor(camp.compounds, R.boardFor(s.pl)) : s.compound)
     };
   }
 
@@ -250,6 +255,7 @@ class Table {
       planet: s.planet === 'random' ? null : s.planet,
       terrainSetup: s.terrain === 'manual' ? 'manual' : 'auto',
       options: s.options || {},
+      compoundPlan: compoundOf(s.compound),
       solo: { coop: true, faction: a.faction || 'pmc', opFaction: opFaction, names: [a.name, b.name] }
     };
   }
