@@ -118,6 +118,57 @@ const { ROOT } = require('../where.js');
     W = await world();
     ok('...both turns on, the duel over', W.players[0].turn === 1 && W.players[1].turn === 2 && !(W.duels || []).length);
 
+    console.log('\nA co-operative contract between the two players (p. 150)');
+    // a legal commando out of the force at the screen, clicked unit by unit as a player would
+    async function pickCommando() {
+      const rids = await p.evaluate(() => {
+        const SOLO = window.PMCSolo, R = window.PMC, o = window.PMC_CAMPAIGN.online(), co = o.camp.companies.A, k = o.camp.online.coop.contract;
+        let picks = [];
+        for (const e of co.roster) {
+          if (e.restUntil > 0) continue;
+          const next = picks.concat([e]), c = SOLO.checkCommando(next.map((x) => R.entryPick(x)), k.tier, 1, co.faction);
+          if (c.faults.every((f) => /^Needs at least/.test(f))) picks = next;
+          if (SOLO.checkCommando(picks.map((x) => R.entryPick(x)), k.tier, 1, co.faction).ok) break;
+        }
+        return picks.map((e) => e.rid);
+      });
+      for (const r of rids) { await press('[data-ocoopunit="' + r + '"]'); await wait(80); }
+      await press('[data-go="ocoopready"]'); await wait(800);
+      return rids;
+    }
+    s = await st();
+    const asker = s.seat;
+    await press('.hubtake [data-kind="rivals"]'); await wait(400);
+    ok('a player offers the other a co-op contract from the other forces', await press('.cmodal:not([hidden]) [data-ocoopask="' + (1 - asker) + '"]'));
+    await wait(500);
+    await press('[data-go="oseat"]'); await wait(600); await closeNote(); await wait(200);
+    ok('...hands over: the offer waiting for the other player', !!(await p.evaluate(() => document.querySelector('#camp-body [data-ocoopaccept]'))));
+    await press('[data-ocoopaccept]'); await wait(600);
+    const cv = await p.evaluate(() => document.getElementById('camp-body').innerText);
+    ok('...accepted: the co-op contract, its scenario and the OpFor rolled', /The OpFor/.test(cv) && /Your commando/.test(cv), cv.slice(0, 120).replace(/\s+/g, ' '));
+    const pB = await pickCommando();
+    await press('[data-go="hub"]'); await wait(200);
+    await press('[data-go="oseat"]'); await wait(600); await closeNote(); await wait(200);
+    await press('[data-go="ocoop"]'); await wait(300);
+    const pA = await pickCommando();
+    await wait(800);
+    const cb = await p.evaluate(() => { const x = window.PMC_STATE && window.PMC_STATE(); return x && x.cfg ? { coop: !!(x.cfg.solo && x.cfg.solo.coop), net: !!x.cfg.netCoop, local: !!x.cfg.localBattle, owners: (x.cfg.ownersA || []).join(''), b: x.cfg.armyB.length, nameB: x.cfg.nameB } : null; });
+    ok('both ready: the co-op battle on this table, each player\u2019s units their own, against the OpFor', cb && cb.coop && !cb.net && cb.local && cb.nameB === 'OpFor' && cb.b > 0 &&
+      cb.owners === '1'.repeat(asker === 0 ? pA.length : pB.length) + '2'.repeat(asker === 0 ? pB.length : pA.length), JSON.stringify(cb));
+    const W0 = await world();
+    await forfeit('A');
+    const seen2 = [];
+    for (let k = 0; k < 4; k++) {
+      s = await st();
+      if (s.view === 'aftermath') { seen2.push(s.seat); await press('[data-go="pastback"]'); await wait(300); }
+      if (seen2.length === 2) break;
+      await press('[data-go="oseat"]'); await wait(600); await closeNote(); await wait(200);
+    }
+    W = await world();
+    ok('...each player reads their own aftermath, handing over between', seen2.sort().join() === '0,1', JSON.stringify(seen2));
+    ok('...both turns on, both marked co-op and halved, the contract over', W.players[0].turn === W0.players[0].turn + 1 && W.players[1].turn === W0.players[1].turn + 1 &&
+      W.players[0].after.coop && W.players[1].after.coop && W.players[0].after.payment.halved && !(W.coops || []).length);
+
     console.log('\nContinue');
     await p.evaluate(() => { window.PMCMenu.open(); window.PMCMenu.show('continue'); });
     await wait(400);

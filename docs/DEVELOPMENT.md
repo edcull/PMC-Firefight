@@ -253,7 +253,7 @@ battlesave.js      the battle kept in the browser: a run of picks kept as one, a
 auth.js            accounts and sessions on a database in memory: hashing, renewal, guests, limits
 serverrestart.js   a battle kept through a server restart, put away and brought back, a forfeit
 online.js          online campaigns as a world: the lobby (slots, AI armies, colours, chat, ready, start), founding, an AI contract fought
-                   on the server and its aftermath, a duel challenged, accepted, fought and settled for both, whose move, retiring
+                   on the server and its aftermath, a duel challenged, accepted, fought and settled for both, a co-op contract (halved, split by owner), whose move, retiring
 coopnet.js         a cooperative game over the network: one side of both players' commandos, each seat its own units and its own go
 expectedshot.js    the average shot worked out (the unit viewer's Fire!): hits off the D10, each hit off the hit table, Damage on machines
 admingames.js      the console's battles and campaigns: listed, shown, removed (asked first), old ones cleared

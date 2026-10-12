@@ -70,10 +70,12 @@
     const slotOf = (W, userId) => W.slots.findIndex((s) => s.kind === 'human' && s.user === userId);
     const playing = (W, i) => W.slots[i] && W.slots[i].kind === 'human' && !W.slots[i].out;
     function duelOf(W, i) { return (W.duels || []).filter((d) => d.phase !== 'asked' && (d.a === i || d.b === i))[0] || null; }
+    // a co-operative contract under way with another player (p. 150): the two of them against the OpFor
+    function coopOf(W, i) { return (W.coops || []).filter((c) => c.phase !== 'asked' && (c.a === i || c.b === i))[0] || null; }
     // a player with something under way (a contract, a battle, questions after one): nothing else starts for them
     function busy(W, i) {
       const p = W.players[i] || {};
-      return !!(p.contract || p.pending || p.post || duelOf(W, i));
+      return !!(p.contract || p.pending || p.post || duelOf(W, i) || coopOf(W, i));
     }
     // an AI force already in a player's contract or battle
     function aiBusy(W, slot) {
@@ -194,6 +196,67 @@
           options: R.cleanOptions(W.options), world: k.world || null
         }
       };
+    }
+
+    /* A co-operative contract's battle (pp. 146-150): each player's commando from their own
+       dossier, together as side A (each player's units their own, the turns alternating),
+       against an OpFor rolled at Priority Level 2 (one more for the second player, p. 147). */
+    function coopBattleConfig(W, c) {
+      const k = c.contract, A = W.forces[c.a], B = W.forces[c.b], SOLO = root.PMCSolo;
+      const pA = Cmds.pickEntries(A, k.picks.A), pB = Cmds.pickEntries(B, k.picks.B);
+      const keys = pA.concat(pB).map((e) => R.entryPick(e)), owners = pA.map(() => 1).concat(pB.map(() => 2));
+      // what the OpFor must answer: the players' hulls, and their aircraft
+      const machines = { ground: false, air: false };
+      keys.forEach((kk) => { const p = R.profile(R.splitPick(kk).key); if (!p || p.cls === 'infantry') return; if (p.cls === 'aircraft') machines.air = true; else machines.ground = true; });
+      const cA = colourOf(A), cB = colourOf(B);
+      return {
+        pending: { kind: 'coop', tier: k.tier, pl: 2, scenario: k.scenario, A: pA.map((e) => e.rid), B: pB.map((e) => e.rid) },
+        cfg: {
+          tier: k.tier, pl: 2, scenario: k.scenario,
+          armyA: keys, ownersA: owners, armyB: SOLO.rollOpFor(k.tier, 2, k.opFaction, machines),
+          nameA: A.name + ' & ' + B.name, nameB: 'OpFor',
+          colourA: cA, colourC: cB && cB !== cA ? cB : null, colourB: null,
+          dossier: { A: pA.concat(pB), B: [] },
+          doctrines: { A: [], B: [] },                      // (each company's doctrines are its own: none carried into a shared side)
+          tactics: { A: null, B: null },
+          campaign: true, mode: 'ai', netCoop: true,
+          planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto',
+          options: R.cleanOptions(W.options), world: k.world || null,
+          solo: { coop: true, faction: A.faction || 'pmc', opFaction: k.opFaction, names: [A.name, B.name] }
+        }
+      };
+    }
+    /* A co-operative battle's aftermath, for each of its players: their own units (by
+       the engine's owner), against the OpFor, paid as a battle of its Tier and Level,
+       and then pay and experience halved (p. 150). Xenotripods count it as a battle
+       with an attacker and a defender (p. 136, "including solitaire/coop scenarios"). */
+    function finishCoop(W, c, report) {
+      const k = c.contract || {};
+      [[c.a, 1, c.b], [c.b, 2, c.a]].forEach((t) => {
+        const i = t[0], owner = t[1], pl = W.players[i], co = W.forces[i];
+        const opfor = C.newCompany('OpFor', { faction: k.opFaction || 'rebel' });
+        opfor.tier = report.battleTier;
+        const rep = Object.assign({}, report, {
+          attackDefend: true,
+          units: (report.units || []).filter((l) => l.side === 'A' && (l.owner || 1) === owner),
+          casualties: (report.casualties || []).filter((x) => x.side === 'A' && (x.owner == null || x.owner === owner))
+        });
+        const camp = { mode: 'hotseat', companies: { A: co, B: opfor }, rivals: [opfor], facing: 0, turn: pl.turn || 0, log: [], options: W.options };
+        const inc = C.rollIncome(rep.battleTier, rep.pl, co, opfor, rep.winner, ['A']);
+        const after = C.aftermath(camp, rep, { dice: inc.dice, plunder: inc.plunder, neg: inc.neg, halve: true });
+        after.loss = lossOf(rep);
+        const keep = { winner: after.winner, payment: after.payment, loss: after.loss, sides: { A: after.sides.A, B: null }, rival: null, fronts: null, elsewhere: [], coop: true,
+          partner: W.forces[t[2]].name };
+        pl.turn = (pl.turn || 0) + 1;
+        keep.turn = pl.turn;
+        const e = { turn: pl.turn, scenario: report.scenario, tier: report.battleTier, pl: report.pl, winner: report.winner,
+          against: 'OpFor (with ' + W.forces[t[2]].name + ')', after: JSON.parse(JSON.stringify(keep)), balance: co.kUC, coop: true };
+        pl.log = (pl.log || []).concat([e]).slice(-40);
+        pl.after = Object.assign(keep, { n: (pl.afterN = (pl.afterN || 0) + 1), side: 'A' });
+        pl.offers = null; pl.offersTurn = null;
+      });
+      W.coops = (W.coops || []).filter((x) => x !== c);
+      [c.a, c.b].forEach((j) => ensureOffers(W, j));
     }
 
     // the post-battle questions, in the order the book puts them (dossier-after.js onFinish), for the players at the table
@@ -317,6 +380,12 @@
           return k && k.ready[me] ? 'them' : 'you';
         }
         if ((W.duels || []).some((x) => x.phase === 'asked' && x.b === i)) return 'you';
+        const c = coopOf(W, i);
+        if (c) {
+          if (c.battle) return 'you';
+          return c.contract && c.contract.ready[c.a === i ? 'A' : 'B'] ? 'them' : 'you';
+        }
+        if ((W.coops || []).some((x) => x.phase === 'asked' && x.b === i)) return 'you';
         return 'either';
       }
       function waitsNow(id) {
@@ -379,8 +448,16 @@
           after: p.after || null,
           busyAi: aiSlots(W).filter((s) => aiBusy(W, s) && !(p.contract && p.contract.vs === s)).map((s) => aiSlots(W).indexOf(s)),
           challenges: (W.duels || []).filter((d) => d.phase === 'asked' && (d.a === i || d.b === i)).map((d) => ({ id: d.id, from: d.a, to: d.b, mine: d.a === i })),
-          duel: null
+          coopAsks: (W.coops || []).filter((c) => c.phase === 'asked' && (c.a === i || c.b === i)).map((c) => ({ id: c.id, from: c.a, to: c.b, mine: c.a === i })),
+          duel: null, coop: null
         };
+        const cp = coopOf(W, i);
+        if (cp) {
+          const me = cp.a === i ? 'A' : 'B', mate = cp.a === i ? cp.b : cp.a, ck = cp.contract || {};
+          camp.online.coop = { id: cp.id, side: me, mate: mate, mateName: W.forces[mate].name, player: W.slots[mate].name, phase: cp.phase, battle: cp.battle || null,
+            contract: { tier: ck.tier, tierRoll: ck.tierRoll, pl: 2, scenario: ck.scenario, opFaction: ck.opFaction, planet: ck.planet, world: ck.world || null,
+              pick: ck.picks ? ck.picks[me] : null, ready: ck.ready || {}, mateReady: !!(ck.ready && ck.ready[me === 'A' ? 'B' : 'A']), matePicked: !!(ck.picks && ck.picks[me === 'A' ? 'B' : 'A']) } };
+        }
         const d = duelOf(W, i);
         if (d) {
           const me = d.a === i ? 'A' : 'B', foe = d.a === i ? d.b : d.a;
@@ -734,6 +811,91 @@
         }
       };
 
+      /* ---- a co-operative contract (p. 150): "Players may agree to play cooperative games
+         during a campaign" — one asks, the other agrees; the Battle Tier rolled as any
+         contract's between them, a solitaire scenario and the OpFor's army rolled; each
+         picks a commando from their own dossier; both ready makes the battle. ---- */
+      const COOP = {
+        coopAsk(W, i, a) {
+          const j = +a.to;
+          if (j === i || !playing(W, j)) return no('no such player');
+          if (!founded(W.forces[i]) || !founded(W.forces[j])) return no('both forces must be founded first');
+          W.coops = W.coops || [];
+          if (W.coops.some((c) => (c.a === i && c.b === j) || (c.a === j && c.b === i))) return no('there is a co-op offer between you already');
+          if (busy(W, j)) return no(W.slots[j].name + ' is fighting someone else just now');
+          W.nextCoop = W.nextCoop || 1;
+          W.coops.push({ id: W.nextCoop++, a: i, b: j, phase: 'asked', at: now(), contract: null });
+          return { ok: true };
+        },
+        coopCancel(W, i, a) {
+          const c = (W.coops || []).filter((x) => x.id === +a.id && x.phase === 'asked' && (x.a === i || x.b === i))[0];
+          if (!c) return no('no such offer');
+          W.coops = W.coops.filter((x) => x !== c);
+          return { ok: true };
+        },
+        coopAccept(W, i, a) {
+          const c = (W.coops || []).filter((x) => x.id === +a.id && x.phase === 'asked' && x.b === i)[0];
+          if (!c) return no('no such offer to you');
+          if (busy(W, c.a)) return no(W.slots[c.a].name + ' has something else under way \u2014 try again when it is done');
+          if (busy(W, i)) return no('finish what you have under way first');
+          const A = W.forces[c.a], B = W.forces[i], SOLO = root.PMCSolo, F = ['pmc', 'rebel', 'bugs', 'xeno'];
+          const tier = C.rollBattleTier(A, B);
+          c.contract = {
+            tierRoll: tier, tier: tier.tier, pl: 2,
+            scenario: SOLO.ORDER[Math.floor(Math.random() * SOLO.ORDER.length)],
+            opFaction: F[Math.floor(Math.random() * F.length)],
+            planet: 'random', world: W.options && W.options.otherWorlds ? R.rollWorld() : null,
+            picks: { A: null, B: null }, ready: { A: false, B: false }
+          };
+          c.phase = 'contract';
+          return { ok: true };
+        },
+        coopOff(W, i) {
+          const c = coopOf(W, i);
+          if (!c || c.phase !== 'contract') return no('there is no co-op contract to call off');
+          W.coops = W.coops.filter((x) => x !== c);
+          return { ok: true };
+        },
+        // a player's commando for it, from their own dossier (the commando table, p. 147)
+        coopPick(W, i, a) {
+          const c = coopOf(W, i);
+          if (!c || c.phase !== 'contract') return no('there is no co-op contract');
+          const side = c.a === i ? 'A' : 'B', co = W.forces[i], k = c.contract;
+          const rids = (Array.isArray(a.rids) ? a.rids : []).map((r) => text(r, 40));
+          if (new Set(rids).size !== rids.length) return no('a unit is picked once');
+          for (const r of rids) {
+            const e = C.byRid(co, r);
+            if (!e) return no('that unit is not yours');
+            if (e.restUntil > 0) return no(e.name + ' is resting');
+          }
+          const units = Cmds.pickEntries(co, { rids: rids, field: [] });
+          const chk = root.PMCSolo.checkCommando(units.map((e) => R.entryPick(e)), k.tier, 1, co.faction);
+          if (!chk.ok) return no((chk.faults || ['that commando cannot be fielded']).join(' '));
+          k.picks[side] = { rids: rids, field: [], tactic: null, drugs: [] };
+          k.ready[side] = false;
+          return { ok: true };
+        },
+        coopReady(W, i, a, ctx) {
+          const c = coopOf(W, i);
+          if (!c || c.phase !== 'contract') return no('there is no co-op contract');
+          const side = c.a === i ? 'A' : 'B', k = c.contract;
+          if (a.ready === false) { k.ready[side] = false; return { ok: true }; }
+          if (!k.picks[side]) return no('pick your commando first');
+          k.ready[side] = true;
+          if (!(k.ready.A && k.ready.B)) return { ok: true };
+          if (c.battle) return no('the battle is already made \u2014 go to it');
+          if (!startBattle) return no('this server cannot run battles');
+          const made = coopBattleConfig(W, c);
+          c.pending = made.pending;
+          made.cfg.onlineCampaign = ctx.id;
+          const code = makeBattle({ campaignId: ctx.id, ref: { kind: 'coop', id: c.id }, name: W.forces[c.a].name + ' & ' + W.forces[c.b].name + ' v OpFor',
+            cfg: made.cfg, seats: { A: seat(W, c.a), B: seat(W, c.b) } });
+          c.battle = { code: code, at: now() };
+          c.phase = 'battle';
+          return { ok: true, battle: code, battleFor: [c.a, c.b] };
+        }
+      };
+
       /* ---- after a battle: the questions, each put to its own player, then the aftermath ---- */
       function finishAi(W, i, v) {
         const p = W.players[i], post = p.post;
@@ -853,10 +1015,11 @@
       function retire(W, i, why) {
         const s = W.slots[i];
         if (s.out) return no('you are out of this campaign already');
-        if (busy(W, i) && (W.players[i].battle || (duelOf(W, i) || {}).battle)) return no('a battle is being fought — finish it, or walk away from it, first');
+        if (busy(W, i) && (W.players[i].battle || (duelOf(W, i) || {}).battle || (coopOf(W, i) || {}).battle)) return no('a battle is being fought — finish it, or walk away from it, first');
         s.out = { turn: (W.players[i] || {}).turn || 0, why: why };
         W.players[i].contract = null;
         W.duels = W.duels.filter((d) => !(d.a === i || d.b === i) || d.phase === 'battle');
+        W.coops = (W.coops || []).filter((c) => !(c.a === i || c.b === i) || c.phase === 'battle');
         const left = humanSlots(W).filter((j) => playing(W, j));
         if (!left.length) { W.phase = 'over'; W.over = { text: 'Every player has left the world.' }; }
         return { ok: true };
@@ -873,6 +1036,7 @@
         if (FORCE.indexOf(cmd) >= 0) return forceCmd(W, i, cmd, a || {});
         if (Object.prototype.hasOwnProperty.call(AI, cmd)) return AI[cmd](W, i, a || {}, ctx);
         if (Object.prototype.hasOwnProperty.call(DUEL, cmd)) return DUEL[cmd](W, i, a || {}, ctx);
+        if (Object.prototype.hasOwnProperty.call(COOP, cmd)) return COOP[cmd](W, i, a || {}, ctx);
         if (/^post/.test(cmd)) return postCmd(W, i, cmd, a || {});
         if (cmd === 'concede') return retire(W, i, 'gave it up');
         if (cmd === 'campEnd') {
@@ -1128,6 +1292,11 @@
               p.battle = null;
               v.post = p.post;
               if (prepPost(v)) finishAi(W, i, v);
+            } else if (ref.kind === 'coop') {
+              const c = (W.coops || []).filter((x) => x.id === +ref.id)[0];
+              if (!c || !c.pending) return;
+              report.battleTier = c.pending.tier; report.pl = c.pending.pl; report.scenario = c.pending.scenario;
+              finishCoop(W, c, report);
             } else if (ref.kind === 'duel') {
               const d = (W.duels || []).filter((x) => x.id === +ref.id)[0];
               if (!d || !d.pending) return;

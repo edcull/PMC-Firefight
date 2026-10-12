@@ -926,6 +926,7 @@
     else if (view === 'olobby' && online) h = kitOnline().lobbyView();
     else if (view === 'offers' && online) h = kitOnline().offersView();
     else if (view === 'ocontract' && online) h = kitOnline().contractView();
+    else if (view === 'ocoop' && online) h = kitOnline().coopView();
     else if (view === 'post' && online) h = kitOnline().postView();
     else if (view === 'found') h = foundView();
     else if (view === 'offers') h = offersView();

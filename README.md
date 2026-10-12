@@ -188,7 +188,13 @@ There are two kinds:
 | | |
 |---|---|
 | **Single player** | You against AI rival forces |
-| **Online** | A world on the server: players and AI forces in slots, contracts against the AI, and duels between players, played at each player's own pace |
+| **Online** | A world on the server: players and AI forces in slots, contracts against the AI, duels between players, and co-operative contracts, played at each player's own pace |
+
+A **co-operative contract** (p. 150) is offered to another player from the
+other forces, as a challenge is: once they accept, a Battle Tier, a solitaire
+scenario and the OpFor's army are rolled, each of you picks a commando from your
+own dossier, and you fight side by side against the OpFor. Pay and experience
+are halved afterwards, each company's from its own units.
 
 ### The unit viewer
 
@@ -241,8 +247,6 @@ The full file layout and every test are described in [docs/DEVELOPMENT.md](docs/
 
 Planned in [docs/roadmap.md](docs/roadmap.md):
 
-- **Co-op battles in a campaign (v0.3).** Co-op is played as a one-off battle
-  for now.
 - **Appendix 1, Close Encounters (v0.4):** corridors, doors, hidden movement,
   reaction fire and its scenarios.
 

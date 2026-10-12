@@ -491,7 +491,8 @@
           wiped: !R.isMachine(u) && u.models <= 0,
           fled: !!u.fled,
           aboardDowned: !!u.lostAboard,
-          weakened: !!u.weakened,             // Other Worlds: an unexplained weakness (+1 TP in a campaign)
+          weakened: !!u.weakened,
+          owner: u.owner || null,             // co-op: whose unit it was (a campaign's co-op contract splits by it)             // Other Worlds: an unexplained weakness (+1 TP in a campaign)
           lostAboard: u.lostAboard || null,
           drugged: !!u.drugged,            // Drug Dealer: the comedown comes after
           // the swarm's own bookkeeping (p. 124): its low point, and what it ate

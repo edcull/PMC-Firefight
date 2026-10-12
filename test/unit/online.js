@@ -270,6 +270,56 @@ function ok(name, cond, note) {
   ok('...and the duel is over: both free again', !s.online.duel && !s2.online.duel && view(ash).waiting === 'either');
   void sb;
 
+  console.log('\nA co-operative contract (p. 150)');
+  {
+    const SOLO = global.PMCSolo;
+    // a legal commando out of a roster, as a player would pick one (the commando table, p. 147)
+    const commando = (co, tier) => {
+      let picks = [];
+      for (const e of co.roster) {
+        if (e.restUntil > 0) continue;
+        const next = picks.concat([e]);
+        const c = SOLO.checkCommando(next.map((x) => R.entryPick(x)), tier, 1, co.faction);
+        if (c.faults.every((f) => /^Needs at least/.test(f))) picks = next;
+        if (SOLO.checkCommando(picks.map((x) => R.entryPick(x)), tier, 1, co.faction).ok) break;
+      }
+      return picks.map((e) => e.rid);
+    };
+    const bs = view(brann).slot;
+    ok('Ash offers Brann a co-op contract', cmd(ash, 'coopAsk', { to: bs }).ok && camp(brann).online.coopAsks.some((c) => !c.mine));
+    ok('...a second offer between them is refused', /already/.test(cmd(brann, 'coopAsk', { to: view(ash).slot }).why));
+    const offer = camp(brann).online.coopAsks[0];
+    ok('...only the one asked accepts it', !cmd(ash, 'coopAccept', { id: offer.id }).ok && cmd(brann, 'coopAccept', { id: offer.id }).ok);
+    let ck = camp(ash).online.coop;
+    ok('...a contract: a Battle Tier, a solitaire scenario and the OpFor\u2019s army rolled', ck && ck.phase === 'contract' && ck.contract.tier >= 1 &&
+      SOLO.ORDER.indexOf(ck.contract.scenario) >= 0 && ['pmc', 'rebel', 'bugs', 'xeno'].indexOf(ck.contract.opFaction) >= 0, JSON.stringify(ck && ck.contract).slice(0, 140));
+    ok('...both busy meanwhile: a challenge to either is refused', /fighting someone else/.test(cmd(cole, 'duelAsk', { to: bs }).why));
+    const tier = ck.contract.tier, rA = commando(camp(ash).companies.A, tier), rB = commando(camp(brann).companies.A, tier);
+    ok('a pick that is no commando is refused, saying why', !cmd(ash, 'coopPick', { rids: camp(ash).companies.A.roster.map((e) => e.rid) }).ok);
+    ok('each picks a commando from their own dossier', cmd(ash, 'coopPick', { rids: rA }).ok && cmd(brann, 'coopPick', { rids: rB }).ok, rA.length + ' + ' + rB.length);
+    ok('...one ready waits for the other', cmd(ash, 'coopReady', {}).ok && view(ash).waiting === 'them' && view(brann).waiting === 'you');
+    const go = cmd(brann, 'coopReady', {});
+    const room = lobby.rooms.get(go.battle);
+    const tc = room && room.table.cfg;
+    ok('both ready: the battle, the two of them as side A against the OpFor', go.ok && room && tc.netCoop && tc.solo && tc.solo.coop && tc.armyA.length === rA.length + rB.length &&
+      tc.ownersA.filter((o) => o === 1).length === rA.length && tc.ownersA.filter((o) => o === 2).length === rB.length && tc.armyB.length > 0, JSON.stringify(go).slice(0, 100));
+    ok('...each seat held for its player, both playing side A', room.seats.A.id === 'u' + ash.userId && room.seats.B.id === 'u' + brann.userId && room.table.sideOf('B') === 'A');
+    const kA = camp(ash).companies.A.kUC, kB = camp(brann).companies.A.kUC, tA = camp(ash).turn, tB = camp(brann).turn;
+    room.table.forfeit('A');
+    const sa = camp(ash), sb2 = camp(brann);
+    ok('the battle over (lost to the OpFor): an aftermath for each, a turn on each', sa.turn === tA + 1 && sb2.turn === tB + 1 && sa.online.after && sa.online.after.coop && sb2.online.after.coop,
+      [tA, sa.turn, tB, sb2.turn].join());
+    ok('...each paid half (rounded up) of what the battle paid', sa.online.after.payment.halved && sa.online.after.payment.A === Math.ceil(sa.online.after.payment.halved.A / 2) &&
+      sa.companies.A.kUC === kA + sa.online.after.payment.A && sb2.companies.A.kUC === kB + sb2.online.after.payment.A,
+      JSON.stringify(sa.online.after.payment));
+    const fieldedA = sa.online.after.sides.A.units.filter((u) => u.exp), fieldedB = sb2.online.after.sides.A.units.filter((u) => u.exp);
+    ok('...each company\u2019s own units in its own aftermath, the rest resting', fieldedA.map((u) => u.rid).sort().join() === rA.slice().sort().join() &&
+      fieldedB.map((u) => u.rid).sort().join() === rB.slice().sort().join(), fieldedA.length + ' / ' + rA.length);
+    ok('...its experience halved', fieldedA.concat(fieldedB).filter((u) => u.exp.total > 0).every((u) => u.exp.lines.some((l) => /Co-operative — halved/.test(l.text))));
+    ok('...on each log, against the OpFor with the other', /OpFor \(with Red Dawn\)/.test(sa.log[sa.log.length - 1].against) && /OpFor \(with Iron Wolves\)/.test(sb2.log[sb2.log.length - 1].against));
+    ok('...and both free again', !sa.online.coop && !sb2.online.coop && view(ash).waiting === 'either');
+  }
+
   console.log('\nWhose move, and stepping out');
   mailed.length = 0;
   db.setNotify(brann.userId, true);
