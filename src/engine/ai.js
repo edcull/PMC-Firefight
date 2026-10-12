@@ -1128,6 +1128,8 @@
         if (s > bestScore) { bestScore = s; best = c; }
       });
       if (best) {
+        // Covering Fire! (p. 158): a friend fires first on the enemy waiting where the move ends
+        if (E.state.compound && behaviour !== 'flee') coverMove(u, best);
         var path = R.pathTo(E.state, u, allowance, best);
         // Opportunity Fire (Close Encounters, p. 158): crossing an enemy's sight on the way, it may be shot there
         var opp = E.oppCheck(u, path, best);
@@ -1168,6 +1170,25 @@
     }
 
     function fire(u, t, mode) { resolveShot(u, t, mode, {}); }
+
+    /* Before one of the AI's moves in a compound: the enemies that will have it in
+       their sights where the move ends, nearest first — a friend within 6" gives
+       Covering Fire! on the first of them it can reach (E.aiCover), spending its
+       own activation on it. Once a turn for a unit, as a player's is. */
+    function coverMove(u, to) {
+      if (u.covered === E.state.turn) return null;
+      var ox = u.x, oy = u.y;
+      u.x = to.x; u.y = to.y;
+      var threats;
+      try {
+        threats = activeUnits().filter(function (t) {
+          return t.side !== u.side && t.side !== 'N' && !t.hidden && t.fp !== null && R.status(t) === 'ready' && R.canShoot(E.state, t, u, 'react', {});
+        });
+      } finally { u.x = ox; u.y = oy; }
+      threats.sort(function (a, b) { return R.inches(a.x, a.y, to.x, to.y) - R.inches(b.x, b.y, to.x, to.y); });
+      for (var i = 0; i < threats.length; i++) { var f = E.aiCover(u, threats[i], true); if (f) return f; }
+      return null;
+    }
 
     /* A counter of the computer's (Close Encounters, p. 158). Close enough to an
        enemy unit to charge it once it shows itself, it reveals itself and acts as
@@ -1452,7 +1473,7 @@
     return {
       threatTarget: threatTarget, aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
       gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
-      nearestEnemy: nearestEnemy, aiAct: aiAct, aiCharge: aiCharge, aiStands: aiStands, scoreSpot: scoreSpot
+      nearestEnemy: nearestEnemy, aiAct: aiAct, aiCharge: aiCharge, coverMove: coverMove, aiStands: aiStands, scoreSpot: scoreSpot
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineAI;

@@ -2508,6 +2508,7 @@
         reservePhase: acting(function (done) { K.reservePhase(done || function () {}); }),
         aiAct: acting(function (u) { ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; K.aiAct(u); }),
         aiCharge: acting(function (u, t) { ui.selected = u; K.aiCharge(u, t); }),
+        coverMove: acting(function (u, to) { return K.coverMove(u, to); }),
         specialsFor: function (u) { return specialsFor(u); },
         targetsFor: function (u, o) { return K.targetsFor(u, o); },
         eligible: function (s) { return eligible(s); },
