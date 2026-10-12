@@ -328,7 +328,7 @@
       var allReady = (L.slots || []).every(function (x) { return x.kind !== 'human' || x.ready; });
       h += '</div>';
       // the optional rules every battle of it is fought under: the host's to set, read by the rest
-      if (U.optionBoxes) h += '<div class="field olob-opts" id="olob-opts"><label>Optional rules</label>' + U.optionBoxes(L.options, host ? '' : ' disabled') + '</div>';
+      if (U.optionBoxes) h += '<div class="field olob-opts" id="olob-opts"><label>Optional rules</label>' + U.optionBoxes(L.options, host ? '' : ' disabled', true) + '</div>';
       /* as the skirmish room has it, above the chat: the way out a quiet link, and the
          one thing to do next the full-width button (ready, then the host's Start) */
       h += '<div class="lob-acts olob-acts"><button class="lnk" data-go="omulti">Leave</button>';

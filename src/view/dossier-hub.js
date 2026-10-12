@@ -64,7 +64,7 @@
           });
         }
         // the optional rules every battle of the campaign is fought under (R.OPTIONS), set now for good
-        if (U.optionBoxes) h += '<div class="field camp-opts" id="camp-opts"><label>Optional rules</label>' + U.optionBoxes(E.wantOptions) + '</div>';
+        if (U.optionBoxes) h += '<div class="field camp-opts" id="camp-opts"><label>Optional rules</label>' + U.optionBoxes(E.wantOptions, '', true) + '</div>';
         // one line: how many AI forces (an odd number: with yours, the forces pair off for each round), a save file to load instead, and Raise the force
         // (hotseat: none, or an even number — with the two players, the forces pair off)
         h += '<div class="olob-bar"><label class="olob-n">AI forces <select id="' + (hot ? 'camp-hotai' : 'camp-rivals') + '">' + (hot ? [0, 2, 4, 6, 8] : [1, 3, 5, 7, 9]).map(function (n) {

@@ -285,6 +285,17 @@
           }
           return;
         }
+        /* A compound (Close Encounters): the solid between the floors as low
+           blocks of plating, kept low so the troops in the corridors still show
+           over them, and each door as a slab across its doorway. */
+        if (r.kind === 'bulkhead') {
+          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(r.thin ? 3.4 : 3.8), thin: !!r.thin, seed: (rr2() * 9999) | 0 });
+          return;
+        }
+        if (r.kind === 'door' || r.kind === 'doorlock' || r.kind === 'doorlockA' || r.kind === 'doorlockB') {
+          props.push({ kind: 'door', x: r.x, y: r.y, w: r.w, h: r.h, horiz: r.w >= r.h, lock: r.kind, height: a(3.2), seed: (rr2() * 9999) | 0 });
+          return;
+        }
         if (r.kind !== 'building' && r.kind !== 'bunker' && r.kind !== 'objective') return;
         /* A high building — one that gives Firepower to the men in it — is drawn a
            storey taller than a low one, so the table says which is which. */
@@ -328,7 +339,7 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1 };
+      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, bulkhead: 1, door: 1 };
       function behind(p1, p2) {
         var e = 1e-3;
         var sepX = p1.x + p1.w <= p2.x + e, sepY = p1.y + p1.h <= p2.y + e;

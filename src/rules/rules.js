@@ -896,7 +896,24 @@
     // what a demolished piece leaves behind (p. 41-43)
     razed:     { name: 'Rubble of a wall', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, wreck: true },
     cutwire:   { name: 'Cut wire', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, wreck: true },
-    burning:   { name: 'Burning building', blocks: true, impassable: true, movePenalty: 0, cover: 0, fp: 0, wreck: true }
+    burning:   { name: 'Burning building', blocks: true, impassable: true, movePenalty: 0, cover: 0, fp: 0, wreck: true },
+    /* Close Encounters' compounds (Appendix 1, p. 157; rules/compound.js). The
+       floor — corridors, rooms and halls — is open terrain, each piece a section;
+       everything between is solid. A door is linear: it blocks sight and is
+       crossed freely while it works, barred while it is Locked (for one side or
+       both), and like any linear terrain it can be breached. `wallside` is the
+       floor too near a wall for a unit to stand on, which only a point's own
+       question asks (terrainAt). */
+    corridor:  { name: 'Corridor',    blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, floor: true },
+    room:      { name: 'Room',        blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, floor: true },
+    hall:      { name: 'Hall',        blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, floor: true },
+    bulkhead:  { name: 'Bulkhead',    blocks: true,  impassable: true,  movePenalty: 0, cover: 0, fp: 0, solid: true },
+    wallside:  { name: 'Against the wall', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
+    door:      { name: 'Door',        blocks: true,  impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear' },
+    doorlock:  { name: 'Locked door', blocks: true,  impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'both' },
+    doorlockA: { name: 'Door (locked to A)', blocks: true, impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'A' },
+    breached:  { name: 'Breached door', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, wreck: true },
+    doorlockB: { name: 'Door (locked to B)', blocks: true, impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'B' }
   };
 
   /* ---- the table: in rules/space.js ---- */
@@ -935,6 +952,8 @@
   function turnPiece(t, k) { return (KIT_SPACE || kitSpace()).turnPiece(t, k); }
   function shapePiece(r, rand, family) { return (KIT_SPACE || kitSpace()).shapePiece(r, rand, family); }
   function terrainAt(state, x, y) { return (KIT_SPACE || kitSpace()).terrainAt(state, x, y); }
+  function walkField(state, gx, gy, side) { return (KIT_SPACE || kitSpace()).walkField(state, gx, gy, side); }
+  function nearestFree(state, x, y, u, pad, reach) { return (KIT_SPACE || kitSpace()).nearestFree(state, x, y, u, pad, reach); }
   /* Ground this unit may not be put down on: anything impassable, and for a
      Stationary Artillery gun shallow water too (p. 95). */
   function barredAt(state, u, x, y) {
@@ -1002,7 +1021,10 @@
     { key: 'bookkeeper', name: 'Bad, worse, the bookkeeper', page: 167,
       text: 'An army routs when the Tiers of its destroyed units add up to half its composition points, rather than when half its units are gone.' },
     { key: 'otherWorlds', name: 'Other Worlds', page: 164,
-      text: 'Gravity, atmosphere and anomalies rolled for the battle (for each contract, in a campaign): low or high gravity, no air, toxic air or fog, radiation, time anomalies or an unexplained weakness.' }
+      text: 'Gravity, atmosphere and anomalies rolled for the battle (for each contract, in a campaign): low or high gravity, no air, toxic air or fog, radiation, time anomalies or an unexplained weakness.' },
+    // a campaign sets how often its contracts are fought inside a compound instead (camp: false)
+    { key: 'closeEncounters', name: 'Close Encounters', page: 157, camp: false,
+      text: 'Fighting inside compounds: corridors, rooms and doors, and no vehicles or aircraft. Adds the Close Encounters scenarios (Clearing out, Critical control) to the scenario list.' }
   ];
   function cleanOptions(o) {
     var out = {};
@@ -1406,7 +1428,8 @@
        the wall, which left a squad standing just back from a wall in the open.
        Rubble and the like shelter only the men standing in them, which the
        lines above already give. */
-    var plunging = has(attacker, 'Indirect Fire');
+    // (inside a compound nothing lobs: Close Encounters, p. 157)
+    var plunging = has(attacker, 'Indirect Fire') && !state.compound;
     for (var i = 0; i < state.terrain.length; i++) {
       var r = state.terrain[i], t = TERRAIN[r.kind];
       if (r.kind !== 'barricade' || !behindWall(state, attacker, target, r)) continue;
@@ -1439,7 +1462,7 @@
   function behindWall(state, attacker, target, r) {
     if (!attacker || inRect(attacker.x, attacker.y, r)) return false;
     if (rectPointDist(r, target.x, target.y) > WALL_REACH + 1e-6) return false;
-    if (has(attacker, 'Indirect Fire')) return true;
+    if (has(attacker, 'Indirect Fire') && !state.compound) return true;
     var grown = r.w >= r.h ? { x: r.x - 0.5, y: r.y, w: r.w + 1, h: r.h } : { x: r.x, y: r.y - 0.5, w: r.w, h: r.h + 1 };
     return segRect(attacker.x, attacker.y, target.x, target.y, grown);
   }
@@ -2432,7 +2455,7 @@
     d10: d10, d6: d6, d3: d3, answering: answering, mayRoll: mayRoll, angleWrap: angleWrap, esc: esc,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, infamyPanic: infamyPanic, panicSweep: panicSweep, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
-    terrainAt: terrainAt, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
+    terrainAt: terrainAt, nearestFree: nearestFree, walkField: walkField, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
     groundLevel: groundLevel, levelOf: levelOf, heightUnder: heightUnder,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
     enterable: enterable, sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,

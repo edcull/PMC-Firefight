@@ -188,8 +188,9 @@
      A box each, the rule's name with what it does under it. `on` is the options
      switched on; `attrs` goes on every box (' disabled' where they may only be
      read). readOptions reads them back off the element holding them. */
-  function optionBoxes(on, attrs) {
-    return '<div class="opt-list">' + root.PMC.OPTIONS.map(function (d) {
+  // `camp`: a campaign's boxes, without the ones a campaign sets another way (Close Encounters)
+  function optionBoxes(on, attrs, camp) {
+    return '<div class="opt-list">' + root.PMC.OPTIONS.filter(function (d) { return !camp || d.camp !== false; }).map(function (d) {
       return '<label class="opt-row"><input type="checkbox" data-opt="' + d.key + '"' + (on && on[d.key] ? ' checked' : '') + (attrs || '') + '>' +
         '<span><b>' + esc(d.name) + '</b> <small class="opt-pg">p. ' + d.page + '</small><small class="opt-txt">' + esc(d.text) + '</small></span></label>';
     }).join('') + '</div>';

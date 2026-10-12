@@ -416,11 +416,20 @@
        wood, and so is shallow water, a road or anything else put on one. Pieces
        only stand inside a hill, so at a point in a hill and in something else,
        the something else is what counts; otherwise the most significant piece. */
-    function terrainAt(state, x, y) {
+    /* In a compound (Close Encounters, p. 157) the floor right up against a wall
+       is no place to stand: a unit's base would be in the wall. A point closer
+       than this to a bulkhead is `wallside`, which nobody may stand on — asked of
+       a point where a unit would stand, not of the rim of one already standing
+       (`rim`, kindsUnder). In a 3" corridor that leaves a strip down the middle
+       a base wide, so two units cannot stand side by side in it. */
+    var WALL_GAP = 0.9;
+    function terrainAt(state, x, y, rim) {
       // the pieces at the point, walked in place rather than gathered into a list (this is asked a great deal)
-      var ts = state.terrain, best = 'open', bestRank = 0, onHill = false, inOther = false;
+      var ts = state.terrain, best = 'open', bestRank = 0, onHill = false, inOther = false, nearWall = false;
+      var cmp = !rim && !!state.compound;
       for (var i = 0; i < ts.length; i++) {
         var r = ts[i];
+        if (cmp && r.kind === 'bulkhead' && !nearWall && rectPointDist(r, x, y) < WALL_GAP) nearWall = true;
         if (!inRect(x, y, r)) continue;
         if (r.kind === 'hill') { onHill = true; continue; }
         inOther = true;
@@ -428,8 +437,9 @@
         if (rk > bestRank) { best = r.kind; bestRank = rk; }
       }
       // in something on the hill (even flat ground, such as a road): its rules, not the hill's
-      if (inOther) return best;
-      return onHill ? 'hill' : 'open';
+      var k = inOther ? best : onHill ? 'hill' : 'open';
+      if (nearWall && !TERRAIN[k].impassable && !TERRAIN[k].linear) return 'wallside';
+      return k;
     }
     function terrainOf(state, u) { return terrainAt(state, u.x, u.y); }
     /* Which terrain a unit is in. "One foot in grave" (p. 42) has a unit in
@@ -459,8 +469,8 @@
         RIM_R = UNIT_R; RIM_DX = []; RIM_DY = [];
         for (var q = 0; q < RIM; q++) { var an = q / RIM * Math.PI * 2; RIM_DX.push(Math.cos(an) * UNIT_R); RIM_DY.push(Math.sin(an) * UNIT_R); }
       }
-      var kc = terrainAt(state, px, py), n = {};
-      for (var i = 0; i < RIM; i++) { var k = terrainAt(state, px + RIM_DX[i], py + RIM_DY[i]); n[k] = (n[k] || 0) + 1; }
+      var kc = terrainAt(state, px, py, true), n = {};
+      for (var i = 0; i < RIM; i++) { var k = terrainAt(state, px + RIM_DX[i], py + RIM_DY[i], true); n[k] = (n[k] || 0) + 1; }
       if ((n[kc] || 0) >= RIM / 2) return [kc];
       for (var kk in n) if (n[kk] > RIM / 2) return [kk];
       return [kc];
@@ -557,6 +567,8 @@
           var aTop = aIn && inPoly(a.x, a.y, r.top), bTop = bIn && inPoly(b.x, b.y, r.top);
           if (!aTop && !bTop && segRect(ax, ay, bx, by, upperStep(r))) return false;
         }
+        // a compound's solid rock blocks every line through it, whoever stands where (p. 157)
+        if (t.solid) { if (segRect(ax, ay, bx, by, r)) return false; continue; }
         // a hill blocks sight across it, but not for a unit standing on it (p. 42)
         if (aIn || bIn) continue;
         if (segRect(ax, ay, bx, by, r)) {
@@ -579,7 +591,7 @@
         if ((!u.alive && !u.wreckLoS) || u === a || u === b || u.aboard || u.x < 0) continue;
         // a ghost (where a unit might stand) is not hidden by the unit itself, where it stands now
         if (u === a.of || u === b.of) continue;
-        if (pointSegDist(u.x, u.y, ax, ay, bx, by) >= UNIT_R * 0.9) continue;
+        if (!standsInWay(state, u, ax, ay, bx, by)) continue;
         if (!u.alive) return false;                    // a burnt-out hull hides what is behind it
         if (aLv < 0) { aLv = a.side ? sightLevel(state, a) : 0; bLv = b.side ? sightLevel(state, b) : 0; }
         if ((aLv && u.side === a.side) || (bLv && u.side === b.side)) {
@@ -589,6 +601,30 @@
         return false;
       }
       return true;
+    }
+
+    /* Whether a unit standing at its place is in the way of a line. In the open,
+       the line has to pass over its base. In a compound's corridor "any unit
+       inside fills the whole width of that section, blocking the Line of Sight
+       of units on both sides" (p. 157): the line is stopped wherever it crosses
+       the corridor at the unit's place, wall to wall. */
+    function standsInWay(state, u, ax, ay, bx, by) {
+      var d = pointSegDist(u.x, u.y, ax, ay, bx, by);
+      if (d < UNIT_R * 0.9) return true;
+      if (!state.compound || d > 3.5) return false;
+      var sec = corridorOf(state, u);
+      if (!sec) return false;
+      var band = sec.axis === 'h' ? { x: u.x - UNIT_R * 0.9, y: sec.y, w: UNIT_R * 1.8, h: sec.h }
+        : sec.axis === 'v' ? { x: sec.x, y: u.y - UNIT_R * 0.9, w: sec.w, h: UNIT_R * 1.8 } : sec;
+      return segBox(ax, ay, bx, by, band);
+    }
+    // the corridor section a unit stands in, if it stands in one
+    function corridorOf(state, u) {
+      for (var i = 0; i < state.terrain.length; i++) {
+        var r = state.terrain[i];
+        if (r.kind === 'corridor' && u.x >= r.x && u.x <= r.x + r.w && u.y >= r.y && u.y <= r.y + r.h) return r;
+      }
+      return null;
     }
 
     /* How high a point stands: level ground (0), a hill (1), or the upper step
@@ -651,6 +687,84 @@
         return sectionsOf(r).some(function (q) { return inRect(x, y, q) && sectionHigh(r, q); });
       });
     }
+    /* The nearest point to (x, y) a unit could stand on: ground it may stand on
+       (not impassable — in a compound, not against a wall) and `pad` inches clear
+       of every other unit. Looked for ring by ring outward, so in a compound it
+       finds the corridor beside a wall rather than wandering in the rock. */
+    function nearestFree(state, x, y, u, pad, reach) {
+      function clampBoard(q) { return { x: Math.max(UNIT_R, Math.min(BOARD.w - UNIT_R, q.x)), y: Math.max(UNIT_R, Math.min(BOARD.h - UNIT_R, q.y)) }; }
+      var p0 = clampBoard({ x: x, y: y });
+      function ok(p) { return !TERRAIN[terrainAt(state, p.x, p.y)].impassable && !unitNear(state, p.x, p.y, u, pad == null ? 1 : pad); }
+      if (ok(p0)) return p0;
+      for (var ring = 1; ring <= (reach || 24) * 2; ring++) {
+        var r = ring * 0.5, n = Math.max(8, Math.round(r * 6));
+        for (var k = 0; k < n; k++) {
+          var a = k / n * Math.PI * 2, p = clampBoard({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r });
+          if (ok(p)) return p;
+        }
+      }
+      return null;
+    }
+    /* How far it is to walk from a point to (gx, gy) inside a compound, round the
+       walls and through the doors `side` may pass: shortest paths over the 3"
+       grid of floor cells, plus the step from the point to its cell's middle. A
+       straight line is no measure in there — the nearest enemy may be through a
+       wall and forty inches round. Null outside a compound. Worked out once for
+       each goal cell, side and state of the doors. */
+    var walkCache = { state: null, key: '', fields: {}, n: 0 };
+    function walkField(state, gx, gy, side) {
+      var cmp = state.compound;
+      if (!cmp) return null;
+      var C = cmp.cell, cols = cmp.cols, rows = cmp.rows, N = cols * rows;
+      var doors = state.terrain.filter(function (r) { return TERRAIN[r.kind] && (TERRAIN[r.kind].door || r.kind === 'breached'); })
+        .map(function (r) { return r.kind; }).join(',');
+      if (walkCache.state !== state || walkCache.key !== doors) walkCache = { state: state, key: doors, fields: {}, n: 0, floor: null };
+      if (!walkCache.floor) {
+        walkCache.floor = new Uint8Array(N);
+        for (var c = 0; c < N; c++) {
+          var cx = (c % cols + 0.5) * C, cy = ((c / cols | 0) + 0.5) * C;
+          walkCache.floor[c] = terrainAt(state, cx, cy, true) !== 'bulkhead' ? 1 : 0;
+        }
+      }
+      var floor = walkCache.floor;
+      function cellOf(x, y) {
+        var i = Math.max(0, Math.min(cols - 1, Math.floor(x / C))), j = Math.max(0, Math.min(rows - 1, Math.floor(y / C)));
+        return j * cols + i;
+      }
+      var g0 = cellOf(gx, gy), fk = g0 + ':' + side;
+      var dist = walkCache.fields[fk];
+      if (!dist) {
+        if (walkCache.n > 200) { walkCache.fields = {}; walkCache.n = 0; }
+        dist = new Float64Array(N).fill(Infinity);
+        // the way from a cell to the next, through the middle of the edge between them
+        var pass = function (a, b) {
+          if (!floor[a] || !floor[b]) return false;
+          var ax = (a % cols + 0.5) * C, ay = ((a / cols | 0) + 0.5) * C, bx = (b % cols + 0.5) * C, by = ((b / cols | 0) + 0.5) * C;
+          var k = terrainAt(state, (ax + bx) / 2, (ay + by) / 2, true), t = TERRAIN[k];
+          if (k === 'bulkhead') return false;
+          return !(t.lockedFor && (t.lockedFor === 'both' || t.lockedFor === side));
+        };
+        dist[g0] = 0;
+        var queue = [g0];
+        for (var qi = 0; qi < queue.length; qi++) {
+          var cur = queue[qi], i = cur % cols, j = cur / cols | 0;
+          var nb = [i > 0 ? cur - 1 : -1, i < cols - 1 ? cur + 1 : -1, j > 0 ? cur - cols : -1, j < rows - 1 ? cur + cols : -1];
+          for (var q = 0; q < 4; q++) {
+            var nx = nb[q];
+            if (nx < 0 || dist[nx] !== Infinity || !pass(cur, nx)) continue;
+            dist[nx] = dist[cur] + C;
+            queue.push(nx);
+          }
+        }
+        walkCache.fields[fk] = dist;
+        walkCache.n++;
+      }
+      return function (x, y) {
+        var c = cellOf(x, y), d = dist[c];
+        if (d === Infinity) return Infinity;
+        return d + Math.hypot(x - (c % cols + 0.5) * C, y - ((c / cols | 0) + 0.5) * C);
+      };
+    }
     function onHill(state, p) { return !!p && p.x >= 0 && terrainAt(state, p.x, p.y) === 'hill'; }
 
     function unitNear(state, x, y, ignore, pad) {
@@ -676,7 +790,7 @@
       canGarrison: canGarrison, enterTargets: enterTargets, enterBuilding: enterBuilding,
       exitSpots: exitSpots, exitBuilding: exitBuilding, leaveAway: leaveAway, inches: inches, inRect: inRect, heightUnder: heightUnder,
       inPoly: inPoly, pieceDepth: pieceDepth, placePiece: placePiece, turnPoint: turnPoint,
-      turnPiece: turnPiece, shapePiece: shapePiece, terrainAt: terrainAt, terrainOf: terrainOf,
+      turnPiece: turnPiece, shapePiece: shapePiece, terrainAt: terrainAt, terrainOf: terrainOf, nearestFree: nearestFree, walkField: walkField,
       footprint: footprint, kindsUnder: kindsUnder, coverAt: coverAt, segRect: segRect,
       pointSegDist: pointSegDist, hasLoS: hasLoS, lineClear: lineClear, groundLevel: groundLevel,
       levelOf: levelOf, tooHighToHover: tooHighToHover, onHill: onHill, unitNear: unitNear

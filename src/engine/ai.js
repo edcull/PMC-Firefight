@@ -1334,7 +1334,10 @@
          outweighs the best cover; everyone else values cover first. */
       if (behaviour === 'offensive') { s += cover * 1.0; if (terr.fp) s += 4.5; }
       else { s += cover * 1.6; if (terr.fp) s += 2; }
-      s -= 0.6 * R.inches(c.x, c.y, goal.x, goal.y);
+      // inside a compound, the walk there round the walls (R.walkField), not the line through them
+      var wf = E.state.compound ? R.walkField(E.state, goal.x, goal.y, u.side) : null;
+      var gd = wf ? wf(c.x, c.y) : Infinity;
+      s -= 0.6 * (gd < Infinity ? gd : R.inches(c.x, c.y, goal.x, goal.y));
       /* Attacking a held position (assaultPlan): no further than 6" out in front of the
          force until it goes in; then the objective pulls, whatever else is near. */
       var ap = assaultPlan(u);

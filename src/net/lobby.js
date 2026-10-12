@@ -487,8 +487,12 @@
       '</div>' +
       forcesHTML(mine, isHost) +
       '<div class="lob-terms">' +
-      sel('term-scenario', 'Scenario', P.SCENARIOS.filter(function (x) { return x !== 'rolld3'; }).map(function (x) {
-        return { v: x, t: optionText('sel-scen', x, x) };
+      // the Close Encounters scenarios only with that option on (Appendix 1)
+      sel('term-scenario', 'Scenario', P.SCENARIOS.filter(function (x) {
+        return x !== 'rolld3' && (!/^ce_/.test(x) || (s.options && s.options.closeEncounters) || s.scenario === x);
+      }).map(function (x) {
+        var SCN = root.PMCScen && root.PMCScen.SCENARIOS[x];
+        return { v: x, t: optionText('sel-scen', x, SCN ? SCN.name + (SCN.compound ? ' (Close Encounters)' : '') : x) };
       }), s.scenario) +
       world +
       '</div>';

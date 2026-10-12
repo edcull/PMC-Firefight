@@ -171,7 +171,8 @@
           var nIn = Math.ceil((cd - 2 * UNIT_R) / 0.5);
           for (var wk = 1; wk <= nIn; wk++) {
             var r0 = cd - (cd - 2 * UNIT_R) * wk / nIn;
-            walk.push({ x: t.x - (t.x - end.x) / cd * r0, y: t.y - (t.y - end.y) / cd * r0 });
+            var wx = t.x - (t.x - end.x) / cd * r0, wy = t.y - (t.y - end.y) / cd * r0;
+            if (!TERRAIN[terrainAt(state, wx, wy)].impassable) walk.push({ x: wx, y: wy });
           }
         }
         /* With its main weapon, or — where that cannot bear (inside its Minimum
@@ -213,8 +214,9 @@
         a.x = cx + ux / ul * (UNIT_R + 0.05); a.y = cy + uy / ul * (UNIT_R + 0.05);
       } else {
         var v = Math.hypot(t.x - a.x, t.y - a.y) || 1;
-        a.x = t.x - (t.x - a.x) / v * (2 * UNIT_R);
-        a.y = t.y - (t.y - a.y) / v * (2 * UNIT_R);
+        var bx = t.x - (t.x - a.x) / v * (2 * UNIT_R), by = t.y - (t.y - a.y) / v * (2 * UNIT_R);
+        // round a compound's corner the last inch may not go straight: it stops where it can stand, as close as that
+        if (!TERRAIN[terrainAt(state, bx, by)].impassable) { a.x = bx; a.y = by; }
       }
 
       martyr(a, t);

@@ -13,6 +13,11 @@
         pebble = S.pebble, poly = S.poly, rect = S.rect, rng = S.rng, shadowBlob = S.shadowBlob,
         toScreen = S.toScreen, vgrad = S.vgrad;
 
+    // a compound's plating, and its doors (Close Encounters)
+    var BULK = ['#1d2124', '#2a2f33', '#3a4146', '#4a535a', '#5c666e', '#76818a'];
+    var DOOR_OK = ['#2a2618', '#4a4122', '#7a6a2c', '#a68f34', '#c9ad44', '#e2c860'];
+    var DOOR_RED = ['#2a1412', '#4a1d18', '#7a2a22', '#9c352a', '#b8473a', '#d0675a'];
+    var DOOR_AMBER = ['#2a1e10', '#4a3418', '#7a5222', '#a06a2a', '#c08636', '#d9a456'];
     function drawKind(cutaway, g, lift, p, pr) {
       switch (pr.kind) {
         case 'tree': {
@@ -577,6 +582,21 @@
           // the warning lamps, unlit: they flash over the table every frame (drawLive)
           dot(g, mx - 1, my - MH - a(6) - 1, '#5a2018', 3);
           dot(g, mx - 1, my - MH * 0.5, '#5a2018', 2);
+          break;
+        }
+        /* A compound's bulkhead: a low block of steel plate, riveted at the seams,
+           with a hazard-striped lip along the top of the faces you can see. */
+        case 'bulkhead': {
+          box(g, pr, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: lift || 0, cutaway: !!cutaway });
+          break;
+        }
+        /* A door: a steel slab across the doorway. Working, it is striped yellow and
+           black; locked to both sides, red; locked to one, amber. */
+        case 'door': {
+          var dpal = pr.lock === 'doorlock' ? DOOR_RED : pr.lock === 'door' ? DOOR_OK : DOOR_AMBER;
+          box(g, pr, dpal, { roof: dpal[4], roofEdge: dpal[5], windows: null, lift: lift || 0 });
+          var dl = lift || 0, dc = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
+          dot(g, dc.x - 1, dc.y - dl - pr.height - 2, pr.lock === 'door' ? '#7bdc6a' : pr.lock === 'doorlock' ? '#ff4a3a' : '#ffb02e', 3);
           break;
         }
         case 'building':

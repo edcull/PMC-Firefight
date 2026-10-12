@@ -22,7 +22,7 @@
    the handler registered under its name (on(), below). */
 (function (root) {
   'use strict';
-  var R = root.PMC, SC = root.PMCScen, GEN = root.PMCGen, C = root.PMCCamp, SOLO = root.PMCSolo;
+  var R = root.PMC, SC = root.PMCScen, GEN = root.PMCGen, C = root.PMCCamp, SOLO = root.PMCSolo, CMP = root.PMCCompound;
 
   // the one list of colours, shared with the server (protocol.js)
   var COLOURS = root.PMCProto.COLOURS;
@@ -330,8 +330,13 @@
     /* Terrain set-up (pp. 46-47): either the generator lays the whole table, or
        the players take the four areas in turn, roll for each and put the pieces
        down themselves. A demo is always generated. */
-    var manual = K.wantsManualTerrain(cfg);
-    var built = manual
+    /* Close Encounters (Appendix 1): the battle is fought inside a compound,
+       laid by its own generator in place of the world's table. */
+    var scenDef = SC.SCENARIOS[scenId] || {};
+    var manual = !scenDef.compound && K.wantsManualTerrain(cfg);
+    var built = scenDef.compound
+      ? CMP.generate(R.BOARD.w, R.BOARD.h, Math.random, { rooms: scenDef.rooms || 0 })
+      : manual
       ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
       : GEN.generate({
         width: R.BOARD.w, height: R.BOARD.h, planet: cfg.planet,
@@ -341,6 +346,7 @@
       cfg: cfg,
       terrain: built.terrain,
       genCount: built.terrain.length,
+      compound: built.compound || null,
       // nothing is nominated until the table is set (the scenario places them)
       objectives: manual ? [] : OBJECTIVES().map(function (o) { return { x: o.x, y: o.y, owner: null }; }),
       units: [], turn: 0, phase: 'deploy', activeSide: 'A', initiative: null,
@@ -373,6 +379,13 @@
         var pick = R.splitPick(k);
         var entry = roster ? roster[i] : null;
         var prof = R.profile(pick.key);
+        /* "No vehicles or aircraft may be used" in a compound (p. 157): they stay
+           out of it — a campaign's stay home, and are not lost. */
+        if (scenDef.compound && (prof.cls || 'infantry') !== 'infantry') {
+          state.homeBound = state.homeBound || [];
+          state.homeBound.push({ side: side, key: pick.key, name: prof.name, pickIdx: i });
+          return;
+        }
         /* A Xenotripod turret set is one pick, but every turret in it stands on
            the table as a unit of its own, and counts as a Tier I unit for victory
            and the scenario (p. 130). */
@@ -402,10 +415,19 @@
         state.units.push(u);
       });
     });
+    /* Inside a compound "units with Markerlights/Pheromone Markers special rules
+       lose it, but get the Advanced Sensors/Sixth Sense special rule instead"
+       (Close Encounters, p. 157). */
+    if (scenDef.compound) state.units.forEach(function (u) {
+      u.rules = u.rules.map(function (r) { return r === 'Markerlights' ? 'Advanced Sensors' : r === 'Pheromone Markers' ? 'Sixth Sense' : r; });
+    });
+    (state.homeBound || []).forEach(function (h) {
+      logLine('note', sideName(h.side) + ' — ' + h.name + ' stays outside the compound: no vehicles or aircraft in Close Encounters.');
+    });
     /* Complex Teleport Network (p. 141): a free set of Teleport turrets a
        Priority Level, of the Battle Tier — the sets run from Tier II to IV. */
     ['A', 'B'].forEach(function (side) {
-      if (docsOf(side).indexOf('XO1') < 0) return;
+      if (docsOf(side).indexOf('XO1') < 0 || scenDef.compound) return;
       var tt = Math.max(2, Math.min(4, cfg.tier || 1)), tprof = R.profile('xtturret' + tt);
       for (var np = 0; np < (cfg.pl || 1); np++) {
         for (var ts2 = 0; ts2 < tprof.turretSet; ts2++) {

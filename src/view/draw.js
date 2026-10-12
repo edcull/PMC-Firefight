@@ -243,7 +243,7 @@
     }
 
     // the pieces that can stand between the camera and a squad, and hide it (see drawBoard)
-    var OPENS = { building: 1, bunker: 1, highwall: 1 };
+    var OPENS = { building: 1, bunker: 1, highwall: 1, bulkhead: 1 };
     function paintStructures() {
       B.vc.props = ISO.buildProps(B.state.terrain, B.state.objectives, B.state.seed, B.state.cfg.planet);
       var sg = B.vc.structs.getContext('2d');
@@ -1439,7 +1439,8 @@
         });
         // pieces down since the table was last baked, as flat footprints until it is
         var TINT = { woods: '64,110,52', ruins: '120,112,100', crater: '110,96,80', barricade: '150,140,112', rocks: '118,112,104',
-          hill: '128,120,82', building: '150,138,120', bunker: '120,126,130', wall: '140,136,128', water: '70,110,140', deep: '40,70,110', lava: '200,80,30', crystal: '110,210,150', ravine: '170,210,235' };
+          hill: '128,120,82', building: '150,138,120', bunker: '120,126,130', wall: '140,136,128', water: '70,110,140', deep: '40,70,110', lava: '200,80,30', crystal: '110,210,150', ravine: '170,210,235',
+          bulkhead: '58,64,70', corridor: '72,80,86', room: '84,92,98', hall: '80,88,94', door: '200,170,60' };
         B.state.terrain.slice(B.vc.tsetBaked || 0).forEach(function (pc) {
           var sh = pc.parts ? pc.parts.map(function (r) { return [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]]; })
             : [pc.poly || [[pc.x, pc.y], [pc.x + pc.w, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x, pc.y + pc.h]]];

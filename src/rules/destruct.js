@@ -90,12 +90,15 @@
       if (kind === 'building' && sec != null && r.parts && r.parts.length > 1 && r.parts[sec]) return burnSection(state, r, sec, log, by);
       var was = TERRAIN[r.kind].name;
       r.was = r.kind;                                    // what it was, so the wreck is drawn as the right kind of rubble
-      r.kind = kind === 'building' ? 'burning' : kind === 'wire' ? 'cutwire' : 'razed';
+      // a compound's door is Breached (p. 157): the doorway is open to everyone, and seen through
+      var door = !!TERRAIN[r.kind].door;
+      r.kind = kind === 'building' ? 'burning' : kind === 'wire' ? 'cutwire' : door ? 'breached' : 'razed';
       r.wrecked = true;
       var out = { piece: r, was: was, kind: r.kind, evicted: [] };
       log.push({
         t: 'kill',
-        text: (by ? by.label + ' brings down ' : 'Down comes ') + was.toLowerCase() +
+        text: door ? (by ? by.label + ' breaches ' : 'Breached: ') + was.toLowerCase() + ' — the doorway stands open.'
+          : (by ? by.label + ' brings down ' : 'Down comes ') + was.toLowerCase() +
           (kind === 'building' ? ' — it goes up in flames.' : kind === 'wire' ? ' — a gap is cut through it.' : ' — only rubble is left.')
       });
       if (kind === 'building') {

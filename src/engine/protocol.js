@@ -49,7 +49,7 @@
   var PLANETS = ['random', 'desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable', 'barren'];
   // what a player is shown to choose from: everything but the old name
   var PLANET_CHOICES = PLANETS.filter(function (p) { return p !== 'barren'; });
-  var SCENARIOS = ['roll', 'rolld3', 'meeting', 'secure', 'find', 'invasion', 'demolish', 'takeover'];
+  var SCENARIOS = ['roll', 'rolld3', 'meeting', 'secure', 'find', 'invasion', 'demolish', 'takeover', 'ce_clear', 'ce_control'];
   var FACTIONS = ['pmc', 'rebel', 'bugs', 'xeno'];
   var TACTICS = ['', 'laststand', 'wave', 'guerillas'];
   var COLOURS = ['ochre', 'steel', 'olive', 'crimson', 'slate', 'plum', 'sand', 'rust', 'jade', 'midnight', 'charcoal', 'hazard', 'rose', 'forest',

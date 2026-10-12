@@ -732,9 +732,34 @@
         var on = {};
         try { on = JSON.parse(localStorage.getItem('pmc-options') || '{}') || {}; } catch (e) { }
         box.innerHTML = U.optionBoxes(R.cleanOptions(on));
-        box.addEventListener('change', function () { try { localStorage.setItem('pmc-options', JSON.stringify(U.readOptions(box))); } catch (e) { } });
+        box.addEventListener('change', function () {
+          try { localStorage.setItem('pmc-options', JSON.stringify(U.readOptions(box))); } catch (e) { }
+          offerCloseEncounters();
+        });
+        offerCloseEncounters();
       })();
       drawColourPick();
+    }
+    /* Close Encounters (Appendix 1) ticked: its scenarios are offered after the
+       six, in a group of their own; unticked, they go (and a choice of one with them). */
+    function offerCloseEncounters() {
+      var sel = el('sel-scen'), box = el('opt-boxes');
+      if (!sel || !box || !U) return;
+      var on = !!U.readOptions(box).closeEncounters, g = sel.querySelector('optgroup[data-ce]');
+      if (on && !g) {
+        g = document.createElement('optgroup');
+        g.label = 'Close Encounters (Appendix 1)';
+        g.setAttribute('data-ce', '1');
+        (SC.CE_ORDER || []).forEach(function (id) {
+          var o = document.createElement('option');
+          o.value = id; o.textContent = SC.SCENARIOS[id].name;
+          g.appendChild(o);
+        });
+        sel.appendChild(g);
+      } else if (!on && g) {
+        if (/^ce_/.test(sel.value)) sel.value = 'roll';
+        g.parentNode.removeChild(g);
+      }
     }
     // the optional rules ticked on the battlefield step (none for a demo)
     function chosenOptions(kind) { return kind === 'demo' || !U ? {} : U.readOptions(el('opt-boxes')); }
