@@ -25,8 +25,10 @@
         var lim = R.has(t, 'Stealth') && !R.has(u, 'Keen-Eyed') ? Math.min(12, far) : far;
         if (R.unitDist(u, t) > lim) return false;
         if (R.hasLoS(E.state, u, t)) return true;
-        // Mental Projection (p. 129): what one of the tribe sees, every Xenotripod sees — a marker included
-        return R.xenoSenses(u) && !R.campFlag(u, 'banished') && R.tribeSees(E.state, u.side, t);
+        /* Mental Projection (p. 129): what one of the tribe sees, every Xenotripod sees — past the
+           marker's own 12", but the beam still needs a clear line, as direct fire does (XEN-18) */
+        return R.xenoSenses(u) && !R.campFlag(u, 'banished') && R.tribeSees(E.state, u.side, t) &&
+          R.lineClear(E.state, u, t);
       });
     }
 

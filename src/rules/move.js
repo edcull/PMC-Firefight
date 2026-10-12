@@ -53,6 +53,10 @@
         if (mt && mt.rough && t.movePenalty && !t.linear) return mt.rough;   // a motorbike bogs down in rough ground
         return t.movePenalty * 2;
       }
+      /* A Tier III-V hull driving through a high wall flattens it, and "these moves are
+         still subject to penalties for moving through terrain" (p. 35): the 2" any vehicle
+         pays for a section of linear terrain, as for a low wall (VEH-5). */
+      if (heavy && t.linear && t.impassable && t.destructible === 'linear') return 2;
       return t.movePenalty * (heavy ? 2 : 1);
     }
     function terrainBars(u, kind) {

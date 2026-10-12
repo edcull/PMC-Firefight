@@ -54,8 +54,8 @@
       var suicidal = campFlag(target, 'suicidal');         // Suicidal Tendencies
       for (var i = 0; i < hits; i++) {
         var raw = d6(), r = raw + mod, tag, down = false;
-        if (suicidal) {
-          // ignores hits on 1-2, but goes down on a 5-6
+        if (suicidal && !(medics && r >= 6)) {
+          // ignores hits on 1-2, but goes down on a 5-6 — a 6 near Field Medics is still MEDIC! (CMP-13)
           if (r <= 2) tag = 'Steady, boys!';
           else if (r <= 4) { tag = 'Get down! (1 SP)'; out.sp += 1; }
           else { tag = 'Man down! (1 model, 2 SP)'; down = true; }

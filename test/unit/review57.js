@@ -180,5 +180,64 @@ console.log('\nSOL-13 / SOL-14 / SOL-16 / SOL-17 The solitaire set-ups');
   ok('Evacuation: civilians may not go back into a reinforced building', !R.enterTargets(s2, civ).length && R.enterTargets(s2, mil).length > 0);
 })();
 
+console.log('\nVEH-5 A Tier III hull pays 2" to drive through a high wall, as through a low one');
+(function () {
+  const lcv = mk('lcv', 'A', 10, 24);
+  ok('high wall: 2"', R.terrainCost(lcv, 'wall') === 2, String(R.terrainCost(lcv, 'wall')));
+  ok('low wall: 2"', R.terrainCost(lcv, 'barricade') === 2, String(R.terrainCost(lcv, 'barricade')));
+})();
+
+console.log('\nVEH-7 Martyrdom against a machine rolls on the assault table');
+(function () {
+  const holy = mk('racolytes', 'A', 10, 10), lcv = mk('lcv', 'B', 11.5, 10, { fp: null });   // (no defensive fire to stop the charge)
+  const st = world([holy, lcv]); st.doctrines = { A: ['P1'], B: [] };
+  const res = R.assault(st, holy, lcv, { martyr: { A: true } });
+  const lines = res.log.map((l) => l.text || '').join(' | ');
+  const mart = lines.indexOf('Martyrdom') >= 0;
+  ok('the martyr goes in, and its hits read off the assault table', mart && /Bounced off the armour|Hull breached|Charge placed/.test(lines.slice(lines.indexOf('Martyrdom'))), lines.slice(0, 160));
+})();
+
+console.log('\nCMP-9 Rapid Relocation: up to half the units, rounded down');
+(function () {
+  const e = Engine.create({});
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['regular', 'regular', 'regular', 'regular', 'regular'], armyB: ['regular'], nameA: 'A', nameB: 'B',
+    colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', terrainSetup: 'auto', tactics: { A: null, B: null } });
+  const st = e.state();
+  st.units.forEach((u, i) => { u.reserve = false; u.aboard = null; u.x = 5 + i; u.y = 5; });
+  const n = st.units.filter((u) => u.side === 'A').length;
+  ok(n + ' units: ' + Math.floor(n / 2) + ' may relocate', e.query.relocCap('A') === Math.floor(n / 2), String(e.query.relocCap('A')));
+})();
+
+console.log('\nCMP-13 Suicidal Tendencies near Field Medics: a 6 is still MEDIC!');
+(function () {
+  const sq = mk('regular', 'A', 10, 10, { camp: { flags: { suicidal: true }, once: {} } }), med = mk('medics', 'A', 12, 10);
+  const st = world([sq, med]);
+  // damage.js binds its own d6 at start: fix Math.random for the one call instead
+  const roll = (v, fn) => { const keep = Math.random; Math.random = () => (v - 0.5) / 6; try { return fn(); } finally { Math.random = keep; } };
+  const six = roll(6, () => R.resolveShootingHits(st, sq, 1, 0, null, true));
+  ok('a 6 goes to the medic', /MEDIC!/.test(six.rolls.join(' ')), six.rolls.join(' '));
+  const five = roll(5, () => R.resolveShootingHits(st, sq, 1, 0, null, true));
+  ok('...a 5 is still Man down!', /Man down!/.test(five.rolls.join(' ')) && five.casualties === 1, five.rolls.join(' '));
+  const alone = world([mk('regular', 'A', 10, 10, { camp: { flags: { suicidal: true }, once: {} } })]);
+  const six2 = roll(6, () => R.resolveShootingHits(alone, alone.units[0], 1, 0, null, true));
+  ok('...and with no medic near, a 6 is Man down!', /Man down!/.test(six2.rolls.join(' ')), six2.rolls.join(' '));
+})();
+
+console.log('\nXEN-18 A Markerlight marks what the tribe sees only along a clear line');
+(function () {
+  const e = Engine.create({});
+  e.start({ tier: 3, pl: 1, scenario: 'meeting', armyA: ['xalpha3', 'xbeta3', 'xgamma3'], armyB: ['regular'], nameA: 'A', nameB: 'B',
+    colourA: 'ochre', colourB: 'steel', mode: 'hotseat', planet: 'sparse', terrainSetup: 'auto', tactics: { A: null, B: null } });
+  const st = e.state();
+  st.terrain.length = 0;
+  const beta = st.units.find((u) => u.key === 'xbeta3'), spot = st.units.find((u) => u.key === 'xgamma3');
+  const alpha = st.units.find((u) => u.key === 'xalpha3'), foe = st.units.find((u) => u.side === 'B');
+  st.units.forEach((u) => { u.reserve = false; u.aboard = null; });
+  beta.x = 6; beta.y = 24; alpha.x = 4; alpha.y = 4; foe.x = 26; foe.y = 24; spot.x = 20; spot.y = 30;
+  ok('the tribe sees it and the line is clear: it can mark', e.query.markTargets(beta).indexOf(foe) >= 0);
+  st.terrain.push({ kind: 'building', x: 13, y: 21, w: 4, h: 6 });
+  ok('...a building between the marker and the target: it cannot', e.query.markTargets(beta).indexOf(foe) < 0);
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

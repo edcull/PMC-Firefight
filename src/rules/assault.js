@@ -98,6 +98,18 @@
       var p = BY_KEY[u.key];
       return !!p && p.group === 'Holy Warriors' && u.models > 1;
     }
+    // a machine hit in close combat (p. 36): 1 bounces, 2-3 a point, 4-6 D3; `vm` on each die
+    function machineAssaultHits(hits, vm) {
+      var out = { damage: 0, rolls: [] };
+      for (var h = 0; h < hits; h++) {
+        var r0 = d6(), r = Math.min(6, r0 + vm), tag;
+        if (r === 1) tag = 'Bounced off the armour!';
+        else if (r <= 3) { tag = 'Hull breached (1 DP)'; out.damage += 1; }
+        else { var c = d3(); tag = 'Charge placed! (D3 ' + c + ' DP)'; out.damage += c; }
+        out.rolls.push('D6 ' + r0 + (vm ? '+' + vm : '') + ' → ' + tag);
+      }
+      return out;
+    }
     function assault(state, a, t, opts) {
       var log = [], wrecked = null;
       opts = opts || {};
@@ -117,8 +129,9 @@
         var hits = d3();
         log.push({ t: 'assault', text: 'Martyrdom — one of ' + u.label + ' goes in alone. ' +
           hits + ' automatic hit' + (hits === 1 ? '' : 's') + ' on ' + foe.label + '.' });
+        // hits in an assault: a machine takes them off the assault table (p. 36, VEH-7)
         if (isMachine(foe)) {
-          var dm = resolveDamage(foe, hits, false);
+          var dm = machineAssaultHits(hits, dmgMod(state, u, foe));
           log.push({ t: 'hits', text: dm.rolls.join(' · ') });
           applyDamage(state, foe, dm.damage, log, u);
         } else {
@@ -362,15 +375,7 @@
           ' → ' + hits + ' hit' + (hits === 1 ? '' : 's')
       });
       if (hits > 0 && isMachine(def)) {
-        // a machine in close combat: 1 bounces, 2-3 a point, 4-6 D3
-        var out = { damage: 0, rolls: [] }, vm = dmgMod(state, atk, def) + plusHit;
-        for (var h = 0; h < hits; h++) {
-          var r0 = d6(), r = Math.min(6, r0 + vm), tag;
-          if (r === 1) tag = 'Bounced off the armour!';
-          else if (r <= 3) { tag = 'Hull breached (1 DP)'; out.damage += 1; }
-          else { var c = d3(); tag = 'Charge placed! (D3 ' + c + ' DP)'; out.damage += c; }
-          out.rolls.push('D6 ' + r0 + (vm ? '+' + vm : '') + ' → ' + tag);
-        }
+        var out = machineAssaultHits(hits, dmgMod(state, atk, def) + plusHit);
         log.push({ t: 'hits', text: out.rolls.join(' · ') });
         applyDamage(state, def, out.damage, log, atk);
       } else if (hits > 0) {

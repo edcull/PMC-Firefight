@@ -215,3 +215,9 @@ phases and co-op alternation, OpFor activation order; behaviour table bands and 
 | SOL-15 Neutral never leaves cover | **Fixed.** It moves to Firepower ground within half range of an enemy, as the book allows. | `ai.js` (`neutralHold`); test `review57.js` |
 | SOL-16 Landing zone partly in cover | **Fixed.** The whole 8" circle in the open; a table with no such spot falls back to the looser test. | `solitaire.js` (`lzLegal`, `lzSpots`); test `review57.js` |
 | SOL-17 Civilians back into the homes | **Fixed.** A civilian group cannot enter the reinforced buildings. | `space.js` (`enterTargets`); test `review57.js` |
+| VEH-5 Tier III+ hull through a high wall for free | **Fixed** (owner: the crushing move is "still subject to penalties"): 2" for the section, as a low wall. | `move.js` (`terrainCost`); test `review57.js` |
+| VEH-7 Martyrdom on a machine off the shooting table | **Fixed** (owner: unambiguous, it is an assault): the assault table, 1 / 2-3 / 4-6 D3. | `assault.js` (`machineAssaultHits`); test `review57.js` |
+| CMP-9 Rapid Relocation rounds up | **Fixed** (owner: round down): up to half the units on the table, rounded down, as the other "up to" shares. | `engine.js` (`relocCap`); test `review57.js` |
+| CMP-13 Suicidal Tendencies switch off Field Medics | **Fixed** (owner: a 6 is still MEDIC!): 1-2 ignored, 3-4 Get down!, 5 Man down!, and a 6 near medics goes to the medic as usual. | `damage.js` (`resolveShootingHits`); test `review57.js` |
+| XEN-18 Markerlights mark through blocking terrain | **Fixed** (owner: needs LoS): past the marker's own 12" the tribe's sight still needs a clear line from the marker. | `marks.js` (`markTargets`); test `review57.js` |
+| SCN-4, PMC-4, CMP-10, REB-10, BUG-10, BUG-12, XEN-19, XEN-20 | **Kept** (owner). BUG-12: the Carrier bug is Overgrown. XEN-20: Psychic and morale rules are for troops; machines run on Structure and damage. BUG-10: kept for now. | — |
