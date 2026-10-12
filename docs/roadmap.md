@@ -371,6 +371,117 @@ Book l.5119-5336. This is close to a separate game mode inside compounds.
 
 ---
 
+## v0.5 (proposal) — the star system: contracts on a map
+
+An alternative to the hub's **Contract** button and its list of offers, for
+single-player campaigns: the campaign is fought across one star system. The
+Contract button opens the system, with its planets on their orbits. Tap a
+planet to zoom in to a map of it, with the contracts on offer pinned where they
+are. Tap a pin for the job (the offer card as it is now) and take it from there.
+
+This follows decision 3's "later idea": the planets and their conditions are
+fixed for the campaign, and contracts name a planet from it.
+
+**What stays the same.** How many contracts there are each turn, who they are
+against, the scenario, Tier, Priority Levels and roles are all still
+`rollOffers`. The offers are still rolled once a campaign turn and kept. Only
+where each one is fought changes, and what the screen looks like.
+
+### A. The system (rules: `src/rules/camp-system.js`)
+
+- `campaign.system` is made once, when the campaign is founded, from a seed kept
+  with it (so a save or an import draws the same system):
+  - a name and a star (its colour and size, for the picture);
+  - 5 planets (4–7, rolled), each with:
+    - a name;
+    - its world kind: one of the terrain generator's kinds (desert, arctic,
+      temperate, colonised, industrial, jungle, mountain, unstable);
+    - its conditions: gravity, atmosphere and anomaly rolled once on the Other
+      Worlds table (`R.rollWorld`) and kept for good;
+    - where it sits: its orbit and angle;
+    - a look for the drawing, derived from the kind and the conditions (a haze
+      for a toxic or foggy atmosphere, none for an airless one).
+- The book's dice leave about half the planets "much like home". So that the
+  system is worth looking at, at least half the planets carry one condition or
+  more. The dice are rolled again for the rest until they do; this is a reading
+  of the rules, and it goes in the docs as one.
+- **The offers:** `rollOffers` deals each offer to a planet (spread so most
+  planets have something; never all on one). It also gives the offer a site on
+  that planet: a point on its map, and a place name ("Kessler Ridge", "Pumping
+  Station 4"). The offer's `planet` and `world` are then the planet's, not
+  rolled. A Close Encounters contract's site is a compound ("Mine 7", "Hab
+  Block C").
+- `cleanSystem` for a save or import, and old campaigns keep working:
+  - with no `system`, the list of offers as now;
+  - an older campaign can be given a system from the hub ("Chart the system").
+
+### B. The system view (view: `src/view/dossier-system.js`)
+
+- **Drawing:** an SVG drawn to the screen's width. The star in the middle, the
+  orbits faint, each planet a disc in its kind's colours with its atmosphere as
+  a haze ring. A badge shows how many contracts are on it; a planet with none
+  is dimmed.
+- **Tap or hover on a planet:** a card with its name, its kind, its conditions
+  (the pills the offers show now, each with what it does in its tip) and its
+  contracts this turn.
+- **Hub:** the Contract button opens the system. A **List** link beside the
+  system keeps the old offers list (also for screen readers, and for the
+  tests).
+- **Phone:** the system scales to the width, and the planet card sits under it,
+  not over it.
+
+### C. The planet map
+
+- **The map:** opening a planet zooms into a map of it: a flat, made-up map in
+  that kind's colours, from the planet's seed (made-up ground: ice and ravines
+  on an arctic world, slag and stacks on an industrial one). The rivals'
+  colours are on the pins.
+- **Pins:** each contract is a pin at its site, in the rival's colours, with
+  the rival's name on it.
+- **A pin opens the job:** the current offer panel (`offerPanel`/`jobCard`)
+  beside the map, or under it on a phone, with **Take this contract**.
+- **Back:** to the system; from the system, to the hub.
+
+### D. Settings and scope
+
+- **New-campaign form:** "Contracts: Star system / Offer list". Recommended
+  default: Star system.
+- **What the conditions do:** the conditions do something only with Other
+  Worlds on. Recommended: choosing the star system turns Other Worlds on for
+  the campaign, with a note saying so. Otherwise the conditions would be for
+  show and only the terrain would differ.
+- **Single-player only to start.** Hotseat and online world campaigns could
+  share a system later; their offers are rolled elsewhere (`camp-world.js`).
+
+### E. Later, if wanted
+
+- Each rival has a home planet, and its contracts lean towards it.
+- A planet's standing moves with your wins there: more pay, fewer hostiles.
+- A rare event changes a planet's conditions (a reactor leak brings high
+  radiation).
+
+### Order
+
+1. A, with the offer list showing the planet's name and site. Unit tests: the
+   same seed gives the same system, a system survives save and load, offers
+   are spread over the planets, and the conditions are kept.
+2. B. A browser test: open the system, tap a planet, see its contracts.
+3. C. A browser test: open a planet, open a pin, take the contract, and the
+   battle is fought on that planet's world.
+4. D, and the docs.
+
+**Size:** medium. Most of it is new screens. The rules change is small,
+because `rollOffers` and the offer card are kept as they are.
+
+**Decisions wanted:**
+1. Does choosing the star system turn on Other Worlds (recommended), or do the
+   conditions apply only with that option on?
+2. How many planets: 5, or 4–7 rolled?
+3. Is the star system the default for new campaigns?
+4. Should E's home planets come in the first version?
+
+---
+
 ## Progress
 
 | Step | State |
