@@ -92,7 +92,7 @@
       const ai = aiSlots(W), rivals = ai.map((s) => W.forces[s]);
       const facing = faced != null ? Math.max(0, ai.indexOf(faced)) : 0;
       return {
-        mode: 'solo', world: true, turn: p.turn || 0, created: 0, name: W.name,
+        mode: 'solo', world: true, turn: p.turn || 0, created: 0, name: W.name, options: R.cleanOptions(W.options),
         companies: { A: W.forces[i], B: rivals[facing] || null }, rivals: rivals, facing: facing,
         offers: p.offers || null, offersTurn: p.offersTurn == null ? null : p.offersTurn, log: p.log || []
       };
@@ -124,7 +124,7 @@
     // a two-player camp of the shape the contract commands and the hotseat aftermath want
     function pairOf(W, d) {
       const A = W.forces[d.a], B = W.forces[d.b];
-      return { mode: 'hotseat', companies: { A: A, B: B }, rivals: [B], facing: 0, turn: (W.players[d.a] || {}).turn || 0, log: [],
+      return { mode: 'hotseat', companies: { A: A, B: B }, rivals: [B], facing: 0, turn: (W.players[d.a] || {}).turn || 0, log: [], options: R.cleanOptions(W.options),
         online: { contract: d.contract || null }, pending: d.pending || null, post: d.post || null };
     }
 
@@ -170,7 +170,7 @@
           temper: { B: C.aiTemper(B) },
           campaign: true, mode: 'ai',
           planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto',
-          options: R.cleanOptions(W.options)
+          options: R.cleanOptions(W.options), world: k.world || null
         }
       };
     }
@@ -191,7 +191,7 @@
           tactics: { A: null, B: null }, askTactics: true,
           campaign: true, mode: 'hotseat', readyUp: true,
           planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto',
-          options: R.cleanOptions(W.options)
+          options: R.cleanOptions(W.options), world: k.world || null
         }
       };
     }
@@ -550,7 +550,7 @@
           const lv = o.levels.filter((n) => n <= 2);
           p.contract = {
             vs: vs, tierRoll: o.tierRoll, tier: o.tier, levels: lv, pl: C.defaultLevel(W.forces[i], W.forces[vs], o.tier, lv),
-            scenario: o.scenario, planet: o.planet || 'random', roles: o.roles || null,
+            scenario: o.scenario, planet: o.planet || 'random', world: o.world || null, roles: o.roles || null,
             alt: o.alt || null, altRoles: o.altRoles || null, altBy: o.alt ? 'A' : null, altUsed: false,
             fore: o.fore ? JSON.parse(JSON.stringify(o.fore)) : null, foreNote: o.foreNote || null,
             terms: {}, picks: { A: null, B: null }, ready: { A: false, B: true }, turn: p.turn, caught: o.caught || null

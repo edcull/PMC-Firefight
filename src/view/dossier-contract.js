@@ -65,6 +65,13 @@
       var sc = root.PMCScen && root.PMCScen.SCENARIOS[job.scenario.id];
       var h = '<div class="offer-job"><div class="offer-scen"><b>' + esc(job.scenario.name) + '</b>' +
         (job.planet && job.planet !== 'random' ? planetPill(job.planet) : '') + '</div>';
+      // Other Worlds: the conditions rolled with the job, each a pill with what it does in its tip
+      if (job.world) {
+        var wl = R.worldLines(job.world);
+        h += '<div class="offer-world">' + (wl.length ? wl.map(function (x) {
+          return '<span class="mk worldpill" title="' + esc(x.text) + '">' + esc(x.name) + '</span>';
+        }).join('') : '<span class="mk worldpill">Conditions much like home</span>') + '</div>';
+      }
       // how big a fight it is: the Battle Tier the D6 gave this job, and the Priority Levels it may be fought at
       levels = levels && levels.length ? levels : [job.pl || 1];
       h += '<div class="offer-size"><span>Battle Tier <b>' + ROMAN[job.tier] + '</b></span>' +
@@ -256,6 +263,7 @@
         pl: C.defaultLevel(A, B, tier.tier, levels),
         levels: levels,
         tierRoll: tier, tier: tier.tier, scenario: fs.scenario || fs.fore.dice[0], planet: 'random',
+        world: E.camp.options && E.camp.options.otherWorlds ? R.rollWorld() : null,     // Other Worlds (p. 165)
         alt: fs.alt || null, altBy: fs.altBy || (fs.alt ? 'A' : null), fore: fs.fore || null, foreNote: fs.note || null,
         picks: [], terms: {}, caught: caught, hot: hotseat()
       };
@@ -299,7 +307,7 @@
         // the highest Level both can fill in full, not merely field (camp: defaultLevel)
         pl: lvls.length ? C.defaultLevel(E.camp.companies.A, E.camp.companies.B, o.tier, lvls) : 1,
         levels: lvls,
-        tierRoll: o.tierRoll, tier: o.tier, scenario: o.scenario, planet: o.planet || 'random',
+        tierRoll: o.tierRoll, tier: o.tier, scenario: o.scenario, planet: o.planet || 'random', world: o.world || null,
         roles: o.roles, alt: o.alt || null, altRoles: o.altRoles || null, altBy: o.alt ? 'A' : null,
         fore: o.fore ? JSON.parse(JSON.stringify(o.fore)) : null, foreNote: o.foreNote || null,
         picks: [], terms: {}, caught: o.caught
@@ -644,7 +652,8 @@
           // two players at one screen swap from their benches in turn, unseen, as a hotseat skirmish does (HC-8)
           secretSwaps: E.camp.mode === 'hotseat',
           planet: E.contract.planet,
-          options: E.camp.options || {}             // the campaign's optional rules
+          options: E.camp.options || {},
+          world: E.contract.world || null           // Other Worlds, rolled with the contract             // the campaign's optional rules
         });
       }
     }

@@ -198,6 +198,8 @@
         return {
           alt: alt, fore: fs.fore || null, foreNote: fs.note || null,
           planet: pick(PLANETS),
+          // Other Worlds: "during a campaign, the rules are randomized before the contract" (p. 165)
+          world: campaign.options && campaign.options.otherWorlds ? R.rollWorld() : null,
           altRoles: alt && SC ? SC.rollRoles(alt.id, docs, null, ['A']) : null,
           rival: idx,
           scenario: scen,

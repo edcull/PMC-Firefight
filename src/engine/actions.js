@@ -43,6 +43,10 @@
       if (u.carryMoved && id !== 'embark' && id !== 'disembark') {
         return { on: false, hint: 'Driven first — now Embark or Disembark (or press any action to stop there).' };
       }
+      // Other Worlds, high radiation: a drone vehicle that lost its link this activation does not move (p. 165)
+      if (['move', 'advance', 'assault'].indexOf(id) >= 0 && u.radioRoll && u.radioRoll.turn === E.state.turn && !u.radioRoll.ok) {
+        return { on: false, hint: 'Its control link is down (D6 1, high radiation): it cannot move this activation.' };
+      }
       if (u.supportUsed && ['embark', 'disembark', 'regroup', 'skip'].indexOf(id) < 0) {
         return { on: false, hint: 'Supporting Fire given — load or unload, or pass.' };
       }
@@ -450,6 +454,12 @@
       }
       // Unreliable (p. 89): searching and sabotage are actions too (CMP-7)
       if (['embark', 'disembark'].indexOf(id) < 0 && unreliableWasted(u)) return;
+      // high radiation: a drone vehicle rolls for its link the first time it would move this activation
+      if (['move', 'advance', 'assault'].indexOf(id) >= 0 && radioDown(u)) {
+        setHint(null, u.label + ' has lost its control link (D6 1, high radiation): it cannot move this activation \u2014 it may still fire.');
+        render();
+        return;
+      }
       if (id === 'checkarea') {
         // two locations in reach: the player says which one is searched
         var sites = SC.searchSpots(E.state, u);
@@ -620,8 +630,24 @@
       return true;
     }
 
+    /* Other Worlds, high radiation (p. 165): "drone controlled vehicles have to roll 2+
+       on a D6 at the beginning of their activation or automatically skip their
+       movement". Rolled once an activation, the first time it matters. True when down. */
+    function radioDown(u) {
+      var w = R.worldOf(E.state);
+      if (!w || w.anomaly !== 'radiation' || !R.isMachine(u) || !(u.drone || R.has(u, 'Drone Control'))) return false;
+      var t = E.state.turn, rr = u.radioRoll;
+      if (!rr || rr.turn !== t) {
+        var d = R.d6();
+        rr = u.radioRoll = { turn: t, ok: d >= 2 };
+        logLine('note', u.label + ' \u2014 high radiation: D6 ' + d + (rr.ok ? ', its control link holds.' : ', its control link is down: no movement this activation.'));
+        if (!rr.ok) pushRes({ kind: 'World', title: 'High radiation', side: u.side, note: u.label + ' loses its control link and cannot move.', dice: [{ label: 'D6', value: d }] });
+      }
+      return !rr.ok;
+    }
+
     return {
-      unreliableWasted: unreliableWasted,
+      unreliableWasted: unreliableWasted, radioDown: radioDown,
       actionState: actionState, chooseAction: chooseAction, dropFor: dropFor, nextOff: nextOff
     };
   };

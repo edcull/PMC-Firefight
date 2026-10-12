@@ -851,12 +851,14 @@
       /* Decapitation: the OpFor's leaders "always act according to the Reasonably
          Defensive result and never Move nor Advance" (p. 152) — whatever state they
          are in, they shoot from where they are or keep their heads down. */
-      if (E.state.scen.noMove && E.state.scen.noMove(E.state, u)) {
+      // high radiation: a drone vehicle whose link is down fires from where it is, as a leader that never moves does
+      var linkDown = E.radioDown(u);
+      if (linkDown || (E.state.scen.noMove && E.state.scen.noMove(E.state, u))) {
         /* Reasonably Defensive: the biggest threat (SOL-6); Suppressed, its Auxiliary
            weapons — the one shot a pinned unit has (p. 34; rules review a119ac2 SOL-8) */
         var pinned = R.status(u) !== 'ready';
         var still = threatTarget(u, 'fire', pinned ? { aux: true } : undefined);
-        logLine('ai', u.label + ' holds its position (Reasonably Defensive).');
+        logLine('ai', u.label + (linkDown ? ' cannot move (its link is down) and holds its position.' : ' holds its position (Reasonably Defensive).'));
         if (still.t) { resolveShot(u, still.t, 'fire', pinned ? { aux: true } : {}); return; }
         if (u.sp) {
           var rr0 = abRally(E.state, u, { regroup: true });

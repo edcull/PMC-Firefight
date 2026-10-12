@@ -82,6 +82,15 @@ briefing lists the ones in play.
 - **"Bad, worse, the bookkeeper"** (p. 167): an army routs when the Tiers of its
   destroyed units add up to half its composition points, rather than when half
   its units are gone.
+- **Other Worlds** (Appendix 2, pp. 164-165): three D10s for the planet's
+  gravity, atmosphere and anomalies, rolled at the start of the battle (in a
+  campaign, with each contract, and shown on the offer). Low gravity lengthens
+  a Move and makes an Advance fire at Basic Firepower; high gravity shortens it
+  and toughens infantry. No air adds 6" to every Range; no air or toxic air is +1
+  against infantry; fog limits sight to 18". High radiation jams everyone and can
+  cut a drone vehicle's link; time anomalies let a side act again on a 5+; an
+  unexplained weakness takes 1 off Movement, Firepower, Assault and Morale (and
+  costs a Trauma point in a campaign).
 
 ### Solitaire
 
@@ -232,8 +241,6 @@ The full file layout and every test are described in [docs/DEVELOPMENT.md](docs/
 
 Planned in [docs/roadmap.md](docs/roadmap.md):
 
-- **Optional rules (v0.3):** Appendix 2, Other Worlds (gravity, atmosphere,
-  anomalies); for now the world only chooses the terrain.
 - **Priority Level 3 on a 6′ × 4′ table (v0.3).** Battles are Priority Level 1–2
   on 4′ × 4′.
 - **Co-op battles in a campaign (v0.3).** Co-op is played as a one-off battle

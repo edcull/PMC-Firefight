@@ -30,6 +30,9 @@
         if (!o.alive || o.side !== side || o.aboard || o.reserve || o.x < 0 || !xenoSenses(o)) continue;
         if (campFlag(o, 'banished') || status(o) === 'broken') continue;
         if (unitDist(o, t) > sightRange(o)) continue;
+        // (no further than 18" in fog, Other Worlds)
+        var w = E.worldOf && E.worldOf(state);
+        if (w && /^foggy/.test(w.atmosphere) && unitDist(o, t) > 18) continue;
         if (isFlying(o) || isFlying(t) || lineClear(state, o, t)) out.push(o);
       }
       return out;

@@ -19,7 +19,7 @@
         reachable = E.reachable, rectPointDist = E.rectPointDist, resolveAssaultHits = E.resolveAssaultHits,
         resolveDamage = E.resolveDamage, sectionRect = E.sectionRect, shelterOf = E.shelterOf,
         shoot = E.shoot, sizeBonus = E.sizeBonus, status = E.status, terrainAt = E.terrainAt,
-        unitDist = E.unitDist, unitNear = E.unitNear, closestTwo = E.closestTwo;
+        unitDist = E.unitDist, unitNear = E.unitNear, closestTwo = E.closestTwo, thinAir = E.thinAir;
     /* ---------- assault ---------- */
     /* Vehicles and aircraft never charge; nothing can charge an aircraft. `state`,
        where the caller has the battle: "There can be only two!" (optional, p. 166)
@@ -138,7 +138,7 @@
           log.push({ t: 'hits', text: dm.rolls.join(' · ') });
           applyDamage(state, foe, dm.damage, log, u);
         } else {
-          var mr = resolveAssaultHits(foe, hits, 0, u);
+          var mr = resolveAssaultHits(foe, hits, 0, u, thinAir(state, foe));
           log.push({ t: 'hits', text: mr.rolls.join(' · ') });
           applyResult(state, foe, mr, log, u);
         }
@@ -382,7 +382,7 @@
         log.push({ t: 'hits', text: out.rolls.join(' · ') });
         applyDamage(state, def, out.damage, log, atk);
       } else if (hits > 0) {
-        var res = resolveAssaultHits(def, hits, plusHit + dmgMod(state, atk, def), atk);
+        var res = resolveAssaultHits(def, hits, plusHit + dmgMod(state, atk, def), atk, thinAir(state, def));
         log.push({ t: 'hits', text: res.rolls.join(' · ') +
           (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
         var fell = def.models;

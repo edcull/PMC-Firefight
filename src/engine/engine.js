@@ -302,6 +302,8 @@
     }
     // a campaign unit carries its dossier on its back: name, honours, traumas, upgrades
     if (entry && C) C.applyEntry(u, entry, state && state.doctrines ? state.doctrines[side] : null);
+    // the world it is fought on (Other Worlds): what that does to the unit's own numbers
+    if (state) R.worldStats(u, R.worldOf(state));
     return u;
   }
 
@@ -311,6 +313,8 @@
        every screen — reads the one name this leaves in the config. */
     cfg.planet = GEN.resolvePlanet(cfg.planet, Math.random);
     cfg.options = R.cleanOptions(cfg.options);          // the optional rules switched on (R.OPTIONS)
+    // Other Worlds: the conditions a campaign rolled for the contract, or rolled now (pp. 164-165)
+    cfg.world = cfg.options.otherWorlds ? (R.cleanWorld(cfg.world) || R.rollWorld()) : null;
     var scenId = cfg.scenario && SC.SCENARIOS[cfg.scenario] ? cfg.scenario : 'secure';
     // a solitaire / cooperative game only runs the solitaire scenarios, and they only run in one
     if (cfg.solo && !(SC.SCENARIOS[scenId] || {}).solo) scenId = 's_crush';
@@ -785,6 +789,14 @@
               { text: sideName('B') + ' — ' + deployWhere('B') }])
     });
     logLine('note', cfg.nameA + ' [A] against ' + cfg.nameB + ' [B].');
+    // Other Worlds: what the planet does to this battle
+    if (cfg.world) {
+      var wl = R.worldLines(cfg.world);
+      logLine('note', 'Other Worlds: ' + (wl.length ? wl.map(function (x) { return x.name; }).join(', ') : 'conditions much like home') + '.');
+      pushRes({ kind: 'World', title: wl.length ? wl.map(function (x) { return x.name; }).join(' \u00b7 ') : 'Standard conditions',
+        note: 'Other Worlds (pp. 164-165): gravity, atmosphere and anomalies.',
+        list: wl.length ? wl.map(function (x) { return { text: x.name + ' \u2014 ' + x.text }; }) : [{ text: 'Standard gravity, standard atmosphere, no anomalies.' }] });
+    }
     logLine('note', 'Terrain generator: ' + built.generator + '. ' +
       built.rolls.map(function (r) { return r.area + ' D6 ' + r.roll; }).join(', ') + '.');
     if (!built.manual) built.rolls.forEach(function (r) { logLine('terrain', r.area + ' — D6 ' + r.roll + ': ' + r.text); });
@@ -829,6 +841,13 @@
     if (R.has(u, 'Riders')) base = Math.max(base, 4);
     if (u.tactic === 'wave' && u.cls === 'infantry' &&
       (action === 'move' || action === 'assault' || !action)) base = Math.max(base, 4);
+    /* Other Worlds (p. 164), on a Move: low gravity M+6" for infantry and M+8" for
+       ground vehicles; high gravity 1" less (2" for ground vehicles, 4" for aircraft). */
+    var w = state && R.worldOf(state);
+    if (w && (action === 'move' || !action)) {
+      if (w.gravity === 'low' && !R.isFlying(u)) base = Math.max(base, R.isMachine(u) ? 8 : 6);
+      if (w.gravity === 'high') base -= R.isFlying(u) ? 4 : R.isMachine(u) ? 2 : 1;
+    }
     if (!C || !state) return base;
     return C.moveBonus(u, base, action || 'move', state.doctrines ? state.doctrines[u.side] : null);
   }
@@ -1360,6 +1379,17 @@
   function afterChain() {
     if (state.solo) { K.soloNext(); return; }
     state.streak -= 1;
+    /* Other Worlds, time anomalies (p. 165): with the side's activations done (all
+       of an Overwhelming streak), a D6 of 5+ gives it one more — and the roll again after that. */
+    var tw = R.worldOf(state);
+    if (state.streak <= 0 && tw && tw.anomaly === 'time' && eligible(state.activeSide).length > 0) {
+      var tr = R.d6();
+      if (tr >= 5) {
+        state.streak = 1;
+        logLine('note', 'Time anomalies: D6 ' + tr + ' \u2014 ' + sideName(state.activeSide) + ' activates another unit.');
+        pushRes({ kind: 'World', title: 'Time anomalies', side: state.activeSide, note: sideName(state.activeSide) + ' acts again.', dice: [{ label: 'D6', value: tr }] });
+      }
+    }
     if (state.streak > 0 && eligible(state.activeSide).length > 0) { render(); maybeAI(); return; }
 
     var next = other(state.activeSide);

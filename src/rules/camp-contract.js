@@ -282,6 +282,8 @@
       if (ctx.routed && !hasDoctrine(ctx.company, 'S5')) out.push({ text: 'The army was routed', n: 1 });
       if (ctx.consecutive) out.push({ text: 'A second battle in a row', n: 1 });
       if (line.aboardDowned) out.push({ text: 'Was aboard an aircraft that was shot down', n: 5 });
+      // Other Worlds: "in a campaign, all these units get an additional Trauma point" (p. 165)
+      if (line.weakened) out.push({ text: 'Unexplained weakness on that world', n: 1 });
       // Drug Dealer: whatever they were given, they pay for afterwards
       if (line.drugged) out.push({ text: 'Drug Dealer — the comedown', n: d6() + 1 });
       var tot = sum(out.map(function (o) { return o.n; }));

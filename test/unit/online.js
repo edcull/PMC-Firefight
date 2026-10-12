@@ -91,7 +91,7 @@ function ok(name, cond, note) {
   ok('only the host renames it', !cmd(brann, 'lobbyName', { name: 'Mine now' }).ok && cmd(ash, 'lobbyName', { name: 'The Long War' }).ok &&
     view(brann).name === 'The Long War' && online.list(brann).some((c) => c.name === 'The Long War'));
   ok('only the host sets the optional rules', !cmd(brann, 'lobbyOptions', { options: { onlyTwo: true } }).ok &&
-    cmd(ash, 'lobbyOptions', { options: { onlyTwo: true, bogus: true } }).ok && JSON.stringify(view(brann).options) === '{"onlyTwo":true}', JSON.stringify(view(brann).options));
+    cmd(ash, 'lobbyOptions', { options: { onlyTwo: true, otherWorlds: true, bogus: true } }).ok && JSON.stringify(view(brann).options) === '{"onlyTwo":true,"otherWorlds":true}', JSON.stringify(view(brann).options));
   ok('only the host starts it', !cmd(brann, 'lobbyStart').ok);
   ok('...and not before saying they are ready too', /Ash is not ready/.test(cmd(ash, 'lobbyStart').why));
   cmd(ash, 'lobbyReady', {});
@@ -149,6 +149,8 @@ function ok(name, cond, note) {
   const room = lobby.rooms.get(go.battle);
   ok('a private room: the player’s seat held, the AI’s side with nobody in it', room && room.settings.private && room.seats.A.id === 'u' + ash.userId && !room.seats.B);
   ok('...fought under the campaign\u2019s optional rules', room && room.table.engine.state().cfg.options.onlyTwo === true && !room.table.engine.state().cfg.options.bogus);
+  ok('...on the world the contract was offered with (Other Worlds, rolled before the contract)', room && !!room.table.engine.state().cfg.world &&
+    JSON.stringify(room.table.engine.state().cfg.world) === JSON.stringify(room.table.cfg.world), JSON.stringify(room.table.cfg.world));
   ok('...the table set for the AI to play side B, against the AI force’s own list', room && room.table.cfg.mode === 'ai' && room.table.cfg.nameB === aiName && room.table.cfg.armyB.length > 0 && room.table.engine.state().cfg.aiSides.indexOf('B') >= 0);
   ok('the force holds while it is fought', /battle is being fought/.test(cmd(ash, 'recruit', { key: 'recruits' }).why));
   ok('...but the others play on meanwhile (Brann takes a contract of their own)', (() => {

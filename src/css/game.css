@@ -2369,3 +2369,7 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .opk .ct { font-family: var(--mono); color: var(--ink-dim); }
 #op-modal .askrow { flex-wrap: wrap; gap: 8px; }
 #op-modal .limits { white-space: normal; overflow: visible; text-overflow: clip; }
+
+/* Other Worlds on a job: the conditions rolled with it, a pill each (dossier-contract.js jobCard) */
+.offer-world { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 2px; }
+.worldpill { border-color: color-mix(in srgb, var(--warn, #d9a441) 50%, var(--line)); color: var(--ink); }
