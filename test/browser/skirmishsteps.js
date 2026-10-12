@@ -60,7 +60,8 @@ const { ROOT, SHOTS, seedDice } = require('../where.js');
   await p.locator('#setup .sheet').screenshot({ path: path.join(SHOTS, 'skirmish-battlefield.png') });
   // the optional rules, a box each on the battlefield, off to begin with
   const boxes = await p.evaluate(() => Array.from(document.querySelectorAll('#opt-boxes input[data-opt]')).map((i) => i.getAttribute('data-opt') + (i.checked ? '+' : '-')));
-  check('the optional rules are on the battlefield, a box each, all off', await shown('opts-field') && boxes.join() === 'onlyTwo-,bookkeeper-', boxes.join());
+  const want = await p.evaluate(() => window.PMC.OPTIONS.map((d) => d.key + '-').join());
+  check('the optional rules are on the battlefield, a box each, all off', await shown('opts-field') && boxes.join() === want, boxes.join());
   await p.evaluate(() => { const i = document.querySelector('#opt-boxes input[data-opt="onlyTwo"]'); i.checked = true; i.dispatchEvent(new Event('change', { bubbles: true })); });
   await setVal('sel-scen', 'meeting');
   await next();
