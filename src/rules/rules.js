@@ -1026,9 +1026,14 @@
     { key: 'closeEncounters', name: 'Close Encounters', page: 157, camp: false,
       text: 'Fighting inside compounds: corridors, rooms and doors, and no vehicles or aircraft. Adds the Close Encounters scenarios (Clearing out, Critical control) to the scenario list.' }
   ];
+  /* A campaign's Close Encounters (Appendix 1): how often a contract is fought
+     inside a compound — none (the key left out), 10% (low), half (mid) or all. */
+  var CE_FREQ = { low: 0.1, mid: 0.5, all: 1 };
+  var CE_FREQ_NAMES = { low: 'Close Encounters (1 contract in 10)', mid: 'Close Encounters (half the contracts)', all: 'Close Encounters (every contract)' };
   function cleanOptions(o) {
     var out = {};
     OPTIONS.forEach(function (d) { if (o && (o[d.key] === true || o[d.key] === 'true')) out[d.key] = true; });
+    if (o && CE_FREQ[o.ceFreq]) out.ceFreq = o.ceFreq;
     return out;
   }
   function opt(state, key) { return !!(state && state.cfg && state.cfg.options && state.cfg.options[key]); }
@@ -1119,7 +1124,8 @@
   }
   // the names of the options on, for a card or a log line
   function optionNames(o) {
-    return OPTIONS.filter(function (d) { return o && o[d.key]; }).map(function (d) { return d.name; });
+    return OPTIONS.filter(function (d) { return o && o[d.key]; }).map(function (d) { return d.name; })
+      .concat(o && CE_FREQ_NAMES[o.ceFreq] ? [CE_FREQ_NAMES[o.ceFreq]] : []);
   }
   // the bug groups an Evolutionary Pathway names (p. 124)
   function bugRanged(u) { return !!u && u.faction === 'bugs' && (u.group === 'Spore Bugs' || u.group === 'Flying Bugs'); }
@@ -2478,7 +2484,7 @@
     enemyWithinRange: enemyWithinRange, onTable: onTable, swapAllowance: swapAllowance, steadyShooter: steadyShooter, steadyTargets: steadyTargets, steadyFire: steadyFire,
     hasExact: hasExact, antiTank: antiTank,
     campFlag: campFlag, doctrine: doctrine, unitDoc: unitDoc, credit: credit,
-    OPTIONS: OPTIONS, cleanOptions: cleanOptions, opt: opt, optionNames: optionNames, closestTwo: closestTwo,
+    OPTIONS: OPTIONS, CE_FREQ: CE_FREQ, cleanOptions: cleanOptions, opt: opt, optionNames: optionNames, closestTwo: closestTwo,
     rollWorld: rollWorld, cleanWorld: cleanWorld, worldOf: worldOf, worldLines: worldLines, thinAir: thinAir, worldStats: worldStats,
     isDestructible: isDestructible, destructibleKind: destructibleKind, shelterOf: shelterOf,
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,

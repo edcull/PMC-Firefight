@@ -256,7 +256,7 @@
       }
       var tier = C.rollBattleTier(A, B);
       // a D6 across all six, whatever the Tier — and Foresighted Command's dice (camp-contract.js)
-      var fs = C.foresight(A, B, !hotseat());
+      var fs = C.foresight(A, B, !hotseat(), E.camp.options);
       var levels = C.levelsFor(A, B, tier.tier);
       E.contract = {
         // the highest Level both can fill in full, not merely field (camp: defaultLevel)

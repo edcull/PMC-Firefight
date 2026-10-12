@@ -183,7 +183,7 @@
       campaign.offers = deal.map(function (idx) {
         var co = rivals[idx];
         // Foresighted Command (p. 141): the rival's and the player's (camp-contract.js)
-        var fs = foresight(A, co, true);
+        var fs = foresight(A, co, true, campaign.options);
         var scen = fs.scenario || fs.fore.dice[0];
         var tier = rollBattleTier(A, co);
         // no bigger a fight than the force can field in full
