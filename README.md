@@ -14,12 +14,10 @@ edge to edge.
 - **Ways to play:**
   - against the AI;
   - solitaire;
-  - hotseat on one screen;
   - online against another player;
-  - co-op against the OpFor, on one device or online.
+  - co-op against the OpFor, online.
 - **Campaigns:**
   - single player against AI rival forces;
-  - hotseat, with 0, 2, 4, 6 or 8 AI forces alongside the two players;
   - online "world" campaigns: a lobby with player and AI slots, contracts
     against the AI, and duels between players.
 - **Accounts on a game server:** sign-in or guest play, email activation and
@@ -62,10 +60,8 @@ The main menu offers:
 | **Force builder** | Build and save a skirmish force, or a campaign's starting company |
 | **Unit viewer** | Every profile in all four armies, walking and firing |
 
-The **Hotseat** menu (skirmish, co-op and campaign on one screen) is hidden for
-now; hotseat games already under way are still in **Continue**. Along the foot of
-the menu are sound, graphics (low for phones that struggle), an AI-against-AI
-demo, and your account.
+Along the foot of the menu are sound, graphics (low for phones that struggle), an
+AI-against-AI demo, and your account.
 
 A skirmish opens on **the battlefield**: pick the Battle Tier, Priority Level,
 scenario and world, then tap each force's card to muster it. Mustering spends
@@ -77,7 +73,7 @@ named, saved, and saved to or loaded from a file (`.pmcforce.json`).
 - **Terrain** is rolled from the book's generators, or laid by hand: tap to place
   a piece, and turn it with **Turn it**, <kbd>R</kbd> or a right-click.
 - **Modifying the armies:** once the table is known, each side may swap units,
-  in secret in a hotseat game.
+  in secret from the other player.
 - **Deployment:** tap a unit in the order of battle, then tap inside your zone.
   **Auto-deploy** places the rest. Units with Battlefield Insertion may be held
   back to arrive later.
@@ -147,12 +143,11 @@ play the battle, and read the aftermath: pay, experience, trauma, casualties by
 name, promotions and upgrades. The other forces on the world fight their own
 battles between yours.
 
-There are three kinds:
+There are two kinds:
 
 | | |
 |---|---|
 | **Single player** | You against AI rival forces |
-| **Hotseat** | Two players, each with their own dossier, on one screen, with 0–8 AI forces. The hub switches between the two players' forces |
 | **Online** | A world on the server: players and AI forces in slots, contracts against the AI, and duels between players, played at each player's own pace |
 
 ### The unit viewer
