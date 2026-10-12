@@ -452,7 +452,21 @@
 
     function wireMuster() {
       ['sel-tier', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).addEventListener('change', gateD3); });
-      ['sel-scen', 'sel-pl'].forEach(function (id) { if (el(id)) el(id).addEventListener('change', drawKit); });
+      ['sel-scen', 'sel-pl', 'sel-solo-scen'].forEach(function (id) { if (el(id)) el(id).addEventListener('change', drawKit); });
+      if (el('sel-compound')) {
+        try { if (localStorage.getItem('pmc-compound-mode') === 'hand') el('sel-compound').value = 'hand'; } catch (e) { }
+        el('sel-compound').addEventListener('change', function () {
+          try { localStorage.setItem('pmc-compound-mode', el('sel-compound').value); } catch (e) { }
+          drawCompound();
+        });
+      }
+      if (el('btn-compound')) el('btn-compound').addEventListener('click', function () {
+        var b = compoundBoard();
+        root.PMCCompoundEdit.open({ w: b.w, h: b.h, plan: savedPlan(b), onDone: function (plan) {
+          try { localStorage.setItem(planKey(b), JSON.stringify(plan)); } catch (e) { }
+          drawCompound();
+        } });
+      });
       gateD3();
       ['sel-tier', 'sel-pl', 'sel-faction'].forEach(function (id) {
         if (!el(id)) return;
@@ -776,7 +790,43 @@
       var k = muster.hot && muster.hot.kind;
       return k === 'hotseat' ? ['A', 'B'] : k === 'ai' ? ['A'] : [];
     }
+    /* The compound a Close Encounters battle is fought in (p. 157): laid out by the
+       game for each battle, or by hand (compound-edit.js, "set up the complex in
+       agreeable way", p. 163) — one kept on this device for each size of table. */
+    function compoundScen() {
+      var k = muster.hot && muster.hot.kind;
+      if (k === 'solo' || k === 'coop') return !!el('sel-solo-scen') && (SC.SCENARIOS[el('sel-solo-scen').value] || {}).compound === true;
+      return !!el('sel-scen') && /^ce_/.test(el('sel-scen').value);
+    }
+    function compoundBoard() {
+      var k = muster.hot && muster.hot.kind;
+      return k === 'solo' || k === 'coop' ? { w: 48, h: 48 } : R.boardFor(musterPL());
+    }
+    function planKey(b) { return 'pmc-compound-' + b.w + 'x' + b.h; }
+    function savedPlan(b) { try { return JSON.parse(localStorage.getItem(planKey(b)) || 'null'); } catch (e) { return null; } }
+    function drawCompound() {
+      var f = el('compound-field'), CMP = root.PMCCompound, k = muster.hot && muster.hot.kind;
+      if (!f || !CMP) return;
+      var on = compoundScen() && k !== 'net' && k !== 'build';
+      f.hidden = !on;
+      if (!on) return;
+      var b = compoundBoard(), plan = savedPlan(b), hand = el('sel-compound').value === 'hand';
+      var ck = plan ? CMP.checkPlan(plan, b.w, b.h) : null;
+      el('btn-compound').hidden = !hand;
+      el('btn-compound').textContent = plan ? 'Change it\u2026' : 'Lay it out\u2026';
+      el('compound-note').textContent = !hand ? 'A fresh compound for each battle: corridors, rooms and halls, with entry points on the two long edges.'
+        : !plan ? 'None laid out yet for a ' + b.w + '" \u00d7 ' + b.h + '" table.'
+        : ck.ok ? 'Yours, for a ' + b.w + '" \u00d7 ' + b.h + '" table: ' + ck.rooms + ' room' + (ck.rooms === 1 ? '' : 's') + ', ' + ck.halls + ' hall' + (ck.halls === 1 ? '' : 's') + ', ' + (ck.entries.L + ck.entries.R) + ' entry points.'
+        : 'Yours cannot be fought in yet: ' + ck.faults.join(' ');
+    }
+    // the plan to fight in, when one is wanted and fit (null: the game lays one out)
+    function chosenPlan() {
+      if (!compoundScen() || !el('sel-compound') || el('sel-compound').value !== 'hand') return null;
+      var b = compoundBoard(), p = savedPlan(b);
+      return p && root.PMCCompound.checkPlan(p, b.w, b.h).ok ? p : null;
+    }
     function drawKit() {
+      drawCompound();
       var f = el('kit-field'), box = el('kit-boxes'), sel = el('sel-scen');
       var CMP = root.PMCCompound;
       if (!f || !box || !CMP) return;
@@ -1411,6 +1461,8 @@
         if (h.opKeys && !opChosen) { opModal(true); return hotRefuse('The OpFor is not legal yet.'); }
         var scen = el('sel-solo-scen').value;
         if (scen === 'roll') scen = SOLO.ORDER[Math.floor(Math.random() * SOLO.ORDER.length)];
+        if (compoundScen() && el('sel-compound').value === 'hand' && !chosenPlan()) return hotRefuse('Lay out the compound first, or let the game lay one out.');
+        var soloPlan = chosenPlan();
         el('setup').hidden = true;
         hotEnd();
         begin({
@@ -1421,11 +1473,13 @@
           colourA: a.colour, colourC: coop ? b.colour : null,
           colourB: h.opColour && (coop ? [a.colour, b.colour] : [a.colour]).indexOf(h.opColour) < 0 ? h.opColour : foeColour(coop ? [a.colour, b.colour] : [a.colour]),
           tactics: { A: null, B: null }, mode: 'ai', planet: planet, terrainSetup: terrainSetup, options: chosenOptions(h.kind),
+          compoundPlan: soloPlan,
           solo: { coop: coop, faction: a.faction || 'pmc', opFaction: opFaction, names: coop ? [a.name, b.name] : [a.name],
             handPlace: !!el('sel-solo-place') && el('sel-solo-place').value === 'hand' }
         });
         return;
       }
+      if (compoundScen() && el('sel-compound').value === 'hand' && !chosenPlan()) return hotRefuse('Lay out the compound first, or let the game lay one out.');
       var pickScen = el('sel-scen') ? el('sel-scen').value : 'secure';
       if (pickScen === 'roll') pickScen = SC.ORDER[R.d6() - 1];
       else if (pickScen === 'rolld3') pickScen = SC.ORDER[(d3Allowed() ? R.d3() : R.d6()) - 1];
@@ -1442,6 +1496,7 @@
         temper: { A: hotTemper(a), B: hotTemper(b) },
         mode: mode, planet: planet, terrainSetup: terrainSetup, options: chosenOptions(h.kind),
         kit: /^ce_/.test(pickScen) ? chosenKit() : null,
+        compoundPlan: /^ce_/.test(pickScen) ? chosenPlan() : null,
         secretSwaps: mode === 'hotseat'           // two players at one screen swap in turn, unseen
       });
     }

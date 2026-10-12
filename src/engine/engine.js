@@ -334,7 +334,11 @@
        laid by its own generator in place of the world's table. */
     var scenDef = SC.SCENARIOS[scenId] || {};
     var manual = !scenDef.compound && K.wantsManualTerrain(cfg);
-    var built = scenDef.compound
+    /* A compound the players laid out themselves (cfg.compoundPlan) where it fits
+       this table and can be fought in; the generator's otherwise. */
+    var handBuilt = scenDef.compound && cfg.compoundPlan ? CMP.build(cfg.compoundPlan, R.BOARD.w, R.BOARD.h) : null;
+    var built = handBuilt ? handBuilt
+      : scenDef.compound
       ? CMP.generate(R.BOARD.w, R.BOARD.h, Math.random, { rooms: scenDef.rooms || 0, danger: scenDef.danger != null ? scenDef.danger : 0.15 })
       : manual
       ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
@@ -859,7 +863,8 @@
       var secs = { corridor: 0, room: 0, hall: 0, door: 0, danger: 0 };
       state.terrain.forEach(function (r) { if (secs[r.kind] != null) secs[r.kind]++; if (r.dangerous) secs.danger++; });
       var made = secs.room + ' rooms, ' + secs.hall + ' hall' + (secs.hall === 1 ? '' : 's') + ', ' + secs.corridor + ' corridor sections and ' + secs.door + ' doors';
-      logLine('note', 'The compound: ' + made + (secs.danger ? '; ' + secs.danger + ' dangerous section' + (secs.danger === 1 ? '' : 's') : '') + '.');
+      if (state.cfg.compoundPlan && !state.compound.built) logLine('note', 'The compound laid out by hand does not fit this table or cannot be fought in — the game has laid one out instead.');
+      logLine('note', (state.compound.built ? 'The compound, laid out by hand: ' : 'The compound: ') + made + (secs.danger ? '; ' + secs.danger + ' dangerous section' + (secs.danger === 1 ? '' : 's') : '') + '.');
       pushRes({ kind: 'Terrain', title: 'A compound',
         note: 'Close Encounters (p. 157): corridors, rooms and halls inside solid walls, with entry points on each long edge.',
         list: [{ text: made + '.' }].concat(secs.danger ? [{ text: secs.danger + ' dangerous section' + (secs.danger === 1 ? '' : 's') + ' (fuel drums): fire into one may set it off.' }] : []) });

@@ -165,5 +165,54 @@ for (const scen of SC.CE_ORDER) {
   ok('two of three at the end of turn 20 wins', (st.scen.check(st) || {}).winner === 'A');
 }
 
+console.log('\nHand-built compounds (p. 163: "set up the complex in agreeable way")');
+{
+  // a 16 x 16 plan: in from the left along row 7, a door into a 3 x 3 room, out along row 8, up column 12, and off right along row 2
+  const cols = 16, rows = 16, at = (i, j) => j * cols + i, ek = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
+  const cells = Array(cols * rows).fill('.');
+  for (let i = 0; i <= 5; i++) cells[at(i, 7)] = 'c';
+  for (let j = 6; j <= 8; j++) for (let i = 6; i <= 8; i++) cells[at(i, j)] = 'r';
+  for (let i = 9; i <= 12; i++) cells[at(i, 8)] = 'c';
+  for (let j = 2; j <= 7; j++) cells[at(12, j)] = 'c';
+  for (let i = 13; i <= 15; i++) cells[at(i, 2)] = 'c';
+  const base = () => ({ cols, rows, cells: cells.join(''), walls: [], doors: [ek(at(5, 7), at(6, 7))], danger: [at(7, 7)] });
+  const ck = CMP.checkPlan(base(), 48, 48);
+  ok('a plan with a way in on each edge, one room, everything joined, can be fought in', ck.ok && ck.rooms === 1 && ck.halls === 0 && ck.entries.L === 1 && ck.entries.R === 1, JSON.stringify(ck));
+  const b = CMP.build(base(), 48, 48);
+  const room = b.terrain.find((r) => r.kind === 'room');
+  ok('built: the room where it was painted, 9" a side', room && room.x === 18 && room.y === 18 && room.w === 9 && room.h === 9);
+  ok('...marked dangerous where it was marked', room && room.dangerous);
+  ok('...corridor sections 3" wide and no longer than 12"', b.terrain.filter((r) => r.kind === 'corridor').every((r) => Math.min(r.w, r.h) === 3 && Math.max(r.w, r.h) <= 12));
+  ok('...the door hung where it was put, and only there', b.terrain.filter((r) => r.kind === 'door').length === 1 && b.terrain.some((r) => r.kind === 'door' && Math.abs(r.x + r.w / 2 - 18) < 0.01 && r.y === 21));
+  ok('...solid round it, and the entry points where corridors meet the edges', b.terrain.some((r) => r.kind === 'bulkhead') && b.compound.entries.L.length === 1 && b.compound.entries.R.length === 1 &&
+    b.compound.entries.L[0].x === 0 && b.compound.entries.R[0].x + b.compound.entries.R[0].w === 48 && b.compound.built);
+  const st = { terrain: b.terrain, compound: b.compound, units: [] };
+  ok('...walked through from one edge to the other', (() => { const wf = R.walkField(st, 1.5, 22.5, 'A'); return wf && wf(46.5, 7.5) < 80; })());
+
+  let p = base(); p.cells = p.cells.slice(0, at(9, 6)) + 'r' + p.cells.slice(at(9, 6) + 1);
+  ok('a room that is not a rectangle is refused', /rectangle/.test(CMP.checkPlan(p, 48, 48).faults.join()));
+  p = base(); p.cells = p.cells.slice(0, at(3, 12)) + 'c' + p.cells.slice(at(3, 12) + 1);
+  ok('...as is floor cut off from every entry', /cut off/.test(CMP.checkPlan(p, 48, 48).faults.join()));
+  p = base(); for (let i = 13; i <= 15; i++) p.cells = p.cells.slice(0, at(i, 2)) + '.' + p.cells.slice(at(i, 2) + 1);
+  ok('...and one with no way in on the right', /right edge/.test(CMP.checkPlan(p, 48, 48).faults.join()) && !CMP.build(p, 48, 48));
+  p = base(); p.doors = []; p.walls = [ek(at(5, 7), at(6, 7))];
+  ok('a wall across the only way: no way through from left to right', /no way through|cut off/.test(CMP.checkPlan(p, 48, 48).faults.join()));
+  p = base(); for (let i = 0; i < cols; i++) p.cells = p.cells.slice(0, at(i, 14)) + 'c' + p.cells.slice(at(i, 14) + 1);
+  ok('a corridor straight across from edge to edge is allowed, with a warning', CMP.checkPlan(p, 48, 48).ok && /edge to edge/.test(CMP.checkPlan(p, 48, 48).warnings.join()));
+  ok('a plan for another table size is refused', /different table size/.test(CMP.checkPlan(base(), 48, 72).faults.join()));
+  ok('nonsense is refused, not thrown', !CMP.build({ cells: 7, walls: 'x' }, 48, 48) && !CMP.build(null, 48, 48));
+  let rt = 0;
+  for (let n = 0; n < 12; n++) { const w = n % 2 ? 48 : 48, h = n % 2 ? 72 : 48; if (CMP.checkPlan(CMP.generatedPlan(w, h), w, h).ok) rt++; }
+  ok('a generated compound, as a plan to start from, can be fought in as it is', rt === 12, rt + '/12');
+
+  const e = Engine.create();
+  e.start({ tier: 3, pl: 1, scenario: 'ce_clear', armyA: ['regular'], armyB: ['regular'], nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', compoundPlan: base() });
+  const s1 = e.state();
+  ok('a battle given the plan is fought in it', s1.compound.built && s1.terrain.some((r) => r.kind === 'room' && r.x === 18 && r.y === 18) && /laid out by hand/.test(s1.log.map((l) => l.text).join()));
+  const f = Engine.create();
+  f.start({ tier: 3, pl: 3, scenario: 'ce_clear', armyA: ['regular'], armyB: ['regular'], nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse', compoundPlan: base() });
+  ok('...one that does not fit the table is set aside for a generated one, and said so', !f.state().compound.built && /does not fit/.test(f.state().log.map((l) => l.text).join()));
+}
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

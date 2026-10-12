@@ -2379,3 +2379,13 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .kit-row .kit-who { font-weight: 600; min-width: 92px; }
 .field .kit-pick, .kit-pick { display: inline-flex; gap: 4px; align-items: center; margin: 0; text-transform: none; letter-spacing: 0; font-size: 12px; }
 .kit-pick select { width: auto; padding: 2px 4px; }
+
+/* laying out a compound by hand (compound-edit.js) */
+.cmp-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cmp-box { width: min(640px, 100%); }
+.cmp-tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.cmp-tool { background: var(--panel-2); color: var(--ink-dim); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.cmp-tool.on { color: var(--ink); border-color: var(--alpha); background: var(--on-bg); }
+.cmp-wrap { display: flex; justify-content: center; overflow: auto; touch-action: none; }
+.cmp-wrap canvas { display: block; touch-action: none; cursor: crosshair; border: 1px solid var(--line); }
+.cmp-key { margin: 6px 0 2px; }

@@ -44,6 +44,42 @@ function ok(name, cond, note) {
       satchel: (f.querySelector('select[data-kit="satchel"]') || {}).value, pl: document.getElementById('sel-pl').value };
   });
   ok('a compound scenario: the special equipment to choose, the standard set (one of each a Priority Level) to start', kit.shown && kit.rows === 1 && kit.picks === 5 && kit.satchel === kit.pl, JSON.stringify(kit));
+
+  console.log('\nA compound laid out by hand');
+  // (the menu closes when a skirmish is picked from it; called directly, it is still up)
+  await p.evaluate(() => { const m = document.getElementById('menu'); if (m) m.hidden = true; try { localStorage.removeItem('pmc-compound-48x48'); localStorage.removeItem('pmc-compound-mode'); } catch (e) { } });
+  let cf = await p.evaluate(() => ({ shown: !document.getElementById('compound-field').hidden, btn: !document.getElementById('btn-compound').hidden, note: document.getElementById('compound-note').textContent }));
+  ok('with a compound scenario, the compound is the game\'s to lay out unless asked', cf.shown && !cf.btn && /fresh compound/.test(cf.note), JSON.stringify(cf));
+  await p.evaluate(() => { const s = document.getElementById('sel-compound'); s.value = 'hand'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+  cf = await p.evaluate(() => ({ btn: !document.getElementById('btn-compound').hidden, note: document.getElementById('compound-note').textContent }));
+  ok('...by hand: none laid out yet, and the way to lay one out', cf.btn && /None laid out/.test(cf.note), cf.note);
+  await p.click('#btn-compound');
+  await p.waitForTimeout(150);
+  const blank = await p.evaluate(() => ({ open: !document.getElementById('cmp-modal').hidden, canvas: !!document.getElementById('cmp-canvas'), status: document.getElementById('cmp-status').textContent, done: document.getElementById('cmp-done').disabled }));
+  ok('the editor opens on a blank 3" grid, which cannot be fought in yet', blank.open && blank.canvas && /No entry point/.test(blank.status) && blank.done, blank.status);
+  // a corridor dragged across the table on row 4, by hand
+  const box = await p.evaluate(() => { const r = document.getElementById('cmp-canvas').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
+  const cell = (i, j) => ({ x: box.x + (i + 0.5) * box.w / 16, y: box.y + (j + 0.5) * box.h / 16 });
+  await p.mouse.move(cell(0, 4).x, cell(0, 4).y); await p.mouse.down();
+  for (let i = 1; i < 16; i++) await p.mouse.move(cell(i, 4).x, cell(i, 4).y, { steps: 2 });
+  await p.mouse.up();
+  const drawn = await p.evaluate(() => ({ row: window.PMCCompoundEdit.plan().cells.slice(64, 80), status: document.getElementById('cmp-status').textContent, done: document.getElementById('cmp-done').disabled }));
+  ok('a corridor painted edge to edge: fought in, with a warning about the open row', drawn.row === 'cccccccccccccccc' && !drawn.done && /edge to edge/.test(drawn.status), drawn.row + ' / ' + drawn.status);
+  // a door on the line between cells 7 and 8 of it
+  await p.click('.cmp-tool[data-tool="edge"]');
+  await p.mouse.click(box.x + 8 * box.w / 16, cell(7, 4).y);
+  const dr = await p.evaluate(() => window.PMCCompoundEdit.plan().doors.slice());
+  ok('the edge tool hangs a door between two cells', dr.length === 1 && dr[0] === '71|72', dr.join());
+  await p.click('[data-cmp="gen"]');
+  await p.waitForTimeout(100);
+  const gen = await p.evaluate(() => ({ status: document.getElementById('cmp-status').textContent, done: document.getElementById('cmp-done').disabled }));
+  ok('"Start from a generated one" gives a whole compound to change', !gen.done && /rooms?, \d+ halls?/.test(gen.status), gen.status);
+  await p.screenshot({ path: path.join(SHOTS, 'compound-edit.png') });
+  await p.click('#cmp-done');
+  cf = await p.evaluate(() => ({ closed: document.getElementById('cmp-modal').hidden, note: document.getElementById('compound-note').textContent, saved: !!localStorage.getItem('pmc-compound-48x48') }));
+  ok('Use this compound: kept for the table size, and named on the battlefield step', cf.closed && cf.saved && /^Yours/.test(cf.note), cf.note);
+  await p.evaluate(() => { const s = document.getElementById('sel-compound'); s.value = 'gen'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+
   await tick(false);
   const after = await p.evaluate(() => document.getElementById('sel-scen').value);
   ok('unticked, they go, and a choice of one with them', !(await scens()).some((v) => /^ce_/.test(v)) && after === 'roll', after);
@@ -78,6 +114,14 @@ function ok(name, cond, note) {
   });
   ok('the two AIs fight it out into turn 2, nobody standing in a wall', mid.turn >= 2 && mid.onTable > 0 && mid.walled === 0, JSON.stringify(mid));
   await p.screenshot({ path: path.join(SHOTS, 'compound.png') });
+
+  console.log('\nA battle in the compound laid out by hand');
+  await p.evaluate(() => window.PMC_NEWGAME({ tier: 3, pl: 1, mode: 'demo', planet: 'sparse', scenario: 'ce_clear', nameA: 'Ironhold', nameB: 'Kessler',
+    armyA: ['regular', 'veterans'], armyB: ['regular', 'veterans'], compoundPlan: JSON.parse(localStorage.getItem('pmc-compound-48x48')) }));
+  await p.waitForTimeout(900);
+  const hb = await p.evaluate(() => { const s = window.PMC_STATE(); return { built: !!(s.compound && s.compound.built), rooms: s.terrain.filter((r) => r.kind === 'room' || r.kind === 'hall').length }; });
+  ok('fought in as it was laid out', hb.built && hb.rooms > 0, JSON.stringify(hb));
+  await p.screenshot({ path: path.join(SHOTS, 'compound-hand.png') });
 
   console.log('\nBesieged, solitaire');
   await p.evaluate(() => window.PMC_NEWGAME({ tier: 3, pl: 1, mode: 'demo', planet: 'sparse', scenario: 's_besieged', nameA: 'Ironhold', nameB: 'OpFor',

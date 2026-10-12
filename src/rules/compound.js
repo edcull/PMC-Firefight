@@ -30,6 +30,38 @@
     return a;
   }
 
+  /* The corridor cells (marked `corr` in the grid) cut into sections: straight
+     runs of up to four cells, along the way the cells are open to each other.
+     The grid is rewritten in place; the axis of each new section handed back. */
+  function cutCorridors(cols, rows, grid, kindOf, open, corr) {
+    var N = cols * rows;
+    function idx(i, j) { return j * cols + i; }
+    function ek(a, b) { return a < b ? a + '|' + b : b + '|' + a; }
+    function linkedTo(c, d) {
+      var i = c % cols, j = (c / cols) | 0, ni = i + d[0], nj = j + d[1];
+      if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) return -1;
+      var nc = idx(ni, nj);
+      return grid[nc] === corr && open[ek(c, nc)] ? nc : -1;
+    }
+    var axisOf = {};
+    for (var c0 = 0; c0 < N; c0++) {
+      if (grid[c0] !== corr) continue;
+      // the longer of the two straight runs through this cell, as far as four
+      var runs = [[[1, 0], [-1, 0]], [[0, 1], [0, -1]]].map(function (dirs) {
+        var cells = [c0];
+        dirs.forEach(function (d) {
+          var cc = c0;
+          while (cells.length < RUN) { var nx = linkedTo(cc, d); if (nx < 0) break; cells.push(nx); cc = nx; }
+        });
+        return cells;
+      });
+      var pick = runs[0].length >= runs[1].length ? 0 : 1;
+      var s = kindOf.length; kindOf.push('corridor'); axisOf[s] = runs[pick].length > 1 ? (pick === 0 ? 'h' : 'v') : null;
+      runs[pick].forEach(function (cc) { grid[cc] = s; });
+    }
+    return axisOf;
+  }
+
   /* One try at a compound on a table `w` x `h` inches. Entry points are on the
      two long edges that the players come in from: x = 0 (`L`) and x = w (`R`). */
   function attempt(w, h, rand, opts) {
@@ -163,29 +195,7 @@
     });
     for (var pi = 0; pi < pairs.length; pi++) if (!dig(nodes[pairs[pi][0]], nodes[pairs[pi][1]])) return null;
 
-    /* --- the corridor cut into sections: straight runs of up to four cells --- */
-    function linkedTo(c, d) {
-      var i = c % cols, j = (c / cols) | 0, ni = i + d[0], nj = j + d[1];
-      if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) return -1;
-      var nc = idx(ni, nj);
-      return grid[nc] === CORR && open[ek(c, nc)] ? nc : -1;
-    }
-    var axisOf = {};
-    for (var c0 = 0; c0 < N; c0++) {
-      if (grid[c0] !== CORR) continue;
-      // the longer of the two straight runs through this cell, as far as four
-      var runs = [[[1, 0], [-1, 0]], [[0, 1], [0, -1]]].map(function (dirs) {
-        var cells = [c0];
-        dirs.forEach(function (d) {
-          var cc = c0;
-          while (cells.length < RUN) { var nx = linkedTo(cc, d); if (nx < 0) break; cells.push(nx); cc = nx; }
-        });
-        return cells;
-      });
-      var pick = runs[0].length >= runs[1].length ? 0 : 1;
-      var s = kindOf.length; kindOf.push('corridor'); axisOf[s] = runs[pick].length > 1 ? (pick === 0 ? 'h' : 'v') : null;
-      runs[pick].forEach(function (cc) { grid[cc] = s; });
-    }
+    var axisOf = cutCorridors(cols, rows, grid, kindOf, open, CORR);
 
     /* --- entries must not be seen from the enemy's edge: a straight corridor
        running the width of the table is no good --- */
@@ -212,7 +222,7 @@
   }
 
   /* The pieces of terrain a laid-out compound stands as. */
-  function piecesOf(g, rand, opts) {
+  function piecesOf(g, opts) {
     var cols = g.cols, rows = g.rows, grid = g.grid, out = [];
     function idx(i, j) { return j * cols + i; }
     function ek(a, b) { return a < b ? a + '|' + b : b + '|' + a; }
@@ -235,7 +245,7 @@
       /* "Some sections may be designated as dangerous due to the presence of
          explosive materials, toxic chemicals, fragile tanks" (p. 158): the odd room
          or hall of the compound, at the chance asked for (opts.danger). */
-      if (kind !== 'corridor' && opts.danger && rand() < opts.danger) p.dangerous = true;
+      if (kind !== 'corridor' && g.danger && g.danger[s]) p.dangerous = true;
       out.push(p);
     });
     // the solid cells, gathered into as few blocks as will cover them
@@ -281,10 +291,7 @@
               : { kind: 'bulkhead', thin: true, x: ci * CELL, y: ey - WALL / 2, w: CELL, h: WALL });
             return;
           }
-          // a doorway: where a corridor meets a room or a hall, most have a door; between two corridor sections, a few
-          var ka = g.kindOf[grid[a]], kb = g.kindOf[grid[b2]];
-          var pDoor = ka === 'corridor' && kb === 'corridor' ? 0.12 : 0.75;
-          if (rand() >= pDoor) return;
+          if (!g.doors[ek(a, b2)]) return;
           doors++;
           out.push(vert ? { kind: 'door', x: ex - DOOR / 2, y: cj * CELL, w: DOOR, h: CELL }
             : { kind: 'door', x: ci * CELL, y: ey - DOOR / 2, w: CELL, h: DOOR });
@@ -303,6 +310,23 @@
     return { terrain: out, entries: entries, doors: doors };
   }
 
+  /* The generator's doors and dangerous sections. A doorway where a corridor
+     meets a room or a hall mostly has a door; between two corridor sections, a
+     few do. "Some sections may be designated as dangerous due to the presence
+     of explosive materials, toxic chemicals, fragile tanks" (p. 158): the odd
+     room or hall, at the chance asked for. */
+  function furnish(g, rand, danger) {
+    var cols = g.cols, grid = g.grid;
+    g.doors = {}; g.danger = {};
+    Object.keys(g.open).sort().forEach(function (k) {
+      var ab = k.split('|'), a = +ab[0], b = +ab[1];
+      if (grid[a] < 0 || grid[b] < 0 || grid[a] === grid[b]) return;
+      var both = g.kindOf[grid[a]] === 'corridor' && g.kindOf[grid[b]] === 'corridor';
+      if (rand() < (both ? 0.12 : 0.75)) g.doors[k] = true;
+    });
+    g.kindOf.forEach(function (kind, s) { if (kind !== 'corridor' && danger && rand() < danger) g.danger[s] = true; });
+  }
+
   /* A compound for a table `w` x `h` inches. `opts.rooms`: at least so many
      rooms (not counting halls); `opts.entries`: entry points on each long edge;
      `opts.danger`: the chance a room or hall is a dangerous section. */
@@ -312,7 +336,8 @@
     for (var t = 0; t < 200; t++) {
       var g = attempt(w, h, rand, opts);
       if (!g) continue;
-      var laid = piecesOf(g, rand, { w: w, h: h, danger: opts.danger || 0 });
+      furnish(g, rand, opts.danger || 0);
+      var laid = piecesOf(g, { w: w, h: h });
       return {
         terrain: laid.terrain,
         compound: { cell: CELL, cols: g.cols, rows: g.rows, entries: laid.entries },
@@ -320,6 +345,199 @@
       };
     }
     throw new Error('no compound could be laid on a ' + w + '" x ' + h + '" table');
+  }
+
+  /* ---- hand-built compounds ----
+     "Set up the complex in agreeable way" (p. 163): the players lay it out
+     themselves, on the same 3" grid. A plan is
+       { cols, rows, cells, walls, doors, danger }
+     `cells` a string, a character a cell row by row: '.' solid, 'c' corridor,
+     'r' room floor; `walls` and `doors` the edges between two floor cells
+     ('a|b', the lower cell index first) closed by a wall or hung with a door —
+     every other edge between floor cells is open; `danger`, a cell of each
+     dangerous room. A run of room cells open to each other is one room (a hall
+     when it is more than 9" a side), and has to be a rectangle; corridor cells
+     are cut into straight sections of up to 12", a door always ending one; and
+     every corridor cell on the left or right edge is an entry point. */
+  function ekOf(a, b) { return a < b ? a + '|' + b : b + '|' + a; }
+  function setOf(list) { var o = {}; (list || []).forEach(function (k) { o[k] = true; }); return o; }
+  function planSize(w, h) { return { cols: Math.floor(w / CELL), rows: Math.floor(h / CELL) }; }
+  function blankPlan(w, h) {
+    var sz = planSize(w, h);
+    return { cols: sz.cols, rows: sz.rows, cells: new Array(sz.cols * sz.rows + 1).join('.'), walls: [], doors: [], danger: [] };
+  }
+  // a plan's grid, laid out as the generator lays its own, with what is wrong with it
+  function gridOf(plan) {
+    var cols = plan.cols, rows = plan.rows, N = cols * rows, cells = plan.cells || '';
+    var faults = [], warnings = [];
+    var grid = new Int16Array(N).fill(-1), kindOf = [], open = {}, link = {};
+    var walls = setOf(plan.walls), doorSet = setOf(plan.doors);
+    function idx(i, j) { return j * cols + i; }
+    function kind(c) { var ch = cells.charAt(c); return ch === 'c' || ch === 'r' ? ch : '.'; }
+    var CORR = -2;
+    for (var c = 0; c < N; c++) if (kind(c) === 'c') grid[c] = CORR;
+    // the open edges; a door keeps an edge open but ends a section there
+    for (var j = 0; j < rows; j++) for (var i = 0; i < cols; i++) {
+      var a = idx(i, j);
+      if (kind(a) === '.') continue;
+      [[1, 0], [0, 1]].forEach(function (d) {
+        if (i + d[0] >= cols || j + d[1] >= rows) return;
+        var b = idx(i + d[0], j + d[1]);
+        if (kind(b) === '.') return;
+        var k = ekOf(a, b);
+        if (walls[k]) return;
+        open[k] = true;
+        if (!doorSet[k] && kind(a) === kind(b)) link[k] = true;
+      });
+    }
+    // rooms and halls: room cells linked to each other, each a rectangle
+    var rooms = [];
+    for (var r0 = 0; r0 < N; r0++) {
+      if (kind(r0) !== 'r' || grid[r0] >= 0) continue;
+      var s = kindOf.length, stack = [r0], n = 0, i0 = cols, j0 = rows, i1 = -1, j1 = -1;
+      kindOf.push('room'); grid[r0] = s;
+      while (stack.length) {
+        var q = stack.pop(), qi = q % cols, qj = (q / cols) | 0;
+        n++; i0 = Math.min(i0, qi); j0 = Math.min(j0, qj); i1 = Math.max(i1, qi); j1 = Math.max(j1, qj);
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+          var ni = qi + d[0], nj = qj + d[1];
+          if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) return;
+          var nc = idx(ni, nj);
+          if (kind(nc) === 'r' && grid[nc] < 0 && link[ekOf(q, nc)]) { grid[nc] = s; stack.push(nc); }
+        });
+      }
+      var rw = i1 - i0 + 1, rh = j1 - j0 + 1;
+      if (n !== rw * rh) faults.push('A room has to be a rectangle (the one at column ' + (i0 + 1) + ', row ' + (j0 + 1) + ' is not).');
+      kindOf[s] = rw > 3 || rh > 3 ? 'hall' : 'room';
+      rooms.push({ i: i0, j: j0, w: rw, h: rh, kind: kindOf[s], sec: s });
+    }
+    var axisOf = cutCorridors(cols, rows, grid, kindOf, link, CORR);
+    // doors only between two sections, across an open edge
+    var doors = {};
+    Object.keys(doorSet).forEach(function (k) {
+      var ab = k.split('|'), a2 = +ab[0], b2 = +ab[1];
+      if (open[k] && grid[a2] >= 0 && grid[b2] >= 0 && grid[a2] !== grid[b2]) doors[k] = true;
+    });
+    var danger = {};
+    (plan.danger || []).forEach(function (c2) { var s2 = grid[c2]; if (s2 >= 0 && kindOf[s2] !== 'corridor') danger[s2] = true; });
+    // the entry points: corridor cells on the two long edges, one a section
+    var entries = { L: [], R: [] };
+    ['L', 'R'].forEach(function (side) {
+      var col = side === 'L' ? 0 : cols - 1, seen = {};
+      for (var jj = 0; jj < rows; jj++) {
+        var ec = idx(col, jj);
+        if (kind(ec) !== 'c' || seen[grid[ec]]) continue;
+        seen[grid[ec]] = true;
+        entries[side].push({ i: col, j: jj });
+      }
+    });
+    if (!entries.L.length) faults.push('No entry point on the left edge: run a corridor out to it.');
+    if (!entries.R.length) faults.push('No entry point on the right edge: run a corridor out to it.');
+    // everything reachable from the entry points
+    var reach = new Uint8Array(N), todo = [];
+    entries.L.concat(entries.R).forEach(function (e) { var ec = idx(e.i, e.j); reach[ec] = 1; todo.push(ec); });
+    while (todo.length) {
+      var t = todo.pop(), ti = t % cols, tj = (t / cols) | 0;
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+        var ni = ti + d[0], nj = tj + d[1];
+        if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) return;
+        var nc = idx(ni, nj);
+        if (!reach[nc] && kind(nc) !== '.' && open[ekOf(t, nc)]) { reach[nc] = 1; todo.push(nc); }
+      });
+    }
+    var cut = 0;
+    for (var c3 = 0; c3 < N; c3++) if (kind(c3) !== '.' && !reach[c3]) cut++;
+    if (cut) faults.push(cut + ' floor cell' + (cut === 1 ? ' is' : 's are') + ' cut off from every entry point.');
+    else if (entries.L.length && entries.R.length) {
+      // the two edges joined at all (the reach above runs from both)
+      var fromL = new Uint8Array(N), td = [];
+      entries.L.forEach(function (e) { var ec = idx(e.i, e.j); fromL[ec] = 1; td.push(ec); });
+      while (td.length) {
+        var u = td.pop(), ui = u % cols, uj = (u / cols) | 0;
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+          var ni = ui + d[0], nj = uj + d[1];
+          if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) return;
+          var nc = idx(ni, nj);
+          if (!fromL[nc] && kind(nc) !== '.' && open[ekOf(u, nc)]) { fromL[nc] = 1; td.push(nc); }
+        });
+      }
+      if (!entries.R.some(function (e) { return fromL[idx(e.i, e.j)]; })) faults.push('There is no way through from the left edge to the right.');
+    }
+    // a straight line of sight from edge to edge (the generator never lays one)
+    for (var jr = 0; jr < rows; jr++) {
+      var through = true;
+      for (var ir = 0; ir < cols && through; ir++) {
+        if (grid[idx(ir, jr)] < 0) through = false;
+        else if (ir > 0 && !open[ekOf(idx(ir - 1, jr), idx(ir, jr))]) through = false;
+      }
+      if (through) { warnings.push('Row ' + (jr + 1) + ' is open from edge to edge: each side can see the other\u2019s entry.'); break; }
+    }
+    return { g: { cols: cols, rows: rows, grid: grid, kindOf: kindOf, axisOf: axisOf, open: open, rooms: rooms, entries: entries, doors: doors, danger: danger },
+      faults: faults, warnings: warnings };
+  }
+  // is the plan one for this table, and can it be fought in
+  // a plan as it came (saved, typed in, sent over the wire), made safe to read
+  function cleanPlan(p) {
+    if (!p || typeof p !== 'object') return null;
+    var keys = function (l) { return Array.isArray(l) ? l.filter(function (k) { return typeof k === 'string' && /^\d+\|\d+$/.test(k); }) : []; };
+    return { cols: p.cols | 0, rows: p.rows | 0, cells: typeof p.cells === 'string' ? p.cells.replace(/[^.cr]/g, '.') : '',
+      walls: keys(p.walls), doors: keys(p.doors),
+      danger: Array.isArray(p.danger) ? p.danger.filter(function (c) { return typeof c === 'number' && c >= 0; }) : [] };
+  }
+  function checkPlan(plan, w, h) {
+    plan = cleanPlan(plan);
+    var sz = planSize(w, h);
+    if (!plan || plan.cols !== sz.cols || plan.rows !== sz.rows || (plan.cells || '').length !== sz.cols * sz.rows) {
+      return { ok: false, faults: ['This compound is laid out for a different table size (' + (plan ? plan.cols * CELL + '" x ' + plan.rows * CELL + '"' : 'none') + ').'], warnings: [] };
+    }
+    var r = gridOf(plan);
+    return { ok: !r.faults.length, faults: r.faults, warnings: r.warnings,
+      rooms: r.g.rooms.filter(function (q) { return q.kind === 'room'; }).length, halls: r.g.rooms.filter(function (q) { return q.kind === 'hall'; }).length,
+      entries: { L: r.g.entries.L.length, R: r.g.entries.R.length } };
+  }
+  // the compound a plan makes, as `generate` hands one back (null if it cannot be fought in)
+  function build(plan, w, h) {
+    plan = cleanPlan(plan);
+    if (!checkPlan(plan, w, h).ok) return null;
+    var g = gridOf(plan).g;
+    var laid = piecesOf(g, { w: w, h: h });
+    return {
+      terrain: laid.terrain,
+      compound: { cell: CELL, cols: g.cols, rows: g.rows, entries: laid.entries, built: true },
+      rolls: [], generator: 'Hand-built compound'
+    };
+  }
+  // a generated layout as a plan, to start a hand-built one from
+  function planOf(g) {
+    var N = g.cols * g.rows, cells = '', walls = [], doors = Object.keys(g.doors || {}), danger = [], dz = {};
+    for (var c = 0; c < N; c++) {
+      var s = g.grid[c];
+      cells += s < 0 ? '.' : g.kindOf[s] === 'corridor' ? 'c' : 'r';
+      if (s >= 0 && g.danger && g.danger[s] && !dz[s]) { dz[s] = true; danger.push(c); }
+    }
+    for (var j = 0; j < g.rows; j++) for (var i = 0; i < g.cols; i++) {
+      var a = j * g.cols + i;
+      if (g.grid[a] < 0) continue;
+      [[1, 0], [0, 1]].forEach(function (d) {
+        if (i + d[0] >= g.cols || j + d[1] >= g.rows) return;
+        var b = (j + d[1]) * g.cols + i + d[0];
+        if (g.grid[b] < 0) return;
+        var k = ekOf(a, b);
+        if (!g.open[k]) walls.push(k);
+      });
+    }
+    return { cols: g.cols, rows: g.rows, cells: cells, walls: walls, doors: doors, danger: danger };
+  }
+  // a fresh generated compound, as a plan to edit
+  function generatedPlan(w, h, rand, opts) {
+    rand = rand || Math.random; opts = opts || {};
+    for (var t = 0; t < 200; t++) {
+      var g = attempt(w, h, rand, opts);
+      if (!g) continue;
+      furnish(g, rand, opts.danger != null ? opts.danger : 0.15);
+      return planOf(g);
+    }
+    return blankPlan(w, h);
   }
 
   /* ---- special equipment (p. 159) ----
@@ -358,6 +576,6 @@
     return null;
   }
 
-  root.PMCCompound = { CELL: CELL, KINDS: KINDS, generate: generate, isCompound: isCompound, sectionAt: sectionAt, KIT: KIT, cleanKit: cleanKit, defaultKit: defaultKit };
+  root.PMCCompound = { CELL: CELL, KINDS: KINDS, generate: generate, blankPlan: blankPlan, cleanPlan: cleanPlan, layout: function (plan) { return gridOf(cleanPlan(plan)).g; }, checkPlan: checkPlan, build: build, generatedPlan: generatedPlan, planSize: planSize, isCompound: isCompound, sectionAt: sectionAt, KIT: KIT, cleanKit: cleanKit, defaultKit: defaultKit };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCCompound;
 })(typeof window !== 'undefined' ? window : global);
