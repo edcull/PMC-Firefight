@@ -64,6 +64,11 @@
           });
         }
         // the optional rules every battle of the campaign is fought under (R.OPTIONS), set now for good
+        // alone: where the contracts are found — across a star system (camp-system.js), or as a plain list
+        if (!hot) h += '<div class="field camp-sys"><label for="camp-system">Contracts</label><select id="camp-system">' +
+          '<option value="system"' + (E.wantSystem ? ' selected' : '') + '>Across a star system \u2014 planets, their conditions, contracts on their maps</option>' +
+          '<option value="list"' + (E.wantSystem ? '' : ' selected') + '>A plain list of offers</option></select>' +
+          '<p class="hint small">A star system turns Other Worlds on: every planet has conditions of its own.</p></div>';
         if (U.optionBoxes) h += '<div class="field camp-opts" id="camp-opts"><label>Optional rules</label>' + U.optionBoxes(E.wantOptions, '', true) + '</div>';
         // one line: how many AI forces (an odd number: with yours, the forces pair off for each round), a save file to load instead, and Raise the force
         // (hotseat: none, or an even number — with the two players, the forces pair off)
@@ -106,7 +111,11 @@
       /* Taking a contract is what the screen is for (alone, or on a world): at the top,
          where a contract or a battle under way says so instead */
       if (!done && !finished && (E.online || E.camp.mode === 'solo') && !/data-go="(obattle|ocontract)"/.test(onote)) {
-        h += '<div class="cpan onote hubtake"><button class="start" data-go="fmodal" data-kind="rivals">Take a contract</button></div>';
+        // fought across a star system (camp-system.js): the system, with the contracts on its planets
+        h += '<div class="cpan onote hubtake">' + (E.camp.system && !E.online ? '<button class="start" data-go="offers">Take a contract</button>'
+          : '<button class="start" data-go="fmodal" data-kind="rivals">Take a contract</button>') +
+          // a single-player campaign begun before star systems (or with the plain list): one charted now, if wanted
+          (!E.online && E.camp.mode === 'solo' && !E.camp.system && root.PMCSystem ? '<button class="lnk hubchart" data-go="chartsys">Chart a star system for this campaign</button>' : '') + '</div>';
       }
       /* The campaign's own business, on the company view under the promotion: the
          battles fought, the fallen, and the campaign's file (out to a file, back in

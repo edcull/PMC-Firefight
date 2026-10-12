@@ -371,6 +371,154 @@ Book l.5119-5336. This is close to a separate game mode inside compounds.
 
 ---
 
+## v0.5 (proposal) — the star system: contracts on a map
+
+An alternative to the hub's **Contract** button and its list of offers, for
+single-player campaigns: the campaign is fought across one star system. The
+Contract button opens the system, with its planets on their orbits. Tap a
+planet to zoom in to a map of it, with the contracts on offer pinned where they
+are. Tap a pin for the job (the offer card as it is now) and take it from there.
+
+This follows decision 3's "later idea": the planets and their conditions are
+fixed for the campaign, and contracts name a planet from it.
+
+**What stays the same.** How many contracts there are each turn, who they are
+against, the scenario, Tier, Priority Levels and roles are all still
+`rollOffers`. The offers are still rolled once a campaign turn and kept. Only
+where each one is fought changes, and what the screen looks like.
+
+A clickable mockup of B and C, with made-up data: `docs/mockups/star-system.html`.
+
+### A. The system (rules: `src/rules/camp-system.js`)
+
+- `campaign.system` is made once, when the campaign is founded, from a seed kept
+  with it (so a save or an import draws the same system):
+  - a name and a star (its colour and size, for the picture);
+  - 5 planets (4–7, rolled), each with:
+    - a name;
+    - its world kind: one of the terrain generator's kinds (desert, arctic,
+      temperate, colonised, industrial, jungle, mountain, unstable);
+    - its conditions: gravity, atmosphere and anomaly rolled once on the Other
+      Worlds table (`R.rollWorld`) and kept for good;
+    - where it sits: its orbit and angle;
+    - a look for the drawing, derived from the kind and the conditions (a haze
+      for a toxic or foggy atmosphere, none for an airless one).
+- The book's dice leave about half the planets "much like home". So that the
+  system is worth looking at, at least half the planets carry one condition or
+  more. The dice are rolled again for the rest until they do; this is a reading
+  of the rules, and it goes in the docs as one.
+- **The offers:** `rollOffers` deals each offer to a planet (spread so most
+  planets have something; never all on one). It also gives the offer a site on
+  that planet: a point on its map, and a place name ("Kessler Ridge", "Pumping
+  Station 4"). The offer's `planet` and `world` are then the planet's, not
+  rolled. A Close Encounters contract's site is a compound ("Mine 7", "Hab
+  Block C").
+- `cleanSystem` for a save or import, and old campaigns keep working:
+  - with no `system`, the list of offers as now;
+  - an older campaign can be given a system from the hub ("Chart the system").
+
+### B. The system view (view: `src/view/dossier-system.js`)
+
+- **Drawing:** an SVG drawn to the screen's width. The star in the middle, the
+  orbits faint, each planet a disc in its kind's colours with its atmosphere as
+  a haze ring. A badge shows how many contracts are on it; a planet with none
+  is dimmed.
+- **Tap or hover on a planet:** a card with its name, its kind, its conditions
+  (the pills the offers show now, each with what it does in its tip) and its
+  contracts this turn.
+- **Hub:** the Contract button opens the system. A **List** link beside the
+  system keeps the old offers list (also for screen readers, and for the
+  tests).
+- **Phone:** the system scales to the width, and the planet card sits under it,
+  not over it.
+
+### C. The planet map
+
+- **The map:** opening a planet zooms into a map of it: a flat, made-up map in
+  that kind's colours, from the planet's seed (made-up ground: ice and ravines
+  on an arctic world, slag and stacks on an industrial one). The rivals'
+  colours are on the pins.
+- **Pins:** each contract is a pin at its site, in the rival's colours, with
+  the rival's name on it.
+- **A pin opens the job:** the current offer panel (`offerPanel`/`jobCard`)
+  beside the map, or under it on a phone, with **Take this contract**.
+- **Back:** to the system; from the system, to the hub.
+
+### D. Settings and scope
+
+- **New-campaign form:** "Contracts: Star system / Offer list". Recommended
+  default: Star system.
+- **What the conditions do:** the conditions do something only with Other
+  Worlds on. Recommended: choosing the star system turns Other Worlds on for
+  the campaign, with a note saying so. Otherwise the conditions would be for
+  show and only the terrain would differ.
+- **Single-player only to start.** Hotseat and online world campaigns could
+  share a system later; their offers are rolled elsewhere (`camp-world.js`).
+
+### E. Later, if wanted
+
+- Each rival has a home planet, and its contracts lean towards it.
+- A planet's standing moves with your wins there: more pay, fewer hostiles.
+- A rare event changes a planet's conditions (a reactor leak brings high
+  radiation).
+
+### Order
+
+1. A, with the offer list showing the planet's name and site. Unit tests: the
+   same seed gives the same system, a system survives save and load, offers
+   are spread over the planets, and the conditions are kept.
+2. B. A browser test: open the system, tap a planet, see its contracts.
+3. C. A browser test: open a planet, open a pin, take the contract, and the
+   battle is fought on that planet's world.
+4. D, and the docs.
+
+**Size:** medium. Most of it is new screens. The rules change is small,
+because `rollOffers` and the offer card are kept as they are.
+
+**Decisions (owner):** the star system turns Other Worlds on for the campaign;
+4–7 planets, rolled; it is the default for new single-player campaigns; and E
+is in the first version, as below.
+
+### E. Influence, standing and events (in the first version)
+
+- **Home planets and influence.** Every planet keeps a share of influence for
+  each force, from 0 to 100, with the rest unaligned.
+  - Each rival gets a home planet, starting at 50–70 there, and a foothold of
+    5–15 on one or two other planets.
+  - Your company gets a base planet at 35, not a rival's home where that can be
+    avoided.
+  - A force with 50 or more on a planet holds it; otherwise the planet is
+    contested.
+  - A rival's contracts land on planets in proportion to its influence there,
+    with a little on every planet and a lot on its home, so you mostly fight it
+    on its own ground.
+  - A force that leaves the campaign loses half its influence each turn. A new
+    one is given the planet with the least influence on it as its home.
+- **Standing** is your own influence on a planet:
+  - 0–24 Unknown, 25–49 Known, 50–74 Held, 75+ Favoured;
+  - for show only: standing and holding a planet bring no benefit (owner's
+    ruling);
+  - a win moves 12 points from that rival to you, and a loss moves 10 from you
+    to it (a draw moves nothing);
+  - the system view shows each planet's holder, and the planet card shows the
+    shares as a bar.
+- **Rare events.** Each new campaign turn has a one-in-six chance of an event
+  on a random planet, with no more than one at a time on any planet. Each lasts
+  a few turns and is shown on the system and in the hub's news:
+  - Reactor breach: high radiation, 3 turns;
+  - Dust storm season: foggy atmosphere, 2 turns;
+  - Chemical spill or spore bloom: toxic atmosphere, 3 turns;
+  - Gravitic anomaly: time anomalies, 2 turns;
+  - Wasting sickness: unexplained weakness, 2 turns;
+  - Uprising: the holder loses 20 influence there;
+
+  An event's condition overrides the planet's own while it lasts, and a
+  contract offered meanwhile carries it. No event reaches the campaign itself
+  (pay, recruits, the forces): only a planet's conditions and who holds it
+  (owner's ruling).
+
+---
+
 ## Progress
 
 | Step | State |
@@ -397,6 +545,14 @@ Book l.5119-5336. This is close to a separate game mode inside compounds.
 | G Automated defence | **Done** (counters.js, the Automated defence system option). A control panel (`state.adPanel`, a `console` prop) in a room off the middle, three Automatic guns (`adgun`: Tier III, FP 6, Range 18", Defence 11, Structure 3, Limited Fire Arc, Immobile) within 12" walk of it and 6" apart, on side `N`, belonging to neither player. At the start of each Action phase each gun fires (mode `react`) at the nearest unit of either side in its sight, arc and range (`autoGuns`); either side may shoot them. Control the Guns from within 1" of the panel: 2+ with Hackers, else 4+; *reading:* the guns then turn on the nearest enemy of the side holding the panel, and a gun that would face none of them but cover a friend is blown up. The AI tries for the panel when standing at it. |
 | J Campaign hook | **Done.** The campaign's Close Encounters frequency (Off / Low 10% / Mid 50% / All; `options.ceFreq`, `R.CE_FREQ`) in the campaign options: a contract's battle is swapped for Clearing out or Critical control at that rate (`closeEncounter` in camp-contract.js, from `foresight`); a force picked for one leaves its machines at home (`pickForce`'s `nursed('machines')`). |
 | I AI | **Done** as far as here: movement round walls and through doors (`R.walkField` scoring), counters that move round the walls and show themselves within charge reach (`aiHidden`), Opportunity Fire always taken, Stun Grenades with every charge while the side has any. Now also (`aiKit`, `aiCover` in counters.js): Vacuum Charges on a fire it or a friend stands in; Incendiary Grenades into a section with no friend in it and two of the enemy, or one in a dangerous section or one it has no shot at; a Ballistic Barrier where it stands in the open, shot at, with nothing in reach to answer; Covering Fire! from a friend within 6" before a charge that goes in without Stun Grenades, and before a move that ends in an enemy's sights (`coverMove` in ai.js); Satchel Charges planted in a section with the enemy in it and none of its own — two of them, or one in a dangerous section or one it has no shot at — and then out of it as far as its Movement takes it (`aiSatchel`, Opportunity Fire on the way as any move). The Besieged OpFor plays by the book's script (aggressive +2, the important unit first, Fire at Will!). |
+
+### v0.5 — the star system
+
+| Part | State |
+|---|---|
+| A, E Rules | **Done** (`rules/camp-system.js`, `PMCSystem`). A system is charted when a single-player campaign is founded (`chartSystem` in dossier.js, after the rivals): a seeded star and 4–7 planets, each a kind of world and conditions rolled once (at least half out of the ordinary), a home for each rival (50–70) with a foothold or two, the company's base (35). `rollOffers` hands the turn's offers to `placeOffers`: a planet by the rival's influence there (4 + its share, spread out), a named site on its map, the planet's kind and conditions (events laid over them) as the offer's world. The pending battle carries its site; the aftermath (`afterBattle`) moves 12 of the rival's share to the company on a win and 10 back on a loss (standing and holding are for show: nothing is paid for them), and says who holds the planet now. `newTurn`: a force that has left loses half its hold a turn, a new one is given a home, and one turn in six an event on a quiet planet (Reactor breach, Storm season, Chemical spill, Gravitic anomaly, Wasting sickness, Uprising) for a few turns — a planet's conditions or its holder only, never the campaign itself. Kept through a save and a load (`cleanSystem` in `rehydrate`). Other Worlds is on for such a campaign. |
+| B, C Views | **Done** (`view/dossier-system.js`). Take a contract on the hub opens the system: the star, the orbits, each planet in its kind's colours with its atmosphere's haze, a ring in the colours of whoever holds it, a badge for its contracts and a mark for an event; the card lists the planets and the news. A planet: its conditions (with what each does), events, the shares of influence as a bar and the company's standing, and its contracts; Land on it (or a second tap) for its map, drawn from the seed in its kind's colours, with the contracts pinned at their sites in the rivals' colours. A pin opens the offer as the list has it (`offerPanel`, with the site and standing), and Take this contract takes it. The plain list is a tap away (List), with the way back. A phone gets a closer crop and larger planets. |
+| D Settings | **Done.** The new-campaign form's Contracts: across a star system (the default) or a plain list of offers. An older single-player campaign can have a system charted from its hub (its turn's offers kept, and placed on it). Single-player only; hotseat and online world campaigns keep their offers as they are. |
 
 ## Suggested order for v0.3
 

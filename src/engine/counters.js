@@ -289,7 +289,8 @@
       }
       return null;
     }
-    function secName(r) { return r.name ? r.name.toLowerCase() : r.kind === 'corridor' ? 'corridor section' : r.kind; }
+    // a section as a sentence names it: a room or hall by its name ("Room 1"), anything else "the corridor section"; `cap`, at the start of one
+    function secName(r, cap) { return r.name ? r.name : (cap ? 'The ' : 'the ') + (r.kind === 'corridor' ? 'corridor section' : r.kind); }
     function inside(u, r) { return u.alive && onTable(u) && !u.aboard && u.x >= r.x && u.x <= r.x + r.w && u.y >= r.y && u.y <= r.y + r.h; }
     // whether a unit sees into a section: to the nearest point of it, a little way in
     function seesInto(u, r) {
@@ -326,14 +327,14 @@
        goes up once a battle. */
     function explodeSection(r, why) {
       if (!r) return;
-      var log = [{ t: 'note', text: 'The ' + secName(r) + ' explodes' + (why ? ' — ' + why : '') + '!' }];
+      var log = [{ t: 'note', text: secName(r, true) + ' explodes' + (why ? ' — ' + why : '') + '!' }];
       r.dangerous = false; r.blown = true;
       var near = E.state.units.filter(function (u) {
         return u.alive && onTable(u) && !u.aboard && !inside(u, r) && Math.max(0, R.rectPointDist(r, u.x, u.y) - UR) <= 6 && seesInto(u, r);
       });
       E.state.units.filter(function (u) { return inside(u, r); }).forEach(function (u) { blast(u, 10, 'The explosion', log); });
       near.forEach(function (u) { if (u.alive) blast(u, 6, 'The blast', log); });
-      tell('Explosion', null, log, 'The ' + secName(r));
+      tell('Explosion', null, log, secName(r, true));
       if (E.addFx) E.addFx({ kind: 'collapse', x: r.x + r.w / 2, y: r.y + r.h / 2, r: Math.max(2, Math.max(r.w, r.h) * 0.6), dur: 1100 });
       repaintTerrain([{ piece: r }]);
     }
@@ -341,14 +342,14 @@
     function setBurning(r, by) {
       if (!r || r.burning) return;
       r.burning = E.state.turn; r.burnRolled = false;
-      logLine('note', 'The ' + secName(r) + ' is on fire' + (by ? ' — ' + by : '') + '.');
+      logLine('note', secName(r, true) + ' is on fire' + (by ? ' — ' + by : '') + '.');
       repaintTerrain([{ piece: r }]);
       if (r.dangerous) explodeSection(r, 'the fire reaches what is stored there');
     }
     function putOut(r, how) {
       if (!r || !r.burning) return;
       r.burning = null; r.burnRolled = false;
-      logLine('note', 'The fire in the ' + secName(r) + ' ' + how + '.');
+      logLine('note', 'The fire in ' + secName(r) + ' ' + how + '.');
       repaintTerrain([{ piece: r }]);
     }
     /* "We can't have any firing in there" (p. 159): firing at a target inside a
@@ -371,7 +372,7 @@
         r.burnRolled = true;
         var d = R.d6();
         if (d >= 4) putOut(r, 'dies down (D6 ' + d + ')');
-        else logLine('note', 'The ' + secName(r) + ' burns on (D6 ' + d + ').');
+        else logLine('note', secName(r, true) + ' burns on (D6 ' + d + ').');
       });
     }
     /* End phase: "each unit inside a burning section suffers a Firepower 6 shooting
@@ -382,12 +383,12 @@
         if (!r.burning) return;
         var log = [];
         E.state.units.filter(function (u) { return inside(u, r); }).forEach(function (u) { blast(u, 6, 'The fire', log); });
-        if (log.length) tell('Fire', null, log, 'The ' + secName(r));
+        if (log.length) tell('Fire', null, log, secName(r, true));
       });
       (E.state.charges || []).forEach(function (c) {
         var r = E.state.terrain[c.sec], d = R.d6(), tot = d + (c.sappers ? 1 : 0);
         if (tot >= 3) explodeSection(r, 'Satchel Charges (D6 ' + d + (c.sappers ? '+1' : '') + ')');
-        else logLine('note', 'Satchel Charges in the ' + secName(r) + ' — D6 ' + d + (c.sappers ? '+1' : '') + ': duds, or found and disarmed.');
+        else logLine('note', 'Satchel Charges in ' + secName(r) + ' — D6 ' + d + (c.sappers ? '+1' : '') + ': duds, or found and disarmed.');
       });
       E.state.charges = [];
     }
@@ -413,7 +414,7 @@
       spend(u, 'satchel');
       E.state.charges = E.state.charges || [];
       E.state.charges.push({ sec: E.state.terrain.indexOf(r), side: u.side, sappers: R.has(u, 'Sappers') });
-      logLine('note', u.label + ' plants Satchel Charges in the ' + secName(r) + ' — they go off in the End phase.');
+      logLine('note', u.label + ' plants Satchel Charges in ' + secName(r) + ' — they go off in the End phase.');
     }
     /* Ballistic Barrier: a low wall up to 6" long within 1" of the unit. Put across
        the way the nearest enemy (as the walk goes) would come: across a corridor,
@@ -464,10 +465,10 @@
       spend(u, key);
       var d = R.d6();
       if (key === 'incendiary') {
-        if (d === 1) logLine('note', u.label + '’s Incendiary Grenades fizzle in the ' + secName(r) + ' (D6 1).');
+        if (d === 1) logLine('note', u.label + '’s Incendiary Grenades fizzle in ' + secName(r) + ' (D6 1).');
         else setBurning(r, u.label + '’s Incendiary Grenades (D6 ' + d + ')');
       } else {
-        if (d === 1) logLine('note', u.label + '’s Vacuum Charges fail to smother the fire in the ' + secName(r) + ' (D6 1).');
+        if (d === 1) logLine('note', u.label + '’s Vacuum Charges fail to smother the fire in ' + secName(r) + ' (D6 1).');
         else putOut(r, 'is smothered by ' + u.label + '’s Vacuum Charges (D6 ' + d + ')');
       }
     }
@@ -502,7 +503,7 @@
           var score = n + (r.dangerous ? 2 : 0) + (shotScore < 0.3 ? 1 : 0);
           if (score >= 2 && score > bs) { bs = score; best = r; }
         });
-        if (best) { logLine('ai', u.label + ' lobs Incendiary Grenades into the ' + secName(best) + '.'); throwAt(u, best, 'incendiary'); return done(u); }
+        if (best) { logLine('ai', u.label + ' lobs Incendiary Grenades into ' + secName(best) + '.'); throwAt(u, best, 'incendiary'); return done(u); }
       }
       if (kitUsable(u, 'barrier') && shotScore < 0.2 && R.coverAt(E.state, u.x, u.y, u) === 0) {
         var shotAt = E.state.units.some(function (e) {
@@ -532,12 +533,12 @@
       if (!outs.length) return false;
       outs.sort(function (a, b) { return R.rectPointDist(r, b.x, b.y) - R.rectPointDist(r, a.x, a.y); });
       var to = outs[0], path = R.pathTo(E.state, u, u.move, to);
-      logLine('ai', u.label + ' plants Satchel Charges in the ' + secName(r) + ' and gets out.');
+      logLine('ai', u.label + ' plants Satchel Charges in ' + secName(r) + ' and gets out.');
       satchel(u);
       var go = function (dest, route) {
         var d = R.inches(u.x, u.y, dest.x, dest.y);
         u.x = dest.x; u.y = dest.y;
-        logLine('move', u.label + ' moves ' + d.toFixed(1) + '" clear of the ' + secName(r) + '.');
+        logLine('move', u.label + ' moves ' + d.toFixed(1) + '" clear of ' + secName(r) + '.');
         E.animateMove(u, route, true);
         done(u);
       };

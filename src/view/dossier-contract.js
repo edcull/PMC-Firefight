@@ -31,7 +31,8 @@
       var offers = C.rollOffers(E.camp);
       var h = '<h2>Contracts on offer</h2>';
       offers.forEach(function (o, i) { h += offerPanel(o, i); });
-      h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button></p>';
+      h += '<p class="camp-foot"><button class="lnk" data-go="hub">Back</button>' +
+        (E.camp.system ? ' <button class="lnk" data-go="offersys">The star system</button>' : '') + '</p>';
       return h;
     }
 
@@ -65,6 +66,12 @@
       var sc = root.PMCScen && root.PMCScen.SCENARIOS[job.scenario.id];
       var h = '<div class="offer-job"><div class="offer-scen"><b>' + esc(job.scenario.name) + '</b>' +
         (job.planet && job.planet !== 'random' ? planetPill(job.planet) : '') + '</div>';
+      // in a star system: where, on which planet, and the company's standing there (camp-system.js)
+      var SYS = root.PMCSystem, sys = E.camp && E.camp.system, sp = SYS && sys && job.site ? SYS.byId(sys, job.site.planet) : null;
+      if (sp) {
+        var st = SYS.standing(sys, sp);
+        h += '<div class="cpstat offer-site">' + esc(job.site.name) + ', <b>' + esc(sp.name) + '</b> \u00b7 your standing ' + st + ' (' + SYS.standingName(st) + ')' + '</div>';
+      }
       // Other Worlds: the conditions rolled with the job, each a pill with what it does in its tip
       if (job.world) {
         var wl = R.worldLines(job.world);
@@ -310,7 +317,9 @@
         tierRoll: o.tierRoll, tier: o.tier, scenario: o.scenario, planet: o.planet || 'random', world: o.world || null,
         roles: o.roles, alt: o.alt || null, altRoles: o.altRoles || null, altBy: o.alt ? 'A' : null,
         fore: o.fore ? JSON.parse(JSON.stringify(o.fore)) : null, foreNote: o.foreNote || null,
-        picks: [], terms: {}, caught: o.caught
+        picks: [], terms: {}, caught: o.caught,
+        // where in the star system it is fought (camp-system.js)
+        site: o.site || null
       };
       save();
       E.view = 'contract';
@@ -607,7 +616,7 @@
       var druggedA = drugThem(A, picksA, mine.drugs || []);
       var druggedB = drugThem(B, theirs, theirDrugs);
       E.camp.pending = {
-        tier: E.contract.tier, pl: E.contract.pl, scenario: E.contract.scenario.id,
+        tier: E.contract.tier, pl: E.contract.pl, scenario: E.contract.scenario.id, site: E.contract.site || null,
         A: picksA.map(function (e) { return e.rid; }),
         B: theirs.map(function (e) { return e.rid; }),
         drugged: picksA.filter(function (e) { return e.drugged; }).map(function (e) { return e.rid; })
@@ -661,7 +670,7 @@
     }
 
     return {
-      offersView: offersView, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
+      offersView: offersView, offerPanel: offerPanel, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
       forceBox: forceBox, scrollTop: scrollTop, byMark: byMark, pickOrder: pickOrder, groupHead: E.groupHead, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
       autoPick: autoPick, fight: fight, seatBack: seatBack
     };

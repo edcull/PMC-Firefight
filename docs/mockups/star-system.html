@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Star System Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Oxanium:wght@500;600;700&display=swap">
+<style>
+/* Mockup of the v0.5 proposal (docs/roadmap.md): the campaign's Contract button
+   opens the star system; a planet opens its map; a pin opens the job. The
+   colours and type are the game's own (src/css/base.css). Made-up data. */
+:root {
+  --ground: #0d1117; --panel: #141a24; --panel-2: #1a2230; --panel-3: #212b3b; --line: #26303f;
+  --ink: #e7ecf4; --ink-dim: #93a1b5; --ink-faint: #64728a;
+  --alpha: #d8a13a; --bravo: #5aa9c8; --warn: #e08a3a; --bad: #e0557a; --good: #7ed6a0; --amber: #f0b64a; --sky: #6fc4e2;
+  --display: 'Oxanium', system-ui, sans-serif; --body: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--ground); color: var(--ink); font: 14px/1.45 var(--body); }
+button { font: inherit; color: inherit; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 16px; }
+/* the campaign screen's title bar */
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 14px; }
+.bar h1 { font: 600 16px var(--display); letter-spacing: .04em; margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar .crumb { color: var(--ink-faint); font: 500 12px var(--mono); }
+.lnk { background: none; border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; cursor: pointer; color: var(--ink-dim); font: 500 11px var(--display); letter-spacing: .08em; text-transform: uppercase; }
+.lnk:hover { color: var(--ink); border-color: var(--ink-faint); }
+.start { width: 100%; margin-top: 12px; padding: 11px; background: color-mix(in srgb, var(--alpha) 16%, transparent); border: 1px solid var(--alpha); color: var(--ink); border-radius: 6px; cursor: pointer; font: 600 13px var(--display); letter-spacing: .12em; text-transform: uppercase; }
+.start:hover { background: color-mix(in srgb, var(--alpha) 26%, transparent); }
+/* the two halves: the drawing and the card beside it */
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; }
+.view { background: radial-gradient(ellipse at center, #121a28 0%, var(--ground) 70%); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; position: relative; }
+.view svg { display: block; width: 100%; height: auto; }
+.hint { position: absolute; left: 12px; bottom: 10px; color: var(--ink-faint); font: 12px var(--body); pointer-events: none; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+.card h2 { font: 600 15px var(--display); margin: 0 0 2px; letter-spacing: .03em; }
+.card h3 { font: 600 11px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); margin: 14px 0 6px; }
+.sub { color: var(--ink-dim); font-size: 13px; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); background: var(--panel-2); }
+.pill.cond { border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); color: #f3c9a0; }
+.pill.home { color: var(--ink-dim); }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; }
+.cond-text { color: var(--ink-faint); font-size: 12px; margin: 4px 0 0; }
+.jobs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.jobs button { width: 100%; text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; cursor: pointer; display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; }
+.jobs button:hover, .jobs button.on { border-color: var(--ink-faint); background: var(--panel-3); }
+.jobs .sw { width: 10px; height: 26px; border-radius: 2px; }
+.jobs b { display: block; font-weight: 600; }
+.jobs small { color: var(--ink-dim); }
+.jobs .t { font: 500 12px var(--mono); color: var(--ink-dim); }
+.none { color: var(--ink-faint); font-style: italic; }
+/* the offer, as the game's offer panel has it */
+.offer-head { display: flex; align-items: center; gap: 8px; padding-left: 10px; border-left: 4px solid var(--c, var(--bravo)); }
+.offer-head b { font: 600 15px var(--display); }
+.offer-head .ct { margin-left: auto; font: 500 12px var(--mono); color: var(--ink-dim); }
+.stat { color: var(--ink-dim); font-size: 12px; margin: 6px 0 0 14px; }
+.job { margin-top: 12px; padding: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; }
+.job .scen { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.job .scen b { font: 600 14px var(--display); }
+.size { display: flex; gap: 16px; margin-top: 8px; font-size: 13px; color: var(--ink-dim); }
+.size b { color: var(--ink); font-family: var(--mono); }
+.role { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 4px; font: 600 11px var(--display); letter-spacing: .1em; text-transform: uppercase; }
+.role.attacker { background: color-mix(in srgb, var(--bad) 18%, transparent); color: #f2a3bb; }
+.role.defender { background: color-mix(in srgb, var(--bravo) 18%, transparent); color: #a7d6ea; }
+.role.even { background: var(--panel-3); color: var(--ink-dim); }
+.win { color: var(--ink-dim); font-size: 12px; margin-top: 6px; }
+.site { color: var(--ink-faint); font: 500 12px var(--mono); margin-top: 2px; }
+/* the drawing's parts */
+.planet { cursor: pointer; }
+.planet:focus { outline: none; }
+.planet:focus-visible .ring, .planet:hover .ring { stroke: var(--ink); stroke-opacity: .7; }
+.planet.sel .ring { stroke: var(--alpha); stroke-opacity: 1; stroke-width: 2; }
+.planet.dim { opacity: .45; }
+.pin { cursor: pointer; }
+.pin:hover .pinhead, .pin.sel .pinhead { stroke: #fff; stroke-width: 2.5; }
+.lbl { font: 600 12px var(--display); letter-spacing: .05em; fill: var(--ink); paint-order: stroke; stroke: rgba(8, 11, 16, .85); stroke-width: 3px; }
+.narrow .lbl { font-size: 20px; } .narrow .badge text { font-size: 16px; }
+.lbl.small { font: 500 11px var(--body); fill: var(--ink-dim); letter-spacing: 0; }
+.badge text { font: 600 11px var(--mono); fill: #10141c; }
+.zoomin { animation: zoomin .45s cubic-bezier(.2, .7, .2, 1); }
+@keyframes zoomin { from { transform: scale(.35); opacity: 0; } to { transform: none; opacity: 1; } }
+.fadein { animation: fadein .3s ease; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .zoomin, .fadein { animation: none; } }
+@media (max-width: 860px) {
+  .stage { grid-template-columns: 1fr; }
+  .bar h1 { flex-basis: 100%; }
+  .wrap { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <h1 id="title">The Hadley Reach</h1>
+    <span class="crumb" id="crumb">Turn 7 · 6 contracts on offer</span>
+    <button class="lnk" id="back" hidden>← The system</button>
+    <button class="lnk" id="list">List</button>
+    <button class="lnk">← Hub</button>
+  </div>
+  <div class="stage">
+    <div class="view" id="view"></div>
+    <aside class="card" id="card"></aside>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  // ---- made-up data, in the shape the proposal gives campaign.system and the offers ----
+  var KINDS = {
+    desert: { name: 'Desert world', base: '#c9955a', dark: '#7a4f2a', light: '#ecc58c', ground: ['#b9854c', '#a36f3c', '#d3a26a', '#8d5c31'] },
+    arctic: { name: 'Arctic world', base: '#c7dbe6', dark: '#6f8ea3', light: '#f2f8fb', ground: ['#d6e5ee', '#b8ccd9', '#e8f1f6', '#9fb6c6'] },
+    jungle: { name: 'Jungle world', base: '#3f8a4f', dark: '#1d4a2a', light: '#7cc183', ground: ['#3c7f48', '#2f6a3b', '#4f9a5a', '#25522f'] },
+    industrial: { name: 'Industrial world', base: '#8a8f99', dark: '#3d4250', light: '#c4c9d2', ground: ['#7c818b', '#686d77', '#959aa3', '#555a64'] },
+    unstable: { name: 'Unstable world', base: '#a2483a', dark: '#4a1c18', light: '#f08a4a', ground: ['#8a3c30', '#6e2e25', '#b0503d', '#55221c'] }
+  };
+  var COND = {
+    'Low gravity': 'Infantry move M+6" and ground vehicles M+8" on a Move; turning costs 1" more; an Advance fires at Basic Firepower.',
+    'High gravity': 'Infantry +1 Defence; a Move is 1" shorter (2" for ground vehicles, 4" for aircraft).',
+    'No atmosphere': '+1 when resolving hits against infantry; every weapon’s Range +6".',
+    'Toxic atmosphere': '+1 when resolving hits against infantry.',
+    'Foggy atmosphere': 'Nobody sees further than 18".',
+    'High radiation': 'Everyone counts as jammed; a drone vehicle needs 2+ to move.',
+    'Unexplained weakness': 'Every unit but a drone has −1 Movement, Firepower, Assault and Morale; +1 Trauma point each.'
+  };
+  var RIVALS = {
+    kessler: { name: 'Kessler’s Raiders', colour: '#5aa9c8', tier: 'III', arch: 'Mercenary company', won: '4 won · 2 lost' },
+    dawn: { name: 'Red Dawn Brigade', colour: '#d06a8c', tier: 'II', arch: 'Insurgent group', won: '3 won · 3 lost' },
+    swarm: { name: 'The Choir', colour: '#7ed6a0', tier: 'III', arch: 'Bug swarm', won: '5 won · 1 lost' }
+  };
+  var SYSTEM = {
+    name: 'The Hadley Reach', star: { name: 'Hadley’s Star', colour: '#ffcf7a' },
+    planets: [
+      { id: 'vesk', name: 'Vesk', kind: 'desert', orbit: 92, angle: -40, r: 13, conds: ['Low gravity', 'No atmosphere'], haze: null },
+      { id: 'thule', name: 'Thule IV', kind: 'arctic', orbit: 148, angle: 200, r: 16, conds: ['Foggy atmosphere'], haze: '#dfe8ef' },
+      { id: 'marrow', name: 'Marrow', kind: 'jungle', orbit: 205, angle: 28, r: 19, conds: ['Toxic atmosphere', 'Unexplained weakness'], haze: '#b6e36a' },
+      { id: 'caldera', name: 'Caldera', kind: 'unstable', orbit: 262, angle: 128, r: 15, conds: ['High gravity', 'High radiation'], haze: '#ff8a5a' },
+      { id: 'ossian', name: 'Port Ossian', kind: 'industrial', orbit: 318, angle: -112, r: 21, conds: [], haze: '#c9d2dc' }
+    ]
+  };
+  var OFFERS = [
+    { planet: 'vesk', rival: 'kessler', site: 'Kessler Ridge', x: .32, y: .4, scen: 'Secure and control', tier: 'III', pl: '1 or 2', role: 'attacker', win: 'Hold more of the three objectives than the enemy at the end of turn 6.' },
+    { planet: 'vesk', rival: 'dawn', site: 'Dry Well 9', x: .68, y: .64, scen: 'Meeting engagement', tier: 'II', pl: '1', role: 'even', win: 'Rout the enemy, or hold the centre at the end of turn 6.' },
+    { planet: 'thule', rival: 'swarm', site: 'Relay Station Kappa', x: .55, y: .35, scen: 'Demolish', tier: 'III', pl: '1 or 2', role: 'defender', win: 'Keep the SAM site standing to the end of turn 8.' },
+    { planet: 'marrow', rival: 'swarm', site: 'Hab Block C', x: .42, y: .58, scen: 'Clearing out', ce: true, tier: 'III', pl: '1', role: 'even', win: 'Rout the enemy inside the compound — destroy or drive off half their units.' },
+    { planet: 'ossian', rival: 'kessler', site: 'Pumping Station 4', x: .28, y: .62, scen: 'Hostile takeover', tier: 'III', pl: '2', role: 'defender', win: 'Still hold the position at the end of turn 20.' },
+    { planet: 'ossian', rival: 'dawn', site: 'Dockyard 12', x: .7, y: .3, scen: 'Find and secure', tier: 'II', pl: '1 or 2', role: 'attacker', win: 'Find the objective and hold it at the end of turn 8.' }
+  ];
+
+  // ---- a small seeded random, so each planet's map is the same every time it is drawn ----
+  function rng(seed) { var s = 0; for (var i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) >>> 0; return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(id) { return document.getElementById(id); }
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function offersOn(p) { return OFFERS.filter(function (o) { return o.planet === p.id; }); }
+  function planetById(id) { return SYSTEM.planets.filter(function (p) { return p.id === id; })[0]; }
+
+  var state = { view: 'system', planet: null, offer: null };
+
+  // ---- the system ----
+  function polar(p, cx, cy) {
+    var a = p.angle * Math.PI / 180;
+    return { x: cx + Math.cos(a) * p.orbit, y: cy + Math.sin(a) * p.orbit * 0.62 };
+  }
+  function planetDefs(p) {
+    var k = KINDS[p.kind];
+    return '<radialGradient id="g-' + p.id + '" cx="35%" cy="32%" r="75%">' +
+      '<stop offset="0" stop-color="' + k.light + '"/><stop offset=".45" stop-color="' + k.base + '"/><stop offset="1" stop-color="' + k.dark + '"/></radialGradient>' +
+      (p.haze ? '<radialGradient id="h-' + p.id + '"><stop offset=".62" stop-color="' + p.haze + '" stop-opacity="0"/><stop offset=".8" stop-color="' + p.haze + '" stop-opacity=".45"/><stop offset="1" stop-color="' + p.haze + '" stop-opacity="0"/></radialGradient>' : '');
+  }
+  function drawSystem() {
+    var W = 760, H = 520, cx = W / 2, cy = H / 2 + 6, r = rng('stars');
+    // a phone: the orbits cropped close and the planets and their names drawn larger, so a finger can find them
+    var narrow = el('view').clientWidth < 560, k = narrow ? 1.7 : 1;
+    var vb = narrow ? (cx - 340) + ' ' + (cy - 242) + ' 680 484' : '0 0 ' + W + ' ' + H;
+    var s = '<svg viewBox="' + vb + '"' + (narrow ? ' class="narrow"' : '') + ' role="img" aria-label="The ' + esc(SYSTEM.name) + ' system: ' + SYSTEM.planets.length + ' planets"><defs>' +
+      '<radialGradient id="star"><stop offset="0" stop-color="#fff7e0"/><stop offset=".35" stop-color="' + SYSTEM.star.colour + '"/><stop offset="1" stop-color="#ff9a3c" stop-opacity="0"/></radialGradient>' +
+      SYSTEM.planets.map(planetDefs).join('') + '</defs>';
+    // background stars
+    for (var i = 0; i < 140; i++) s += '<circle cx="' + (r() * W).toFixed(1) + '" cy="' + (r() * H).toFixed(1) + '" r="' + (r() * 1.1 + .2).toFixed(2) + '" fill="#cfd8e6" opacity="' + (r() * .5 + .15).toFixed(2) + '"/>';
+    // orbits
+    SYSTEM.planets.forEach(function (p) {
+      s += '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + p.orbit + '" ry="' + (p.orbit * .62).toFixed(1) + '" fill="none" stroke="#3a4a63" stroke-opacity=".55" stroke-dasharray="2 5"/>';
+    });
+    // the star
+    s += '<circle cx="' + cx + '" cy="' + cy + '" r="58" fill="url(#star)"/><circle cx="' + cx + '" cy="' + cy + '" r="17" fill="#fff3cf"/>' +
+      '<text class="lbl small" x="' + cx + '" y="' + (cy + 40) + '" text-anchor="middle">' + esc(SYSTEM.star.name) + '</text>';
+    // the planets, back to front
+    SYSTEM.planets.slice().sort(function (a, b) { return polar(a, cx, cy).y - polar(b, cx, cy).y; }).forEach(function (p) {
+      var q = polar(p, cx, cy), n = offersOn(p).length;
+      p = Object.assign({}, p, { r: p.r * k });
+      s += '<g class="planet' + (n ? '' : ' dim') + (state.planet === p.id ? ' sel' : '') + '" data-planet="' + p.id + '" tabindex="0" role="button" aria-label="' + esc(p.name) + ', ' + n + ' contract' + (n === 1 ? '' : 's') + '">' +
+        (p.haze ? '<circle cx="' + q.x + '" cy="' + q.y + '" r="' + (p.r * 1.75) + '" fill="url(#h-' + p.id + ')"/>' : '') +
+        '<circle cx="' + q.x + '" cy="' + q.y + '" r="' + p.r + '" fill="url(#g-' + p.id + ')"/>' +
+        '<circle class="ring" cx="' + q.x + '" cy="' + q.y + '" r="' + (p.r + 5) + '" fill="none" stroke="#fff" stroke-opacity="0"/>' +
+        // the night side
+        '<path d="M' + (q.x) + ' ' + (q.y - p.r) + ' a' + p.r + ' ' + p.r + ' 0 0 1 0 ' + (2 * p.r) + ' a' + (p.r * .55) + ' ' + p.r + ' 0 0 0 0 ' + (-2 * p.r) + 'z" fill="#05070b" opacity=".38" transform="rotate(' + (Math.atan2(q.y - cy, q.x - cx) * 180 / Math.PI) + ' ' + q.x + ' ' + q.y + ')"/>' +
+        '<text class="lbl" x="' + q.x + '" y="' + (q.y + p.r + 18 * k) + '" text-anchor="middle">' + esc(p.name) + '</text>' +
+        (n ? '<g class="badge"><circle cx="' + (q.x + p.r * .8) + '" cy="' + (q.y - p.r * .8) + '" r="' + (9 * k) + '" fill="var(--alpha)"/><text x="' + (q.x + p.r * .8) + '" y="' + (q.y - p.r * .8 + 4 * k) + '" text-anchor="middle">' + n + '</text></g>' : '') +
+        '</g>';
+    });
+    s += '</svg><div class="hint">Tap a planet for its conditions and contracts.</div>';
+    var v = el('view');
+    v.innerHTML = s;
+    v.firstChild.classList.add('fadein');
+  }
+
+  // ---- a planet's map ----
+  function blob(r, cx, cy, rad, pts) {
+    var d = '';
+    for (var i = 0; i < pts; i++) {
+      var a = i / pts * Math.PI * 2, rr = rad * (0.65 + r() * 0.55);
+      var x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 0.8;
+      d += (i ? ' L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }
+    return d + 'Z';
+  }
+  function drawPlanet(p) {
+    var W = 760, H = 520, k = KINDS[p.kind], r = rng(p.id);
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Map of ' + esc(p.name) + '"><defs>' +
+      '<filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6"/></filter>' +
+      '<radialGradient id="vig" cx="50%" cy="50%" r="72%"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>' +
+      '<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#000" stroke-opacity=".12"/></pattern>' +
+      (p.haze ? '<linearGradient id="fog" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + p.haze + '" stop-opacity=".28"/><stop offset=".5" stop-color="' + p.haze + '" stop-opacity=".06"/><stop offset="1" stop-color="' + p.haze + '" stop-opacity=".22"/></linearGradient>' : '') +
+      '</defs><rect width="' + W + '" height="' + H + '" fill="' + k.ground[0] + '"/>';
+    // ground: soft patches in the world's colours
+    s += '<g filter="url(#soft)">';
+    for (var i = 0; i < 26; i++) s += '<path d="' + blob(r, r() * W, r() * H, 40 + r() * 110, 9) + '" fill="' + k.ground[1 + (i % 3)] + '" opacity=".75"/>';
+    s += '</g>';
+    // the world's own features
+    if (p.kind === 'desert') for (var d = 0; d < 7; d++) { var y0 = 30 + d * 75 + r() * 20; s += '<path d="M0 ' + y0 + ' Q 190 ' + (y0 - 30) + ' 380 ' + y0 + ' T 760 ' + y0 + '" fill="none" stroke="' + k.light + '" stroke-opacity=".35" stroke-width="3"/>'; }
+    if (p.kind === 'arctic') for (var c = 0; c < 4; c++) { var x0 = r() * W; s += '<path d="M' + x0 + ' 0 l' + (r() * 60 - 30) + ' 120 l' + (r() * 60 - 30) + ' 140 l' + (r() * 60 - 30) + ' 260" fill="none" stroke="#6f8ea3" stroke-width="3" stroke-opacity=".7"/>'; }
+    if (p.kind === 'jungle') for (var j = 0; j < 60; j++) s += '<circle cx="' + (r() * W).toFixed(0) + '" cy="' + (r() * H).toFixed(0) + '" r="' + (6 + r() * 12).toFixed(0) + '" fill="#1d4a2a" opacity=".55"/>';
+    if (p.kind === 'industrial') for (var b = 0; b < 30; b++) s += '<rect x="' + (r() * W).toFixed(0) + '" y="' + (r() * H).toFixed(0) + '" width="' + (14 + r() * 40).toFixed(0) + '" height="' + (10 + r() * 30).toFixed(0) + '" fill="#4b505b" stroke="#2d313a" opacity=".85"/>';
+    if (p.kind === 'unstable') for (var l = 0; l < 5; l++) { var lx = r() * W, ly = r() * H; s += '<path d="' + blob(r, lx, ly, 30 + r() * 40, 8) + '" fill="#f08a4a" opacity=".55"/><path d="' + blob(r, lx, ly, 14 + r() * 14, 7) + '" fill="#ffd27a" opacity=".6"/>'; }
+    // a river or a road between the sites
+    s += '<path d="M -10 ' + (H * .7) + ' C ' + (W * .3) + ' ' + (H * .45) + ', ' + (W * .55) + ' ' + (H * .85) + ', ' + (W + 10) + ' ' + (H * .35) + '" fill="none" stroke="' + k.dark + '" stroke-opacity=".5" stroke-width="6"/>';
+    s += '<rect width="' + W + '" height="' + H + '" fill="url(#grid)"/>';
+    if (p.haze) s += '<rect width="' + W + '" height="' + H + '" fill="url(#fog)"/>';
+    // a vignette and the planet's name
+    s += '<rect width="' + W + '" height="' + H + '" fill="url(#vig)"/>' +
+      '<text class="lbl" x="22" y="34" style="font-size:18px">' + esc(p.name) + '</text>' +
+      '<text class="lbl small" x="22" y="52">' + esc(KINDS[p.kind].name) + '</text>';
+    // the contracts, pinned where they are
+    offersOn(p).forEach(function (o) {
+      var R = RIVALS[o.rival], x = o.x * W, y = o.y * H, i2 = OFFERS.indexOf(o);
+      s += '<g class="pin' + (state.offer === i2 ? ' sel' : '') + '" data-offer="' + i2 + '" tabindex="0" role="button" aria-label="' + esc(o.site + ': ' + o.scen + ' against ' + R.name) + '">' +
+        '<ellipse cx="' + x + '" cy="' + (y + 2) + '" rx="10" ry="4" fill="#000" opacity=".35"/>' +
+        '<path class="pinhead" d="M' + x + ' ' + y + ' c -11 -14 -15 -20 -15 -28 a15 15 0 1 1 30 0 c0 8 -4 14 -15 28z" fill="' + R.colour + '" stroke="#0d1117" stroke-width="2"/>' +
+        '<text x="' + x + '" y="' + (y - 24) + '" text-anchor="middle" style="font:600 12px var(--mono);fill:#0d1117">' + (o.ce ? 'CE' : o.tier) + '</text>' +
+        '<text class="lbl" x="' + x + '" y="' + (y + 18) + '" text-anchor="middle">' + esc(o.site) + '</text>' +
+        '<text class="lbl small" x="' + x + '" y="' + (y + 32) + '" text-anchor="middle">' + esc(o.scen) + '</text></g>';
+    });
+    s += '</svg><div class="hint">Tap a pin for the job.</div>';
+    var v = el('view');
+    v.innerHTML = s;
+    v.firstChild.classList.add('zoomin');
+  }
+
+  // ---- the card beside the drawing ----
+  function condPills(p) {
+    if (!p.conds.length) return '<div class="pills"><span class="pill home">Conditions much like home</span></div>';
+    return '<div class="pills">' + p.conds.map(function (c) { return '<span class="pill cond" title="' + esc(COND[c]) + '">' + esc(c) + '</span>'; }).join('') + '</div>' +
+      p.conds.map(function (c) { return '<p class="cond-text"><b>' + esc(c) + ':</b> ' + esc(COND[c]) + '</p>'; }).join('');
+  }
+  function jobList(p) {
+    var os = offersOn(p);
+    if (!os.length) return '<p class="none">No contracts here this turn.</p>';
+    return '<ul class="jobs">' + os.map(function (o) {
+      var R = RIVALS[o.rival], i = OFFERS.indexOf(o);
+      return '<li><button data-offer="' + i + '"' + (state.offer === i ? ' class="on"' : '') + '><span class="sw" style="background:' + R.colour + '"></span>' +
+        '<span><b>' + esc(o.scen) + '</b><small>' + esc(R.name) + ' · ' + esc(o.site) + '</small></span><span class="t">Tier ' + o.tier + '</span></button></li>';
+    }).join('') + '</ul>';
+  }
+  function cardSystem() {
+    var p = state.planet && planetById(state.planet);
+    if (!p) {
+      return '<h2>' + esc(SYSTEM.name) + '</h2><div class="sub">' + SYSTEM.planets.length + ' planets around ' + esc(SYSTEM.star.name) + ' · ' + OFFERS.length + ' contracts this turn</div>' +
+        '<h3>Planets</h3><ul class="jobs">' + SYSTEM.planets.map(function (q) {
+          var n = offersOn(q).length;
+          return '<li><button data-planet="' + q.id + '"><span class="sw" style="background:' + KINDS[q.kind].base + '"></span><span><b>' + esc(q.name) + '</b><small>' + esc(KINDS[q.kind].name) +
+            (q.conds.length ? ' · ' + esc(q.conds.join(', ')) : ' · much like home') + '</small></span><span class="t">' + n + '</span></button></li>';
+        }).join('') + '</ul>';
+    }
+    return '<h2>' + esc(p.name) + '</h2><div class="sub">' + esc(KINDS[p.kind].name) + '</div>' + condPills(p) +
+      '<h3>Contracts here</h3>' + jobList(p) +
+      (offersOn(p).length ? '<button class="start" data-open="' + p.id + '">Land on ' + esc(p.name) + '</button>' : '');
+  }
+  function cardOffer(o) {
+    var R = RIVALS[o.rival], p = planetById(o.planet);
+    return '<div class="offer-head" style="--c:' + R.colour + '"><b>' + esc(R.name) + '</b><span class="ct">Tier ' + R.tier + '</span></div>' +
+      '<div class="stat">' + esc(R.arch) + ' · ' + esc(R.won) + '</div>' +
+      '<div class="job"><div class="scen"><b>' + esc(o.scen) + '</b>' + (o.ce ? '<span class="pill">Close Encounters</span>' : '') + '</div>' +
+      '<div class="site">' + esc(o.site) + ', ' + esc(p.name) + '</div>' +
+      condPills(p) +
+      '<div class="size"><span>Battle Tier <b>' + o.tier + '</b></span><span>Priority Level <b>' + o.pl + '</b></span></div>' +
+      '<span class="role ' + o.role + '">' + (o.role === 'attacker' ? 'You attack' : o.role === 'defender' ? 'You defend' : 'Even terms') + '</span>' +
+      '<div class="win">' + esc(o.win) + '</div></div>' +
+      '<button class="start">Take this contract</button>';
+  }
+  function cardPlanet() {
+    var p = planetById(state.planet), o = state.offer != null ? OFFERS[state.offer] : null;
+    return o ? cardOffer(o) : '<h2>' + esc(p.name) + '</h2><div class="sub">' + esc(KINDS[p.kind].name) + '</div>' + condPills(p) + '<h3>Contracts here</h3>' + jobList(p);
+  }
+
+  function render() {
+    var sys = state.view === 'system';
+    if (sys) drawSystem(); else drawPlanet(planetById(state.planet));
+    el('card').innerHTML = sys ? cardSystem() : cardPlanet();
+    el('back').hidden = sys;
+    el('title').textContent = sys ? SYSTEM.name : planetById(state.planet).name;
+    el('crumb').textContent = sys ? 'Turn 7 · ' + OFFERS.length + ' contracts on offer' : SYSTEM.name + ' · ' + offersOn(planetById(state.planet)).length + ' contracts';
+  }
+  function act(t) {
+    if (!t) return;
+    var pl = t.getAttribute('data-planet'), of = t.getAttribute('data-offer'), op = t.getAttribute('data-open');
+    if (op) { state.view = 'planet'; state.planet = op; state.offer = null; render(); return; }
+    if (pl) {
+      // a second tap on the chosen planet lands on it
+      if (state.view === 'system' && state.planet === pl && offersOn(planetById(pl)).length) { state.view = 'planet'; state.offer = null; }
+      else state.planet = pl;
+      render(); return;
+    }
+    if (of != null) {
+      var o = OFFERS[+of];
+      state.view = 'planet'; state.planet = o.planet; state.offer = +of; render();
+    }
+  }
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('#back')) { state.view = 'system'; state.offer = null; render(); return; }
+    act(e.target.closest('[data-planet],[data-offer],[data-open]'));
+  });
+  document.addEventListener('keydown', function (e) {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-planet],[data-offer]')) { e.preventDefault(); act(e.target); }
+    if (e.key === 'Escape' && state.view !== 'system') { state.view = 'system'; state.offer = null; render(); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>

@@ -15,6 +15,7 @@
       report.battleTier = E.camp.pending.tier;
       report.pl = E.camp.pending.pl;
       report.scenario = E.camp.pending.scenario;
+      report.site = E.camp.pending.site || null;       // where in the star system, if the campaign has one
       C.clearOffers(E.camp);            // a battle fought: three fresh jobs next turn
       /* The Paths' post-battle choices come first, each at its moment in the book
          (p. 112): Plunderer once the pay is rolled after a win, No Place for the
@@ -122,7 +123,7 @@
          out (regroup() rebuilds that from the flat list otherwise), not twice. */
       // both sides, and what the AI force did afterwards, for the battle's own card at the head
       var a = E.after, keep = { turn: a.turn, winner: a.winner, payment: a.payment, loss: a.loss || null, sides: { A: a.sides.A, B: a.sides.B || null },
-        rival: a.rival || null, fronts: a.fronts || null, elsewhere: a.fronts ? [] : (a.elsewhere || []) };
+        rival: a.rival || null, fronts: a.fronts || null, elsewhere: a.fronts ? [] : (a.elsewhere || []), system: a.system || null };
       last.after = JSON.parse(JSON.stringify(keep));
       last.balance = E.camp.companies.A.kUC;
       if (E.camp.mode === 'hotseat') last.balances = { A: E.camp.companies.A.kUC, B: E.camp.companies.B.kUC };
@@ -449,6 +450,10 @@
         '</div><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
         '<span class="cmoney">+' + p[me] + ' ' + coin() + ' → ' + (pastLine ? pastBalance(pastLine) : co.kUC) + '</span></div></div>';
 
+      // a star-system campaign: who holds the planet now (camp-system.js)
+      if (me === 'A' && E.after.system && E.after.system.lines.length) {
+        h += '<div class="cpan"><div class="cpstat">' + E.after.system.lines.map(esc).join(' ') + '</div></div>';
+      }
       if (p.territory && p.territory[me]) {
         var tt = p.territory[me];
         h += '<div class="cpan"><div class="cpstat">Territorial recalculation (' + (tt.won ? 'the tribe claimed ground' : 'the tribe gave ground') + '): ' +

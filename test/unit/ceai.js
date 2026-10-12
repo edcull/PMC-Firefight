@@ -121,6 +121,7 @@ console.log('\nSatchel Charges');
   const inRoom = a.x >= room.x && a.x <= room.x + room.w && a.y >= room.y && a.y <= room.y + room.h;
   ok('in a room with two of the enemy and none of its own: it plants Satchel Charges and gets out', (st.charges || []).length === 1 && st.charges[0].sec === st.terrain.indexOf(room) &&
     st.kit.A.satchel === 0 && !inRoom && a.activated, (text(st).match(/[^\n]*(Satchel|clear of)[^\n]*/g) || []).join(' | '));
+  ok('...the log names the room as the table does ("Room 1"), and a corridor as "the corridor section"', /Satchel Charges in Room 1/.test(text(st)) && !/the room 1/i.test(text(st)));
   ok('...and they go off in the End phase as anyone\'s do', dice(0.9, () => { e.query.hazardsEnd(); return room.blown; }));
 }
 {

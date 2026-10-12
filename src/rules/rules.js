@@ -2489,7 +2489,7 @@
     hasExact: hasExact, antiTank: antiTank,
     campFlag: campFlag, doctrine: doctrine, unitDoc: unitDoc, credit: credit,
     OPTIONS: OPTIONS, CE_FREQ: CE_FREQ, cleanOptions: cleanOptions, opt: opt, optionNames: optionNames, closestTwo: closestTwo,
-    rollWorld: rollWorld, cleanWorld: cleanWorld, worldOf: worldOf, worldLines: worldLines, thinAir: thinAir, worldStats: worldStats,
+    rollWorld: rollWorld, WORLD_ROLL: WORLD_ROLL, cleanWorld: cleanWorld, worldOf: worldOf, worldLines: worldLines, thinAir: thinAir, worldStats: worldStats,
     isDestructible: isDestructible, destructibleKind: destructibleKind, shelterOf: shelterOf,
     canDemolish: canDemolish, canCharge: canCharge, destroyTerrain: destroyTerrain, chargeBonus: chargeBonus,
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,

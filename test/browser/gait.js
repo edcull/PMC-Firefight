@@ -103,9 +103,13 @@ function head(t) { console.log('\n  ' + t); }
     window.__tapMove({ x: u.x + 6, y: u.y });
     await new Promise(r => setTimeout(r, 80));
     window.__previewConfirm();
-    for (let i = 0; i < 40; i++) {
-      if (u.walk) seen.walk[u.walk] = (seen.walk[u.walk] || 0) + 1;
+    /* watched until the walk is over, not for a set time: on a busy machine the
+       animation starts late and runs slow, and a fixed second saw only one foot */
+    let started = false;
+    for (let i = 0; i < 400; i++) {
+      if (u.walk) { started = true; seen.walk[u.walk] = (seen.walk[u.walk] || 0) + 1; }
       seen.hop.push(u.hop || 0);
+      if (started && !u.walk && Object.keys(seen.walk).length) break;
       await new Promise(r => setTimeout(r, 25));
     }
     return { frames: Object.keys(seen.walk).sort(), peak: Math.max(...seen.hop),

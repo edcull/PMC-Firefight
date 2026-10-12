@@ -440,7 +440,7 @@
           gu.x = g.x; gu.y = g.y; gu.facing = g.facing; gu.startSize = 1; gu.faction = 'neutral';
           state.units.push(gu);
         });
-        logLine('note', 'An automated defence system guards the ' + (K.sectionOf(lay.panel.x, lay.panel.y) || {}).name + ': a control panel and ' + lay.guns.length + ' automatic guns.');
+        logLine('note', 'An automated defence system guards ' + ((K.sectionOf(lay.panel.x, lay.panel.y) || {}).name || 'the compound') + ': a control panel and ' + lay.guns.length + ' automatic guns.');
       }
     }
     // Close Encounters' special equipment (p. 159): what each side carries in, chosen or the standard set
