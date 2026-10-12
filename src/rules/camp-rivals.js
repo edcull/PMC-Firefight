@@ -31,6 +31,8 @@
        campaign saved against a single rival into the three-force shape. */
     function rehydrate(campaign) {
       if (!campaign || !campaign.companies) return campaign;
+      // its star system, if it is fought across one (camp-system.js), made safe to read
+      if (campaign.system) campaign.system = root.PMCSystem ? root.PMCSystem.cleanSystem(campaign.system) : campaign.system;
       if (!campaign.rivals || !campaign.rivals.length) {
         campaign.rivals = campaign.companies.B ? [campaign.companies.B] : [];
         campaign.facing = 0;
@@ -213,6 +215,8 @@
           caught: caught[idx]
         };
       });
+      // a campaign fought across a star system: each job on one of its planets, at a site on it (camp-system.js)
+      if (campaign.system && root.PMCSystem) root.PMCSystem.placeOffers(campaign, campaign.offers);
       campaign.offersTurn = campaign.turn;
       return campaign.offers;
     }

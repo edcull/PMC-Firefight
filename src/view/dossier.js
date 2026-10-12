@@ -372,7 +372,8 @@
   var wantRivalColours = [], rivColourFor = null;   // ...their colours, and the slot whose picker is open (a number, or 'A'/'B' for a player)
   var wantColours = { A: null, B: null };            // the players' own colours, picked on the new-campaign page
   var wantName = '';                                 // what the new campaign is called
-  var wantOptions = {};                              // ...and the optional rules it is fought under (R.OPTIONS)
+  var wantOptions = {};
+  var wantSystem = true;                             // ...and whether it is fought across a star system (camp-system.js)                              // ...and the optional rules it is fought under (R.OPTIONS)
   /* Every slot on the new-campaign page starts in colours of its own, rolled — the
      players' and up to nine AI forces' — none worn twice. */
   /* A force's name to start from, as the online founding gives one: the player's own
@@ -1676,6 +1677,15 @@
       r.colour = freeColour(taken); taken.push(r.colour);
     });
     ensureColours();
+    chartSystem();
+  }
+  /* A single-player campaign fought across a star system (camp-system.js; the
+     default — the new-campaign form may ask for the plain list of offers): its
+     planets each have conditions of their own, so Other Worlds is on for it. */
+  function chartSystem() {
+    if (!camp || camp.mode !== 'solo' || camp.system || !wantSystem || !root.PMCSystem) return;
+    camp.system = root.PMCSystem.makeSystem(camp);
+    camp.options = R.cleanOptions(Object.assign({}, camp.options || {}, { otherWorlds: true }));
   }
 
   /* Every force in a campaign wears its own colour: the player's is chosen, and

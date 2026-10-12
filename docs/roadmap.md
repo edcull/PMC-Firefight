@@ -475,12 +475,45 @@ A clickable mockup of B and C, with made-up data: `docs/mockups/star-system.html
 **Size:** medium. Most of it is new screens. The rules change is small,
 because `rollOffers` and the offer card are kept as they are.
 
-**Decisions wanted:**
-1. Does choosing the star system turn on Other Worlds (recommended), or do the
-   conditions apply only with that option on?
-2. How many planets: 5, or 4–7 rolled?
-3. Is the star system the default for new campaigns?
-4. Should E's home planets come in the first version?
+**Decisions (owner):** the star system turns Other Worlds on for the campaign;
+4–7 planets, rolled; it is the default for new single-player campaigns; and E
+is in the first version, as below.
+
+### E. Influence, standing and events (in the first version)
+
+- **Home planets and influence.** Every planet keeps a share of influence for
+  each force, from 0 to 100, with the rest unaligned.
+  - Each rival gets a home planet, starting at 50–70 there, and a foothold of
+    5–15 on one or two other planets.
+  - Your company gets a base planet at 35, not a rival's home where that can be
+    avoided.
+  - A force with 50 or more on a planet holds it; otherwise the planet is
+    contested.
+  - A rival's contracts land on planets in proportion to its influence there,
+    with a little on every planet and a lot on its home, so you mostly fight it
+    on its own ground.
+  - A force that leaves the campaign loses half its influence each turn. A new
+    one is given the planet with the least influence on it as its home.
+- **Standing** is your own influence on a planet:
+  - 0–24 Unknown, 25–49 Known, 50–74 Held, 75+ Favoured;
+  - a battle won there pays +1 kUC for each full 25 standing you had going in;
+  - a win moves 12 points from that rival to you, and a loss moves 10 from you
+    to it (a draw moves nothing);
+  - the system view shows each planet's holder, and the planet card shows the
+    shares as a bar.
+- **Rare events.** Each new campaign turn has a one-in-six chance of an event
+  on a random planet, with no more than one at a time on any planet. Each lasts
+  a few turns and is shown on the system and in the hub's news:
+  - Reactor breach: high radiation, 3 turns;
+  - Dust storm season: foggy atmosphere, 2 turns;
+  - Chemical spill or spore bloom: toxic atmosphere, 3 turns;
+  - Gravitic anomaly: time anomalies, 2 turns;
+  - Wasting sickness: unexplained weakness, 2 turns;
+  - Uprising: the holder loses 20 influence there;
+  - Bounty: wins there pay +2 kUC, 2 turns.
+
+  An event's condition overrides the planet's own while it lasts, and a
+  contract offered meanwhile carries it.
 
 ---
 
