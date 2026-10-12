@@ -575,18 +575,27 @@
      units per Priority Level ... any infantry units with Unit Tier equal to the
      Battle Tier". They join the list as it stands, off the bill. */
   function waveChoices(sd) {
-    var bt = state.cfg.tier;
+    var cfg = state.cfg, bt = cfg.tier, keys = (sd === 'A' ? cfg.armyA : cfg.armyB) || [];
+    // the caps alone ("Max …"): what the list lacks or spends besides is not the wave's to answer for
+    var faults = function (list) {
+      return R.checkArmy(list, cfg.tier, cfg.pl, docsOf(sd), 'wave', 'rebel').faults.filter(function (f) { return /^Max /.test(f); });
+    };
+    var had = faults(keys);
     return R.listFor('rebel').filter(function (p) {
-      return p.cls === 'infantry' && p.tier === bt && !p.command && !p.noSlot && !p.turretSet;
+      if (!(p.cls === 'infantry' && p.tier === bt && !p.command && !p.noSlot && !p.turretSet)) return false;
+      // the army's caps bind the wave too: 4 Deserters and POWs an army, an AA team a Priority Level (REB-7)
+      return faults(keys.concat([p.key])).every(function (f) { return had.indexOf(f) >= 0; });
     });
   }
   function waveRoom(sd) { return 2 * (state.cfg.pl || 1); }
-  function waveAdd(sd, key) {
+  // `riders`: the Riders upgrade, which the wave may take as the muster does (p. 93, REB-9)
+  function waveAdd(sd, key, riders) {
     var cfg = state.cfg, armyKey = sd === 'A' ? 'armyA' : 'armyB';
     var prof = R.profile(key);
-    cfg[armyKey] = (cfg[armyKey] || []).concat([key]);
+    riders = !!riders && R.canRide(prof);
+    cfg[armyKey] = (cfg[armyKey] || []).concat([R.joinPick(key, null, false, riders, null)]);
     var i = cfg[armyKey].length - 1;
-    var u = makeUnit(prof, sd, i, R.defaultDrive(prof), false, null, false);
+    var u = makeUnit(prof, sd, i, R.defaultDrive(prof), false, null, riders);
     u.pickIdx = i; u.startSize = u.models; u.waveExtra = true;
     state.units.push(u);
     dedupeCodes();
@@ -594,9 +603,11 @@
     return u;
   }
   // one called-up unit sent back: the last, or the last of the kind named (a pick toggled off)
-  function waveUndo(sd, key) {
+  function waveUndo(sd, key, riders) {
     var cfg = state.cfg, armyKey = sd === 'A' ? 'armyA' : 'armyB';
-    var gone = state.units.filter(function (u) { return u.side === sd && u.waveExtra && (!key || u.key === key); }).pop();
+    var gone = state.units.filter(function (u) {
+      return u.side === sd && u.waveExtra && (!key || (u.key === key && (riders == null || !!u.riders === !!riders)));
+    }).pop();
     if (!gone) return false;
     state.units.splice(state.units.indexOf(gone), 1);
     var at = gone.pickIdx;
@@ -606,9 +617,10 @@
     return true;
   }
   function autoWave(sd, n) {
-    var pool = waveChoices(sd);
-    for (var k = 0; k < n && pool.length; k++) waveAdd(sd, pool[Math.floor(Math.random() * pool.length)].key);
-    if (n && pool.length) logLine('note', sideName(sd) + ' calls up the human wave: ' + n + ' more infantry units.');
+    var pool = waveChoices(sd), had = pool.length;
+    // (the choices asked again after each one: a cap may be reached on the way)
+    for (var k = 0; k < n && pool.length; k++) { waveAdd(sd, pool[Math.floor(Math.random() * pool.length)].key); pool = waveChoices(sd); }
+    if (n && had) logLine('note', sideName(sd) + ' calls up the human wave: ' + n + ' more infantry units.');
   }
   // the next player's tactic, or, with everyone done, the table
   function tacticsOn() {
@@ -744,6 +756,10 @@
       heldIns[sd].forEach(function (u) { u.reserve = false; });
     });
     SC.deploy(state);
+    // Last Stand's barricades, for a side not placing them by hand: now the zones are known (REB-8)
+    var nT = state.terrain.length;
+    SC.lastStandBarricades(state);
+    if (state.terrain.length !== nT) V.scenery();
     Object.keys(heldIns).forEach(function (sd) {
       if (state.sc.split && state.sc.split[sd]) return;
       heldIns[sd].forEach(function (u) { if (!u.reserve) { u.reserve = true; u.x = -1; u.y = -1; } });
@@ -2132,7 +2148,10 @@
       ta.chosen[side] = tac;
       logLine('note', sideName(side) + ' ' + (tac ? 'takes ' + R.tacticById(tac).name : 'takes no tactic') + '.');
       // Human Wave: the extra units are called up before anyone goes on
-      if (tac === 'wave' && waveChoices(side).length) { ta.wave = { side: side, left: waveRoom(side) }; render(); return yes; }
+      if (tac === 'wave' && waveChoices(side).length) {
+        ta.wave = { side: side, left: waveRoom(side), keys: waveChoices(side).map(function (p) { return p.key; }) };
+        render(); return yes;
+      }
       tacticsOn();
       return yes;
     });
@@ -2141,14 +2160,16 @@
       if (!w || w.side !== side) return no('no wave to call up');
       if (it.k === 'waveadd') {
         if (w.left < 1) return no('the wave is full');
-        if (!waveChoices(side).some(function (p) { return p.key === it.key; })) return no('only infantry of the Battle Tier');
-        waveAdd(side, it.key); w.left--;
+        if (!waveChoices(side).some(function (p) { return p.key === it.key; })) return no('only infantry of the Battle Tier, within the army\u2019s caps');
+        waveAdd(side, it.key, !!it.riders); w.left--;
       } else if (it.k === 'waveundo') {
-        if (!waveUndo(side, it.key)) return no('nothing to take back');
+        if (!waveUndo(side, it.key, it.riders == null ? null : !!it.riders)) return no('nothing to take back');
         w.left++;
       } else if (it.k === 'waveauto') {
         autoWave(side, w.left); w.left = 0;
       }
+      // what may still be called up, for the card (a cap reached takes a kind off it)
+      w.keys = waveChoices(side).map(function (p) { return p.key; });
       if (it.k === 'wavedone' || w.left < 1 && it.k === 'waveauto') {
         var n = state.units.filter(function (u) { return u.side === side && u.waveExtra; }).length;
         if (it.k === 'wavedone' && n) logLine('note', sideName(side) + ' calls up the human wave: ' + n + ' more infantry unit' + (n === 1 ? '' : 's') + '.');

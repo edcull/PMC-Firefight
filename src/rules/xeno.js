@@ -137,6 +137,9 @@
         state.units.forEach(function (u) {
           if (u.alive && status(u) !== 'broken') { u.panicBroke = false; return; }
           if (u.alive ? u.panicBroke : u.panicDead) return;
+          /* A Broken unit that runs off the table has fled, not been destroyed (p. 34):
+             its breaking was answered already, so it is not answered again (XEN-17). */
+          if (!u.alive && u.fled && u.panicBroke) { u.panicDead = true; return; }
           infamyPanic(state, u, log);
           fired = true;
         });

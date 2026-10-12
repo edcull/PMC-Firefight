@@ -67,6 +67,8 @@
       var out = [];
       state.terrain.forEach(function (r) {
         if (!enterable(r)) return;
+        // Evacuation: a civilian group that has come out of the reinforced buildings "cannot re-enter any of these" (p. 153, SOL-17)
+        if (r.home && u.soloCiv) return;
         sectionsOf(r).forEach(function (q, i) {
           if (occupant(state, r, i)) return;
           if (u.bld) {

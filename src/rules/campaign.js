@@ -121,7 +121,7 @@
     { n: 18, name: 'Superior Ballistic Skills', mod: { range: 6 },
       text: 'The unit adds 6" to its Range.' },
     { n: 19, name: 'Surrounded, but Steady', flag: 'surrounded',
-      text: 'When rallying, the unit rolls one extra die for each enemy unit within 18".' },
+      text: 'When rallying in the Rally phase, the unit rolls one extra die for each enemy unit within 18".' },
     { n: 20, name: 'To the Last Drop of Blood!', rule: 'Determined',
       text: 'The unit gains the Determined special rule.' }
   ];
@@ -274,7 +274,7 @@
     { n: 7, name: 'Rite of Power', rule: 'Markerlights', text: 'The unit gains the Markerlights special rule.' },
     { n: 8, name: 'Rite of Invisibility', flag: 'invisibility', text: 'The unit gets +3 Defence from terrain instead of +2.' },
     { n: 9, name: 'Rite of Stability', flag: 'stability', text: 'The unit takes no Suppression for warriors killed in friendly units within 6".' },
-    { n: 10, name: 'Rite of Knowledge', flag: 'knowledge', text: 'Using a Teleport, the unit may re-roll a 1–3; the second result stands.' },
+    { n: 10, name: 'Rite of Knowledge', flag: 'knowledge', text: 'Using Teleport Turrets, the unit may re-roll a 1–2 (a random pad); the second result stands.' },
     { n: 11, name: 'Rite of Frenzy', flag: 'frenzy', text: 'For every member of the unit killed in an Assault, the enemy takes D3−1 automatic hits in the next round, unless the unit is Broken.' },
     { n: 12, name: 'Rite of Unyielding Will', rule: 'Determined', text: 'The unit gains the Determined special rule.' },
     { n: 13, name: 'Rite of Unrest', flag: 'unrest', text: 'In the Beginning phase every enemy infantry unit within 12" takes 1 Suppression point (not Drones).' },
@@ -308,7 +308,7 @@
     { n: 6, name: 'Psychic Amplifier', flag: 'psychicAmp', text: 'Friendly infantry within 6" automatically remove 1 Suppression point in the Rally phase.' },
     { n: 7, name: 'Long-range Teleportation System', rule: 'Battlefield Insertion', text: 'The aircraft gains the Battlefield Insertion special rule.' },
     { n: 8, name: 'Temporal Armour Amplifier', flag: 'temporal', text: 'The aircraft is immune to the Anti-aircraft rule: attacks on it are resolved as normal shooting.' },
-    { n: 9, name: 'Time Vortex Generator', flag: 'vortex', text: 'Once a battle the aircraft may double its Movement for a Move.' },
+    { n: 9, name: 'Time Vortex Generator', flag: 'vortex', text: 'Once a battle the aircraft may double its Movement for a Move or an Advance.' },
     { n: 10, name: 'Advanced Control System', flag: 'advControl', text: 'After a Move the aircraft may turn up to 90°.' }
   ];
   var PATHWAY_GROUPS = ['Biochemical', 'Behavioural', 'Phenotypic'];

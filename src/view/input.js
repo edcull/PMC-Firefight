@@ -165,7 +165,9 @@
       var bits = [];
       if (t.cover) bits.push('+' + t.cover + ' Defence');
       if (t.fp && t.hill) bits.push('+' + t.fp + ' Firepower firing down');
-      if (t.movePenalty) bits.push(t.movePenalty + '" off the move to go through, once a move');
+      // what it costs this unit: a hull or Riders pay 2" where a man on foot pays 1" (SCN-5)
+      var pay = t.movePenalty ? R.terrainCost(u, pv.kind) : 0;
+      if (pay) bits.push(pay + '" off the move to go through, once a move');
       if (t.blocks) bits.push('blocks line of sight');
       if (t.shallow) bits.push('no Cumbersome Weapons from here');
       var h = '<div class="card preview"><h2>' + (pv.advance ? 'Advance' : 'Move') + ' ' +
@@ -264,8 +266,10 @@
       if (!bits.length) bits.push('no cover, no penalty');
 
       var extra = '';
-      var obj = B.state.objectives.filter(function (o) { return R.inches(p.x, p.y, o.x, o.y) <= 4; })[0];
-      if (obj) extra += 'Inside an objective — hold it with an unsuppressed unit and no enemy within 4".<br>';
+      var obj = B.state.objectives.filter(function (o) { return R.inches(p.x, p.y, o.x, o.y) <= (o.lz ? o.r : 4); })[0];
+      // a landing zone is held only from over its circle (the house rule in scenarios.js areaOf, SCN-6)
+      if (obj) extra += obj.lz ? 'Inside a landing zone — held by an unsuppressed unit over the circle, with no enemy unit over it.<br>'
+        : 'Inside an objective — hold it with an unsuppressed unit and no enemy within 4".<br>';
       var u = ui.selected;
       if (u && u.alive) {
         var d = Math.max(0, R.inches(u.x, u.y, p.x, p.y) - UR);

@@ -204,6 +204,12 @@
       var how;
       if (isFlying(t)) {
         how = 'shot out of the sky';
+        /* A Lifter's load is a vehicle, and the troops riding in that vehicle go down with
+           it too: "All troops on-board are killed" (p. 38, VEH-4). */
+        crew.slice().forEach(function (v) {
+          (v.cargo || []).forEach(function (w) { crew.push(w); });
+          v.cargo = [];
+        });
         crew.forEach(function (u) {
           u.alive = false; u.models = 0; u.aboard = null;
           /* In a campaign a downed aircraft makes an emergency landing on a 4+ and

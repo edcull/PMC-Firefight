@@ -210,13 +210,15 @@
            to the level ground, and from the crown of a stepped hill on to its
            lower slope as well. Once, however many steps down it is. */
         // (the target's ground: one in a wood or building on the same hill is not below it)
+        // (Tactical Dumbness: "does not get any bonuses from terrain", these included, CMP-8)
+        var dumb = campFlag(a, 'dumb');
         var la = levelOf(state, a), lt = heightUnder(state, t);
-        if (la > lt) {
+        if (la > lt && !dumb) {
           total += 2;
           parts.push({ label: la === 2 && lt === 1 ? 'firing down from the crown of the hill' : 'firing from a hill', v: 2 });
         }
         // a good shooting position: a high building or a reinforced one (pp. 41, 43)
-        if (a.bld && sectionHigh(a.bld, sectionRect(a))) {
+        if (a.bld && sectionHigh(a.bld, sectionRect(a)) && !dumb) {
           total += 2; parts.push({ label: a.bld.kind === 'bunker' ? 'firing from a reinforced building' : 'firing from a high building', v: 2 });
         }
         /* Troops inside buildings, and in trenches, are not affected by Crossfire
@@ -246,11 +248,11 @@
       // a unit charging home cannot claim cover from the defensive fire it draws
       /* A shot called in by Markerlights, marked or designated, ignores the target's
          Stealth (pp. 58-59): the price is that a Stealth unit is marked only within 12". */
-      var dres = atT ? null : defenceAgainst(state, aux ? auxGun(a) : a, t,
-        { noCover: mode === 'defensive', defensiveFire: mode === 'defensive', marked: !aux && !!markCall(state, a, t, opts) });
+      var defOpts = { noCover: mode === 'defensive', defensiveFire: mode === 'defensive', marked: !aux && !!markCall(state, a, t, opts) };
+      var dres = atT ? null : defenceAgainst(state, aux ? auxGun(a) : a, t, defOpts);
       return {
         total: total, parts: parts, basic: basic, aux: aux, pierce: pierce,
-        crossfire: crossfire, arc: arc, dist: dist, def: dres
+        crossfire: crossfire, arc: arc, dist: dist, def: dres, defOpts: defOpts
       };
     }
 
@@ -370,7 +372,8 @@
         var shelter = shelterOf(state, a, t);
         if (shelter && canDemolish(a, shelter)) {
           breach = shelter;
-          dres = defenceAgainst(state, a, t, { noCover: true });
+          // the cover gone, everything else as before: a marked target's Stealth still ignored (SPR-5)
+          dres = defenceAgainst(state, a, t, Object.assign({}, m.defOpts, { noCover: true }));
         }
       }
 
