@@ -472,6 +472,60 @@
       }
     }
 
+    /* ---- the AI's equipment (p. 159), at the start of one of its units' activations ----
+       Vacuum Charges on a fire it or a friend stands in; Incendiary Grenades into
+       a section with the enemy in it and none of its own — two of them, or one in
+       a dangerous section (the fire sets it off) or one it has no shot at; a
+       Ballistic Barrier where it stands in the open, shot at, with nothing in
+       reach to answer. Satchel Charges are left to the players. True if it acted. */
+    function foesIn(r, side) {
+      return E.state.units.filter(function (e) {
+        return e.alive && e.side !== side && e.side !== 'N' && onTable(e) && !e.aboard && !e.hidden && inside(e, r);
+      });
+    }
+    function friendsIn(r, side) {
+      return E.state.units.filter(function (f) { return f.alive && f.side === side && onTable(f) && !f.aboard && inside(f, r); });
+    }
+    function aiKit(u, shotScore) {
+      if (!E.state.compound || !u || u.hidden || R.status(u) !== 'ready') return false;
+      if (kitUsable(u, 'vacuum')) {
+        var fire = throwTargets(u, true).filter(function (r) { return friendsIn(r, u.side).length; })[0];
+        if (fire) { logLine('ai', u.label + ' goes for the fire with its Vacuum Charges.'); throwAt(u, fire, 'vacuum'); return done(u); }
+      }
+      if (kitUsable(u, 'incendiary')) {
+        var best = null, bs = 0;
+        throwTargets(u, false).forEach(function (r) {
+          if (inside(u, r) || friendsIn(r, u.side).length) return;
+          var n = foesIn(r, u.side).length;
+          if (!n) return;
+          var score = n + (r.dangerous ? 2 : 0) + (shotScore < 0.3 ? 1 : 0);
+          if (score >= 2 && score > bs) { bs = score; best = r; }
+        });
+        if (best) { logLine('ai', u.label + ' lobs Incendiary Grenades into the ' + secName(best) + '.'); throwAt(u, best, 'incendiary'); return done(u); }
+      }
+      if (kitUsable(u, 'barrier') && shotScore < 0.2 && R.coverAt(E.state, u.x, u.y, u) === 0) {
+        var shotAt = E.state.units.some(function (e) {
+          return e.alive && e.side !== u.side && e.side !== 'N' && onTable(e) && !e.aboard && !e.hidden && e.fp !== null && R.canShoot(E.state, e, u, 'fire', {});
+        });
+        if (shotAt) { barrier(u); return done(u); }
+      }
+      return false;
+    }
+    function done(u) { u.activated = true; E.endActivation(u); return true; }
+    /* Covering Fire! before one of the AI's charges: the friend that sees the target
+       best, through the charger if need be, fires first and spends its activation
+       on it. Not with Stun Grenades going in, which already stop the defensive fire. */
+    function aiCover(u, t) {
+      if (!E.state.compound || !t || !t.alive || t.fp === null || R.status(t) !== 'ready') return null;
+      var f = coverers(u).filter(function (c) { return coverTargets(c, u).indexOf(t) >= 0; })[0];
+      if (!f) return null;
+      logLine('note', 'Covering Fire! — ' + f.label + ' opens up on ' + t.label + ' before ' + u.label + ' goes in.');
+      through(f, u, function () { reactShot(f, t, 'Covering Fire!'); });
+      f.activated = true;
+      u.covered = E.state.turn;
+      return f;
+    }
+
     /* ---- Automated defence systems (p. 160) ----
        "one control panel (which does not count as terrain, but should be marked
        with a counter) and three guns placed up to 12" of the panel. Automated
@@ -553,7 +607,7 @@
       satchel: satchel, barrier: barrier, throwAt: throwAt, spendKit: spend, doThrow: doThrow, afterKitMove: afterKitMove,
       seerOf: seerOf, hiddenStop: hiddenStop, hiddenMove: hiddenMove, afterHiddenMove: afterHiddenMove,
       revealUnit: revealUnit, revealSweep: revealSweep, fireAtWill: fireAtWill, reactShot: reactShot,
-      detectReveal: detectReveal, canDetect: canDetect, soloSpot: soloSpot,
+      detectReveal: detectReveal, canDetect: canDetect, soloSpot: soloSpot, aiKit: aiKit, aiCover: aiCover,
       coverers: coverers, startCover: startCover, coverBy: coverBy, coverAt: coverAt,
       oppCheck: oppCheck, oppFire: oppFire
     };

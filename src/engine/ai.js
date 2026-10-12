@@ -128,10 +128,12 @@
 
     // an Overgrown bug charging from the AI's hands, when something is in reach
     function aiCharge(u, t) {
+      // in a compound, Stun Grenades go in with the charge while the side has any (p. 159)
+      var stun = !!(E.state.compound && E.kitUsable(u, 'stun'));
+      // without them, a friend's Covering Fire! first (p. 158)
+      if (E.state.compound && !stun && E.aiCover(u, t) && !t.alive) { u.activated = true; endActivation(u); return; }
       martyrFirst(u, t, function (m) {
         var snap = snapshotAlive();
-        // in a compound, Stun Grenades go in with the charge while the side has any (p. 159)
-        var stun = !!(E.state.compound && E.kitUsable(u, 'stun'));
         if (stun) E.spendKit(u, 'stun');
         var res = abAssault(E.state, u, t, m, false, stun);
         res.log.forEach(function (l) { logLine(l.t, l.text, l.math); });
@@ -863,6 +865,8 @@
         u.activated = true; endActivation(u);
         return;
       }
+      // the special equipment, where it is worth more than the unit's own shot
+      if (E.state.compound && E.aiKit(u, (bestTarget(u, 'fire') || {}).score || 0)) return;
       /* Decapitation: the OpFor's leaders "always act according to the Reasonably
          Defensive result and never Move nor Advance" (p. 152) — whatever state they
          are in, they shoot from where they are or keep their heads down. */
@@ -1448,7 +1452,7 @@
     return {
       threatTarget: threatTarget, aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
       gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
-      nearestEnemy: nearestEnemy, aiAct: aiAct, aiStands: aiStands, scoreSpot: scoreSpot
+      nearestEnemy: nearestEnemy, aiAct: aiAct, aiCharge: aiCharge, aiStands: aiStands, scoreSpot: scoreSpot
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineAI;
