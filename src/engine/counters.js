@@ -492,6 +492,7 @@
         var fire = throwTargets(u, true).filter(function (r) { return friendsIn(r, u.side).length; })[0];
         if (fire) { logLine('ai', u.label + ' goes for the fire with its Vacuum Charges.'); throwAt(u, fire, 'vacuum'); return done(u); }
       }
+      if (aiSatchel(u, shotScore)) return true;
       if (kitUsable(u, 'incendiary')) {
         var best = null, bs = 0;
         throwTargets(u, false).forEach(function (r) {
@@ -512,14 +513,53 @@
       return false;
     }
     function done(u) { u.activated = true; E.endActivation(u); return true; }
+    /* Satchel Charges: planted in a section with the enemy in it and none of its own
+       but the unit — two of them, or one in a dangerous section or one it has no
+       shot at — and then out of it, as far from it as its Movement takes it (any
+       Opportunity Fire on the way, as any move). Not in a section already blown, or
+       with charges in it already. */
+    function aiSatchel(u, shotScore) {
+      if (!kitUsable(u, 'satchel')) return false;
+      var r = sectionOf(u.x, u.y);
+      if (!r || r.blown) return false;
+      var sec = E.state.terrain.indexOf(r);
+      if ((E.state.charges || []).some(function (c) { return c.sec === sec; })) return false;
+      if (friendsIn(r, u.side).some(function (f) { return f !== u; })) return false;
+      var n = foesIn(r, u.side).length;
+      if (!n || n + (r.dangerous ? 2 : 0) + (shotScore < 0.3 ? 1 : 0) < 2) return false;
+      var inR = function (c) { return c.x >= r.x && c.x <= r.x + r.w && c.y >= r.y && c.y <= r.y + r.h; };
+      var outs = R.reachable(E.state, u, u.move).filter(function (c) { return !inR(c) && E.canStand(u, c); });
+      if (!outs.length) return false;
+      outs.sort(function (a, b) { return R.rectPointDist(r, b.x, b.y) - R.rectPointDist(r, a.x, a.y); });
+      var to = outs[0], path = R.pathTo(E.state, u, u.move, to);
+      logLine('ai', u.label + ' plants Satchel Charges in the ' + secName(r) + ' and gets out.');
+      satchel(u);
+      var go = function (dest, route) {
+        var d = R.inches(u.x, u.y, dest.x, dest.y);
+        u.x = dest.x; u.y = dest.y;
+        logLine('move', u.label + ' moves ' + d.toFixed(1) + '" clear of the ' + secName(r) + '.');
+        E.animateMove(u, route, true);
+        done(u);
+      };
+      var opp = oppCheck(u, path, to);
+      if (opp) {
+        oppFire(u, opp, function (stop) {
+          if (!u.alive) { done(u); return; }
+          go(stop ? stop.at : to, stop ? stop.path : path);
+        });
+        return true;
+      }
+      go(to, path);
+      return true;
+    }
     /* Covering Fire! before one of the AI's charges: the friend that sees the target
        best, through the charger if need be, fires first and spends its activation
        on it. Not with Stun Grenades going in, which already stop the defensive fire. */
-    function aiCover(u, t) {
+    function aiCover(u, t, moving) {
       if (!E.state.compound || !t || !t.alive || t.fp === null || R.status(t) !== 'ready') return null;
       var f = coverers(u).filter(function (c) { return coverTargets(c, u).indexOf(t) >= 0; })[0];
       if (!f) return null;
-      logLine('note', 'Covering Fire! — ' + f.label + ' opens up on ' + t.label + ' before ' + u.label + ' goes in.');
+      logLine('note', 'Covering Fire! — ' + f.label + ' opens up on ' + t.label + ' before ' + u.label + (moving ? ' moves.' : ' goes in.'));
       through(f, u, function () { reactShot(f, t, 'Covering Fire!'); });
       f.activated = true;
       u.covered = E.state.turn;

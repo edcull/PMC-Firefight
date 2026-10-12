@@ -112,5 +112,44 @@ console.log('\nCovering Fire! before a charge');
   ok('...not needed with Stun Grenades going in (no defensive fire to stop)', !/Covering Fire!/.test(text(st)) && st.kit.A.stun === 0);
 }
 
+console.log('\nSatchel Charges');
+{
+  const { e, st, room } = stage(['regular'], ['regular', 'regular'], { satchel: 1 });
+  const a = st.units.find((u) => u.side === 'A'), [b1, b2] = st.units.filter((u) => u.side === 'B');
+  put(a, 17, 26); put(b1, 21, 30); put(b2, 22.5, 26.5);
+  dice(0.5, () => e.query.aiAct(a));
+  const inRoom = a.x >= room.x && a.x <= room.x + room.w && a.y >= room.y && a.y <= room.y + room.h;
+  ok('in a room with two of the enemy and none of its own: it plants Satchel Charges and gets out', (st.charges || []).length === 1 && st.charges[0].sec === st.terrain.indexOf(room) &&
+    st.kit.A.satchel === 0 && !inRoom && a.activated, (text(st).match(/[^\n]*(Satchel|clear of)[^\n]*/g) || []).join(' | '));
+  ok('...and they go off in the End phase as anyone\'s do', dice(0.9, () => { e.query.hazardsEnd(); return room.blown; }));
+}
+{
+  const { e, st } = stage(['regular', 'regular'], ['regular', 'regular'], { satchel: 1 });
+  const [a, h] = st.units.filter((u) => u.side === 'A'), [b1, b2] = st.units.filter((u) => u.side === 'B');
+  put(a, 17, 26); put(h, 17, 31); put(b1, 21, 30); put(b2, 22.5, 26.5);
+  h.activated = true;
+  dice(0.5, () => e.query.aiAct(a));
+  ok('...never with a friend of its own in there too', !(st.charges || []).length && st.kit.A.satchel === 1);
+}
+
+console.log('\nCovering Fire! before a move');
+{
+  const { e, st } = stage(['regular', 'regular'], ['regular']);
+  const [a, f] = st.units.filter((u) => u.side === 'A'), b = st.units.find((u) => u.side === 'B');
+  // a round the corner in the room, about to step into the corridor where b waits; f in the corridor already sees b
+  put(a, 19.5, 28); put(f, 17, 22.5); put(b, 30, 22.5);
+  a.facing = -Math.PI / 2; f.facing = 0; b.facing = Math.PI;
+  const by = e.query.coverMove(a, { x: 21, y: 22.5 });
+  ok('a move that ends in an enemy\'s sights: a friend within 6" fires first on it', by === f && f.activated && a.covered === st.turn && /Covering Fire! — .*\[A\] opens up on .*\[B\]/.test(text(st)),
+    (text(st).match(/Covering Fire![^\n]*/g) || []).join(' | '));
+}
+{
+  const { e, st } = stage(['regular', 'regular'], ['regular']);
+  const [a, f] = st.units.filter((u) => u.side === 'A'), b = st.units.find((u) => u.side === 'B');
+  put(a, 19.5, 28); put(f, 17, 22.5); put(b, 30, 22.5);
+  a.facing = -Math.PI / 2; f.facing = 0; b.facing = Math.PI;
+  ok('...none where it ends out of every enemy\'s sight', !e.query.coverMove(a, { x: 19.5, y: 31 }) && !f.activated);
+}
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
