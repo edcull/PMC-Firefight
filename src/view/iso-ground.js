@@ -151,6 +151,26 @@
     /* The rubble under a rock pile is the world's own low ground broken up, not
        one grey for every planet: set with the ground as the table is baked. */
     var ROCKF = null, ROCKTINT = null;
+    /* A compound's rooms and halls are not all one deck: each is fitted out as
+       something — plain plate, a sick bay's pale tiles, a workshop's ochre, the
+       green of the hydroponics, a command room's blue, the reactor's rust — kept
+       dark enough that the troops in it still stand out. The corridors stay plain
+       steel. Drawn from the table's seed and where the room is, so it is the
+       same room each time it is drawn. */
+    var ROOM_THEMES = [
+      null,
+      { ramp: ['#3a4244', '#424b4d', '#4a5456', '#535d5f', '#5c6769'], fleck: ['#2a3133', '#6f7c7e', '#3f6b6a'], rim: '#1c2224' },    // sick bay
+      { ramp: ['#3a3426', '#433c2b', '#4c4431', '#564d37', '#60563e'], fleck: ['#262118', '#76683f', '#8a6a24'], rim: '#1e1a12' },    // workshop
+      { ramp: ['#25302a', '#2b3830', '#314036', '#38483d', '#3f5144'], fleck: ['#18201b', '#4f6b4c', '#5f7f3a'], rim: '#131a15' },    // hydroponics
+      { ramp: ['#262d38', '#2c3441', '#323b4a', '#394354', '#404b5e'], fleck: ['#1a1f27', '#56637a', '#3c5c8a'], rim: '#141820' },    // command
+      { ramp: ['#352826', '#3d2e2b', '#453430', '#4e3b36', '#57423c'], fleck: ['#241a18', '#6e534a', '#8a3a24'], rim: '#1c1412' }     // reactor
+    ];
+    function roomTheme(r, seed) {
+      if (r.kind !== 'room' && r.kind !== 'hall') return null;
+      if (r.theme != null) return ROOM_THEMES[r.theme % ROOM_THEMES.length];
+      var h = Math.imul((seed | 0) ^ Math.round(r.x * 37 + r.y * 101), 2654435761) >>> 0;
+      return ROOM_THEMES[(h >>> 7) % ROOM_THEMES.length];
+    }
     function floorOf(kind) {
       if (ROCKF && kind === 'rocks') return ROCKF;
       // a crystal field grows out of the same broken ground, with green glinting in it
@@ -323,7 +343,7 @@
       var floorsDone = false;
       function floorOf1(r, ri) {
         if (r.kind === 'hill') return;
-        if (FLOOR[r.kind]) paintFloor(d, r, floorOf(r.kind), seed + ri * 131, lat, fN, fD);
+        if (FLOOR[r.kind]) paintFloor(d, r, roomTheme(r, seed) || floorOf(r.kind), seed + ri * 131, lat, fN, fD);
       }
 
       if (!sliced) { latRows(gy0, gy1); soilRows(cy0, cy1); return finish(); }

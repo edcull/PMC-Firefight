@@ -26,8 +26,32 @@
       desert: { pine: 0.1, tall: 0.7 }, arctic: { pine: 0.95, tall: 0.8 },
       unstable: { pine: 0.5, tall: 0.85 }
     };
+    // a compound's plating, how high it stands (inches of the art's scale)
+    var BULK_H = 6.5;
     function buildProps(terrain, objectives, seed, planet) {
       var props = [];
+      /* The stretches of a bulkhead's sides that face a floor, not more plating
+         or a door: [side, from, to], the side 'N', 'S', 'W' or 'E' and the run
+         along it in inches of the table. */
+      var solids = terrain.filter(function (q) { return q.kind === 'bulkhead' || /^door/.test(q.kind); });
+      var floors = terrain.filter(function (q) { return q.kind === 'corridor' || q.kind === 'room' || q.kind === 'hall' || q.kind === 'breached'; });
+      function inAny(list, x, y) {
+        for (var i = 0; i < list.length; i++) { var q = list[i]; if (x > q.x && x < q.x + q.w && y > q.y && y < q.y + q.h) return true; }
+        return false;
+      }
+      function openEdges(r) {
+        var out = [], E = 0.05, ST = 0.1;
+        [['N', r.x, r.x + r.w, function (t) { return [t, r.y - E]; }], ['S', r.x, r.x + r.w, function (t) { return [t, r.y + r.h + E]; }],
+          ['W', r.y, r.y + r.h, function (t) { return [r.x - E, t]; }], ['E', r.y, r.y + r.h, function (t) { return [r.x + r.w + E, t]; }]].forEach(function (S2) {
+          var run = null;
+          for (var t = S2[1]; t < S2[2] - 1e-6; t += ST) {
+            var t1 = Math.min(S2[2], t + ST), q = S2[3]((t + t1) / 2);
+            var op = inAny(floors, q[0], q[1]) && !inAny(solids, q[0], q[1]);
+            if (op) { if (run) run[2] = t1; else out.push(run = [S2[0], t, t1]); } else run = null;
+          }
+        });
+        return out;
+      }
       var FL = FLORA[planet] || FLORA.sparse;
       terrain.forEach(function (r, ri) {
         var rand = rng(seed + ri * 977 + Math.round(r.x * 13 + r.y * 29));
@@ -311,15 +335,17 @@
           }
           return;
         }
-        /* A compound (Close Encounters): the solid between the floors as low
-           blocks of plating, kept low so the troops in the corridors still show
-           over them, and each door as a slab across its doorway. */
+        /* A compound (Close Encounters): the solid between the floors as blocks
+           of plating, all one height so the solid reads as one mass, with a lit
+           lip only along the edges that face a floor (a squad behind it is
+           outlined through it), and each door as a hatch framed in the same
+           plating. */
         if (r.kind === 'bulkhead') {
-          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(r.thin ? 3.4 : 3.8), thin: !!r.thin, seed: (rr2() * 9999) | 0 });
+          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(BULK_H), thin: !!r.thin, open: openEdges(r), seed: (rr2() * 9999) | 0 });
           return;
         }
         if (r.kind === 'door' || r.kind === 'doorlock' || r.kind === 'doorlockA' || r.kind === 'doorlockB') {
-          props.push({ kind: 'door', x: r.x, y: r.y, w: r.w, h: r.h, horiz: r.w >= r.h, lock: r.kind, height: a(3.2), seed: (rr2() * 9999) | 0 });
+          props.push({ kind: 'door', x: r.x, y: r.y, w: r.w, h: r.h, horiz: r.w >= r.h, lock: r.kind, height: a(BULK_H), seed: (rr2() * 9999) | 0 });
           return;
         }
         if (r.kind !== 'building' && r.kind !== 'bunker' && r.kind !== 'objective') return;
@@ -420,8 +446,11 @@
       var t1 = top(c1), t2 = top(c2), t3 = top(c3), t4 = top(c4);
       var rand = rng(pr.seed || 7);
 
-      poly(g, [[c1[0] + sh, c1[1] + PIXEL], [c2[0] + sh, c2[1] + PIXEL],
-      [c3[0] + sh, c3[1] + PIXEL], [c4[0] + sh, c4[1] + PIXEL]], 'rgba(14,11,8,.45)');
+      // (a compound's plating throws none: laid on the next block, it drew a seam across the solid)
+      if (!opts.solid && !opts.noShadow) {
+        poly(g, [[c1[0] + sh, c1[1] + PIXEL], [c2[0] + sh, c2[1] + PIXEL],
+        [c3[0] + sh, c3[1] + PIXEL], [c4[0] + sh, c4[1] + PIXEL]], 'rgba(14,11,8,.45)');
+      }
 
       /* In this projection the nearest corner is c3, so the only two faces a viewer
          can see are c2-c3 and c4-c3. They must be painted LAST: drawing the far
@@ -517,6 +546,32 @@
       }
 
       poly(g, [t1, t2, t3, t4], opts.roof);          // roof
+      if (opts.solid) { solidTop(); return; }
+      /* A compound's plating: one mass however many blocks it is laid in. Its
+         deck plates are on the table's own 3" grid, not each block's, so they run
+         on from one block to the next; the only lip is along the stretches that
+         face a floor. */
+      function solidTop() {
+        var seam = 'rgba(14,17,20,.5)', G = 3;
+        for (var X = Math.ceil((pr.x + 1e-6) / G) * G; X < pr.x + pr.w - 1e-6; X += G) edgeLine(g, pt(X, pr.y, hgt), pt(X, pr.y + pr.h, hgt), seam, 1);
+        for (var Y = Math.ceil((pr.y + 1e-6) / G) * G; Y < pr.y + pr.h - 1e-6; Y += G) edgeLine(g, pt(pr.x, Y, hgt), pt(pr.x + pr.w, Y, hgt), seam, 1);
+        for (var gq = 0; gq < pr.w * pr.h * 1.2; gq++) {
+          var su = rand(), sv = rand();
+          var sq = lerp2(lerp2(t1, t2, su), lerp2(t4, t3, su), sv);
+          dot(g, sq[0], sq[1], rand() > 0.5 ? 'rgba(20,24,30,.5)' : 'rgba(120,128,140,.18)', 1);
+        }
+        (pr.open || []).forEach(function (o) {
+          var A2, B2;
+          if (o[0] === 'N') { A2 = pt(o[1], pr.y, hgt); B2 = pt(o[2], pr.y, hgt); }
+          else if (o[0] === 'S') { A2 = pt(o[1], pr.y + pr.h, hgt); B2 = pt(o[2], pr.y + pr.h, hgt); }
+          else if (o[0] === 'W') { A2 = pt(pr.x, o[1], hgt); B2 = pt(pr.x, o[2], hgt); }
+          else { A2 = pt(pr.x + pr.w, o[1], hgt); B2 = pt(pr.x + pr.w, o[2], hgt); }
+          // the near edges catch the light; the far ones are a darker lip against the floor beyond
+          var near = o[0] === 'S' || o[0] === 'E';
+          edgeLine(g, A2, B2, opts.roofEdge, 2);
+          if (near) edgeLine(g, [A2[0], A2[1] - 1], [B2[0], B2[1] - 1], pal[5], 1);
+        });
+      }
       // roof panels
       var gx = Math.max(2, Math.round(pr.w / 2.2)), gy = Math.max(2, Math.round(pr.h / 2.2));
       var seamCol = 'rgba(18,22,28,.45)';

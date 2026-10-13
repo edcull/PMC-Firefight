@@ -15,9 +15,9 @@
 
     // a compound's plating, and its doors (Close Encounters)
     var BULK = ['#1d2124', '#2a2f33', '#3a4146', '#4a535a', '#5c666e', '#76818a'];
-    var DOOR_OK = ['#2a2618', '#4a4122', '#7a6a2c', '#a68f34', '#c9ad44', '#e2c860'];
     var DOOR_RED = ['#2a1412', '#4a1d18', '#7a2a22', '#9c352a', '#b8473a', '#d0675a'];
     var DOOR_AMBER = ['#2a1e10', '#4a3418', '#7a5222', '#a06a2a', '#c08636', '#d9a456'];
+    var DOOR_STEEL = ['#23282c', '#323a40', '#465058', '#58636c', '#6b7781', '#8a96a0'];
     function drawKind(cutaway, g, lift, p, pr) {
       switch (pr.kind) {
         case 'tree': {
@@ -613,19 +613,53 @@
           dot(g, mx - 1, my - MH * 0.5, '#5a2018', 2);
           break;
         }
-        /* A compound's bulkhead: a low block of steel plate, riveted at the seams,
-           with a hazard-striped lip along the top of the faces you can see. */
+        /* A compound's bulkhead: a block of steel plate, one of the many the solid
+           is laid in, drawn so they read as one mass (box: solid). */
         case 'bulkhead': {
-          box(g, pr, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: lift || 0, cutaway: !!cutaway });
+          box(g, pr, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
           break;
         }
-        /* A door: a steel slab across the doorway. Working, it is striped yellow and
-           black; locked to both sides, red; locked to one, amber. */
+        /* A door: a blast hatch framed in the compound's own plating — two jambs
+           and a lintel the height of the walls. Working, it stands open over a
+           hazard-striped sill, its lamp green; locked, the shutter is down, banded
+           red (both sides) or amber (one), its lamp to match. */
         case 'door': {
-          var dpal = pr.lock === 'doorlock' ? DOOR_RED : pr.lock === 'door' ? DOOR_OK : DOOR_AMBER;
-          box(g, pr, dpal, { roof: dpal[4], roofEdge: dpal[5], windows: null, lift: lift || 0 });
-          var dl = lift || 0, dc = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
-          dot(g, dc.x - 1, dc.y - dl - pr.height - 2, pr.lock === 'door' ? '#7bdc6a' : pr.lock === 'doorlock' ? '#ff4a3a' : '#ffb02e', 3);
+          var dl = lift || 0, H = pr.height, hz = pr.horiz;
+          var len = hz ? pr.w : pr.h, jl = Math.min(0.7, len * 0.22);
+          // a piece of the doorway, from u0 to u1 along it (inches), thickened by th either side
+          function part(u0, u1, th) {
+            return hz ? { x: pr.x + u0, y: pr.y - th, w: u1 - u0, h: pr.h + th * 2 } : { x: pr.x - th, y: pr.y + u0, w: pr.w + th * 2, h: u1 - u0 };
+          }
+          function slab(q, height, up, palQ, roof, edge) {
+            var o = { kind: 'door', x: q.x, y: q.y, w: q.w, h: q.h, height: height, seed: pr.seed };
+            box(g, o, palQ, { roof: roof, roofEdge: edge, windows: null, lift: dl + (up || 0), noShadow: !!up });
+          }
+          var lamp = pr.lock === 'door' ? '#7bdc6a' : pr.lock === 'doorlock' ? '#ff4a3a' : '#ffb02e';
+          var band = pr.lock === 'doorlock' ? DOOR_RED : pr.lock === 'door' ? null : DOOR_AMBER;
+          var lt = Math.max(2, Math.round(H * 0.2));
+          // the far jamb first, then what fills the opening, the lintel over it, and the near jamb
+          slab(part(0, jl, 0.05), H, 0, BULK, '#30363a', '#68727a');
+          var mid = part(jl, len - jl, -0.08);
+          if (pr.lock === 'door') {
+            // open: the sill across the floor, striped, and the shutter's lip showing under the lintel
+            var s0 = hz ? toScreen(mid.x, mid.y + mid.h / 2) : toScreen(mid.x + mid.w / 2, mid.y);
+            var s1 = hz ? toScreen(mid.x + mid.w, mid.y + mid.h / 2) : toScreen(mid.x + mid.w / 2, mid.y + mid.h);
+            var n = 8;
+            for (var i = 0; i < n; i++) {
+              var q0 = lerp2([s0.x, s0.y - dl], [s1.x, s1.y - dl], i / n), q1 = lerp2([s0.x, s0.y - dl], [s1.x, s1.y - dl], (i + 1) / n);
+              poly(g, [[q0[0], q0[1] - 1], [q1[0], q1[1] - 1], [q1[0], q1[1] + 1], [q0[0], q0[1] + 1]], i % 2 ? '#1b1a17' : '#c9a23c');
+            }
+            slab(mid, Math.max(2, Math.round(H * 0.08)), H - lt - Math.max(2, Math.round(H * 0.08)), DOOR_STEEL, DOOR_STEEL[3], DOOR_STEEL[4]);
+          } else {
+            // shut: the shutter down in the frame, plated, with its band of warning paint
+            slab(mid, H - lt, 0, DOOR_STEEL, DOOR_STEEL[3], DOOR_STEEL[4]);
+            var bh = Math.max(2, Math.round(H * 0.16));
+            slab(part(jl, len - jl, -0.06), bh, Math.round(H * 0.3), band, band[3], band[5]);
+          }
+          slab(part(jl * 0.5, len - jl * 0.5, 0.02), lt, H - lt, BULK, '#30363a', '#68727a');
+          slab(part(len - jl, len, 0.05), H, 0, BULK, '#30363a', '#68727a');
+          var dc = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
+          dot(g, dc.x - 1, dc.y - dl - H - 2, lamp, 3);
           break;
         }
         case 'building':
