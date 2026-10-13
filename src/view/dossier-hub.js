@@ -153,7 +153,7 @@
       }
       // the fallen, opened from the company view
       h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>');
-      h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : E.camp.system ? 'The other forces' : 'Take a contract',
+      h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : E.camp.system ? 'Other forces' : 'Take a contract',
         // the other player's force shown as a rival's is: its figures, its kind and creed, and their dossier to open
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? rivalPanel(hs === 'B' ? A : B, 0)
           // the other players first, then the AI forces (each keeps its own place for its dossier and its contract)
@@ -481,8 +481,6 @@
       if (!(mine.roster || []).length) return off('Found your force first');
       // too battered to field a real army: it sits this turn out and rebuilds
       if (co.regrouping) return off('Regrouping this turn');
-      // across a star system the AI forces' jobs are on its planets, taken there, not from their dossiers
-      if (E.camp.system && !co.human) return '';
       // alone: the job they offer this turn (or one rolled for them), then the contract screen
       if (!E.online) return '<button class="start" data-rivcontract="' + ri + '">Contract</button>';
       if (on.contract || on.duel || on.coop) return off('Something else is under way');
