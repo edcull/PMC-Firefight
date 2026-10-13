@@ -14,6 +14,7 @@
     var S = root.PMCSystem;
     var ui = { planet: null, offer: null };       // the planet chosen (or open), the offer open on its map
     var open = false;                            // the planet's map open, rather than the system
+    var landing = false;                         // just landed: the map zooms in this once, not on every redraw
 
     // the look of each kind of world: the disc, and the ground of its map
     var LOOK = {
@@ -193,24 +194,28 @@
         '<span class="sys-crumb">' + (p ? esc(s0.name) + ' · ' + offersOn(p).length + ' contracts' : 'Turn ' + (E.camp.turn + 1) + ' · ' + offers().length + ' contracts on offer') + '</span>' +
         (p ? '<button type="button" class="lnk" data-sys="back">← The system</button>' : '') +
         '<button type="button" class="lnk" data-go="offerlist">List</button><button type="button" class="lnk" data-go="hub">← Hub</button></div>';
-      return head + '<div class="sys-stage"><div class="sys-view' + (p ? ' zoomin' : '') + '">' + (p ? mapSvg(p) : systemSvg()) +
+      var zoom = !!p && landing;
+      landing = false;
+      return head + '<div class="sys-stage"><div class="sys-view' + (zoom ? ' zoomin' : '') + '">' + (p ? mapSvg(p) : systemSvg()) +
         '<div class="sys-hint">' + (p ? 'Tap a pin for the job.' : 'Tap a planet for its conditions and contracts.') + '</div></div>' +
-        '<aside class="cpan sys-card">' + (p ? planetCard(p) : systemCard()) + '</aside></div>';
+        // a div, not an aside: on a narrow screen every <aside> is the battle's slide-out drawer, off the edge
+        '<div class="cpan sys-card">' + (p ? planetCard(p) : systemCard()) + '</div></div>';
     }
     // a tap on the system's parts; true if it was one
     function act(t) {
       var what = t.getAttribute('data-sys'), pl = t.getAttribute('data-planet'), of = t.getAttribute('data-offer');
       if (what === 'back') { open = false; ui.offer = null; return true; }
-      if (what === 'land') { ui.planet = pl; open = true; ui.offer = null; return true; }
+      if (what === 'land') { ui.planet = pl; open = landing = true; ui.offer = null; return true; }
       if (what === 'planet') {
         // a second tap on the chosen planet lands on it
-        if (!open && ui.planet === pl && offersOn(S.byId(sys(), pl)).length) { open = true; ui.offer = null; }
+        if (!open && ui.planet === pl && offersOn(S.byId(sys(), pl)).length) { open = landing = true; ui.offer = null; }
         else ui.planet = pl;
         return true;
       }
       if (what === 'offer') {
         var o = offers()[+of];
         if (!o || !o.site) return true;
+        if (!open || ui.planet !== o.site.planet) landing = true;
         ui.planet = o.site.planet; open = true; ui.offer = +of;
         return true;
       }

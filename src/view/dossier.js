@@ -1093,7 +1093,15 @@
   function onClick(ev) {
     // the star system's planets and pins (dossier-system.js): drawn parts, not buttons
     var sysT = ev.target.closest('[data-sys]');
-    if (sysT && camp && camp.system && view === 'offers') { if (kitSystem().act(sysT)) render(); return; }
+    if (sysT && camp && camp.system && view === 'offers') {
+      var what = sysT.getAttribute('data-sys');
+      if (!kitSystem().act(sysT)) return;
+      render();
+      // on a phone the card is under the picture: a planet or pin tapped brings it up to be read
+      var card = (what === 'planet' || what === 'offer') && document.querySelector('#camp-body .sys-card');
+      if (card && card.getBoundingClientRect().top > window.innerHeight - 120) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
     var t = ev.target.closest('button');
     // the founding colours drop down under the chip: a tap anywhere else puts them away
     // an AI force's colours, popped up by its chip on the new-campaign page: a tap anywhere else puts them away

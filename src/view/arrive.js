@@ -385,7 +385,8 @@
       if (ins.kind === 'arrive' && entryTurn()) {
         return '<div class="card"><h2>Entering the table</h2>' +
           '<p class="sub"><b>' + esc(u.name) + '</b> comes on now' + ((u.cargo || []).length ? ', with ' + u.cargo.map(function (c) { return esc(c.name); }).join(' and ') + ' aboard' : '') +
-          '. Tap the shaded ground: within 4″ of your own table edge, and 12″ clear of the enemy where the ground allows.</p>' +
+          '. Tap the shaded ground: ' + (B.state.compound ? 'the corridors at your entry points, on your own table edge.'
+            : 'within 4″ of your own table edge, and 12″ clear of the enemy where the ground allows.') + '</p>' +
           '<p class="hint">A unit each in turn, from the side with the initiative.</p>' +
           arrivalChoices(ins) + '</div>';
       }
