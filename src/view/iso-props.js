@@ -549,7 +549,8 @@
           var q = lerp2(A, B, i / cols);
           edgeLine(g, [q[0], q[1] - hgt + 1], [q[0], q[1] - 1], seam, 1);
         }
-        var rows = Math.max(1, Math.round(hgt / (K * 1.2)));
+        // (a compound's plating has no courses across it: drawn at each piece's own height they broke the wall at every door)
+        var rows = opts.solid ? 1 : Math.max(1, Math.round(hgt / (K * 1.2)));
         for (var j = 1; j < rows; j++) {
           var h2 = hgt * j / rows;
           edgeLine(g, [A[0], A[1] - h2], [B[0], B[1] - h2], seam, 1);
@@ -611,7 +612,6 @@
         poly(g, [a0, b0, b1, a1], o[0] === 'S' ? vgrad(g, a1[1], a0[1], [tp[5], tp[4], tp[4], tp[3]]) : vgrad(g, a1[1], a0[1], [tp[2], tp[2], tp[1]]));
         var segs = Math.max(1, Math.round(Math.hypot(b0[0] - a0[0], b0[1] - a0[1]) / (K * 1.7)));
         for (var si = 1; si < segs; si++) { var sq = lerp2(a0, b0, si / segs); edgeLine(g, [sq[0], sq[1] - hgt + 1], [sq[0], sq[1] - 1], tp[o[0] === 'S' ? 3 : 1], 1); }
-        edgeLine(g, lerp2(a0, a1, 0.5), lerp2(b0, b1, 0.5), tp[o[0] === 'S' ? 3 : 1], 1);
         edgeLine(g, [a0[0], a0[1] - 1], [b0[0], b0[1] - 1], tp[0], 1);      // the skirting, where it meets the floor
       });
       poly(g, [t1, t2, t3, t4], opts.roof);          // roof
