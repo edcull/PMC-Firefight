@@ -15,9 +15,13 @@
 
     // a compound's plating, and its doors (Close Encounters)
     var BULK = ['#1d2124', '#2a2f33', '#3a4146', '#4a535a', '#5c666e', '#76818a'];
-    var DOOR_OK = ['#2a2618', '#4a4122', '#7a6a2c', '#a68f34', '#c9ad44', '#e2c860'];
     var DOOR_RED = ['#2a1412', '#4a1d18', '#7a2a22', '#9c352a', '#b8473a', '#d0675a'];
     var DOOR_AMBER = ['#2a1e10', '#4a3418', '#7a5222', '#a06a2a', '#c08636', '#d9a456'];
+    var CRATE = ['#22231c', '#3a3a2a', '#545338', '#6b6946', '#848155', '#9c9a6c'];
+    var CRATE2 = ['#1f2326', '#33393e', '#4a535a', '#5f6a72', '#76828b', '#8f9ba3'];
+    var MACH = ['#1a1e22', '#2a3036', '#3d454c', '#50595f', '#636d74', '#86919a'];
+    var SHIELD = ['#1f2428', '#2e353b', '#46515a', '#5d6a74', '#73808a', '#94a1ab'];
+    var DOOR_STEEL = ['#23282c', '#323a40', '#465058', '#58636c', '#6b7781', '#8a96a0'];
     function drawKind(cutaway, g, lift, p, pr) {
       switch (pr.kind) {
         case 'tree': {
@@ -253,6 +257,87 @@
               if (k2) g.lineTo(q2[0] + (loop ? 0 : 1), q2[1] + (loop ? 0 : 1)); else g.moveTo(q2[0], q2[1]);
             }
             g.stroke();
+          }
+          break;
+        }
+        /* A room's crates and lockers: a few boxes of different heights along the
+           wall, stencilled, one maybe a shade off the others. */
+        case 'crates': {
+          var cr = rng(pr.seed || 3), hz3 = pr.w >= pr.h, ln3 = hz3 ? pr.w : pr.h, nb = Math.max(1, Math.round(ln3 / 0.75)), bl = ln3 / nb;
+          for (var cb = 0; cb < nb; cb++) {
+            var cpal = cr() < 0.5 ? CRATE : CRATE2, ch = pr.height * (0.6 + cr() * 0.6);
+            var cq = hz3 ? { x: pr.x + cb * bl + 0.04, y: pr.y + 0.04, w: bl - 0.08, h: pr.h - 0.08 } : { x: pr.x + 0.04, y: pr.y + cb * bl + 0.04, w: pr.w - 0.08, h: bl - 0.08 };
+            box(g, { x: cq.x, y: cq.y, w: cq.w, h: cq.h, height: Math.round(ch), seed: pr.seed + cb }, cpal, { roof: cpal[3], roofEdge: cpal[4], windows: null, lift: lift || 0 });
+          }
+          break;
+        }
+        /* A bank of machinery: a tall plated cabinet with a lit display, vents and a
+           run of pipe along its top. */
+        case 'machinery': {
+          box(g, pr, MACH, { roof: MACH[3], roofEdge: MACH[5], windows: null, lift: lift || 0, cutaway: !!cutaway });
+          var ml = lift || 0, hz4 = pr.w >= pr.h;
+          // the face towards the viewer: +y for one along x, +x for one along y
+          function onM(t, up) {
+            var q = hz4 ? toScreen(pr.x + pr.w * t, pr.y + pr.h) : toScreen(pr.x + pr.w, pr.y + pr.h * t);
+            return [q.x, q.y - ml - up];
+          }
+          var mr = rng(pr.seed || 9);
+          for (var mv = 0; mv < 3; mv++) {                 // vents
+            var v0 = onM(0.12 + mv * 0.1, pr.height * 0.35), v1 = onM(0.18 + mv * 0.1, pr.height * 0.35);
+            edgeLine(g, v0, v1, '#14181b', 2);
+          }
+          var d0 = onM(0.55, pr.height * 0.7), d1 = onM(0.85, pr.height * 0.7);      // the display
+          edgeLine(g, d0, d1, mr() < 0.5 ? '#5fd0b4' : '#e2b84a', 3);
+          var p0 = onM(0.05, pr.height + 2), p1 = onM(0.95, pr.height + 2);         // the pipe along the top
+          edgeLine(g, p0, p1, '#6b7680', 2);
+          break;
+        }
+        // the floor's small clutter (drawn only): a deck grate, a cable run, a small box, litter
+        case 'deckgrate': {
+          var gq = [[-0.45, -0.45], [0.45, -0.45], [0.45, 0.45], [-0.45, 0.45]].map(function (o) { var t = toScreen(pr.x + o[0], pr.y + o[1]); return [t.x, t.y - (lift || 0)]; });
+          poly(g, gq, 'rgba(14,17,20,.55)');
+          for (var gl = 1; gl < 5; gl++) edgeLine(g, lerp2(gq[0], gq[3], gl / 5), lerp2(gq[1], gq[2], gl / 5), 'rgba(110,120,128,.35)', 1);
+          break;
+        }
+        case 'cable': {
+          var cr2 = rng(pr.seed || 4), cpts = [], cx0 = pr.x - 0.9, cy0 = pr.y + (cr2() - 0.5) * 0.4;
+          for (var cs = 0; cs <= 6; cs++) {
+            var cw = pr.horiz ? toScreen(cx0 + cs * 0.3, cy0 + Math.sin(cs * 1.3 + cr2()) * 0.12) : toScreen(pr.x + Math.sin(cs * 1.3 + cr2()) * 0.12, pr.y - 0.9 + cs * 0.3);
+            cpts.push([cw.x, cw.y - (lift || 0)]);
+          }
+          for (var cl = 1; cl < cpts.length; cl++) edgeLine(g, cpts[cl - 1], cpts[cl], pr.tone < 0.5 ? '#14171a' : '#3a2a18', 2);
+          break;
+        }
+        case 'smallbox': {
+          var sbp = pr.tone < 0.5 ? CRATE : CRATE2;
+          box(g, { x: pr.x - 0.22, y: pr.y - 0.18, w: 0.44, h: 0.36, height: a(0.9), seed: pr.seed }, sbp, { roof: sbp[3], roofEdge: sbp[4], windows: null, lift: lift || 0 });
+          break;
+        }
+        case 'litter': {
+          var lr = rng(pr.seed || 5);
+          for (var li = 0; li < 5; li++) {
+            var lq = toScreen(pr.x + (lr() - 0.5) * 0.9, pr.y + (lr() - 0.5) * 0.9);
+            dot(g, lq.x, lq.y - (lift || 0), lr() < 0.5 ? 'rgba(200,196,180,.55)' : 'rgba(30,32,30,.6)', 2);
+          }
+          break;
+        }
+        /* A portable ballistic shield: a steel plate on its feet, a vision slit
+           near the top, a hazard band across its foot. */
+        case 'shield': {
+          var hl = pr.len / 2, th2 = 0.07;
+          var sq = pr.horiz ? { x: pr.x - hl, y: pr.y - th2, w: pr.len, h: th2 * 2 } : { x: pr.x - th2, y: pr.y - hl, w: th2 * 2, h: pr.len };
+          box(g, { x: sq.x, y: sq.y, w: sq.w, h: sq.h, height: pr.height, seed: pr.seed }, SHIELD, { roof: SHIELD[4], roofEdge: SHIELD[5], windows: null, lift: lift || 0, noShadow: true });
+          // the slit and the band on the face towards the viewer (+x or +y side)
+          function onFace(t, up) {
+            var q = pr.horiz ? toScreen(pr.x - hl + pr.len * t, pr.y + th2) : toScreen(pr.x + th2, pr.y - hl + pr.len * t);
+            return [q.x, q.y - (lift || 0) - up];
+          }
+          var s0 = onFace(0.3, pr.height * 0.78), s1 = onFace(0.7, pr.height * 0.78);
+          edgeLine(g, s0, s1, '#0e1114', 2);
+          var b0 = onFace(0.05, pr.height * 0.12), b1 = onFace(0.95, pr.height * 0.12);
+          for (var bi = 0; bi < 4; bi++) {
+            var c0 = lerp2(b0, b1, bi / 4), c1 = lerp2(b0, b1, (bi + 1) / 4);
+            edgeLine(g, c0, c1, bi % 2 ? '#1b1a17' : '#c9a23c', 2);
           }
           break;
         }
@@ -613,19 +698,69 @@
           dot(g, mx - 1, my - MH * 0.5, '#5a2018', 2);
           break;
         }
-        /* A compound's bulkhead: a low block of steel plate, riveted at the seams,
-           with a hazard-striped lip along the top of the faces you can see. */
+        /* A compound's bulkhead: a block of steel plate, one of the many the solid
+           is laid in, drawn so they read as one mass (box: solid). */
         case 'bulkhead': {
-          box(g, pr, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: lift || 0, cutaway: !!cutaway });
+          box(g, pr, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
           break;
         }
-        /* A door: a steel slab across the doorway. Working, it is striped yellow and
-           black; locked to both sides, red; locked to one, amber. */
+        /* A door: a blast hatch framed in the compound's own plating — two jambs
+           and a lintel the height of the walls. Working, it stands open over a
+           hazard-striped sill, its lamp green; locked, the shutter is down, banded
+           red (both sides) or amber (one), its lamp to match. */
         case 'door': {
-          var dpal = pr.lock === 'doorlock' ? DOOR_RED : pr.lock === 'door' ? DOOR_OK : DOOR_AMBER;
-          box(g, pr, dpal, { roof: dpal[4], roofEdge: dpal[5], windows: null, lift: lift || 0 });
-          var dl = lift || 0, dc = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
-          dot(g, dc.x - 1, dc.y - dl - pr.height - 2, pr.lock === 'door' ? '#7bdc6a' : pr.lock === 'doorlock' ? '#ff4a3a' : '#ffb02e', 3);
+          var dl = lift || 0, H = pr.height, hz = pr.horiz, out = pr.out || 1;
+          var len = hz ? pr.w : pr.h, jl = Math.min(0.7, len * 0.22);
+          // the wall's own thickness (a door's piece is a shade thicker than a wall)
+          var WT = 0.4, cen = hz ? pr.y + pr.h / 2 : pr.x + pr.w / 2;
+          // a piece of the doorway from u0 to u1 along it, `th` thick, set off the wall's line by `off`
+          function part(u0, u1, th, off) {
+            var a0 = cen - th / 2 + (off || 0);
+            return hz ? { x: pr.x + u0, y: a0, w: u1 - u0, h: th } : { x: a0, y: pr.y + u0, w: th, h: u1 - u0 };
+          }
+          // plating like the walls': one mass with them, a lip only along the faces either side
+          function wallPart(q, height, up) {
+            // the face towards the viewer (+y, or +x) looks into section B: its room's colours
+            var tb = pr.themeB == null ? -1 : pr.themeB, ta = pr.themeA == null ? -1 : pr.themeA;
+            var o = { kind: 'door', x: q.x, y: q.y, w: q.w, h: q.h, height: height, seed: pr.seed,
+              open: hz ? [['N', q.x, q.x + q.w, ta], ['S', q.x, q.x + q.w, tb]] : [['W', q.y, q.y + q.h, ta], ['E', q.y, q.y + q.h, tb]] };
+            box(g, o, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: dl + (up || 0), solid: true });
+          }
+          function slab(q, height, up, palQ) {
+            var o = { kind: 'door', x: q.x, y: q.y, w: q.w, h: q.h, height: height, seed: pr.seed };
+            box(g, o, palQ, { roof: palQ[3], roofEdge: palQ[4], windows: null, lift: dl + (up || 0), noShadow: !!up });
+          }
+          var lamp = pr.lock === 'door' ? '#7bdc6a' : pr.lock === 'doorlock' ? '#ff4a3a' : '#ffb02e';
+          var band = pr.lock === 'doorlock' ? DOOR_RED : pr.lock === 'door' ? null : DOOR_AMBER;
+          var lt = Math.max(2, Math.round(H * 0.22));
+          // the hatch hangs on the outside of the wall: drawn before the wall when that side is the far one
+          function hatch() {
+            var hoff = out * (WT / 2 + 0.08);
+            if (pr.lock === 'door') {
+              // open: a striped sill across the floor, the shutter's lip showing under the lintel
+              var sq = part(jl, len - jl, 0.16, hoff);
+              var s0 = hz ? toScreen(sq.x, sq.y + sq.h / 2) : toScreen(sq.x + sq.w / 2, sq.y);
+              var s1 = hz ? toScreen(sq.x + sq.w, sq.y + sq.h / 2) : toScreen(sq.x + sq.w / 2, sq.y + sq.h);
+              for (var i = 0; i < 8; i++) {
+                var q0 = lerp2([s0.x, s0.y - dl], [s1.x, s1.y - dl], i / 8), q1 = lerp2([s0.x, s0.y - dl], [s1.x, s1.y - dl], (i + 1) / 8);
+                poly(g, [[q0[0], q0[1] - 1], [q1[0], q1[1] - 1], [q1[0], q1[1] + 1], [q0[0], q0[1] + 1]], i % 2 ? '#1b1a17' : '#c9a23c');
+              }
+              var lip = Math.max(2, Math.round(H * 0.08));
+              slab(part(jl - 0.1, len - jl + 0.1, 0.16, hoff), lip, H - lt - lip, DOOR_STEEL);
+            } else {
+              // shut: the shutter down over the doorway, with its band of warning paint
+              slab(part(jl - 0.1, len - jl + 0.1, 0.16, hoff), H - lt, 0, DOOR_STEEL);
+              slab(part(jl - 0.1, len - jl + 0.1, 0.18, hoff), Math.max(2, Math.round(H * 0.16)), Math.round(H * 0.3), band);
+            }
+          }
+          if (out < 0) hatch();
+          // the wall either side and over the doorway, all one with the walls it joins
+          wallPart(part(0, jl, WT), H, 0);
+          wallPart(part(jl, len - jl, WT), lt, H - lt);
+          wallPart(part(len - jl, len, WT), H, 0);
+          if (out > 0) hatch();
+          var dc = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
+          dot(g, dc.x - 1, dc.y - dl - H - 2, lamp, 3);
           break;
         }
         case 'building':

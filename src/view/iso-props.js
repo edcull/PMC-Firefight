@@ -26,8 +26,42 @@
       desert: { pine: 0.1, tall: 0.7 }, arctic: { pine: 0.95, tall: 0.8 },
       unstable: { pine: 0.5, tall: 0.85 }
     };
+    // a compound's plating, how high it stands (inches of the art's scale)
+    var BULK_H = 6.5;
     function buildProps(terrain, objectives, seed, planet) {
       var props = [];
+      /* The stretches of a bulkhead's sides that face a floor, not more plating
+         or a door: [side, from, to], the side 'N', 'S', 'W' or 'E' and the run
+         along it in inches of the table. */
+      var solids = terrain.filter(function (q) { return q.kind === 'bulkhead' || /^door/.test(q.kind); });
+      var floors = terrain.filter(function (q) { return q.kind === 'corridor' || q.kind === 'room' || q.kind === 'hall' || q.kind === 'breached'; });
+      function inAny(list, x, y) {
+        for (var i = 0; i < list.length; i++) { var q = list[i]; if (x > q.x && x < q.x + q.w && y > q.y && y < q.y + q.h) return true; }
+        return false;
+      }
+      // the room a point is in, as its theme (PMCCompound.roomTheme), or -1 in a corridor or none
+      function themeAt(x, y) {
+        for (var i = 0; i < floors.length; i++) {
+          var q = floors[i];
+          if (x > q.x && x < q.x + q.w && y > q.y && y < q.y + q.h) { var t = root.PMCCompound ? root.PMCCompound.roomTheme(q) : null; return t == null ? -1 : t; }
+        }
+        return -1;
+      }
+      function openEdges(r) {
+        var out = [], E = 0.05, ST = 0.1;
+        [['N', r.x, r.x + r.w, function (t) { return [t, r.y - E]; }], ['S', r.x, r.x + r.w, function (t) { return [t, r.y + r.h + E]; }],
+          ['W', r.y, r.y + r.h, function (t) { return [r.x - E, t]; }], ['E', r.y, r.y + r.h, function (t) { return [r.x + r.w + E, t]; }]].forEach(function (S2) {
+          var run = null;
+          for (var t = S2[1]; t < S2[2] - 1e-6; t += ST) {
+            var t1 = Math.min(S2[2], t + ST), q = S2[3]((t + t1) / 2);
+            var op = inAny(floors, q[0], q[1]) && !inAny(solids, q[0], q[1]);
+            // a run breaks where the room in front of it changes (each stretch takes that room's colours)
+            var th = op ? themeAt(q[0], q[1]) : -1;
+            if (op && run && run[3] === th) run[2] = t1; else if (op) out.push(run = [S2[0], t, t1, th]); else run = null;
+          }
+        });
+        return out;
+      }
       var FL = FLORA[planet] || FLORA.sparse;
       terrain.forEach(function (r, ri) {
         var rand = rng(seed + ri * 977 + Math.round(r.x * 13 + r.y * 29));
@@ -134,6 +168,14 @@
               rad: 1 + rand() * 1.4, h: a(4 + rand() * 5), seed: (rand() * 9999) | 0
             });
           }
+        } else if (r.kind === 'barricade' && r.shield) {
+          /* A Ballistic Barrier: portable shields stood edge to edge along the
+             line, each its own plate, so it reads as kit set down, not a wall. */
+          var shz = r.w > r.h, sln = shz ? r.w : r.h, nsh = Math.max(2, Math.round(sln / 0.8)), ssl = sln / nsh;
+          for (var sh = 0; sh < nsh; sh++) {
+            var smd = (sh + 0.5) * ssl;
+            props.push({ kind: 'shield', x: shz ? r.x + smd : r.x + r.w / 2, y: shz ? r.y + r.h / 2 : r.y + smd, horiz: shz, len: ssl - 0.06, face: r.face, height: a(3.4), seed: (rand() * 9999) | 0 });
+          }
         } else if (r.kind === 'barricade') {
           /* one continuous wall of bags down the length of the piece, laid in
              short runs so each can be drawn in its place among the models */
@@ -223,6 +265,17 @@
         if (r.kind === 'panel') { props.push({ kind: 'console', x: r.x + r.w / 2, y: r.y + r.h / 2, seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'corridor' || r.kind === 'room' || r.kind === 'hall') {
           var sa = r.w * r.h;
+          /* The small clutter of a lived-in compound, drawn only (nothing a rule
+             reads): deck grates, cable runs, the odd box, litter. A long corridor
+             gets its share too; nothing goes down on a fitting. */
+          var fits = terrain.filter(function (q) { return q.kind === 'crates' || q.kind === 'machinery'; });
+          var nDet = Math.round(sa / (r.kind === 'corridor' ? 9 : 7));
+          for (var dt = 0; dt < nDet; dt++) {
+            var dq = spotIn(r, 0.55, rr2), dk = rr2();
+            if (fits.some(function (q) { return dq.x > q.x - 0.5 && dq.x < q.x + q.w + 0.5 && dq.y > q.y - 0.5 && dq.y < q.y + q.h + 0.5; })) continue;
+            props.push({ kind: dk < 0.3 ? 'deckgrate' : dk < 0.55 ? 'cable' : dk < 0.8 ? 'smallbox' : 'litter', x: dq.x, y: dq.y,
+              horiz: r.w >= r.h, tone: rr2(), seed: (rr2() * 9999) | 0 });
+          }
           if (r.dangerous) {
             for (var dr = 0; dr < Math.max(2, Math.round(sa / 14)); dr++) {
               var dq = spotIn(r, 0.9, rr2);
@@ -311,15 +364,31 @@
           }
           return;
         }
-        /* A compound (Close Encounters): the solid between the floors as low
-           blocks of plating, kept low so the troops in the corridors still show
-           over them, and each door as a slab across its doorway. */
+        /* A compound (Close Encounters): the solid between the floors as blocks
+           of plating, all one height so the solid reads as one mass, with a lit
+           lip only along the edges that face a floor (a squad behind it is
+           outlined through it), and each door as a hatch framed in the same
+           plating. */
+        // a room's fittings (compound.js fit): crates and lockers, and banks of machinery
+        if (r.kind === 'crates' || r.kind === 'machinery') {
+          props.push({ kind: r.kind, x: r.x, y: r.y, w: r.w, h: r.h, height: a(r.kind === 'machinery' ? 5.2 : 2.4), seed: r.seed || (rr2() * 9999) | 0 });
+          return;
+        }
         if (r.kind === 'bulkhead') {
-          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(r.thin ? 3.4 : 3.8), thin: !!r.thin, seed: (rr2() * 9999) | 0 });
+          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(BULK_H), thin: !!r.thin, open: openEdges(r), seed: (rr2() * 9999) | 0 });
           return;
         }
         if (r.kind === 'door' || r.kind === 'doorlock' || r.kind === 'doorlockA' || r.kind === 'doorlockB') {
-          props.push({ kind: 'door', x: r.x, y: r.y, w: r.w, h: r.h, horiz: r.w >= r.h, lock: r.kind, height: a(3.2), seed: (rr2() * 9999) | 0 });
+          /* which side of the wall line is outside the room — the corridor (or the
+             smaller section) — so the hatch is hung on that side and the room's own
+             wall runs on unbroken; +1 the side of greater y (or x), -1 the other */
+          var dhz = r.w >= r.h, dmx = r.x + r.w / 2, dmy = r.y + r.h / 2;
+          var secA = floors.filter(function (q) { return inAny([q], dhz ? dmx : dmx - 1, dhz ? dmy - 1 : dmy); })[0];
+          var secB = floors.filter(function (q) { return inAny([q], dhz ? dmx : dmx + 1, dhz ? dmy + 1 : dmy); })[0];
+          var areaOf = function (q) { return !q ? 1e9 : q.kind === 'corridor' ? 0 : q.w * q.h; };
+          props.push({ kind: 'door', x: r.x, y: r.y, w: r.w, h: r.h, horiz: dhz, lock: r.kind, out: areaOf(secB) <= areaOf(secA) ? 1 : -1, height: a(BULK_H),
+            // the colours of the rooms either side, for the wall faces looking into them
+            themeA: themeAt(dhz ? dmx : dmx - 1, dhz ? dmy - 1 : dmy), themeB: themeAt(dhz ? dmx : dmx + 1, dhz ? dmy + 1 : dmy), seed: (rr2() * 9999) | 0 });
           return;
         }
         if (r.kind !== 'building' && r.kind !== 'bunker' && r.kind !== 'objective') return;
@@ -355,17 +424,19 @@
         var onTarget = terrain.some(function (t) { return t.kind === 'objective' && o.x >= t.x - 0.5 && o.x <= t.x + t.w + 0.5 && o.y >= t.y - 0.5 && o.y <= t.y + t.h + 0.5; });
         if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz });
       });
+      // what lies flat on the floor goes down before anything stands on it
+      var FLAT = { deckgrate: 1, cable: 1, litter: 1 };
       props.forEach(function (p) {
         // the search-site hatch draws over its own scatter, so it stays readable; an objective's flag over the hatch it stands in
         p.depth = (p.w ? p.x + p.w / 2 + p.y + p.h / 2 : p.x + p.y) +
-          (p.kind === 'rubble' ? -0.01 : p.kind === 'searchsite' ? 2.4 : p.kind === 'beacon' ? 2.5 : 0);
+          (p.kind === 'rubble' ? -0.01 : p.kind === 'searchsite' ? 2.4 : p.kind === 'beacon' ? 2.5 : FLAT[p.kind] ? -1e4 : 0);
       });
       props.sort(function (a, b) { return a.depth - b.depth; });
       /* Two blocks side by side are not ordered by their middles: a small wing at
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, bulkhead: 1, door: 1 };
+      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
       function behind(p1, p2) {
         var e = 1e-3;
         var sepX = p1.x + p1.w <= p2.x + e, sepY = p1.y + p1.h <= p2.y + e;
@@ -409,6 +480,17 @@
       }
     }
 
+    /* The wall faces of a room fitted out as something (rules/compound.js
+       roomTheme): plain plate, a sick bay's pale panels, a workshop's ochre, the
+       hydroponics' green, a command room's blue, the reactor's rust — dark to light. */
+    var WALL_THEME = [
+      null,
+      ['#2a3335', '#3d4a4c', '#556466', '#6d7f81', '#879a9c', '#a6b8b9'],
+      ['#2c271b', '#433b28', '#5c5136', '#766945', '#8f8054', '#ab9b6a'],
+      ['#1c2620', '#2b3a30', '#3c5042', '#4f6754', '#637f67', '#7f9b80'],
+      ['#1e2430', '#2e3747', '#404c61', '#53627b', '#677894', '#8495ad'],
+      ['#2a1e1c', '#402d2a', '#583e39', '#714f48', '#8a6157', '#a67b6f']
+    ];
     // an extruded structure: two lit faces, two shaded, a panelled skin, a roof
     function box(g, pr, pal, opts) {
       var lift = opts.lift || 0;
@@ -420,8 +502,11 @@
       var t1 = top(c1), t2 = top(c2), t3 = top(c3), t4 = top(c4);
       var rand = rng(pr.seed || 7);
 
-      poly(g, [[c1[0] + sh, c1[1] + PIXEL], [c2[0] + sh, c2[1] + PIXEL],
-      [c3[0] + sh, c3[1] + PIXEL], [c4[0] + sh, c4[1] + PIXEL]], 'rgba(14,11,8,.45)');
+      // (a compound's plating throws none: laid on the next block, it drew a seam across the solid)
+      if (!opts.solid && !opts.noShadow) {
+        poly(g, [[c1[0] + sh, c1[1] + PIXEL], [c2[0] + sh, c2[1] + PIXEL],
+        [c3[0] + sh, c3[1] + PIXEL], [c4[0] + sh, c4[1] + PIXEL]], 'rgba(14,11,8,.45)');
+      }
 
       /* In this projection the nearest corner is c3, so the only two faces a viewer
          can see are c2-c3 and c4-c3. They must be painted LAST: drawing the far
@@ -516,7 +601,46 @@
         }
       }
 
+      // a stretch of a near face looking into a room: the room's colours (iso-ground ROOM_THEMES)
+      if (opts.solid) (pr.open || []).forEach(function (o) {
+        if (o[3] == null || o[3] < 0 || (o[0] !== 'S' && o[0] !== 'E')) return;
+        var tp = WALL_THEME[o[3]];
+        if (!tp) return;
+        var A3 = o[0] === 'S' ? [o[1], pr.y + pr.h] : [pr.x + pr.w, o[1]], B3 = o[0] === 'S' ? [o[2], pr.y + pr.h] : [pr.x + pr.w, o[2]];
+        var a0 = pt(A3[0], A3[1]), b0 = pt(B3[0], B3[1]), a1 = pt(A3[0], A3[1], hgt), b1 = pt(B3[0], B3[1], hgt);
+        poly(g, [a0, b0, b1, a1], o[0] === 'S' ? vgrad(g, a1[1], a0[1], [tp[5], tp[4], tp[4], tp[3]]) : vgrad(g, a1[1], a0[1], [tp[2], tp[2], tp[1]]));
+        var segs = Math.max(1, Math.round(Math.hypot(b0[0] - a0[0], b0[1] - a0[1]) / (K * 1.7)));
+        for (var si = 1; si < segs; si++) { var sq = lerp2(a0, b0, si / segs); edgeLine(g, [sq[0], sq[1] - hgt + 1], [sq[0], sq[1] - 1], tp[o[0] === 'S' ? 3 : 1], 1); }
+        edgeLine(g, lerp2(a0, a1, 0.5), lerp2(b0, b1, 0.5), tp[o[0] === 'S' ? 3 : 1], 1);
+        edgeLine(g, [a0[0], a0[1] - 1], [b0[0], b0[1] - 1], tp[0], 1);      // the skirting, where it meets the floor
+      });
       poly(g, [t1, t2, t3, t4], opts.roof);          // roof
+      if (opts.solid) { solidTop(); return; }
+      /* A compound's plating: one mass however many blocks it is laid in. Its
+         deck plates are on the table's own 3" grid, not each block's, so they run
+         on from one block to the next; the only lip is along the stretches that
+         face a floor. */
+      function solidTop() {
+        var seam = 'rgba(14,17,20,.5)', G = 3;
+        for (var X = Math.ceil((pr.x + 1e-6) / G) * G; X < pr.x + pr.w - 1e-6; X += G) edgeLine(g, pt(X, pr.y, hgt), pt(X, pr.y + pr.h, hgt), seam, 1);
+        for (var Y = Math.ceil((pr.y + 1e-6) / G) * G; Y < pr.y + pr.h - 1e-6; Y += G) edgeLine(g, pt(pr.x, Y, hgt), pt(pr.x + pr.w, Y, hgt), seam, 1);
+        for (var gq = 0; gq < pr.w * pr.h * 1.2; gq++) {
+          var su = rand(), sv = rand();
+          var sq = lerp2(lerp2(t1, t2, su), lerp2(t4, t3, su), sv);
+          dot(g, sq[0], sq[1], rand() > 0.5 ? 'rgba(20,24,30,.5)' : 'rgba(120,128,140,.18)', 1);
+        }
+        (pr.open || []).forEach(function (o) {
+          var A2, B2;
+          if (o[0] === 'N') { A2 = pt(o[1], pr.y, hgt); B2 = pt(o[2], pr.y, hgt); }
+          else if (o[0] === 'S') { A2 = pt(o[1], pr.y + pr.h, hgt); B2 = pt(o[2], pr.y + pr.h, hgt); }
+          else if (o[0] === 'W') { A2 = pt(pr.x, o[1], hgt); B2 = pt(pr.x, o[2], hgt); }
+          else { A2 = pt(pr.x + pr.w, o[1], hgt); B2 = pt(pr.x + pr.w, o[2], hgt); }
+          // the near edges catch the light; the far ones are a darker lip against the floor beyond
+          var near = o[0] === 'S' || o[0] === 'E';
+          edgeLine(g, A2, B2, opts.roofEdge, 2);
+          if (near) edgeLine(g, [A2[0], A2[1] - 1], [B2[0], B2[1] - 1], pal[5], 1);
+        });
+      }
       // roof panels
       var gx = Math.max(2, Math.round(pr.w / 2.2)), gy = Math.max(2, Math.round(pr.h / 2.2));
       var seamCol = 'rgba(18,22,28,.45)';

@@ -243,7 +243,7 @@
     }
 
     // the pieces that can stand between the camera and a squad, and hide it (see drawBoard)
-    var OPENS = { building: 1, bunker: 1, highwall: 1, bulkhead: 1 };
+    var OPENS = { building: 1, bunker: 1, highwall: 1, bulkhead: 1, machinery: 1 };
     function paintStructures() {
       B.vc.props = ISO.buildProps(B.state.terrain, B.state.objectives, B.state.seed, B.state.cfg.planet);
       var sg = B.vc.structs.getContext('2d');
@@ -560,6 +560,47 @@
         g.textAlign = 'center'; g.textBaseline = 'middle';
         g.fillText(DIG_NAMES[i], lp[0], lp[1]);
       });
+      g.restore();
+    }
+    function drawReach(g, moves, onView) {
+      var S2 = R.STEP / 2, have = {}, k = function (x, y) { return Math.round(x / R.STEP) + ',' + Math.round(y / R.STEP); };
+      moves.forEach(function (c) { have[k(c.x, c.y)] = true; });
+      function P(x, y, l) { var q = ISO.toScreen(x, y); return [q.x, q.y - l]; }
+      // each square's corners, and which of its sides are the area's edge
+      var quads = [];
+      moves.forEach(function (c) {
+        if (!onView(c.x, c.y)) return;
+        var l = liftOf(c.x, c.y);
+        quads.push({ q: [P(c.x - S2, c.y - S2, l), P(c.x + S2, c.y - S2, l), P(c.x + S2, c.y + S2, l), P(c.x - S2, c.y + S2, l)],
+          e: [!have[k(c.x, c.y - R.STEP)], !have[k(c.x + R.STEP, c.y)], !have[k(c.x, c.y + R.STEP)], !have[k(c.x - R.STEP, c.y)]] });
+      });
+      g.save();
+      g.beginPath();
+      quads.forEach(function (o) { g.moveTo(o.q[0][0], o.q[0][1]); for (var i = 1; i < 4; i++) g.lineTo(o.q[i][0], o.q[i][1]); g.closePath(); });
+      g.fillStyle = 'rgba(110,205,150,.20)'; g.fill();
+      g.beginPath();
+      quads.forEach(function (o) { for (var i = 0; i < 4; i++) if (o.e[i]) { g.moveTo(o.q[i][0], o.q[i][1]); g.lineTo(o.q[(i + 1) % 4][0], o.q[(i + 1) % 4][1]); } });
+      g.lineJoin = 'round'; g.lineCap = 'round';
+      g.strokeStyle = 'rgba(8,14,10,.45)'; g.lineWidth = 3.2; g.stroke();        // a dark edge under it, so it reads on pale ground
+      g.strokeStyle = 'rgba(150,235,185,.9)'; g.lineWidth = 1.5; g.stroke();
+      g.restore();
+    }
+    /* Ballistic Barrier: where the shields would go for the way pointed at, and
+       where the unit would step up to — red where there is no room. */
+    function drawBarrierGhost(g, u) {
+      var plan = root.PMCCompound.barrierPlan(B.state, u, digPreview(u)), lift = liftOf(dispX(u), dispY(u));
+      g.save();
+      plan.pieces.forEach(function (r) {
+        var q = [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]].map(function (c) { var t = ISO.toScreen(c[0], c[1]); return [t.x, t.y - lift]; });
+        g.beginPath(); q.forEach(function (c, i) { if (i) g.lineTo(c[0], c[1]); else g.moveTo(c[0], c[1]); }); g.closePath();
+        g.fillStyle = plan.ok ? 'rgba(150,200,230,.55)' : 'rgba(220,80,60,.55)'; g.fill();
+        g.strokeStyle = plan.ok ? '#d8eefa' : '#ff9a8a'; g.lineWidth = 1.5; g.stroke();
+      });
+      if (plan.to) {
+        var t = ISO.toScreen(plan.to.x, plan.to.y);
+        g.beginPath(); g.ellipse(t.x, t.y - lift, ISO.K * R.UNIT_R, ISO.K * R.UNIT_R / 2, 0, 0, Math.PI * 2);
+        g.setLineDash([5, 4]); g.strokeStyle = 'rgba(216,238,250,.9)'; g.lineWidth = 1.5; g.stroke(); g.setLineDash([]);
+      }
       g.restore();
     }
     function drawBoard() {
@@ -941,19 +982,14 @@
          shown, and they are its business rather than the player's. */
       var aiSel = !!(ui.selected && B.state.cfg.aiSides.indexOf(ui.selected.side) >= 0);
       // reachable ground
-      if (ui.moves.length && !aiSel) {
-        var mw = Math.ceil(K * 0.6), mh = Math.ceil(K * 0.35);
-        ui.moves.forEach(function (c) {
-          if (!onView(c.x, c.y)) return;
-          var p = ISO.toScreen(c.x, c.y);
-          var l = liftOf(c.x, c.y);
-          B.pctx.fillStyle = ((c.x * 2 + c.y * 2) | 0) % 2 ? 'rgba(122,206,152,.30)' : 'rgba(96,180,130,.26)';
-          B.pctx.fillRect(Math.round(p.x) - mw / 2, Math.round(p.y) - l - mh / 2, mw, mh);
-        });
-      }
+      /* The ground it can reach: one tinted area, its own lattice squares laid edge
+         to edge and filled as one, with a line traced round its edge — where a
+         square has no neighbour on that side. */
+      if (ui.moves.length && !aiSel) drawReach(B.pctx, ui.moves, onView);
 
       if (faceAsked()) drawDigFacing(B.pctx, faceAsked(), true);
       else if (ui.mode === 'digface' && ui.selected && !aiSel) drawDigFacing(B.pctx, ui.selected);
+      else if (ui.mode === 'barrierface' && ui.selected && !aiSel) { drawDigFacing(B.pctx, ui.selected, true); drawBarrierGhost(B.pctx, ui.selected); }
 
       /* ---- units and the buildings that hide them ----
          The structures are one baked layer under everything, so a unit used to be
@@ -1469,7 +1505,7 @@
         // pieces down since the table was last baked, as flat footprints until it is
         var TINT = { woods: '64,110,52', ruins: '120,112,100', crater: '110,96,80', barricade: '150,140,112', rocks: '118,112,104',
           hill: '128,120,82', building: '150,138,120', bunker: '120,126,130', wall: '140,136,128', water: '70,110,140', deep: '40,70,110', lava: '200,80,30', crystal: '110,210,150', ravine: '170,210,235',
-          bulkhead: '58,64,70', corridor: '72,80,86', room: '84,92,98', hall: '80,88,94', door: '200,170,60' };
+          bulkhead: '58,64,70', corridor: '72,80,86', room: '84,92,98', hall: '80,88,94', door: '200,170,60', crates: '120,116,80', machinery: '70,78,84' };
         B.state.terrain.slice(B.vc.tsetBaked || 0).forEach(function (pc) {
           var sh = pc.parts ? pc.parts.map(function (r) { return [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]]; })
             : [pc.poly || [[pc.x, pc.y], [pc.x + pc.w, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x, pc.y + pc.h]]];

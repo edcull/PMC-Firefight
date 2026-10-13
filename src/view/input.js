@@ -326,6 +326,12 @@
         if (Math.hypot(fx, fy) > 0.4) send({ k: 'vface', dir: Math.atan2(fy, fx) });
         return;
       }
+      // Ballistic Barrier: a tap round the unit chooses the way the shields go up
+      if (ui.mode === 'barrierface' && ui.selected) {
+        var bgx = p.x - dispX(ui.selected), bgy = p.y - dispY(ui.selected);
+        if (Math.hypot(bgx, bgy) > 0.4) send({ k: 'barrierface', dir: Math.atan2(bgy, bgx) });
+        return;
+      }
       // Dig in!: a tap round the gun chooses the way it faces
       if (ui.mode === 'digface' && ui.selected) {
         var dgx = p.x - dispX(ui.selected), dgy = p.y - dispY(ui.selected);

@@ -129,8 +129,13 @@ console.log('\nSpecial equipment (p. 159)');
   put(a, 6, 22.5); put(b, 30, 22.5);
   const n0 = st.terrain.length;
   e.intent('A', { k: 'select', id: a.id });
-  ok('Ballistic Barrier: a low wall goes up, across the corridor, between it and the enemy', e.intent('A', { k: 'action', id: 'kit-barrier' }).ok &&
-    st.terrain.length === n0 + 1 && st.terrain[n0].kind === 'barricade' && st.terrain[n0].x > a.x && st.terrain[n0].h === 3, JSON.stringify(st.terrain[n0]));
+  const x0 = a.x;
+  ok('Ballistic Barrier: the way the shields go up is asked', e.intent('A', { k: 'action', id: 'kit-barrier' }).ok && st.terrain.length === n0);
+  ok('...a way with no room for them is refused', !e.intent('A', { k: 'barrierface', dir: -Math.PI / 2 }).ok && st.terrain.length === n0);
+  ok('...towards the enemy: shields across its frontage, 1" off it, a low wall', e.intent('A', { k: 'barrierface', dir: 0 }).ok &&
+    st.terrain.length === n0 + 1 && st.terrain[n0].kind === 'barricade' && st.terrain[n0].shield && Math.abs(st.terrain[n0].x - (x0 + R.UNIT_R + 1)) < 1e-6 &&
+    st.terrain[n0].h > 2 * R.UNIT_R && st.terrain[n0].h < 3, JSON.stringify(st.terrain[n0]));
+  ok('...and the unit moves up behind them', a.x > x0 && a.x + R.UNIT_R < st.terrain[n0].x && a.activated, a.x + '');
   ok('...in cover behind it from the enemy\'s fire', R.coverFor(st, b, a).v === 2, R.coverFor(st, b, a).why);
 }
 {

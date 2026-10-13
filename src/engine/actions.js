@@ -495,7 +495,16 @@
         render();
         return;
       }
-      if (id === 'kit-barrier') { E.barrier(u); u.activated = true; endActivation(u); return; }
+      /* Ballistic Barrier: the way the shields go up, chosen on the octagon round the
+         unit (as Dig in! is); the AI sets them towards its nearest enemy */
+      if (id === 'kit-barrier') {
+        if (isAI(u.side)) { if (E.barrier(u)) { u.activated = true; endActivation(u); } return; }
+        ui.mode = 'barrierface'; ui.targets = []; ui.moves = [];
+        ui.digDir = E.barrierWay(u).dir;
+        setHint(null, 'Ballistic Barrier: choose the way the shields go up — tap a direction around the unit, or on the octagon. They go down 1" off its front and it moves up behind them.');
+        render();
+        return;
+      }
       if (id === 'kit-incendiary' || id === 'kit-vacuum') {
         ui.mode = 'kit-move'; ui.kitThen = id.slice(4);
         ui.moves = R.reachable(E.state, u, u.move).filter(function (c) { return canStand(u, c); });

@@ -86,13 +86,33 @@
 
     /* A unit walking or driving on from a table edge, shown coming in from the
        nearest edge (or from `start`, where the scenario says it came out) to
-       where it was put. */
+       where it was put. Where the side comes on through entry points (a
+       compound's corridors), it comes in at the mouth of the nearest one and
+       walks the way round to its spot, not through the walls. */
+    function entryStart(u) {
+      var sc = B.state.sc || {}, boxes = (sc.entry && sc.entry[u.side]) || null;
+      if (!boxes || !boxes.length) return null;
+      var best = null, bd = Infinity;
+      boxes.forEach(function (b) { var d = R.rectPointDist(b, u.x, u.y); if (d < bd) { bd = d; best = b; } });
+      // the middle of the mouth, on whichever table edge the entry point opens on to
+      var W = R.BOARD.w, H = R.BOARD.h, mx = best.x + best.w / 2, my = best.y + best.h / 2;
+      var m = Math.min(best.x, W - best.x - best.w, best.y, H - best.y - best.h);
+      return m === best.x ? { x: 0.2, y: my } : m === W - best.x - best.w ? { x: W - 0.2, y: my } : m === best.y ? { x: mx, y: 0.2 } : { x: mx, y: H - 0.2 };
+    }
     function walkOn(u, start) {
       var dl = u.x, dr = R.BOARD.w - u.x, dt = u.y, db = R.BOARD.h - u.y, m = Math.min(dl, dr, dt, db);
-      var from = start ? { x: start.x, y: start.y } : m === dl ? { x: 0.2, y: u.y } : m === dr ? { x: R.BOARD.w - 0.2, y: u.y }
+      var entry = !start && entryStart(u);
+      var from = start ? { x: start.x, y: start.y } : entry ? entry : m === dl ? { x: 0.2, y: u.y } : m === dr ? { x: R.BOARD.w - 0.2, y: u.y }
         : m === dt ? { x: u.x, y: 0.2 } : { x: u.x, y: R.BOARD.h - 0.2 };
+      var path = [from, { x: u.x, y: u.y }];
+      if (entry) {
+        // the way from the mouth to the spot, round whatever stands between (a straight line if there is none)
+        var ghost = Object.assign({}, u, { x: from.x, y: from.y });
+        var route = R.pathTo(B.state, ghost, 999, { x: u.x, y: u.y });
+        if (route && route.length >= 2) path = route.map(function (q) { return { x: q.x, y: q.y }; });
+      }
       focusUnit(u, false, true);
-      animateMove(u, [from, { x: u.x, y: u.y }], false);
+      animateMove(u, path, false);
       /* Arriving within 12" of the enemy invites a free shot (p. 30). The engine
          has already fired it and sent the result along behind this arrival. */
       render();

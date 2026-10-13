@@ -2345,6 +2345,19 @@
       K.finishStance(ui.selected, R.nearestFacing(it.dir));
       return yes;
     });
+    on('barrierface', null, function (side, it) {
+      // Ballistic Barrier: the way chosen, as a bearing (put on the nearest of the eight)
+      if (!mayAct(side) || !selected(side)) return no('not your activation');
+      if (ui.mode !== 'barrierface' || !ui.selected) return no('not setting up a barrier');
+      if (typeof it.dir !== 'number' || !isFinite(it.dir)) return no('which way?');
+      var bu = ui.selected, plan = CMP.barrierPlan(state, bu, it.dir);
+      if (!plan.ok) { setHint(null, 'Ballistic Barrier: ' + plan.why + ' — choose another way.'); return no(plan.why); }
+      ui.mode = 'idle'; ui.digDir = null;
+      K.barrier(bu, it.dir);
+      bu.activated = true;
+      endActivation(bu);
+      return yes;
+    });
     on('vface vfaceall', null, function (side, it) {
       // which way a vehicle just put down faces; 'vfaceall' keeps the one offered for it and any still to ask about
       var fa = state.faceAsk;
