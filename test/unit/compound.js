@@ -90,6 +90,10 @@ function corridorTable(door) {
   ok('a unit at a door holds it open: it and the enemy beyond see each other', R.doorOpen(st, st.terrain[4]) && R.lineClear(st, a, b));
   a.x = 6;
   ok('...stepped back from it, the door shuts and blocks sight again', !R.doorOpen(st, st.terrain[4]) && !R.lineClear(st, a, b));
+  // in front of it, not beside it: near the door but past the end of the doorway is no use
+  a.x = 11; a.y = 25.2;
+  ok('...a unit beside the doorway (past its end, along the wall) does not open it', !R.doorOpen(st, st.terrain[4]));
+  a.y = 22.5; a.x = 6;
   b.x = 13.4;
   ok('...whichever side the unit at it stands', R.doorOpen(st, st.terrain[4]) && R.lineClear(st, a, b));
   st.terrain[4].kind = 'doorlockB';
