@@ -375,7 +375,21 @@
           return;
         }
         if (r.kind === 'bulkhead') {
-          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(BULK_H), thin: !!r.thin, open: openEdges(r), seed: (rr2() * 9999) | 0 });
+          /* Every wall drawn about the grid line it stands on: a wall between two
+             sections is already half its thickness either side of the line, so a
+             block of the solid has each side that faces a floor brought out by half
+             a wall too — and its faces, the walls between sections and the doors all
+             line up. (Drawn only: the rules keep the solid where it is.) */
+          var q = { x: r.x, y: r.y, w: r.w, h: r.h };
+          if (!r.thin) {
+            var HW = 0.2, faces = {};
+            openEdges(r).forEach(function (o) { faces[o[0]] = true; });
+            if (faces.W) { q.x -= HW; q.w += HW; }
+            if (faces.E) q.w += HW;
+            if (faces.N) { q.y -= HW; q.h += HW; }
+            if (faces.S) q.h += HW;
+          }
+          props.push({ kind: 'bulkhead', x: q.x, y: q.y, w: q.w, h: q.h, height: a(BULK_H), thin: !!r.thin, open: openEdges(q), seed: (rr2() * 9999) | 0 });
           return;
         }
         if (r.kind === 'door' || r.kind === 'doorlock' || r.kind === 'doorlockA' || r.kind === 'doorlockB') {
