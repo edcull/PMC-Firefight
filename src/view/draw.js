@@ -1710,11 +1710,24 @@
       B.ctx.save(); clipTable();
       B.state.objectives.forEach(function (o) {
         var hb = B.heldBy(o), col = hb ? sideInk(hb) : 'rgba(235,240,248,.6)';
+        /* A control room (Critical control) is held by whoever is inside it, so the
+           room itself is marked — its floor outlined just inside the walls, tinted
+           in the colours of the side holding it — not a ring round its middle. */
+        var room = o.rect && o.inside;
+        function shape() {
+          if (!room) { isoRing(o.x, o.y, 4, liftOf(o.x, o.y)); return; }
+          var e = 0.35, r = o.rect, l = liftOf(o.x, o.y);
+          var c = [hud(r.x + e, r.y + e), hud(r.x + r.w - e, r.y + e), hud(r.x + r.w - e, r.y + r.h - e), hud(r.x + e, r.y + r.h - e)];
+          B.ctx.beginPath();
+          c.forEach(function (q, n) { if (n) B.ctx.lineTo(q.x, q.y - l); else B.ctx.moveTo(q.x, q.y - l); });
+          B.ctx.closePath();
+        }
+        if (room && hb) { shape(); B.ctx.fillStyle = sideInk(hb); B.ctx.globalAlpha = 0.12; B.ctx.fill(); B.ctx.globalAlpha = 1; }
         B.ctx.setLineDash([6, 6]);
         B.ctx.lineWidth = 3; B.ctx.strokeStyle = 'rgba(8,10,14,.5)';
-        isoRing(o.x, o.y, 4, liftOf(o.x, o.y)); B.ctx.stroke();
+        shape(); B.ctx.stroke();
         B.ctx.lineWidth = 1.4; B.ctx.strokeStyle = col;
-        isoRing(o.x, o.y, 4, liftOf(o.x, o.y)); B.ctx.stroke();
+        shape(); B.ctx.stroke();
         B.ctx.setLineDash([]);
       });
       B.ctx.restore();
