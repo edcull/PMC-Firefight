@@ -70,6 +70,11 @@
        carry its base off. Not from a building, and not while Suppressed, when a
        Move may only make for safety (p. 34). */
     function edgeGap(c) { return Math.min(c.x, R.BOARD.w - c.x, c.y, R.BOARD.h - c.y) + R.UNIT_R; }
+    // just over the nearest table edge from c, where a unit leaving is last seen going
+    function pastEdge(c) {
+      var W = R.BOARD.w, H = R.BOARD.h, m = Math.min(c.x, W - c.x, c.y, H - c.y), o = R.UNIT_R + 0.5;
+      return m === c.x ? { x: -o, y: c.y } : m === W - c.x ? { x: W + o, y: c.y } : m === c.y ? { x: c.x, y: -o } : { x: c.x, y: H + o };
+    }
     function leaveSpots(u) {
       if (!u || !u.alive || u.x < 0 || u.aboard || u.bld || u.cls === 'aircraft' || !u.move) return [];
       if (R.has(u, 'Stationary Artillery') || R.has(u, 'Immobile') || R.status(u) !== 'ready') return [];
@@ -80,9 +85,11 @@
     }
     function doLeave(u, spot) {
       var was = { x: u.x, y: u.y };
+      // the way it walks off: round the walls and down the corridors to its spot, then over the edge
+      var path = R.pathTo(E.state, u, u.move + moveBonus(u, 'move'), spot);
       E.faceAlong(u, u.x, u.y, spot.x, spot.y);
       u.x = spot.x; u.y = spot.y;
-      E.animateMove(u, [was, { x: spot.x, y: spot.y }]);
+      E.animateMove(u, (path && path.length > 1 ? path.map(function (q) { return { x: q.x, y: q.y }; }) : [was, { x: spot.x, y: spot.y }]).concat([pastEdge(spot)]));
       u.alive = false; u.fled = true; u.activated = true;
       logLine('kill', u.label + ' moves off the table — counted as fled.');
       // whoever is aboard goes with it

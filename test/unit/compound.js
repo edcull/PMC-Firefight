@@ -83,6 +83,40 @@ function corridorTable(door) {
   ok('a door brought down is Breached: the doorway seen through', st.terrain[4].kind === 'breached' && R.lineClear(st, { x: 2, y: 22.5 }, { x: 22, y: 22.5 }), log.map((l) => l.text).join());
 }
 {
+  // a door someone stands at is open: sight goes through it, for either side of it (house rule)
+  const st = corridorTable('door');
+  const a = { id: 'a', side: 'A', x: 10.5, y: 22.5, alive: true }, b = { id: 'b', side: 'B', x: 20, y: 22.5, alive: true };
+  st.units.push(a, b);
+  ok('a unit at a door holds it open: it and the enemy beyond see each other', R.doorOpen(st, st.terrain[4]) && R.lineClear(st, a, b));
+  a.x = 6;
+  ok('...stepped back from it, the door shuts and blocks sight again', !R.doorOpen(st, st.terrain[4]) && !R.lineClear(st, a, b));
+  b.x = 13.4;
+  ok('...whichever side the unit at it stands', R.doorOpen(st, st.terrain[4]) && R.lineClear(st, a, b));
+  st.terrain[4].kind = 'doorlockB';
+  ok('locked against a side, that side at it does not open it', !R.doorOpen(st, st.terrain[4]) && !R.lineClear(st, a, b));
+  st.terrain[4].kind = 'doorlock';
+  a.x = 10.5;
+  ok('...and one locked to both sides stays shut for anyone', !R.doorOpen(st, st.terrain[4]));
+}
+{
+  // a few doors are locked at random, but never so as to shut a section off from the rest, for either side
+  let locked = 0, one = 0, split = 0;
+  for (let n = 0; n < 30; n++) {
+    const g = CMP.generate(48, 48);
+    const doors = g.terrain.filter((r) => /^door/.test(r.kind));
+    locked += doors.filter((r) => r.kind === 'doorlock').length;
+    one += doors.filter((r) => r.kind === 'doorlockA' || r.kind === 'doorlockB').length;
+    ['A', 'B'].forEach((side) => {
+      const st = { terrain: g.terrain, compound: g.compound, units: [] };
+      const secs = g.terrain.filter((r) => FLOOR[r.kind]), s0 = secs[0];
+      const wf = R.walkField(st, s0.x + 1.5, s0.y + 1.5, side);
+      if (secs.some((r) => !isFinite(wf(r.x + 1.5, r.y + 1.5)))) split++;
+    });
+  }
+  ok('some doors come locked to both sides, some to one', locked > 0 && one > 0, locked + ' both, ' + one + ' one side, over 30 compounds');
+  ok('...and every section can still be reached by both sides', split === 0, split + ' cut off');
+}
+{
   const st = corridorTable();
   // a unit off the middle line, but in the corridor: it still fills it
   const mid = { id: 'm', side: 'A', x: 12, y: 22.4, alive: true };

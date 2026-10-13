@@ -105,8 +105,9 @@
       var from = start ? { x: start.x, y: start.y } : entry ? entry : m === dl ? { x: 0.2, y: u.y } : m === dr ? { x: R.BOARD.w - 0.2, y: u.y }
         : m === dt ? { x: u.x, y: 0.2 } : { x: u.x, y: R.BOARD.h - 0.2 };
       var path = [from, { x: u.x, y: u.y }];
-      if (entry) {
-        // the way from the mouth to the spot, round whatever stands between (a straight line if there is none)
+      // every unit walking on comes the way round to its spot, not through whatever stands between
+      if (!R.isFlying || !R.isFlying(u)) {
+        // the way from where it came on to the spot, round whatever stands between (a straight line if there is none)
         var ghost = Object.assign({}, u, { x: from.x, y: from.y });
         var route = R.pathTo(B.state, ghost, 999, { x: u.x, y: u.y });
         if (route && route.length >= 2) path = route.map(function (q) { return { x: q.x, y: q.y }; });

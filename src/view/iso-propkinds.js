@@ -8,7 +8,7 @@
   root.PMCIsoPropKinds = function (S) {
     var BAG = S.BAG, BARK = S.BARK, BASALTS = S.BASALTS, BRICK = S.BRICK, CHAR = S.CHAR,
         CONCRETE = S.CONCRETE, K = S.K, LEAF = S.LEAF, PIXEL = S.PIXEL, PREFAB = S.PREFAB, ROOF = S.ROOF,
-        STONE = S.STONE, a = S.a, boulder = S.boulder, box = S.box, brokenWall = S.brokenWall,
+        STONE = S.STONE, WALL_THEME = S.WALL_THEME, a = S.a, boulder = S.boulder, box = S.box, brokenWall = S.brokenWall,
         conifer = S.conifer, dot = S.dot, edgeLine = S.edgeLine, ellipse = S.ellipse, lerp2 = S.lerp2,
         pebble = S.pebble, poly = S.poly, rect = S.rect, rng = S.rng, shadowBlob = S.shadowBlob,
         toScreen = S.toScreen, vgrad = S.vgrad;
@@ -705,12 +705,13 @@
           break;
         }
         /* A door: a blast hatch framed in the compound's own plating — two jambs
-           and a lintel the height of the walls. Working, it stands open over a
-           hazard-striped sill, its lamp green; locked, the shutter is down, banded
-           red (both sides) or amber (one), its lamp to match. */
+           and a lintel the height of the walls, the shutter down (a door blocks
+           sight). Working, the shutter is banded in hazard stripes, its lamp green;
+           locked, banded red (both sides) or amber (one), its lamp to match. */
         case 'door': {
-          var dl = lift || 0, H = pr.height, hz = pr.horiz, out = pr.out || 1;
-          var len = hz ? pr.w : pr.h, jl = Math.min(0.7, len * 0.22);
+          var dl = lift || 0, H = pr.height, hz = pr.horiz;
+          // the opening: narrower than the doorway's whole run and lower than the wall, cut into it, so the wall goes on round it
+          var len = hz ? pr.w : pr.h, jl = Math.max(0.5, (len - Math.min(1.7, len * 0.6)) / 2);
           // the wall's own thickness (a door's piece is a shade thicker than a wall)
           var WT = 0.4, cen = hz ? pr.y + pr.h / 2 : pr.x + pr.w / 2;
           // a piece of the doorway from u0 to u1 along it, `th` thick, set off the wall's line by `off`
@@ -724,7 +725,8 @@
             var tb = pr.themeB == null ? -1 : pr.themeB, ta = pr.themeA == null ? -1 : pr.themeA;
             var o = { kind: 'door', x: q.x, y: q.y, w: q.w, h: q.h, height: height, seed: pr.seed,
               open: hz ? [['N', q.x, q.x + q.w, ta], ['S', q.x, q.x + q.w, tb]] : [['W', q.y, q.y + q.h, ta], ['E', q.y, q.y + q.h, tb]] };
-            box(g, o, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: dl + (up || 0), solid: true });
+            // the frame looks into a room on the side towards the viewer: all of it in that room's colours, the reveal of the opening too
+            box(g, o, (tb >= 0 && WALL_THEME[tb]) || BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: dl + (up || 0), solid: true });
           }
           function slab(q, height, up, palQ) {
             var o = { kind: 'door', x: q.x, y: q.y, w: q.w, h: q.h, height: height, seed: pr.seed };
@@ -732,33 +734,36 @@
           }
           var lamp = pr.lock === 'door' ? '#7bdc6a' : pr.lock === 'doorlock' ? '#ff4a3a' : '#ffb02e';
           var band = pr.lock === 'doorlock' ? DOOR_RED : pr.lock === 'door' ? null : DOOR_AMBER;
-          var lt = Math.max(2, Math.round(H * 0.22));
-          // the hatch hangs on the outside of the wall: drawn before the wall when that side is the far one
+          var lt = Math.max(2, Math.round(H * 0.3));
+          // the hatch set back in the middle of the wall, the frame's depth showing from either side
           function hatch() {
-            var hoff = out * (WT / 2 + 0.08);
-            if (pr.lock === 'door') {
-              // open: a striped sill across the floor, the shutter's lip showing under the lintel
-              var sq = part(jl, len - jl, 0.16, hoff);
-              var s0 = hz ? toScreen(sq.x, sq.y + sq.h / 2) : toScreen(sq.x + sq.w / 2, sq.y);
-              var s1 = hz ? toScreen(sq.x + sq.w, sq.y + sq.h / 2) : toScreen(sq.x + sq.w / 2, sq.y + sq.h);
+            var hoff = 0;
+            /* Shut, as a door is unless something is going through it (it blocks sight,
+               p. 157): the shutter down over the doorway. Working, a band of hazard
+               stripes across it; locked, a band of warning paint (red both sides, amber one). */
+            var sq = part(jl, len - jl, 0.14, hoff);
+            slab(sq, H - lt, 0, DOOR_STEEL);
+            var bh2 = Math.max(2, Math.round(H * 0.16)), by2 = Math.round(H * 0.3);
+            if (band) slab(part(jl, len - jl, 0.16, hoff), bh2, by2, band);
+            else {
+              // the stripes on the face towards the viewer (+y, or +x)
+              var f0 = hz ? toScreen(sq.x, sq.y + sq.h) : toScreen(sq.x + sq.w, sq.y);
+              var f1 = hz ? toScreen(sq.x + sq.w, sq.y + sq.h) : toScreen(sq.x + sq.w, sq.y + sq.h);
+              var A0 = [f0.x, f0.y - dl - by2], A1 = [f1.x, f1.y - dl - by2];
               for (var i = 0; i < 8; i++) {
-                var q0 = lerp2([s0.x, s0.y - dl], [s1.x, s1.y - dl], i / 8), q1 = lerp2([s0.x, s0.y - dl], [s1.x, s1.y - dl], (i + 1) / 8);
-                poly(g, [[q0[0], q0[1] - 1], [q1[0], q1[1] - 1], [q1[0], q1[1] + 1], [q0[0], q0[1] + 1]], i % 2 ? '#1b1a17' : '#c9a23c');
+                var q0 = lerp2(A0, A1, i / 8), q1 = lerp2(A0, A1, (i + 1) / 8);
+                poly(g, [[q0[0], q0[1] - bh2], [q1[0], q1[1] - bh2], [q1[0], q1[1]], [q0[0], q0[1]]], i % 2 ? '#1b1a17' : '#c9a23c');
               }
-              var lip = Math.max(2, Math.round(H * 0.08));
-              slab(part(jl - 0.1, len - jl + 0.1, 0.16, hoff), lip, H - lt - lip, DOOR_STEEL);
-            } else {
-              // shut: the shutter down over the doorway, with its band of warning paint
-              slab(part(jl - 0.1, len - jl + 0.1, 0.16, hoff), H - lt, 0, DOOR_STEEL);
-              slab(part(jl - 0.1, len - jl + 0.1, 0.18, hoff), Math.max(2, Math.round(H * 0.16)), Math.round(H * 0.3), band);
             }
+            // the seam where its two leaves meet, down the middle
+            var m0 = hz ? toScreen(sq.x + sq.w / 2, sq.y + sq.h) : toScreen(sq.x + sq.w, sq.y + sq.h / 2);
+            edgeLine(g, [m0.x, m0.y - dl - 1], [m0.x, m0.y - dl - (H - lt) + 1], '#1a1e22', 1);
           }
-          if (out < 0) hatch();
-          // the wall either side and over the doorway, all one with the walls it joins
+          // the wall either side and over the doorway, all one with the walls it joins; the hatch in the opening between
           wallPart(part(0, jl, WT), H, 0);
+          hatch();
           wallPart(part(jl, len - jl, WT), lt, H - lt);
           wallPart(part(len - jl, len, WT), H, 0);
-          if (out > 0) hatch();
           var dc = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
           dot(g, dc.x - 1, dc.y - dl - H - 2, lamp, 3);
           break;
@@ -861,7 +866,48 @@
        time t (ms): an objective beacon's pennant fluttering (in the colours of
        the side holding it: `pr.holder`, a palette, set by the board; none while it
        is nobody's or contested) and its lamp flashing slowly. */
+    /* A door opening (draw.js sets pr.openK, 0 shut to 1 open): over the shut
+       hatch baked into the table, the doorway dark beyond and the two leaves
+       slid apart into the frame, all kept inside the opening so the frame stays
+       in front of them. The same measures as the door's own drawing. */
+    function doorOpening(g, lift, pr) {
+      var dl = lift || 0, H = pr.height, hz = pr.horiz, k = pr.openK;
+      var len = hz ? pr.w : pr.h, jl = Math.max(0.5, (len - Math.min(1.7, len * 0.6)) / 2), WT = 0.4;
+      var lt = Math.max(2, Math.round(H * 0.3)), oh = H - lt, cen = hz ? pr.y + pr.h / 2 : pr.x + pr.w / 2, base = hz ? pr.x : pr.y;
+      // a point along the doorway (u), across it (off, + towards the viewer) and up (z)
+      function P(u, off, z) { var q = hz ? toScreen(base + u, cen + off) : toScreen(cen + off, base + u); return [q.x, q.y - dl - z]; }
+      var u0 = jl, u1 = len - jl, F = WT / 2, w = (u1 - u0) / 2, LO = 0;
+      g.save();
+      g.beginPath();
+      [P(u0, F, 0), P(u1, F, 0), P(u1, F, oh), P(u1, -F, oh), P(u0, -F, oh), P(u0, F, oh)].forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); });
+      g.closePath(); g.clip();
+      // the floor through the doorway (the ground the hatch was baked over), a little shadowed under the lintel
+      if (pr.ground) {
+        var hx = [P(u0, F, 0), P(u1, F, 0), P(u1, -F, oh), P(u0, -F, oh), P(u1, F, oh), P(u0, F, oh)];
+        var bx0 = Math.floor(Math.min.apply(null, hx.map(function (q) { return q[0]; }))) - 1, by0 = Math.floor(Math.min.apply(null, hx.map(function (q) { return q[1]; }))) - 1;
+        var bx1 = Math.ceil(Math.max.apply(null, hx.map(function (q) { return q[0]; }))) + 1, by1 = Math.ceil(Math.max.apply(null, hx.map(function (q) { return q[1]; }))) + 1;
+        bx0 = Math.max(0, bx0); by0 = Math.max(0, by0); bx1 = Math.min(pr.ground.width, bx1); by1 = Math.min(pr.ground.height, by1);
+        if (bx1 > bx0 && by1 > by0) g.drawImage(pr.ground, bx0, by0, bx1 - bx0, by1 - by0, bx0, by0, bx1 - bx0, by1 - by0);
+      }
+      poly(g, [P(u0, F, 0), P(u1, F, 0), P(u1, F, oh), P(u1, -F, oh), P(u0, -F, oh), P(u0, F, oh)], 'rgba(8,10,12,' + (pr.ground ? 0.35 : 0.9) + ')');
+      // the leaves, each sliding out of the opening into the frame on its own side
+      var slide = w * k;
+      [[u0 - slide, u0 + w - slide], [u0 + w + slide, u1 + slide]].forEach(function (L) {
+        poly(g, [P(L[0], LO, 0), P(L[1], LO, 0), P(L[1], LO, oh), P(L[0], LO, oh)], vgrad(g, P(L[0], LO, oh)[1], P(L[0], LO, 0)[1], [DOOR_STEEL[4], DOOR_STEEL[3], DOOR_STEEL[2]]));
+        var by = Math.round(H * 0.3), bh = Math.max(2, Math.round(H * 0.16)), n = 4;
+        for (var i = 0; i < n; i++) {
+          var a0 = L[0] + (L[1] - L[0]) * i / n, a1 = L[0] + (L[1] - L[0]) * (i + 1) / n;
+          poly(g, [P(a0, LO, by), P(a1, LO, by), P(a1, LO, by + bh), P(a0, LO, by + bh)], pr.lock === 'door' ? (i % 2 ? '#1b1a17' : '#c9a23c') : pr.lock === 'doorlock' ? DOOR_RED[3] : DOOR_AMBER[3]);
+        }
+        edgeLine(g, P(L[1], LO, 1), P(L[1], LO, oh - 1), '#1a1e22', 1);
+      });
+      g.restore();
+      // its lamp, lit bright while it stands open
+      var lc = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
+      dot(g, lc.x - 1, lc.y - dl - H - 2, '#b4ff9a', 3);
+    }
     function drawLive(g, lift, p, pr, t) {
+      if (pr.kind === 'door') { doorOpening(g, lift, pr); return; }
       if (pr.kind === 'objective') {
         // the uplink's warning lamps: a slow beat, on for about a second in three
         var mc = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2), mx = mc.x, my = mc.y - (lift || 0) - pr.height, MH = a(36);
@@ -947,7 +993,7 @@
       }
     }
     // the pieces with moving parts
-    function lives(pr) { return pr.kind === 'beacon' || pr.kind === 'objective'; }
+    function lives(pr) { return pr.kind === 'beacon' || pr.kind === 'objective' || (pr.kind === 'door' && pr.openK > 0); }
 
     return { drawKind: drawKind, drawLive: drawLive, lives: lives };
   };

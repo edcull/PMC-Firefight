@@ -562,24 +562,74 @@
       });
       g.restore();
     }
-    function drawReach(g, moves, onView) {
-      var S2 = R.STEP / 2, have = {}, k = function (x, y) { return Math.round(x / R.STEP) + ',' + Math.round(y / R.STEP); };
-      moves.forEach(function (c) { have[k(c.x, c.y)] = true; });
-      function P(x, y, l) { var q = ISO.toScreen(x, y); return [q.x, q.y - l]; }
-      // each square's corners, and which of its sides are the area's edge
-      var quads = [];
+    /* Drawn once into a picture of its own when the reach changes (the same array
+       until a new move is asked for), and laid over the table from then on: rebuilt
+       every frame, thousands of squares and their edges cost a move's animation
+       its frames. Without a canvas to draw into (the headless tests), straight onto the board. */
+    var reachCache = { moves: null, n: -1, cv: null, x: 0, y: 0 };
+    function drawReach(g, moves) {
+      if (reachCache.moves !== moves || reachCache.n !== moves.length) {
+        reachCache = { moves: moves, n: moves.length, cv: null, x: 0, y: 0 };
+        var quads = reachQuads(moves), x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        quads.forEach(function (o) { o.q.forEach(function (c) { x0 = Math.min(x0, c[0]); y0 = Math.min(y0, c[1]); x1 = Math.max(x1, c[0]); y1 = Math.max(y1, c[1]); }); });
+        var doc = root.document, cv = quads.length && doc && doc.createElement ? doc.createElement('canvas') : null, cg = cv && cv.getContext ? cv.getContext('2d') : null;
+        if (cg && cg.drawImage) {
+          x0 = Math.floor(x0) - 3; y0 = Math.floor(y0) - 3;
+          cv.width = Math.max(1, Math.ceil(x1) + 3 - x0); cv.height = Math.max(1, Math.ceil(y1) + 3 - y0);
+          cg.translate(-x0, -y0);
+          paintReach(cg, quads);
+          reachCache.cv = cv; reachCache.x = x0; reachCache.y = y0;
+        } else reachCache.quads = quads;
+      }
+      if (reachCache.cv) g.drawImage(reachCache.cv, reachCache.x, reachCache.y);
+      else if (reachCache.quads) paintReach(g, reachCache.quads);
+    }
+    /* The area as strips: each row of squares side by side on the same level one
+       quad, and its edges joined into runs — a few hundred shapes to fill and
+       stroke rather than thousands of squares, the same picture. */
+    function reachQuads(moves) {
+      var ST = R.STEP, S2 = ST / 2, have = {}, rows = {};
+      function key(i, j) { return i + ',' + j; }
       moves.forEach(function (c) {
-        if (!onView(c.x, c.y)) return;
-        var l = liftOf(c.x, c.y);
-        quads.push({ q: [P(c.x - S2, c.y - S2, l), P(c.x + S2, c.y - S2, l), P(c.x + S2, c.y + S2, l), P(c.x - S2, c.y + S2, l)],
-          e: [!have[k(c.x, c.y - R.STEP)], !have[k(c.x + R.STEP, c.y)], !have[k(c.x, c.y + R.STEP)], !have[k(c.x - R.STEP, c.y)]] });
+        var i = Math.round(c.x / ST), j = Math.round(c.y / ST);
+        have[key(i, j)] = true;
+        (rows[j] = rows[j] || []).push({ i: i, x: c.x, y: c.y, l: liftOf(c.x, c.y) });
       });
+      function P(x, y, l) { var q = ISO.toScreen(x, y); return [q.x, q.y - l]; }
+      var out = [];
+      Object.keys(rows).forEach(function (jk) {
+        var j = +jk, row = rows[jk].sort(function (a, b) { return a.i - b.i; });
+        for (var s0 = 0; s0 < row.length;) {
+          var e0 = s0;
+          while (e0 + 1 < row.length && row[e0 + 1].i === row[e0].i + 1 && row[e0 + 1].l === row[s0].l) e0++;
+          var a = row[s0], z = row[e0], l = a.l, y = a.y, xa = a.x - S2, xz = z.x + S2;
+          var q = [P(xa, y - S2, l), P(xz, y - S2, l), P(xz, y + S2, l), P(xa, y + S2, l)], edges = [];
+          // the long sides: the stretches with no square beyond them
+          [[-1, y - S2], [1, y + S2]].forEach(function (side) {
+            var run = null;
+            for (var n = s0; n <= e0; n++) {
+              var open = !have[key(row[n].i, j + side[0])];
+              if (open && run) run[1] = row[n].x + S2;
+              else if (open) edges.push(run = [row[n].x - S2, row[n].x + S2, side[1]]);
+              else run = null;
+            }
+          });
+          var segs = edges.map(function (e) { return [P(e[0], e[2], l), P(e[1], e[2], l)]; });
+          if (!have[key(a.i - 1, j)]) segs.push([P(xa, y - S2, l), P(xa, y + S2, l)]);
+          if (!have[key(z.i + 1, j)]) segs.push([P(xz, y - S2, l), P(xz, y + S2, l)]);
+          out.push({ q: q, segs: segs });
+          s0 = e0 + 1;
+        }
+      });
+      return out;
+    }
+    function paintReach(g, quads) {
       g.save();
       g.beginPath();
       quads.forEach(function (o) { g.moveTo(o.q[0][0], o.q[0][1]); for (var i = 1; i < 4; i++) g.lineTo(o.q[i][0], o.q[i][1]); g.closePath(); });
       g.fillStyle = 'rgba(110,205,150,.20)'; g.fill();
       g.beginPath();
-      quads.forEach(function (o) { for (var i = 0; i < 4; i++) if (o.e[i]) { g.moveTo(o.q[i][0], o.q[i][1]); g.lineTo(o.q[(i + 1) % 4][0], o.q[(i + 1) % 4][1]); } });
+      quads.forEach(function (o) { o.segs.forEach(function (sg) { g.moveTo(sg[0][0], sg[0][1]); g.lineTo(sg[1][0], sg[1][1]); }); });
       g.lineJoin = 'round'; g.lineCap = 'round';
       g.strokeStyle = 'rgba(8,14,10,.45)'; g.lineWidth = 3.2; g.stroke();        // a dark edge under it, so it reads on pale ground
       g.strokeStyle = 'rgba(150,235,185,.9)'; g.lineWidth = 1.5; g.stroke();
@@ -985,7 +1035,7 @@
       /* The ground it can reach: one tinted area, its own lattice squares laid edge
          to edge and filled as one, with a line traced round its edge — where a
          square has no neighbour on that side. */
-      if (ui.moves.length && !aiSel) drawReach(B.pctx, ui.moves, onView);
+      if (ui.moves.length && !aiSel) drawReach(B.pctx, ui.moves);
 
       if (faceAsked()) drawDigFacing(B.pctx, faceAsked(), true);
       else if (ui.mode === 'digface' && ui.selected && !aiSel) drawDigFacing(B.pctx, ui.selected);
@@ -1027,13 +1077,32 @@
         if (!onView(bx, by)) return;
         order.push({ depth: bx + by, draw: 'boarding', u: u, x: bx, y: by, k: k, age: age, up: bd.up });
       });
-      // the pieces of scenery that move: an objective's pennant and lamp, a search site's tag
+      /* A door stands open while a unit is at it (R.doorOpen: the edge of its base
+         within half an inch), and is open for sight then too; a unit walking up to
+         it opens it as it comes, its leaves sliding back into the frame, and they
+         close again once it is past. One locked to both sides stays shut; one
+         locked to a side opens only for the other side. */
+      var REACH = 1.5;
+      (B.vc.props || []).forEach(function (pr) {
+        if (pr.kind !== 'door') return;
+        var k = 0, shut = pr.lock === 'doorlock' ? 'all' : pr.lock === 'doorlockA' ? 'A' : pr.lock === 'doorlockB' ? 'B' : null;
+        if (shut !== 'all') B.state.units.forEach(function (u) {
+          if (!u.alive || u.aboard || u.side === shut) return;
+          var x = u.ax != null ? u.ax : u.x, y = u.ay != null ? u.ay : u.y;
+          if (x < 0) return;
+          var d = R.rectPointDist(pr, x, y);
+          k = Math.max(k, Math.min(1, Math.max(0, (REACH + 1.2 - d) / 1.2)));
+        });
+        pr.openK = k;
+      });
+      // the pieces of scenery that move: an objective's pennant and lamp, a search site's tag, a door opening
       var lives = (B.vc.props || []).filter(function (pr) {
         return ISO.propLives(pr) && onView(pr.x + (pr.w || 0) / 2, pr.y + (pr.h || 0) / 2);
       });
       lives.forEach(function (pr) {
         var lx = pr.x + (pr.w || 0) / 2, ly = pr.y + (pr.h || 0) / 2;
-        order.push({ depth: lx + ly, draw: 'live', pr: pr, x: lx, y: ly });
+        // a door opening goes down before any unit: the one walking through it is drawn over it, whichever side it is on
+        order.push({ depth: pr.kind === 'door' ? -1e9 : lx + ly, draw: 'live', pr: pr, x: lx, y: ly });
       });
       B.vc.liveOnView = lives.length > 0;
       // the dead and the wrecks stay where they fell
@@ -1070,6 +1139,8 @@
             if (it.pr.kind === 'beacon' && !it.pr.lz) it.pr.holder = holderPalette(B.state.objectives[it.pr.index]);
             // an Invasion's smoke is the attacker's colour: they are the ones coming down on it
             if (it.pr.kind === 'beacon' && it.pr.lz) it.pr.holder = holderPalette({ owner: B.state.sc && B.state.sc.attacker });
+            // a door opening shows the floor through it: the baked ground, under the shut hatch on the structures layer
+            if (it.pr.kind === 'door') it.pr.ground = B.vc.ground;
             ISO.drawPropLive(B.pctx, it.pr, liftOf(it.pr.x, it.pr.y), GFX.idleNow());
             return;
           }

@@ -45,6 +45,15 @@ function ok(name, cond, note) {
   });
   ok('a compound scenario: the special equipment to choose, the standard set (one of each a Priority Level) to start', kit.shown && kit.rows === 1 && kit.picks === 5 && kit.satchel === kit.pl, JSON.stringify(kit));
 
+  // a demo's battlefield has the optional rules too, and with Close Encounters ticked its scenarios
+  await p.evaluate(() => { const m = document.getElementById('menu'); if (m) m.hidden = true; window.PMC_SKIRMISH('demo'); });
+  await p.waitForTimeout(250);
+  const demo = await p.evaluate(() => {
+    const f = document.getElementById('opts-field');
+    return { shown: !!f && getComputedStyle(f).display !== 'none', ce: Array.from(document.querySelectorAll('#sel-scen option')).some((o) => /^ce_/.test(o.value)) };
+  });
+  ok('a demo: the optional rules on its battlefield, and the Close Encounters scenarios with them', demo.shown && demo.ce, JSON.stringify(demo));
+
   console.log('\nA compound laid out by hand');
   // (the menu closes when a skirmish is picked from it; called directly, it is still up)
   await p.evaluate(() => { const m = document.getElementById('menu'); if (m) m.hidden = true; try { localStorage.removeItem('pmc-compound-48x48'); localStorage.removeItem('pmc-compound-mode'); } catch (e) { } });

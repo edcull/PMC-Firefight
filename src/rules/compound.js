@@ -223,7 +223,7 @@
 
   /* The pieces of terrain a laid-out compound stands as. */
   function piecesOf(g, opts) {
-    var cols = g.cols, rows = g.rows, grid = g.grid, out = [];
+    var cols = g.cols, rows = g.rows, grid = g.grid, out = [], doorAt = [];
     function idx(i, j) { return j * cols + i; }
     function ek(a, b) { return a < b ? a + '|' + b : b + '|' + a; }
     // each section, as the rectangle of its cells
@@ -293,11 +293,14 @@
           }
           if (!g.doors[ek(a, b2)]) return;
           doors++;
-          out.push(vert ? { kind: 'door', x: ex - DOOR / 2, y: cj * CELL, w: DOOR, h: CELL }
-            : { kind: 'door', x: ci * CELL, y: ey - DOOR / 2, w: CELL, h: DOOR });
+          var dp = vert ? { kind: 'door', x: ex - DOOR / 2, y: cj * CELL, w: DOOR, h: CELL }
+            : { kind: 'door', x: ci * CELL, y: ey - DOOR / 2, w: CELL, h: DOOR };
+          out.push(dp);
+          doorAt.push({ p: dp, sa: grid[a], sb: grid[b2] });
         });
       }
     }
+    lockSome(g, doorAt);
     // and the entry points: the corridor sections that open onto each long edge
     var entries = { L: [], R: [] };
     ['L', 'R'].forEach(function (side) {
@@ -309,6 +312,52 @@
     });
     fit(out, g);
     return { terrain: out, entries: entries, doors: doors };
+  }
+
+  /* A few doors locked (Close Encounters p. 157 has them, for scenarios to
+     use): now and then one locked to both sides, now and then one locked against
+     one side only — but never one that would shut a section off from the rest
+     for anybody it is locked against (a locked door can still be breached, but
+     the compound starts whole). Drawn from the layout, so the same plan is
+     locked the same way. */
+  var LOCK_BOTH = 0.06, LOCK_ONE = 0.06;
+  function lockSome(g, doorAt) {
+    if (!doorAt.length) return;
+    var grid = g.grid, cols = g.cols, h = 40503;
+    for (var q = 0; q < grid.length; q++) h = Math.imul(h ^ (grid[q] + 7), 16777619);
+    var rand = function () { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+    // every opening between two sections, as the pair it joins and the door hung in it (if any)
+    var links = [];
+    Object.keys(g.open).forEach(function (k) {
+      var ab = k.split('|'), sa = grid[+ab[0]], sb = grid[+ab[1]];
+      if (sa < 0 || sb < 0 || sa === sb) return;
+      var d = null;
+      doorAt.forEach(function (o) { if (!d && ((o.sa === sa && o.sb === sb) || (o.sa === sb && o.sb === sa)) && g.doors[k] && !o.link) { d = o; o.link = true; } });
+      links.push({ sa: sa, sb: sb, door: d });
+    });
+    var secs = {};
+    for (var c = 0; c < grid.length; c++) if (grid[c] >= 0) secs[grid[c]] = true;
+    var all = Object.keys(secs).map(Number);
+    // whether every section can still reach every other for `side`, the locks as they stand
+    function whole(side) {
+      var adj = {};
+      links.forEach(function (l) {
+        var lk = l.door && l.door.p.kind;
+        if (lk === 'doorlock' || (side === 'A' && lk === 'doorlockA') || (side === 'B' && lk === 'doorlockB')) return;
+        (adj[l.sa] = adj[l.sa] || []).push(l.sb); (adj[l.sb] = adj[l.sb] || []).push(l.sa);
+      });
+      var seen = {}, stack = [all[0]];
+      seen[all[0]] = true;
+      while (stack.length) { var n = stack.pop(); (adj[n] || []).forEach(function (m) { if (!seen[m]) { seen[m] = true; stack.push(m); } }); }
+      return all.every(function (s2) { return seen[s2]; });
+    }
+    doorAt.forEach(function (o) {
+      var r = rand(), want = r < LOCK_BOTH ? 'doorlock' : r < LOCK_BOTH + LOCK_ONE ? (rand() < 0.5 ? 'doorlockA' : 'doorlockB') : null;
+      if (!want) return;
+      o.p.kind = want;
+      if (!whole('A') || !whole('B')) o.p.kind = 'door';
+    });
+    doorAt.forEach(function (o) { delete o.link; });
   }
 
   /* A room's fittings (the scatter): a few crates and lockers, and the odd bank of
@@ -342,6 +391,21 @@
       if (gaps.some(function (p) { return Math.hypot(p.x - cx, p.y - cy) < 2.4 + Math.max(r.w, r.h) / 2; })) return false;
       return !placed.some(function (p) { return r.x < p.x + p.w + 0.6 && p.x < r.x + r.w + 0.6 && r.y < p.y + p.h + 0.6 && p.y < r.y + r.h + 0.6; });
     }
+    /* Pillars holding up a larger room's roof (at least 6" by 9"): on the room's
+       inner 3" grid corners — never its middle, where the defence system's panel
+       goes, nor a point the walk between cells passes through — every one in a
+       room, every other one (6" apart) in a hall. */
+    var PIL = 0.8;
+    out.filter(function (r) { return r.kind === 'room' || r.kind === 'hall'; }).forEach(function (room) {
+      if (Math.min(room.w, room.h) < 6 || Math.max(room.w, room.h) < 9) return;
+      var hall = room.kind === 'hall' || room.w * room.h > 81;
+      for (var ox = CELL; ox < room.w - 0.01; ox += CELL) for (var oy = CELL; oy < room.h - 0.01; oy += CELL) {
+        if (hall && ((ox / CELL) % 2 === 0 || (oy / CELL) % 2 === 0)) continue;
+        if (Math.abs(ox - room.w / 2) < 0.01 && Math.abs(oy - room.h / 2) < 0.01) continue;
+        var pl = { kind: 'pillar', x: room.x + ox - PIL / 2, y: room.y + oy - PIL / 2, w: PIL, h: PIL };
+        placed.push(pl); out.push(pl);
+      }
+    });
     out.filter(function (r) { return r.kind === 'room' || r.kind === 'hall'; }).forEach(function (room) {
       if (room.w < 6 || room.h < 6) return;
       var n = Math.max(1, Math.round(room.w * room.h / 28 * (0.6 + rand() * 0.6)));
@@ -693,7 +757,7 @@
     return (h >>> 7) % THEMES;
   }
 
-  var KINDS = ['corridor', 'room', 'hall', 'bulkhead', 'door', 'crates', 'machinery'];
+  var KINDS = ['corridor', 'room', 'hall', 'bulkhead', 'door', 'crates', 'machinery', 'pillar'];
   function isCompound(state) { return !!(state && state.compound); }
   // the floor section a point is in (a corridor, room or hall piece), or null
   function sectionAt(state, x, y) {

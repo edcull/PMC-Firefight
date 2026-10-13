@@ -30,6 +30,19 @@
     var BULK_H = 6.5;
     function buildProps(terrain, objectives, seed, planet) {
       var props = [];
+      /* A compound's entry points (a corridor open onto the table's edge) each get
+         a spawn door across the mouth: drawn only, a door like the others, which
+         opens for the units coming on through it. */
+      if (terrain.some(function (q) { return q.kind === 'bulkhead'; })) {
+        var TW = 0, spawn = [];
+        terrain.forEach(function (q) { TW = Math.max(TW, q.x + q.w); });
+        terrain.forEach(function (q) {
+          if (q.kind !== 'corridor' || q.h > 3.01) return;
+          if (q.x <= 0.01) spawn.push({ kind: 'door', x: 0, y: q.y, w: 0.5, h: q.h, spawn: true });
+          if (q.x + q.w >= TW - 0.01) spawn.push({ kind: 'door', x: TW - 0.5, y: q.y, w: 0.5, h: q.h, spawn: true });
+        });
+        if (spawn.length) terrain = terrain.concat(spawn);
+      }
       /* The stretches of a bulkhead's sides that face a floor, not more plating
          or a door: [side, from, to], the side 'N', 'S', 'W' or 'E' and the run
          along it in inches of the table. */
@@ -47,14 +60,94 @@
         }
         return -1;
       }
-      function openEdges(r) {
+      /* The compound's walls as they are drawn (each about its grid line): a block
+         of the solid with the sides that face a floor brought out by half a wall, a
+         wall between two sections run on by half a wall at each end so two walls
+         meet in a full corner, and a door as thick as a wall. The lit lip along a
+         wall's top is worked out against these, so it stops where another wall's
+         body covers it rather than running on across it. */
+      var HW = 0.2;
+      function drawnRect(r) {
+        var q = { x: r.x, y: r.y, w: r.w, h: r.h };
+        if (r.kind === 'bulkhead' && r.thin) {
+          if (r.w >= r.h) { q.x -= HW; q.w += HW * 2; } else { q.y -= HW; q.h += HW * 2; }
+        } else if (r.kind === 'bulkhead') {
+          var faces = {};
+          openEdges(r, solids).forEach(function (o) { faces[o[0]] = true; });
+          if (faces.W) { q.x -= HW; q.w += HW; }
+          if (faces.E) q.w += HW;
+          if (faces.N) { q.y -= HW; q.h += HW; }
+          if (faces.S) q.h += HW;
+        } else if (r.w >= r.h) { q.y = r.y + r.h / 2 - HW; q.h = HW * 2; } else { q.x = r.x + r.w / 2 - HW; q.w = HW * 2; }
+        return q;
+      }
+      /* All the walls as one shape, then cut into pieces that never overlap: on a
+         fine grid (a fifth of an inch, which every wall edge falls on) each wall as
+         drawn is marked, a door's own stretch of wall left out (it draws its own
+         frame), and the marked cells taken a strip at a time into rectangles. Boxes
+         that overlapped painted their hidden faces over one another; these only
+         meet edge to edge. */
+      var wallSet = null;
+      function wallPieces() {
+        if (wallSet) return wallSet;
+        var RES = 0.2, walls = solids.filter(function (q) { return q.kind === 'bulkhead'; }), doors = solids.filter(function (q) { return q.kind !== 'bulkhead'; });
+        var W = 0, H = 0;
+        terrain.forEach(function (q) { W = Math.max(W, q.x + q.w); H = Math.max(H, q.y + q.h); });
+        var NX = Math.ceil(W / RES) + 2, NY = Math.ceil(H / RES) + 2, m = new Uint8Array(NX * NY);
+        function mark(q, v) {
+          var i0 = Math.max(0, Math.round(q.x / RES)), i1 = Math.min(NX, Math.round((q.x + q.w) / RES));
+          var j0 = Math.max(0, Math.round(q.y / RES)), j1 = Math.min(NY, Math.round((q.y + q.h) / RES));
+          for (var j = j0; j < j1; j++) for (var i = i0; i < i1; i++) m[j * NX + i] = v;
+        }
+        walls.forEach(function (q) { mark(drawnRect(q), 1); });
+        /* A door's frame stops where the wall it meets comes out to its grid line:
+           an end already covered by a wall (a fifth of an inch at a time) is the
+           wall's, not the door's, so the frame meets that wall flush. */
+        function covered(q) {
+          var i0 = Math.round(q.x / RES), i1 = Math.round((q.x + q.w) / RES), j0 = Math.round(q.y / RES), j1 = Math.round((q.y + q.h) / RES);
+          for (var j = j0; j < j1; j++) for (var i = i0; i < i1; i++) if (!m[j * NX + i]) return false;
+          return true;
+        }
+        var doorBands = doors.map(function (d) {
+          var q = drawnRect(d), hz = q.w >= q.h;
+          for (var k = 0; k < 3; k++) {
+            var a0 = hz ? { x: q.x, y: q.y, w: RES, h: q.h } : { x: q.x, y: q.y, w: q.w, h: RES };
+            if (covered(a0)) { if (hz) { q.x += RES; q.w -= RES; } else { q.y += RES; q.h -= RES; } } else break;
+          }
+          for (var k2 = 0; k2 < 3; k2++) {
+            var a1 = hz ? { x: q.x + q.w - RES, y: q.y, w: RES, h: q.h } : { x: q.x, y: q.y + q.h - RES, w: q.w, h: RES };
+            if (covered(a1)) { if (hz) q.w -= RES; else q.h -= RES; } else break;
+          }
+          d._drawn = q;
+          return q;
+        });
+        doorBands.forEach(function (q) { mark(q, 0); });
+        var pieces = [];
+        for (var j = 0; j < NY; j++) for (var i = 0; i < NX; i++) {
+          if (m[j * NX + i] !== 1) continue;
+          var w = 1;
+          while (i + w < NX && m[j * NX + i + w] === 1) w++;
+          var h = 1;
+          for (; j + h < NY; h++) {
+            var full = true;
+            for (var k = 0; k < w && full; k++) if (m[(j + h) * NX + i + k] !== 1) full = false;
+            if (!full) break;
+          }
+          for (var jj = j; jj < j + h; jj++) for (var ii = i; ii < i + w; ii++) m[jj * NX + ii] = 2;
+          pieces.push({ x: i * RES, y: j * RES, w: w * RES, h: h * RES });
+        }
+        wallSet = { pieces: pieces, against: pieces.concat(doorBands) };
+        return wallSet;
+      }
+      function openEdges(r, against) {
         var out = [], E = 0.05, ST = 0.1;
+        if (!against) against = wallPieces().against;
         [['N', r.x, r.x + r.w, function (t) { return [t, r.y - E]; }], ['S', r.x, r.x + r.w, function (t) { return [t, r.y + r.h + E]; }],
           ['W', r.y, r.y + r.h, function (t) { return [r.x - E, t]; }], ['E', r.y, r.y + r.h, function (t) { return [r.x + r.w + E, t]; }]].forEach(function (S2) {
           var run = null;
           for (var t = S2[1]; t < S2[2] - 1e-6; t += ST) {
             var t1 = Math.min(S2[2], t + ST), q = S2[3]((t + t1) / 2);
-            var op = inAny(floors, q[0], q[1]) && !inAny(solids, q[0], q[1]);
+            var op = inAny(floors, q[0], q[1]) && !inAny(against, q[0], q[1]);
             // a run breaks where the room in front of it changes (each stretch takes that room's colours)
             var th = op ? themeAt(q[0], q[1]) : -1;
             if (op && run && run[3] === th) run[2] = t1; else if (op) out.push(run = [S2[0], t, t1, th]); else run = null;
@@ -370,12 +463,29 @@
            outlined through it), and each door as a hatch framed in the same
            plating. */
         // a room's fittings (compound.js fit): crates and lockers, and banks of machinery
+        // a room's pillar: the walls' plating, the room's colours, the walls' height
+        if (r.kind === 'pillar') {
+          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(BULK_H), thin: true, pillar: true,
+            open: [['N', r.x, r.x + r.w, themeAt(r.x + r.w / 2, r.y - 0.3)], ['S', r.x, r.x + r.w, themeAt(r.x + r.w / 2, r.y + r.h + 0.3)],
+              ['W', r.y, r.y + r.h, themeAt(r.x - 0.3, r.y + r.h / 2)], ['E', r.y, r.y + r.h, themeAt(r.x + r.w + 0.3, r.y + r.h / 2)]], seed: (rr2() * 9999) | 0 });
+          return;
+        }
         if (r.kind === 'crates' || r.kind === 'machinery') {
           props.push({ kind: r.kind, x: r.x, y: r.y, w: r.w, h: r.h, height: a(r.kind === 'machinery' ? 5.2 : 2.4), seed: r.seed || (rr2() * 9999) | 0 });
           return;
         }
         if (r.kind === 'bulkhead') {
-          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(BULK_H), thin: !!r.thin, open: openEdges(r), seed: (rr2() * 9999) | 0 });
+          /* Every wall drawn about the grid line it stands on: a wall between two
+             sections is already half its thickness either side of the line, so a
+             block of the solid has each side that faces a floor brought out by half
+             a wall too, and a wall between two sections is run on into its corners
+             (drawnRect) — so faces, walls and doors all line up. (Drawn only: the
+             rules keep the solid where it is.) */
+          if (wallSet && wallSet.laid) return;          // the whole shape went down with the first wall
+          wallPieces().laid = true;
+          wallSet.pieces.forEach(function (q, n) {
+            props.push({ kind: 'bulkhead', x: q.x, y: q.y, w: q.w, h: q.h, height: a(BULK_H), thin: Math.min(q.w, q.h) < 0.5, open: openEdges(q), seed: (seed * 31 + n * 7919) % 9999 });
+          });
           return;
         }
         if (r.kind === 'door' || r.kind === 'doorlock' || r.kind === 'doorlockA' || r.kind === 'doorlockB') {
@@ -386,7 +496,10 @@
           var secA = floors.filter(function (q) { return inAny([q], dhz ? dmx : dmx - 1, dhz ? dmy - 1 : dmy); })[0];
           var secB = floors.filter(function (q) { return inAny([q], dhz ? dmx : dmx + 1, dhz ? dmy + 1 : dmy); })[0];
           var areaOf = function (q) { return !q ? 1e9 : q.kind === 'corridor' ? 0 : q.w * q.h; };
-          props.push({ kind: 'door', x: r.x, y: r.y, w: r.w, h: r.h, horiz: dhz, lock: r.kind, out: areaOf(secB) <= areaOf(secA) ? 1 : -1, height: a(BULK_H),
+          // the frame as long as the walls at its ends leave it (wallPieces): its own thickness, its run trimmed
+          var dq = (wallPieces(), r._drawn) || r;
+          var drect = dhz ? { x: dq.x, y: r.y, w: dq.w, h: r.h } : { x: r.x, y: dq.y, w: r.w, h: dq.h };
+          props.push({ kind: 'door', x: drect.x, y: drect.y, w: drect.w, h: drect.h, horiz: dhz, lock: r.kind, out: areaOf(secB) <= areaOf(secA) ? 1 : -1, height: a(BULK_H),
             // the colours of the rooms either side, for the wall faces looking into them
             themeA: themeAt(dhz ? dmx : dmx - 1, dhz ? dmy - 1 : dmy), themeB: themeAt(dhz ? dmx : dmx + 1, dhz ? dmy + 1 : dmy), seed: (rr2() * 9999) | 0 });
           return;
@@ -437,7 +550,17 @@
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
       var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      /* The small things set down on a compound's floor (a box, drums, a console,
+         wreckage) take a footprint of their own in this, so one standing behind a
+         wall is drawn before the wall, and the wall hides it. */
+      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4 };
+      function rectOf(p) {
+        if (BOX[p.kind] && p.w) return p;
+        var r2 = SMALL[p.kind];
+        return r2 ? (p._r || (p._r = { x: p.x - r2, y: p.y - r2, w: r2 * 2, h: r2 * 2 })) : null;
+      }
       function behind(p1, p2) {
+        p1 = rectOf(p1); p2 = rectOf(p2);
         var e = 1e-3;
         var sepX = p1.x + p1.w <= p2.x + e, sepY = p1.y + p1.h <= p2.y + e;
         var backX = p2.x + p2.w <= p1.x + e, backY = p2.y + p2.h <= p1.y + e;
@@ -447,10 +570,10 @@
         var moved = false;
         for (var i1 = 0; i1 < props.length; i1++) {
           var pa = props[i1];
-          if (!BOX[pa.kind] || !pa.w) continue;
+          if (!rectOf(pa)) continue;
           for (var j1 = i1 + 1; j1 < props.length; j1++) {
             var pb = props[j1];
-            if (!BOX[pb.kind] || !pb.w) continue;
+            if (!rectOf(pb)) continue;
             // pb is drawn after pa, but stands wholly behind it: pb goes first
             if (behind(pb, pa) && !behind(pa, pb)) {
               props.splice(j1, 1); props.splice(i1, 0, pb);
@@ -491,6 +614,19 @@
       ['#1e2430', '#2e3747', '#404c61', '#53627b', '#677894', '#8495ad'],
       ['#2a1e1c', '#402d2a', '#583e39', '#714f48', '#8a6157', '#a67b6f']
     ];
+    /* A wall face from foot A to foot B, `hgt` high, shaded top to bottom. One
+       gradient pinned to one end drifts along a long face, which slopes on the
+       screen, so the face is laid in narrow upright slices, each shaded down its
+       own height: the same at any point of the wall whichever piece it is in. */
+    function shadeFace(g, A, B, hgt, cols) {
+      var len = Math.abs(B[0] - A[0]), n = Math.max(1, Math.ceil(len / 3));
+      for (var i = 0; i < n; i++) {
+        var q0 = lerp2(A, B, i / n), q1 = lerp2(A, B, (i + 1) / n), mx = (q0[1] + q1[1]) / 2;
+        // a pixel's overlap, so no seam of background shows between slices
+        var e0 = i ? q0 : q0, e1 = i < n - 1 ? lerp2(A, B, Math.min(1, (i + 1) / n + 0.5 / len)) : q1;
+        poly(g, [e0, e1, [e1[0], e1[1] - hgt], [e0[0], e0[1] - hgt]], vgrad(g, mx - hgt, mx, cols));
+      }
+    }
     // an extruded structure: two lit faces, two shaded, a panelled skin, a roof
     function box(g, pr, pal, opts) {
       var lift = opts.lift || 0;
@@ -537,9 +673,20 @@
       poly(g, [c1, c4, t4, t1], pal[0]);
       // the two faces the viewer sees, shaded top to bottom: a little sky light
       // at the eaves, darkening into the ground at the foot
-      poly(g, [c2, c3, t3, t2], vgrad(g, t3[1], c3[1], [pal[2], pal[2], pal[1]]));
-      poly(g, [c4, c3, t3, t4], vgrad(g, t3[1], c3[1], [pal[5], pal[4], pal[4], pal[3]]));
-      edgeLine(g, t3, c3, pal[5], 1);                // the corner, catching the light
+      if (opts.solid) {
+        // a compound's plating: shaded in slices that follow the slope, so pieces of one wall shade alike where they meet
+        shadeFace(g, c2, c3, hgt, [pal[2], pal[2], pal[1]]);
+        shadeFace(g, c4, c3, hgt, [pal[5], pal[4], pal[4], pal[3]]);
+      } else {
+        poly(g, [c2, c3, t3, t2], vgrad(g, t3[1], c3[1], [pal[2], pal[2], pal[1]]));
+        poly(g, [c4, c3, t3, t4], vgrad(g, t3[1], c3[1], [pal[5], pal[4], pal[4], pal[3]]));
+      }
+      // the corner, catching the light — on a compound's plating only where it is a corner, the wall turning with floor both ways, not where two pieces of one wall meet
+      if (!opts.solid || nearCorner()) edgeLine(g, t3, c3, pal[5], 1);
+      function nearCorner() {
+        var o = pr.open || [], e = 1e-3;
+        return o.some(function (q) { return q[0] === 'S' && q[2] >= pr.x + pr.w - e; }) && o.some(function (q) { return q[0] === 'E' && q[2] >= pr.y + pr.h - e; });
+      }
 
       // cast panels, joints, streaks and grime on the two faces that are lit
       function skin(A, B, seam, grime) {
@@ -549,7 +696,8 @@
           var q = lerp2(A, B, i / cols);
           edgeLine(g, [q[0], q[1] - hgt + 1], [q[0], q[1] - 1], seam, 1);
         }
-        var rows = Math.max(1, Math.round(hgt / (K * 1.2)));
+        // (a compound's plating has no courses across it: drawn at each piece's own height they broke the wall at every door)
+        var rows = opts.solid ? 1 : Math.max(1, Math.round(hgt / (K * 1.2)));
         for (var j = 1; j < rows; j++) {
           var h2 = hgt * j / rows;
           edgeLine(g, [A[0], A[1] - h2], [B[0], B[1] - h2], seam, 1);
@@ -608,22 +756,16 @@
         if (!tp) return;
         var A3 = o[0] === 'S' ? [o[1], pr.y + pr.h] : [pr.x + pr.w, o[1]], B3 = o[0] === 'S' ? [o[2], pr.y + pr.h] : [pr.x + pr.w, o[2]];
         var a0 = pt(A3[0], A3[1]), b0 = pt(B3[0], B3[1]), a1 = pt(A3[0], A3[1], hgt), b1 = pt(B3[0], B3[1], hgt);
-        poly(g, [a0, b0, b1, a1], o[0] === 'S' ? vgrad(g, a1[1], a0[1], [tp[5], tp[4], tp[4], tp[3]]) : vgrad(g, a1[1], a0[1], [tp[2], tp[2], tp[1]]));
+        shadeFace(g, a0, b0, hgt, o[0] === 'S' ? [tp[5], tp[4], tp[4], tp[3]] : [tp[2], tp[2], tp[1]]);
         var segs = Math.max(1, Math.round(Math.hypot(b0[0] - a0[0], b0[1] - a0[1]) / (K * 1.7)));
         for (var si = 1; si < segs; si++) { var sq = lerp2(a0, b0, si / segs); edgeLine(g, [sq[0], sq[1] - hgt + 1], [sq[0], sq[1] - 1], tp[o[0] === 'S' ? 3 : 1], 1); }
-        edgeLine(g, lerp2(a0, a1, 0.5), lerp2(b0, b1, 0.5), tp[o[0] === 'S' ? 3 : 1], 1);
         edgeLine(g, [a0[0], a0[1] - 1], [b0[0], b0[1] - 1], tp[0], 1);      // the skirting, where it meets the floor
       });
       poly(g, [t1, t2, t3, t4], opts.roof);          // roof
       if (opts.solid) { solidTop(); return; }
-      /* A compound's plating: one mass however many blocks it is laid in. Its
-         deck plates are on the table's own 3" grid, not each block's, so they run
-         on from one block to the next; the only lip is along the stretches that
-         face a floor. */
+      /* A compound's plating: one mass however many blocks it is laid in, with no
+         plates marked across it; the only lip is along the stretches that face a floor. */
       function solidTop() {
-        var seam = 'rgba(14,17,20,.5)', G = 3;
-        for (var X = Math.ceil((pr.x + 1e-6) / G) * G; X < pr.x + pr.w - 1e-6; X += G) edgeLine(g, pt(X, pr.y, hgt), pt(X, pr.y + pr.h, hgt), seam, 1);
-        for (var Y = Math.ceil((pr.y + 1e-6) / G) * G; Y < pr.y + pr.h - 1e-6; Y += G) edgeLine(g, pt(pr.x, Y, hgt), pt(pr.x + pr.w, Y, hgt), seam, 1);
         for (var gq = 0; gq < pr.w * pr.h * 1.2; gq++) {
           var su = rand(), sv = rand();
           var sq = lerp2(lerp2(t1, t2, su), lerp2(t4, t3, su), sv);
@@ -993,7 +1135,7 @@
       PIXEL: PIXEL, PREFAB: PREFAB, ROOF: ROOF, STONE: STONE, a: a, boulder: boulder, box: box,
       brokenWall: brokenWall, conifer: conifer, dot: dot, edgeLine: edgeLine, ellipse: ellipse, lerp2: lerp2,
       pebble: pebble, poly: poly, rect: rect, rng: rng, shadowBlob: shadowBlob, toScreen: toScreen,
-      vgrad: vgrad
+      vgrad: vgrad, WALL_THEME: WALL_THEME
     });
 
     return {
