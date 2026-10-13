@@ -584,6 +584,19 @@
       ['#1e2430', '#2e3747', '#404c61', '#53627b', '#677894', '#8495ad'],
       ['#2a1e1c', '#402d2a', '#583e39', '#714f48', '#8a6157', '#a67b6f']
     ];
+    /* A wall face from foot A to foot B, `hgt` high, shaded top to bottom. One
+       gradient pinned to one end drifts along a long face, which slopes on the
+       screen, so the face is laid in narrow upright slices, each shaded down its
+       own height: the same at any point of the wall whichever piece it is in. */
+    function shadeFace(g, A, B, hgt, cols) {
+      var len = Math.abs(B[0] - A[0]), n = Math.max(1, Math.ceil(len / 3));
+      for (var i = 0; i < n; i++) {
+        var q0 = lerp2(A, B, i / n), q1 = lerp2(A, B, (i + 1) / n), mx = (q0[1] + q1[1]) / 2;
+        // a pixel's overlap, so no seam of background shows between slices
+        var e0 = i ? q0 : q0, e1 = i < n - 1 ? lerp2(A, B, Math.min(1, (i + 1) / n + 0.5 / len)) : q1;
+        poly(g, [e0, e1, [e1[0], e1[1] - hgt], [e0[0], e0[1] - hgt]], vgrad(g, mx - hgt, mx, cols));
+      }
+    }
     // an extruded structure: two lit faces, two shaded, a panelled skin, a roof
     function box(g, pr, pal, opts) {
       var lift = opts.lift || 0;
@@ -630,8 +643,14 @@
       poly(g, [c1, c4, t4, t1], pal[0]);
       // the two faces the viewer sees, shaded top to bottom: a little sky light
       // at the eaves, darkening into the ground at the foot
-      poly(g, [c2, c3, t3, t2], vgrad(g, t3[1], c3[1], [pal[2], pal[2], pal[1]]));
-      poly(g, [c4, c3, t3, t4], vgrad(g, t3[1], c3[1], [pal[5], pal[4], pal[4], pal[3]]));
+      if (opts.solid) {
+        // a compound's plating: shaded in slices that follow the slope, so pieces of one wall shade alike where they meet
+        shadeFace(g, c2, c3, hgt, [pal[2], pal[2], pal[1]]);
+        shadeFace(g, c4, c3, hgt, [pal[5], pal[4], pal[4], pal[3]]);
+      } else {
+        poly(g, [c2, c3, t3, t2], vgrad(g, t3[1], c3[1], [pal[2], pal[2], pal[1]]));
+        poly(g, [c4, c3, t3, t4], vgrad(g, t3[1], c3[1], [pal[5], pal[4], pal[4], pal[3]]));
+      }
       // the corner, catching the light — on a compound's plating only where it is a corner, the wall turning with floor both ways, not where two pieces of one wall meet
       if (!opts.solid || nearCorner()) edgeLine(g, t3, c3, pal[5], 1);
       function nearCorner() {
@@ -707,7 +726,7 @@
         if (!tp) return;
         var A3 = o[0] === 'S' ? [o[1], pr.y + pr.h] : [pr.x + pr.w, o[1]], B3 = o[0] === 'S' ? [o[2], pr.y + pr.h] : [pr.x + pr.w, o[2]];
         var a0 = pt(A3[0], A3[1]), b0 = pt(B3[0], B3[1]), a1 = pt(A3[0], A3[1], hgt), b1 = pt(B3[0], B3[1], hgt);
-        poly(g, [a0, b0, b1, a1], o[0] === 'S' ? vgrad(g, a1[1], a0[1], [tp[5], tp[4], tp[4], tp[3]]) : vgrad(g, a1[1], a0[1], [tp[2], tp[2], tp[1]]));
+        shadeFace(g, a0, b0, hgt, o[0] === 'S' ? [tp[5], tp[4], tp[4], tp[3]] : [tp[2], tp[2], tp[1]]);
         var segs = Math.max(1, Math.round(Math.hypot(b0[0] - a0[0], b0[1] - a0[1]) / (K * 1.7)));
         for (var si = 1; si < segs; si++) { var sq = lerp2(a0, b0, si / segs); edgeLine(g, [sq[0], sq[1] - hgt + 1], [sq[0], sq[1] - 1], tp[o[0] === 'S' ? 3 : 1], 1); }
         edgeLine(g, [a0[0], a0[1] - 1], [b0[0], b0[1] - 1], tp[0], 1);      // the skirting, where it meets the floor

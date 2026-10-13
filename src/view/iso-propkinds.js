@@ -735,10 +735,9 @@
           var lamp = pr.lock === 'door' ? '#7bdc6a' : pr.lock === 'doorlock' ? '#ff4a3a' : '#ffb02e';
           var band = pr.lock === 'doorlock' ? DOOR_RED : pr.lock === 'door' ? null : DOOR_AMBER;
           var lt = Math.max(2, Math.round(H * 0.3));
-          /* the hatch is flush with the room's face of the wall (pr.out points to the
-             corridor side), the doorway's depth recessed towards the corridor */
+          // the hatch set back in the middle of the wall, the frame's depth showing from either side
           function hatch() {
-            var hoff = -(pr.out || 1) * (WT / 2 - 0.07);
+            var hoff = 0;
             /* Shut, as a door is unless something is going through it (it blocks sight,
                p. 157): the shutter down over the doorway. Working, a band of hazard
                stripes across it; locked, a band of warning paint (red both sides, amber one). */
@@ -877,7 +876,7 @@
       var lt = Math.max(2, Math.round(H * 0.3)), oh = H - lt, cen = hz ? pr.y + pr.h / 2 : pr.x + pr.w / 2, base = hz ? pr.x : pr.y;
       // a point along the doorway (u), across it (off, + towards the viewer) and up (z)
       function P(u, off, z) { var q = hz ? toScreen(base + u, cen + off) : toScreen(cen + off, base + u); return [q.x, q.y - dl - z]; }
-      var u0 = jl, u1 = len - jl, F = WT / 2, w = (u1 - u0) / 2, LO = -(pr.out || 1) * (WT / 2 - 0.07);
+      var u0 = jl, u1 = len - jl, F = WT / 2, w = (u1 - u0) / 2, LO = 0;
       g.save();
       g.beginPath();
       [P(u0, F, 0), P(u1, F, 0), P(u1, F, oh), P(u1, -F, oh), P(u0, -F, oh), P(u0, F, oh)].forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); });
