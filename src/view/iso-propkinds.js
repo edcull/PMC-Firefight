@@ -705,9 +705,9 @@
           break;
         }
         /* A door: a blast hatch framed in the compound's own plating — two jambs
-           and a lintel the height of the walls. Working, it stands open over a
-           hazard-striped sill, its lamp green; locked, the shutter is down, banded
-           red (both sides) or amber (one), its lamp to match. */
+           and a lintel the height of the walls, the shutter down (a door blocks
+           sight). Working, the shutter is banded in hazard stripes, its lamp green;
+           locked, banded red (both sides) or amber (one), its lamp to match. */
         case 'door': {
           var dl = lift || 0, H = pr.height, hz = pr.horiz, out = pr.out || 1;
           var len = hz ? pr.w : pr.h, jl = Math.min(0.7, len * 0.22);
@@ -737,22 +737,26 @@
           // the hatch hangs on the outside of the wall: drawn before the wall when that side is the far one
           function hatch() {
             var hoff = out * (WT / 2 + 0.08);
-            if (pr.lock === 'door') {
-              // open: a striped sill across the floor, the shutter's lip showing under the lintel
-              var sq = part(jl, len - jl, 0.16, hoff);
-              var s0 = hz ? toScreen(sq.x, sq.y + sq.h / 2) : toScreen(sq.x + sq.w / 2, sq.y);
-              var s1 = hz ? toScreen(sq.x + sq.w, sq.y + sq.h / 2) : toScreen(sq.x + sq.w / 2, sq.y + sq.h);
+            /* Shut, as a door is unless something is going through it (it blocks sight,
+               p. 157): the shutter down over the doorway. Working, a band of hazard
+               stripes across it; locked, a band of warning paint (red both sides, amber one). */
+            var sq = part(jl - 0.1, len - jl + 0.1, 0.16, hoff);
+            slab(sq, H - lt, 0, DOOR_STEEL);
+            var bh2 = Math.max(2, Math.round(H * 0.16)), by2 = Math.round(H * 0.3);
+            if (band) slab(part(jl - 0.1, len - jl + 0.1, 0.18, hoff), bh2, by2, band);
+            else {
+              // the stripes on the face towards the viewer (+y, or +x)
+              var f0 = hz ? toScreen(sq.x, sq.y + sq.h) : toScreen(sq.x + sq.w, sq.y);
+              var f1 = hz ? toScreen(sq.x + sq.w, sq.y + sq.h) : toScreen(sq.x + sq.w, sq.y + sq.h);
+              var A0 = [f0.x, f0.y - dl - by2], A1 = [f1.x, f1.y - dl - by2];
               for (var i = 0; i < 8; i++) {
-                var q0 = lerp2([s0.x, s0.y - dl], [s1.x, s1.y - dl], i / 8), q1 = lerp2([s0.x, s0.y - dl], [s1.x, s1.y - dl], (i + 1) / 8);
-                poly(g, [[q0[0], q0[1] - 1], [q1[0], q1[1] - 1], [q1[0], q1[1] + 1], [q0[0], q0[1] + 1]], i % 2 ? '#1b1a17' : '#c9a23c');
+                var q0 = lerp2(A0, A1, i / 8), q1 = lerp2(A0, A1, (i + 1) / 8);
+                poly(g, [[q0[0], q0[1] - bh2], [q1[0], q1[1] - bh2], [q1[0], q1[1]], [q0[0], q0[1]]], i % 2 ? '#1b1a17' : '#c9a23c');
               }
-              var lip = Math.max(2, Math.round(H * 0.08));
-              slab(part(jl - 0.1, len - jl + 0.1, 0.16, hoff), lip, H - lt - lip, DOOR_STEEL);
-            } else {
-              // shut: the shutter down over the doorway, with its band of warning paint
-              slab(part(jl - 0.1, len - jl + 0.1, 0.16, hoff), H - lt, 0, DOOR_STEEL);
-              slab(part(jl - 0.1, len - jl + 0.1, 0.18, hoff), Math.max(2, Math.round(H * 0.16)), Math.round(H * 0.3), band);
             }
+            // the seam where its two leaves meet, down the middle
+            var m0 = hz ? toScreen(sq.x + sq.w / 2, sq.y + sq.h) : toScreen(sq.x + sq.w, sq.y + sq.h / 2);
+            edgeLine(g, [m0.x, m0.y - dl - 1], [m0.x, m0.y - dl - (H - lt) + 1], '#1a1e22', 1);
           }
           if (out < 0) hatch();
           // the wall either side and over the doorway, all one with the walls it joins
