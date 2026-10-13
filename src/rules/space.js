@@ -552,18 +552,27 @@
       }
       return false;
     }
-    /* A door stands open while a unit is at it (house rule): one with the edge of
-       its base within half an inch of the door, either side of it. Open, it no
-       longer blocks sight. A door locked to both sides stays shut; one locked to
-       a side opens only for the other side's units. */
-    var DOOR_REACH = UNIT_R + 0.5;
+    /* A door stands open while a unit is in front of it (house rule): its middle
+       within the doorway's width (and half an inch either side of it) and no
+       more than 2" out from the door, either side — standing at it, not beside
+       it along the wall or round a corner from it. Open, it no longer blocks
+       sight. A door locked to both sides stays shut; one locked to a side opens
+       only for the other side's units. doorFront: how far out in front of door
+       r the point is, or Infinity where it is not in front of it at all. */
+    var DOOR_REACH = UNIT_R + 1, DOOR_SIDE = 0.5;
+    function doorFront(r, x, y) {
+      var hz = r.w >= r.h;
+      var along = hz ? x - r.x : y - r.y, len = hz ? r.w : r.h;
+      if (along < -DOOR_SIDE || along > len + DOOR_SIDE) return Infinity;
+      return Math.abs(hz ? y - (r.y + r.h / 2) : x - (r.x + r.w / 2));
+    }
     function doorOpen(state, r) {
       var t = TERRAIN[r.kind];
       if (!t || !t.door || t.lockedFor === 'both') return false;
       for (var i = 0; i < state.units.length; i++) {
         var u = state.units[i];
         if (!u.alive || u.aboard || u.x < 0 || u.reserve || u.side === t.lockedFor) continue;
-        if (rectPointDist(r, u.x, u.y) <= DOOR_REACH) return true;
+        if (doorFront(r, u.x, u.y) <= DOOR_REACH) return true;
       }
       return false;
     }
@@ -818,7 +827,7 @@
       inPoly: inPoly, pieceDepth: pieceDepth, placePiece: placePiece, turnPoint: turnPoint,
       turnPiece: turnPiece, shapePiece: shapePiece, terrainAt: terrainAt, terrainOf: terrainOf, nearestFree: nearestFree, walkField: walkField,
       footprint: footprint, kindsUnder: kindsUnder, coverAt: coverAt, segRect: segRect,
-      pointSegDist: pointSegDist, hasLoS: hasLoS, lineClear: lineClear, doorOpen: doorOpen, DOOR_REACH: DOOR_REACH, groundLevel: groundLevel,
+      pointSegDist: pointSegDist, hasLoS: hasLoS, lineClear: lineClear, doorOpen: doorOpen, doorFront: doorFront, DOOR_REACH: DOOR_REACH, groundLevel: groundLevel,
       levelOf: levelOf, tooHighToHover: tooHighToHover, onHill: onHill, unitNear: unitNear
     };
   };
