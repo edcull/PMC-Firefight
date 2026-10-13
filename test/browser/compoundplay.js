@@ -123,6 +123,34 @@ function ok(name, cond, note) {
   ok('fought in as it was laid out', hb.built && hb.rooms > 0, JSON.stringify(hb));
   await p.screenshot({ path: path.join(SHOTS, 'compound-hand.png') });
 
+  console.log('\nEntering the table, a player against the AI');
+  // the entry points are boxes, not a strip: the camera must not be sent to NaN by them
+  await p.evaluate(() => window.PMC_NEWGAME({ tier: 1, pl: 1, mode: 'ai', planet: 'sparse', scenario: 'ce_clear', nameA: 'Us', nameB: 'Them',
+    armyA: ['cmd4', 'lighteng', 'recruits'], armyB: ['cmd4', 'recruits', 'irregulars'] }));
+  await p.waitForTimeout(800);
+  for (let i = 0; i < 20; i++) {
+    const at = await p.evaluate(() => {
+      const vis = [...document.querySelectorAll('button')].filter((x) => x.offsetParent);
+      const go = vis.find((x) => x.id === 'obj-done') || vis.find((x) => x.id === 'res-continue') || vis.find((x) => /Continue to deployment|Begin the battle/.test(x.textContent));
+      if (go) go.click();
+      return !go && !!window.__insertionAsking();
+    });
+    if (at) break;
+    await p.waitForTimeout(400);
+  }
+  const ent = await p.evaluate(() => {
+    const v = window.__viewRect(), sp = window.__insertionSpotsNow() || [];
+    const was = window.__insertionAsking(), q = sp[Math.floor(sp.length / 2)];
+    if (q) window.__boardTapAt(q.x, q.y);
+    return { view: [v.sx, v.sy].every((n) => typeof n === 'number' && isFinite(n)), spots: sp.length, was,
+      placed: window.PMC_STATE().units.filter((u) => u.side === 'A' && !u.reserve && u.x >= 0).length };
+  });
+  ok('the camera on the table, the entry corridors shaded, and a tap there brings the unit on', ent.view && ent.spots > 0 && ent.was && ent.placed === 1, JSON.stringify(ent));
+  const cam0 = await p.evaluate(() => window.__viewRect());
+  await p.mouse.move(670, 300); await p.mouse.down(); await p.mouse.move(520, 200, { steps: 6 }); await p.mouse.up();
+  const cam1 = await p.evaluate(() => window.__viewRect());
+  ok('...and the table still pans', [cam0.sx, cam0.sy, cam1.sx, cam1.sy].every(isFinite) && (cam1.sx !== cam0.sx || cam1.sy !== cam0.sy), JSON.stringify([cam0.sx, cam0.sy, cam1.sx, cam1.sy]));
+
   console.log('\nBesieged, solitaire');
   await p.evaluate(() => window.PMC_NEWGAME({ tier: 3, pl: 1, mode: 'demo', planet: 'sparse', scenario: 's_besieged', nameA: 'Ironhold', nameB: 'OpFor',
     armyA: window.PMCSolo.rollCommando(3, 1, 'pmc'), armyB: window.PMCSolo.rollOpFor(3, 1, 'rebel', false),

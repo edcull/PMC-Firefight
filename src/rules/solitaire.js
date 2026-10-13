@@ -1391,7 +1391,7 @@
       toPool(state);
       var ent = state.compound ? state.compound.entries : { L: [], R: [] };
       state.sc.entry = { A: ent.L.slice(), B: [] };
-      state.sc.zones = { A: state.sc.entry.A, B: [] };
+      state.sc.boxes = { A: state.sc.entry.A, B: [] };      // the corridors at the left edge's entry points, as boxes
       var obj = besiegedObjective(state);
       if (obj) { obj.reserve = true; obj.wave = 'objective'; obj.x = -1; obj.y = -1; }
       /* "a number of counters equal to twice the number of OpFor units ... scattered
@@ -1409,7 +1409,6 @@
       mineA.forEach(function (u, i) { u.reserve = true; u.wave = i < first ? 1 : 2; u.x = -1; u.y = -1; u.hidden = false; });
       state.sc.found = 0;
     },
-    zoneFor: function (state, side) { return side === 'A' ? state.sc.zones.A : null; },
     reserves: function (state, side) {
       if (side !== 'A') return [];
       return state.units.filter(function (u) {

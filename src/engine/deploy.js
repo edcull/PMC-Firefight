@@ -314,7 +314,8 @@
       var bx = boxesFor(side);
       if (bx && bx.length) return { x: bx[0].x + bx[0].w / 2, y: bx[0].y + bx[0].h / 2 };
       var z = zoneFor(side);
-      if (!z) return { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
+      // (a zone that is not a strip's [x0, x1] pair would put the camera at NaN, and leave it there)
+      if (!z || typeof z[0] !== 'number' || typeof z[1] !== 'number') return { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
       return { x: (z[0] + z[1]) / 2, y: R.BOARD.h / 2 };
     }
 

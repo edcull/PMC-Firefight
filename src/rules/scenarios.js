@@ -1000,7 +1000,10 @@
     var ent = state.compound ? state.compound.entries : { L: [], R: [] };
     var swap = Math.random() < 0.5;
     state.sc.entry = { A: (swap ? ent.R : ent.L).slice(), B: (swap ? ent.L : ent.R).slice() };
-    state.sc.zones = { A: state.sc.entry.A, B: state.sc.entry.B };
+    /* The ground each side comes on through, as boxes (the corridor at each entry
+       point) — the shape every deploy, draw and camera path reads; a strip's [x0, x1]
+       pair it is not. */
+    state.sc.boxes = { A: state.sc.entry.A, B: state.sc.entry.B };
   }
   /* Who comes in this Reserve phase: everyone of the wave, from turn `from` on —
      and anyone who found no room at the entry points the turn before. */
@@ -1038,7 +1041,6 @@
     deploy: function (state) { compoundEntries(state); },
     reserves: function (state, side) { return compoundEntering(state, side, 1, 1); },
     deployText: function () { return CE_ENTRY_TEXT; },
-    zoneFor: function (state, side) { return state.sc.zones[side]; },
     hint: 'Inside a compound: corridors, rooms and doors. No objectives — break the other company to win.',
     check: function (state) {
       var r = routCheck(state);
@@ -1077,7 +1079,6 @@
     // the first half in turn 1; the book says only "held in reserve": here they follow from turn 2
     reserves: function (state, side) { return state.turn === 1 ? entering(state, side) : compoundEntering(state, side, 2, 2); },
     deployText: function () { return CE_ENTRY_TEXT.replace('your units come in', 'the first half of your force comes in'); },
-    zoneFor: function (state, side) { return state.sc.zones[side]; },
     hint: 'Three control rooms, marked on the table. A room is held by a unit standing inside it with no enemy inside. Hold all three at the end of a turn after the 5th and the battle is won; otherwise two of three at the end of turn 20.',
     check: function (state) {
       var held = { A: 0, B: 0 };

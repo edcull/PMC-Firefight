@@ -117,6 +117,21 @@ function ok(name, cond, note) {
   const phone = await p.evaluate(() => ({ wide: document.documentElement.scrollWidth > innerWidth, narrow: !!document.querySelector('#camp-body .sys-svg.narrow') }));
   ok('the system fits the width, drawn larger to tap', !phone.wide && phone.narrow, JSON.stringify(phone));
   await p.screenshot({ path: path.join(SHOTS, 'system-phone.png'), fullPage: true });
+  // the card is not the battle's slide-out drawer (every <aside> is, on a phone): a tap shows it, on the page
+  const onPage = () => p.evaluate(() => { const c = document.querySelector('#camp-body .sys-card'), r = c.getBoundingClientRect();
+    return { fixed: getComputedStyle(c).position === 'fixed', inside: r.left >= 0 && r.right <= innerWidth + 1, take: !!c.querySelector('[data-take-offer]'), land: !!c.querySelector('[data-sys="land"]'), zoom: !!document.querySelector('#camp-body .sys-view.zoomin') }; });
+  const pid = await p.evaluate(() => window.PMC_CAMPAIGN.get().offers[0].site.planet);
+  await p.click('#camp-body .sys-planet[data-planet="' + pid + '"]');
+  await p.waitForTimeout(300);
+  const pc = await onPage();
+  ok('a planet tapped on a phone: its card on the page, under the system', !pc.fixed && pc.inside && pc.land, JSON.stringify(pc));
+  await p.click('#camp-body [data-sys="land"]');
+  await p.waitForTimeout(300);
+  const landed = await onPage();
+  await p.click('#camp-body .sys-pin');
+  await p.waitForTimeout(300);
+  const pinned = await onPage();
+  ok('...a pin tapped: the offer shown, and the map not zoomed in again', landed.zoom && pinned.take && pinned.inside && !pinned.fixed && !pinned.zoom, JSON.stringify([landed, pinned]));
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
 
   await b.close();
