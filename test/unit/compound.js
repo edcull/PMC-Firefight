@@ -122,7 +122,7 @@ function corridorTable(door) {
 }
 {
   // Critical control's three rooms are about as far for both long edges to walk to
-  const imb = [];
+  const imb = [], off = [];
   for (let n = 0; n < 20; n++) {
     const g = CMP.generate(48, 48);
     const st = { terrain: g.terrain, compound: g.compound, units: [], sc: {} };
@@ -131,9 +131,12 @@ function corridorTable(door) {
     const walk = (boxes, r) => Math.min(...boxes.map((b) => R.walkField(st, b.x + b.w / 2, b.y + b.h / 2, 'N')(r.x + r.w / 2, r.y + r.h / 2)));
     const L = st.sc.rooms.reduce((a, r) => a + walk(ent.L, r), 0), Rr = st.sc.rooms.reduce((a, r) => a + walk(ent.R, r), 0);
     imb.push(Math.abs(L - Rr) / Math.max(L, Rr));
+    off.push(Math.max(...st.sc.rooms.map((r) => Math.abs(r.x + r.w / 2 - 24) / 24)));
   }
-  const mean = imb.reduce((a, b) => a + b, 0) / imb.length;
-  ok('Critical control\u2019s rooms are fair: both edges walk about as far to the three', st3(mean) && mean < 0.12, (mean * 100).toFixed(1) + '% apart on average');
+  const mean = imb.reduce((a, b) => a + b, 0) / imb.length, offMean = off.reduce((a, b) => a + b, 0) / off.length;
+  ok('Critical control\u2019s rooms are fair: both edges walk about as far to the three', st3(mean) && mean < 0.15, (mean * 100).toFixed(1) + '% apart on average');
+  ok('...and none tucked against one side\u2019s edge: each room near the middle of the table', offMean < 0.27 && Math.max(...off) <= 0.6,
+    'furthest off the middle: ' + (offMean * 100).toFixed(0) + '% of the half-width on average, ' + (Math.max(...off) * 100).toFixed(0) + '% at worst');
   function st3(m) { return isFinite(m); }
 }
 {

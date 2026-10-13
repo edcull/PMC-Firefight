@@ -119,7 +119,7 @@
       function count(c) { return foes.filter(function (e) { return R.inches(c.x, c.y, e.x, e.y) - 2 * UR <= 12; }).length; }
       var best = { x: u.x, y: u.y }, bn = count(best), bs = bn * 10 + R.coverAt(E.state, u.x, u.y, u);
       R.reachable(E.state, u, u.move).forEach(function (c) {
-        if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2) || !canStand(u, c)) return;
+        if (thinned(c) || !canStand(u, c)) return;
         var n = count(c), sc = n * 10 + R.coverAt(E.state, c.x, c.y, u) - c.cost * 0.1;
         if (sc > bs) { bs = sc; bn = n; best = c; }
       });
@@ -214,7 +214,7 @@
     function bestDriveSpot(u, allowance, score) {
       var best = null, bs = -Infinity;
       R.reachable(E.state, u, allowance).forEach(function (c) {
-        if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2) || !canStand(u, c)) return;
+        if (thinned(c) || !canStand(u, c)) return;
         var v = score(c);
         if (v > bs) { bs = v; best = c; }
       });
@@ -547,7 +547,7 @@
     function bestStrafe(u) {
       var spots = R.reachable(E.state, u, u.move), best = null;
       spots.forEach(function (c) {
-        if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)) return;
+        if (thinned(c)) return;
         if (!canStand(u, c)) return;                     // nowhere it could not hover (p. 38)
         var n = 0, own = 0;
         activeUnits().forEach(function (t) {
@@ -1122,7 +1122,7 @@
       var here = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look);
       var best = null, bestScore = here + 0.6;
       R.reachable(E.state, u, allowance).forEach(function (c) {
-        if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)) return;
+        if (thinned(c)) return;
         if (!canStand(u, c)) return;
         var s = scoreSpot(u, c, goal, behaviour, look);
         if (s > bestScore) { bestScore = s; best = c; }
@@ -1206,14 +1206,24 @@
         aiAct(u);
         return;
       }
+      /* Unseen, cover and the enemy's sights do not come into it yet: the counter makes
+         its way round the walls towards its goal (R.walkField), as far as it can go
+         this activation, keeping a little off its friends so a corridor does not jam.
+         At the goal (a room to hold) it spreads out there rather than stand on the rest. */
       var goal = pickGoal(u, 'neutral'), allowance = u.move + moveBonus(u, 'move');
-      var look = R.groundLookup(E.state);
-      var best = null, bestScore = scoreSpot(u, { x: u.x, y: u.y }, goal, 'neutral', look) + 0.3;
+      var wf = R.walkField(E.state, goal.x, goal.y, u.side);
+      var walkTo = function (p) { var w = wf ? wf(p.x, p.y) : Infinity; return w < Infinity ? w : R.inches(p.x, p.y, goal.x, goal.y) + 20; };
+      var crowd = function (p) {
+        var n = 0;
+        E.state.units.forEach(function (f) { if (f.alive && f !== u && f.side === u.side && f.x >= 0 && R.inches(p.x, p.y, f.x, f.y) < 2.5) n++; });
+        return n;
+      };
+      var hiddenScore = function (p) { return -walkTo(p) - 1.2 * crowd(p); };
+      var best = null, bestScore = hiddenScore({ x: u.x, y: u.y }) + 0.5;
       R.reachable(E.state, u, allowance).forEach(function (c) {
-        if ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)) return;
         if (!canStand(u, c)) return;
-        var s = scoreSpot(u, c, goal, 'neutral', look);
-        if (s > bestScore) { bestScore = s; best = c; }
+        var sc = hiddenScore(c);
+        if (sc > bestScore) { bestScore = sc; best = c; }
       });
       u.activated = true;
       if (!best) { logLine('ai', 'A counter [' + u.side + '] waits where it is, unseen.'); endActivation(u); return; }
@@ -1408,6 +1418,11 @@
       var foe = nearestEnemy(u);
       return foe ? { x: foe.unit.x, y: foe.unit.y } : { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
     }
+
+    /* The spots an AI move weighs: every other half-inch on an open table (enough to
+       choose from, and quick); inside a compound every one, as a corridor's middle
+       line falls on the half-inch. */
+    function thinned(c) { return !E.state.compound && ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)); }
 
     function scoreSpot(u, c, goal, behaviour, look) {
       /* Run for Your Lives! (p. 147): "moving as far as possible away from any

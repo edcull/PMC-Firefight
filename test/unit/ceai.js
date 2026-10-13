@@ -152,5 +152,42 @@ console.log('\nCovering Fire! before a move');
   ok('...none where it ends out of every enemy\'s sight', !e.query.coverMove(a, { x: 19.5, y: 31 }) && !f.activated);
 }
 
+console.log('\nMaking its way in');
+{
+  /* The computer on both sides of a compound: its counters make their way in down
+     the corridors, round the walls, and do not sit at their own edge (the middle
+     line of a corridor falls on the half-inch: every spot is weighed there). */
+  const games = [];
+  for (const scenario of ['ce_control', 'ce_clear']) {
+    const e = Engine.create();
+    e.start({ tier: 3, pl: 2, scenario, armyA: ['recruits', 'enforcers', 'irregulars', 'rookie', 'regular', 'regular'], armyB: ['regular', 'regular', 'recruits', 'enforcers', 'irregulars', 'rookie'],
+      nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel', mode: 'demo', planet: 'sparse' });
+    let edge = null, out = null;
+    for (let g = 0; g < 40000 && !out; g++) {
+      const s = e.state();
+      if (s.over) { out = { over: true }; break; }
+      if (s.phase === 'battle' && s.turn === 2 && !edge) {
+        // where each side came in: its units' mean x once all are on
+        edge = {};
+        ['A', 'B'].forEach((sd) => { const us = s.units.filter((u) => u.side === sd && u.alive && u.x >= 0); edge[sd] = us.reduce((a, u) => a + u.x, 0) / us.length < 24 ? 0 : 48; });
+      }
+      if (s.phase === 'battle' && s.turn === 9) {
+        out = {};
+        ['A', 'B'].forEach((sd) => { const us = s.units.filter((u) => u.side === sd && u.alive && u.x >= 0); out[sd] = us.reduce((a, u) => a + Math.abs(u.x - edge[sd]), 0) / us.length; });
+        const waits = s.log.filter((l) => /waits where it is, unseen/.test(l.text || '')).length, moves = s.log.filter((l) => /^A counter \[[AB]\] moves .*unseen/.test(l.text || '')).length;
+        out.waited = waits / Math.max(1, waits + moves);
+        break;
+      }
+      if (s.swapAsk) { e.intent(s.swapAsk.side, { k: 'swapdone' }); continue; }
+      if (s.faceAsk) { e.intent(s.faceAsk.side, { k: 'vfaceall' }); continue; }
+      if (s.phase === 'deploy' || s.phase === 'terrain') { e.intent('A', { k: 'autodeploy' }); e.intent('B', { k: 'autodeploy' }); e.intent('A', { k: 'start' }); continue; }
+      e.intent(s.activeSide || 'A', { k: 'step' });
+    }
+    games.push(out);
+  }
+  ok('by turn 9 both sides are well into the compound, not waiting at their own edge', games.every((g) => g && (g.over || (g.A > 12 && g.B > 12 && g.waited < 0.25))),
+    games.map((g) => g && (g.over ? 'over' : 'A ' + g.A.toFixed(1) + '", B ' + g.B.toFixed(1) + '", ' + Math.round(g.waited * 100) + '% of unseen counters waited')).join(' · '));
+}
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
