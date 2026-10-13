@@ -1088,10 +1088,12 @@
         var k = 0, shut = pr.lock === 'doorlock' ? 'all' : pr.lock === 'doorlockA' ? 'A' : pr.lock === 'doorlockB' ? 'B' : null;
         if (shut !== 'all') B.state.units.forEach(function (u) {
           if (!u.alive || u.aboard || u.side === shut) return;
-          var x = u.ax != null ? u.ax : u.x, y = u.ay != null ? u.ay : u.y;
+          var moving = u.ax != null, x = moving ? u.ax : u.x, y = moving ? u.ay : u.y;
           if (x < 0) return;
           var d = R.doorFront(pr, x, y);
-          k = Math.max(k, Math.min(1, Math.max(0, (REACH + 1.2 - d) / 1.2)));
+          // standing still it is open exactly when the rules have it open (and sight goes through);
+          // a unit walking up eases it open over the last stretch of its way
+          k = Math.max(k, d <= REACH ? 1 : moving ? Math.min(1, Math.max(0, (REACH + 1.2 - d) / 1.2)) : 0);
         });
         pr.openK = k;
       });

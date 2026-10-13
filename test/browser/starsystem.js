@@ -58,7 +58,7 @@ function ok(name, cond, note) {
   ok('a tap on a planet: its kind, conditions, who holds it and its contracts', /world/.test(card.text) && card.bar && /standing/.test(card.text) && card.land, card.text.slice(0, 160));
   await p.click('#camp-body [data-sys="land"]');
   await p.waitForTimeout(500);
-  const map = await p.evaluate(() => ({ map: !!document.querySelector('#camp-body .sys-map'), pins: document.querySelectorAll('#camp-body .sys-pin').length, back: !!document.querySelector('#camp-body [data-sys="back"]') }));
+  const map = await p.evaluate(() => ({ map: !!document.querySelector('#camp-body .sys-map'), pins: document.querySelectorAll('#camp-body .sys-pin').length, back: (() => { const b = document.getElementById('camp-back'); return !!b && !b.hidden && b.getAttribute('data-go') === 'sysback'; })() }));
   ok('Land on it: its map, the contracts pinned on it', map.map && map.pins >= 1 && map.back, JSON.stringify(map));
   await p.click('#camp-body .sys-pin');
   await p.waitForTimeout(300);

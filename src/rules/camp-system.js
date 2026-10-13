@@ -76,6 +76,10 @@
     return { gravity: W.gravity[d10()], atmosphere: W.atmosphere[d10()], anomaly: W.anomaly[d10()] };
   }
   function likeHome(w) { return !w || (w.gravity === 'standard' && w.atmosphere === 'standard' && w.anomaly === 'none'); }
+  /* Whose share is the campaign's own: 'you' alone; on a world played online, each
+     player's ('f' and their slot), with the other players' kept as theirs too. */
+  function keyOf(campaign) { return (campaign && campaign.systemKey) || YOU; }
+  function playersOf(campaign) { return (campaign && campaign.systemPlayers) || [keyOf(campaign)]; }
   function rivalsOf(campaign) {
     return (campaign.rivals && campaign.rivals.length ? campaign.rivals : [campaign.companies.B]).filter(Boolean);
   }
@@ -124,6 +128,15 @@
     var free = planets.filter(function (p) { return !p.home; });
     var base = free.length ? free[Math.floor(rand() * free.length)] : planets[Math.floor(rand() * planets.length)];
     base.base = true; give(base, YOU, 35);
+    // online, every player a base of their own (opts.players: their keys), apart where the planets allow
+    if (opts.players && opts.players.length) {
+      delete base.influence[YOU]; base.base = false;
+      opts.players.forEach(function (key) {
+        var open = planets.filter(function (p) { return !p.home && !p.base; });
+        var pick = open.length ? open[Math.floor(rand() * open.length)] : planets.filter(function (p) { return !p.base; })[0] || planets[0];
+        pick.base = pick.base || key; give(pick, key, 35);
+      });
+    }
     return sys;
   }
   // a home for a rival (on `at`, or the planet with the least influence on it), and a foothold or two besides
@@ -145,7 +158,7 @@
   function activeEvents(sys, p) {
     return (sys.events || []).filter(function (e) { return e.planet === p.id && e.until >= sys.turn; });
   }
-  function standing(sys, p) { return (p.influence[YOU] || 0); }
+  function standing(sys, p, key) { return (p.influence[key || YOU] || 0); }
   function standingName(n) { for (var i = 0; i < STANDING.length; i++) if (n >= STANDING[i].at) return STANDING[i].name; return 'Unknown'; }
   // who holds a planet: 50 or more of it; null where it is contested
   function holder(p) {
@@ -157,14 +170,15 @@
   /* ---- a new campaign turn: news, events, the forces that have come and gone ---- */
   function newTurn(campaign) {
     var sys = campaign.system;
-    if (!sys || sys.turnSeen === campaign.turn) return [];
+    // (online the players' turns run apart: the system moves on with the furthest along)
+    if (!sys || (sys.turnSeen != null && campaign.turn <= sys.turnSeen)) return [];
     var first = sys.turnSeen == null;
     sys.turnSeen = campaign.turn; sys.turn = campaign.turn;
-    var said = [], names = rivalsOf(campaign).map(function (co) { return co.name; });
+    var said = [], names = rivalsOf(campaign).map(function (co) { return co.name; }), mine = playersOf(campaign);
     // a force that has left loses half its hold a turn; a new one is given a home
     sys.planets.forEach(function (p) {
       Object.keys(p.influence).forEach(function (k) {
-        if (k === YOU || names.indexOf(k) >= 0) return;
+        if (k === YOU || mine.indexOf(k) >= 0 || names.indexOf(k) >= 0) return;
         p.influence[k] = Math.floor(p.influence[k] / 2);
         if (!p.influence[k]) delete p.influence[k];
         if (p.home === k) p.home = null;
@@ -232,22 +246,29 @@
   function afterBattle(campaign, site, rivalName, winner) {
     var sys = campaign.system, p = sys && site && byId(sys, site.planet);
     if (!p) return null;
-    var was = holder(p), lines = [];
+    var me = keyOf(campaign), was = holder(p), lines = [];
     if (winner === 'A') {
       var moved = Math.min(12, p.influence[rivalName] || 0);
-      take(p, rivalName, moved); give(p, YOU, 12);
-      lines.push('Your standing on ' + p.name + ' rises to ' + standing(sys, p) + ' (' + standingName(standing(sys, p)) + ').');
+      take(p, rivalName, moved); give(p, me, 12);
+      lines.push('Your standing on ' + p.name + ' rises to ' + standing(sys, p, me) + ' (' + standingName(standing(sys, p, me)) + ').');
     } else if (winner === 'B') {
-      take(p, YOU, 10); give(p, rivalName, 10);
-      lines.push(rivalName + ' tightens its grip on ' + p.name + '; your standing there falls to ' + standing(sys, p) + '.');
+      take(p, me, 10); give(p, rivalName, 10);
+      lines.push(rivalName + ' tightens its grip on ' + p.name + '; your standing there falls to ' + standing(sys, p, me) + '.');
     }
-    var now = holder(p);
+    var now = holder(p), names = (campaign && campaign.systemNames) || {};
     if (now !== was) {
-      lines.push(now === YOU ? 'You hold ' + p.name + ' now.' : now ? now + ' holds ' + p.name + ' now.' : p.name + ' is contested now.');
+      lines.push(now === me ? 'You hold ' + p.name + ' now.' : now ? (names[now] || now) + ' holds ' + p.name + ' now.' : p.name + ' is contested now.');
     }
-    lines.forEach(function (t) { sys.news.push({ turn: campaign.turn, text: t }); });
+    // (the news is the system's, read by every player: told in the third person online)
+    var told = me === YOU ? lines : lines.map(function (t) {
+      var who = names[me] || 'A player';
+      return t.replace(/^Your standing on (.*) rises to (\d+).*$/, who + '\u2019s standing on $1 rises to $2.')
+        .replace(/; your standing there falls to (\d+)\.$/, '; ' + who + '\u2019s standing there falls to $1.')
+        .replace(/^You hold /, who + ' holds ');
+    });
+    told.forEach(function (t) { sys.news.push({ turn: campaign.turn, text: t }); });
     sys.news = sys.news.slice(-12);
-    return { planet: p.id, lines: lines, standing: standing(sys, p) };
+    return { planet: p.id, lines: lines, standing: standing(sys, p, me) };
   }
 
   // a system as it came from a save or a file, made safe to read (null if it is no system)
@@ -259,7 +280,7 @@
       var inf = {};
       if (p.influence && typeof p.influence === 'object') Object.keys(p.influence).slice(0, 16).forEach(function (k) { var v = +p.influence[k]; if (v > 0) inf[k] = Math.min(100, Math.floor(v)); });
       return { id: p.id, name: String(p.name || p.id).slice(0, 30), kind: kinds[p.kind] ? p.kind : 'sparse', world: R.cleanWorld(p.world) || { gravity: 'standard', atmosphere: 'standard', anomaly: 'none' },
-        orbit: +p.orbit || 1, angle: +p.angle || 0, size: +p.size || 1, home: typeof p.home === 'string' ? p.home : null, base: !!p.base, influence: inf };
+        orbit: +p.orbit || 1, angle: +p.angle || 0, size: +p.size || 1, home: typeof p.home === 'string' ? p.home : null, base: typeof p.base === 'string' ? p.base.slice(0, 12) : !!p.base, influence: inf };
     });
     s.events = Array.isArray(s.events) ? s.events.filter(function (e) { return e && typeof e.planet === 'string' && e.kind !== 'bounty'; }) : [];
     s.news = Array.isArray(s.news) ? s.news.slice(-12) : [];
@@ -270,7 +291,7 @@
     KINDS: KINDS, KIND_NAMES: KIND_NAMES, EVENTS: EVENTS, YOU: YOU,
     makeSystem: makeSystem, newTurn: newTurn, placeOffers: placeOffers, afterBattle: afterBattle, cleanSystem: cleanSystem,
     byId: byId, conditions: conditions, activeEvents: activeEvents, standing: standing, standingName: standingName, holder: holder,
-    likeHome: likeHome, seeded: seeded
+    likeHome: likeHome, seeded: seeded, keyOf: keyOf
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCSystem;
 })(typeof window !== 'undefined' ? window : global);

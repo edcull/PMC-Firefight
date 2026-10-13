@@ -1021,13 +1021,39 @@
     return null;
   }
   /* Critical control's three rooms: the three rooms "a reasonable distance from
-     entry points of both sides" (p. 162) — the ones nearest the middle of the
-     compound, between the two long edges. */
+     entry points of both sides" (p. 162) — and fair to both: how far each is to
+     walk from each long edge's nearest entry point, through the compound (its
+     doors as they stand), and the three taken that make it most even — the two
+     edges' walks to the three as near equal in all as can be had, and each room
+     as near halfway between them. (Which side has which edge is drawn later.) */
   function controlRooms(state) {
-    var mid = R.BOARD.w / 2;
-    return state.terrain.filter(function (r) { return r.kind === 'room'; })
-      .map(function (r) { return { r: r, d: Math.abs(r.x + r.w / 2 - mid) + Math.random() * 0.01 }; })
-      .sort(function (a, b) { return a.d - b.d; }).slice(0, 3).map(function (q) { return q.r; });
+    var rooms = state.terrain.filter(function (r) { return r.kind === 'room'; });
+    var ent = state.compound && state.compound.entries;
+    if (!ent || !ent.L.length || !ent.R.length || !R.walkField || rooms.length < 3) {
+      var mid = R.BOARD.w / 2;
+      return rooms.map(function (r) { return { r: r, d: Math.abs(r.x + r.w / 2 - mid) + Math.random() * 0.01 }; })
+        .sort(function (a, b) { return a.d - b.d; }).slice(0, 3).map(function (q) { return q.r; });
+    }
+    function walk(boxes, r) {
+      var best = Infinity;
+      boxes.forEach(function (b) {
+        var wf = R.walkField(state, b.x + b.w / 2, b.y + b.h / 2, 'N');
+        if (wf) best = Math.min(best, wf(r.x + r.w / 2, r.y + r.h / 2));
+      });
+      return best;
+    }
+    var cand = rooms.map(function (r) { return { r: r, L: walk(ent.L, r), R: walk(ent.R, r) }; })
+      .filter(function (c) { return isFinite(c.L) && isFinite(c.R); });
+    if (cand.length < 3) return rooms.slice(0, 3);
+    var best = null, bs = Infinity;
+    for (var i = 0; i < cand.length; i++) for (var j = i + 1; j < cand.length; j++) for (var k = j + 1; k < cand.length; k++) {
+      var t = [cand[i], cand[j], cand[k]];
+      var sumL = t[0].L + t[1].L + t[2].L, sumR = t[0].R + t[1].R + t[2].R;
+      var each = t.reduce(function (a, c) { return a + Math.abs(c.L - c.R); }, 0);
+      var score = Math.abs(sumL - sumR) + 0.5 * each + Math.random() * 0.01;
+      if (score < bs) { bs = score; best = t; }
+    }
+    return best.map(function (c) { return c.r; });
   }
 
   SCENARIOS.ce_clear = {

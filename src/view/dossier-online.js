@@ -327,6 +327,11 @@
       // everyone says they are ready, the host too; then the host has Start
       var allReady = (L.slots || []).every(function (x) { return x.kind !== 'human' || x.ready; });
       h += '</div>';
+      // where the contracts are found: across a star system (camp-system.js), or a plain list — the host's to say
+      h += '<div class="field camp-sys"><label for="olob-sys">Contracts</label><select id="olob-sys"' + (host ? '' : ' disabled') + '>' +
+        '<option value="system"' + (L.starSystem ? ' selected' : '') + '>Across a star system \u2014 planets, their conditions, contracts on their maps</option>' +
+        '<option value="list"' + (L.starSystem ? '' : ' selected') + '>A plain list of offers</option></select>' +
+        '<p class="hint small">A star system turns Other Worlds on: every planet has conditions of its own.</p></div>';
       // the optional rules every battle of it is fought under: the host's to set, read by the rest
       if (U.optionBoxes) h += '<div class="field olob-opts" id="olob-opts"><label>Optional rules</label>' + U.optionBoxes(L.options, host ? '' : ' disabled', true) + '</div>';
       /* as the skirmish room has it, above the chat: the way out a quiet link, and the
@@ -586,6 +591,7 @@
           var can = lv.indexOf(n) >= 0;
           return '<option value="' + n + '"' + (shownPl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + '</option>';
         }).join('') + '</select>' + (plNote ? '<p class="dnote">' + plNote + '</p>' : '') + '</div></div>';
+      h += E.contractKit().compoundBox(k.scenario, k.pl, !!E.online.host);
 
       var pk = pickNow(k, me), units = entriesOf(co, pk), keys = units.map(function (e) { return R.entryPick(e); });
       var chk = R.checkArmy(keys, k.tier, k.pl, co.doctrines, pk.tactic || null, co.faction);
@@ -915,6 +921,7 @@
         return true;
       }
       if (target.id === 'olob-pub') { cmd('lobbyListed', { on: !!target.checked }); return true; }
+      if (target.id === 'olob-sys') { cmd('lobbySystem', { on: target.value === 'system' }); return true; }
       if (target.hasAttribute('data-opt') && target.closest('#olob-opts')) { cmd('lobbyOptions', { options: U.readOptions(document.getElementById('olob-opts')) }); return true; }
       if (target.hasAttribute('data-olob-ai')) { cmd('lobbySlot', { i: +target.getAttribute('data-olob-ai'), kind: target.checked ? 'ai' : 'open' }); return true; }
       if (target.hasAttribute('data-olob-army')) { cmd('lobbyFaction', { i: +target.getAttribute('data-olob-army'), faction: target.value }); return true; }

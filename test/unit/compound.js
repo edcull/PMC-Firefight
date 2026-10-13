@@ -121,6 +121,22 @@ function corridorTable(door) {
   ok('...and every section can still be reached by both sides', split === 0, split + ' cut off');
 }
 {
+  // Critical control's three rooms are about as far for both long edges to walk to
+  const imb = [];
+  for (let n = 0; n < 20; n++) {
+    const g = CMP.generate(48, 48);
+    const st = { terrain: g.terrain, compound: g.compound, units: [], sc: {} };
+    SC.SCENARIOS.ce_control.objectives(st);
+    const ent = g.compound.entries;
+    const walk = (boxes, r) => Math.min(...boxes.map((b) => R.walkField(st, b.x + b.w / 2, b.y + b.h / 2, 'N')(r.x + r.w / 2, r.y + r.h / 2)));
+    const L = st.sc.rooms.reduce((a, r) => a + walk(ent.L, r), 0), Rr = st.sc.rooms.reduce((a, r) => a + walk(ent.R, r), 0);
+    imb.push(Math.abs(L - Rr) / Math.max(L, Rr));
+  }
+  const mean = imb.reduce((a, b) => a + b, 0) / imb.length;
+  ok('Critical control\u2019s rooms are fair: both edges walk about as far to the three', st3(mean) && mean < 0.12, (mean * 100).toFixed(1) + '% apart on average');
+  function st3(m) { return isFinite(m); }
+}
+{
   const st = corridorTable();
   // a unit off the middle line, but in the corridor: it still fills it
   const mid = { id: 'm', side: 'A', x: 12, y: 22.4, alive: true };

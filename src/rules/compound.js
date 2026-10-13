@@ -75,7 +75,7 @@
 
     /* --- rooms and halls, a cell clear of each other and of the entry columns --- */
     var rooms = [];
-    var want = Math.max(4, Math.round(N / 42)), halls = rows > 18 ? 2 : 1;
+    var want = Math.max(6, Math.round(N / 24)), halls = rows > 18 ? 2 : 1;
     var need = opts.rooms || 0;
     for (var t = 0; t < 400 && rooms.length < want; t++) {
       var hall = rooms.length < halls;
@@ -84,10 +84,18 @@
       if (rand() < 0.5) { var sw = rw; rw = rh; rh = sw; }
       var ri = 3 + Math.floor(rand() * (cols - 6 - rw + 1)), rj = 1 + Math.floor(rand() * (rows - 2 - rh + 1));
       if (ri < 3 || rj < 1 || ri + rw > cols - 3 || rj + rh > rows - 1) continue;
+      // a cell clear of the others; now and then two rooms side by side, wall to wall (a doorway between, below)
+      var touch = rand() < 0.35;
       var clash = rooms.some(function (r) {
-        return ri <= r.i + r.w && ri + rw >= r.i && rj <= r.j + r.h && rj + rh >= r.j;
+        return touch ? ri < r.i + r.w && ri + rw > r.i && rj < r.j + r.h && rj + rh > r.j
+          : ri <= r.i + r.w && ri + rw >= r.i && rj <= r.j + r.h && rj + rh >= r.j;
       });
       if (clash) continue;
+      // ...side by side, not corner to corner
+      if (touch && rooms.some(function (r) {
+        var gx = Math.max(r.i - (ri + rw), ri - (r.i + r.w)), gy = Math.max(r.j - (rj + rh), rj - (r.j + r.h));
+        return gx === 0 && gy === 0;
+      })) continue;
       rooms.push({ i: ri, j: rj, w: rw, h: rh, kind: hall ? 'hall' : 'room' });
     }
     if (rooms.length < 3 || rooms.filter(function (r) { return r.kind === 'room'; }).length < need) return null;
@@ -98,6 +106,21 @@
         if (ii > r.i) open[ek(idx(ii - 1, jj), idx(ii, jj))] = true;
         if (jj > r.j) open[ek(idx(ii, jj - 1), idx(ii, jj))] = true;
       }
+    });
+    // rooms wall to wall: a doorway through the wall they share, about its middle
+    rooms.forEach(function (a, ai) {
+      rooms.forEach(function (b, bi) {
+        if (bi <= ai) return;
+        var edges = [];
+        if (a.i + a.w === b.i || b.i + b.w === a.i) {
+          var x0 = a.i + a.w === b.i ? a.i + a.w - 1 : a.i, x1 = a.i + a.w === b.i ? b.i : a.i - 1;
+          for (var jj = Math.max(a.j, b.j); jj < Math.min(a.j + a.h, b.j + b.h); jj++) edges.push(ek(idx(x0, jj), idx(x1, jj)));
+        } else if (a.j + a.h === b.j || b.j + b.h === a.j) {
+          var y0 = a.j + a.h === b.j ? a.j + a.h - 1 : a.j, y1 = a.j + a.h === b.j ? b.j : a.j - 1;
+          for (var ii = Math.max(a.i, b.i); ii < Math.min(a.i + a.w, b.i + b.w); ii++) edges.push(ek(idx(ii, y0), idx(ii, y1)));
+        }
+        if (edges.length) open[edges[Math.floor((edges.length - 1) / 2 + rand() * 0.99) % edges.length]] = true;
+      });
     });
 
     /* --- entry points, spread down each long edge --- */
@@ -187,7 +210,7 @@
       linked.push(best.b); pairs.push([best.a, best.b]);
     }
     nodes.forEach(function (n, a) {
-      if (!n.room || rand() > 0.45) return;
+      if (!n.room || rand() > 0.7) return;
       var far = nodes.map(function (m, b) { return { b: b, d: Math.abs(m.x - n.x) + Math.abs(m.y - n.y) }; })
         .filter(function (q) { return q.b !== a && nodes[q.b].room && !pairs.some(function (pr) { return (pr[0] === a && pr[1] === q.b) || (pr[1] === a && pr[0] === q.b); }); })
         .sort(function (p1, p2) { return p1.d - p2.d; })[0];
@@ -430,8 +453,8 @@
   }
 
   /* The generator's doors and dangerous sections. A doorway where a corridor
-     meets a room or a hall mostly has a door; between two corridor sections, a
-     few do. "Some sections may be designated as dangerous due to the presence
+     meets a room or a hall mostly has a door; between two rooms side by side,
+     always; between two corridor sections, a few do. "Some sections may be designated as dangerous due to the presence
      of explosive materials, toxic chemicals, fragile tanks" (p. 158): the odd
      room or hall, at the chance asked for. */
   function furnish(g, rand, danger) {
@@ -440,8 +463,9 @@
     Object.keys(g.open).sort().forEach(function (k) {
       var ab = k.split('|'), a = +ab[0], b = +ab[1];
       if (grid[a] < 0 || grid[b] < 0 || grid[a] === grid[b]) return;
-      var both = g.kindOf[grid[a]] === 'corridor' && g.kindOf[grid[b]] === 'corridor';
-      if (rand() < (both ? 0.12 : 0.75)) g.doors[k] = true;
+      var ca = g.kindOf[grid[a]] === 'corridor', cb = g.kindOf[grid[b]] === 'corridor';
+      // two rooms wall to wall always have a door between them (open, they would be one room)
+      if (rand() < (ca && cb ? 0.12 : !ca && !cb ? 1 : 0.75)) g.doors[k] = true;
     });
     g.kindOf.forEach(function (kind, s) { if (kind !== 'corridor' && danger && rand() < danger) g.danger[s] = true; });
   }
