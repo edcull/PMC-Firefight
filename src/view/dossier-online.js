@@ -586,6 +586,7 @@
           var can = lv.indexOf(n) >= 0;
           return '<option value="' + n + '"' + (shownPl === n ? ' selected' : '') + (can ? '' : ' disabled') + '>' + n + '</option>';
         }).join('') + '</select>' + (plNote ? '<p class="dnote">' + plNote + '</p>' : '') + '</div></div>';
+      h += E.contractKit().compoundBox(k.scenario, k.pl, !!E.online.host);
 
       var pk = pickNow(k, me), units = entriesOf(co, pk), keys = units.map(function (e) { return R.entryPick(e); });
       var chk = R.checkArmy(keys, k.tier, k.pl, co.doctrines, pk.tactic || null, co.faction);

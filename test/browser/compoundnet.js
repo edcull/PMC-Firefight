@@ -69,8 +69,8 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
     const built = await p2.evaluate(() => { const s = window.PMC_STATE(); return s ? { compound: !!s.compound, log: (s.log || []).some((l) => /laid out by hand/.test(l.text || '')) } : null; });
     ok('the battle is fought in it', built && built.compound && built.log, JSON.stringify(built));
 
-    console.log('\n  A campaign\'s compounds, from its hub');
-    // a single-player campaign under Close Encounters: the hub keeps one compound a size of table
+    console.log('\n  A campaign\'s compounds, on a Close Encounters contract');
+    // a single-player campaign under Close Encounters: one compound a size of table, laid out on the contract fought in it
     const p3 = await b.newPage({ viewport: { width: 1340, height: 900 } });
     p3.on('pageerror', e => errs.push(e.message));
     await p3.goto('http://localhost:' + PORT + '/');
@@ -83,20 +83,28 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
       camp.companies.A.name = 'Tunnel Rats';
       camp.rivals = C.foundRivals(camp, 1) || camp.rivals;
       camp.options = { closeEncounters: true, ceFreq: 'all' };
+      delete camp.system;
       window.PMC_CAMPAIGN.set(camp);
       window.PMC_CAMPAIGN.open('hub');
-      const line = document.querySelector('.hubcmp');
-      return line ? { text: line.textContent, btns: line.querySelectorAll('[data-go="cmpedit"]').length } : { text: null };
+      return { cmp: !!document.querySelector('.hubcmp'), opts: !!document.querySelector('.hubopts') };
     });
-    ok('the hub of a campaign fought in compounds lists them, each the game\'s and to lay out', hub && /4′ × 4′: the game’s/.test(hub.text || '') && hub.btns === 2, JSON.stringify(hub));
-    if (hub && hub.btns) {
-      await p3.evaluate(() => document.querySelector('.hubcmp [data-go="cmpedit"][data-size="48x48"]').click());
+    ok('the hub no longer carries the compounds or the optional rules', !hub.cmp && !hub.opts, JSON.stringify(hub));
+    await p3.evaluate(() => document.querySelector('#camp-body [data-go="fmodal"][data-kind="rivals"]').click());
+    await p3.waitForTimeout(200);
+    await p3.evaluate(() => document.querySelector('[data-rivcontract]').click());
+    await p3.waitForTimeout(250);
+    await p3.evaluate(() => { const t = document.querySelector('#camp-body [data-take-offer]'); if (t) t.click(); });
+    await p3.waitForTimeout(300);
+    const box = await p3.evaluate(() => { const c = document.querySelector('#camp-body .ccompound'); return c ? { text: c.textContent, lay: !!c.querySelector('.start[data-go="cmpedit"][data-size="48x48"]') } : null; });
+    ok('a Close Encounters contract: its compound, the game\'s, to lay out', box && /4′ × 4′ table/.test(box.text) && /game lays out/.test(box.text) && box.lay, JSON.stringify(box));
+    if (box && box.lay) {
+      await p3.evaluate(() => document.querySelector('#camp-body .ccompound [data-go="cmpedit"]').click());
       await p3.waitForTimeout(200);
       await p3.evaluate(() => { document.querySelector('[data-cmp="gen"]').click(); document.getElementById('cmp-done').click(); });
       await p3.waitForTimeout(300);
-      const kept = await p3.evaluate(() => ({ line: document.querySelector('.hubcmp').textContent, plan: !!(window.PMC_CAMPAIGN.get().compounds || {})['48x48'] }));
-      ok('...one laid out is kept with the campaign', kept.plan && /4′ × 4′: laid out by hand/.test(kept.line), kept.line);
-      await p3.screenshot({ path: path.join(SHOTS, 'hub-compounds.png') }).catch(() => {});
+      const kept = await p3.evaluate(() => ({ text: (document.querySelector('#camp-body .ccompound') || {}).textContent || '', gen: !!document.querySelector('#camp-body .ccompound [data-go="cmpgen"]'), plan: !!(window.PMC_CAMPAIGN.get().compounds || {})['48x48'] }));
+      ok('...one laid out is kept with the campaign', kept.plan && /laid out by hand/.test(kept.text) && kept.gen, JSON.stringify(kept));
+      await p3.screenshot({ path: path.join(SHOTS, 'contract-compound.png') }).catch(() => {});
     }
     ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   } finally {

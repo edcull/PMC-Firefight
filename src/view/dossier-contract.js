@@ -62,6 +62,20 @@
        scenario and its world, the Battle Tier and Priority Levels, which side of it
        `side` is on (what that asks of them), and what wins it. `job`: an offer or a
        contract ({ scenario, planet, tier, roles }); `levels`: those it may be fought at. */
+    /* A Close Encounters contract is fought inside a compound (p. 157), one kept for
+       each size of table: the game's, laid out for the battle, or one laid out by hand
+       (compound-edit.js) — changed here, where it is fought, by whoever keeps the
+       campaign (online, its host). The table follows the Priority Level. */
+    function compoundBox(scenario, pl, keeper) {
+      var CMP = root.PMCCompound, SC = root.PMCScen;
+      if (!CMP || !scenario || !(scenario.ce || SC && SC.CE_ORDER && SC.CE_ORDER.indexOf(scenario.id) >= 0)) return '';
+      var b = R.boardFor(pl), k = CMP.sizeKey(b), mine = (E.camp.compounds || {})[k];
+      return '<div class="cpan ccompound"><div class="cprom-head"><b>The compound</b> \u2014 ' + (b.h > 48 ? '6\u2032 \u00d7 4\u2032' : '4\u2032 \u00d7 4\u2032') + ' table</div>' +
+        '<div class="cpstat">' + (mine ? 'Fought in the compound laid out by hand for this table.' : 'The game lays out a compound for this battle.') + '</div>' +
+        (keeper ? '<div class="cacts">' + (mine ? '<button type="button" class="lnk cdrop" data-go="cmpgen" data-size="' + k + '">Use the game\u2019s</button>' : '') +
+          '<button type="button" class="start" data-go="cmpedit" data-size="' + k + '">' + (mine ? 'Change the layout' : 'Lay one out') + '</button></div>'
+          : '<div class="cpstat dnote">The campaign\u2019s host lays out the compounds.</div>') + '</div>';
+    }
     function jobCard(job, side, levels) {
       var sc = root.PMCScen && root.PMCScen.SCENARIOS[job.scenario.id];
       var h = '<div class="offer-job"><div class="offer-scen"><b>' + esc(job.scenario.name) + '</b>' +
@@ -485,6 +499,7 @@
             (can ? '' : ' disabled') + '>' + n + (n === 3 ? ' \u2014 6\u2032 \u00d7 4\u2032 table' : '') +
             (can ? '' : ' (neither force can fill it)') + '</option>';
         }).join('') + '</select></div></div>';   // the world was rolled with the job, and shown on the offer
+      if (!second) h += compoundBox(E.contract.scenario, E.contract.pl, true);
 
       var list = '';
       /* What each Tier asks for at this Battle Tier and Priority Level, and how
@@ -670,7 +685,7 @@
     }
 
     return {
-      offersView: offersView, offerPanel: offerPanel, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, wear: wear, tpBadge: tpBadge, contractView: contractView,
+      offersView: offersView, offerPanel: offerPanel, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, compoundBox: compoundBox, wear: wear, tpBadge: tpBadge, contractView: contractView,
       forceBox: forceBox, scrollTop: scrollTop, byMark: byMark, pickOrder: pickOrder, groupHead: E.groupHead, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
       autoPick: autoPick, fight: fight, seatBack: seatBack
     };

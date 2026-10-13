@@ -112,7 +112,9 @@
          where a contract or a battle under way says so instead */
       if (!done && !finished && (E.online || E.camp.mode === 'solo') && !/data-go="(obattle|ocontract)"/.test(onote)) {
         // fought across a star system (camp-system.js): the system, with the contracts on its planets
-        h += '<div class="cpan onote hubtake">' + (E.camp.system && !E.online ? '<button class="start" data-go="offers">Take a contract</button>'
+        // with the other forces beside it: their figures and dossiers (the contracts are the system's)
+        h += '<div class="cpan onote hubtake">' + (E.camp.system ? '<div class="cacts"><button class="lnk cdrop" data-go="fmodal" data-kind="rivals">Other forces</button>' +
+            '<button class="start" data-go="offers">Take a contract</button></div>'
           : '<button class="start" data-go="fmodal" data-kind="rivals">Take a contract</button>') +
           // a single-player campaign begun before star systems (or with the plain list): one charted now, if wanted
           (!E.online && E.camp.mode === 'solo' && !E.camp.system && root.PMCSystem ? '<button class="lnk hubchart" data-go="chartsys">Chart a star system for this campaign</button>' : '') + '</div>';
@@ -140,9 +142,6 @@
         '<button type="button" class="lnk ico danger" data-go="wipe" title="Abandon the campaign — every dossier goes (it asks first)" aria-label="Abandon the campaign">' + ICON_ABANDON + '</button>') +
         '</div>' +
         '</div>';
-      // the optional rules it is fought under, when any are on (set when it was raised)
-      if (U.optionsLine && root.PMC.optionNames(E.camp.options).length) h += '<p class="dnote hubopts">Optional rules: ' + U.optionsLine(E.camp.options) + '</p>';
-      h += compoundsLine();
       h += companyPanel(cur, hs, hubBar(), manageHtml);
       // recruiting: a window over the dossier, drawn only while open
       if (E.openModal === 'recruit') h += cmodal('recruit', C.words(cur).recruit + ' \u2014 ' + cur.kUC + ' ' + C.money(cur), '<div class="cmodal-scroll">' + recruitList(cur) + '</div>');
@@ -154,7 +153,7 @@
       }
       // the fallen, opened from the company view
       h += cmodal('memorial', C.words(cur).memorial, '<div class="cmodal-scroll">' + memorialList(cur) + '</div>');
-      h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : 'Take a contract',
+      h += cmodal('rivals', E.camp.mode === 'hotseat' ? (hs === 'B' ? 'Player 1' : 'Player 2') : E.camp.system ? 'The other forces' : 'Take a contract',
         // the other player's force shown as a rival's is: its figures, its kind and creed, and their dossier to open
         '<div class="cmodal-scroll">' + (E.camp.mode === 'hotseat' ? rivalPanel(hs === 'B' ? A : B, 0)
           // the other players first, then the AI forces (each keeps its own place for its dossier and its contract)
@@ -229,20 +228,6 @@
       return '<div class="hubbar">' + seat +
         '<button class="lnk" data-go="roster">Dossier</button>' +
         manage + go + '</div>';
-    }
-    /* The compounds its Close Encounters battles are fought in (p. 157), one for each
-       size of table: the game's, laid out for each battle, or one laid out by hand
-       (compound-edit.js) — by whoever keeps the campaign; online, by its host. */
-    function compoundsLine() {
-      var o = E.camp.options || {}, CMP = root.PMCCompound;
-      if (!CMP || !(o.ceFreq || o.closeEncounters)) return '';
-      var keeper = !E.online || !!E.online.host;
-      return '<p class="dnote hubcmp">Close Encounters compounds \u2014 ' + CMP.TABLES.map(function (b) {
-        var k = CMP.sizeKey(b), p = (E.camp.compounds || {})[k];
-        return '<span class="hubcmp-t">' + (b.h > 48 ? '6\u2032 \u00d7 4\u2032' : '4\u2032 \u00d7 4\u2032') + ': ' + (p ? 'laid out by hand' : 'the game\u2019s') +
-          (keeper ? ' <button type="button" class="lnk" data-go="cmpedit" data-size="' + k + '">' + (p ? 'change' : 'lay one out') + '</button>' +
-            (p ? ' <button type="button" class="lnk" data-go="cmpgen" data-size="' + k + '">use the game\u2019s</button>' : '') : '') + '</span>';
-      }).join(' \u00b7 ') + '</p>';
     }
     function companyPanel(co, side, bar, manage) {
       // the force being managed (the one with the bar) fills the screen, whichever side it is
@@ -496,6 +481,8 @@
       if (!(mine.roster || []).length) return off('Found your force first');
       // too battered to field a real army: it sits this turn out and rebuilds
       if (co.regrouping) return off('Regrouping this turn');
+      // across a star system the AI forces' jobs are on its planets, taken there, not from their dossiers
+      if (E.camp.system && !co.human) return '';
       // alone: the job they offer this turn (or one rolled for them), then the contract screen
       if (!E.online) return '<button class="start" data-rivcontract="' + ri + '">Contract</button>';
       if (on.contract || on.duel || on.coop) return off('Something else is under way');

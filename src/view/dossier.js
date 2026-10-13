@@ -279,9 +279,8 @@
       if (!found.length) { storeNote = ''; return null; }
       found.sort(function (x, y) { return (y.value.turn || 0) - (x.value.turn || 0); });
       var win = found[0];
-      storeNote = win.id === 'local' ? ''
-        : 'Loaded from ' + BACKENDS[win.id].name +
-          (found.length > 1 ? ' — it was further along than this browser’s copy.' : '.');
+      // which copy it came from is not said: only a copy saved elsewhere since asks (above)
+      storeNote = '';
       return C.rehydrate(win.value);
     },
     async save(camp) {
