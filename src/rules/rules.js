@@ -977,6 +977,7 @@
   function pointSegDist(px, py, x1, y1, x2, y2) { return (KIT_SPACE || kitSpace()).pointSegDist(px, py, x1, y1, x2, y2); }
   function hasLoS(state, a, b) { return (KIT_SPACE || kitSpace()).hasLoS(state, a, b); }
   function lineClear(state, a, b) { return (KIT_SPACE || kitSpace()).lineClear(state, a, b); }
+  function doorOpen(state, r) { return (KIT_SPACE || kitSpace()).doorOpen(state, r); }
   function groundLevel(state, x, y) { return (KIT_SPACE || kitSpace()).groundLevel(state, x, y); }
   function levelOf(state, u) { return (KIT_SPACE || kitSpace()).levelOf(state, u); }
   function heightUnder(state, u) { return (KIT_SPACE || kitSpace()).heightUnder(state, u); }
@@ -2471,7 +2472,7 @@
     profile: function (k) { return BY_KEY[k]; },
     checkArmy: checkArmy, rollArmy: rollArmy, TERRAIN: TERRAIN, WALL_REACH: WALL_REACH, wallCoverAt: wallCoverAt,
     d10: d10, d6: d6, d3: d3, answering: answering, mayRoll: mayRoll, angleWrap: angleWrap, esc: esc,
-    inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear,
+    inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, lineClear: lineClear, doorOpen: doorOpen,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, infamyPanic: infamyPanic, panicSweep: panicSweep, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
     terrainAt: terrainAt, nearestFree: nearestFree, walkField: walkField, applyResult: applyResult, dmgMod: dmgMod, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
     groundLevel: groundLevel, levelOf: levelOf, heightUnder: heightUnder,

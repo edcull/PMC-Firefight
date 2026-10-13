@@ -552,6 +552,21 @@
       }
       return false;
     }
+    /* A door stands open while a unit is at it (house rule): one with the edge of
+       its base within half an inch of the door, either side of it. Open, it no
+       longer blocks sight. A door locked to both sides stays shut; one locked to
+       a side opens only for the other side's units. */
+    var DOOR_REACH = UNIT_R + 0.5;
+    function doorOpen(state, r) {
+      var t = TERRAIN[r.kind];
+      if (!t || !t.door || t.lockedFor === 'both') return false;
+      for (var i = 0; i < state.units.length; i++) {
+        var u = state.units[i];
+        if (!u.alive || u.aboard || u.x < 0 || u.reserve || u.side === t.lockedFor) continue;
+        if (rectPointDist(r, u.x, u.y) <= DOOR_REACH) return true;
+      }
+      return false;
+    }
     // one line of sight, from (ax, ay) by a to (bx, by) by b
     function lineClearAt(state, a, b, ax, ay, bx, by) {
       for (var i = 0; i < state.terrain.length; i++) {
@@ -577,6 +592,8 @@
              inside that piece as well as units outside it" (p. 42): in it as the
              cover rule counts it, by the most of its base, not only its middle. */
           if (!t.hill && (countsIn(state, a, r) || countsIn(state, b, r))) continue;
+          // a door someone is standing at is open, and is no longer in the way (doorOpen)
+          if (t.door && doorOpen(state, r)) continue;
           return false;
         }
       }
@@ -801,7 +818,7 @@
       inPoly: inPoly, pieceDepth: pieceDepth, placePiece: placePiece, turnPoint: turnPoint,
       turnPiece: turnPiece, shapePiece: shapePiece, terrainAt: terrainAt, terrainOf: terrainOf, nearestFree: nearestFree, walkField: walkField,
       footprint: footprint, kindsUnder: kindsUnder, coverAt: coverAt, segRect: segRect,
-      pointSegDist: pointSegDist, hasLoS: hasLoS, lineClear: lineClear, groundLevel: groundLevel,
+      pointSegDist: pointSegDist, hasLoS: hasLoS, lineClear: lineClear, doorOpen: doorOpen, DOOR_REACH: DOOR_REACH, groundLevel: groundLevel,
       levelOf: levelOf, tooHighToHover: tooHighToHover, onHill: onHill, unitNear: unitNear
     };
   };

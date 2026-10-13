@@ -1077,16 +1077,21 @@
         if (!onView(bx, by)) return;
         order.push({ depth: bx + by, draw: 'boarding', u: u, x: bx, y: by, k: k, age: age, up: bd.up });
       });
-      /* A door opens for a unit walking through it: its leaves slide back into the
-         frame as the unit comes up to it and close again once it is past, by how
-         near the moving unit is. One locked to both sides stays shut. */
+      /* A door stands open while a unit is at it (R.doorOpen: the edge of its base
+         within half an inch), and is open for sight then too; a unit walking up to
+         it opens it as it comes, its leaves sliding back into the frame, and they
+         close again once it is past. One locked to both sides stays shut; one
+         locked to a side opens only for the other side. */
+      var REACH = 1.5;
       (B.vc.props || []).forEach(function (pr) {
         if (pr.kind !== 'door') return;
-        var k = 0;
-        if (pr.lock !== 'doorlock') B.state.units.forEach(function (u) {
-          if (!u.alive || u.ax == null || u.ay == null) return;
-          var d = R.rectPointDist(pr, u.ax, u.ay);
-          k = Math.max(k, Math.min(1, Math.max(0, (2.4 - d) / 1.2)));
+        var k = 0, shut = pr.lock === 'doorlock' ? 'all' : pr.lock === 'doorlockA' ? 'A' : pr.lock === 'doorlockB' ? 'B' : null;
+        if (shut !== 'all') B.state.units.forEach(function (u) {
+          if (!u.alive || u.aboard || u.side === shut) return;
+          var x = u.ax != null ? u.ax : u.x, y = u.ay != null ? u.ay : u.y;
+          if (x < 0) return;
+          var d = R.rectPointDist(pr, x, y);
+          k = Math.max(k, Math.min(1, Math.max(0, (REACH + 1.2 - d) / 1.2)));
         });
         pr.openK = k;
       });
