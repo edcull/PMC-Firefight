@@ -735,9 +735,10 @@
           var lamp = pr.lock === 'door' ? '#7bdc6a' : pr.lock === 'doorlock' ? '#ff4a3a' : '#ffb02e';
           var band = pr.lock === 'doorlock' ? DOOR_RED : pr.lock === 'door' ? null : DOOR_AMBER;
           var lt = Math.max(2, Math.round(H * 0.3));
-          // the hatch is set back in the wall's thickness, the sides of the opening showing in front of it
+          /* the hatch is flush with the room's face of the wall (pr.out points to the
+             corridor side), the doorway's depth recessed towards the corridor */
           function hatch() {
-            var hoff = 0;
+            var hoff = -(pr.out || 1) * (WT / 2 - 0.07);
             /* Shut, as a door is unless something is going through it (it blocks sight,
                p. 157): the shutter down over the doorway. Working, a band of hazard
                stripes across it; locked, a band of warning paint (red both sides, amber one). */
@@ -876,7 +877,7 @@
       var lt = Math.max(2, Math.round(H * 0.3)), oh = H - lt, cen = hz ? pr.y + pr.h / 2 : pr.x + pr.w / 2, base = hz ? pr.x : pr.y;
       // a point along the doorway (u), across it (off, + towards the viewer) and up (z)
       function P(u, off, z) { var q = hz ? toScreen(base + u, cen + off) : toScreen(cen + off, base + u); return [q.x, q.y - dl - z]; }
-      var u0 = jl, u1 = len - jl, F = WT / 2, w = (u1 - u0) / 2;
+      var u0 = jl, u1 = len - jl, F = WT / 2, w = (u1 - u0) / 2, LO = -(pr.out || 1) * (WT / 2 - 0.07);
       g.save();
       g.beginPath();
       [P(u0, F, 0), P(u1, F, 0), P(u1, F, oh), P(u1, -F, oh), P(u0, -F, oh), P(u0, F, oh)].forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); });
@@ -893,13 +894,13 @@
       // the leaves, each sliding out of the opening into the frame on its own side
       var slide = w * k;
       [[u0 - slide, u0 + w - slide], [u0 + w + slide, u1 + slide]].forEach(function (L) {
-        poly(g, [P(L[0], 0, 0), P(L[1], 0, 0), P(L[1], 0, oh), P(L[0], 0, oh)], vgrad(g, P(L[0], 0, oh)[1], P(L[0], 0, 0)[1], [DOOR_STEEL[4], DOOR_STEEL[3], DOOR_STEEL[2]]));
+        poly(g, [P(L[0], LO, 0), P(L[1], LO, 0), P(L[1], LO, oh), P(L[0], LO, oh)], vgrad(g, P(L[0], LO, oh)[1], P(L[0], LO, 0)[1], [DOOR_STEEL[4], DOOR_STEEL[3], DOOR_STEEL[2]]));
         var by = Math.round(H * 0.3), bh = Math.max(2, Math.round(H * 0.16)), n = 4;
         for (var i = 0; i < n; i++) {
           var a0 = L[0] + (L[1] - L[0]) * i / n, a1 = L[0] + (L[1] - L[0]) * (i + 1) / n;
-          poly(g, [P(a0, 0, by), P(a1, 0, by), P(a1, 0, by + bh), P(a0, 0, by + bh)], pr.lock === 'door' ? (i % 2 ? '#1b1a17' : '#c9a23c') : pr.lock === 'doorlock' ? DOOR_RED[3] : DOOR_AMBER[3]);
+          poly(g, [P(a0, LO, by), P(a1, LO, by), P(a1, LO, by + bh), P(a0, LO, by + bh)], pr.lock === 'door' ? (i % 2 ? '#1b1a17' : '#c9a23c') : pr.lock === 'doorlock' ? DOOR_RED[3] : DOOR_AMBER[3]);
         }
-        edgeLine(g, P(L[1], 0, 1), P(L[1], 0, oh - 1), '#1a1e22', 1);
+        edgeLine(g, P(L[1], LO, 1), P(L[1], LO, oh - 1), '#1a1e22', 1);
       });
       g.restore();
       // its lamp, lit bright while it stands open
