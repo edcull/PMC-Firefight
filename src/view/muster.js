@@ -855,8 +855,8 @@
       });
       return out;
     }
-    // the optional rules ticked on the battlefield step (none for a demo)
-    function chosenOptions(kind) { return kind === 'demo' || !U ? {} : U.readOptions(el('opt-boxes')); }
+    // the optional rules ticked on the battlefield step (a demo's too: Close Encounters, Other Worlds and the rest are worth watching)
+    function chosenOptions() { return !U ? {} : U.readOptions(el('opt-boxes')); }
 
     /* ---- a two-force skirmish, mustered in three steps ----
        Hotseat, co-op and demo all build two forces on this screen in turn, and
