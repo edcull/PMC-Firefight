@@ -993,7 +993,7 @@
       PIXEL: PIXEL, PREFAB: PREFAB, ROOF: ROOF, STONE: STONE, a: a, boulder: boulder, box: box,
       brokenWall: brokenWall, conifer: conifer, dot: dot, edgeLine: edgeLine, ellipse: ellipse, lerp2: lerp2,
       pebble: pebble, poly: poly, rect: rect, rng: rng, shadowBlob: shadowBlob, toScreen: toScreen,
-      vgrad: vgrad
+      vgrad: vgrad, WALL_THEME: WALL_THEME
     });
 
     return {

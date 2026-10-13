@@ -8,7 +8,7 @@
   root.PMCIsoPropKinds = function (S) {
     var BAG = S.BAG, BARK = S.BARK, BASALTS = S.BASALTS, BRICK = S.BRICK, CHAR = S.CHAR,
         CONCRETE = S.CONCRETE, K = S.K, LEAF = S.LEAF, PIXEL = S.PIXEL, PREFAB = S.PREFAB, ROOF = S.ROOF,
-        STONE = S.STONE, a = S.a, boulder = S.boulder, box = S.box, brokenWall = S.brokenWall,
+        STONE = S.STONE, WALL_THEME = S.WALL_THEME, a = S.a, boulder = S.boulder, box = S.box, brokenWall = S.brokenWall,
         conifer = S.conifer, dot = S.dot, edgeLine = S.edgeLine, ellipse = S.ellipse, lerp2 = S.lerp2,
         pebble = S.pebble, poly = S.poly, rect = S.rect, rng = S.rng, shadowBlob = S.shadowBlob,
         toScreen = S.toScreen, vgrad = S.vgrad;
@@ -724,7 +724,8 @@
             var tb = pr.themeB == null ? -1 : pr.themeB, ta = pr.themeA == null ? -1 : pr.themeA;
             var o = { kind: 'door', x: q.x, y: q.y, w: q.w, h: q.h, height: height, seed: pr.seed,
               open: hz ? [['N', q.x, q.x + q.w, ta], ['S', q.x, q.x + q.w, tb]] : [['W', q.y, q.y + q.h, ta], ['E', q.y, q.y + q.h, tb]] };
-            box(g, o, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: dl + (up || 0), solid: true });
+            // the frame looks into a room on the side towards the viewer: all of it in that room's colours, the reveal of the opening too
+            box(g, o, (tb >= 0 && WALL_THEME[tb]) || BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: dl + (up || 0), solid: true });
           }
           function slab(q, height, up, palQ) {
             var o = { kind: 'door', x: q.x, y: q.y, w: q.w, h: q.h, height: height, seed: pr.seed };
