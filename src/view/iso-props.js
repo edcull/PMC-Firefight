@@ -87,7 +87,27 @@
           for (var j = j0; j < j1; j++) for (var i = i0; i < i1; i++) m[j * NX + i] = v;
         }
         walls.forEach(function (q) { mark(drawnRect(q), 1); });
-        var doorBands = doors.map(drawnRect);
+        /* A door's frame stops where the wall it meets comes out to its grid line:
+           an end already covered by a wall (a fifth of an inch at a time) is the
+           wall's, not the door's, so the frame meets that wall flush. */
+        function covered(q) {
+          var i0 = Math.round(q.x / RES), i1 = Math.round((q.x + q.w) / RES), j0 = Math.round(q.y / RES), j1 = Math.round((q.y + q.h) / RES);
+          for (var j = j0; j < j1; j++) for (var i = i0; i < i1; i++) if (!m[j * NX + i]) return false;
+          return true;
+        }
+        var doorBands = doors.map(function (d) {
+          var q = drawnRect(d), hz = q.w >= q.h;
+          for (var k = 0; k < 3; k++) {
+            var a0 = hz ? { x: q.x, y: q.y, w: RES, h: q.h } : { x: q.x, y: q.y, w: q.w, h: RES };
+            if (covered(a0)) { if (hz) { q.x += RES; q.w -= RES; } else { q.y += RES; q.h -= RES; } } else break;
+          }
+          for (var k2 = 0; k2 < 3; k2++) {
+            var a1 = hz ? { x: q.x + q.w - RES, y: q.y, w: RES, h: q.h } : { x: q.x, y: q.y + q.h - RES, w: q.w, h: RES };
+            if (covered(a1)) { if (hz) q.w -= RES; else q.h -= RES; } else break;
+          }
+          d._drawn = q;
+          return q;
+        });
         doorBands.forEach(function (q) { mark(q, 0); });
         var pieces = [];
         for (var j = 0; j < NY; j++) for (var i = 0; i < NX; i++) {
@@ -456,7 +476,10 @@
           var secA = floors.filter(function (q) { return inAny([q], dhz ? dmx : dmx - 1, dhz ? dmy - 1 : dmy); })[0];
           var secB = floors.filter(function (q) { return inAny([q], dhz ? dmx : dmx + 1, dhz ? dmy + 1 : dmy); })[0];
           var areaOf = function (q) { return !q ? 1e9 : q.kind === 'corridor' ? 0 : q.w * q.h; };
-          props.push({ kind: 'door', x: r.x, y: r.y, w: r.w, h: r.h, horiz: dhz, lock: r.kind, out: areaOf(secB) <= areaOf(secA) ? 1 : -1, height: a(BULK_H),
+          // the frame as long as the walls at its ends leave it (wallPieces): its own thickness, its run trimmed
+          var dq = (wallPieces(), r._drawn) || r;
+          var drect = dhz ? { x: dq.x, y: r.y, w: dq.w, h: r.h } : { x: r.x, y: dq.y, w: r.w, h: dq.h };
+          props.push({ kind: 'door', x: drect.x, y: drect.y, w: drect.w, h: drect.h, horiz: dhz, lock: r.kind, out: areaOf(secB) <= areaOf(secA) ? 1 : -1, height: a(BULK_H),
             // the colours of the rooms either side, for the wall faces looking into them
             themeA: themeAt(dhz ? dmx : dmx - 1, dhz ? dmy - 1 : dmy), themeB: themeAt(dhz ? dmx : dmx + 1, dhz ? dmy + 1 : dmy), seed: (rr2() * 9999) | 0 });
           return;
