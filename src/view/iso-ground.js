@@ -155,8 +155,8 @@
        something — plain plate, a sick bay's pale tiles, a workshop's ochre, the
        green of the hydroponics, a command room's blue, the reactor's rust — kept
        dark enough that the troops in it still stand out. The corridors stay plain
-       steel. Drawn from the table's seed and where the room is, so it is the
-       same room each time it is drawn. */
+       steel. Chosen as the compound is laid out (PMCCompound.roomTheme), so the
+       walls facing the room take the same colours. */
     var ROOM_THEMES = [
       null,
       { ramp: ['#3a4244', '#424b4d', '#4a5456', '#535d5f', '#5c6769'], fleck: ['#2a3133', '#6f7c7e', '#3f6b6a'], rim: '#1c2224' },    // sick bay
@@ -165,11 +165,9 @@
       { ramp: ['#262d38', '#2c3441', '#323b4a', '#394354', '#404b5e'], fleck: ['#1a1f27', '#56637a', '#3c5c8a'], rim: '#141820' },    // command
       { ramp: ['#352826', '#3d2e2b', '#453430', '#4e3b36', '#57423c'], fleck: ['#241a18', '#6e534a', '#8a3a24'], rim: '#1c1412' }     // reactor
     ];
-    function roomTheme(r, seed) {
-      if (r.kind !== 'room' && r.kind !== 'hall') return null;
-      if (r.theme != null) return ROOM_THEMES[r.theme % ROOM_THEMES.length];
-      var h = Math.imul((seed | 0) ^ Math.round(r.x * 37 + r.y * 101), 2654435761) >>> 0;
-      return ROOM_THEMES[(h >>> 7) % ROOM_THEMES.length];
+    function roomTheme(r) {
+      var t = root.PMCCompound ? root.PMCCompound.roomTheme(r) : null;
+      return t == null ? null : ROOM_THEMES[t];
     }
     function floorOf(kind) {
       if (ROCKF && kind === 'rocks') return ROCKF;
@@ -343,7 +341,7 @@
       var floorsDone = false;
       function floorOf1(r, ri) {
         if (r.kind === 'hill') return;
-        if (FLOOR[r.kind]) paintFloor(d, r, roomTheme(r, seed) || floorOf(r.kind), seed + ri * 131, lat, fN, fD);
+        if (FLOOR[r.kind]) paintFloor(d, r, roomTheme(r) || floorOf(r.kind), seed + ri * 131, lat, fN, fD);
       }
 
       if (!sliced) { latRows(gy0, gy1); soilRows(cy0, cy1); return finish(); }

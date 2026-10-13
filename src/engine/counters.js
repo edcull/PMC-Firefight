@@ -394,7 +394,10 @@
     }
 
     /* ---- special equipment (p. 159): the list and the choosing in rules/compound.js ---- */
-    var KIT = root.PMCCompound.KIT, cleanKit = root.PMCCompound.cleanKit, defaultKit = root.PMCCompound.defaultKit;
+    var CMP = root.PMCCompound, KIT = root.PMCCompound.KIT, cleanKit = root.PMCCompound.cleanKit, defaultKit = root.PMCCompound.defaultKit;
+    // the eight facings by name, as the screen shows them (the Dig in! octagon)
+    var WAY = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
+    function wayName(f) { return 'to the ' + WAY[((Math.round((f + Math.PI / 4) / (Math.PI / 4)) % 8) + 8) % 8]; }
     function kitLeft(u, key) { var k = E.state.kit && E.state.kit[u.side]; return k ? k[key] || 0 : 0; }
     function spend(u, key) { E.state.kit[u.side][key] -= 1; }
     // may this unit use that piece now: unsuppressed, on the table, revealed, in a compound
@@ -416,31 +419,32 @@
       E.state.charges.push({ sec: E.state.terrain.indexOf(r), side: u.side, sappers: R.has(u, 'Sappers') });
       logLine('note', u.label + ' plants Satchel Charges in ' + secName(r) + ' — they go off in the End phase.');
     }
-    /* Ballistic Barrier: a low wall up to 6" long within 1" of the unit. Put across
-       the way the nearest enemy (as the walk goes) would come: across a corridor,
-       wall to wall; in a room, 6" wide, and kept inside it. */
-    function barrier(u) {
-      var r = sectionOf(u.x, u.y);
+    /* Ballistic Barrier (PMCCompound.barrierPlan): portable shields across the
+       unit's front, 1" off, the way given; then the unit steps up behind them.
+       With no way given (the AI), the way of the nearest enemy as the walk goes,
+       or the next nearest way with room. True if they went down. */
+    function barrierWay(u) {
       var foes = E.state.units.filter(function (e) { return e.alive && e.side !== u.side && onTable(e) && !e.aboard; });
       var wf = R.walkField(E.state, u.x, u.y, u.side);
       var foe = foes.sort(function (a2, b2) { return (wf ? wf(a2.x, a2.y) : 0) - (wf ? wf(b2.x, b2.y) : 0) || R.unitDist(u, a2) - R.unitDist(u, b2); })[0];
-      var dx = foe ? foe.x - u.x : 1, dy = foe ? foe.y - u.y : 0;
-      var along = r && r.axis ? r.axis : Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
-      // within 1" of it, and near enough to shelter behind (the low wall's 1.5" to the middle)
-      var T = 0.6, gap = UR + 0.3, piece;
-      if (along === 'h') {
-        var x = u.x + (dx >= 0 ? gap : -gap - T), y0 = r ? r.y : u.y - 3, h = r ? Math.min(6, r.h) : 6;
-        if (r && r.h > 6) y0 = Math.max(r.y, Math.min(r.y + r.h - 6, u.y - 3));
-        piece = { kind: 'barricade', x: x, y: y0, w: T, h: h, kit: true };
-      } else {
-        var y = u.y + (dy >= 0 ? gap : -gap - T), x0 = r ? r.x : u.x - 3, w = r ? Math.min(6, r.w) : 6;
-        if (r && r.w > 6) x0 = Math.max(r.x, Math.min(r.x + r.w - 6, u.x - 3));
-        piece = { kind: 'barricade', x: x0, y: y, w: w, h: T, kit: true };
-      }
+      return { foe: foe, dir: R.nearestFacing(foe ? Math.atan2(foe.y - u.y, foe.x - u.x) : (u.side === 'A' ? 0 : Math.PI)) };
+    }
+    function barrier(u, dir) {
+      var plan;
+      if (dir == null) {
+        var w = barrierWay(u), tries = [];
+        for (var k = 0; k < 8; k++) tries.push(w.dir + Math.PI / 4 * (k % 2 ? (k + 1) / 2 : -k / 2));
+        for (var t = 0; t < tries.length && !(plan && plan.ok); t++) plan = CMP.barrierPlan(E.state, u, tries[t]);
+      } else plan = CMP.barrierPlan(E.state, u, dir);
+      if (!plan || !plan.ok) return false;
       spend(u, 'barrier');
-      E.state.terrain.push(piece);
-      logLine('note', u.label + ' throws up a Ballistic Barrier — a low wall ' + Math.max(piece.w, piece.h).toFixed(0) + '" long' + (foe ? ', facing ' + foe.label : '') + '.');
-      repaintTerrain([{ piece: piece }]);
+      plan.pieces.forEach(function (p) { E.state.terrain.push(p); });
+      var moved = !!plan.to;
+      if (moved) { u.x = plan.to.x; u.y = plan.to.y; }
+      logLine('note', u.label + ' sets up Ballistic Barrier shields ' + wayName(plan.pieces[0].face) +
+        (moved ? ' and moves up into their cover.' : ', but has no room to step up behind them.'));
+      repaintTerrain(plan.pieces.map(function (p) { return { piece: p }; }));
+      return true;
     }
     // after the move an incendiary or vacuum charge comes with: the section, picked off the board
     function afterKitMove(u, key) {
@@ -509,7 +513,7 @@
         var shotAt = E.state.units.some(function (e) {
           return e.alive && e.side !== u.side && e.side !== 'N' && onTable(e) && !e.aboard && !e.hidden && e.fp !== null && R.canShoot(E.state, e, u, 'fire', {});
         });
-        if (shotAt) { barrier(u); return done(u); }
+        if (shotAt && barrier(u)) return done(u);
       }
       return false;
     }
@@ -645,7 +649,7 @@
       sectionOf: sectionOf, explodeSection: explodeSection, setBurning: setBurning, putOut: putOut, firingHazard: firingHazard,
       hazardsBeginning: hazardsBeginning, hazardsEnd: hazardsEnd,
       KIT: KIT, cleanKit: cleanKit, defaultKit: defaultKit, kitLeft: kitLeft, kitUsable: kitUsable, throwTargets: throwTargets,
-      satchel: satchel, barrier: barrier, throwAt: throwAt, spendKit: spend, doThrow: doThrow, afterKitMove: afterKitMove,
+      satchel: satchel, barrier: barrier, barrierWay: barrierWay, throwAt: throwAt, spendKit: spend, doThrow: doThrow, afterKitMove: afterKitMove,
       seerOf: seerOf, hiddenStop: hiddenStop, hiddenMove: hiddenMove, afterHiddenMove: afterHiddenMove,
       revealUnit: revealUnit, revealSweep: revealSweep, fireAtWill: fireAtWill, reactShot: reactShot,
       detectReveal: detectReveal, canDetect: canDetect, soloSpot: soloSpot, aiKit: aiKit, aiCover: aiCover,

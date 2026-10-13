@@ -768,11 +768,19 @@
     }
     function onHill(state, p) { return !!p && p.x >= 0 && terrainAt(state, p.x, p.y) === 'hill'; }
 
+    /* The room kept between units: the rules' 1" from another unit holds against
+       the enemy (and anyone, where it is not said whose unit is asking), but a
+       unit may close up to its own side's to a quarter inch (house rule: the
+       tokens are bigger than the men on them, and a squad stacking up on a door
+       stands shoulder to shoulder). */
+    var FRIEND_GAP = 0.25;
     function unitNear(state, x, y, ignore, pad) {
+      var side = ignore && ignore.side;
       for (var i = 0; i < state.units.length; i++) {
         var u = state.units[i];
         if (!u.alive || u === ignore) continue;
-        if (Math.hypot(u.x - x, u.y - y) < 2 * UNIT_R + (pad || 0)) return u;
+        var gap = side && u.side === side ? Math.min(pad || 0, FRIEND_GAP) : (pad || 0);
+        if (Math.hypot(u.x - x, u.y - y) < 2 * UNIT_R + gap) return u;
       }
       return null;
     }

@@ -914,6 +914,11 @@
     doorlockA: { name: 'Door (locked to A)', blocks: true, impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'A' },
     // the automated defence system's control panel (p. 160): "does not count as terrain", only marks the spot
     panel:     { name: 'Control panel', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
+    /* A compound's fittings, set against a room's walls: crates and lockers a
+       unit has to go round but sees over, and machinery it can neither cross
+       nor see past. */
+    crates:    { name: 'Crates and lockers', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
+    machinery: { name: 'Machinery',   blocks: true,  impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     breached:  { name: 'Breached door', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, wreck: true },
     doorlockB: { name: 'Door (locked to B)', blocks: true, impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'B' }
   };

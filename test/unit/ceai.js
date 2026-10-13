@@ -82,7 +82,7 @@ console.log('\nBallistic Barrier');
   const wall = st.terrain[n0];
   ok('shot at down a bare corridor with nothing to answer: it throws up a Ballistic Barrier', !!wall && wall.kit && st.kit.A.barrier === 0 && a.activated,
     wall ? JSON.stringify(wall) : 'none');
-  ok('...across the corridor, between it and the gun', wall && wall.x > a.x && wall.x < b.x && wall.y <= corridor.y + 0.01 && wall.y + wall.h >= corridor.y + corridor.h - 0.01);
+  ok('...across its front, between it and the gun, and it moves up into their cover', wall && wall.x > a.x && wall.x < b.x && wall.h > 2 * R.UNIT_R && a.x > 4 && R.coverFor(st, b, a).v === 2, JSON.stringify([a.x, R.coverFor(st, b, a)]));
 }
 {
   const { e, st } = stage(['regular'], ['regular'], { barrier: 1 });

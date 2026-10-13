@@ -183,7 +183,7 @@
           terrain: (ui.terrain || []).map(function (r) { return E.state.terrain.indexOf(r); }),
           deployPick: ui.deployPick,
           markKind: ui.markKind,
-          digDir: ui.mode === 'digface' ? ui.digDir : null,     // Dig in!: the facing offered
+          digDir: ui.mode === 'digface' || ui.mode === 'barrierface' ? ui.digDir : null,     // Dig in! (or a Ballistic Barrier): the facing offered
           markPicks: idsOf(ui.markPicks),
           hint: ui.hint,
           tsetHint: ui.tsetHint || '',

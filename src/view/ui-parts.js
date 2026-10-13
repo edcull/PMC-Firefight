@@ -185,19 +185,19 @@
   }
 
   /* ---------- the optional rules (R.OPTIONS) ----------
-     A box each, the rule's name with what it does under it. `on` is the options
+     A box each, the rule's name, with what it does in its tooltip. `on` is the options
      switched on; `attrs` goes on every box (' disabled' where they may only be
      read). readOptions reads them back off the element holding them. */
   // `camp`: a campaign's boxes, without the ones a campaign sets another way (Close Encounters)
   function optionBoxes(on, attrs, camp) {
     var cf = (on && on.ceFreq) || 'off';
     return '<div class="opt-list">' + root.PMC.OPTIONS.filter(function (d) { return !camp || d.camp !== false; }).map(function (d) {
+      // the name only; what it does, and where it is in the book, in its tooltip (tips.js)
       return '<label class="opt-row"><input type="checkbox" data-opt="' + d.key + '"' + (on && on[d.key] ? ' checked' : '') + (attrs || '') + '>' +
-        '<span><b>' + esc(d.name) + '</b> <small class="opt-pg">p. ' + d.page + '</small><small class="opt-txt">' + esc(d.text) + '</small></span></label>';
+        '<span class="opt-name" data-tip="' + esc(d.text) + '" data-tip-title="' + esc(d.name + ' \u00b7 p. ' + d.page) + '">' + esc(d.name) + '</span></label>';
     }).join('') +
       // a campaign's Close Encounters: how often a contract is fought inside a compound (Appendix 1)
-      (camp ? '<label class="opt-row opt-sel"><span><b>Close Encounters</b> <small class="opt-pg">p. 157</small>' +
-        '<small class="opt-txt">How often a contract is fought inside a compound — corridors, rooms and doors; vehicles and aircraft stay at home.</small></span>' +
+      (camp ? '<label class="opt-row opt-sel"><span class="opt-name" data-tip="How often a contract is fought inside a compound — corridors, rooms and doors; vehicles and aircraft stay at home." data-tip-title="Close Encounters \u00b7 p. 157">Close Encounters</span>' +
         '<select data-opt="ceFreq"' + (attrs || '') + '>' + [['off', 'Never'], ['low', '1 contract in 10'], ['mid', 'Half the contracts'], ['all', 'Every contract']].map(function (q) {
           return '<option value="' + q[0] + '"' + (cf === q[0] ? ' selected' : '') + '>' + q[1] + '</option>';
         }).join('') + '</select></label>' : '') + '</div>';

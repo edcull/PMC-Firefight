@@ -657,6 +657,7 @@
       else if (ui.mode === 'enter' && ui.sections.length && ui.selected) html = sectionPanel(ui.selected);
       else if (ui.mode === 'disembark' && ui.selected && !isAI(ui.selected.side) && offBoard(ui.selected).length > 1) html = dropPanel(ui.selected);
       else if (ui.mode === 'digface' && ui.selected && !isAI(ui.selected.side)) html = digFaceCard(ui.selected);
+      else if (ui.mode === 'barrierface' && ui.selected && !isAI(ui.selected.side)) html = digFaceCard(ui.selected, true);
       else if (ui.preview) html = movePreviewCard();
       else if (ui.targets.length && ui.selected && atThisScreen(ui.selected.side) && ['fire', 'aux', 'advance-fire', 'assault', 'designate'].indexOf(ui.mode) >= 0) {
         html = targetPanel(ui.selected);
@@ -1223,16 +1224,23 @@
     /* Dig in!: the eight facings as an octagon of buttons, laid out as they
        point on the screen, the one on offer marked; hovering one shows its fire
        arc on the table, pressing it digs the gun in that way. */
-    function digFaceCard(u) {
+    function digFaceCard(u, barrier) {
       var F = digFacings(), pick = digPreview(u);
       var grid = [[5, 6, 7], [4, -1, 0], [3, 2, 1]];     // NW N NE / W · E / SW S SE
       var cells = grid.map(function (row) {
         return row.map(function (i) {
           if (i < 0) return '<span class="dig-mid">' + esc(u.code || '') + '</span>';
           var on = Math.abs(R.angleWrap(F[i] - pick)) < 0.01;
-          return '<button class="dig-dir' + (on ? ' on' : '') + '" data-digface="' + i + '">' + DIG_NAMES[i] + '</button>';
+          return '<button class="dig-dir' + (on ? ' on' : '') + '" data-' + (barrier ? 'barrierface' : 'digface') + '="' + i + '">' + DIG_NAMES[i] + '</button>';
         }).join('');
       }).join('');
+      if (barrier) {
+        return '<div class="card"><h2>Ballistic Barrier — which way?</h2>' +
+          '<p class="sub">Portable shields go down 1" off ' + esc(u.name) + '\u2019s front, across its frontage, and it moves up behind them. They count as a low wall. ' +
+          'Tap a direction round the unit on the table, or here.</p>' +
+          '<div class="dig-oct">' + cells + '</div>' +
+          '<div class="acts"><button class="act" data-act="digcancel"><span>Cancel</span><small>Keep the shields for later</small></button></div></div>';
+      }
       return '<div class="card"><h2>Dig in! — which way?</h2>' +
         '<p class="sub">' + esc(u.name) + ' is laid over open sights and cannot be turned after: it fires only across the 90° in front, 6"–24". ' +
         'Tap a direction round the gun on the table, or here.</p>' +
@@ -1407,6 +1415,12 @@
       host.querySelectorAll('[data-vface]').forEach(function (b) {
         var i = +b.getAttribute('data-vface');
         b.addEventListener('click', function () { if (SFX) SFX.click(); ui.digHover = null; send({ k: 'vface', dir: digFacings()[i] }); });
+        b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
+        b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
+      });
+      host.querySelectorAll('[data-barrierface]').forEach(function (b) {
+        var i = +b.getAttribute('data-barrierface');
+        b.addEventListener('click', function () { if (SFX) SFX.click(); ui.digHover = null; send({ k: 'barrierface', dir: digFacings()[i] }); });
         b.addEventListener('mouseenter', function () { ui.digHover = digFacings()[i]; drawBoard(); });
         b.addEventListener('mouseleave', function () { ui.digHover = null; drawBoard(); });
       });

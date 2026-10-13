@@ -307,7 +307,62 @@
         if (p) entries[side].push({ x: p.x, y: p.y, w: p.w, h: p.h, sec: sec });
       });
     });
+    fit(out, g);
     return { terrain: out, entries: entries, doors: doors };
+  }
+
+  /* A room's fittings (the scatter): a few crates and lockers, and the odd bank of
+     machinery, stood against its walls — never across a doorway or an opening
+     into the next section, never in the middle of the floor, and only in a room
+     wide enough both ways (6") that a unit still gets round them. Drawn from the
+     layout itself, so the same plan is always fitted out the same way. Corridors
+     are left clear (their small clutter is only drawn, iso-props). */
+  function fit(out, g) {
+    var cols = g.cols, grid = g.grid, h = 2166136261;
+    for (var q = 0; q < grid.length; q++) h = Math.imul(h ^ (grid[q] + 3), 16777619);
+    var rand = function () { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+    // the openings: the middle of each edge between a room cell and a cell of another section it opens on to (a door or a gap)
+    var gaps = [];
+    for (var c = 0; c < grid.length; c++) {
+      if (grid[c] < 0) continue;
+      var i = c % cols, j = c / cols | 0;
+      [[1, 0], [0, 1]].forEach(function (d) {
+        if (i + d[0] >= cols || j + d[1] >= g.rows) return;
+        var b = (j + d[1]) * cols + i + d[0];
+        if (grid[b] < 0 || grid[b] === grid[c]) return;
+        var k = c < b ? c + '|' + b : b + '|' + c;
+        if (g.open[k]) gaps.push({ x: (i + 0.5 + d[0] * 0.5) * CELL, y: (j + 0.5 + d[1] * 0.5) * CELL });
+      });
+    }
+    // each room and hall fitted out as something (the art's floor and wall colours: roomTheme)
+    out.forEach(function (r) { if (r.kind === 'room' || r.kind === 'hall') r.theme = rand() * THEMES | 0; });
+    var placed = [];
+    function clear(r) {
+      var cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+      if (gaps.some(function (p) { return Math.hypot(p.x - cx, p.y - cy) < 2.4 + Math.max(r.w, r.h) / 2; })) return false;
+      return !placed.some(function (p) { return r.x < p.x + p.w + 0.6 && p.x < r.x + r.w + 0.6 && r.y < p.y + p.h + 0.6 && p.y < r.y + r.h + 0.6; });
+    }
+    out.filter(function (r) { return r.kind === 'room' || r.kind === 'hall'; }).forEach(function (room) {
+      if (room.w < 6 || room.h < 6) return;
+      var n = Math.max(1, Math.round(room.w * room.h / 28 * (0.6 + rand() * 0.6)));
+      var inset = WALL / 2;
+      for (var t = 0, got = 0; t < n * 8 && got < n; t++) {
+        var big = rand() < 0.35, along = big ? 1.8 + rand() * 1.2 : 0.9 + rand() * 0.9, deep = big ? 0.9 : 0.6 + rand() * 0.3;
+        var side = rand() * 4 | 0, r;
+        if (side === 0 || side === 1) {           // against the north or south wall
+          var x = room.x + inset + 0.3 + rand() * (room.w - along - inset * 2 - 0.6);
+          r = { x: x, y: side === 0 ? room.y + inset : room.y + room.h - inset - deep, w: along, h: deep };
+        } else {                                  // against the west or east wall
+          var y = room.y + inset + 0.3 + rand() * (room.h - along - inset * 2 - 0.6);
+          r = { x: side === 2 ? room.x + inset : room.x + room.w - inset - deep, y: y, w: deep, h: along };
+        }
+        if (!clear(r)) continue;
+        r.kind = big ? 'machinery' : 'crates';
+        r.x = Math.round(r.x * 10) / 10; r.y = Math.round(r.y * 10) / 10; r.w = Math.round(r.w * 10) / 10; r.h = Math.round(r.h * 10) / 10;
+        r.seed = (rand() * 9999) | 0;
+        placed.push(r); out.push(r); got++;
+      }
+    });
   }
 
   /* The generator's doors and dangerous sections. A doorway where a corridor
@@ -563,7 +618,7 @@
      of the four that need no fire to work with for each Priority Level. */
   var KIT = [
     { key: 'satchel', name: 'Satchel Charges', text: 'Plant them where the unit stands, then move up to its Movement. In the End phase, D6: 1-2 duds, 3-6 the section explodes (+1 with Sappers).' },
-    { key: 'barrier', name: 'Ballistic Barrier', text: 'Put down a low wall up to 6" long within 1" of the unit, towards the nearest enemy.' },
+    { key: 'barrier', name: 'Ballistic Barrier', text: 'Set portable shields 1" off the unit\u2019s front, the way chosen, then move up into their cover. They count as a low wall.' },
     { key: 'stun', name: 'Stun Grenades', text: 'With an Assault: the defender takes D6-1 SP and cannot fire at the attackers in that Assault.' },
     { key: 'incendiary', name: 'Incendiary Grenades', text: 'Move up to Movement, then a section it stands in or sees within 6": D6 2-6 sets it on fire.' },
     { key: 'vacuum', name: 'Vacuum Charges', text: 'Move up to Movement, then a burning section it stands in or sees within 6": D6 2-6 puts the fire out.' }
@@ -580,7 +635,65 @@
   }
   function defaultKit(pl) { var n = Math.max(1, pl || 1); return { satchel: n, barrier: n, stun: n, incendiary: n }; }
 
-  var KINDS = ['corridor', 'room', 'hall', 'bulkhead', 'door'];
+  /* Ballistic Barrier (p. 159): "places a barrier up to 6" long within 1" of
+     its position and then may move behind it. The barrier counts as a low wall
+     in all respects." Drawn as portable shields across the unit's own frontage,
+     set 1" off its token the way chosen (one of the eight facings), and the unit
+     steps up into contact behind them. Facing straight down the table's grid it
+     is one line of shields; on a diagonal, two short lines meeting in a corner,
+     so the low wall's own rules (straight pieces) hold either way. A way with no
+     room for them (a wall, a door, another unit, the table's edge) is refused.
+     { ok, why, pieces, to } — `to` where the unit steps to, or null to stay. */
+  var SHIELD_T = 0.35, SHIELD_GAP = 1;
+  function barrierPlan(state, u, dir) {
+    var R = root.PMC, UR = R.UNIT_R, f = R.nearestFacing(dir), T = SHIELD_T, D = UR + SHIELD_GAP;
+    var c = Math.cos(f), s = Math.sin(f), pieces = [], dx = 0, dy = 0;
+    function shield(x, y, w, h) { pieces.push({ kind: 'barricade', x: x, y: y, w: w, h: h, kit: true, shield: true, face: f }); }
+    if (Math.abs(s) < 1e-3) {
+      var L = UR * 2 + 0.4;
+      shield(c > 0 ? u.x + D : u.x - D - T, u.y - L / 2, T, L);
+      dx = (c > 0 ? 1 : -1) * (SHIELD_GAP - 0.1);
+    } else if (Math.abs(c) < 1e-3) {
+      var L2 = UR * 2 + 0.4;
+      shield(u.x - L2 / 2, s > 0 ? u.y + D : u.y - D - T, L2, T);
+      dy = (s > 0 ? 1 : -1) * (SHIELD_GAP - 0.1);
+    } else {
+      var sx = c > 0 ? 1 : -1, sy = s > 0 ? 1 : -1, Dd = D / Math.SQRT2, L1 = 1.9;
+      var cx = u.x + sx * Dd, cy = u.y + sy * Dd;
+      // the line across x and the line across y, meeting at the corner in front
+      shield(sx > 0 ? cx : cx - T, sy > 0 ? cy - L1 : cy - T, T, L1 + T);
+      shield(sx > 0 ? cx - L1 : cx, sy > 0 ? cy : cy - T, L1, T);
+      dx = sx * (Dd - UR - 0.1); dy = sy * (Dd - UR - 0.1);
+    }
+    function overlaps(a, b) { return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h; }
+    var others = state.units.filter(function (o) { return o !== u && o.alive && !o.reserve && !o.aboard && o.x >= 0; });
+    var solid = state.terrain.filter(function (r) { var t = R.TERRAIN[r.kind]; return t && (t.impassable || t.blocks || r.kind === 'barricade' || r.kind === 'wall'); });
+    for (var i = 0; i < pieces.length; i++) {
+      var p = pieces[i];
+      if (p.x < 0 || p.y < 0 || p.x + p.w > R.BOARD.w || p.y + p.h > R.BOARD.h) return { ok: false, why: 'the table\u2019s edge is in the way', pieces: pieces };
+      if (solid.some(function (r) { return overlaps(p, r); })) return { ok: false, why: 'no room that way: something stands in the way', pieces: pieces };
+      if (others.some(function (o) { return R.rectPointDist(p, o.x, o.y) < UR; })) return { ok: false, why: 'another unit is in the way', pieces: pieces };
+    }
+    // the step up behind them: not into anything solid, nor onto another unit
+    var to = { x: u.x + dx, y: u.y + dy };
+    var free = !solid.some(function (r) { return R.TERRAIN[r.kind].impassable && R.rectPointDist(r, to.x, to.y) < UR; }) &&
+      !others.some(function (o) { return Math.hypot(o.x - to.x, o.y - to.y) < UR * 2; }) &&
+      (!state.scen || !state.scen.moveOK || state.scen.moveOK(state, u, to));
+    return { ok: true, why: '', pieces: pieces, to: free ? to : null };
+  }
+
+  /* What a room is fitted out as, for its colours (0 plain plate, 1 sick bay, 2
+     workshop, 3 hydroponics, 4 command, 5 reactor): set as the compound is laid
+     out, or for one laid out before that, drawn from where the room is. */
+  var THEMES = 6;
+  function roomTheme(r) {
+    if (!r || (r.kind !== 'room' && r.kind !== 'hall')) return null;
+    if (r.theme != null) return ((r.theme | 0) % THEMES + THEMES) % THEMES;
+    var h = Math.imul(Math.round(r.x * 37 + r.y * 101) ^ 0x5bd1e995, 2654435761) >>> 0;
+    return (h >>> 7) % THEMES;
+  }
+
+  var KINDS = ['corridor', 'room', 'hall', 'bulkhead', 'door', 'crates', 'machinery'];
   function isCompound(state) { return !!(state && state.compound); }
   // the floor section a point is in (a corridor, room or hall piece), or null
   function sectionAt(state, x, y) {
@@ -592,6 +705,6 @@
     return null;
   }
 
-  root.PMCCompound = { CELL: CELL, KINDS: KINDS, generate: generate, blankPlan: blankPlan, cleanPlan: cleanPlan, TABLES: TABLES, sizeKey: sizeKey, cleanCompounds: cleanCompounds, planFor: planFor, layout: function (plan) { return gridOf(cleanPlan(plan)).g; }, checkPlan: checkPlan, build: build, generatedPlan: generatedPlan, planSize: planSize, isCompound: isCompound, sectionAt: sectionAt, KIT: KIT, cleanKit: cleanKit, defaultKit: defaultKit };
+  root.PMCCompound = { CELL: CELL, KINDS: KINDS, generate: generate, blankPlan: blankPlan, cleanPlan: cleanPlan, TABLES: TABLES, sizeKey: sizeKey, cleanCompounds: cleanCompounds, planFor: planFor, layout: function (plan) { return gridOf(cleanPlan(plan)).g; }, checkPlan: checkPlan, build: build, generatedPlan: generatedPlan, planSize: planSize, isCompound: isCompound, sectionAt: sectionAt, KIT: KIT, cleanKit: cleanKit, defaultKit: defaultKit, barrierPlan: barrierPlan, roomTheme: roomTheme };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCCompound;
 })(typeof window !== 'undefined' ? window : global);
