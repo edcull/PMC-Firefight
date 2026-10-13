@@ -56,6 +56,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('a player has no Server tools', !(await has('[data-acct="admin-open"]')));
     const r = await p.evaluate(() => fetch('api/admin/overview').then((x) => x.status));
     ok('...and the server refuses them the overview', r === 403, String(r));
+    // a campaign of Ash's kept on the server, for the admin to download below
+    const saved = await p.evaluate(() => fetch('api/campaigns', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ state: { mode: 'solo', name: 'Ash Company', turn: 3, companies: { A: { name: 'Ash Company', roster: [] } } } }) }).then((x) => x.status));
+    const peek = await p.evaluate(() => fetch('api/admin/campaigns-data', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then((x) => x.status));
+    ok('...nor campaign data', peek === 403 && saved < 300, 'saved ' + saved + ', data ' + peek);
     await signOut();
     await signIn('boss@example.com', 'boss password');
     ok('an admin has them', await has('[data-acct="admin-open"]'));
@@ -66,6 +71,16 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('the accounts are listed, the admin marked', /Boss\s*admin/i.test(t) && /Ash/.test(t) && /Brann/.test(t), t.slice(0, 300));
     ok('the server, the battles and the campaigns too', /3 accounts/.test(t) && /campaigns/i.test(t) && /back up now/i.test(t));
     ok('the admin cannot remove their own account here', !(await has('[data-act="delete-user"][data-key="Boss"]')));
+    // the campaigns' data in full, one or every one, as JSON
+    const dl = async (sel) => {
+      const [d] = await Promise.all([p.waitForEvent('download', { timeout: 5000 }), click(sel)]);
+      return { name: d.suggestedFilename(), j: JSON.parse(fs.readFileSync(await d.path(), 'utf8')) };
+    };
+    const one = await dl('[data-acct="admin-dl-camp"]');
+    ok('a campaign downloads in full, its owner named', /^pmc-campaign-\d+-ash-company-/.test(one.name) && one.j.campaigns.length === 1 &&
+      one.j.campaigns[0].owner === 'Ash' && one.j.campaigns[0].state.companies.A.name === 'Ash Company', one.name);
+    const all = await dl('[data-acct="admin-dl-camps"]');
+    ok('...and every campaign at once', /^pmc-campaigns-/.test(all.name) && all.j.kind === 'campaigns' && all.j.campaigns.length >= 1, all.name + ' ' + all.j.campaigns.length);
     await click('[data-act="backup"]');
     t = await till((x) => /Backed up/.test(x), 'backed up');
     ok('a backup is taken', /pmc-.*\.db/.test(t) && fs.readdirSync(require('path').join(DATA, 'backups')).length >= 1);

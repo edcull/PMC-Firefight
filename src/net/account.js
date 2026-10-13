@@ -164,7 +164,8 @@
     h += '<div class="acct-sec"><h3>Data</h3><div class="acct-row"><span><b>Download as JSON</b>' +
       '<small>Each in full as games here use it, with the changes made on this server and the defaults they were made to</small></span><em>' +
       '<button type="button" class="lnk" data-acct="admin-dl-weapons">Weapon animations</button> ' +
-      '<button type="button" class="lnk" data-acct="admin-dl-arch">Personalities</button></em></div></div>';
+      '<button type="button" class="lnk" data-acct="admin-dl-arch">Personalities</button> ' +
+      '<button type="button" class="lnk" data-acct="admin-dl-camps">Every campaign</button></em></div></div>';
     h += '<div class="acct-sec"><h3>Accounts</h3>' + (d.users || []).map(function (u) {
       var row = '<div class="acct-row"><span><b>' + esc(u.name) + (u.admin ? ' <i class="acct-tag">admin</i>' : '') + '</b><small>' +
         esc(u.email || 'no email') + (u.email && !u.emailOk ? ' (unconfirmed)' : '') + (u.active ? '' : ' \u00b7 not activated') + ' \u00b7 last seen ' + when(u.seen) + '</small></span><em>' +
@@ -183,6 +184,7 @@
     h += '<div class="acct-sec"><h3>Campaigns</h3>' + ((d.campaigns || []).length ? d.campaigns.map(function (c) {
       var who2 = c.players ? c.players.map(function (m) { return m.name + ' (' + m.side + ')'; }).join(' & ') + (c.invite ? ' \u00b7 code ' + c.invite + ' open' : '') : 'owner ' + (c.owner || '?');
       var row = '<div class="acct-row"><span><b>' + esc(c.name) + '</b><small>' + esc(c.kind) + ' \u00b7 turn ' + c.turn + ' \u00b7 ' + esc(who2) + ' \u00b7 ' + when(c.updated) + '</small></span><em>' +
+        '<button type="button" class="lnk" data-acct="admin-dl-camp" data-key="' + c.id + '">Download</button> ' +
         btn('delete-campaign', c.id, 'Remove', true) + '</em></div>';
       return row + (asking('delete-campaign', c.id) ? confirm() : '');
     }).join('') : '<p class="acct-none">None.</p>') + '</div>';
@@ -222,6 +224,19 @@
         changes: changes, updated: (r.j && r.j.updated) || [], personalities: JSON.parse(JSON.stringify(all)) });
       notice = 'Personalities downloaded (' + all.length + ', ' + Object.keys(changes).length + ' changed).'; draw();
     }, function () { fault = 'The server could not be reached.'; draw(); });
+  }
+  /* Campaigns as the server keeps them, in full: one (`id`) or every one. */
+  function downloadCampaigns(id) {
+    send('api/admin/campaigns-data', id != null ? { id: id } : {}, function (j) {
+      if (!j) return;
+      var list = j.campaigns || [];
+      var one = id != null && list[0];
+      var slug = one ? String(one.name || 'campaign').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'campaign' : 'campaigns';
+      saveJSON('pmc-' + (one ? 'campaign-' + one.id + '-' + slug : 'campaigns') + '-' + stamp() + '.json',
+        { kind: one ? 'campaign' : 'campaigns', exported: new Date().toISOString(), server: location.host, campaigns: list });
+      notice = one ? one.name + ' downloaded.' : list.length + ' campaign' + (list.length === 1 ? '' : 's') + ' downloaded.';
+      draw();
+    });
   }
   function adminLoad() {
     get('api/admin/overview').then(function (r) {
@@ -491,6 +506,8 @@
       else if (a === 'admin-arch') { if (root.PMCArchEdit) root.PMCArchEdit.open({ get: get, post: post }); }
       else if (a === 'admin-dl-weapons') { fault = ''; notice = ''; downloadWeapons(); }
       else if (a === 'admin-dl-arch') { fault = ''; notice = ''; downloadPersonalities(); }
+      else if (a === 'admin-dl-camps') { fault = ''; notice = ''; downloadCampaigns(null); }
+      else if (a === 'admin-dl-camp') { fault = ''; notice = ''; downloadCampaigns(+b.getAttribute('data-key')); }
       else if (a === 'adm') {
         var act = b.getAttribute('data-act'), key = b.getAttribute('data-key');
         fault = ''; notice = '';
