@@ -113,6 +113,9 @@ function ok(name, cond, note) {
   ok('the AI forces are raised, each with its own name and dossier', s.rivals.filter((r) => !r.human).length === 3 && s.rivals.filter((r) => !r.human).every((r) => r.roster.length && r.name !== 'Rival'), s.rivals.map((r) => r.name).join(', '));
   ok('...in their armies and colours as asked', s.rivals.filter((r) => !r.human).some((r) => r.faction === 'bugs') && s.rivals.some((r) => r.colour === 'lime'));
   ok('the other players are on it too, shown as rivals are', s.rivals.filter((r) => r.human).map((r) => r.player).sort().join() === 'Brann,Cole');
+  ok('the contracts are found across a star system (the default): one system, a base for each player, Other Worlds on',
+    s.system && s.systemKey === 'f0' && camp(brann).systemKey !== 'f0' && camp(brann).system.seed === s.system.seed &&
+    s.systemPlayers.length === 3 && s.systemPlayers.every((key) => s.system.planets.some((p) => p.base === key && p.influence[key] === 35)) && s.options.otherWorlds === true, JSON.stringify(s.system && s.system.planets.map((p) => p.base)));
   ok('each player’s own force is theirs to found', !s.companies.A.roster.length && view(ash).waiting === 'you');
   const pmc = ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'];
   const reb = ['rciv', 'rciv', 'rciv', 'rdesconscript', 'rridergang', 'rmilitia', 'rlmg', 'rtechnical'];
@@ -124,6 +127,7 @@ function ok(name, cond, note) {
   cmd(cole, 'found', { faction: 'pmc', name: 'Grey Lancers', keys: pmc, doctrine: 'S1' });
   s = camp(ash);
   ok('founded, the contracts against the AI forces are on offer, rolled for them', (s.offers || []).length >= 1 && s.offersTurn === s.turn && s.offers.every((o) => o.rival < 3), JSON.stringify((s.offers || []).map((o) => o.rival)));
+  ok('...each at a site on one of the system\u2019s planets, with that planet\u2019s conditions', s.offers.every((o) => o.site && s.system.planets.some((p) => p.id === o.site.planet) && o.world));
   ok('...the same ones each time they look (kept for the turn)', JSON.stringify(camp(ash).offers) === JSON.stringify(s.offers));
   ok('free to take one or challenge someone: “either”', view(ash).waiting === 'either');
 
@@ -172,6 +176,8 @@ function ok(name, cond, note) {
   })());
   cmd(brann, 'aiDrop');
   ok('a contract not yet fought may be dropped', !camp(brann).online.contract);
+  const siteOf = camp(ash).online.contract.site, standing0 = siteOf ? (camp(ash).system.planets.find((p) => p.id === siteOf.planet).influence.f0 || 0) : -1;
+  ok('...the contract kept where it is fought', !!siteOf && siteOf.planet === off.site.planet);
   const before = camp(ash), kUC0 = before.companies.A.kUC, gameId = room.table.gameId + ':' + room.id;   // as the campaign knows it: the row and the code
   room.table.forfeit('B');
   s = camp(ash);
@@ -181,6 +187,10 @@ function ok(name, cond, note) {
   s = camp(ash);
   ok('every question answered: the aftermath is applied, paid, the turn moved on', !s.post && !s.pending && s.online.after && s.online.after.winner === 'A' && s.companies.A.kUC > kUC0 && s.turn === before.turn + 1, JSON.stringify(s.online.after && s.online.after.winner));
   ok('...the AI force grew from it, as a rival does', s.online.after.rival !== undefined);
+  ok('...and Ash\u2019s standing on that planet rose, as every player sees the system', (() => {
+    const pa = camp(ash).system.planets.find((p) => p.id === siteOf.planet), pb = camp(brann).system.planets.find((p) => p.id === siteOf.planet);
+    return pa.influence.f0 > standing0 && pb.influence.f0 === pa.influence.f0;
+  })(), standing0 + ' -> ' + camp(ash).system.planets.find((p) => p.id === siteOf.planet).influence.f0);
   ok('...the AI forces not in it go off to fight each other elsewhere, played out on the server', s.online.after.frontsLeft >= 1 && !(s.online.after.elsewhere || []).length, 'fronts left: ' + s.online.after.frontsLeft);
   ok('...and are not offered to anyone meanwhile', camp(cole).online.busyAi.length >= 2, JSON.stringify(camp(cole).online.busyAi));
   const t0 = Date.now();

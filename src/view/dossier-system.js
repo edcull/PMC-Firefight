@@ -35,12 +35,16 @@
     function rivals() { return E.camp.rivals && E.camp.rivals.length ? E.camp.rivals : [E.camp.companies.B]; }
     function offersOn(p) { return offers().map(function (o, i) { return { o: o, i: i }; }).filter(function (x) { return x.o.site && x.o.site.planet === p.id; }); }
     // the colour a share of influence is painted in: the company's own, a rival's, or grey for one gone
+    // (online each player's share is under their own key, named by systemNames: S.keyOf)
+    function me() { return S.keyOf(E.camp); }
     function shareInk(k) {
-      if (k === S.YOU) return inkOf(E.camp.companies.A);
-      var co = rivals().filter(function (r) { return r.name === k; })[0];
+      if (k === me()) return inkOf(E.camp.companies.A);
+      var nm = shareName(k), co = rivals().filter(function (r) { return r.name === nm; })[0];
       return co ? inkOf(co) : '#64728a';
     }
-    function shareName(k) { return k === S.YOU ? E.camp.companies.A.name : k; }
+    function shareName(k) { return k === me() ? E.camp.companies.A.name : (E.camp.systemNames || {})[k] || k; }
+    // the company's own base (online, a planet may be another player's)
+    function myBase(p) { return p.base === true || p.base === me(); }
 
     /* ---- the system ---- */
     function orbitR(p, n) { return 80 + (p.orbit - 1) * (238 / Math.max(1, n - 1)); }
@@ -78,7 +82,7 @@
           '<circle cx="' + q.x + '" cy="' + q.y + '" r="' + pr + '" fill="url(#sys-g-' + p.id + ')"/>' +
           '<circle class="ring" cx="' + q.x + '" cy="' + q.y + '" r="' + (pr + 7) + '" fill="none" stroke="#fff" stroke-opacity="0"/>' +
           '<path d="M' + q.x + ' ' + (q.y - pr) + ' a' + pr + ' ' + pr + ' 0 0 1 0 ' + (2 * pr) + ' a' + (pr * 0.55) + ' ' + pr + ' 0 0 0 0 ' + (-2 * pr) + 'z" fill="#05070b" opacity=".38" transform="rotate(' + (Math.atan2(q.y - cy, q.x - cx) * 180 / Math.PI).toFixed(1) + ' ' + q.x + ' ' + q.y + ')"/>' +
-          '<text class="sys-lbl" x="' + q.x + '" y="' + (q.y + pr + 18 * k) + '" text-anchor="middle">' + esc(p.name) + (p.base ? ' ★' : '') + '</text>' +
+          '<text class="sys-lbl" x="' + q.x + '" y="' + (q.y + pr + 18 * k) + '" text-anchor="middle">' + esc(p.name) + (myBase(p) ? ' ★' : '') + '</text>' +
           (jobs ? '<g class="sys-badge"><circle cx="' + (q.x + pr * 0.8) + '" cy="' + (q.y - pr * 0.8) + '" r="' + (9 * k) + '"/><text x="' + (q.x + pr * 0.8) + '" y="' + (q.y - pr * 0.8 + 4 * k) + '" text-anchor="middle">' + jobs + '</text></g>' : '') +
           (ev ? '<g class="sys-event"><circle cx="' + (q.x - pr * 0.8) + '" cy="' + (q.y - pr * 0.8) + '" r="' + (8 * k) + '"/><text x="' + (q.x - pr * 0.8) + '" y="' + (q.y - pr * 0.8 + 4 * k) + '" text-anchor="middle">!</text></g>' : '') +
           '</g>';
@@ -142,12 +146,12 @@
     // the shares of influence, as a bar, and who holds it
     function shares(p) {
       var inf = p.influence, keys = Object.keys(inf).filter(function (k) { return inf[k] > 0; }).sort(function (a, b) { return inf[b] - inf[a]; });
-      var free = 100 - keys.reduce(function (a, k) { return a + inf[k]; }, 0), hold = S.holder(p), st = S.standing(sys(), p);
+      var free = 100 - keys.reduce(function (a, k) { return a + inf[k]; }, 0), hold = S.holder(p), st = S.standing(sys(), p, me());
       return '<div class="sys-bar" role="img" aria-label="Influence on ' + esc(p.name) + '">' + keys.map(function (k) {
         return '<span style="width:' + inf[k] + '%;background:' + shareInk(k) + '" title="' + esc(shareName(k) + ': ' + inf[k]) + '"></span>';
       }).join('') + (free > 0 ? '<span class="free" style="width:' + free + '%" title="Unaligned: ' + free + '"></span>' : '') + '</div>' +
         '<div class="sys-hold">' + (hold ? 'Held by <b>' + esc(shareName(hold)) + '</b>' : 'Contested') + ' · your standing ' + st + ' (' + esc(S.standingName(st)) + ')' +
-        (p.home ? ' · home of ' + esc(p.home) : '') + (p.base ? ' · your base' : '') + '</div>';
+        (p.home ? ' · home of ' + esc(p.home) : '') + (myBase(p) ? ' · your base' : p.base ? ' · base of ' + esc(shareName(p.base)) : '') + '</div>';
     }
     function events(p) {
       return S.activeEvents(sys(), p).map(function (e) {

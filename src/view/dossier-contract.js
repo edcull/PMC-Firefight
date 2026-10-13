@@ -83,7 +83,7 @@
       // in a star system: where, on which planet, and the company's standing there (camp-system.js)
       var SYS = root.PMCSystem, sys = E.camp && E.camp.system, sp = SYS && sys && job.site ? SYS.byId(sys, job.site.planet) : null;
       if (sp) {
-        var st = SYS.standing(sys, sp);
+        var st = SYS.standing(sys, sp, SYS.keyOf(E.camp));
         h += '<div class="cpstat offer-site">' + esc(job.site.name) + ', <b>' + esc(sp.name) + '</b> \u00b7 your standing ' + st + ' (' + SYS.standingName(st) + ')' + '</div>';
       }
       // Other Worlds: the conditions rolled with the job, each a pill with what it does in its tip

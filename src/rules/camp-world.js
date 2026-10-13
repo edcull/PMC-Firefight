@@ -62,9 +62,12 @@
           { kind: 'ai', user: null, name: null, colour: 'olive', faction: 'random', ready: true },
           { kind: 'ai', user: null, name: null, colour: 'crimson', faction: 'random', ready: true }
         ],
-        chat: [], forces: [], players: {}, duels: [], nextDuel: 1, applied: [], over: null
+        chat: [], forces: [], players: {}, duels: [], nextDuel: 1, applied: [], over: null,
+        // the contracts found across a star system (camp-system.js), as a single-player campaign's are by default
+        starSystem: true
       };
     }
+    const sysKey = (i) => 'f' + i;
     const humanSlots = (W) => W.slots.map((s, i) => (s.kind === 'human' ? i : -1)).filter((i) => i >= 0);
     const aiSlots = (W) => W.slots.map((s, i) => (s.kind === 'ai' ? i : -1)).filter((i) => i >= 0);
     const slotOf = (W, userId) => W.slots.findIndex((s) => s.kind === 'human' && s.user === userId);
@@ -93,11 +96,19 @@
       const p = W.players[i] || { turn: 0, log: [] };
       const ai = aiSlots(W), rivals = ai.map((s) => W.forces[s]);
       const facing = faced != null ? Math.max(0, ai.indexOf(faced)) : 0;
-      return {
+      const v = {
         mode: 'solo', world: true, turn: p.turn || 0, created: 0, name: W.name, options: R.cleanOptions(W.options), compounds: W.compounds || {},
         companies: { A: W.forces[i], B: rivals[facing] || null }, rivals: rivals, facing: facing,
         offers: p.offers || null, offersTurn: p.offersTurn == null ? null : p.offersTurn, log: p.log || []
       };
+      /* across a star system: the world's one system, shared (the offers placed on it and
+         the battles moving its shares change it for everyone), this player's share under their key */
+      if (W.system) {
+        const names = {};
+        humanSlots(W).forEach((j) => { names[sysKey(j)] = founded(W.forces[j]) ? W.forces[j].name : W.slots[j].name + '’s force'; });
+        Object.assign(v, { system: W.system, systemKey: sysKey(i), systemNames: names, systemPlayers: Object.keys(names) });
+      }
+      return v;
     }
     /* The world as the aftermath of player i's battle with AI force `vs` wants it:
        that force as B, and as the others fighting it out elsewhere only the AI forces
@@ -140,7 +151,7 @@
     }
     function pendingOf(k, pA, pB) {
       return {
-        tier: k.tier, pl: k.pl, scenario: k.scenario.id,
+        tier: k.tier, pl: k.pl, scenario: k.scenario.id, site: k.site || null,
         A: pA.map((e) => e.rid), B: pB.map((e) => e.rid),
         drugged: pA.concat(pB).filter((e) => e.drugged).map((e) => e.rid)
       };
@@ -444,7 +455,7 @@
         }));
         const out = { phase: W.phase, name: W.name, slot: i, host: i === 0, slots: slots, invite: row && W.phase === 'lobby' ? row.invite : null,
           listed: !!(row && row.listed), chat: (W.chat || []).slice(-60), waiting: waitingOn(W, i), over: W.over || null,
-          options: R.cleanOptions(W.options), compounds: W.compounds || {} };
+          options: R.cleanOptions(W.options), compounds: W.compounds || {}, starSystem: !!W.starSystem };
         if (W.phase === 'lobby') return out;
         const p = W.players[i] || {};
         const v = viewOf(W, i, p.contract ? p.contract.vs : p.pending ? p.pending.vs : p.post ? p.post.vs : null);
@@ -558,6 +569,12 @@
           W.options = R.cleanOptions(a.options);
           return { ok: true };
         },
+        // the host: the contracts found across a star system, or as a plain list of offers
+        lobbySystem(W, i, a) {
+          if (i !== 0) return no('the host decides where the contracts are found');
+          W.starSystem = !!a.on;
+          return { ok: true };
+        },
         /* the host: a compound laid out by hand for one size of table ('WxH'), or
            none (null) for the generator's — in the lobby or at any time after */
         setCompound(W, i, a) {
@@ -615,6 +632,12 @@
         });
         W.players = {};
         humanSlots(W).forEach((j) => { W.players[j] = { turn: 0, log: [], offers: null, offersTurn: null, contract: null, pending: null, post: null, after: null, afterN: 0, battle: null }; });
+        /* across a star system: the AI forces' homes, a base for each player, and Other
+           Worlds on (every planet has conditions of its own) */
+        if (W.starSystem && root.PMCSystem && aiSlots(W).length) {
+          W.system = root.PMCSystem.makeSystem({ rivals: aiSlots(W).map((s) => W.forces[s]), companies: {}, turn: 0 }, { players: humanSlots(W).map(sysKey) });
+          W.options = R.cleanOptions(Object.assign({}, W.options || {}, { otherWorlds: true }));
+        }
         W.phase = 'run';
       }
 
@@ -653,7 +676,7 @@
           const lv = o.levels.filter((n) => n <= 3);
           p.contract = {
             vs: vs, tierRoll: o.tierRoll, tier: o.tier, levels: lv, pl: C.defaultLevel(W.forces[i], W.forces[vs], o.tier, lv),
-            scenario: o.scenario, planet: o.planet || 'random', world: o.world || null, roles: o.roles || null,
+            scenario: o.scenario, planet: o.planet || 'random', world: o.world || null, roles: o.roles || null, site: o.site || null,
             alt: o.alt || null, altRoles: o.altRoles || null, altBy: o.alt ? 'A' : null, altUsed: false,
             fore: o.fore ? JSON.parse(JSON.stringify(o.fore)) : null, foreNote: o.foreNote || null,
             terms: {}, picks: { A: null, B: null }, ready: { A: false, B: true }, turn: p.turn, caught: o.caught || null
@@ -1311,6 +1334,7 @@
               const i = +ref.slot, p = W.players[i];
               if (!p || !p.pending) return;
               report.battleTier = p.pending.tier; report.pl = p.pending.pl; report.scenario = p.pending.scenario;
+              if (p.pending.site) report.site = p.pending.site;
               const v = afterView(W, i, p.pending.vs);
               C.clearOffers(v);
               keepView(W, i, v);
