@@ -47,14 +47,40 @@
         }
         return -1;
       }
-      function openEdges(r) {
+      /* The compound's walls as they are drawn (each about its grid line): a block
+         of the solid with the sides that face a floor brought out by half a wall, a
+         wall between two sections run on by half a wall at each end so two walls
+         meet in a full corner, and a door as thick as a wall. The lit lip along a
+         wall's top is worked out against these, so it stops where another wall's
+         body covers it rather than running on across it. */
+      var HW = 0.2;
+      function drawnRect(r) {
+        var q = { x: r.x, y: r.y, w: r.w, h: r.h };
+        if (r.kind === 'bulkhead' && r.thin) {
+          if (r.w >= r.h) { q.x -= HW; q.w += HW * 2; } else { q.y -= HW; q.h += HW * 2; }
+        } else if (r.kind === 'bulkhead') {
+          var faces = {};
+          openEdges(r, solids).forEach(function (o) { faces[o[0]] = true; });
+          if (faces.W) { q.x -= HW; q.w += HW; }
+          if (faces.E) q.w += HW;
+          if (faces.N) { q.y -= HW; q.h += HW; }
+          if (faces.S) q.h += HW;
+        } else if (r.w >= r.h) { q.y = r.y + r.h / 2 - HW; q.h = HW * 2; } else { q.x = r.x + r.w / 2 - HW; q.w = HW * 2; }
+        return q;
+      }
+      var drawnWalls = null;
+      function openEdges(r, against) {
         var out = [], E = 0.05, ST = 0.1;
+        if (!against) {
+          if (!drawnWalls) drawnWalls = solids.map(drawnRect);
+          against = drawnWalls;
+        }
         [['N', r.x, r.x + r.w, function (t) { return [t, r.y - E]; }], ['S', r.x, r.x + r.w, function (t) { return [t, r.y + r.h + E]; }],
           ['W', r.y, r.y + r.h, function (t) { return [r.x - E, t]; }], ['E', r.y, r.y + r.h, function (t) { return [r.x + r.w + E, t]; }]].forEach(function (S2) {
           var run = null;
           for (var t = S2[1]; t < S2[2] - 1e-6; t += ST) {
             var t1 = Math.min(S2[2], t + ST), q = S2[3]((t + t1) / 2);
-            var op = inAny(floors, q[0], q[1]) && !inAny(solids, q[0], q[1]);
+            var op = inAny(floors, q[0], q[1]) && !inAny(against, q[0], q[1]);
             // a run breaks where the room in front of it changes (each stretch takes that room's colours)
             var th = op ? themeAt(q[0], q[1]) : -1;
             if (op && run && run[3] === th) run[2] = t1; else if (op) out.push(run = [S2[0], t, t1, th]); else run = null;
@@ -378,17 +404,10 @@
           /* Every wall drawn about the grid line it stands on: a wall between two
              sections is already half its thickness either side of the line, so a
              block of the solid has each side that faces a floor brought out by half
-             a wall too — and its faces, the walls between sections and the doors all
-             line up. (Drawn only: the rules keep the solid where it is.) */
-          var q = { x: r.x, y: r.y, w: r.w, h: r.h };
-          if (!r.thin) {
-            var HW = 0.2, faces = {};
-            openEdges(r).forEach(function (o) { faces[o[0]] = true; });
-            if (faces.W) { q.x -= HW; q.w += HW; }
-            if (faces.E) q.w += HW;
-            if (faces.N) { q.y -= HW; q.h += HW; }
-            if (faces.S) q.h += HW;
-          }
+             a wall too, and a wall between two sections is run on into its corners
+             (drawnRect) — so faces, walls and doors all line up. (Drawn only: the
+             rules keep the solid where it is.) */
+          var q = drawnRect(r);
           props.push({ kind: 'bulkhead', x: q.x, y: q.y, w: q.w, h: q.h, height: a(BULK_H), thin: !!r.thin, open: openEdges(q), seed: (rr2() * 9999) | 0 });
           return;
         }
