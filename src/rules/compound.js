@@ -342,6 +342,21 @@
       if (gaps.some(function (p) { return Math.hypot(p.x - cx, p.y - cy) < 2.4 + Math.max(r.w, r.h) / 2; })) return false;
       return !placed.some(function (p) { return r.x < p.x + p.w + 0.6 && p.x < r.x + r.w + 0.6 && r.y < p.y + p.h + 0.6 && p.y < r.y + r.h + 0.6; });
     }
+    /* Pillars holding up a larger room's roof (at least 6" by 9"): on the room's
+       inner 3" grid corners — never its middle, where the defence system's panel
+       goes, nor a point the walk between cells passes through — every one in a
+       room, every other one (6" apart) in a hall. */
+    var PIL = 0.8;
+    out.filter(function (r) { return r.kind === 'room' || r.kind === 'hall'; }).forEach(function (room) {
+      if (Math.min(room.w, room.h) < 6 || Math.max(room.w, room.h) < 9) return;
+      var hall = room.kind === 'hall' || room.w * room.h > 81;
+      for (var ox = CELL; ox < room.w - 0.01; ox += CELL) for (var oy = CELL; oy < room.h - 0.01; oy += CELL) {
+        if (hall && ((ox / CELL) % 2 === 0 || (oy / CELL) % 2 === 0)) continue;
+        if (Math.abs(ox - room.w / 2) < 0.01 && Math.abs(oy - room.h / 2) < 0.01) continue;
+        var pl = { kind: 'pillar', x: room.x + ox - PIL / 2, y: room.y + oy - PIL / 2, w: PIL, h: PIL };
+        placed.push(pl); out.push(pl);
+      }
+    });
     out.filter(function (r) { return r.kind === 'room' || r.kind === 'hall'; }).forEach(function (room) {
       if (room.w < 6 || room.h < 6) return;
       var n = Math.max(1, Math.round(room.w * room.h / 28 * (0.6 + rand() * 0.6)));
@@ -693,7 +708,7 @@
     return (h >>> 7) % THEMES;
   }
 
-  var KINDS = ['corridor', 'room', 'hall', 'bulkhead', 'door', 'crates', 'machinery'];
+  var KINDS = ['corridor', 'room', 'hall', 'bulkhead', 'door', 'crates', 'machinery', 'pillar'];
   function isCompound(state) { return !!(state && state.compound); }
   // the floor section a point is in (a corridor, room or hall piece), or null
   function sectionAt(state, x, y) {

@@ -919,6 +919,8 @@
        nor see past. */
     crates:    { name: 'Crates and lockers', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
     machinery: { name: 'Machinery',   blocks: true,  impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
+    // a larger room's roof pillars (compound.js fit): neither crossed nor seen past
+    pillar:    { name: 'Pillar',      blocks: true,  impassable: true,  movePenalty: 0, cover: 0, fp: 0 },
     breached:  { name: 'Breached door', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0, wreck: true },
     doorlockB: { name: 'Door (locked to B)', blocks: true, impassable: false, movePenalty: 0, cover: 0, fp: 0, linear: true, door: true, destructible: 'linear', lockedFor: 'B' }
   };

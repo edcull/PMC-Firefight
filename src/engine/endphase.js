@@ -87,7 +87,12 @@
         }
         if (spots.some(offFrom)) {
           var out = spots.filter(offFrom).sort(function (p, q) { return (p.spent || 0) - (q.spent || 0); })[0];
-          if (out.x !== u.x || out.y !== u.y) animateMove(u, [{ x: u.x, y: u.y }, { x: out.x, y: out.y }]);
+          // the way it runs: round the walls and down the corridors, then on over the edge away from the enemy
+          var fp = out.x !== u.x || out.y !== u.y ? R.pathTo(E.state, u, allow, out) : null;
+          var run = fp && fp.length > 1 ? fp.map(function (q) { return { x: q.x, y: q.y }; }) : [{ x: u.x, y: u.y }, { x: out.x, y: out.y }];
+          var k = outAway(out, foe.unit), adx = ax / an, ady = ay / an;
+          run.push({ x: out.x + adx * Math.min(k, 30), y: out.y + ady * Math.min(k, 30) });
+          animateMove(u, run);
           runOff(u); return;
         }
         var best = null, bv = -Infinity;

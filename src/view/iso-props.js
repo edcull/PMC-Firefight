@@ -30,6 +30,19 @@
     var BULK_H = 6.5;
     function buildProps(terrain, objectives, seed, planet) {
       var props = [];
+      /* A compound's entry points (a corridor open onto the table's edge) each get
+         a spawn door across the mouth: drawn only, a door like the others, which
+         opens for the units coming on through it. */
+      if (terrain.some(function (q) { return q.kind === 'bulkhead'; })) {
+        var TW = 0, spawn = [];
+        terrain.forEach(function (q) { TW = Math.max(TW, q.x + q.w); });
+        terrain.forEach(function (q) {
+          if (q.kind !== 'corridor' || q.h > 3.01) return;
+          if (q.x <= 0.01) spawn.push({ kind: 'door', x: 0, y: q.y, w: 0.5, h: q.h, spawn: true });
+          if (q.x + q.w >= TW - 0.01) spawn.push({ kind: 'door', x: TW - 0.5, y: q.y, w: 0.5, h: q.h, spawn: true });
+        });
+        if (spawn.length) terrain = terrain.concat(spawn);
+      }
       /* The stretches of a bulkhead's sides that face a floor, not more plating
          or a door: [side, from, to], the side 'N', 'S', 'W' or 'E' and the run
          along it in inches of the table. */
@@ -450,6 +463,13 @@
            outlined through it), and each door as a hatch framed in the same
            plating. */
         // a room's fittings (compound.js fit): crates and lockers, and banks of machinery
+        // a room's pillar: the walls' plating, the room's colours, the walls' height
+        if (r.kind === 'pillar') {
+          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(BULK_H), thin: true, pillar: true,
+            open: [['N', r.x, r.x + r.w, themeAt(r.x + r.w / 2, r.y - 0.3)], ['S', r.x, r.x + r.w, themeAt(r.x + r.w / 2, r.y + r.h + 0.3)],
+              ['W', r.y, r.y + r.h, themeAt(r.x - 0.3, r.y + r.h / 2)], ['E', r.y, r.y + r.h, themeAt(r.x + r.w + 0.3, r.y + r.h / 2)]], seed: (rr2() * 9999) | 0 });
+          return;
+        }
         if (r.kind === 'crates' || r.kind === 'machinery') {
           props.push({ kind: r.kind, x: r.x, y: r.y, w: r.w, h: r.h, height: a(r.kind === 'machinery' ? 5.2 : 2.4), seed: r.seed || (rr2() * 9999) | 0 });
           return;
@@ -530,7 +550,17 @@
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
       var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      /* The small things set down on a compound's floor (a box, drums, a console,
+         wreckage) take a footprint of their own in this, so one standing behind a
+         wall is drawn before the wall, and the wall hides it. */
+      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4 };
+      function rectOf(p) {
+        if (BOX[p.kind] && p.w) return p;
+        var r2 = SMALL[p.kind];
+        return r2 ? (p._r || (p._r = { x: p.x - r2, y: p.y - r2, w: r2 * 2, h: r2 * 2 })) : null;
+      }
       function behind(p1, p2) {
+        p1 = rectOf(p1); p2 = rectOf(p2);
         var e = 1e-3;
         var sepX = p1.x + p1.w <= p2.x + e, sepY = p1.y + p1.h <= p2.y + e;
         var backX = p2.x + p2.w <= p1.x + e, backY = p2.y + p2.h <= p1.y + e;
@@ -540,10 +570,10 @@
         var moved = false;
         for (var i1 = 0; i1 < props.length; i1++) {
           var pa = props[i1];
-          if (!BOX[pa.kind] || !pa.w) continue;
+          if (!rectOf(pa)) continue;
           for (var j1 = i1 + 1; j1 < props.length; j1++) {
             var pb = props[j1];
-            if (!BOX[pb.kind] || !pb.w) continue;
+            if (!rectOf(pb)) continue;
             // pb is drawn after pa, but stands wholly behind it: pb goes first
             if (behind(pb, pa) && !behind(pa, pb)) {
               props.splice(j1, 1); props.splice(i1, 0, pb);
@@ -733,14 +763,9 @@
       });
       poly(g, [t1, t2, t3, t4], opts.roof);          // roof
       if (opts.solid) { solidTop(); return; }
-      /* A compound's plating: one mass however many blocks it is laid in. Its
-         deck plates are on the table's own 3" grid, not each block's, so they run
-         on from one block to the next; the only lip is along the stretches that
-         face a floor. */
+      /* A compound's plating: one mass however many blocks it is laid in, with no
+         plates marked across it; the only lip is along the stretches that face a floor. */
       function solidTop() {
-        var seam = 'rgba(14,17,20,.5)', G = 3;
-        for (var X = Math.ceil((pr.x + 1e-6) / G) * G; X < pr.x + pr.w - 1e-6; X += G) edgeLine(g, pt(X, pr.y, hgt), pt(X, pr.y + pr.h, hgt), seam, 1);
-        for (var Y = Math.ceil((pr.y + 1e-6) / G) * G; Y < pr.y + pr.h - 1e-6; Y += G) edgeLine(g, pt(pr.x, Y, hgt), pt(pr.x + pr.w, Y, hgt), seam, 1);
         for (var gq = 0; gq < pr.w * pr.h * 1.2; gq++) {
           var su = rand(), sv = rand();
           var sq = lerp2(lerp2(t1, t2, su), lerp2(t4, t3, su), sv);
