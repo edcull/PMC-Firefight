@@ -984,7 +984,7 @@
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
-    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"], .camp-foot [data-go="pastback"], .camp-foot [data-go="seatback"], .camp-foot [data-go="omulti"], .camp-foot [data-go="campmenu"]'), bk = el('camp-back');
+    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"], .camp-foot [data-go="pastback"], .camp-foot [data-go="seatback"], .camp-foot [data-go="omulti"], .camp-foot [data-go="campmenu"], .camp-foot [data-go="sysback"]'), bk = el('camp-back');
     bk.hidden = !way;
     if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
     if (way && root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(bk, way.getAttribute('data-go') === 'menu');
@@ -1565,6 +1565,8 @@
           } });
         return;
       case 'offersys': offerList = false; render(); return;
+      // the star system's Back from a planet's map: to the system
+      case 'sysback': kitSystem().act({ getAttribute: function (n) { return n === 'data-sys' ? 'back' : null; } }); render(); return;
       case 'contract': if (camp.over) return; beginContract(); render(); return;
       // a force finished: the campaign is over, and says who outlasted whom (HC-14)
       case 'campend': {

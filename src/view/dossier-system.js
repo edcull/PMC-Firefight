@@ -192,14 +192,15 @@
       if (open && !p) open = false;
       var head = '<div class="sys-head"><h2>' + esc(p ? p.name : s0.name) + '</h2>' +
         '<span class="sys-crumb">' + (p ? esc(s0.name) + ' · ' + offersOn(p).length + ' contracts' : 'Turn ' + (E.camp.turn + 1) + ' · ' + offers().length + ' contracts on offer') + '</span>' +
-        (p ? '<button type="button" class="lnk" data-sys="back">← The system</button>' : '') +
-        '<button type="button" class="lnk" data-go="offerlist">List</button><button type="button" class="lnk" data-go="hub">← Hub</button></div>';
+        '<button type="button" class="lnk" data-go="offerlist">List</button></div>';
       var zoom = !!p && landing;
       landing = false;
       return head + '<div class="sys-stage"><div class="sys-view' + (zoom ? ' zoomin' : '') + '">' + (p ? mapSvg(p) : systemSvg()) +
         '<div class="sys-hint">' + (p ? 'Tap a pin for the job.' : 'Tap a planet for its conditions and contracts.') + '</div></div>' +
         // a div, not an aside: on a narrow screen every <aside> is the battle's slide-out drawer, off the edge
-        '<div class="cpan sys-card">' + (p ? planetCard(p) : systemCard()) + '</div></div>';
+        '<div class="cpan sys-card">' + (p ? planetCard(p) : systemCard()) + '</div></div>' +
+        // the way back, taken up by the screen's own Back at the top left: from a planet to the system, from the system to the hub
+        '<p class="camp-foot"><button class="lnk" data-go="' + (p ? 'sysback' : 'hub') + '">Back</button></p>';
     }
     // a tap on the system's parts; true if it was one
     function act(t) {

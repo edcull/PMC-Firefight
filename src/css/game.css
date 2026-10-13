@@ -842,7 +842,7 @@ a.mcard { text-decoration: none; line-height: normal; }
 }
 /* the top bar is the way back: the footer's own Back and Main menu are not needed twice */
 #camp-body .camp-foot [data-go="hub"], #camp-body .camp-foot [data-go="menu"], #camp-body .camp-foot [data-go="roster"],
-#camp-body .camp-foot [data-go="pastback"], #camp-body .camp-foot [data-go="foundback"], #camp-body .camp-foot [data-go="omulti"], #camp-body .camp-foot [data-go="campmenu"] { display: none; }
+#camp-body .camp-foot [data-go="pastback"], #camp-body .camp-foot [data-go="foundback"], #camp-body .camp-foot [data-go="omulti"], #camp-body .camp-foot [data-go="campmenu"], #camp-body .camp-foot [data-go="sysback"] { display: none; }
 /* who a solo campaign is up against: one line, and a list behind it */
 .archline {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer;
