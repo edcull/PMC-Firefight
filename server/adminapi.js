@@ -56,6 +56,20 @@ function create(opts) {
       if (action === 'overview') {
         return { ok: true, stats: db.stats(), health: health(), users: users(), games: db.allGames(60).map(shownGame), campaigns: campaigns() };
       }
+      /* A campaign's data in full, as the server keeps it (`id`), or every campaign's:
+         to keep, look over or carry elsewhere. Read only, so not counted as a change. */
+      if (action === 'campaigns-data') {
+        const ids = b.id != null ? [+b.id] : db.allCampaigns(1e6).map((c) => c.id);
+        const out = ids.map((id) => db.campaign(id)).filter(Boolean).map((c) => {
+          const owner = db.userById(c.owner);
+          return { id: c.id, kind: c.kind, name: c.name, turn: c.turn || 0, version: c.version, created: c.created, updated: c.updated,
+            owner: owner ? owner.name : null, invite: c.invite || null,
+            players: c.kind === 'online' ? db.members(c.id).map((m) => ({ side: m.side, name: m.name })) : null, state: c.state };
+        });
+        if (b.id != null && !out.length) return no('no such campaign');
+        log('admin ' + me.name + ' downloaded ' + (b.id != null ? 'campaign ' + b.id : 'every campaign (' + out.length + ')'));
+        return { ok: true, campaigns: out };
+      }
       if (busy(me)) return no('too many admin changes in a minute — wait a moment', 429);
       const target = () => b.name ? db.userByName(String(b.name)) : null;
       switch (action) {
