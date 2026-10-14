@@ -144,5 +144,25 @@ console.log('\nHC-14 A force that cannot field an army, and cannot recruit back 
   ok('...with nothing it may recruit, it is finished', C.cannotFight(none));
 })();
 
+console.log('\nAn AI force keeps no more command than it can field');
+(function () {
+  var cmds = function (co) { return co.roster.filter(function (e) { return R.profile(e.key).command; }); };
+  var vehs = function (co) { return co.roster.filter(function (e) { return (R.profile(e.key).rules || []).indexOf('Command Vehicle') >= 0; }); };
+  var camp = C.newCampaign({ mode: 'solo', nameA: 'Ironhold' });
+  var co = camp.companies.B;
+  C.foundRival(co, 'shock');
+  co.tier = 3; co.kUC = 200;
+  // as a saved force might have it: three field commands and two Command Vehicles
+  ['cmd3', 'cmd4', 'cmdveh', 'cmdveh'].forEach(function (k) { co.roster.push(C.newEntry(k)); });
+  var before = { c: cmds(co).length, v: vehs(co).length };
+  var did = C.developRival(co) || [];
+  ok('extras are let go: two command units and one Command Vehicle kept, its own commander among them',
+    cmds(co).length <= 2 && vehs(co).length <= 1 && co.roster.some(function (e) { return e.rid === co.cmdRid; }),
+    before.c + ' commands, ' + before.v + ' vehicles -> ' + cmds(co).length + ', ' + vehs(co).length + ' · ' + did.filter(function (x) { return x.what === 'disband'; }).map(function (x) { return x.text; }).join('; '));
+  var over = 0;
+  for (var t = 0; t < 30; t++) { co.kUC += 20; C.developRival(co); if (cmds(co).length > 3 || vehs(co).length > 1) over++; }
+  ok('...and over thirty turns of growing it never buys past that', over === 0, 'Tier ' + co.tier + ': ' + cmds(co).map(function (e) { return e.name; }).join(', ') + ' · ' + vehs(co).length + ' Command Vehicle');
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
