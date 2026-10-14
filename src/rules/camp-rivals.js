@@ -473,29 +473,31 @@
        without a Leader Bug low enough, so it buys one first, before anything else; any
        other force buys it first when the smaller fight is out of reach without it, and
        otherwise two turns in three — useful to have, but the money has other calls. */
-    /* No more command units than one army can field (one a Priority Level: two, or
-       three for a force that can fill a Priority Level 3 army at its own Tier), and one
-       Command Vehicle. A swarm's Leader Bugs are not counted: it needs one low enough for
-       every smaller fight it may be asked to field. */
+    /* One command unit of each Tier at most — the right one for each size of battle
+       it may be asked to fight — and one Command Vehicle. A swarm's Leader Bugs are its
+       own business (it needs one low enough for every smaller fight). */
     function isCmdVehicle(p) { return !!p && (p.rules || []).indexOf('Command Vehicle') >= 0; }
-    function commandCap(co) { return co.faction === 'bugs' ? Infinity : fillsArmy(co, co.tier, 3) ? 3 : 2; }
-    function commandsHeld(co) { return co.roster.filter(function (e) { return !!profile(e.key).command; }).length; }
     function overCommand(co, p) {
       if (isCmdVehicle(p)) return co.roster.some(function (e) { return isCmdVehicle(profile(e.key)); });
-      return !!p.command && commandsHeld(co) >= commandCap(co);
+      return !!p.command && co.faction !== 'bugs' && co.roster.some(function (e) { var q = profile(e.key); return q.command && q.tier === p.tier; });
     }
-    /* ...and any held beyond that (from before the limit) are let go: the most junior
-       command units first, never the force's own commander, and all but the most
-       seasoned Command Vehicle. */
+    /* ...and any held beyond that (from before the limit) are let go: of two command
+       units of a Tier, the force's own commander stays, else the more seasoned; of
+       several Command Vehicles, the most seasoned. */
     function shedCommand(co) {
-      var did = [], cap = commandCap(co);
-      var cmds = co.roster.filter(function (e) { return profile(e.key).command && e.rid !== co.cmdRid; })
-        .sort(function (x, y) { return profile(x.key).tier - profile(y.key).tier || (x.exp || 0) - (y.exp || 0); });
-      while (cmds.length && commandsHeld(co) > cap) {
-        var gone = cmds.shift();
-        co.roster = co.roster.filter(function (e) { return e !== gone; });
-        did.push({ what: 'disband', text: 'stood down ' + gone.name + ', a command unit more than it can field' });
-      }
+      var did = [];
+      var byTier = {};
+      co.roster.filter(function (e) { return profile(e.key).command; }).forEach(function (e) {
+        var t = profile(e.key).tier;
+        (byTier[t] = byTier[t] || []).push(e);
+      });
+      Object.keys(byTier).forEach(function (t) {
+        var list = byTier[t].sort(function (x, y) { return (y.rid === co.cmdRid) - (x.rid === co.cmdRid) || (y.exp || 0) - (x.exp || 0); });
+        list.slice(1).forEach(function (gone) {
+          co.roster = co.roster.filter(function (e) { return e !== gone; });
+          did.push({ what: 'disband', text: 'stood down ' + gone.name + ', a second command unit of its Tier' });
+        });
+      });
       var vehs = co.roster.filter(function (e) { return isCmdVehicle(profile(e.key)); })
         .sort(function (x, y) { return (y.exp || 0) - (x.exp || 0); });
       vehs.slice(1).forEach(function (gone) {
@@ -506,7 +508,6 @@
     }
     function rehireCommand(co) {
       if (!co.wantCmdTier) return [];
-      if (commandsHeld(co) >= commandCap(co)) { co.wantCmdTier = null; return []; }
       var key = commandKey(co, co.wantCmdTier);
       if (!key || co.roster.some(function (e) { return e.key === key; })) { co.wantCmdTier = null; return []; }
       if (!canRecruit(co, key).ok) return [];
