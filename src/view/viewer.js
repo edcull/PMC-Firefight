@@ -268,13 +268,17 @@
         (mach ? '' : ' \u00b7 ' + one(avg('sp')) + ' SP');
     return { hits: hits, t: t, sum: sum, mach: mach };
   }
-  /* What each round of a rifle volley is drawn doing (a trial: rifles only, here on
-     the bench): a share of the rounds into the men who fall as big as the share of
-     the squad the average shot kills (or of the hull's Structure it takes), a share
-     into the dirt at their feet as big as the Suppression it puts on them is of what
-     breaks them, and the rest over their heads (fire.js, roundPlan). */
+  /* What each round of a volley is drawn doing (a trial, here on the bench): a share
+     of the rounds into the men who fall as big as the share of the squad the average
+     shot kills (or of the hull's Structure it takes), a share into the dirt at their
+     feet — or, for what comes down on a spot, close by — as big as the Suppression it
+     puts on them is of what breaks them, and the rest over their heads, or well off
+     (fire.js, roundPlan and landing). */
+  /* rifles, and what comes down on a spot: grenades, bottles, plasma, acid, shells,
+     mortar bombs, missiles and rockets — closer to the men the more the shot does */
+  var TRIAL = ['small', 'spine', 'frag', 'molotov', 'orb', 'orbbig', 'plasmabolt', 'spit', 'spitbig', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket'];
   function roundOutcome(shot, spec) {
-    if (!shot || shot.missed || spec.p !== 'small') return null;
+    if (!shot || shot.missed || TRIAL.indexOf(spec.p) < 0) return null;
     var t = shot.t, s0 = shot.sum;
     if (shot.mach) {
       return { kill: Math.min(1, (s0.dmg || 0) / Math.max(1, t.str || 1)), supp: 0, figs: [{ x: TO.x, y: TO.y }], blood: '255,200,120' };
@@ -1058,7 +1062,7 @@
     if (spec.t) setTimeout(function () { SHOTS.secondary(spec.t, u, from.third || from, to, hits, spec.tn); start(); }, 330);
     // (with the rounds drawn one by one, each lands as it goes: no burst over the mark besides)
     SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, outcome: outcome,
-      land: function (extra, at) { if (!outcome) SHOTS.hit(u, at || to, hits, extra); } });
+      land: function (extra, at) { if (!outcome || (spec.p !== 'small' && spec.p !== 'spine')) SHOTS.hit(u, at || to, hits, extra); } });
   }
 
 
