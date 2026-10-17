@@ -177,7 +177,7 @@
         var a = start(f, I.K * 0.85), b = I.toScreen(f.to.x, f.to.y);
         /* where it ends: chest height on the mark; into the ground (`low`); or, for a
            round over their heads (`over`), well up, carrying on past them */
-        b.y -= liftB(f) + (f.low ? 0 : f.over ? I.K * 1.9 : I.K * 0.75);
+        b.y -= liftB(f) + (f.low ? 0 : f.over ? I.K * 1.45 : I.K * 0.75);
         // a long burst walks about; a rifle volley does not
         if (f.spread) {
           if (f.jx === undefined) {
@@ -212,7 +212,7 @@
         /* A Gauss weapon or a las-cutter: the line is simply there, the whole
            length of it at once, and then it is not. No travel to watch. */
         var ra = start(f, I.K * 0.85), rb = I.toScreen(f.to.x, f.to.y);
-        rb.y -= liftB(f) + (f.low ? 0 : f.over ? I.K * 1.9 : I.K * 0.7);
+        rb.y -= liftB(f) + (f.low ? 0 : f.over ? I.K * 1.45 : I.K * 0.7);
         var fade = Math.pow(1 - k, 1.7);
         g.strokeStyle = 'rgba(' + (f.rgb || '190,225,255') + ',' + (fade * (f.rgb ? 0.7 : 0.5)) + ')';   // the bloom
         g.lineWidth = I.PIXEL * 5;
@@ -525,7 +525,7 @@
            white at the heart, crossing the table fast. */
         var pa = start(f, I.K * 0.8), pb = I.toScreen(f.to.x, f.to.y);
         // chest height on the mark; into the ground (`low`); or well up, going past (`over`)
-        pb.y -= liftB(f) + (f.low ? 0 : f.over ? I.K * 1.9 : I.K * 0.7);
+        pb.y -= liftB(f) + (f.low ? 0 : f.over ? I.K * 1.45 : I.K * 0.7);
         if (f.over) g.globalAlpha = Math.max(0, 1 - k * 1.1);
         var ph = Math.min(1, k * 1.15), pt = Math.max(0, ph - 0.16);
         var px0 = pa.x + (pb.x - pa.x) * pt, py0 = pa.y + (pb.y - pa.y) * pt;

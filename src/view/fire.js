@@ -91,7 +91,7 @@
               var role = plan[j], ux = dx / len, uy = dy / len;
               if (role === 'kill') { var figs = outcome.figs || [], fg = figs.length ? figs[kills++ % figs.length] : to; aim = { x: fg.x, y: fg.y, up: to.up }; }
               else if (role === 'supp') { var sh = 0.4 + Math.random() * 0.7; aim = { x: aim.x - ux * sh, y: aim.y - uy * sh, up: to.up }; }
-              else { var fs = 1.6 + Math.random() * 1.2; aim = { x: aim.x - ux * fs, y: aim.y - uy * fs, up: to.up }; }
+              else { var fs = 0.9 + Math.random() * 0.7; aim = { x: aim.x - ux * fs, y: aim.y - uy * fs, up: to.up }; }
             }
             if (SFX) { if (j === 0) SFX.flame(0, span / 1000); else SFX.flamepuff(); }
             add({ kind: 'flame', from: from, to: aim, dur: FLAME_JET, blocking: true });
@@ -740,8 +740,8 @@
     /* Where the j-th of n rounds that come down on a spot (a grenade, a shell, a
        rocket, a glob) lands, when the shot's outcome is known: a round that kills
        lands among the men who fall; one that only pins them close by; one that does
-       nothing well off. A lone round comes down closer the more it does — on the
-       men if it kills, otherwise nearer the more Suppression it puts on them. Off
+       nothing well off. A lone round lands on the men if it kills, among their feet
+       if it puts any Suppression on them, and misses only if it does nothing. Off
        to either side, or short and over along the line of fire. `plan` is the
        volley's roundPlan; `def` where the round would have come down otherwise. */
     function landing(outcome, plan, j, n, to, from, def) {
@@ -759,13 +759,16 @@
         return { x: f.x + (Math.random() - 0.5) * 0.4, y: f.y + (Math.random() - 0.5) * 0.4, up: to.up };
       }
       if (n <= 1) {
+        // a lone round is the whole attack: on the men if it kills, among their feet if it
+        // pins them at all, and a miss, off to one side, only if it does nothing
         if (kill > 0) return onMan(0);
-        return off(0.8 + (1 - Math.min(1, supp)) * 3.7);
+        if (supp > 0) { var near = onMan(Math.floor(Math.random() * Math.max(1, figs.length))); return { x: near.x + (Math.random() - 0.5) * 0.6, y: near.y + (Math.random() - 0.5) * 0.6, up: to.up }; }
+        return off(1.2 + Math.random() * 1.2);
       }
       var role = plan ? plan[j] : 'over';
       if (role === 'kill') return onMan(plan.slice(0, j).filter(function (r) { return r === 'kill'; }).length);
-      if (role === 'supp') return off(0.7 + Math.random() * 0.9);
-      return off(2.8 + Math.random() * 2);
+      if (role === 'supp') return off(0.5 + Math.random() * 0.7);
+      return off(1.6 + Math.random() * 1.2);
     }
     /* Where a round fired straight at the mark (a bullet, a spine, an energy pulse, a
        Gauss line) ends up, by the part it is dealt in the volley (roundPlan): in one
@@ -783,8 +786,8 @@
         var short = 0.2 + Math.random() * 1.1;
         return { to: { x: to.x - lx * short - ly * jitter, y: to.y - ly * short + lx * jitter, up: to.up }, low: true };
       }
-      var past = 5 + Math.random() * 5;
-      return { to: { x: to.x + lx * past - ly * jitter * 1.5, y: to.y + ly * past + lx * jitter * 1.5, up: to.up }, over: true };
+      var past = 2.5 + Math.random() * 2.5;
+      return { to: { x: to.x + lx * past - ly * jitter, y: to.y + ly * past + lx * jitter, up: to.up }, over: true };
     }
     function playStream(style, shooter, from, to, hits, land, splash, outcome) {
       var f = FIRE[style] || FIRE.small;
