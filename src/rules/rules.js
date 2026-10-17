@@ -1743,6 +1743,9 @@
   function shotMods(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shotMods(state, a, t, mode, opts); }
   function shotOdds(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shotOdds(state, a, t, mode, opts); }
   function expectedShot(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).expectedShot(state, a, t, mode, opts); }
+  // what became of each round of an attack, for the board to draw (shoot.js)
+  function missRungs(roll, total, dres, t) { return (KIT_SHOOT || kitShoot()).missRungs(roll, total, dres, t); }
+  function shotLadder(L, kill, near, glance, extraSp) { return (KIT_SHOOT || kitShoot()).ladder(L, kill, near, glance, extraSp); }
   function shoot(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shoot(state, a, t, mode, opts); }
   /* ---- the Xenotripods: in rules/xeno.js ---- */
   var KIT_XENO = null;
@@ -2504,7 +2507,7 @@
     shootTerrain: shootTerrain, assaultTerrain: assaultTerrain, detonate: detonate, crushOnMove: crushOnMove,
     canMartyr: canMartyr, resolveShootingHits: resolveShootingHits, resolveAssaultHits: resolveAssaultHits,
     applyDrone: applyDrone, canBeDrone: canBeDrone, rollDrive: rollDrive, rollDrone: rollDrone, DRIVE_ODDS: DRIVE_ODDS, DRONE_CHANCE: DRONE_CHANCE, shownRules: shownRules, auxSpec: auxSpec, MOUNTS: MOUNTS, MOUNT_ORDER: MOUNT_ORDER, canMount: canMount, mountOf: mountOf, applyMount: applyMount,
-    shotMods: shotMods, shotOdds: shotOdds, expectedShot: expectedShot, assaultOdds: assaultOdds,
+    shotMods: shotMods, shotOdds: shotOdds, expectedShot: expectedShot, missRungs: missRungs, shotLadder: shotLadder, assaultOdds: assaultOdds,
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
     defaultDrive: defaultDrive, lookDrive: lookDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,

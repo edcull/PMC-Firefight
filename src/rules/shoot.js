@@ -314,19 +314,46 @@
       } finally { Math.random = real; }
       return acc;
     }
-    /* How much of an attack its target's armour turned, as a share of it (0-1), for
-       the board to draw as rounds that strike and glance off rather than go wide:
-       of what the Defence stopped, the part that is the unit's own armour (its
-       Defence, as pierced, and any shield) above an unarmoured man's — all of it on
-       a hull, which is too big to miss. A roll of 0 missed outright. Cover and
-       Stealth are rounds that never reached them. */
+    /* What became of each round of an attack, for the board to draw (fire.js): the
+       D10's ten faces as ten rungs, each worth its face plus the attack's modifiers.
+       A rung the roll did not reach, or the 0, goes wide (a far miss). One it reached
+       that beats the Defence is a hit, and the hit roll says what it did: a man down
+       is a kill, Suppression alone a near miss, nothing a deflection (on a hull,
+       Damage is a kill, a bounce a deflection). One that falls short of the Defence
+       is placed by the band of it it falls in: under an unarmoured man's Defence (6)
+       wide, at a man or a hull; in the unit's own armour (its
+       Defence as pierced, and any shield) a deflection; in its cover a near miss, into
+       what it hides behind; in its Stealth wide. Suppression the special rules add
+       turns a far miss into a near miss, a point each. The ladder is ten rounds: hits
+       past the rungs that could hold them take the places of far misses first. */
     var BARE_DEF = 6;
-    function glanceOf(roll, total, dres, t) {
-      if (!roll || total <= 0 || !dres || dres.value <= 0) return 0;
-      var arm = 0;
-      dres.parts.forEach(function (p) { if (/^(Defence|armour pierced|Shield|Overloaded)/.test(p.label)) arm += p.v; });
-      arm = Math.max(0, arm - (t && isMachine(t) ? 0 : BARE_DEF));
-      return Math.round(Math.min(1, Math.min(total, dres.value) * Math.min(1, arm / dres.value) / total) * 100) / 100;
+    function missRungs(roll, total, dres, t) {
+      var L = { far: 0, glance: 0, near: 0 }, arm = 0, stealth = 0;
+      dres.parts.forEach(function (p) {
+        if (/^(Defence|armour pierced|Shield|Overloaded)/.test(p.label)) arm += p.v;
+        else if (/^Stealth/.test(p.label)) stealth += p.v;
+      });
+      var D = dres.value, cover = D - arm - stealth, floor = BARE_DEF, mods = total - roll;
+      var nat9 = roll === 9 && total <= D;            // a 9 always hits once
+      for (var k = 0; k <= 9; k++) {
+        if (k === 0 || k > roll) { L.far++; continue; }
+        var v = k + mods;
+        if (v > D || (nat9 && k === 9)) continue;      // a hit: its own roll says what it did
+        if (v < floor) L.far++;
+        else if (v <= arm) L.glance++;
+        else if (v <= arm + cover) L.near++;
+        else L.far++;
+      }
+      return L;
+    }
+    function ladder(L, kill, near, glance, extraSp) {
+      var out = { far: L.far, glance: L.glance + glance, near: L.near + near, kill: kill };
+      // more hits than rungs: they take the far misses' places, then the other misses', so it stays ten
+      var over = out.far + out.glance + out.near + out.kill - 10;
+      ['far', 'glance', 'near'].forEach(function (k) { var n = Math.min(Math.max(0, over), L[k] || 0); out[k] -= n; over -= n; });
+      var moved = Math.min(out.far, Math.max(0, Math.round(extraSp || 0)));
+      out.far -= moved; out.near += moved;
+      return out;
     }
     /* What a shot does on average, calculated: the hits off all ten faces of the
        D10 (as shotOdds), times what one hit does on average off the hit table
@@ -337,19 +364,30 @@
       var hitsAt = function (r) {
         return r === 0 ? 0 : r === 9 ? Math.max(1, r + m.total - m.def.value) : Math.max(0, r + m.total - m.def.value);
       };
-      var out = { avgHits: 0, chance: 0, casualties: 0, sp: 0, damage: 0, glance: 0 }, r;
-      for (r = 0; r <= 9; r++) { out.avgHits += hitsAt(r) / 10; if (hitsAt(r) > 0) out.chance += 0.1; out.glance += glanceOf(r, r + m.total, m.def, t) / 10; }
+      var out = { avgHits: 0, chance: 0, casualties: 0, sp: 0, damage: 0 }, r;
+      for (r = 0; r <= 9; r++) { out.avgHits += hitsAt(r) / 10; if (hitsAt(r) > 0) out.chance += 0.1; }
       var u = JSON.parse(JSON.stringify(t));        // the hit table is read, never written
+      /* what became of the rounds (missRungs), on average: each face's ladder as
+         shares of itself, a hit split by the odds of what one hit does */
+      var lad = { far: 0, glance: 0, near: 0, kill: 0 };
+      function addLadder(r, kill, near, extraSp) {
+        var h = hitsAt(r), L = ladder(missRungs(r, r + m.total, m.def, t), h * kill, h * near, h * (1 - kill - near), h > 0 ? extraSp : 0);
+        var n = L.far + L.glance + L.near + L.kill;
+        Object.keys(lad).forEach(function (k) { lad[k] += L[k] / n / 10; });
+      }
       if (isMachine(t)) {
         var dm = dmgMod(state, a, t);
-        out.damage = out.avgHits * everyFall(function () { return { d: resolveDamage(u, 1, m.pierce, dm).damage }; }).d;
+        var hull = everyFall(function () { var d = resolveDamage(u, 1, m.pierce, dm); return { d: d.damage, k: d.struck }; });
+        out.damage = out.avgHits * hull.d;
+        for (r = 0; r <= 9; r++) addLadder(r, hull.k, 0, 0);
+        out.ladder = lad;
         return out;
       }
       var mod = 0, loose = undisciplined(t);
       if (status(t) === 'broken') mod += loose ? 2 : 1;
       if (m.crossfire) mod += loose ? 2 : 1;
       mod += dmgMod(state, a, t);
-      var one = everyFall(function () { var res = resolveShootingHits(state, u, 1, mod, a, true); return { c: res.casualties, s: res.sp }; });
+      var one = everyFall(function () { var res = resolveShootingHits(state, u, 1, mod, a, true); return { c: res.casualties, s: res.sp, k: res.downs, n: res.pinned }; });
       var steady = campFlag(t, 'nerves') || campFlag(t, 'shielding'), mt = mountOf(t);
       var extra = (has(a, 'Suppressive Fire') && !m.aux && !steady ? 2 : 0) + (mt && mt.shotSP && !steady ? mt.shotSP : 0);
       var relief = (campFlag(t, 'brave') ? 1 : 0) + ((t.shotFrom || []).length && doctrine(state, t.side, 'T2') ? 1 : 0);
@@ -357,7 +395,9 @@
         var h = hitsAt(r);
         out.casualties += Math.min(t.models, h * one.c) / 10;
         out.sp += (h > 0 ? Math.max(0, h * one.s + extra - relief) : (mt && mt.shotSP && !steady ? mt.shotSP : 0)) / 10;
+        addLadder(r, one.k, one.n, extra - relief);
       }
+      out.ladder = lad;
       return out;
     }
 
@@ -411,7 +451,7 @@
         }
       }
 
-      var hits, glance = glanceOf(roll, total, dres, t);
+      var hits;
       if (roll === 0) hits = 0;
       else if (roll === 9) hits = Math.max(1, total - dres.value);
       else hits = Math.max(0, total - dres.value);
@@ -431,10 +471,11 @@
         var dres2 = resolveDamage(t, hits, pierce, dmgMod(state, a, t));
         log.push({ t: 'hits', text: dres2.rolls.join(' · ') });
         applyDamage(state, t, dres2.damage, log, a);
-        // what it did, for the board to share the rounds out by (fire.js): Damage against Structure
-        return { log: log, roll: roll, hits: hits, wreck: wreck, fx: { dmg: dres2.damage, str: t.str, glance: glance } };
+        // what became of each round, for the board to draw (missRungs)
+        return { log: log, roll: roll, hits: hits, wreck: wreck,
+          fx: ladder(missRungs(roll, total, dres, t), dres2.struck, 0, hits - dres2.struck, 0) };
       }
-      var medicId = null, fx = null;
+      var medicId = null, fx = null, before = t.models;
       if (hits > 0) {
         var mod = 0;
         /* Undisciplined (p. 94): shooting at a Broken Rebel unit, or catching one in
@@ -477,20 +518,25 @@
         shotRelief(state, t, res);
         log.push({ t: 'hits', text: res.rolls.join(' · ') + burn + (supp ? ' · Suppressive Fire +2 SP' : '') +
           (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
-        var before = t.models;
         applyResult(state, t, res, log, a);
-        // what it did, for the board to share the rounds out by (fire.js): the men lost and the Suppression
-        fx = { before: before, lost: Math.max(0, before - (t.alive ? t.models : 0)), sp: res.sp, glance: glance };
+        /* what became of each round, for the board to draw (missRungs): a hit that only
+           pinned them, its point taken off again (Brave), did nothing after all */
+        var unpinned = Math.min(res.pinned, Math.max(0, res.tableSp - res.sp));
+        fx = ladder(missRungs(roll, total, dres, t), res.downs, res.pinned - unpinned,
+          hits - res.downs - res.pinned + unpinned, res.sp - res.tableSp);
       } else if (mountOf(t) && mountOf(t).shotSP && !campFlag(t, 'nerves') && !campFlag(t, 'shielding')) {
         // a horse shies at being shot at, hit or not (Appendix 3)
         applyResult(state, t, { casualties: 0, sp: mountOf(t).shotSP, rolls: [], notes: [] }, log, a);
+        fx = ladder(missRungs(roll, total, dres, t), 0, 0, 0, mountOf(t).shotSP);
         log.push({ t: 'hits', text: 'Horses shy under fire: +' + mountOf(t).shotSP + ' SP' });
       }
       // who answered a MEDIC! on this volley, so the board can show them at work
       var out = medicId ? { log: log, roll: roll, hits: hits, medic: medicId } : { log: log, roll: roll, hits: hits };
       if (wreck) out.wreck = wreck;                     // what the shot brought down, for the board to repaint
-      if (!fx && glance > 0) fx = { glance: glance };    // nothing got through, but it reached them
-      if (fx) out.fx = fx;
+      if (!fx) fx = ladder(missRungs(roll, total, dres, t), 0, 0, 0, 0);
+      // and the men it had and lost, so the rounds that kill go into the ones who fall
+      fx.before = before; fx.lost = Math.max(0, before - (t.alive ? t.models : 0));
+      out.fx = fx;
       return out;
     }
 
@@ -515,7 +561,7 @@
       relink: relink,
       nearestFacing: nearestFacing, dugIn: dugIn, sandbagged: sandbagged, shotRange: shotRange,
       shotMinRange: shotMinRange, canShoot: canShoot, markCall: markCall, shotMods: shotMods,
-      shotOdds: shotOdds, expectedShot: expectedShot, shoot: shoot
+      shotOdds: shotOdds, expectedShot: expectedShot, shoot: shoot, missRungs: missRungs, ladder: ladder
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCShoot;

@@ -373,7 +373,7 @@ async function fireAndWatch(p, code, ms) {
     const s = window.PMC_STATE();
     const a = s.units.find(x => x.side === 'A' && x.key === 'snipers');
     const t = s.units.find(x => x.side === 'B' && x.key !== 'cmd1');
-    window.__testShoot(a, t, { hits: 1, fx: { before: t.size, lost: 0, sp: 3 } });
+    window.__testShoot(a, t, { hits: 1, fx: { far: 4, glance: 3, near: 3, kill: 0, before: t.size, lost: 0 } });
     const bolts = new Set(), rails = new Set();
     for (let i = 0; i < 40; i++) {
       window.__fxlive().forEach(f => { if (f.kind === 'bolt') bolts.add(f.line); if (f.kind === 'rail') rails.add(f.line); });
@@ -405,10 +405,10 @@ async function fireAndWatch(p, code, ms) {
       return seen;
     }
     return {
-      none: await watch({ hits: 0 }),
-      kill: await watch({ hits: 4, fx: { before: t.size, lost: t.size, sp: 0 } }),
-      pin: await watch({ hits: 2, aux: true, fx: { before: t.size, lost: 0, sp: 40 } }),
-      armour: await watch({ hits: 0, fx: { glance: 0.9 } })
+      none: await watch({ hits: 0, fx: { far: 10, glance: 0, near: 0, kill: 0, before: t.size, lost: 0 } }),
+      kill: await watch({ hits: 4, fx: { far: 0, glance: 0, near: 0, kill: 10, before: t.size, lost: t.size } }),
+      pin: await watch({ hits: 2, aux: true, fx: { far: 0, glance: 0, near: 10, kill: 0, before: t.size, lost: 0 } }),
+      armour: await watch({ hits: 0, fx: { far: 1, glance: 9, near: 0, kill: 0, before: t.size, lost: 0 } })
     };
   });
   ok('a volley that does nothing goes over their heads', by.none.tracer > 0 && by.none.over > by.none.tracer / 2, JSON.stringify(by.none));
