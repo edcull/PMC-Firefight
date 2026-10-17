@@ -326,7 +326,10 @@
        what it hides behind; in its Stealth wide. Suppression the special rules add
        turns a far miss into a near miss, a point each. A bonus that is there to beat
        armour (Anti-tank, Anti-aircraft) counts against the armour only: it carries a
-       rung into the armour or past it, but not up out of the wide band under 6. The ladder is ten rounds: hits
+       rung into the armour or past it, but not up out of the wide band under 6. Cover
+       or Stealth the attacker's own rules saw past (a Gauss weapon, Keen-Eyed, a
+       Markerlight) turns a far miss into a deflection, a point each: rounds that found
+       them where the cover would have hidden them. The ladder is ten rounds: hits
        past the rungs that could hold them take the places of far misses first. */
     var BARE_DEF = 6;
     // what of an attack's modifiers is there to beat armour, not to find the mark
@@ -334,7 +337,7 @@
       return (parts || []).reduce(function (n, p) { return n + (/^Anti-(tank|aircraft)/.test(p.label) ? p.v : 0); }, 0);
     }
     function missRungs(roll, total, dres, t, pen) {
-      var L = { far: 0, glance: 0, near: 0 }, arm = 0, stealth = 0;
+      var L = { far: 0, glance: 0, near: 0, ignored: dres.ignored || 0 }, arm = 0, stealth = 0;
       dres.parts.forEach(function (p) {
         if (/^(Defence|armour pierced|Shield|Overloaded)/.test(p.label)) arm += p.v;
         else if (/^Stealth/.test(p.label)) stealth += p.v;
@@ -359,6 +362,8 @@
       ['far', 'glance', 'near'].forEach(function (k) { var n = Math.min(Math.max(0, over), L[k] || 0); out[k] -= n; over -= n; });
       var moved = Math.min(out.far, Math.max(0, Math.round(extraSp || 0)));
       out.far -= moved; out.near += moved;
+      var found = Math.min(out.far, L.ignored || 0);
+      out.far -= found; out.glance += found;
       return out;
     }
     /* What a shot does on average, calculated: the hits off all ten faces of the

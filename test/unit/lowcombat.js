@@ -371,6 +371,12 @@ console.log('\nWhat became of each round: the D10\u2019s ten faces as a ladder')
   ok('Anti-tank beats armour, not the 6: a 1 (5, 9 with it) wide, 2-4 off the armour, 5+ hits', AT.far === 2 && AT.glance === 3 && AT.near === 0,
     JSON.stringify(AT));
   ok('...without it, the same roll is in the armour', R.missRungs(9, 17, def(12), hull, 0).far === 1);
+  // cover the attacker's own rules saw past: a far miss found them, a deflection a point each
+  ok('cover a rule saw past turns far misses into deflections', (() => {
+    const d = def(8); d.ignored = 2; const L = R.shotLadder(R.missRungs(9, 11, d, man), 1, 2, 0, 0); return L.far === 2 && L.glance === 5; })());
+  ok('...a Gauss weapon at a squad in woods: the woods ignored', (() => {
+    const g = unit('lrrp', 'A', 10, 60), sq = unit('regular', 'B', 14, 60);
+    return R.defenceAgainst(world([g, sq], [{ kind: 'woods', x: 12, y: 56, w: 6, h: 8 }]), g, sq).ignored === 2; })());
   // modifiers 10 against Defence 8, a 4: rungs 1-4 all hit, and the 2 hits more take far misses' places
   ok('more hits than rungs take the far misses\u2019 places: always ten', (() => { const L = R.shotLadder(R.missRungs(4, 14, def(8), man), 4, 2, 0, 0);
     return L.far + L.glance + L.near + L.kill === 10 && L.far === 4; })(), JSON.stringify(R.shotLadder(R.missRungs(4, 14, def(8), man), 4, 2, 0, 0)));
