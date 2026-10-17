@@ -365,7 +365,10 @@ console.log('\nWhat became of each round: the D10\u2019s ten faces as a ladder')
   // modifiers 4 against Defence 8 + woods 2 + Stealth 1: 5 wide, 6-8 armour, 9-10 woods, 11 Stealth, 12-13 hits
   const inCover = R.missRungs(9, 13, def(8, [{ label: 'Woods', v: 2 }, { label: 'Stealth', v: 1 }]), man);
   ok('in cover: past the armour into the cover is a near miss, into the Stealth wide', show(Object.assign({ kill: 0 }, inCover)) === '3/3/2/0', show(inCover));
-  ok('a hull is too big to miss: everything short of its Defence strikes it', R.missRungs(9, 11, def(8), hull).far === 1 && R.missRungs(9, 11, def(8), hull).glance === 6);
+  ok('a hull as a man: under 6 wide, 6 up to its Defence off its armour', R.missRungs(9, 11, def(8), hull).far === 4 && R.missRungs(9, 11, def(8), hull).glance === 3);
+  // modifiers 10 against Defence 8, a 4: rungs 1-4 all hit, and the 2 hits more take far misses' places
+  ok('more hits than rungs take the far misses\u2019 places: always ten', (() => { const L = R.shotLadder(R.missRungs(4, 14, def(8), man), 4, 2, 0, 0);
+    return L.far + L.glance + L.near + L.kill === 10 && L.far === 4; })(), JSON.stringify(R.shotLadder(R.missRungs(4, 14, def(8), man), 4, 2, 0, 0)));
   ok('a 9 that does not beat the Defence still hits once', (() => { const L = R.missRungs(9, 12, def(14), man); return L.far + L.glance + L.near === 9; })());
   ok('Suppression the special rules add turns far misses near, a point each', show(R.shotLadder(L9, 1, 2, 0, 2)) === '2/3/4/1');
 
@@ -375,7 +378,7 @@ console.log('\nWhat became of each round: the D10\u2019s ten faces as a ladder')
   let res;
   try { res = R.shoot(world([a, t]), a, t, 'fire', {}); } finally { Math.random = keep; }
   const f = res.fx || {};
-  ok('a battle shot says what became of its rounds', f.far + f.glance + f.near + f.kill >= 10 && f.kill === f.lost && f.before === t.size, JSON.stringify(f));
+  ok('a battle shot says what became of its rounds', f.far + f.glance + f.near + f.kill === 10 && f.kill === f.lost && f.before === t.size, JSON.stringify(f));
   const b = unit('regular', 'A', 10, 40), v = unit('lpv', 'B', 14, 40, { str: 3, damage: 0 });
   Math.random = () => 0.95;
   try { res = R.shoot(world([b, v]), b, v, 'fire', {}); } finally { Math.random = keep; }

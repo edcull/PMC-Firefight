@@ -320,11 +320,12 @@
        that beats the Defence is a hit, and the hit roll says what it did: a man down
        is a kill, Suppression alone a near miss, nothing a deflection (on a hull,
        Damage is a kill, a bounce a deflection). One that falls short of the Defence
-       is placed by the band of it it falls in: under an unarmoured man's Defence (6;
-       nothing on a hull, which is too big to miss) wide; in the unit's own armour (its
+       is placed by the band of it it falls in: under an unarmoured man's Defence (6)
+       wide, at a man or a hull; in the unit's own armour (its
        Defence as pierced, and any shield) a deflection; in its cover a near miss, into
        what it hides behind; in its Stealth wide. Suppression the special rules add
-       turns a far miss into a near miss, a point each. */
+       turns a far miss into a near miss, a point each. The ladder is ten rounds: hits
+       past the rungs that could hold them take the places of far misses first. */
     var BARE_DEF = 6;
     function missRungs(roll, total, dres, t) {
       var L = { far: 0, glance: 0, near: 0 }, arm = 0, stealth = 0;
@@ -332,7 +333,7 @@
         if (/^(Defence|armour pierced|Shield|Overloaded)/.test(p.label)) arm += p.v;
         else if (/^Stealth/.test(p.label)) stealth += p.v;
       });
-      var D = dres.value, cover = D - arm - stealth, floor = isMachine(t) ? 0 : BARE_DEF, mods = total - roll;
+      var D = dres.value, cover = D - arm - stealth, floor = BARE_DEF, mods = total - roll;
       var nat9 = roll === 9 && total <= D;            // a 9 always hits once
       for (var k = 0; k <= 9; k++) {
         if (k === 0 || k > roll) { L.far++; continue; }
@@ -347,6 +348,9 @@
     }
     function ladder(L, kill, near, glance, extraSp) {
       var out = { far: L.far, glance: L.glance + glance, near: L.near + near, kill: kill };
+      // more hits than rungs: they take the far misses' places, then the other misses', so it stays ten
+      var over = out.far + out.glance + out.near + out.kill - 10;
+      ['far', 'glance', 'near'].forEach(function (k) { var n = Math.min(Math.max(0, over), L[k] || 0); out[k] -= n; over -= n; });
       var moved = Math.min(out.far, Math.max(0, Math.round(extraSp || 0)));
       out.far -= moved; out.near += moved;
       return out;
