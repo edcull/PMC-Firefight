@@ -1490,8 +1490,7 @@
 
   function defenceAgainst(state, attacker, target, opts) {
     opts = opts || {};
-    // `ignored`: cover and Stealth the attacker's own rules saw past, for the board (shoot.js, missRungs)
-    var parts = [], def = target.def, ignored = 0;
+    var parts = [], def = target.def;
     parts.push({ label: 'Defence', v: target.def });
     if (has(target, 'Battle Armour') && attacker &&
       (antiTank(attacker, unitDist(attacker, target)) || has(attacker, 'Gauss Weapon'))) {
@@ -1506,18 +1505,17 @@
         // Rite of Invisibility (p. 142): +3 from terrain rather than +2
         var cv = cov.v === 2 && campFlag(target, 'invisibility') ? 3 : cov.v;
         def += cv; parts.push({ label: cov.why + (cv !== cov.v ? ' — Rite of Invisibility' : ''), v: cv });
-      } else if (cov.v && !has(target, 'Battle Armour')) ignored += cov.v;     // a Gauss weapon's
+      }
     }
-    // a terrain bonus given by hand (the Unit Viewer's terrain box): cover, as the ladder counts it
+    // a terrain bonus given by hand (the Unit Viewer's terrain box): cover
     if (opts.bonus) { def += opts.bonus; parts.push({ label: 'Terrain bonus', v: opts.bonus }); }
     /* Stealth (p. 59) is not cover: a hull has it too (the Shadow bug), and it
        holds against defensive fire, which only strips terrain bonuses. */
-    if (!opts.assault && has(target, 'Stealth') && attacker) {
+    if (!opts.assault && has(target, 'Stealth') && attacker && !has(attacker, 'Keen-Eyed')) {
       // +1 above 6", +2 above 12"...: exactly 6" away is not yet out of the first band
       var st = Math.max(0, Math.ceil(unitDist(attacker, target) / 6) - 1);
-      if (has(attacker, 'Keen-Eyed')) ignored += st;
       // a shot called in by Markerlights ignores it (pp. 58-59)
-      else if (st > 0 && opts.marked) { parts.push({ label: 'Stealth — ignored, the target is marked', v: 0 }); ignored += st; }
+      if (st > 0 && opts.marked) parts.push({ label: 'Stealth — ignored, the target is marked', v: 0 });
       else if (st > 0) { def += st; parts.push({ label: 'Stealth', v: st }); }
     }
     // Shield Generator (p. 130): a dome against fire from outside it
@@ -1537,7 +1535,7 @@
     if (opts.assault && bugGround(target) && doctrine(state, target.side, 'BP5')) {
       def += 2; parts.push({ label: 'Chitin Exoskeletons', v: 2 });
     }
-    return { value: def, parts: parts, ignored: ignored };
+    return { value: def, parts: parts };
   }
 
   /* p. 28: "Both suppressed and broken unit cannot use their passive skills which

@@ -323,39 +323,31 @@
        that beats the Defence is a hit, and the hit roll says what it did: a man down
        is a kill, Suppression alone a near miss, nothing a deflection (on a hull,
        Damage is a kill, a bounce a deflection). One that falls short of the Defence
-       is placed by the band of it it falls in: under an unarmoured man's Defence (6)
-       wide, at a man or a hull; in the unit's own armour (its
-       Defence as pierced, and any shield) a deflection; in its cover a near miss, into
-       what it hides behind; in its Stealth wide. Suppression the special rules add
-       turns a far miss into a near miss, a point each. A bonus that is there to beat
-       armour (Anti-tank, Anti-aircraft, a shot into side or rear armour) counts against
-       the armour only — it does more damage, it is no easier to hit with: it carries a
-       rung into the armour or past it, but not up out of the wide band under 6. Cover
-       or Stealth the attacker's own rules saw past (a Gauss weapon, Keen-Eyed, a
-       Markerlight) turns a far miss into a deflection, a point each: rounds that found
-       them where the cover would have hidden them. The ladder is ten rounds: hits
-       past the rungs that could hold them take the places of far misses first. */
+       deflects off them, unless it is still under an unarmoured man's Defence (6)
+       once what hides them (cover, Stealth) is taken off it: then it goes wide, at a
+       man or a hull. A bonus that is there to beat armour (Anti-tank, Anti-aircraft,
+       a shot into side or rear armour) is taken off too — it does more damage, it is
+       no easier to hit with. Cover the attacker's rules see past (a Gauss weapon,
+       Keen-Eyed, a Markerlight) is simply not there. Suppression the special rules
+       add turns a far miss into a near miss, a point each. The ladder is ten rounds:
+       hits past the rungs that could hold them take the places of far misses first. */
     var BARE_DEF = 6;
     // what of an attack's modifiers is there to beat armour, not to find the mark
     function penOf(parts) {
       return (parts || []).reduce(function (n, p) { return n + (/^(Anti-(tank|aircraft)|side armour|rear armour)/.test(p.label) ? p.v : 0); }, 0);
     }
     function missRungs(roll, total, dres, t, pen) {
-      var L = { far: 0, glance: 0, near: 0, ignored: dres.ignored || 0 }, arm = 0, stealth = 0;
-      dres.parts.forEach(function (p) {
-        if (/^(Defence|armour pierced|Shield|Overloaded)/.test(p.label)) arm += p.v;
-        else if (/^Stealth/.test(p.label)) stealth += p.v;
-      });
-      var D = dres.value, cover = D - arm - stealth, floor = BARE_DEF, mods = total - roll;
+      var L = { far: 0, glance: 0, near: 0 }, arm = 0;
+      dres.parts.forEach(function (p) { if (/^(Defence|armour pierced|Shield|Overloaded)/.test(p.label)) arm += p.v; });
+      // what hides them, cover and Stealth: all of the Defence that is not their own armour
+      var D = dres.value, hidden = D - arm, mods = total - roll;
       var nat9 = roll === 9 && total <= D;            // a 9 always hits once
       for (var k = 0; k <= 9; k++) {
         if (k === 0 || k > roll) { L.far++; continue; }
         var v = k + mods;
         if (v > D || (nat9 && k === 9)) continue;      // a hit: its own roll says what it did
-        if (v - (pen || 0) < floor) L.far++;
-        else if (v <= arm) L.glance++;
-        else if (v <= arm + cover) L.near++;
-        else L.far++;
+        if (v - hidden - (pen || 0) < BARE_DEF) L.far++;
+        else L.glance++;
       }
       return L;
     }
@@ -366,8 +358,6 @@
       ['far', 'glance', 'near'].forEach(function (k) { var n = Math.min(Math.max(0, over), L[k] || 0); out[k] -= n; over -= n; });
       var moved = Math.min(out.far, Math.max(0, Math.round(extraSp || 0)));
       out.far -= moved; out.near += moved;
-      var found = Math.min(out.far, L.ignored || 0);
-      out.far -= found; out.glance += found;
       return out;
     }
     /* What a shot does on average, calculated: the hits off all ten faces of the

@@ -362,28 +362,33 @@ console.log('\nWhat became of each round: the D10\u2019s ten faces as a ladder')
   ok('...and the three hits as their rolls say: 4 far, 3 deflected, 2 near, 1 kill', show(R.shotLadder(L9, 1, 2, 0, 0)) === '4/3/2/1', show(R.shotLadder(L9, 1, 2, 0, 0)));
   ok('a 5 rolled: what the roll never reached goes wide too', (() => { const L = R.missRungs(5, 7, def(8), man); return L.far === 8 && L.glance === 2; })(), show(R.missRungs(5, 7, def(8), man)));
   ok('a 0: all ten wide', R.missRungs(0, 2, def(8), man).far === 10);
-  // modifiers 4 against Defence 8 + woods 2 + Stealth 1: 5 wide, 6-8 armour, 9-10 woods, 11 Stealth, 12-13 hits
-  const inCover = R.missRungs(9, 13, def(8, [{ label: 'Woods', v: 2 }, { label: 'Stealth', v: 1 }]), man);
-  ok('in cover: past the armour into the cover is a near miss, into the Stealth wide', show(Object.assign({ kill: 0 }, inCover)) === '3/3/2/0', show(inCover));
+  // FP 1 against Defence 8: 0-4 wide, 5-7 off the armour, 8-9 hit
+  const open1 = R.missRungs(9, 10, def(8), man);
+  ok('FP 1 v Defence 8: 0-4 wide, 5-7 deflected, 8-9 hits', open1.far === 5 && open1.glance === 3 && open1.near === 0, show(open1));
+  // ...and in cover (+2): 0-6 wide, 7-8 deflected, the 9 a hit all the same
+  const cov1 = R.missRungs(9, 10, def(8, [{ label: 'Woods', v: 2 }]), man);
+  ok('...in cover: 0-6 wide, 7-8 deflected, the 9 hits anyway', cov1.far === 7 && cov1.glance === 2 && cov1.near === 0, show(cov1));
+  // Stealth hides them as cover does
+  const st1 = R.missRungs(9, 10, def(8, [{ label: 'Stealth', v: 2 }]), man);
+  ok('...Stealth the same', st1.far === 7 && st1.glance === 2, show(st1));
   ok('a hull as a man: under 6 wide, 6 up to its Defence off its armour', R.missRungs(9, 11, def(8), hull).far === 4 && R.missRungs(9, 11, def(8), hull).glance === 3);
   // FP 4 and Anti-tank +4 against Defence 12: the +4 counts against the armour, not toward the 6
   const AT = R.missRungs(9, 17, def(12), hull, 4);
   ok('Anti-tank beats armour, not the 6: a 1 (5, 9 with it) wide, 2-4 off the armour, 5+ hits', AT.far === 2 && AT.glance === 3 && AT.near === 0,
     JSON.stringify(AT));
   ok('...without it, the same roll is in the armour', R.missRungs(9, 17, def(12), hull, 0).far === 1);
-  // cover the attacker's own rules saw past: a far miss found them, a deflection a point each
-  ok('cover a rule saw past turns far misses into deflections', (() => {
-    const d = def(8); d.ignored = 2; const L = R.shotLadder(R.missRungs(9, 11, d, man), 1, 2, 0, 0); return L.far === 2 && L.glance === 5; })());
-  ok('...a Gauss weapon at a squad in woods: the woods ignored', (() => {
+  // cover the attacker's rules see past is simply not there: as in the open
+  ok('...and a firer that ignores the cover: as in the open', (() => {
     const g = unit('lrrp', 'A', 10, 60), sq = unit('regular', 'B', 14, 60);
-    return R.defenceAgainst(world([g, sq], [{ kind: 'woods', x: 12, y: 56, w: 6, h: 8 }]), g, sq).ignored === 2; })());
+    const d = R.defenceAgainst(world([g, sq], [{ kind: 'woods', x: 12, y: 56, w: 6, h: 8 }]), g, sq);
+    return d.value === sq.def && show(R.missRungs(9, 10, def(8), man)) === show(open1); })());
   // the Unit Viewer's terrain boxes: +2 to the attack, +2 to the Defence as cover
   ok('a Firepower bonus and a Terrain bonus, by hand', (() => {
     const f = unit('regular', 'A', 10, 70), g = unit('regular', 'B', 14, 70), st = world([f, g]);
     const m0 = R.shotMods(st, f, g, 'fire', {}), m = R.shotMods(st, f, g, 'fire', { fpBonus: 2, coverBonus: 2 });
     return m.total === m0.total + 2 && m.def.value === m0.def.value + 2 && m.parts.some(p => p.label === 'Firepower bonus') && m.def.parts.some(p => p.label === 'Terrain bonus');
   })());
-  ok('...the Terrain bonus is cover: its rungs are near misses', (() => { const L = R.missRungs(9, 11, def(8, [{ label: 'Terrain bonus', v: 2 }]), man); return L.near === 2; })());
+  ok('...the Terrain bonus is cover: it puts rungs wide', (() => { const L = R.missRungs(9, 10, def(8, [{ label: 'Terrain bonus', v: 2 }]), man); return L.far === 7 && L.glance === 2; })());
   ok('critical hits on a hull are counted, for the sparks', (() => { const keep = Math.random; Math.random = () => 0.99;
     try { const d = R.resolveDamage(hull, 3, false, 0); return d.crits === 3; } finally { Math.random = keep; } })());
   // modifiers 10 against Defence 8, a 4: rungs 1-4 all hit, and the 2 hits more take far misses' places
