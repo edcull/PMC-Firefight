@@ -184,6 +184,8 @@
   function placeTarget() { TO.x = FROM.x + view.range + 2 * R.UNIT_R; }
   // the firer where it stands to shoot (not wherever a walk has got it to), and a table with the two on it
   function shooter() { return Object.assign({}, unit(), { x: FROM.x, y: FROM.y, shotFrom: [] }); }
+  // the terrain boxes: +2 to the firer's attack from its position, +2 to the target's Defence from its cover
+  function bonuses() { return { fpBonus: view.fpBonus ? 2 : 0, coverBonus: view.terrBonus ? 2 : 0 }; }
   function table(a, t) {
     return { units: [a, t], terrain: [], objectives: [], cfg: { aiSides: [], tier: a.tier, pl: 1 }, turn: 1, sc: {}, scen: {}, phase: 'battle' };
   }
@@ -209,7 +211,7 @@
   function shotNow() {
     var a = shooter(), t = mark(), st = table(a, t);
     if (outOfRange() || !R.canShoot(st, a, t, 'fire', {})) return null;
-    var m = R.shotMods(st, a, t, 'fire', {});
+    var m = R.shotMods(st, a, t, 'fire', bonuses());
     // the Firepower the weapon brings, as the FP column shows it: all of it bar the squad's size
     m.fp = m.total - (R.sizeBonus(a.models) || 0);
     return m;
@@ -245,7 +247,7 @@
        the special rules on it — so the same unit at the same target always shows the
        same result: hits, casualties, Suppression, Damage. */
     var ex;
-    try { ex = R.expectedShot(st, a, t, 'fire', {}); } catch (e) { return null; }
+    try { ex = R.expectedShot(st, a, t, 'fire', bonuses()); } catch (e) { return null; }
     var sum = { hits: ex.avgHits, lost: ex.casualties, sp: ex.sp, dmg: ex.damage, ladder: ex.ladder };
     var avg = function (k) { return sum[k]; };
     var one = function (v) { return (Math.round(v * 10) / 10).toString(); };
@@ -282,7 +284,8 @@
     if (!shot || shot.missed || TRIAL.indexOf(spec.p) < 0) return null;
     var t = shot.t, s0 = shot.sum;
     if (shot.mach) {
-      return Object.assign(root.PMCFire.shares(s0.ladder || {}), { figs: [{ x: TO.x, y: TO.y }], blood: '255,200,120' });
+      return Object.assign(root.PMCFire.shares(s0.ladder || {}), { figs: [{ x: TO.x, y: TO.y }], blood: '255,200,120',
+        crit: Math.round((s0.ladder || {}).crit || 0) });
     }
     // (the men drawn falling: the average rounded, as the target is shown after)
     var before = Math.max(1, t.before || 1), lost = Math.max(0, before - Math.max(0, t.models));
@@ -1061,8 +1064,13 @@
     if (spec.s && !SHOTS.paired(spec)) setTimeout(function () { SHOTS.secondary(spec.s, u, from.second || from, to, hits, spec.sn, outcome); start(); }, 150);
     if (spec.t) setTimeout(function () { SHOTS.secondary(spec.t, u, from.third || from, to, hits, spec.tn, outcome); start(); }, 330);
     // (with the rounds drawn one by one, each lands as it goes: no burst over the mark besides)
+    var sparked = false;
     SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, outcome: outcome,
-      land: function (extra, at) { if (!outcome || DRAWN_EACH.indexOf(spec.p) < 0) SHOTS.hit(u, at || to, hits, extra); } });
+      land: function (extra, at) {
+        if (!outcome || DRAWN_EACH.indexOf(spec.p) < 0) SHOTS.hit(u, at || to, hits, extra);
+        // a critical hit: sparks off the hull, as the first round lands
+        if (outcome && outcome.crit && !sparked) { sparked = true; SHOTS.crits(at || to, outcome.crit); }
+      } });
   }
 
 
@@ -1420,6 +1428,10 @@
     h += '<div class="vgrp"><label for="vrange" id="vrangelab">Range — ' + view.range + '"</label>' +
       '<input type="range" id="vrange" min="' + RANGE_MIN + '" max="' + RANGE_MAX + '" step="1" value="' + view.range + '">' +
       '<p class="vtgtline" id="vfpline">' + esc(fpLine()) + '</p></div>';
+    // what the ground gives each side: the firer a position worth +2 FP, the target cover worth +2 Defence
+    h += '<div class="vgrp"><label>Terrain</label>' +
+      '<label class="vecheck"><input type="checkbox" id="vfpbonus" data-bonus="fp"' + (view.fpBonus ? ' checked' : '') + '> Firepower bonus (+2 FP, the firer)</label>' +
+      '<label class="vecheck"><input type="checkbox" id="vterrbonus" data-bonus="terr"' + (view.terrBonus ? ' checked' : '') + '> Terrain bonus (+2 Defence, the target)</label></div>';
     h += '<div class="vgrp"><label>State</label><div class="vseg">' +
       seg('status', statesFor(p), view.status) + '</div></div>';
     // on foot or mounted, where the unit may take the Riders upgrade; and on what, if it rides
@@ -1777,6 +1789,12 @@
         else if (wf === 'n' || wf === 'sn' || wf === 'tn') w[wf] = +e.target.value;
         else w[wf] = e.target.value || null;
         setEntry(view.key, w);
+        return;
+      }
+      var bn = e.target.getAttribute && e.target.getAttribute('data-bonus');
+      if (bn) {
+        if (bn === 'fp') view.fpBonus = e.target.checked; else view.terrBonus = e.target.checked;
+        freshTarget(); drawControls(); frame();
         return;
       }
       if (e.target.id !== 'vtarget') return;

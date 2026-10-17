@@ -384,6 +384,23 @@ async function fireAndWatch(p, code, ms) {
   ok('every rail line goes with a shell, barrel to spot', pair.rails.length > 0 && pair.rails.every(l => pair.bolts.indexOf(l) >= 0),
     JSON.stringify(pair));
 
+  head('A critical hit throws sparks off the hull');
+  await stage(p, ['regular', 'veterans']);
+  const sparks = await p.evaluate(async () => {
+    const s = window.PMC_STATE();
+    const a = s.units.find(x => x.side === 'A' && x.key === 'regular');
+    let seen = 0;
+    // a hit on a hull, two of them critical
+    const t = s.units.find(x => x.side === 'B' && x.key === 'veterans');
+    const keep = window.PMC.isMachine; window.PMC.isMachine = (u) => u === t || keep(u);
+    try {
+      window.__testShoot(a, t, { hits: 3, fx: { far: 3, glance: 2, near: 0, kill: 5, crit: 2 } });
+      for (let i = 0; i < 50; i++) { seen = Math.max(seen, window.__fxkinds().filter(k => k === 'sparks').length); await new Promise(r => setTimeout(r, 40)); }
+    } finally { window.PMC.isMachine = keep; }
+    return seen;
+  });
+  ok('two critical hits, two showers of sparks', sparks === 2, sparks + ' showers');
+
   head('A volley is drawn by what it did');
   await stage(p, ['regular', 'veterans']);
   const by = await p.evaluate(async () => {

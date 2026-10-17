@@ -616,6 +616,22 @@ async function pickAndFire(p, key, ms) {
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('another unit is not left mid-detonation', !(await p.evaluate(() => window.__viewer.state().collar)));
 
+  // the terrain boxes: +2 FP for the firer, +2 Defence for the target, in the Fire! line
+  const terr = await p.evaluate(() => {
+    const tab = document.querySelector('[data-tab="opts"]'); if (tab) tab.click();
+    const line = () => (document.getElementById('vfpline') || {}).textContent || '';
+    const before = line();
+    const fp = document.getElementById('vfpbonus'), tb = document.getElementById('vterrbonus');
+    if (!fp || !tb) return { missing: true };
+    fp.click(); document.getElementById('vterrbonus').click();
+    const after = line();
+    document.getElementById('vfpbonus').click(); document.getElementById('vterrbonus').click();
+    return { before, after, back: line() };
+  });
+  ok('the terrain boxes add +2 FP to the firer and +2 Defence to the target', !terr.missing && /Firepower bonus \+2/.test(terr.after) &&
+    (+(terr.after.match(/Defence (\d+)/) || [])[1]) === (+(terr.before.match(/Defence (\d+)/) || [])[1]) + 2 && terr.back === terr.before,
+    terr.missing ? 'no boxes' : terr.after);
+
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
   console.log('page errors: ' + (errs.join(' | ') || 'none'));
   await b.close();

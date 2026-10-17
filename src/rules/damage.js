@@ -179,8 +179,8 @@
       return state && state.scen && state.scen.hitMod && a && t ? (state.scen.hitMod(state, a, t) || 0) : 0;
     }
     function resolveDamage(target, hits, pierce, mod) {
-      // `struck`: how many of the hits did Damage (the rest bounced off)
-      var out = { damage: 0, struck: 0, rolls: [] };
+      // `struck`: how many of the hits did Damage (the rest bounced off); `crits`, how many were critical
+      var out = { damage: 0, struck: 0, crits: 0, rolls: [] };
       mod = mod || 0;
       for (var i = 0; i < hits; i++) {
         var r0 = d6(), r = Math.min(6, r0 + mod), tag;
@@ -189,6 +189,7 @@
         else if (r <= 5) { tag = 'Target damaged! (1 DP)'; out.damage += 1; }
         else {
           var crit = pierce ? d6() : d3();
+          out.crits++;
           tag = 'Critical hit! (' + (pierce ? 'D6 ' : 'D3 ') + crit + ' DP)';
           out.damage += crit;
         }
