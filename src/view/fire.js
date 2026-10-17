@@ -564,21 +564,26 @@
        gunship's rockets, the grenades assault troops throw as they close. It makes
        its own noise and its own mark, but the casualties belong to the primary —
        they are one attack, resolved once. */
-    function playSecondary(style, shooter, from, to, hits, count) {
-      if (FIRE[style]) { playStream(style, shooter, from, to, hits, null); return; }
+    /* `outcome` (when the shot's outcome is known): the secondary's rounds are shared
+       out the same way as the primary's — into the men who fall, close in for the
+       Suppression, wide or over for the rest — so the coaxial and the main gun together
+       show what the attack did. */
+    function playSecondary(style, shooter, from, to, hits, count, outcome) {
+      if (FIRE[style]) { playStream(style, shooter, from, to, hits, null, null, outcome); return; }
+      var oc = outcome || null;
       switch (style) {
-        case 'energy': playEnergy(shooter, from, to, count, null, 120); return;
-        case 'orb': playOrbs(shooter, from, to, count, null, !R.isMachine(shooter)); return;
-        case 'orbbig': playOrbs(shooter, from, to, count, null, false, true); return;
-        case 'plasmabolt': playPlasmaBolts(shooter, from, to, count, null); return;
+        case 'energy': playEnergy(shooter, from, to, count, null, 120, oc); return;
+        case 'orb': playOrbs(shooter, from, to, count, null, !R.isMachine(shooter), false, oc); return;
+        case 'orbbig': playOrbs(shooter, from, to, count, null, false, true, oc); return;
+        case 'plasmabolt': playPlasmaBolts(shooter, from, to, count, null, oc); return;
         case 'spit': case 'spitbig': {
-          var sn = count || 1, sfl = 480;
+          var sn = count || 1, sfl = 480, snp = oc && sn > 1 ? roundPlan(sn, oc) : null;
           for (var q0 = 0; q0 < sn; q0++) {
             (function (j) {
               setTimeout(function () {
                 if (!alive()) return;
                 if (SFX) SFX.spit(0, style === 'spitbig');
-                var aim = sn > 1 ? { x: to.x + (j - (sn - 1) / 2) * 0.9, y: to.y + (j % 2 ? 0.6 : -0.6), up: to.up } : to;
+                var aim = landing(oc, snp, j, sn, to, from, sn > 1 ? { x: to.x + (j - (sn - 1) / 2) * 0.9, y: to.y + (j % 2 ? 0.6 : -0.6), up: to.up } : to);
                 add({ kind: 'glob', from: pick(from, j), to: aim, dur: sfl, big: style === 'spitbig', blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
@@ -591,12 +596,12 @@
           }
           return;
         }
-        case 'molotov': playMolotovs(shooter, from, to, count, null); return;
-        case 'frag': playFrags(shooter, from, to, count, null); return;
+        case 'molotov': playMolotovs(shooter, from, to, count, null, oc); return;
+        case 'frag': playFrags(shooter, from, to, count, null, oc); return;
         case 'arc': case 'arcbig': {
           /* Thrown charges: a short, high lob with a puff where it lands, and
              `count` of them — assault troops go in with a grenade in each hand. */
-          var flight = 520, thrown = count || 1;
+          var flight = 520, thrown = count || 1, thp = oc && thrown > 1 ? roundPlan(thrown, oc) : null;
           // a squad with a shoulder pod fires its charges from the leader's pod rather than throwing them
           var throwFrom = from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod, pool: from.pods } : from;
           for (var q = 0; q < thrown; q++) {
@@ -604,9 +609,9 @@
               setTimeout(function () {
                 if (!alive()) return;
                 // spread them either side of the mark rather than one on top of the other
-                var aim = thrown > 1
+                var aim = landing(oc, thp, j, thrown, to, from, thrown > 1
                   ? { x: to.x + (j - (thrown - 1) / 2) * 1.4, y: to.y + (j % 2 ? 0.9 : -0.9), up: to.up }
-                  : to;
+                  : to);
                 if (SFX) SFX.launch();
                 add({ kind: 'lob', from: from.pod ? pick(throwFrom, j) : spread(throwFrom, j, thrown), to: aim, dur: flight, heavy: style === 'arcbig', blocking: true });
                 setTimeout(function () {
@@ -623,18 +628,19 @@
         }
         case 'shell': case 'shellbig': {
           // `count` rounds in quick succession, each with its own flash and bolt
-          var fired = count || 1;
+          var fired = count || 1, shp2 = oc && fired > 1 ? roundPlan(fired, oc) : null;
           for (var q2 = 0; q2 < fired; q2++) {
             (function (j) {
               setTimeout(function () {
                 if (!alive()) return;
                 if (SFX) SFX.shell();
+                var sto = landing(oc, shp2, j, fired, to, from, to);
                 add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pick(from, j).mz, dur: 240, big: true, blocking: true });
-                add({ kind: 'bolt', from: pick(from, j), to: to, dur: 300, heavy: style === 'shellbig', blocking: true });
+                add({ kind: 'bolt', from: pick(from, j), to: sto, dur: 300, heavy: style === 'shellbig', blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
-                  if (R.weaponSpec(shooter).blast === 'frag') fragBlast(to, style === 'shellbig' ? 1.5 : 1.05, j);
-                  else secondaryLands(shooter, to, style === 'shellbig' ? 3 : 2);
+                  if (R.weaponSpec(shooter).blast === 'frag') fragBlast(sto, style === 'shellbig' ? 1.5 : 1.05, j);
+                  else secondaryLands(shooter, sto, style === 'shellbig' ? 3 : 2);
                 }, 300);
                 redraw();
               }, j * 230);
@@ -643,13 +649,14 @@
           return;
         }
         case 'rail': {
-          var lines = count || 1;
+          var lines = count || 1, lnp = oc ? roundPlan(lines, oc) : null, lnk = 0;
           for (var q3 = 0; q3 < lines; q3++) {
             (function (j) {
               setTimeout(function () {
                 if (!alive()) return;
                 if (SFX) SFX.rail();
-                add({ kind: 'rail', from: pick(from, j), to: to, rgb: shotRGB(shooter), dur: 380, blocking: true });
+                var rl = lnp ? lineRound(lnp[j], lnp[j] === 'kill' ? lnk++ : 0, oc, from, to) : { to: to };
+                add({ kind: 'rail', from: pick(from, j), to: rl.to, low: rl.low, over: rl.over, rgb: shotRGB(shooter), dur: 380, blocking: true });
                 redraw();
               }, j * 170);
             })(q3);
@@ -658,17 +665,18 @@
         }
         case 'missile': {
           // missiles off the rail one after another, not all at once
-          var birds = count || 1;
+          var birds = count || 1, bdp = oc && birds > 1 ? roundPlan(birds, oc) : null;
           for (var q4 = 0; q4 < birds; q4++) {
             (function (j) {
               setTimeout(function () {
                 if (!alive()) return;
                 if (SFX) SFX.missile(0, 0.9, 0.47);
-                add({ kind: 'missile', from: pick(from, j), to: to, seed: j, dur: 900, blocking: true });
+                var mto = landing(oc, bdp, j, birds, to, from, to);
+                add({ kind: 'missile', from: pick(from, j), to: mto, seed: j, dur: 900, blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
-                  if (R.weaponSpec(shooter).blast === 'frag') fragBlast(to, 1.2, j);
-                  else secondaryLands(shooter, to, 3);
+                  if (R.weaponSpec(shooter).blast === 'frag') fragBlast(mto, 1.2, j);
+                  else secondaryLands(shooter, mto, 3);
                 }, 900);
                 redraw();
               }, j * 260);
@@ -679,13 +687,16 @@
         case 'rocket': {
           // a rack of unguided rockets, rippling off in a salvo
           if (SFX) SFX.rocket(3);
+          var rkp = oc ? roundPlan(5, oc) : null;
           for (var q5 = 0; q5 < 5; q5++) {
             (function (j) {
               setTimeout(function () {
                 if (!alive()) return;
+                var rto = landing(oc, rkp, j, 5, to, from, rocketSpot(to, j));
                 add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pick(from, j).mz, dur: 180, big: true, blocking: true });
-                add({ kind: 'missile', from: pick(from, j), to: to, rocket: true, seed: j, dur: 420, blocking: true });
-                if (R.weaponSpec(shooter).blast === 'frag') setTimeout(function () { if (alive()) fragBlast(rocketSpot(to, j), 0.8, j); }, 420);
+                add({ kind: 'missile', from: pick(from, j), to: oc ? rto : to, rocket: true, seed: j, dur: 420, blocking: true });
+                if (R.weaponSpec(shooter).blast === 'frag') setTimeout(function () { if (alive()) fragBlast(rto, 0.8, j); }, 420);
+                else if (oc) setTimeout(function () { if (alive()) secondaryLands(shooter, rto, 2); }, 420);
                 else if (j === 4) setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 420);
                 redraw();
               }, j * 78);
@@ -694,10 +705,10 @@
           return;
         }
         case 'flame':
-          flameJets(from, to, 4, null);
+          flameJets(from, to, 4, null, oc);
           return;
         default:
-          playStream(style, shooter, from, to, hits, null);
+          playStream(style, shooter, from, to, hits, null, null, oc);
       }
     }
 
