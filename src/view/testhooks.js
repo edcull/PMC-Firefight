@@ -370,8 +370,13 @@
           // how high the effect starts: its lift plus, when it leaves a barrel,
           // how far that barrel sits above the ground
           up: (f.up || 0) + (f.mz ? -f.mz.dy : 0),
+          // a round that goes over their heads, or into the dirt at their feet (fire.js)
+          over: !!f.over, low: !!f.low,
           fromUp: f.from ? (f.from.up || 0) + (f.from.mz ? -f.from.mz.dy : 0) : null,
           toUp: f.to ? (f.to.up || 0) : null,
+          // a line's two ends, its barrel included: a shell and the rail paired with it share them
+          line: f.from && f.to ? [f.from.x, f.from.y, f.from.mz ? f.from.mz.dx : 0, f.from.mz ? f.from.mz.dy : 0, f.to.x, f.to.y]
+            .map(function (v) { return Math.round((v || 0) * 100) / 100; }).join(',') : null,
           // where a burst or a splash is on the table
           x: f.x != null ? Math.round(f.x * 10) / 10 : null, y: f.y != null ? Math.round(f.y * 10) / 10 : null
         };

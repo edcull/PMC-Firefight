@@ -253,8 +253,9 @@ async function fireAndWatch(p, code, ms) {
   ok('...its muzzle flashes are up there with them',
     points.some(f => f.kind === 'muzzle' && f.up > 0));
   ok('...and what it hits on the ground still lands on the ground',
-    lines.every(f => f.toUp === 0) && points.every(f => f.kind === 'muzzle' || f.up === 0),
-    'impacts at ground level');
+    // (a round into a man strikes him at chest height, not up at the airframe)
+    lines.every(f => f.toUp === 0) && points.every(f => f.kind === 'muzzle' || (f.up >= 0 && f.up <= 0.6)),
+    JSON.stringify(lines.filter(f => f.toUp !== 0).map(f => f.kind + ' ' + f.toUp).concat(points.filter(f => f.kind !== 'muzzle' && !(f.up >= 0 && f.up <= 0.6)).map(f => f.kind + ' ' + f.up)).slice(0, 6)));
 
   head('And a rifle line keeps firing for a good second');
   await stage(p, ['rlmg', 'regular', 'veterans']);
@@ -360,6 +361,58 @@ async function fireAndWatch(p, code, ms) {
   ok('...where a rifle team fires a burst of single shots',
     (heard.rifle || []).indexOf('burst') >= 0 && (heard.rifle || []).indexOf('rattle') < 0,
     (heard.rifle || []).join(' '));
+
+  /* A shot's rounds go where what it did says: over their heads when it does
+     nothing, into the men when it kills, into the dirt at their feet when it only
+     pins them down — a sidearm's (auxiliary fire) as much as a rifle's. */
+  /* A sniper team's Gauss rifle goes off with its shell, as a pair: the rail line
+     out of the same barrel as the shell, to the same spot. */
+  head('A shell and its rail fire as a pair');
+  await stage(p, ['snipers', 'regular']);
+  const pair = await p.evaluate(async () => {
+    const s = window.PMC_STATE();
+    const a = s.units.find(x => x.side === 'A' && x.key === 'snipers');
+    const t = s.units.find(x => x.side === 'B' && x.key !== 'cmd1');
+    window.__testShoot(a, t, { hits: 1, fx: { before: t.size, lost: 0, sp: 3 } });
+    const bolts = new Set(), rails = new Set();
+    for (let i = 0; i < 40; i++) {
+      window.__fxlive().forEach(f => { if (f.kind === 'bolt') bolts.add(f.line); if (f.kind === 'rail') rails.add(f.line); });
+      await new Promise(r => setTimeout(r, 30));
+    }
+    return { bolts: [...bolts], rails: [...rails] };
+  });
+  ok('every rail line goes with a shell, barrel to spot', pair.rails.length > 0 && pair.rails.every(l => pair.bolts.indexOf(l) >= 0),
+    JSON.stringify(pair));
+
+  head('A volley is drawn by what it did');
+  await stage(p, ['regular', 'veterans']);
+  const by = await p.evaluate(async () => {
+    const s = window.PMC_STATE();
+    const a = s.units.find(x => x.side === 'A' && x.code !== 'CMD1' && x.key !== 'cmd1');
+    const t = s.units.find(x => x.side === 'B' && x.key === 'veterans');
+    async function watch(res) {
+      window.__testShoot(a, t, res);
+      const seen = { over: 0, low: 0, tracer: 0 }, ids = new Set();
+      for (let i = 0; i < 60; i++) {
+        window.__fxlive().forEach((f, k) => {
+          if (f.kind !== 'tracer') return;
+          const id = f.x + ',' + f.y + ',' + f.over + f.low;
+          if (ids.has(id)) return; ids.add(id);
+          seen.tracer++; if (f.over) seen.over++; if (f.low) seen.low++;
+        });
+        await new Promise(r => setTimeout(r, 40));
+      }
+      return seen;
+    }
+    return {
+      none: await watch({ hits: 0 }),
+      kill: await watch({ hits: 4, fx: { before: t.size, lost: t.size, sp: 0 } }),
+      pin: await watch({ hits: 2, aux: true, fx: { before: t.size, lost: 0, sp: 40 } })
+    };
+  });
+  ok('a volley that does nothing goes over their heads', by.none.tracer > 0 && by.none.over > by.none.tracer / 2, JSON.stringify(by.none));
+  ok('...one that kills them all goes into the men, none over', by.kill.tracer > 0 && by.kill.over === 0 && by.kill.low === 0, JSON.stringify(by.kill));
+  ok('...and a sidearm that pins them down kicks up the dirt at their feet', by.pin.tracer > 0 && by.pin.low > 0 && by.pin.over === 0, JSON.stringify(by.pin));
 
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
   console.log('page errors: ' + (errs.join(' | ') || 'none'));

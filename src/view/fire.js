@@ -406,7 +406,7 @@
         case 'shellbig': {
           var big = spec.p === 'shellbig';
           var rounds = spec.n || 1, shellGap = 230, shplan = oc && rounds > 1 ? roundPlan(rounds, oc) : null;
-          var flightMs = big ? 340 : 300;
+          var flightMs = big ? 340 : 300, pairs = paired(spec) ? Math.min(rounds, spec.sn || 1) : 0;
           for (var sh = 0; sh < rounds; sh++) {
             (function (j) {
               setTimeout(function () {
@@ -415,6 +415,11 @@
                 if (SFX) SFX.shell();
                 add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: big ? 320 : 260, big: true, blocking: true });
                 add({ kind: 'bolt', from: F, to: sto, dur: flightMs, heavy: big, blocking: true });
+                // a Gauss line paired with it: out of the same barrel, at the same spot, at the same moment
+                if (j < pairs) {
+                  if (SFX) SFX.rail();
+                  add({ kind: 'rail', from: F, to: sto, rgb: shotRGB(shooter), dur: 380, blocking: true });
+                }
                 setTimeout(function () {
                   // where the weapon entry says (`blast: 'frag'`), each round goes off as a fragmentation blast
                   if (alive() && spec.blast === 'frag') fragBlast(sto, big ? 1.5 : 1.05, j);
@@ -568,6 +573,11 @@
        out the same way as the primary's — into the men who fall, close in for the
        Suppression, wide or over for the rest — so the coaxial and the main gun together
        show what the attack did. */
+    /* A gun with a Gauss weapon beside it (a sniper team's, a hull's coaxial rail)
+       fires the two as a pair: each rail line goes out with a shell, from the same
+       barrel to the same spot (primary, 'shell'), not as a secondary of its own. */
+    function paired(spec) { return !!spec && spec.s === 'rail' && (spec.p === 'shell' || spec.p === 'shellbig'); }
+
     function playSecondary(style, shooter, from, to, hits, count, outcome) {
       if (FIRE[style]) { playStream(style, shooter, from, to, hits, null, null, outcome); return; }
       var oc = outcome || null;
@@ -833,8 +843,8 @@
           add({ kind: 'tracer', from: gun(i), to: dest, low: lr.low, over: lr.over, fat: f.tracer.fat, short: f.tracer.short, bio: f.tracer.bio,
             rgb: shotRGB(shooter), delay: at, dur: (lr.over ? 330 : 250) + at, blocking: true });
           if (plan[i] === 'kill') {
-            // into a man as he falls (a hull: sparks off it)
-            add({ kind: 'impact', x: dest.x, y: dest.y, up: (to.up || 0) + 0.6, n: f.tracer.fat ? 2 : 1, rgb: outcome.blood || '170,40,30', delay: at + 200, dur: 460 + at, blocking: true });
+            // where it strikes (a hull: sparks off it)
+            add({ kind: 'impact', x: dest.x, y: dest.y, up: (to.up || 0) + 0.6, n: f.tracer.fat ? 2 : 1, rgb: outcome.blood || shotRGB(shooter), delay: at + 200, dur: 460 + at, blocking: true });
           } else if (lr.low) {
             // the dirt kicked up at their feet
             add({ kind: 'miss', x: dest.x, y: dest.y, up: to.up, delay: at + 200, dur: 520 + at, blocking: true });
@@ -862,7 +872,7 @@
 
     return {
       FIRE: FIRE, streamLength: streamLength, glowRGB: glowRGB, shotRGB: shotRGB,
-      primary: primary, secondary: playSecondary, stream: playStream, energy: playEnergy, orbs: playOrbs,
+      primary: primary, secondary: playSecondary, paired: paired, stream: playStream, energy: playEnergy, orbs: playOrbs,
       flameJets: flameJets, spread: spread, pick: pick, hit: hit, curve: curveFor
     };
   }
@@ -907,5 +917,9 @@
 
   // the colours a weapon entry's `glow` may name
   var GLOWS = { blue: '110,190,255', green: '150,220,80', red: '255,110,90', violet: '190,140,255', amber: '255,190,90', white: '235,240,255' };
-  root.PMCFire = { GLOWS: GLOWS, make: make, troop: troop, XENO_BLUE: '110,190,255', BUG_GREEN: '150,220,80' };
+  /* The styles whose rounds are drawn landing one by one when a shot carries its
+     outcome: each puts its own strike or dirt down, so nothing more is burst over
+     the mark as the shot lands. */
+  var DRAWN_EACH = ['none', 'small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail', 'flame'];
+  root.PMCFire = { GLOWS: GLOWS, make: make, troop: troop, DRAWN_EACH: DRAWN_EACH, XENO_BLUE: '110,190,255', BUG_GREEN: '150,220,80' };
 })(typeof window !== 'undefined' ? window : globalThis);

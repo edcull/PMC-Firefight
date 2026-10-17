@@ -417,9 +417,10 @@
         var dres2 = resolveDamage(t, hits, pierce, dmgMod(state, a, t));
         log.push({ t: 'hits', text: dres2.rolls.join(' · ') });
         applyDamage(state, t, dres2.damage, log, a);
-        return { log: log, roll: roll, hits: hits, wreck: wreck };
+        // what it did, for the board to share the rounds out by (fire.js): Damage against Structure
+        return { log: log, roll: roll, hits: hits, wreck: wreck, fx: { dmg: dres2.damage, str: t.str } };
       }
-      var medicId = null;
+      var medicId = null, fx = null;
       if (hits > 0) {
         var mod = 0;
         /* Undisciplined (p. 94): shooting at a Broken Rebel unit, or catching one in
@@ -462,7 +463,10 @@
         shotRelief(state, t, res);
         log.push({ t: 'hits', text: res.rolls.join(' · ') + burn + (supp ? ' · Suppressive Fire +2 SP' : '') +
           (res.notes.length ? ' · ' + res.notes.join(' · ') : '') });
+        var before = t.models;
         applyResult(state, t, res, log, a);
+        // what it did, for the board to share the rounds out by (fire.js): the men lost and the Suppression
+        fx = { before: before, lost: Math.max(0, before - (t.alive ? t.models : 0)), sp: res.sp };
       } else if (mountOf(t) && mountOf(t).shotSP && !campFlag(t, 'nerves') && !campFlag(t, 'shielding')) {
         // a horse shies at being shot at, hit or not (Appendix 3)
         applyResult(state, t, { casualties: 0, sp: mountOf(t).shotSP, rolls: [], notes: [] }, log, a);
@@ -471,6 +475,7 @@
       // who answered a MEDIC! on this volley, so the board can show them at work
       var out = medicId ? { log: log, roll: roll, hits: hits, medic: medicId } : { log: log, roll: roll, hits: hits };
       if (wreck) out.wreck = wreck;                     // what the shot brought down, for the board to repaint
+      if (fx) out.fx = fx;
       return out;
     }
 

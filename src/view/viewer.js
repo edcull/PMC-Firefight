@@ -278,7 +278,7 @@
      mortar bombs, missiles and rockets — closer to the men the more the shot does */
   var TRIAL = ['none', 'small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail', 'flame', 'frag', 'molotov', 'orb', 'orbbig', 'plasmabolt', 'spit', 'spitbig', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket'];
   // (those whose every round is drawn landing as it goes: no burst over the mark besides)
-  var DRAWN_EACH = ['none', 'small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail', 'flame'];
+  var DRAWN_EACH = root.PMCFire.DRAWN_EACH;
   function roundOutcome(shot, spec) {
     if (!shot || shot.missed || TRIAL.indexOf(spec.p) < 0) return null;
     var t = shot.t, s0 = shot.sum;
@@ -291,9 +291,7 @@
     var figs = I.formationTable(Math.min(10, before)).map(function (o) { return { x: TO.x + o.dx, y: TO.y + o.dy }; });
     // the men who fall are the last of the formation, as the squad is drawn after
     var fallen = figs.slice(Math.max(0, Math.min(figs.length, Math.round(before - lost))));
-    var art = (t.art || '');
-    return { kill: lost / before, supp: (s0.sp || 0) / (2 * morale + 1), figs: fallen.length ? fallen : figs,
-      blood: /bug|swarm|larv/.test(art) || t.faction === 'bugs' ? '110,170,50' : R.isXeno(t) ? '70,140,230' : '170,40,30' };
+    return { kill: lost / before, supp: (s0.sp || 0) / (2 * morale + 1), figs: fallen.length ? fallen : figs };
   }
   function targetLine() {
     var t = mark(), p = R.profile(view.target) || {};
@@ -1061,7 +1059,7 @@
   function play(spec, from, to, hits, u, outcome) {
     var dist = R.unitDist(u, to);
     // (the secondary and third weapons share the attack's outcome out the same way as the primary)
-    if (spec.s) setTimeout(function () { SHOTS.secondary(spec.s, u, from.second || from, to, hits, spec.sn, outcome); start(); }, 150);
+    if (spec.s && !SHOTS.paired(spec)) setTimeout(function () { SHOTS.secondary(spec.s, u, from.second || from, to, hits, spec.sn, outcome); start(); }, 150);
     if (spec.t) setTimeout(function () { SHOTS.secondary(spec.t, u, from.third || from, to, hits, spec.tn, outcome); start(); }, 330);
     // (with the rounds drawn one by one, each lands as it goes: no burst over the mark besides)
     SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, outcome: outcome,

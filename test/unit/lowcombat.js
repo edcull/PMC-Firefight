@@ -351,5 +351,22 @@ console.log('\nSPR-4 Cover blown in: +1 to every hit roll that round, the defend
   ok('...and not in the rounds after', laterPlus === 0, laterPlus + ' of ' + later);
 })();
 
+console.log('\nA shot says what it did, for the board to draw its rounds by');
+(function () {
+  const a = unit('regular', 'A', 10, 10), t = unit('veterans', 'B', 14, 10);
+  const keep = Math.random; Math.random = () => 0.95;
+  let res;
+  try { res = R.shoot(world([a, t]), a, t, 'fire', {}); } finally { Math.random = keep; }
+  const fx = res.fx || {};
+  ok('a squad hit: the men it had, the men lost and the Suppression', res.hits > 0 && fx.before === t.size && fx.lost === t.size - (t.alive ? t.models : 0) && fx.sp > 0, JSON.stringify(fx));
+  const v = unit('lpv', 'B', 14, 20, { str: 3, damage: 0 }), b = unit('regular', 'A', 10, 20);
+  Math.random = () => 0.95;
+  try { res = R.shoot(world([b, v]), b, v, 'fire', {}); } finally { Math.random = keep; }
+  ok('a hull hit: the Damage against its Structure', res.hits > 0 && res.fx && res.fx.str === 3 && res.fx.dmg === v.damage, JSON.stringify(res.fx));
+  Math.random = () => 0.01;
+  try { res = R.shoot(world([unit('regular', 'A', 10, 30), unit('veterans', 'B', 14, 30)]), a, t, 'fire', {}); } finally { Math.random = keep; }
+  ok('a shot that hits nothing says nothing', !res.fx, JSON.stringify(res.fx));
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);
