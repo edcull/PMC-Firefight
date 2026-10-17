@@ -396,7 +396,7 @@ async function fireAndWatch(p, code, ms) {
       for (let i = 0; i < 60; i++) {
         window.__fxlive().forEach((f, k) => {
           if (f.kind !== 'tracer') return;
-          const id = f.x + ',' + f.y + ',' + f.over + f.low;
+          const id = f.line + ',' + f.over + f.low;
           if (ids.has(id)) return; ids.add(id);
           seen.tracer++; if (f.over) seen.over++; if (f.low) seen.low++;
         });
@@ -407,11 +407,13 @@ async function fireAndWatch(p, code, ms) {
     return {
       none: await watch({ hits: 0 }),
       kill: await watch({ hits: 4, fx: { before: t.size, lost: t.size, sp: 0 } }),
-      pin: await watch({ hits: 2, aux: true, fx: { before: t.size, lost: 0, sp: 40 } })
+      pin: await watch({ hits: 2, aux: true, fx: { before: t.size, lost: 0, sp: 40 } }),
+      armour: await watch({ hits: 0, fx: { glance: 0.9 } })
     };
   });
   ok('a volley that does nothing goes over their heads', by.none.tracer > 0 && by.none.over > by.none.tracer / 2, JSON.stringify(by.none));
   ok('...one that kills them all goes into the men, none over', by.kill.tracer > 0 && by.kill.over === 0 && by.kill.low === 0, JSON.stringify(by.kill));
+  ok('...one their armour turns strikes them, not over their heads', by.armour.tracer > 0 && by.armour.over <= by.armour.tracer / 4 && by.armour.low === 0, JSON.stringify(by.armour));
   ok('...and a sidearm that pins them down kicks up the dirt at their feet', by.pin.tracer > 0 && by.pin.low > 0 && by.pin.over === 0, JSON.stringify(by.pin));
 
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

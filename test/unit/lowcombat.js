@@ -365,7 +365,13 @@ console.log('\nA shot says what it did, for the board to draw its rounds by');
   ok('a hull hit: the Damage against its Structure', res.hits > 0 && res.fx && res.fx.str === 3 && res.fx.dmg === v.damage, JSON.stringify(res.fx));
   Math.random = () => 0.01;
   try { res = R.shoot(world([unit('regular', 'A', 10, 30), unit('veterans', 'B', 14, 30)]), a, t, 'fire', {}); } finally { Math.random = keep; }
-  ok('a shot that hits nothing says nothing', !res.fx, JSON.stringify(res.fx));
+  ok('a shot that misses outright says nothing', !res.fx, JSON.stringify(res.fx));
+  // what the armour turned: more of the attack the heavier it is, none off a bare man
+  const share = (key) => { const sh = unit('regular', 'A', 10, 40), tt = unit(key, 'B', 16, 40); return R.expectedShot(world([sh, tt]), sh, tt, 'fire', {}).glance; };
+  const bare = share('penal'), line = share('regular'), heavy = share('protectors'), hull = share('mcv');
+  ok('the armour turns more of a volley the heavier it is', bare === 0 && line > 0 && heavy > line && hull > line, [bare, line, heavy, hull].map(v => v.toFixed(2)).join(' < '));
+  ok('...and a battle shot says how much', (() => { const sh = unit('regular', 'A', 10, 50), tt = unit('protectors', 'B', 16, 50); Math.random = () => 0.5;
+    try { return R.shoot(world([sh, tt]), sh, tt, 'fire', {}).fx.glance > 0; } catch (e) { return false; } finally { Math.random = keep; } })());
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

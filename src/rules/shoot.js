@@ -314,6 +314,20 @@
       } finally { Math.random = real; }
       return acc;
     }
+    /* How much of an attack its target's armour turned, as a share of it (0-1), for
+       the board to draw as rounds that strike and glance off rather than go wide:
+       of what the Defence stopped, the part that is the unit's own armour (its
+       Defence, as pierced, and any shield) above an unarmoured man's — all of it on
+       a hull, which is too big to miss. A roll of 0 missed outright. Cover and
+       Stealth are rounds that never reached them. */
+    var BARE_DEF = 6;
+    function glanceOf(roll, total, dres, t) {
+      if (!roll || total <= 0 || !dres || dres.value <= 0) return 0;
+      var arm = 0;
+      dres.parts.forEach(function (p) { if (/^(Defence|armour pierced|Shield|Overloaded)/.test(p.label)) arm += p.v; });
+      arm = Math.max(0, arm - (t && isMachine(t) ? 0 : BARE_DEF));
+      return Math.round(Math.min(1, Math.min(total, dres.value) * Math.min(1, arm / dres.value) / total) * 100) / 100;
+    }
     /* What a shot does on average, calculated: the hits off all ten faces of the
        D10 (as shotOdds), times what one hit does on average off the hit table
        (the battle's own, with every special rule on it), plus what the attack
@@ -323,8 +337,8 @@
       var hitsAt = function (r) {
         return r === 0 ? 0 : r === 9 ? Math.max(1, r + m.total - m.def.value) : Math.max(0, r + m.total - m.def.value);
       };
-      var out = { avgHits: 0, chance: 0, casualties: 0, sp: 0, damage: 0 }, r;
-      for (r = 0; r <= 9; r++) { out.avgHits += hitsAt(r) / 10; if (hitsAt(r) > 0) out.chance += 0.1; }
+      var out = { avgHits: 0, chance: 0, casualties: 0, sp: 0, damage: 0, glance: 0 }, r;
+      for (r = 0; r <= 9; r++) { out.avgHits += hitsAt(r) / 10; if (hitsAt(r) > 0) out.chance += 0.1; out.glance += glanceOf(r, r + m.total, m.def, t) / 10; }
       var u = JSON.parse(JSON.stringify(t));        // the hit table is read, never written
       if (isMachine(t)) {
         var dm = dmgMod(state, a, t);
@@ -397,7 +411,7 @@
         }
       }
 
-      var hits;
+      var hits, glance = glanceOf(roll, total, dres, t);
       if (roll === 0) hits = 0;
       else if (roll === 9) hits = Math.max(1, total - dres.value);
       else hits = Math.max(0, total - dres.value);
@@ -418,7 +432,7 @@
         log.push({ t: 'hits', text: dres2.rolls.join(' · ') });
         applyDamage(state, t, dres2.damage, log, a);
         // what it did, for the board to share the rounds out by (fire.js): Damage against Structure
-        return { log: log, roll: roll, hits: hits, wreck: wreck, fx: { dmg: dres2.damage, str: t.str } };
+        return { log: log, roll: roll, hits: hits, wreck: wreck, fx: { dmg: dres2.damage, str: t.str, glance: glance } };
       }
       var medicId = null, fx = null;
       if (hits > 0) {
@@ -466,7 +480,7 @@
         var before = t.models;
         applyResult(state, t, res, log, a);
         // what it did, for the board to share the rounds out by (fire.js): the men lost and the Suppression
-        fx = { before: before, lost: Math.max(0, before - (t.alive ? t.models : 0)), sp: res.sp };
+        fx = { before: before, lost: Math.max(0, before - (t.alive ? t.models : 0)), sp: res.sp, glance: glance };
       } else if (mountOf(t) && mountOf(t).shotSP && !campFlag(t, 'nerves') && !campFlag(t, 'shielding')) {
         // a horse shies at being shot at, hit or not (Appendix 3)
         applyResult(state, t, { casualties: 0, sp: mountOf(t).shotSP, rolls: [], notes: [] }, log, a);
@@ -475,6 +489,7 @@
       // who answered a MEDIC! on this volley, so the board can show them at work
       var out = medicId ? { log: log, roll: roll, hits: hits, medic: medicId } : { log: log, roll: roll, hits: hits };
       if (wreck) out.wreck = wreck;                     // what the shot brought down, for the board to repaint
+      if (!fx && glance > 0) fx = { glance: glance };    // nothing got through, but it reached them
       if (fx) out.fx = fx;
       return out;
     }

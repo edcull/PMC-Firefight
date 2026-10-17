@@ -239,22 +239,24 @@
     /* What a shot did, for fire.js to share its rounds out by: a share into the men
        who fall as big as the share of the squad it killed (or of the hull's
        Structure it took), a share into the dirt at their feet as big as the
-       Suppression it put on them is of what breaks them (2 x Morale + 1), and the
+       Suppression it put on them is of what breaks them (2 x Morale + 1), a share
+       striking them and glancing off as big as what their armour turned, and the
        rest over their heads or wide. A shot that hit nothing goes over or wide
        entirely. A shot the rules did not say the effect of (an older replay, a
        demolition) is drawn as it always was. */
     function roundOutcome(target, to, res) {
       if (!res || !target || !target.id) return null;
       var f = res.fx;
-      if (!(res.hits > 0)) f = { before: target.models || 1, lost: 0, sp: 0 };
+      if (!(res.hits > 0)) f = { before: target.models || 1, lost: 0, sp: 0, glance: res.fx ? res.fx.glance : 0 };
       else if (!f) return null;
-      if (f.str) return { kill: Math.min(1, (f.dmg || 0) / Math.max(1, f.str)), supp: 0, figs: [{ x: to.x, y: to.y }], blood: '255,200,120' };
+      if (f.str || R.isMachine(target)) return { kill: Math.min(1, (f.dmg || 0) / Math.max(1, f.str || 1)), supp: 0, glance: f.glance || 0, figs: [{ x: to.x, y: to.y }], blood: '255,200,120' };
       var before = Math.max(1, f.before || 1), n = Math.max(1, Math.min(ISO.MAX_FIGS || 10, before));
       var figs = ISO.formationTable(n).map(function (o) { return { x: to.x + o.dx, y: to.y + o.dy }; });
       // the men who fall are the last of the formation, as the squad is drawn after
       var fallen = figs.slice(Math.max(0, Math.min(n, Math.round(n * (before - (f.lost || 0)) / before))));
       var morale = (R.currentMorale ? R.currentMorale(target) : target.morale) || 4;
-      return { kill: Math.min(1, (f.lost || 0) / before), supp: (f.sp || 0) / (2 * morale + 1), figs: fallen.length ? fallen : figs };
+      return { kill: Math.min(1, (f.lost || 0) / before), supp: (f.sp || 0) / (2 * morale + 1), glance: f.glance || 0,
+        figs: fallen.length ? fallen : figs, all: figs };
     }
     /* The replay waits on the table being busy. Most weapons put their first
        effect up a moment after they are called (a timer, not at once), and in
