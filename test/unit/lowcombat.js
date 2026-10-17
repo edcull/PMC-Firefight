@@ -366,6 +366,11 @@ console.log('\nWhat became of each round: the D10\u2019s ten faces as a ladder')
   const inCover = R.missRungs(9, 13, def(8, [{ label: 'Woods', v: 2 }, { label: 'Stealth', v: 1 }]), man);
   ok('in cover: past the armour into the cover is a near miss, into the Stealth wide', show(Object.assign({ kill: 0 }, inCover)) === '3/3/2/0', show(inCover));
   ok('a hull as a man: under 6 wide, 6 up to its Defence off its armour', R.missRungs(9, 11, def(8), hull).far === 4 && R.missRungs(9, 11, def(8), hull).glance === 3);
+  // FP 4 and Anti-tank +4 against Defence 12: the +4 counts against the armour, not toward the 6
+  const AT = R.missRungs(9, 17, def(12), hull, 4);
+  ok('Anti-tank beats armour, not the 6: a 1 (5, 9 with it) wide, 2-4 off the armour, 5+ hits', AT.far === 2 && AT.glance === 3 && AT.near === 0,
+    JSON.stringify(AT));
+  ok('...without it, the same roll is in the armour', R.missRungs(9, 17, def(12), hull, 0).far === 1);
   // modifiers 10 against Defence 8, a 4: rungs 1-4 all hit, and the 2 hits more take far misses' places
   ok('more hits than rungs take the far misses\u2019 places: always ten', (() => { const L = R.shotLadder(R.missRungs(4, 14, def(8), man), 4, 2, 0, 0);
     return L.far + L.glance + L.near + L.kill === 10 && L.far === 4; })(), JSON.stringify(R.shotLadder(R.missRungs(4, 14, def(8), man), 4, 2, 0, 0)));

@@ -324,10 +324,16 @@
        wide, at a man or a hull; in the unit's own armour (its
        Defence as pierced, and any shield) a deflection; in its cover a near miss, into
        what it hides behind; in its Stealth wide. Suppression the special rules add
-       turns a far miss into a near miss, a point each. The ladder is ten rounds: hits
+       turns a far miss into a near miss, a point each. A bonus that is there to beat
+       armour (Anti-tank, Anti-aircraft) counts against the armour only: it carries a
+       rung into the armour or past it, but not up out of the wide band under 6. The ladder is ten rounds: hits
        past the rungs that could hold them take the places of far misses first. */
     var BARE_DEF = 6;
-    function missRungs(roll, total, dres, t) {
+    // what of an attack's modifiers is there to beat armour, not to find the mark
+    function penOf(parts) {
+      return (parts || []).reduce(function (n, p) { return n + (/^Anti-(tank|aircraft)/.test(p.label) ? p.v : 0); }, 0);
+    }
+    function missRungs(roll, total, dres, t, pen) {
       var L = { far: 0, glance: 0, near: 0 }, arm = 0, stealth = 0;
       dres.parts.forEach(function (p) {
         if (/^(Defence|armour pierced|Shield|Overloaded)/.test(p.label)) arm += p.v;
@@ -339,7 +345,7 @@
         if (k === 0 || k > roll) { L.far++; continue; }
         var v = k + mods;
         if (v > D || (nat9 && k === 9)) continue;      // a hit: its own roll says what it did
-        if (v < floor) L.far++;
+        if (v - (pen || 0) < floor) L.far++;
         else if (v <= arm) L.glance++;
         else if (v <= arm + cover) L.near++;
         else L.far++;
@@ -371,7 +377,7 @@
          shares of itself, a hit split by the odds of what one hit does */
       var lad = { far: 0, glance: 0, near: 0, kill: 0 };
       function addLadder(r, kill, near, extraSp) {
-        var h = hitsAt(r), L = ladder(missRungs(r, r + m.total, m.def, t), h * kill, h * near, h * (1 - kill - near), h > 0 ? extraSp : 0);
+        var h = hitsAt(r), L = ladder(missRungs(r, r + m.total, m.def, t, penOf(m.parts)), h * kill, h * near, h * (1 - kill - near), h > 0 ? extraSp : 0);
         var n = L.far + L.glance + L.near + L.kill;
         Object.keys(lad).forEach(function (k) { lad[k] += L[k] / n / 10; });
       }
@@ -473,7 +479,7 @@
         applyDamage(state, t, dres2.damage, log, a);
         // what became of each round, for the board to draw (missRungs)
         return { log: log, roll: roll, hits: hits, wreck: wreck,
-          fx: ladder(missRungs(roll, total, dres, t), dres2.struck, 0, hits - dres2.struck, 0) };
+          fx: ladder(missRungs(roll, total, dres, t, penOf(parts)), dres2.struck, 0, hits - dres2.struck, 0) };
       }
       var medicId = null, fx = null, before = t.models;
       if (hits > 0) {
@@ -522,18 +528,18 @@
         /* what became of each round, for the board to draw (missRungs): a hit that only
            pinned them, its point taken off again (Brave), did nothing after all */
         var unpinned = Math.min(res.pinned, Math.max(0, res.tableSp - res.sp));
-        fx = ladder(missRungs(roll, total, dres, t), res.downs, res.pinned - unpinned,
+        fx = ladder(missRungs(roll, total, dres, t, penOf(parts)), res.downs, res.pinned - unpinned,
           hits - res.downs - res.pinned + unpinned, res.sp - res.tableSp);
       } else if (mountOf(t) && mountOf(t).shotSP && !campFlag(t, 'nerves') && !campFlag(t, 'shielding')) {
         // a horse shies at being shot at, hit or not (Appendix 3)
         applyResult(state, t, { casualties: 0, sp: mountOf(t).shotSP, rolls: [], notes: [] }, log, a);
-        fx = ladder(missRungs(roll, total, dres, t), 0, 0, 0, mountOf(t).shotSP);
+        fx = ladder(missRungs(roll, total, dres, t, penOf(parts)), 0, 0, 0, mountOf(t).shotSP);
         log.push({ t: 'hits', text: 'Horses shy under fire: +' + mountOf(t).shotSP + ' SP' });
       }
       // who answered a MEDIC! on this volley, so the board can show them at work
       var out = medicId ? { log: log, roll: roll, hits: hits, medic: medicId } : { log: log, roll: roll, hits: hits };
       if (wreck) out.wreck = wreck;                     // what the shot brought down, for the board to repaint
-      if (!fx) fx = ladder(missRungs(roll, total, dres, t), 0, 0, 0, 0);
+      if (!fx) fx = ladder(missRungs(roll, total, dres, t, penOf(parts)), 0, 0, 0, 0);
       // and the men it had and lost, so the rounds that kill go into the ones who fall
       fx.before = before; fx.lost = Math.max(0, before - (t.alive ? t.models : 0));
       out.fx = fx;

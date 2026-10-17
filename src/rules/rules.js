@@ -1744,7 +1744,7 @@
   function shotOdds(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shotOdds(state, a, t, mode, opts); }
   function expectedShot(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).expectedShot(state, a, t, mode, opts); }
   // what became of each round of an attack, for the board to draw (shoot.js)
-  function missRungs(roll, total, dres, t) { return (KIT_SHOOT || kitShoot()).missRungs(roll, total, dres, t); }
+  function missRungs(roll, total, dres, t, pen) { return (KIT_SHOOT || kitShoot()).missRungs(roll, total, dres, t, pen); }
   function shotLadder(L, kill, near, glance, extraSp) { return (KIT_SHOOT || kitShoot()).ladder(L, kill, near, glance, extraSp); }
   function shoot(state, a, t, mode, opts) { return (KIT_SHOOT || kitShoot()).shoot(state, a, t, mode, opts); }
   /* ---- the Xenotripods: in rules/xeno.js ---- */
