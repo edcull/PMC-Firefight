@@ -175,7 +175,9 @@
       var k = Math.min(1, age / (f.dur - (f.delay || 0)));
       if (f.kind === 'tracer') {
         var a = start(f, I.K * 0.85), b = I.toScreen(f.to.x, f.to.y);
-        b.y -= liftB(f) + I.K * 0.75;
+        /* where it ends: chest height on the mark; into the ground (`low`); or, for a
+           round over their heads (`over`), well up, carrying on past them */
+        b.y -= liftB(f) + (f.low ? 0 : f.over ? I.K * 1.9 : I.K * 0.75);
         // a long burst walks about; a rifle volley does not
         if (f.spread) {
           if (f.jx === undefined) {
@@ -184,7 +186,9 @@
           }
           b.x += f.jx; b.y += f.jy;
         }
-        var head = Math.min(1, k * 1.6), tail = Math.max(0, head - (f.short ? 0.2 : 0.34));
+        var head = Math.min(1, k * 1.6), tail = Math.max(0, head - (f.short ? 0.2 : f.over ? 0.22 : 0.34));
+        // a round going over fades as it goes, gone before it comes down anywhere
+        if (f.over) g.globalAlpha = Math.max(0, 1 - k * 1.1);
         var x0 = a.x + (b.x - a.x) * tail, y0 = a.y + (b.y - a.y) * tail;
         var x1 = a.x + (b.x - a.x) * head, y1 = a.y + (b.y - a.y) * head;
         if (f.rgb) {                                     // energy: a glowing bolt, white at the heart
@@ -203,6 +207,7 @@
         g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
         if (f.fat) I.ellipse(g, x1, y1, I.PIXEL * 1.6, I.PIXEL * 1.3,
           'rgba(255,244,208,' + (1 - k * 0.4) + ')');
+        g.globalAlpha = 1;
       } else if (f.kind === 'rail') {
         /* A Gauss weapon or a las-cutter: the line is simply there, the whole
            length of it at once, and then it is not. No travel to watch. */

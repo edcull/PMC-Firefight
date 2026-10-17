@@ -529,7 +529,7 @@
         }
 
         default:
-          playStream(spec.p, shooter, from, to, hits, land, spec.splash);
+          playStream(spec.p, shooter, from, to, hits, land, spec.splash, o.outcome);
           return Math.max(820, streamLength(spec.p, hits) + 320);
       }
     }
@@ -686,9 +686,30 @@
        one routine draws them all. `land` is null for a secondary, which does its
        own noise but leaves the casualties to the primary. `splash` lands every
        round in its own small burst of light around the mark (the Delta SMGs). */
-    function playStream(style, shooter, from, to, hits, land, splash) {
+    /* What each round of a volley does, when the shot's outcome is known (a trial, on
+       rifle fire): as big a share of the rounds as the share of the squad it kills goes
+       into the men who fall; as big a share as the Suppression it puts on them (to the
+       point of breaking) goes into the ground at their feet, kicking it up; the rest
+       go over their heads and on, for nothing. `outcome`: { kill, supp } as shares 0-1,
+       and `figs`, where the fallen stood. */
+    function roundPlan(n, outcome) {
+      var kill = Math.max(0, Math.min(1, outcome.kill || 0)), supp = Math.max(0, Math.min(1 - kill, outcome.supp || 0));
+      var kN = Math.round(n * kill), sN = Math.round(n * supp);
+      if (kill > 0 && !kN) kN = 1;
+      if (supp > 0 && !sN && kN < n) sN = 1;
+      sN = Math.min(sN, n - kN);
+      var plan = [], i;
+      for (i = 0; i < kN; i++) plan.push('kill');
+      for (i = 0; i < sN; i++) plan.push('supp');
+      while (plan.length < n) plan.push('over');
+      // dealt through the volley rather than in blocks, the killing rounds not all at the start
+      for (i = plan.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = plan[i]; plan[i] = plan[j]; plan[j] = t; }
+      return plan;
+    }
+    function playStream(style, shooter, from, to, hits, land, splash, outcome) {
       var f = FIRE[style] || FIRE.small;
       var n = f.n(hits);
+      var plan = outcome && style === 'small' ? roundPlan(n, outcome) : null;
       var heavy = shooter.fp >= 5;
       // a double burst is heard as two, the second where its rounds start
       var second = f.bursts ? roundAt(f, n, Math.ceil(n / f.bursts)) / 1000 : 0;
@@ -720,9 +741,35 @@
           add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pool[m2], rgb: shotRGB(shooter), delay: m2 * 23, dur: f.muzzle + m2 * 23, blocking: true });
         }
       }
+      // the line of fire, along the ground: overs carry on along it, the dirt goes up short of the men
+      var lx = to.x - from.x, ly = to.y - from.y, ll = Math.hypot(lx, ly) || 1;
+      lx /= ll; ly /= ll;
+      var kills = 0;
       for (var i = 0; i < n; i++) {
         // a clumped weapon pauses between bursts; the rest fire evenly
         var at = roundAt(f, n, i);
+        if (plan) {
+          var role = plan[i], dest, jitter = (Math.random() - 0.5) * 1.6;
+          if (role === 'kill') {
+            // into one of the men who fall, at chest height
+            var fig = (outcome.figs || [])[kills++ % Math.max(1, (outcome.figs || []).length)] || to;
+            dest = { x: fig.x, y: fig.y, up: to.up };
+            add({ kind: 'tracer', from: gun(i), to: dest, rgb: shotRGB(shooter), delay: at, dur: 250 + at, blocking: true });
+            add({ kind: 'impact', x: dest.x, y: dest.y, up: (to.up || 0) + 0.6, n: 1, rgb: outcome.blood || '170,40,30', delay: at + 200, dur: 460 + at, blocking: true });
+          } else if (role === 'supp') {
+            // into the ground just short of them and among their feet
+            var short = 0.2 + Math.random() * 1.1;
+            dest = { x: to.x - lx * short - ly * jitter, y: to.y - ly * short + lx * jitter, up: to.up };
+            add({ kind: 'tracer', from: gun(i), to: dest, low: true, rgb: shotRGB(shooter), delay: at, dur: 250 + at, blocking: true });
+            add({ kind: 'miss', x: dest.x, y: dest.y, up: to.up, delay: at + 200, dur: 520 + at, blocking: true });
+          } else {
+            // over their heads and away, high, landing nowhere that matters
+            var past = 5 + Math.random() * 5;
+            dest = { x: to.x + lx * past - ly * jitter * 1.5, y: to.y + ly * past + lx * jitter * 1.5, up: to.up };
+            add({ kind: 'tracer', from: gun(i), to: dest, over: true, rgb: shotRGB(shooter), delay: at, dur: 330 + at, blocking: true });
+          }
+          continue;
+        }
         add({
           kind: 'tracer', from: gun(i), to: to,
           spread: f.tracer.spread, fat: f.tracer.fat, short: f.tracer.short, bio: f.tracer.bio, rgb: shotRGB(shooter),
