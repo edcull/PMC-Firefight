@@ -377,6 +377,15 @@ console.log('\nWhat became of each round: the D10\u2019s ten faces as a ladder')
   ok('...a Gauss weapon at a squad in woods: the woods ignored', (() => {
     const g = unit('lrrp', 'A', 10, 60), sq = unit('regular', 'B', 14, 60);
     return R.defenceAgainst(world([g, sq], [{ kind: 'woods', x: 12, y: 56, w: 6, h: 8 }]), g, sq).ignored === 2; })());
+  // the Unit Viewer's terrain boxes: +2 to the attack, +2 to the Defence as cover
+  ok('a Firepower bonus and a Terrain bonus, by hand', (() => {
+    const f = unit('regular', 'A', 10, 70), g = unit('regular', 'B', 14, 70), st = world([f, g]);
+    const m0 = R.shotMods(st, f, g, 'fire', {}), m = R.shotMods(st, f, g, 'fire', { fpBonus: 2, coverBonus: 2 });
+    return m.total === m0.total + 2 && m.def.value === m0.def.value + 2 && m.parts.some(p => p.label === 'Firepower bonus') && m.def.parts.some(p => p.label === 'Terrain bonus');
+  })());
+  ok('...the Terrain bonus is cover: its rungs are near misses', (() => { const L = R.missRungs(9, 11, def(8, [{ label: 'Terrain bonus', v: 2 }]), man); return L.near === 2; })());
+  ok('critical hits on a hull are counted, for the sparks', (() => { const keep = Math.random; Math.random = () => 0.99;
+    try { const d = R.resolveDamage(hull, 3, false, 0); return d.crits === 3; } finally { Math.random = keep; } })());
   // modifiers 10 against Defence 8, a 4: rungs 1-4 all hit, and the 2 hits more take far misses' places
   ok('more hits than rungs take the far misses\u2019 places: always ten', (() => { const L = R.shotLadder(R.missRungs(4, 14, def(8), man), 4, 2, 0, 0);
     return L.far + L.glance + L.near + L.kill === 10 && L.far === 4; })(), JSON.stringify(R.shotLadder(R.missRungs(4, 14, def(8), man), 4, 2, 0, 0)));

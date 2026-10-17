@@ -1508,6 +1508,8 @@
         def += cv; parts.push({ label: cov.why + (cv !== cov.v ? ' — Rite of Invisibility' : ''), v: cv });
       } else if (cov.v && !has(target, 'Battle Armour')) ignored += cov.v;     // a Gauss weapon's
     }
+    // a terrain bonus given by hand (the Unit Viewer's terrain box): cover, as the ladder counts it
+    if (opts.bonus) { def += opts.bonus; parts.push({ label: 'Terrain bonus', v: opts.bonus }); }
     /* Stealth (p. 59) is not cover: a hull has it too (the Shadow bug), and it
        holds against defensive fire, which only strips terrain bonuses. */
     if (!opts.assault && has(target, 'Stealth') && attacker) {

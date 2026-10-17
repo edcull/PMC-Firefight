@@ -268,7 +268,10 @@
       // a unit charging home cannot claim cover from the defensive fire it draws
       /* A shot called in by Markerlights, marked or designated, ignores the target's
          Stealth (pp. 58-59): the price is that a Stealth unit is marked only within 12". */
-      var defOpts = { noCover: mode === 'defensive', defensiveFire: mode === 'defensive', marked: !aux && !!markCall(state, a, t, opts) };
+      // a firing position's bonus, given by hand (the Unit Viewer's terrain boxes)
+      if (opts && opts.fpBonus) { total += opts.fpBonus; parts.push({ label: 'Firepower bonus', v: opts.fpBonus }); }
+      var defOpts = { noCover: mode === 'defensive', defensiveFire: mode === 'defensive', marked: !aux && !!markCall(state, a, t, opts),
+        bonus: (opts && opts.coverBonus) || 0 };
       var dres = atT ? null : defenceAgainst(state, aux ? auxGun(a) : a, t, defOpts);
       return {
         total: total, parts: parts, basic: basic, aux: aux, pierce: pierce,
@@ -325,7 +328,8 @@
        Defence as pierced, and any shield) a deflection; in its cover a near miss, into
        what it hides behind; in its Stealth wide. Suppression the special rules add
        turns a far miss into a near miss, a point each. A bonus that is there to beat
-       armour (Anti-tank, Anti-aircraft) counts against the armour only: it carries a
+       armour (Anti-tank, Anti-aircraft, a shot into side or rear armour) counts against
+       the armour only — it does more damage, it is no easier to hit with: it carries a
        rung into the armour or past it, but not up out of the wide band under 6. Cover
        or Stealth the attacker's own rules saw past (a Gauss weapon, Keen-Eyed, a
        Markerlight) turns a far miss into a deflection, a point each: rounds that found
@@ -334,7 +338,7 @@
     var BARE_DEF = 6;
     // what of an attack's modifiers is there to beat armour, not to find the mark
     function penOf(parts) {
-      return (parts || []).reduce(function (n, p) { return n + (/^Anti-(tank|aircraft)/.test(p.label) ? p.v : 0); }, 0);
+      return (parts || []).reduce(function (n, p) { return n + (/^(Anti-(tank|aircraft)|side armour|rear armour)/.test(p.label) ? p.v : 0); }, 0);
     }
     function missRungs(roll, total, dres, t, pen) {
       var L = { far: 0, glance: 0, near: 0, ignored: dres.ignored || 0 }, arm = 0, stealth = 0;
@@ -388,9 +392,10 @@
       }
       if (isMachine(t)) {
         var dm = dmgMod(state, a, t);
-        var hull = everyFall(function () { var d = resolveDamage(u, 1, m.pierce, dm); return { d: d.damage, k: d.struck }; });
+        var hull = everyFall(function () { var d = resolveDamage(u, 1, m.pierce, dm); return { d: d.damage, k: d.struck, c: d.crits }; });
         out.damage = out.avgHits * hull.d;
         for (r = 0; r <= 9; r++) addLadder(r, hull.k, 0, 0);
+        lad.crit = out.avgHits * hull.c;              // the critical hits, on average
         out.ladder = lad;
         return out;
       }
@@ -484,7 +489,7 @@
         applyDamage(state, t, dres2.damage, log, a);
         // what became of each round, for the board to draw (missRungs)
         return { log: log, roll: roll, hits: hits, wreck: wreck,
-          fx: ladder(missRungs(roll, total, dres, t, penOf(parts)), dres2.struck, 0, hits - dres2.struck, 0) };
+          fx: Object.assign(ladder(missRungs(roll, total, dres, t, penOf(parts)), dres2.struck, 0, hits - dres2.struck, 0), { crit: dres2.crits }) };
       }
       var medicId = null, fx = null, before = t.models;
       if (hits > 0) {

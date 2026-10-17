@@ -735,6 +735,14 @@
        nothing. `outcome`: { kill, supp, glance } as shares 0-1, `figs`, where the
        fallen stood, and `all`, where every man stood. */
     var SPARKS = '255,220,150';
+    /* A critical hit on a hull: a shower of sparks off it for each, one after another. */
+    function crits(to, n) {
+      for (var i = 0; i < (n || 0); i++) {
+        add({ kind: 'sparks', x: to.x + (Math.random() - 0.5) * 0.8, y: to.y + (Math.random() - 0.5) * 0.8, up: (to.up || 0) + 0.4,
+          seed: Math.floor(Math.random() * 1000), n: 34, delay: i * 160, dur: 950 + i * 160, blocking: true });
+      }
+      if (n) redraw();
+    }
     function roundPlan(n, outcome) {
       var kill = Math.max(0, Math.min(1, outcome.kill || 0)), supp = Math.max(0, Math.min(1 - kill, outcome.supp || 0));
       var kN = Math.round(n * kill), sN = Math.round(n * supp);
@@ -891,7 +899,7 @@
 
     return {
       FIRE: FIRE, streamLength: streamLength, glowRGB: glowRGB, shotRGB: shotRGB,
-      primary: primary, secondary: playSecondary, paired: paired, stream: playStream, energy: playEnergy, orbs: playOrbs,
+      primary: primary, secondary: playSecondary, paired: paired, crits: crits, stream: playStream, energy: playEnergy, orbs: playOrbs,
       flameJets: flameJets, spread: spread, pick: pick, hit: hit, curve: curveFor
     };
   }

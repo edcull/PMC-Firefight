@@ -1175,6 +1175,20 @@
               : i % 4 === 0 ? 'rgba(255,196,120,' + (1 - k) + ')' : 'rgba(168,150,120,' + (0.9 - k) + ')');
         }
         if (f.rgb && k < 0.5) I.ellipse(g, p2.x, p2.y - I.K * 0.3, I.K * 0.45 * (1 - k * 2), I.K * 0.35 * (1 - k * 2), 'rgba(' + f.rgb + ',' + (0.6 - k * 1.2) + ')');
+      } else if (f.kind === 'sparks') {
+        // a critical hit on a hull: a shower of sparks thrown up and out, falling as they cool
+        var ps = I.toScreen(f.x, f.y); ps.y -= liftAt(f);
+        var ns = f.n || 30, ts = k * (f.dur - (f.delay || 0)) / 1000;
+        for (var si = 0; si < ns; si++) {
+          var h1 = Math.sin((si + 1) * 12.9898 + (f.seed || 0) * 78.233) * 43758.5453; h1 -= Math.floor(h1);
+          var h2 = Math.sin((si + 1) * 39.3468 + (f.seed || 0) * 11.135) * 43758.5453; h2 -= Math.floor(h2);
+          var sa = h1 * Math.PI * 2, sv = I.K * (2 + h2 * 3.5);
+          var sxo = Math.cos(sa) * sv * ts, syo = Math.sin(sa) * sv * ts * 0.5 - I.K * (3 + h2 * 4) * ts + I.K * 10 * ts * ts;
+          var hot = Math.max(0, 1 - k * (0.8 + h2 * 0.4));
+          I.rect(g, ps.x + sxo, ps.y - I.K * 0.5 + syo, I.PIXEL, I.PIXEL,
+            si % 3 === 0 ? 'rgba(255,252,225,' + hot + ')' : 'rgba(255,' + Math.round(150 + 90 * hot) + ',70,' + hot + ')');
+        }
+        if (k < 0.2) I.ellipse(g, ps.x, ps.y - I.K * 0.5, I.K * 0.6 * (1 - k * 5), I.K * 0.45 * (1 - k * 5), 'rgba(255,240,190,' + (0.8 - k * 4) + ')');
       } else if (f.kind === 'miss') {
         var p3 = I.toScreen(f.x, f.y); p3.y -= liftAt(f);
         for (var m = 0; m < 5; m++) {
