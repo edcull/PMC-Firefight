@@ -351,27 +351,42 @@ console.log('\nSPR-4 Cover blown in: +1 to every hit roll that round, the defend
   ok('...and not in the rounds after', laterPlus === 0, laterPlus + ' of ' + later);
 })();
 
-console.log('\nA shot says what it did, for the board to draw its rounds by');
+console.log('\nWhat became of each round: the D10\u2019s ten faces as a ladder');
 (function () {
-  const a = unit('regular', 'A', 10, 10), t = unit('veterans', 'B', 14, 10);
+  const man = unit('recruits', 'B', 14, 10), hull = unit('lpv', 'B', 14, 20);
+  const def = (v, extra) => ({ value: v + (extra || []).reduce((n, p) => n + p.v, 0), parts: [{ label: 'Defence', v }].concat(extra || []) });
+  const show = (L) => [L.far, L.glance, L.near, L.kill].join('/');
+  // Firepower 2 against Defence 8, a 9 rolled; one man down and two pinned off the three hits
+  const L9 = R.missRungs(9, 11, def(8), man);
+  ok('FP 2 v Defence 8, a 9: faces 0-3 wide, 4-6 (6 to 8) turned by the armour', show(Object.assign({ near: 0, kill: 0 }, L9)) === '4/3/0/0', show(L9));
+  ok('...and the three hits as their rolls say: 4 far, 3 deflected, 2 near, 1 kill', show(R.shotLadder(L9, 1, 2, 0, 0)) === '4/3/2/1', show(R.shotLadder(L9, 1, 2, 0, 0)));
+  ok('a 5 rolled: what the roll never reached goes wide too', (() => { const L = R.missRungs(5, 7, def(8), man); return L.far === 8 && L.glance === 2; })(), show(R.missRungs(5, 7, def(8), man)));
+  ok('a 0: all ten wide', R.missRungs(0, 2, def(8), man).far === 10);
+  // modifiers 4 against Defence 8 + woods 2 + Stealth 1: 5 wide, 6-8 armour, 9-10 woods, 11 Stealth, 12-13 hits
+  const inCover = R.missRungs(9, 13, def(8, [{ label: 'Woods', v: 2 }, { label: 'Stealth', v: 1 }]), man);
+  ok('in cover: past the armour into the cover is a near miss, into the Stealth wide', show(Object.assign({ kill: 0 }, inCover)) === '3/3/2/0', show(inCover));
+  ok('a hull is too big to miss: everything short of its Defence strikes it', R.missRungs(9, 11, def(8), hull).far === 1 && R.missRungs(9, 11, def(8), hull).glance === 6);
+  ok('a 9 that does not beat the Defence still hits once', (() => { const L = R.missRungs(9, 12, def(14), man); return L.far + L.glance + L.near === 9; })());
+  ok('Suppression the special rules add turns far misses near, a point each', show(R.shotLadder(L9, 1, 2, 0, 2)) === '2/3/4/1');
+
+  // and a battle shot carries it, with the men it had and lost
+  const a = unit('regular', 'A', 10, 30), t = unit('veterans', 'B', 14, 30);
   const keep = Math.random; Math.random = () => 0.95;
   let res;
   try { res = R.shoot(world([a, t]), a, t, 'fire', {}); } finally { Math.random = keep; }
-  const fx = res.fx || {};
-  ok('a squad hit: the men it had, the men lost and the Suppression', res.hits > 0 && fx.before === t.size && fx.lost === t.size - (t.alive ? t.models : 0) && fx.sp > 0, JSON.stringify(fx));
-  const v = unit('lpv', 'B', 14, 20, { str: 3, damage: 0 }), b = unit('regular', 'A', 10, 20);
+  const f = res.fx || {};
+  ok('a battle shot says what became of its rounds', f.far + f.glance + f.near + f.kill >= 10 && f.kill === f.lost && f.before === t.size, JSON.stringify(f));
+  const b = unit('regular', 'A', 10, 40), v = unit('lpv', 'B', 14, 40, { str: 3, damage: 0 });
   Math.random = () => 0.95;
   try { res = R.shoot(world([b, v]), b, v, 'fire', {}); } finally { Math.random = keep; }
-  ok('a hull hit: the Damage against its Structure', res.hits > 0 && res.fx && res.fx.str === 3 && res.fx.dmg === v.damage, JSON.stringify(res.fx));
-  Math.random = () => 0.01;
-  try { res = R.shoot(world([unit('regular', 'A', 10, 30), unit('veterans', 'B', 14, 30)]), a, t, 'fire', {}); } finally { Math.random = keep; }
-  ok('a shot that misses outright says nothing', !res.fx, JSON.stringify(res.fx));
-  // what the armour turned: more of the attack the heavier it is, none off a bare man
-  const share = (key) => { const sh = unit('regular', 'A', 10, 40), tt = unit(key, 'B', 16, 40); return R.expectedShot(world([sh, tt]), sh, tt, 'fire', {}).glance; };
-  const bare = share('penal'), line = share('regular'), heavy = share('protectors'), hull = share('mcv');
-  ok('the armour turns more of a volley the heavier it is', bare === 0 && line > 0 && heavy > line && hull > line, [bare, line, heavy, hull].map(v => v.toFixed(2)).join(' < '));
-  ok('...and a battle shot says how much', (() => { const sh = unit('regular', 'A', 10, 50), tt = unit('protectors', 'B', 16, 50); Math.random = () => 0.5;
-    try { return R.shoot(world([sh, tt]), sh, tt, 'fire', {}).fx.glance > 0; } catch (e) { return false; } finally { Math.random = keep; } })());
+  ok('...a hull: each hit that did Damage a kill', res.fx && res.fx.kill === res.hits, JSON.stringify(res.fx));
+  // the average shot, as the Unit Viewer draws it: heavier armour, more turned, never more gone wide
+  const avg = (key) => { const sh = unit('regular', 'A', 10, 50), tt = unit(key, 'B', 16, 50); return R.expectedShot(world([sh, tt]), sh, tt, 'fire', {}).ladder; };
+  const bare = avg('penal'), line = avg('regular'), heavy = avg('protectors'), tank = avg('mcv');
+  ok('the average shot: the heavier the armour, the more of it turned', bare.glance < line.glance && line.glance < heavy.glance && line.glance < tank.glance,
+    [bare, line, heavy, tank].map(L => (L.glance * 100).toFixed(0) + '%').join(' < '));
+  // (what goes wide is what the roll never reached, much the same whatever is shot at)
+  ok('...and not much more going wide for it', heavy.far <= line.far + 0.1 && tank.far <= line.far + 0.1, [bare, line, heavy, tank].map(L => (L.far * 100).toFixed(0) + '%').join(' '));
 })();
 
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');

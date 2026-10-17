@@ -246,7 +246,7 @@
        same result: hits, casualties, Suppression, Damage. */
     var ex;
     try { ex = R.expectedShot(st, a, t, 'fire', {}); } catch (e) { return null; }
-    var sum = { hits: ex.avgHits, lost: ex.casualties, sp: ex.sp, dmg: ex.damage, glance: ex.glance || 0 };
+    var sum = { hits: ex.avgHits, lost: ex.casualties, sp: ex.sp, dmg: ex.damage, ladder: ex.ladder };
     var avg = function (k) { return sum[k]; };
     var one = function (v) { return (Math.round(v * 10) / 10).toString(); };
     // the target as the average shot leaves it
@@ -268,12 +268,11 @@
         (mach ? '' : ' \u00b7 ' + one(avg('sp')) + ' SP');
     return { hits: hits, t: t, sum: sum, mach: mach };
   }
-  /* What each round of a volley is drawn doing (a trial, here on the bench): a share
-     of the rounds into the men who fall as big as the share of the squad the average
-     shot kills (or of the hull's Structure it takes), a share into the dirt at their
-     feet — or, for what comes down on a spot, close by — as big as the Suppression it
-     puts on them is of what breaks them, and the rest over their heads, or well off
-     (fire.js, roundPlan and landing). */
+  /* What each round of a volley is drawn doing: the rules' ladder of what became of
+     an attack's rounds (shoot.js, missRungs), averaged over the D10's faces — kills
+     into the men who fall, near misses into the dirt at their feet (or close by, for
+     what comes down on a spot), deflections off any of them, and far misses over
+     their heads or well off (fire.js, roundPlan and landing). */
   /* rifles, and what comes down on a spot: grenades, bottles, plasma, acid, shells,
      mortar bombs, missiles and rockets — closer to the men the more the shot does */
   var TRIAL = ['none', 'small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail', 'flame', 'frag', 'molotov', 'orb', 'orbbig', 'plasmabolt', 'spit', 'spitbig', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket'];
@@ -283,15 +282,15 @@
     if (!shot || shot.missed || TRIAL.indexOf(spec.p) < 0) return null;
     var t = shot.t, s0 = shot.sum;
     if (shot.mach) {
-      return { kill: Math.min(1, (s0.dmg || 0) / Math.max(1, t.str || 1)), supp: 0, glance: s0.glance, figs: [{ x: TO.x, y: TO.y }], blood: '255,200,120' };
+      return Object.assign(root.PMCFire.shares(s0.ladder || {}), { figs: [{ x: TO.x, y: TO.y }], blood: '255,200,120' });
     }
     // (the men drawn falling: the average rounded, as the target is shown after)
     var before = Math.max(1, t.before || 1), lost = Math.max(0, before - Math.max(0, t.models));
-    var morale = (R.currentMorale ? R.currentMorale(t) : t.morale) || 4;
     var figs = I.formationTable(Math.min(10, before)).map(function (o) { return { x: TO.x + o.dx, y: TO.y + o.dy }; });
     // the men who fall are the last of the formation, as the squad is drawn after
-    var fallen = figs.slice(Math.max(0, Math.min(figs.length, Math.round(before - lost))));
-    return { kill: lost / before, supp: (s0.sp || 0) / (2 * morale + 1), glance: s0.glance, figs: fallen.length ? fallen : figs, all: figs };
+    var fallen = figs.slice(Math.max(0, Math.min(figs.length, Math.round(figs.length * (before - lost) / before))));
+    // the rounds shared out as the rules' ladder for the average shot has them (shoot.js, missRungs)
+    return Object.assign(root.PMCFire.shares(s0.ladder || {}), { figs: fallen.length ? fallen : figs, all: figs });
   }
   function targetLine() {
     var t = mark(), p = R.profile(view.target) || {};

@@ -728,13 +728,12 @@
        one routine draws them all. `land` is null for a secondary, which does its
        own noise but leaves the casualties to the primary. `splash` lands every
        round in its own small burst of light around the mark (the Delta SMGs). */
-    /* What each round of a volley does, when the shot's outcome is known: as big a
-       share of the rounds as the share of the squad it kills goes into the men who
-       fall; as big a share as the Suppression it puts on them (to the point of
-       breaking) goes into the ground at their feet, kicking it up; as big a share as
-       their armour stopped strikes them and glances off; the rest go over their heads
-       and on, for nothing. `outcome`: { kill, supp, glance } as shares 0-1, `figs`,
-       where the fallen stood, and `all`, where every man stood. */
+    /* What each round of a volley does, when the shot's outcome is known (the rules'
+       ladder, shoot.js missRungs, as shares): the kills go into the men who fall; the
+       near misses into the ground at their feet, kicking it up; the deflections
+       strike one of them and glance off; the rest go over their heads and on, for
+       nothing. `outcome`: { kill, supp, glance } as shares 0-1, `figs`, where the
+       fallen stood, and `all`, where every man stood. */
     var SPARKS = '255,220,150';
     function roundPlan(n, outcome) {
       var kill = Math.max(0, Math.min(1, outcome.kill || 0)), supp = Math.max(0, Math.min(1 - kill, outcome.supp || 0));
@@ -757,7 +756,8 @@
        rocket, a glob) lands, when the shot's outcome is known: a round that kills
        lands among the men who fall; one that only pins them close by; one that does
        nothing well off. A lone round lands on the men if it kills, among their feet
-       if it puts any Suppression on them, and misses only if it does nothing. Off
+       if it puts any Suppression on them, on one of them if their armour turned any
+       of it, and misses only if none of these. Off
        to either side, or short and over along the line of fire. `plan` is the
        volley's roundPlan; `def` where the round would have come down otherwise. */
     function landing(outcome, plan, j, n, to, from, def) {
@@ -778,10 +778,10 @@
       function onAny() { var all = outcome.all || figs; return onMan(Math.floor(Math.random() * Math.max(1, all.length)), all); }
       if (n <= 1) {
         // a lone round is the whole attack: on the men if it kills, among their feet if it
-        // pins them at all, and a miss, off to one side, only if it does nothing
+        // pins them at all, off one of them if it reached them, and wide only if none of these
         if (kill > 0) return onMan(0);
         if (supp > 0) { var near = onMan(Math.floor(Math.random() * Math.max(1, figs.length))); return { x: near.x + (Math.random() - 0.5) * 0.6, y: near.y + (Math.random() - 0.5) * 0.6, up: to.up }; }
-        if ((outcome.glance || 0) >= 0.3) return onAny();
+        if ((outcome.glance || 0) > 0) return onAny();
         return off(1.2 + Math.random() * 1.2);
       }
       var role = plan ? plan[j] : 'over';
@@ -940,5 +940,12 @@
      outcome: each puts its own strike or dirt down, so nothing more is burst over
      the mark as the shot lands. */
   var DRAWN_EACH = ['none', 'small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail', 'flame'];
-  root.PMCFire = { GLOWS: GLOWS, make: make, troop: troop, DRAWN_EACH: DRAWN_EACH, XENO_BLUE: '110,190,255', BUG_GREEN: '150,220,80' };
+  /* The rules' ladder for a shot (shoot.js, missRungs: far misses, deflections,
+     near misses and kills, as counts or shares) as the shares roundPlan deals the
+     rounds out by. */
+  function shares(L) {
+    var n = (L.far || 0) + (L.glance || 0) + (L.near || 0) + (L.kill || 0) || 1;
+    return { kill: (L.kill || 0) / n, supp: (L.near || 0) / n, glance: (L.glance || 0) / n };
+  }
+  root.PMCFire = { GLOWS: GLOWS, make: make, troop: troop, DRAWN_EACH: DRAWN_EACH, shares: shares, XENO_BLUE: '110,190,255', BUG_GREEN: '150,220,80' };
 })(typeof window !== 'undefined' ? window : globalThis);

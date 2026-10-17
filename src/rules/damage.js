@@ -47,7 +47,10 @@
     // `later`: the caller adds to the attack's suppression afterwards, and calls shotRelief itself
     function resolveShootingHits(state, target, hits, mod, atk, later) {
       // `ruleSp`: the points special rules added on top of the table's own (Incendiary leaves them undoubled)
-      var out = { casualties: 0, sp: 0, ruleSp: 0, rolls: [], notes: [] };
+      /* `downs` and `pinned`: how many of the hits put a man down, and how many only
+         pinned them (Suppression, no casualty); the rest did nothing. The board draws
+         a round for each (fire.js); `tableSp` is the table's own Suppression. */
+      var out = { casualties: 0, sp: 0, ruleSp: 0, downs: 0, pinned: 0, tableSp: 0, rolls: [], notes: [] };
       // "When resolving hits inflicted on a drone unit (both in shooting and assault), add 1 to the result" (p. 40)
       if (droneUnit(target)) { mod = (mod || 0) + 1; out.notes.push('Drone unit +1 to hit rolls'); }
       var medic = medicFor(state, target), medics = !!medic;
@@ -57,6 +60,7 @@
       var thin = thinAir(state, target);
       if (thin) out.notes.push('Thin or toxic air: +1 against infantry, a 1 still ignored');
       for (var i = 0; i < hits; i++) {
+        var c0 = out.casualties, s0 = out.sp;
         var raw = d6(), r = raw + mod + (thin && raw > 1 ? 1 : 0), tag, down = false;
         if (suicidal && !(medics && r >= 6)) {
           // ignores hits on 1-2, but goes down on a 5-6 — a 6 near Field Medics is still MEDIC! (CMP-13)
@@ -91,7 +95,10 @@
           }
         }
         out.rolls.push('D6 ' + raw + (mod ? '+' + mod : '') + ' → ' + tag);
+        if (out.casualties > c0) out.downs++;
+        else if (out.sp > s0) out.pinned++;
       }
+      out.tableSp = out.sp - out.ruleSp;
       // Style Bonus on the firer: one more point of suppression per man killed
       if (atk && campFlag(atk, 'style') && out.casualties) {
         out.sp += out.casualties; out.ruleSp += out.casualties;
@@ -172,10 +179,12 @@
       return state && state.scen && state.scen.hitMod && a && t ? (state.scen.hitMod(state, a, t) || 0) : 0;
     }
     function resolveDamage(target, hits, pierce, mod) {
-      var out = { damage: 0, rolls: [] };
+      // `struck`: how many of the hits did Damage (the rest bounced off)
+      var out = { damage: 0, struck: 0, rolls: [] };
       mod = mod || 0;
       for (var i = 0; i < hits; i++) {
         var r0 = d6(), r = Math.min(6, r0 + mod), tag;
+        if (r !== 1) out.struck++;
         if (r === 1) tag = 'Bounced off the armour!';
         else if (r <= 5) { tag = 'Target damaged! (1 DP)'; out.damage += 1; }
         else {
