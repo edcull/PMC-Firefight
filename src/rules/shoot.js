@@ -323,10 +323,12 @@
        that beats the Defence is a hit, and the hit roll says what it did: a man down
        is a kill, Suppression alone a near miss, nothing a deflection (on a hull,
        Damage is a kill, a bounce a deflection). One that falls short of the Defence
-       deflects off them, unless it is still under an unarmoured man's Defence (6)
-       once what hides them (cover, Stealth) is taken off it: then it goes wide, at a
-       man or a hull. A bonus that is there to beat armour (Anti-tank, Anti-aircraft,
-       a shot into side or rear armour) is taken off too — it does more damage, it is
+       is under an unarmoured man's Defence (6) or not, as what stands between is
+       taken off it in turn: under 6 as it is, it goes wide; under once their cover is
+       taken off, it goes into the cover (a near miss); under once their Stealth is,
+       wide, unseen; and if it is 6 or more for all that, it deflects off them, a man
+       or a hull. A bonus that is there to beat armour (Anti-tank, Anti-aircraft, a
+       shot into side or rear armour) is taken off first — it does more damage, it is
        no easier to hit with. Cover the attacker's rules see past (a Gauss weapon,
        Keen-Eyed, a Markerlight) is simply not there. Suppression the special rules
        add turns a far miss into a near miss, a point each. The ladder is ten rounds:
@@ -337,16 +339,22 @@
       return (parts || []).reduce(function (n, p) { return n + (/^(Anti-(tank|aircraft)|side armour|rear armour)/.test(p.label) ? p.v : 0); }, 0);
     }
     function missRungs(roll, total, dres, t, pen) {
-      var L = { far: 0, glance: 0, near: 0 }, arm = 0;
-      dres.parts.forEach(function (p) { if (/^(Defence|armour pierced|Shield|Overloaded)/.test(p.label)) arm += p.v; });
-      // what hides them, cover and Stealth: all of the Defence that is not their own armour
-      var D = dres.value, hidden = D - arm, mods = total - roll;
+      var L = { far: 0, glance: 0, near: 0 }, arm = 0, stealth = 0;
+      dres.parts.forEach(function (p) {
+        if (/^(Defence|armour pierced|Shield|Overloaded)/.test(p.label)) arm += p.v;
+        else if (/^Stealth/.test(p.label)) stealth += p.v;
+      });
+      // their cover: all of the Defence that is neither their own armour nor their Stealth
+      var D = dres.value, cover = D - arm - stealth, mods = total - roll;
       var nat9 = roll === 9 && total <= D;            // a 9 always hits once
       for (var k = 0; k <= 9; k++) {
         if (k === 0 || k > roll) { L.far++; continue; }
         var v = k + mods;
         if (v > D || (nat9 && k === 9)) continue;      // a hit: its own roll says what it did
-        if (v - hidden - (pen || 0) < BARE_DEF) L.far++;
+        var e = v - (pen || 0);
+        if (e < BARE_DEF) L.far++;
+        else if (e - cover < BARE_DEF) L.near++;
+        else if (e - cover - stealth < BARE_DEF) L.far++;
         else L.glance++;
       }
       return L;

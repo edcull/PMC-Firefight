@@ -365,12 +365,12 @@ console.log('\nWhat became of each round: the D10\u2019s ten faces as a ladder')
   // FP 1 against Defence 8: 0-4 wide, 5-7 off the armour, 8-9 hit
   const open1 = R.missRungs(9, 10, def(8), man);
   ok('FP 1 v Defence 8: 0-4 wide, 5-7 deflected, 8-9 hits', open1.far === 5 && open1.glance === 3 && open1.near === 0, show(open1));
-  // ...and in cover (+2): 0-6 wide, 7-8 deflected, the 9 a hit all the same
+  // ...and in cover (+2): 0-4 wide, 5-6 into the cover, 7-8 deflected, the 9 a hit all the same
   const cov1 = R.missRungs(9, 10, def(8, [{ label: 'Woods', v: 2 }]), man);
-  ok('...in cover: 0-6 wide, 7-8 deflected, the 9 hits anyway', cov1.far === 7 && cov1.glance === 2 && cov1.near === 0, show(cov1));
-  // Stealth hides them as cover does
+  ok('...in cover: 0-4 wide, 5-6 into the cover, 7-8 deflected, the 9 hits anyway', cov1.far === 5 && cov1.near === 2 && cov1.glance === 2, show(cov1));
+  // Stealth: unseen, wide
   const st1 = R.missRungs(9, 10, def(8, [{ label: 'Stealth', v: 2 }]), man);
-  ok('...Stealth the same', st1.far === 7 && st1.glance === 2, show(st1));
+  ok('...behind Stealth instead: those wide, unseen', st1.far === 7 && st1.glance === 2, show(st1));
   ok('a hull as a man: under 6 wide, 6 up to its Defence off its armour', R.missRungs(9, 11, def(8), hull).far === 4 && R.missRungs(9, 11, def(8), hull).glance === 3);
   // FP 4 and Anti-tank +4 against Defence 12: the +4 counts against the armour, not toward the 6
   const AT = R.missRungs(9, 17, def(12), hull, 4);
@@ -388,7 +388,7 @@ console.log('\nWhat became of each round: the D10\u2019s ten faces as a ladder')
     const m0 = R.shotMods(st, f, g, 'fire', {}), m = R.shotMods(st, f, g, 'fire', { fpBonus: 2, coverBonus: 2 });
     return m.total === m0.total + 2 && m.def.value === m0.def.value + 2 && m.parts.some(p => p.label === 'Firepower bonus') && m.def.parts.some(p => p.label === 'Terrain bonus');
   })());
-  ok('...the Terrain bonus is cover: it puts rungs wide', (() => { const L = R.missRungs(9, 10, def(8, [{ label: 'Terrain bonus', v: 2 }]), man); return L.far === 7 && L.glance === 2; })());
+  ok('...the Terrain bonus is cover: its rungs are near misses', (() => { const L = R.missRungs(9, 10, def(8, [{ label: 'Terrain bonus', v: 2 }]), man); return L.near === 2 && L.far === 5; })());
   ok('critical hits on a hull are counted, for the sparks', (() => { const keep = Math.random; Math.random = () => 0.99;
     try { const d = R.resolveDamage(hull, 3, false, 0); return d.crits === 3; } finally { Math.random = keep; } })());
   // modifiers 10 against Defence 8, a 4: rungs 1-4 all hit, and the 2 hits more take far misses' places
