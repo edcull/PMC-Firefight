@@ -266,7 +266,32 @@
       : 'Average ' + one(avg('hits')) + ' hit' + (one(avg('hits')) === '1' ? '' : 's') + ' \u2192 ' +
         (mach ? one(avg('dmg')) + ' Damage' : one(avg('lost')) + ' casualt' + (one(avg('lost')) === '1' ? 'y' : 'ies')) +
         (mach ? '' : ' \u00b7 ' + one(avg('sp')) + ' SP');
-    return { hits: hits, t: t };
+    return { hits: hits, t: t, sum: sum, mach: mach };
+  }
+  /* What each round of a volley is drawn doing (a trial, here on the bench): a share
+     of the rounds into the men who fall as big as the share of the squad the average
+     shot kills (or of the hull's Structure it takes), a share into the dirt at their
+     feet — or, for what comes down on a spot, close by — as big as the Suppression it
+     puts on them is of what breaks them, and the rest over their heads, or well off
+     (fire.js, roundPlan and landing). */
+  /* rifles, and what comes down on a spot: grenades, bottles, plasma, acid, shells,
+     mortar bombs, missiles and rockets — closer to the men the more the shot does */
+  var TRIAL = ['small', 'spine', 'frag', 'molotov', 'orb', 'orbbig', 'plasmabolt', 'spit', 'spitbig', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket'];
+  function roundOutcome(shot, spec) {
+    if (!shot || shot.missed || TRIAL.indexOf(spec.p) < 0) return null;
+    var t = shot.t, s0 = shot.sum;
+    if (shot.mach) {
+      return { kill: Math.min(1, (s0.dmg || 0) / Math.max(1, t.str || 1)), supp: 0, figs: [{ x: TO.x, y: TO.y }], blood: '255,200,120' };
+    }
+    // (the men drawn falling: the average rounded, as the target is shown after)
+    var before = Math.max(1, t.before || 1), lost = Math.max(0, before - Math.max(0, t.models));
+    var morale = (R.currentMorale ? R.currentMorale(t) : t.morale) || 4;
+    var figs = I.formationTable(Math.min(10, before)).map(function (o) { return { x: TO.x + o.dx, y: TO.y + o.dy }; });
+    // the men who fall are the last of the formation, as the squad is drawn after
+    var fallen = figs.slice(Math.max(0, Math.min(figs.length, Math.round(before - lost))));
+    var art = (t.art || '');
+    return { kill: lost / before, supp: (s0.sp || 0) / (2 * morale + 1), figs: fallen.length ? fallen : figs,
+      blood: /bug|swarm|larv/.test(art) || t.faction === 'bugs' ? '110,170,50' : R.isXeno(t) ? '70,140,230' : '170,40,30' };
   }
   function targetLine() {
     var t = mark(), p = R.profile(view.target) || {};
@@ -1002,7 +1027,7 @@
     if (spec.t) from.third = from.poolFor ? from.poolFor(spec.t) : mountFrom(spec.t);
     var shot = rollShot(), hits = shot ? shot.hits : 0;
     syncSound();
-    play(spec, from, to, hits, u);
+    play(spec, from, to, hits, u, roundOutcome(shot, spec));
     start();
     // what the shot left is shown once it has landed
     if (shot && !shot.missed) {
@@ -1031,11 +1056,13 @@
      scored so there is something to see land. Nothing is resolved here. */
   var SHOTS = root.PMCFire.make({ add: function (f) { FX.add(f); start(); }, redraw: start });
   function glowRGB() { return root.PMCFire.XENO_BLUE; }
-  function play(spec, from, to, hits, u) {
+  function play(spec, from, to, hits, u, outcome) {
     var dist = R.unitDist(u, to);
     if (spec.s) setTimeout(function () { SHOTS.secondary(spec.s, u, from.second || from, to, hits, spec.sn); start(); }, 150);
     if (spec.t) setTimeout(function () { SHOTS.secondary(spec.t, u, from.third || from, to, hits, spec.tn); start(); }, 330);
-    SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, land: function (extra, at) { SHOTS.hit(u, at || to, hits, extra); } });
+    // (with the rounds drawn one by one, each lands as it goes: no burst over the mark besides)
+    SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, outcome: outcome,
+      land: function (extra, at) { if (!outcome || (spec.p !== 'small' && spec.p !== 'spine')) SHOTS.hit(u, at || to, hits, extra); } });
   }
 
 

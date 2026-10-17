@@ -136,8 +136,9 @@
       }
       return n * (gap || 120) + 300;
     }
-    function playOrbs(shooter, from, to, count, land, tele, big) {
+    function playOrbs(shooter, from, to, count, land, tele, big, outcome) {
       var rgb = glowRGB(shooter), n = count || 1, blast = R.weaponSpec(shooter).blast;
+      var plan = outcome && n > 1 ? roundPlan(n, outcome) : null;
       var fl = tele ? 1000 : Math.round((big ? 760 : 560) + Math.min(600, R.unitDist(shooter, { x: to.x, y: to.y }) * 12));
       /* a Gamma's salvo all comes out of one exit portal, hanging short of the
          target on the shooter's side, and spreads from it */
@@ -152,7 +153,7 @@
           setTimeout(function () {
             if (!alive()) return;
             if (tele && SFX && SFX.shimmer) SFX.shimmer(); else if (SFX && SFX.launch) SFX.launch();
-            var aim = n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.1, y: to.y + (j % 2 ? 0.7 : -0.7), up: to.up } : to;
+            var aim = landing(outcome, plan, j, n, to, from, n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.1, y: to.y + (j % 2 ? 0.7 : -0.7), up: to.up } : to);
             add({ kind: 'orb', from: pick(from, j), to: aim, rgb: rgb, tele: !!tele, exit: exit, big: !!big, dur: fl, blocking: true });
             setTimeout(function () {
               if (!alive()) return;
@@ -199,14 +200,15 @@
     }
     /* A plasma breaching gun: one big blue bolt, flat and fast like a shell,
        bursting in a single large splash where it strikes. */
-    function playPlasmaBolts(shooter, from, to, count, land) {
+    function playPlasmaBolts(shooter, from, to0, count, land, outcome) {
       var rgb = glowRGB(shooter), n = count || 1, fl = 420;
+      var plan = outcome && n > 1 ? roundPlan(n, outcome) : null;
       for (var q = 0; q < n; q++) {
         (function (j) {
           setTimeout(function () {
             if (!alive()) return;
             if (SFX) { SFX.shell(); if (SFX.zap) SFX.zap(0.02); }
-            var F = pick(from, j);
+            var F = pick(from, j), to = landing(outcome, plan, j, n, to0, from, to0);
             add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: F.mz, rgb: rgb, dur: 260, big: true, blocking: true });
             add({ kind: 'plasmabolt', from: F, to: to, rgb: rgb, dur: fl, blocking: true });
             setTimeout(function () {
@@ -264,14 +266,14 @@
        tumbling end over end along a high lob with its rag alight, and bursting
        into a fiery splash where it lands — glass, a fireball, the fuel burning
        on. `land` (the primary's) is told as the last one breaks. */
-    function playMolotovs(shooter, from, to, count, land) {
-      var n = count || 1, gap = 210;
+    function playMolotovs(shooter, from, to, count, land, outcome) {
+      var n = count || 1, gap = 210, plan = outcome && n > 1 ? roundPlan(n, outcome) : null;
       var fl = Math.round(560 + Math.min(420, R.unitDist(shooter, { x: to.x, y: to.y }) * 18));
       for (var q = 0; q < n; q++) {
         (function (j) {
           setTimeout(function () {
             if (!alive()) return;
-            var aim = n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.3, y: to.y + (j % 2 ? 0.8 : -0.8), up: to.up } : to;
+            var aim = landing(outcome, plan, j, n, to, from, n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.3, y: to.y + (j % 2 ? 0.8 : -0.8), up: to.up } : to);
             if (SFX) SFX.launch();
             add({ kind: 'molotov', from: spread(from, j, n), to: aim, seed: j, dur: fl, blocking: true });
             setTimeout(function () {
@@ -291,14 +293,14 @@
        turning over along a short lob, skipping once and rolling to the mark,
        then going off in a sharp burst of splinters, dust and earth. `land`
        (the primary's) is told as the last one goes off. */
-    function playFrags(shooter, from, to, count, land) {
-      var n = count || 1, gap = 190;
+    function playFrags(shooter, from, to, count, land, outcome) {
+      var n = count || 1, gap = 190, plan = outcome && n > 1 ? roundPlan(n, outcome) : null;
       var fl = Math.round(480 + Math.min(360, R.unitDist(shooter, { x: to.x, y: to.y }) * 16));
       for (var q = 0; q < n; q++) {
         (function (j) {
           setTimeout(function () {
             if (!alive()) return;
-            var aim = n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.4, y: to.y + (j % 2 ? 0.9 : -0.9), up: to.up } : to;
+            var aim = landing(outcome, plan, j, n, to, from, n > 1 ? { x: to.x + (j - (n - 1) / 2) * 1.4, y: to.y + (j % 2 ? 0.9 : -0.9), up: to.up } : to);
             if (SFX) SFX.launch();
             add({ kind: 'frag', from: spread(from, j, n), to: aim, seed: j, dur: fl, blocking: true });
             setTimeout(function () {
@@ -318,7 +320,7 @@
        the rounds arrive. Returns how long it takes, in ms, before any
        secondary is added on. */
     function primary(spec, shooter, from, to, o) {
-      var hits = o.hits || 1, land = o.land, dist = o.dist || 0, curve = curveFor(shooter, dist);
+      var hits = o.hits || 1, land = o.land, dist = o.dist || 0, curve = curveFor(shooter, dist), oc = o.outcome || null;
       switch (spec.p) {
         case 'none':
           // nothing in hand: what it throws (the secondary) is the attack, and lands its hits
@@ -327,12 +329,12 @@
 
         // fragmentation grenades, thrown: skipping to the mark and going off
         case 'frag': {
-          return playFrags(shooter, from, to, spec.n, land);
+          return playFrags(shooter, from, to, spec.n, land, oc);
         }
 
         // Molotov cocktails, thrown: tumbling, alight, bursting into fire
         case 'molotov': {
-          return playMolotovs(shooter, from, to, spec.n, land);
+          return playMolotovs(shooter, from, to, spec.n, land, oc);
         }
 
         // Xenotripod small arms: pulses of the army's own light
@@ -341,15 +343,15 @@
         }
         // plasma orbs: lobbed from craft and turrets, teleported from a Gamma's launcher (or as `orb` says)
         case 'orb': {
-          return playOrbs(shooter, from, to, spec.n, land, spec.orb ? spec.orb === 'tele' : !R.isMachine(shooter));
+          return playOrbs(shooter, from, to, spec.n, land, spec.orb ? spec.orb === 'tele' : !R.isMachine(shooter), false, oc);
         }
         // an energy howitzer: heavier orbs, lobbed, bursting blue on the ground
         case 'orbbig': {
-          return playOrbs(shooter, from, to, spec.n, land, false, true);
+          return playOrbs(shooter, from, to, spec.n, land, false, true, oc);
         }
         // a plasma breaching gun: a big blue bolt, straight in, splashing blue
         case 'plasmabolt': {
-          return playPlasmaBolts(shooter, from, to, spec.n, land);
+          return playPlasmaBolts(shooter, from, to, spec.n, land, oc);
         }
 
         /* Bug acid: a glob (or `n` of them from the squad) lobbed low, landing in
@@ -359,16 +361,16 @@
           var sbig = spec.p === 'spitbig';
           var sr = dist;
           var sflight = Math.round((sbig ? 560 : 420) + Math.min(600, sr * 12));
-          var globs = spec.n || 1, sgap = sbig ? 260 : 150;
+          var globs = spec.n || 1, sgap = sbig ? 260 : 150, splan = oc && globs > 1 ? roundPlan(globs, oc) : null;
           for (var gi = 0; gi < globs; gi++) {
             (function (j) {
               setTimeout(function () {
                 if (!alive()) return;
                 var F = pick(from, j);
                 if (SFX) SFX.spit(0, sbig);
-                var aim = globs > 1
+                var aim = landing(oc, splan, j, globs, to, from, globs > 1
                   ? { x: to.x + (j - (globs - 1) / 2) * 0.9, y: to.y + (j % 2 ? 0.6 : -0.6), up: to.up }
-                  : to;
+                  : to);
                 add({ kind: 'glob', from: F, to: aim, dur: sflight, big: sbig, blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
@@ -388,20 +390,20 @@
         case 'shell':
         case 'shellbig': {
           var big = spec.p === 'shellbig';
-          var rounds = spec.n || 1, shellGap = 230;
+          var rounds = spec.n || 1, shellGap = 230, shplan = oc && rounds > 1 ? roundPlan(rounds, oc) : null;
           var flightMs = big ? 340 : 300;
           for (var sh = 0; sh < rounds; sh++) {
             (function (j) {
               setTimeout(function () {
                 if (!alive()) return;
-                var F = pick(from, j);
+                var F = pick(from, j), sto = landing(oc, shplan, j, rounds, to, from, to);
                 if (SFX) SFX.shell();
                 add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: big ? 320 : 260, big: true, blocking: true });
-                add({ kind: 'bolt', from: F, to: to, dur: flightMs, heavy: big, blocking: true });
+                add({ kind: 'bolt', from: F, to: sto, dur: flightMs, heavy: big, blocking: true });
                 setTimeout(function () {
                   // where the weapon entry says (`blast: 'frag'`), each round goes off as a fragmentation blast
-                  if (alive() && spec.blast === 'frag') fragBlast(to, big ? 1.5 : 1.05, j);
-                  land(big ? 4 : 2);
+                  if (alive() && spec.blast === 'frag') fragBlast(sto, big ? 1.5 : 1.05, j);
+                  land(big ? 4 : 2, oc ? sto : undefined);
                 }, flightMs);
                 redraw();
               }, j * shellGap);
@@ -417,7 +419,7 @@
           var heavy = spec.p === 'arcbig';
           var range = dist;
           var flight = Math.round((heavy ? 640 : 520) + Math.min(760, range * 16));
-          var tubes = spec.n || 1;
+          var tubes = spec.n || 1, aplan = oc && tubes > 1 ? roundPlan(tubes, oc) : null;
           // the charges leave the shoulder pods, one after another — the Protectors' leader's, or each drone's in turn
           var tubeFrom = from.pod ? { x: from.x, y: from.y, up: from.up, mz: from.pod, pool: from.pods } : from;
           for (var q = 0; q < tubes; q++) {
@@ -430,9 +432,9 @@
                 // a mortar's tube gives a short flash at its mouth, not a tank gun's blast
                 add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: 220, big: !F.mz, blocking: true });
                 // each tube walks its round a little off the others
-                var aim = tubes > 1
+                var aim = landing(oc, aplan, i, tubes, to, from, tubes > 1
                   ? { x: to.x + (i - (tubes - 1) / 2) * 1.6, y: to.y + (i % 2 ? 1 : -1) * 0.9, up: to.up }
-                  : to;
+                  : to);
                 add({ kind: 'lob', from: F, to: aim, dur: flight, heavy: heavy, blocking: true });
                 if (SFX) SFX.incoming(flight / 1000 - 0.45, 0.45);
                 setTimeout(function () {
@@ -452,20 +454,20 @@
           // longer than the distance alone asks for: it leaves the tube slowly
           var mflight = Math.round(700 + Math.min(700, mr * 14));
           // `n` birds off the rail one after another, not all at once
-          var birdsP = spec.n || 1, birdGap = 260;
+          var birdsP = spec.n || 1, birdGap = 260, mplan = oc && birdsP > 1 ? roundPlan(birdsP, oc) : null;
           for (var mi2 = 0; mi2 < birdsP; mi2++) {
             (function (j) {
               setTimeout(function () {
                 if (!alive()) return;
-                var F = pick(from, j);
+                var F = pick(from, j), mto = landing(oc, mplan, j, birdsP, to, from, to);
                 if (SFX) SFX.missile(0, mflight / 1000, mflight / 1000 * 0.52);
                 // no flash at the tube: it is ejected cold and lights further out
-                add({ kind: 'missile', from: F, to: to, seed: j, dur: mflight, curve: curve, blocking: true,
+                add({ kind: 'missile', from: F, to: mto, seed: j, dur: mflight, curve: curve, blocking: true,
                   sam: samLaunch(spec, shooter, to) });
                 setTimeout(function () {
                   // where the weapon entry says (`blast: 'frag'`), each missile goes off as a fragmentation blast
-                  if (alive() && spec.blast === 'frag') fragBlast(to, 1.2, j);
-                  land(3);
+                  if (alive() && spec.blast === 'frag') fragBlast(mto, 1.2, j);
+                  land(3, oc ? mto : undefined);
                 }, mflight);
                 redraw();
               }, j * birdGap);
@@ -477,7 +479,7 @@
         /* Unguided rockets, off the rails in a ripple. */
         case 'rocket': {
           var rn = 6;                                   // the full ripple, whatever hit
-          var rflight = 420;
+          var rflight = 420, rplan = oc ? roundPlan(rn, oc) : null;
           if (SFX) SFX.rocket(hits);
           for (var r = 0; r < rn; r++) {
             (function (i) {
@@ -485,14 +487,15 @@
                 if (!alive()) return;
                 var F = pick(from, i);
                 add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: 180, big: true, blocking: true });
+                var rto = landing(oc, rplan, i, rn, to, from, rocketSpot(to, i));
                 add({
-                  kind: 'missile', from: F, to: to, rocket: true, seed: i,
+                  kind: 'missile', from: F, to: oc ? rto : to, rocket: true, seed: i,
                   dur: rflight, blocking: true
                 });
                 setTimeout(function () {
                   // as `blast: 'frag'` asks: each rocket a smaller blast, scattered about the mark
-                  if (alive() && spec.blast === 'frag') fragBlast(rocketSpot(to, i), 0.8, i);
-                  land(i === rn - 1 ? 3 : 0);
+                  if (alive() && spec.blast === 'frag') fragBlast(rto, 0.8, i);
+                  land(i === rn - 1 ? 3 : 0, oc ? rto : undefined);
                 }, rflight);
               }, i * 78);
             })(r);
@@ -529,7 +532,7 @@
         }
 
         default:
-          playStream(spec.p, shooter, from, to, hits, land, spec.splash);
+          playStream(spec.p, shooter, from, to, hits, land, spec.splash, o.outcome);
           return Math.max(820, streamLength(spec.p, hits) + 320);
       }
     }
@@ -686,9 +689,60 @@
        one routine draws them all. `land` is null for a secondary, which does its
        own noise but leaves the casualties to the primary. `splash` lands every
        round in its own small burst of light around the mark (the Delta SMGs). */
-    function playStream(style, shooter, from, to, hits, land, splash) {
+    /* What each round of a volley does, when the shot's outcome is known (a trial, on
+       rifle fire): as big a share of the rounds as the share of the squad it kills goes
+       into the men who fall; as big a share as the Suppression it puts on them (to the
+       point of breaking) goes into the ground at their feet, kicking it up; the rest
+       go over their heads and on, for nothing. `outcome`: { kill, supp } as shares 0-1,
+       and `figs`, where the fallen stood. */
+    function roundPlan(n, outcome) {
+      var kill = Math.max(0, Math.min(1, outcome.kill || 0)), supp = Math.max(0, Math.min(1 - kill, outcome.supp || 0));
+      var kN = Math.round(n * kill), sN = Math.round(n * supp);
+      if (kill > 0 && !kN) kN = 1;
+      if (supp > 0 && !sN && kN < n) sN = 1;
+      sN = Math.min(sN, n - kN);
+      var plan = [], i;
+      for (i = 0; i < kN; i++) plan.push('kill');
+      for (i = 0; i < sN; i++) plan.push('supp');
+      while (plan.length < n) plan.push('over');
+      // dealt through the volley rather than in blocks, the killing rounds not all at the start
+      for (i = plan.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = plan[i]; plan[i] = plan[j]; plan[j] = t; }
+      return plan;
+    }
+    /* Where the j-th of n rounds that come down on a spot (a grenade, a shell, a
+       rocket, a glob) lands, when the shot's outcome is known: a round that kills
+       lands among the men who fall; one that only pins them close by; one that does
+       nothing well off. A lone round comes down closer the more it does — on the
+       men if it kills, otherwise nearer the more Suppression it puts on them. Off
+       to either side, or short and over along the line of fire. `plan` is the
+       volley's roundPlan; `def` where the round would have come down otherwise. */
+    function landing(outcome, plan, j, n, to, from, def) {
+      if (!outcome) return def;
+      var lx = to.x - from.x, ly = to.y - from.y, ll = Math.hypot(lx, ly) || 1;
+      lx /= ll; ly /= ll;
+      var figs = outcome.figs || [], kill = Math.max(0, outcome.kill || 0), supp = Math.max(0, outcome.supp || 0);
+      function off(d) {
+        // along the line (short or over) more than across it, as rounds fall
+        var along = (Math.random() < 0.5 ? -1 : 1) * d * (0.55 + Math.random() * 0.45), across = (Math.random() - 0.5) * 2 * d * 0.6;
+        return { x: to.x + lx * along - ly * across, y: to.y + ly * along + lx * across, up: to.up };
+      }
+      function onMan(k) {
+        var f = figs.length ? figs[k % figs.length] : to;
+        return { x: f.x + (Math.random() - 0.5) * 0.4, y: f.y + (Math.random() - 0.5) * 0.4, up: to.up };
+      }
+      if (n <= 1) {
+        if (kill > 0) return onMan(0);
+        return off(0.8 + (1 - Math.min(1, supp)) * 3.7);
+      }
+      var role = plan ? plan[j] : 'over';
+      if (role === 'kill') return onMan(plan.slice(0, j).filter(function (r) { return r === 'kill'; }).length);
+      if (role === 'supp') return off(0.7 + Math.random() * 0.9);
+      return off(2.8 + Math.random() * 2);
+    }
+    function playStream(style, shooter, from, to, hits, land, splash, outcome) {
       var f = FIRE[style] || FIRE.small;
       var n = f.n(hits);
+      var plan = outcome && (style === 'small' || style === 'spine') ? roundPlan(n, outcome) : null;
       var heavy = shooter.fp >= 5;
       // a double burst is heard as two, the second where its rounds start
       var second = f.bursts ? roundAt(f, n, Math.ceil(n / f.bursts)) / 1000 : 0;
@@ -720,9 +774,35 @@
           add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pool[m2], rgb: shotRGB(shooter), delay: m2 * 23, dur: f.muzzle + m2 * 23, blocking: true });
         }
       }
+      // the line of fire, along the ground: overs carry on along it, the dirt goes up short of the men
+      var lx = to.x - from.x, ly = to.y - from.y, ll = Math.hypot(lx, ly) || 1;
+      lx /= ll; ly /= ll;
+      var kills = 0;
       for (var i = 0; i < n; i++) {
         // a clumped weapon pauses between bursts; the rest fire evenly
         var at = roundAt(f, n, i);
+        if (plan) {
+          var role = plan[i], dest, jitter = (Math.random() - 0.5) * 1.6;
+          if (role === 'kill') {
+            // into one of the men who fall, at chest height
+            var fig = (outcome.figs || [])[kills++ % Math.max(1, (outcome.figs || []).length)] || to;
+            dest = { x: fig.x, y: fig.y, up: to.up };
+            add({ kind: 'tracer', from: gun(i), to: dest, short: f.tracer.short, bio: f.tracer.bio, rgb: shotRGB(shooter), delay: at, dur: 250 + at, blocking: true });
+            add({ kind: 'impact', x: dest.x, y: dest.y, up: (to.up || 0) + 0.6, n: 1, rgb: outcome.blood || '170,40,30', delay: at + 200, dur: 460 + at, blocking: true });
+          } else if (role === 'supp') {
+            // into the ground just short of them and among their feet
+            var short = 0.2 + Math.random() * 1.1;
+            dest = { x: to.x - lx * short - ly * jitter, y: to.y - ly * short + lx * jitter, up: to.up };
+            add({ kind: 'tracer', from: gun(i), to: dest, low: true, short: f.tracer.short, bio: f.tracer.bio, rgb: shotRGB(shooter), delay: at, dur: 250 + at, blocking: true });
+            add({ kind: 'miss', x: dest.x, y: dest.y, up: to.up, delay: at + 200, dur: 520 + at, blocking: true });
+          } else {
+            // over their heads and away, high, landing nowhere that matters
+            var past = 5 + Math.random() * 5;
+            dest = { x: to.x + lx * past - ly * jitter * 1.5, y: to.y + ly * past + lx * jitter * 1.5, up: to.up };
+            add({ kind: 'tracer', from: gun(i), to: dest, over: true, bio: f.tracer.bio, rgb: shotRGB(shooter), delay: at, dur: 330 + at, blocking: true });
+          }
+          continue;
+        }
         add({
           kind: 'tracer', from: gun(i), to: to,
           spread: f.tracer.spread, fat: f.tracer.fat, short: f.tracer.short, bio: f.tracer.bio, rgb: shotRGB(shooter),

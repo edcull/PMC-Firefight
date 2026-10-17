@@ -473,6 +473,39 @@
        without a Leader Bug low enough, so it buys one first, before anything else; any
        other force buys it first when the smaller fight is out of reach without it, and
        otherwise two turns in three — useful to have, but the money has other calls. */
+    /* One command unit of each Tier at most — the right one for each size of battle
+       it may be asked to fight — and one Command Vehicle. A swarm's Leader Bugs are its
+       own business (it needs one low enough for every smaller fight). */
+    function isCmdVehicle(p) { return !!p && (p.rules || []).indexOf('Command Vehicle') >= 0; }
+    function overCommand(co, p) {
+      if (isCmdVehicle(p)) return co.roster.some(function (e) { return isCmdVehicle(profile(e.key)); });
+      return !!p.command && co.faction !== 'bugs' && co.roster.some(function (e) { var q = profile(e.key); return q.command && q.tier === p.tier; });
+    }
+    /* ...and any held beyond that (from before the limit) are let go: of two command
+       units of a Tier, the force's own commander stays, else the more seasoned; of
+       several Command Vehicles, the most seasoned. */
+    function shedCommand(co) {
+      var did = [];
+      var byTier = {};
+      co.roster.filter(function (e) { return profile(e.key).command; }).forEach(function (e) {
+        var t = profile(e.key).tier;
+        (byTier[t] = byTier[t] || []).push(e);
+      });
+      Object.keys(byTier).forEach(function (t) {
+        var list = byTier[t].sort(function (x, y) { return (y.rid === co.cmdRid) - (x.rid === co.cmdRid) || (y.exp || 0) - (x.exp || 0); });
+        list.slice(1).forEach(function (gone) {
+          co.roster = co.roster.filter(function (e) { return e !== gone; });
+          did.push({ what: 'disband', text: 'stood down ' + gone.name + ', a second command unit of its Tier' });
+        });
+      });
+      var vehs = co.roster.filter(function (e) { return isCmdVehicle(profile(e.key)); })
+        .sort(function (x, y) { return (y.exp || 0) - (x.exp || 0); });
+      vehs.slice(1).forEach(function (gone) {
+        co.roster = co.roster.filter(function (e) { return e !== gone; });
+        did.push({ what: 'disband', text: 'gave up ' + gone.name + ', a second Command Vehicle' });
+      });
+      return did;
+    }
     function rehireCommand(co) {
       if (!co.wantCmdTier) return [];
       var key = commandKey(co, co.wantCmdTier);
@@ -488,7 +521,7 @@
     /* One campaign turn of development, in the archetype's own direction. */
     function developRival(co) {
       var a = archetype(co.archetype);
-      var did = rehireCommand(co);            // first call on the money, when it is due
+      var did = shedCommand(co).concat(rehireCommand(co));    // first call on the money, when it is due
       // what its weights name above 0
       function wanted(p) { return weightIn(a, p) > 0; }
       /* Banking for its next Company Tier: the promotion affordable now, or short only of
@@ -504,7 +537,7 @@
       var lowestHire = Math.max(1, co.tier - ((a.tier || 0) < 0 ? 1 : 0));
       // the hulls it keeps: its own count (machinesMax), else twice its skirmish force's most (hulls a Priority Level)
       var hullsKept = a.machinesMax || (a.hulls && a.hulls.max ? Math.round(a.hulls.max * 2) : 0);
-      function capped(p) { return atLimit(co, a, p); }
+      function capped(p) { return atLimit(co, a, p) || overCommand(co, p); }
       function leaning(list) { return leanTo(co, a, list); }
       // Penal troops are free for ever but four to an army: a fifth is no use to anyone
       function fullUp(p) { return p.key === 'penal' && co.roster.filter(function (e) { return e.key === 'penal'; }).length >= 4; }
