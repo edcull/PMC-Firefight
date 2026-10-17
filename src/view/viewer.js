@@ -246,7 +246,7 @@
        same result: hits, casualties, Suppression, Damage. */
     var ex;
     try { ex = R.expectedShot(st, a, t, 'fire', {}); } catch (e) { return null; }
-    var sum = { hits: ex.avgHits, lost: ex.casualties, sp: ex.sp, dmg: ex.damage };
+    var sum = { hits: ex.avgHits, lost: ex.casualties, sp: ex.sp, dmg: ex.damage, glance: ex.glance || 0 };
     var avg = function (k) { return sum[k]; };
     var one = function (v) { return (Math.round(v * 10) / 10).toString(); };
     // the target as the average shot leaves it
@@ -278,12 +278,12 @@
      mortar bombs, missiles and rockets — closer to the men the more the shot does */
   var TRIAL = ['none', 'small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail', 'flame', 'frag', 'molotov', 'orb', 'orbbig', 'plasmabolt', 'spit', 'spitbig', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket'];
   // (those whose every round is drawn landing as it goes: no burst over the mark besides)
-  var DRAWN_EACH = ['none', 'small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail', 'flame'];
+  var DRAWN_EACH = root.PMCFire.DRAWN_EACH;
   function roundOutcome(shot, spec) {
     if (!shot || shot.missed || TRIAL.indexOf(spec.p) < 0) return null;
     var t = shot.t, s0 = shot.sum;
     if (shot.mach) {
-      return { kill: Math.min(1, (s0.dmg || 0) / Math.max(1, t.str || 1)), supp: 0, figs: [{ x: TO.x, y: TO.y }], blood: '255,200,120' };
+      return { kill: Math.min(1, (s0.dmg || 0) / Math.max(1, t.str || 1)), supp: 0, glance: s0.glance, figs: [{ x: TO.x, y: TO.y }], blood: '255,200,120' };
     }
     // (the men drawn falling: the average rounded, as the target is shown after)
     var before = Math.max(1, t.before || 1), lost = Math.max(0, before - Math.max(0, t.models));
@@ -291,9 +291,7 @@
     var figs = I.formationTable(Math.min(10, before)).map(function (o) { return { x: TO.x + o.dx, y: TO.y + o.dy }; });
     // the men who fall are the last of the formation, as the squad is drawn after
     var fallen = figs.slice(Math.max(0, Math.min(figs.length, Math.round(before - lost))));
-    var art = (t.art || '');
-    return { kill: lost / before, supp: (s0.sp || 0) / (2 * morale + 1), figs: fallen.length ? fallen : figs,
-      blood: /bug|swarm|larv/.test(art) || t.faction === 'bugs' ? '110,170,50' : R.isXeno(t) ? '70,140,230' : '170,40,30' };
+    return { kill: lost / before, supp: (s0.sp || 0) / (2 * morale + 1), glance: s0.glance, figs: fallen.length ? fallen : figs, all: figs };
   }
   function targetLine() {
     var t = mark(), p = R.profile(view.target) || {};
@@ -1061,7 +1059,7 @@
   function play(spec, from, to, hits, u, outcome) {
     var dist = R.unitDist(u, to);
     // (the secondary and third weapons share the attack's outcome out the same way as the primary)
-    if (spec.s) setTimeout(function () { SHOTS.secondary(spec.s, u, from.second || from, to, hits, spec.sn, outcome); start(); }, 150);
+    if (spec.s && !SHOTS.paired(spec)) setTimeout(function () { SHOTS.secondary(spec.s, u, from.second || from, to, hits, spec.sn, outcome); start(); }, 150);
     if (spec.t) setTimeout(function () { SHOTS.secondary(spec.t, u, from.third || from, to, hits, spec.tn, outcome); start(); }, 330);
     // (with the rounds drawn one by one, each lands as it goes: no burst over the mark besides)
     SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, outcome: outcome,

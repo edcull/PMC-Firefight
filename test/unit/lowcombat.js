@@ -351,5 +351,28 @@ console.log('\nSPR-4 Cover blown in: +1 to every hit roll that round, the defend
   ok('...and not in the rounds after', laterPlus === 0, laterPlus + ' of ' + later);
 })();
 
+console.log('\nA shot says what it did, for the board to draw its rounds by');
+(function () {
+  const a = unit('regular', 'A', 10, 10), t = unit('veterans', 'B', 14, 10);
+  const keep = Math.random; Math.random = () => 0.95;
+  let res;
+  try { res = R.shoot(world([a, t]), a, t, 'fire', {}); } finally { Math.random = keep; }
+  const fx = res.fx || {};
+  ok('a squad hit: the men it had, the men lost and the Suppression', res.hits > 0 && fx.before === t.size && fx.lost === t.size - (t.alive ? t.models : 0) && fx.sp > 0, JSON.stringify(fx));
+  const v = unit('lpv', 'B', 14, 20, { str: 3, damage: 0 }), b = unit('regular', 'A', 10, 20);
+  Math.random = () => 0.95;
+  try { res = R.shoot(world([b, v]), b, v, 'fire', {}); } finally { Math.random = keep; }
+  ok('a hull hit: the Damage against its Structure', res.hits > 0 && res.fx && res.fx.str === 3 && res.fx.dmg === v.damage, JSON.stringify(res.fx));
+  Math.random = () => 0.01;
+  try { res = R.shoot(world([unit('regular', 'A', 10, 30), unit('veterans', 'B', 14, 30)]), a, t, 'fire', {}); } finally { Math.random = keep; }
+  ok('a shot that misses outright says nothing', !res.fx, JSON.stringify(res.fx));
+  // what the armour turned: more of the attack the heavier it is, none off a bare man
+  const share = (key) => { const sh = unit('regular', 'A', 10, 40), tt = unit(key, 'B', 16, 40); return R.expectedShot(world([sh, tt]), sh, tt, 'fire', {}).glance; };
+  const bare = share('penal'), line = share('regular'), heavy = share('protectors'), hull = share('mcv');
+  ok('the armour turns more of a volley the heavier it is', bare === 0 && line > 0 && heavy > line && hull > line, [bare, line, heavy, hull].map(v => v.toFixed(2)).join(' < '));
+  ok('...and a battle shot says how much', (() => { const sh = unit('regular', 'A', 10, 50), tt = unit('protectors', 'B', 16, 50); Math.random = () => 0.5;
+    try { return R.shoot(world([sh, tt]), sh, tt, 'fire', {}).fx.glance > 0; } catch (e) { return false; } finally { Math.random = keep; } })());
+})();
+
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

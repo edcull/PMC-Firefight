@@ -90,6 +90,7 @@
             if (plan) {
               var role = plan[j], ux = dx / len, uy = dy / len;
               if (role === 'kill') { var figs = outcome.figs || [], fg = figs.length ? figs[kills++ % figs.length] : to; aim = { x: fg.x, y: fg.y, up: to.up }; }
+              else if (role === 'glance') { var all = outcome.all || outcome.figs || [], gm = all.length ? all[j % all.length] : to; aim = { x: gm.x, y: gm.y, up: to.up }; }
               else if (role === 'supp') { var sh = 0.4 + Math.random() * 0.7; aim = { x: aim.x - ux * sh, y: aim.y - uy * sh, up: to.up }; }
               else { var fs = 0.9 + Math.random() * 0.7; aim = { x: aim.x - ux * fs, y: aim.y - uy * fs, up: to.up }; }
             }
@@ -142,7 +143,7 @@
               // each pulse by its part in the volley: into a man, into the ground at their feet, or past them
               var lr = lineRound(plan[j], plan[j] === 'kill' ? kills++ : 0, outcome, from, to);
               add({ kind: 'pulse', from: pick(from, j), to: lr.to, low: lr.low, over: lr.over, rgb: rgb, dur: lr.over ? 320 : 260, blocking: true });
-              if (!lr.over) add({ kind: 'impact', x: lr.to.x, y: lr.to.y, up: (to.up || 0) + (lr.low ? 0 : 0.6), n: 1, rgb: plan[j] === 'kill' ? (outcome.blood || rgb) : rgb, delay: 220, dur: 680, blocking: true });
+              if (!lr.over) add({ kind: 'impact', x: lr.to.x, y: lr.to.y, up: (to.up || 0) + (lr.low ? 0 : 0.6), n: 1, rgb: lr.glance ? SPARKS : plan[j] === 'kill' ? (outcome.blood || rgb) : rgb, delay: 220, dur: 680, blocking: true });
             } else add({ kind: 'pulse', from: pick(from, j), to: to, rgb: rgb, dur: 260, blocking: true });
             if (land) setTimeout(function () { land(j === n - 1 ? 1 : 0); }, 250);
             redraw();
@@ -406,7 +407,7 @@
         case 'shellbig': {
           var big = spec.p === 'shellbig';
           var rounds = spec.n || 1, shellGap = 230, shplan = oc && rounds > 1 ? roundPlan(rounds, oc) : null;
-          var flightMs = big ? 340 : 300;
+          var flightMs = big ? 340 : 300, pairs = paired(spec) ? Math.min(rounds, spec.sn || 1) : 0;
           for (var sh = 0; sh < rounds; sh++) {
             (function (j) {
               setTimeout(function () {
@@ -415,6 +416,11 @@
                 if (SFX) SFX.shell();
                 add({ kind: 'muzzle', x: F.x, y: F.y, up: F.up, mz: F.mz, dur: big ? 320 : 260, big: true, blocking: true });
                 add({ kind: 'bolt', from: F, to: sto, dur: flightMs, heavy: big, blocking: true });
+                // a Gauss line paired with it: out of the same barrel, at the same spot, at the same moment
+                if (j < pairs) {
+                  if (SFX) SFX.rail();
+                  add({ kind: 'rail', from: F, to: sto, rgb: shotRGB(shooter), dur: 380, blocking: true });
+                }
                 setTimeout(function () {
                   // where the weapon entry says (`blast: 'frag'`), each round goes off as a fragmentation blast
                   if (alive() && spec.blast === 'frag') fragBlast(sto, big ? 1.5 : 1.05, j);
@@ -539,7 +545,7 @@
                 // each line leaves its own barrel, spread through a squad rather than the two at the front
                 var rl = rlplan ? lineRound(rlplan[j], rlplan[j] === 'kill' ? rlk++ : 0, oc, from, to) : { to: to };
                 add({ kind: 'rail', from: R.isMachine(shooter) ? pick(from, j) : spread(from, j, shots), to: rl.to, low: rl.low, over: rl.over, rgb: shotRGB(shooter), dur: 380, blocking: true });
-                if (rlplan && !rl.over) add({ kind: 'impact', x: rl.to.x, y: rl.to.y, up: (to.up || 0) + (rl.low ? 0 : 0.6), n: 2, rgb: rlplan[j] === 'kill' ? (oc.blood || shotRGB(shooter)) : shotRGB(shooter), dur: 460, blocking: true });
+                if (rlplan && !rl.over) add({ kind: 'impact', x: rl.to.x, y: rl.to.y, up: (to.up || 0) + (rl.low ? 0 : 0.6), n: 2, rgb: rl.glance ? SPARKS : rlplan[j] === 'kill' ? (oc.blood || shotRGB(shooter)) : shotRGB(shooter), dur: 460, blocking: true });
                 if (j === shots - 1) setTimeout(function () { land(1); }, 90);
                 redraw();
               }, j * railGap);
@@ -568,6 +574,11 @@
        out the same way as the primary's — into the men who fall, close in for the
        Suppression, wide or over for the rest — so the coaxial and the main gun together
        show what the attack did. */
+    /* A gun with a Gauss weapon beside it (a sniper team's, a hull's coaxial rail)
+       fires the two as a pair: each rail line goes out with a shell, from the same
+       barrel to the same spot (primary, 'shell'), not as a secondary of its own. */
+    function paired(spec) { return !!spec && spec.s === 'rail' && (spec.p === 'shell' || spec.p === 'shellbig'); }
+
     function playSecondary(style, shooter, from, to, hits, count, outcome) {
       if (FIRE[style]) { playStream(style, shooter, from, to, hits, null, null, outcome); return; }
       var oc = outcome || null;
@@ -717,21 +728,26 @@
        one routine draws them all. `land` is null for a secondary, which does its
        own noise but leaves the casualties to the primary. `splash` lands every
        round in its own small burst of light around the mark (the Delta SMGs). */
-    /* What each round of a volley does, when the shot's outcome is known (a trial, on
-       rifle fire): as big a share of the rounds as the share of the squad it kills goes
-       into the men who fall; as big a share as the Suppression it puts on them (to the
-       point of breaking) goes into the ground at their feet, kicking it up; the rest
-       go over their heads and on, for nothing. `outcome`: { kill, supp } as shares 0-1,
-       and `figs`, where the fallen stood. */
+    /* What each round of a volley does, when the shot's outcome is known: as big a
+       share of the rounds as the share of the squad it kills goes into the men who
+       fall; as big a share as the Suppression it puts on them (to the point of
+       breaking) goes into the ground at their feet, kicking it up; as big a share as
+       their armour stopped strikes them and glances off; the rest go over their heads
+       and on, for nothing. `outcome`: { kill, supp, glance } as shares 0-1, `figs`,
+       where the fallen stood, and `all`, where every man stood. */
+    var SPARKS = '255,220,150';
     function roundPlan(n, outcome) {
       var kill = Math.max(0, Math.min(1, outcome.kill || 0)), supp = Math.max(0, Math.min(1 - kill, outcome.supp || 0));
       var kN = Math.round(n * kill), sN = Math.round(n * supp);
       if (kill > 0 && !kN) kN = 1;
       if (supp > 0 && !sN && kN < n) sN = 1;
       sN = Math.min(sN, n - kN);
+      // and the rounds that reach them and are stopped by their armour: they strike and glance off
+      var glance = Math.max(0, Math.min(1, outcome.glance || 0)), gN = Math.min(n - kN - sN, Math.round(n * glance));
       var plan = [], i;
       for (i = 0; i < kN; i++) plan.push('kill');
       for (i = 0; i < sN; i++) plan.push('supp');
+      for (i = 0; i < gN; i++) plan.push('glance');
       while (plan.length < n) plan.push('over');
       // dealt through the volley rather than in blocks, the killing rounds not all at the start
       for (i = plan.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = plan[i]; plan[i] = plan[j]; plan[j] = t; }
@@ -754,26 +770,31 @@
         var along = (Math.random() < 0.5 ? -1 : 1) * d * (0.55 + Math.random() * 0.45), across = (Math.random() - 0.5) * 2 * d * 0.6;
         return { x: to.x + lx * along - ly * across, y: to.y + ly * along + lx * across, up: to.up };
       }
-      function onMan(k) {
-        var f = figs.length ? figs[k % figs.length] : to;
+      function onMan(k, among) {
+        var fs = among || figs, f = fs.length ? fs[k % fs.length] : to;
         return { x: f.x + (Math.random() - 0.5) * 0.4, y: f.y + (Math.random() - 0.5) * 0.4, up: to.up };
       }
+      // on any of them, the fallen or not: a round their armour turns
+      function onAny() { var all = outcome.all || figs; return onMan(Math.floor(Math.random() * Math.max(1, all.length)), all); }
       if (n <= 1) {
         // a lone round is the whole attack: on the men if it kills, among their feet if it
         // pins them at all, and a miss, off to one side, only if it does nothing
         if (kill > 0) return onMan(0);
         if (supp > 0) { var near = onMan(Math.floor(Math.random() * Math.max(1, figs.length))); return { x: near.x + (Math.random() - 0.5) * 0.6, y: near.y + (Math.random() - 0.5) * 0.6, up: to.up }; }
+        if ((outcome.glance || 0) >= 0.3) return onAny();
         return off(1.2 + Math.random() * 1.2);
       }
       var role = plan ? plan[j] : 'over';
       if (role === 'kill') return onMan(plan.slice(0, j).filter(function (r) { return r === 'kill'; }).length);
       if (role === 'supp') return off(0.5 + Math.random() * 0.7);
+      if (role === 'glance') return onAny();
       return off(1.6 + Math.random() * 1.2);
     }
     /* Where a round fired straight at the mark (a bullet, a spine, an energy pulse, a
        Gauss line) ends up, by the part it is dealt in the volley (roundPlan): in one
        of the men who fall (`k`, the how-manyth killing round), in the ground short of
-       them and among their feet (`low`), or over their heads and on (`over`). */
+       them and among their feet (`low`), into any of them and turned by their armour
+       (`glance`), or over their heads and on (`over`). */
     function lineRound(role, k, outcome, from, to) {
       var lx = to.x - from.x, ly = to.y - from.y, ll = Math.hypot(lx, ly) || 1;
       lx /= ll; ly /= ll;
@@ -781,6 +802,11 @@
       if (role === 'kill') {
         var figs = outcome.figs || [], fig = figs.length ? figs[k % figs.length] : to;
         return { to: { x: fig.x, y: fig.y, up: to.up } };
+      }
+      if (role === 'glance') {
+        // into one of them, the fallen or not, and turned by the armour: sparks off it
+        var all = outcome.all || outcome.figs || [], man = all.length ? all[Math.floor(Math.random() * all.length)] : to;
+        return { to: { x: man.x, y: man.y, up: to.up }, glance: true };
       }
       if (role === 'supp') {
         var short = 0.2 + Math.random() * 1.1;
@@ -832,9 +858,12 @@
           var lr = lineRound(plan[i], plan[i] === 'kill' ? kills++ : 0, outcome, from, to), dest = lr.to;
           add({ kind: 'tracer', from: gun(i), to: dest, low: lr.low, over: lr.over, fat: f.tracer.fat, short: f.tracer.short, bio: f.tracer.bio,
             rgb: shotRGB(shooter), delay: at, dur: (lr.over ? 330 : 250) + at, blocking: true });
-          if (plan[i] === 'kill') {
-            // into a man as he falls (a hull: sparks off it)
-            add({ kind: 'impact', x: dest.x, y: dest.y, up: (to.up || 0) + 0.6, n: f.tracer.fat ? 2 : 1, rgb: outcome.blood || '170,40,30', delay: at + 200, dur: 460 + at, blocking: true });
+          if (lr.glance) {
+            // turned by their armour: sparks off it
+            add({ kind: 'impact', x: dest.x, y: dest.y, up: (to.up || 0) + 0.6, n: 1, rgb: SPARKS, delay: at + 200, dur: 420 + at, blocking: true });
+          } else if (plan[i] === 'kill') {
+            // where it strikes (a hull: sparks off it)
+            add({ kind: 'impact', x: dest.x, y: dest.y, up: (to.up || 0) + 0.6, n: f.tracer.fat ? 2 : 1, rgb: outcome.blood || shotRGB(shooter), delay: at + 200, dur: 460 + at, blocking: true });
           } else if (lr.low) {
             // the dirt kicked up at their feet
             add({ kind: 'miss', x: dest.x, y: dest.y, up: to.up, delay: at + 200, dur: 520 + at, blocking: true });
@@ -862,7 +891,7 @@
 
     return {
       FIRE: FIRE, streamLength: streamLength, glowRGB: glowRGB, shotRGB: shotRGB,
-      primary: primary, secondary: playSecondary, stream: playStream, energy: playEnergy, orbs: playOrbs,
+      primary: primary, secondary: playSecondary, paired: paired, stream: playStream, energy: playEnergy, orbs: playOrbs,
       flameJets: flameJets, spread: spread, pick: pick, hit: hit, curve: curveFor
     };
   }
@@ -907,5 +936,9 @@
 
   // the colours a weapon entry's `glow` may name
   var GLOWS = { blue: '110,190,255', green: '150,220,80', red: '255,110,90', violet: '190,140,255', amber: '255,190,90', white: '235,240,255' };
-  root.PMCFire = { GLOWS: GLOWS, make: make, troop: troop, XENO_BLUE: '110,190,255', BUG_GREEN: '150,220,80' };
+  /* The styles whose rounds are drawn landing one by one when a shot carries its
+     outcome: each puts its own strike or dirt down, so nothing more is burst over
+     the mark as the shot lands. */
+  var DRAWN_EACH = ['none', 'small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail', 'flame'];
+  root.PMCFire = { GLOWS: GLOWS, make: make, troop: troop, DRAWN_EACH: DRAWN_EACH, XENO_BLUE: '110,190,255', BUG_GREEN: '150,220,80' };
 })(typeof window !== 'undefined' ? window : globalThis);
