@@ -71,8 +71,9 @@
        laid a little off the last — which is why it takes ground rather than
        picking a target out of it. */
     var FLAME_JET = 620, FLAME_GAP = 165;
-    function flameJets(from, to, n, onLand) {
+    function flameJets(from, to, n, onLand, outcome) {
       var dx = to.x - from.x, dy = to.y - from.y;
+      var plan = outcome ? roundPlan(n, outcome) : null, kills = 0;
       var len = Math.max(0.001, Math.sqrt(dx * dx + dy * dy));
       var px = -dy / len, py = dx / len;               // across the line of fire
       var span = (n - 1) * FLAME_GAP + FLAME_JET;      // how long the roar has to hold
@@ -83,6 +84,15 @@
             // barely off the mark: the jets converge rather than sweeping a line
             var off = (j - (n - 1) / 2) * 0.45;
             var aim = { x: to.x + px * off, y: to.y + py * off, up: to.up };
+            /* by its part in the attack: a jet that kills washes over the men who fall,
+               one that pins them licks at their feet, and one that does nothing falls short
+               (fire does not go over their heads) */
+            if (plan) {
+              var role = plan[j], ux = dx / len, uy = dy / len;
+              if (role === 'kill') { var figs = outcome.figs || [], fg = figs.length ? figs[kills++ % figs.length] : to; aim = { x: fg.x, y: fg.y, up: to.up }; }
+              else if (role === 'supp') { var sh = 0.4 + Math.random() * 0.7; aim = { x: aim.x - ux * sh, y: aim.y - uy * sh, up: to.up }; }
+              else { var fs = 1.6 + Math.random() * 1.2; aim = { x: aim.x - ux * fs, y: aim.y - uy * fs, up: to.up }; }
+            }
             if (SFX) { if (j === 0) SFX.flame(0, span / 1000); else SFX.flamepuff(); }
             add({ kind: 'flame', from: from, to: aim, dur: FLAME_JET, blocking: true });
             if (onLand && j === n - 1) setTimeout(onLand, 360);
@@ -121,14 +131,19 @@
        army's own — a Xenotripod's blue, a bug's acid green, and amber for the
        mercenaries and the revolt. */
     function splashRGB(u) { return R.isXeno(u) ? XENO_BLUE : (u && u.faction === 'bugs') ? '150,220,80' : '255,190,90'; }
-    function playEnergy(shooter, from, to, count, land, gap) {
-      var rgb = glowRGB(shooter), n = count || 1;
+    function playEnergy(shooter, from, to, count, land, gap, outcome) {
+      var rgb = glowRGB(shooter), n = count || 1, plan = outcome ? roundPlan(n, outcome) : null, kills = 0;
       for (var q = 0; q < n; q++) {
         (function (j) {
           setTimeout(function () {
             if (!alive()) return;
             if (SFX) (SFX.zap || SFX.rail).call(SFX);
-            add({ kind: 'pulse', from: pick(from, j), to: to, rgb: rgb, dur: 260, blocking: true });
+            if (plan) {
+              // each pulse by its part in the volley: into a man, into the ground at their feet, or past them
+              var lr = lineRound(plan[j], plan[j] === 'kill' ? kills++ : 0, outcome, from, to);
+              add({ kind: 'pulse', from: pick(from, j), to: lr.to, low: lr.low, over: lr.over, rgb: rgb, dur: lr.over ? 320 : 260, blocking: true });
+              if (!lr.over) add({ kind: 'impact', x: lr.to.x, y: lr.to.y, up: (to.up || 0) + (lr.low ? 0 : 0.6), n: 1, rgb: plan[j] === 'kill' ? (outcome.blood || rgb) : rgb, delay: 220, dur: 680, blocking: true });
+            } else add({ kind: 'pulse', from: pick(from, j), to: to, rgb: rgb, dur: 260, blocking: true });
             if (land) setTimeout(function () { land(j === n - 1 ? 1 : 0); }, 250);
             redraw();
           }, j * (gap || 120));
@@ -339,7 +354,7 @@
 
         // Xenotripod small arms: pulses of the army's own light
         case 'energy': {
-          return playEnergy(shooter, from, to, spec.n, land, R.isMachine(shooter) ? 150 : 110);
+          return playEnergy(shooter, from, to, spec.n, land, R.isMachine(shooter) ? 150 : 110, oc);
         }
         // plasma orbs: lobbed from craft and turrets, teleported from a Gamma's launcher (or as `orb` says)
         case 'orb': {
@@ -505,7 +520,7 @@
 
         /* A cone of fire. Nothing flies: the ground between burns. */
         case 'flame': {
-          var span = flameJets(from, to, 6, function () { land(2); });
+          var span = flameJets(from, to, 6, function () { land(2); }, oc);
           return span + 220;
         }
 
@@ -515,14 +530,16 @@
            puts three down in quick succession. */
         case 'rail': {
           var shots = spec.n || 1;
-          var railGap = 170;
+          var railGap = 170, rlplan = oc ? roundPlan(shots, oc) : null, rlk = 0;
           for (var rs = 0; rs < shots; rs++) {
             (function (j) {
               setTimeout(function () {
                 if (!alive()) return;
                 if (SFX) SFX.rail();
                 // each line leaves its own barrel, spread through a squad rather than the two at the front
-                add({ kind: 'rail', from: R.isMachine(shooter) ? pick(from, j) : spread(from, j, shots), to: to, rgb: shotRGB(shooter), dur: 380, blocking: true });
+                var rl = rlplan ? lineRound(rlplan[j], rlplan[j] === 'kill' ? rlk++ : 0, oc, from, to) : { to: to };
+                add({ kind: 'rail', from: R.isMachine(shooter) ? pick(from, j) : spread(from, j, shots), to: rl.to, low: rl.low, over: rl.over, rgb: shotRGB(shooter), dur: 380, blocking: true });
+                if (rlplan && !rl.over) add({ kind: 'impact', x: rl.to.x, y: rl.to.y, up: (to.up || 0) + (rl.low ? 0 : 0.6), n: 2, rgb: rlplan[j] === 'kill' ? (oc.blood || shotRGB(shooter)) : shotRGB(shooter), dur: 460, blocking: true });
                 if (j === shots - 1) setTimeout(function () { land(1); }, 90);
                 redraw();
               }, j * railGap);
@@ -739,10 +756,29 @@
       if (role === 'supp') return off(0.7 + Math.random() * 0.9);
       return off(2.8 + Math.random() * 2);
     }
+    /* Where a round fired straight at the mark (a bullet, a spine, an energy pulse, a
+       Gauss line) ends up, by the part it is dealt in the volley (roundPlan): in one
+       of the men who fall (`k`, the how-manyth killing round), in the ground short of
+       them and among their feet (`low`), or over their heads and on (`over`). */
+    function lineRound(role, k, outcome, from, to) {
+      var lx = to.x - from.x, ly = to.y - from.y, ll = Math.hypot(lx, ly) || 1;
+      lx /= ll; ly /= ll;
+      var jitter = (Math.random() - 0.5) * 1.6;
+      if (role === 'kill') {
+        var figs = outcome.figs || [], fig = figs.length ? figs[k % figs.length] : to;
+        return { to: { x: fig.x, y: fig.y, up: to.up } };
+      }
+      if (role === 'supp') {
+        var short = 0.2 + Math.random() * 1.1;
+        return { to: { x: to.x - lx * short - ly * jitter, y: to.y - ly * short + lx * jitter, up: to.up }, low: true };
+      }
+      var past = 5 + Math.random() * 5;
+      return { to: { x: to.x + lx * past - ly * jitter * 1.5, y: to.y + ly * past + lx * jitter * 1.5, up: to.up }, over: true };
+    }
     function playStream(style, shooter, from, to, hits, land, splash, outcome) {
       var f = FIRE[style] || FIRE.small;
       var n = f.n(hits);
-      var plan = outcome && (style === 'small' || style === 'spine') ? roundPlan(n, outcome) : null;
+      var plan = outcome ? roundPlan(n, outcome) : null;
       var heavy = shooter.fp >= 5;
       // a double burst is heard as two, the second where its rounds start
       var second = f.bursts ? roundAt(f, n, Math.ceil(n / f.bursts)) / 1000 : 0;
@@ -774,32 +810,24 @@
           add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pool[m2], rgb: shotRGB(shooter), delay: m2 * 23, dur: f.muzzle + m2 * 23, blocking: true });
         }
       }
-      // the line of fire, along the ground: overs carry on along it, the dirt goes up short of the men
-      var lx = to.x - from.x, ly = to.y - from.y, ll = Math.hypot(lx, ly) || 1;
-      lx /= ll; ly /= ll;
       var kills = 0;
       for (var i = 0; i < n; i++) {
         // a clumped weapon pauses between bursts; the rest fire evenly
         var at = roundAt(f, n, i);
         if (plan) {
-          var role = plan[i], dest, jitter = (Math.random() - 0.5) * 1.6;
-          if (role === 'kill') {
-            // into one of the men who fall, at chest height
-            var fig = (outcome.figs || [])[kills++ % Math.max(1, (outcome.figs || []).length)] || to;
-            dest = { x: fig.x, y: fig.y, up: to.up };
-            add({ kind: 'tracer', from: gun(i), to: dest, short: f.tracer.short, bio: f.tracer.bio, rgb: shotRGB(shooter), delay: at, dur: 250 + at, blocking: true });
-            add({ kind: 'impact', x: dest.x, y: dest.y, up: (to.up || 0) + 0.6, n: 1, rgb: outcome.blood || '170,40,30', delay: at + 200, dur: 460 + at, blocking: true });
-          } else if (role === 'supp') {
-            // into the ground just short of them and among their feet
-            var short = 0.2 + Math.random() * 1.1;
-            dest = { x: to.x - lx * short - ly * jitter, y: to.y - ly * short + lx * jitter, up: to.up };
-            add({ kind: 'tracer', from: gun(i), to: dest, low: true, short: f.tracer.short, bio: f.tracer.bio, rgb: shotRGB(shooter), delay: at, dur: 250 + at, blocking: true });
+          var lr = lineRound(plan[i], plan[i] === 'kill' ? kills++ : 0, outcome, from, to), dest = lr.to;
+          add({ kind: 'tracer', from: gun(i), to: dest, low: lr.low, over: lr.over, fat: f.tracer.fat, short: f.tracer.short, bio: f.tracer.bio,
+            rgb: shotRGB(shooter), delay: at, dur: (lr.over ? 330 : 250) + at, blocking: true });
+          if (plan[i] === 'kill') {
+            // into a man as he falls (a hull: sparks off it)
+            add({ kind: 'impact', x: dest.x, y: dest.y, up: (to.up || 0) + 0.6, n: f.tracer.fat ? 2 : 1, rgb: outcome.blood || '170,40,30', delay: at + 200, dur: 460 + at, blocking: true });
+          } else if (lr.low) {
+            // the dirt kicked up at their feet
             add({ kind: 'miss', x: dest.x, y: dest.y, up: to.up, delay: at + 200, dur: 520 + at, blocking: true });
-          } else {
-            // over their heads and away, high, landing nowhere that matters
-            var past = 5 + Math.random() * 5;
-            dest = { x: to.x + lx * past - ly * jitter * 1.5, y: to.y + ly * past + lx * jitter * 1.5, up: to.up };
-            add({ kind: 'tracer', from: gun(i), to: dest, over: true, bio: f.tracer.bio, rgb: shotRGB(shooter), delay: at, dur: 330 + at, blocking: true });
+          }
+          // a round that bursts (`splash`) bursts where it ends, if it ends on anything
+          if (splash && !lr.over) {
+            add({ kind: 'impact', n: 2, rgb: shotRGB(shooter) || splashRGB(shooter), delay: at + 240, dur: 520 + at, blocking: true, x: dest.x, y: dest.y, up: to.up });
           }
           continue;
         }

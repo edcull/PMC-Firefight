@@ -276,7 +276,9 @@
      (fire.js, roundPlan and landing). */
   /* rifles, and what comes down on a spot: grenades, bottles, plasma, acid, shells,
      mortar bombs, missiles and rockets — closer to the men the more the shot does */
-  var TRIAL = ['small', 'spine', 'frag', 'molotov', 'orb', 'orbbig', 'plasmabolt', 'spit', 'spitbig', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket'];
+  var TRIAL = ['small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail', 'flame', 'frag', 'molotov', 'orb', 'orbbig', 'plasmabolt', 'spit', 'spitbig', 'shell', 'shellbig', 'arc', 'arcbig', 'missile', 'rocket'];
+  // (those whose every round is drawn landing as it goes: no burst over the mark besides)
+  var DRAWN_EACH = ['small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail', 'flame'];
   function roundOutcome(shot, spec) {
     if (!shot || shot.missed || TRIAL.indexOf(spec.p) < 0) return null;
     var t = shot.t, s0 = shot.sum;
@@ -1062,7 +1064,7 @@
     if (spec.t) setTimeout(function () { SHOTS.secondary(spec.t, u, from.third || from, to, hits, spec.tn); start(); }, 330);
     // (with the rounds drawn one by one, each lands as it goes: no burst over the mark besides)
     SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, outcome: outcome,
-      land: function (extra, at) { if (!outcome || (spec.p !== 'small' && spec.p !== 'spine')) SHOTS.hit(u, at || to, hits, extra); } });
+      land: function (extra, at) { if (!outcome || DRAWN_EACH.indexOf(spec.p) < 0) SHOTS.hit(u, at || to, hits, extra); } });
   }
 
 

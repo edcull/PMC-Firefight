@@ -212,7 +212,7 @@
         /* A Gauss weapon or a las-cutter: the line is simply there, the whole
            length of it at once, and then it is not. No travel to watch. */
         var ra = start(f, I.K * 0.85), rb = I.toScreen(f.to.x, f.to.y);
-        rb.y -= liftB(f) + I.K * 0.7;
+        rb.y -= liftB(f) + (f.low ? 0 : f.over ? I.K * 1.9 : I.K * 0.7);
         var fade = Math.pow(1 - k, 1.7);
         g.strokeStyle = 'rgba(' + (f.rgb || '190,225,255') + ',' + (fade * (f.rgb ? 0.7 : 0.5)) + ')';   // the bloom
         g.lineWidth = I.PIXEL * 5;
@@ -524,7 +524,9 @@
         /* A Xenotripod energy pulse: a short dash of light in the tribe's colour,
            white at the heart, crossing the table fast. */
         var pa = start(f, I.K * 0.8), pb = I.toScreen(f.to.x, f.to.y);
-        pb.y -= liftB(f) + I.K * 0.7;
+        // chest height on the mark; into the ground (`low`); or well up, going past (`over`)
+        pb.y -= liftB(f) + (f.low ? 0 : f.over ? I.K * 1.9 : I.K * 0.7);
+        if (f.over) g.globalAlpha = Math.max(0, 1 - k * 1.1);
         var ph = Math.min(1, k * 1.15), pt = Math.max(0, ph - 0.16);
         var px0 = pa.x + (pb.x - pa.x) * pt, py0 = pa.y + (pb.y - pa.y) * pt;
         var px1 = pa.x + (pb.x - pa.x) * ph, py1 = pa.y + (pb.y - pa.y) * ph;
@@ -541,6 +543,7 @@
         g.beginPath(); g.moveTo((px0 + px1) / 2, (py0 + py1) / 2); g.lineTo(px1, py1); g.stroke();
         g.lineCap = 'butt';
         if (k < 0.2) I.ellipse(g, pa.x, pa.y, I.PIXEL * 4, I.PIXEL * 3, 'rgba(' + rgb + ',' + (0.8 - k * 4) + ')');
+        g.globalAlpha = 1;
       } else if (f.kind === 'orb') {
         /* A plasma orb: lobbed from a craft or a turret, or — from a Gamma
            squad's launcher — teleported: it winks out at the muzzle and flashes
