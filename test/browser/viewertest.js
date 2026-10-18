@@ -654,6 +654,20 @@ async function pickAndFire(p, key, ms) {
   ok('the casualties fall as they are hit, while the shot is still going', fall.midFall && fall.n0 > fall.n1, JSON.stringify(fall));
   ok('...then the rest walk to their new places, and it is over', fall.walking && fall.done && fall.bodies === fall.n0 - fall.n1, JSON.stringify(fall));
 
+  // closing up, each man walks to the nearest place, not across the squad
+  const walkMax = await p.evaluate(() => {
+    const I = window.PMCIso, K = I.K, tab = (q) => { const t = q.sx / (2 * K), d = q.sy / K; return { x: t + d, y: d - t }; };
+    const toS = (f) => ({ sx: (f.dx - f.dy) * K, sy: (f.dx + f.dy) * K / 2 });
+    let worst = 0;
+    for (const n of [10, 8, 6, 4]) for (let dead = 0; dead < n; dead++) {
+      const F0 = I.formationTable(n).map(toS), F1 = I.formationTable(n - 1).map(toS);
+      const from = F0.filter((f, k) => k !== dead), pick = I.closestPlaces(from, F1);
+      from.forEach((f, i) => { const a = tab(f), b = tab(F1[pick[i]]); worst = Math.max(worst, Math.hypot(a.x - b.x, a.y - b.y)); });
+    }
+    return worst;
+  });
+  ok('closing up after a loss, no man walks further than a step', walkMax < 1.0, walkMax.toFixed(2) + '"');
+
   // the terrain boxes: +2 FP for the firer, +2 Defence for the target, in the Fire! line
   const terr = await p.evaluate(() => {
     const tab = document.querySelector('[data-tab="opts"]'); if (tab) tab.click();
