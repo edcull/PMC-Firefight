@@ -806,7 +806,8 @@
     function lineRound(role, k, outcome, from, to) {
       var lx = to.x - from.x, ly = to.y - from.y, ll = Math.hypot(lx, ly) || 1;
       lx /= ll; ly /= ll;
-      var jitter = (Math.random() - 0.5) * 1.6;
+      // how far either side of the line a round strays: a tight cone, not a fan
+      var jitter = (Math.random() - 0.5) * 0.9;
       if (role === 'kill') {
         var figs = outcome.figs || [], fig = figs.length ? figs[k % figs.length] : to;
         return { to: { x: fig.x, y: fig.y, up: to.up } };
