@@ -112,6 +112,12 @@
         var route = R.pathTo(B.state, ghost, 999, { x: u.x, y: u.y });
         if (route && route.length >= 2) path = route.map(function (q) { return { x: q.x, y: q.y }; });
       }
+      /* ...and it is seen coming on: from off the table, a few inches out beyond the
+         edge it crosses, so a unit put down right at the edge still marches in. */
+      var OUT = 3, W = R.BOARD.w, H = R.BOARD.h, e0 = path[0];
+      var off = e0.x <= 0.6 ? { x: -OUT, y: e0.y } : e0.x >= W - 0.6 ? { x: W + OUT, y: e0.y }
+        : e0.y <= 0.6 ? { x: e0.x, y: -OUT } : e0.y >= H - 0.6 ? { x: e0.x, y: H + OUT } : null;
+      if (off) path.unshift(off);
       focusUnit(u, false, true);
       animateMove(u, path, false);
       /* Arriving within 12" of the enemy invites a free shot (p. 30). The engine
