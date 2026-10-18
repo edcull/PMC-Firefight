@@ -1005,11 +1005,11 @@
         }
         if (cmd === 'postNegotiate') {
           if (st.kind !== 'negotiate' || pre.neg[side]) return no('not now');
-          const dice = pre.dice[side].slice(), cap = Math.ceil(dice.length / 2);
+          // the dice of the roll that pays it, re-rolled: the rolls themselves (the other side's pay) are left as they are
+          const dice = C.payingDice(pre.dice, side, post.report.winner, camp.companies[side]), cap = Math.ceil(dice.length / 2);
           const sel = Array.from(new Set((Array.isArray(a.sel) ? a.sel : []).map(Number))).filter((n) => n >= 0 && n < dice.length).slice(0, cap);
           if (!sel.length) return no('pick the dice to roll again');
           const sw = sel.map((n) => { const was = dice[n]; dice[n] = 1 + Math.floor(Math.random() * 6); return { was: was, now: dice[n] }; });
-          pre.dice[side] = dice;
           pre.neg[side] = { dice: dice.slice(), swapped: sw, idx: sel };
           return { ok: true };
         }

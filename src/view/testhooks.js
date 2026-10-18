@@ -367,6 +367,7 @@
           kind: f.kind,
           // a ghost's unit: what fades into the ground where a unit was wiped out
           unit: f.unit ? { key: f.unit.key, art: f.unit.art, side: f.unit.side } : null,
+          models: f.models != null ? f.models : null,
           // how high the effect starts: its lift plus, when it leaves a barrel,
           // how far that barrel sits above the ground
           up: (f.up || 0) + (f.mz ? -f.mz.dy : 0),

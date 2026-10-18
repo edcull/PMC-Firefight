@@ -310,8 +310,10 @@ ok('the winner is paid more than the loser', tot.A > tot.B, true,
 ok('a Tier III PL1 battle rolls 3D6', C.rollPayment(3, 1).length, 3);
 ok('a Tier II PL3 battle rolls 6D6', C.rollPayment(2, 3).length, 6);
 var draws = 0, equal = 0;
+// (companies without Tough Negotiators: it re-rolls the pay once handed out, so it would make the two differ)
+var pa0 = start(), pb0 = start(); pa0.doctrines = []; pb0.doctrines = [];
 for (var i5 = 0; i5 < 2000; i5++) {
-  var d = C.payment(3, 1, pa, pb, null);
+  var d = C.payment(3, 1, pa0, pb0, null);
   draws++; if (d.A === d.B && d.A === d.low) equal++;
 }
 ok('a draw pays both the lower roll', equal, draws);

@@ -323,11 +323,14 @@
       }
       if (st.kind === 'negotiate') {
         if (!pre.dice[st.side]) { pre.dice[st.side] = C.rollPayment(rep.battleTier, rep.pl); save(); }
-        var nd = pre.dice[st.side], ntot = nd.reduce(function (a, b) { return a + b; }, 0), ng = pre.neg[st.side];
+        /* the roll that pays it, once the two are handed out (the winner the higher, the
+           loser the lower): that is what it re-rolls, and only its own pay changes */
+        var ng = pre.neg[st.side], nd = ng ? ng.dice : C.payingDice(pre.dice, st.side, rep.winner, co);
+        var ntot = nd.reduce(function (a, b) { return a + b; }, 0);
         var cap = Math.ceil(nd.length / 2), sel = st.sel || [];
         h += '<div class="cpan"><div class="cprom-head"><b>Tough Negotiators</b></div>' +
-          '<p class="cpstat">' + esc(co.name) + '’s payment roll. Up to ' + cap + ' of the dice may be re-rolled; the second result stands, even if it is worse.</p>' +
-          rollsLine(rep, pre, st.side, co);
+          rollsLine(rep, pre, st.side, co) +
+          '<p class="cpstat">The roll that pays ' + esc(co.name) + ', below. Up to ' + cap + ' of its dice may be re-rolled; the second result stands, even if it is worse, and the other side’s pay is not touched.</p>';
         if (ng) {
           h += '<p class="dice-row">' + nd.map(function (v, i) {
             var sw = ng.idx.indexOf(i) >= 0;
@@ -445,8 +448,9 @@
         (E.after.winner
           ? 'The winner takes the higher, ' + p.high + '; the loser the lower, ' + p.low + '.'
           : 'A draw, so both companies take the lower, ' + p.low + '.') +
-        (p['neg' + me] ? ' Tough Negotiators re-rolled ' + p['neg' + me].swapped.length +
-          (p['neg' + me].swapped.length === 1 ? ' die.' : ' dice.') : '') +
+        (p['neg' + me] && p['neg' + me].swapped.length ? ' Tough Negotiators re-rolled ' + p['neg' + me].swapped.length +
+          (p['neg' + me].swapped.length === 1 ? ' die' : ' dice') + ' of its pay (' +
+          p['neg' + me].swapped.map(function (w) { return w.was + '→' + w.now; }).join(', ') + ').' : '') +
         '</div><div class="cphead">' + colourFlash(co) + '<b>' + esc(co.name) + '</b>' +
         '<span class="cmoney">+' + p[me] + ' ' + coin() + ' → ' + (pastLine ? pastBalance(pastLine) : co.kUC) + '</span></div></div>';
 
