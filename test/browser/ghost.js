@@ -44,7 +44,7 @@ function ok(name, cond, note) {
       window.__shootAt(t.id);
       const ghosts = [];
       for (let i = 0; i < 120; i++) {
-        window.__fxlive().filter((f) => f.kind === 'ghost').forEach((f) => ghosts.push(f.unit));
+        window.__fxlive().filter((f) => f.kind === 'ghost').forEach((f) => ghosts.push(Object.assign({ n: f.models }, f.unit)));
         await wait(20);
         if (i > 30 && !window.__busy()) break;
       }
@@ -57,6 +57,9 @@ function ok(name, cond, note) {
     ok('...and faded into the ground', got.ghosts.length > 0);
     ok('...drawn as itself, not a rifle squad', got.ghosts.length > 0 && got.ghosts.every((g) => g && g.key === got.key && g.art === got.art),
       got.ghosts[0] ? got.ghosts[0].key + ' / ' + got.ghosts[0].art : 'none');
+    // it had one man left: one man fades, not the whole squad it started with
+    ok('...as the men it had left, not its full size', got.ghosts.length > 0 && got.ghosts.every((g) => g.n === 1),
+      got.ghosts.map((g) => g.n).join(','));
   }
   // to look at: the ghost of a bug squad and of a xeno squad, part way down
   await p.evaluate(() => {

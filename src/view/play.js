@@ -371,6 +371,8 @@
          Suppression can fill over the rest of the attack. */
       (deaths || []).forEach(function (d) {
         var h = d.u && B.held[d.u.id];
+        // the men it still had as it was last drawn: what fades out is what was standing there
+        d.shown = h ? h.models : d.u && d.u._seen ? d.u._seen.models : null;
         if (!h) return;
         if (!d.u.alive) { delete B.held[d.u.id]; return; }
         h.models = d.u.models; h.damage = d.u.damage;
@@ -379,7 +381,7 @@
         addFx({
           // the unit itself, so what fades into the ground is what was there: its kind, its colours, its men
           kind: 'ghost', x: d.x, y: d.y, unit: d.u, side: d.u.side, code: d.u.code,
-          models: Math.max(1, d.u.size), dur: 700, blocking: true
+          models: Math.max(1, d.shown || d.u.size), dur: 700, blocking: true
         });
       });
       if (deaths && deaths.length && SFX) SFX.casualty();
