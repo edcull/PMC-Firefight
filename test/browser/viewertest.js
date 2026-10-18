@@ -631,8 +631,8 @@ async function pickAndFire(p, key, ms) {
     Math.abs(pcs.reduce((a, b) => a + b, 0) - 100) <= 2, rounds);
 
   // men falling as their rounds strike them, then the rest walking to their new places
-  const fall = await p.evaluate(async () => {
-    window.__viewer.pick('lmgteam');
+  const fallBy = async (key) => p.evaluate(async (key) => {
+    window.__viewer.pick(key);
     await new Promise(r => setTimeout(r, 200));
     window.__viewer.range(6);
     await new Promise(r => setTimeout(r, 100));
@@ -652,10 +652,15 @@ async function pickAndFire(p, key, ms) {
       await new Promise(r => setTimeout(r, 40));
     }
     return seen;
-  });
+  }, key);
+  const fall = await fallBy('lmgteam');
   ok('the casualties fall as they are hit, while the shot is still going', fall.midFall && fall.n0 > fall.n1, JSON.stringify(fall));
   ok('...every one as his own round strikes him, none left to drop at the end', fall.downBeforeEnd === fall.n0 - fall.n1, JSON.stringify(fall));
   ok('...then the rest walk to their new places, and it is over', fall.walking && fall.done && fall.bodies === fall.n0 - fall.n1, JSON.stringify(fall));
+  // ...and a gun's shells the same: each man drops as the shell that comes down on him lands
+  const shelled = await fallBy('ldestroyer');           // (shells and nothing else: no rifle or pistol alongside to drop them)
+  ok('shells: each casualty drops as his shell lands, none left to the end', shelled.n0 > shelled.n1 && shelled.midFall &&
+    shelled.downBeforeEnd === shelled.n0 - shelled.n1, JSON.stringify(shelled));
 
   // closing up, each man walks to the nearest place, not across the squad
   const walkMax = await p.evaluate(() => {

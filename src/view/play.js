@@ -202,13 +202,12 @@
       // (with the rounds drawn one by one, each lands as it goes: no burst over the mark besides)
       var each = outcome && window.PMCFire.DRAWN_EACH.indexOf(spec.p) >= 0;
       /* A squad that loses men and still stands: each man drops as the round that
-         kills him strikes (fire.js tells outcome.onKill; what comes down on a spot
-         drops them all as it lands), and once the attack is over the rest walk to
+         kills him strikes, or comes down on him (fire.js tells outcome.onKill), and
+         once the attack is over the rest walk to
          their places in the smaller formation (ISO.regroup, drawn by draw.js). */
       var rg = null, f0 = res && res.fx, game = B.state;     // (a later battle's board is not this shot's to hold up)
       if (outcome && f0 && f0.lost > 0 && !R.isMachine(target) && target.alive && f0.before - f0.lost > 0) {
         rg = target._rg = ISO.regroup(target, f0.before, f0.before - f0.lost);
-        rg.byRound = each;
         outcome.onKill = function (k) {
           // (a volley may carry more killing rounds than the men it kills: each man dies once)
           if (target._rg !== rg || B.state !== game || k >= rg.n0 - rg.n1) return;
@@ -238,7 +237,7 @@
           if (outcome && outcome.crit) SHOTS.crits(p, outcome.crit);      // a critical hit: sparks off the hull
           if (impact) impact(Math.max(250, endsAt - nowMs()));
           // (the impact shows every loss at once; those still standing stand till their round strikes)
-          if (rg) { if (!rg.byRound) rg.dead = rg.n0; showLosses(); }
+          if (rg) showLosses();
         }
       }
       var endsAt = nowMs() + 600;           // until the length of the shot is known
