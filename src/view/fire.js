@@ -767,6 +767,8 @@
       var kill = Math.max(0, Math.min(1, outcome.kill || 0)), supp = Math.max(0, Math.min(1 - kill, outcome.supp || 0));
       var kN = Math.round(n * kill), sN = Math.round(n * supp);
       if (kill > 0 && !kN) kN = 1;
+      // a round for every man it kills, so each drops as his own round strikes him (outcome.minKill)
+      if (outcome.minKill) kN = Math.max(kN, Math.min(n, outcome.minKill));
       if (supp > 0 && !sN && kN < n) sN = 1;
       sN = Math.min(sN, n - kN);
       // and the rounds that reach them and are stopped by their armour: they strike and glance off

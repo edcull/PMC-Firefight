@@ -644,6 +644,8 @@ async function pickAndFire(p, key, ms) {
       if (rg) {
         seen.n0 = rg.n0; seen.n1 = rg.n1; seen.maxDead = Math.max(seen.maxDead, rg.dead);
         if (rg.dead > 0 && !rg.walkAt) seen.midFall = true;
+        // every man down by his own round, before the shot is over: none left to fall at the end
+        if (!rg.walkAt) seen.downBeforeEnd = Math.max(seen.downBeforeEnd || 0, Math.min(rg.dead, rg.n0 - rg.n1));
         if (rg.walkAt) seen.walking = true;
       }
       seen.bodies = (st.tbodies || []).length; seen.done = !rg;
@@ -652,6 +654,7 @@ async function pickAndFire(p, key, ms) {
     return seen;
   });
   ok('the casualties fall as they are hit, while the shot is still going', fall.midFall && fall.n0 > fall.n1, JSON.stringify(fall));
+  ok('...every one as his own round strikes him, none left to drop at the end', fall.downBeforeEnd === fall.n0 - fall.n1, JSON.stringify(fall));
   ok('...then the rest walk to their new places, and it is over', fall.walking && fall.done && fall.bodies === fall.n0 - fall.n1, JSON.stringify(fall));
 
   // closing up, each man walks to the nearest place, not across the squad

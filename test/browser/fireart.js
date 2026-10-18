@@ -338,6 +338,8 @@ async function fireAndWatch(p, code, ms) {
     async function fire(code) {
       const u = s.units.find(x => x.side === 'A' && x.code === code);
       if (!u) return null;
+      // the last attack played out first (a shot that kills has its survivors close up)
+      for (let i = 0; i < 100 && window.__busy && window.__busy(); i++) await wait(40);
       /* every shot moves the turn on to the other side, as the rifle line's
          did above, so hand it back before each one, and let the table catch
          up with the selection the way a player's next tap would */
