@@ -143,7 +143,8 @@
               // each pulse by its part in the volley: into a man, into the ground at their feet, or past them
               var lr = lineRound(plan[j], plan[j] === 'kill' ? kills++ : 0, outcome, from, to);
               add({ kind: 'pulse', from: pick(from, j), to: lr.to, low: lr.low, over: lr.over, rgb: rgb, dur: lr.over ? 320 : 260, blocking: true });
-              if (!lr.over) add({ kind: 'impact', x: lr.to.x, y: lr.to.y, up: (to.up || 0) + (lr.low ? 0 : 0.6), n: 1, rgb: lr.glance ? SPARKS : plan[j] === 'kill' ? (outcome.blood || rgb) : rgb, delay: 220, dur: 680, blocking: true });
+              if (lr.glance || plan[j] === 'kill') strike(lr.glance ? 'glance' : 'kill', lr.to, outcome, from, to, 220);
+              else if (!lr.over) add({ kind: 'impact', x: lr.to.x, y: lr.to.y, up: to.up || 0, n: 1, rgb: rgb, delay: 220, dur: 680, blocking: true });
             } else add({ kind: 'pulse', from: pick(from, j), to: to, rgb: rgb, dur: 260, blocking: true });
             if (land) setTimeout(function () { land(j === n - 1 ? 1 : 0); }, 250);
             redraw();
@@ -545,7 +546,8 @@
                 // each line leaves its own barrel, spread through a squad rather than the two at the front
                 var rl = rlplan ? lineRound(rlplan[j], rlplan[j] === 'kill' ? rlk++ : 0, oc, from, to) : { to: to };
                 add({ kind: 'rail', from: R.isMachine(shooter) ? pick(from, j) : spread(from, j, shots), to: rl.to, low: rl.low, over: rl.over, rgb: shotRGB(shooter), dur: 380, blocking: true });
-                if (rlplan && !rl.over) add({ kind: 'impact', x: rl.to.x, y: rl.to.y, up: (to.up || 0) + (rl.low ? 0 : 0.6), n: 2, rgb: rl.glance ? SPARKS : rlplan[j] === 'kill' ? (oc.blood || shotRGB(shooter)) : shotRGB(shooter), dur: 460, blocking: true });
+                if (rlplan && (rl.glance || rlplan[j] === 'kill')) strike(rl.glance ? 'glance' : 'kill', rl.to, oc, from, to, 0, true);
+                else if (rlplan && !rl.over) add({ kind: 'impact', x: rl.to.x, y: rl.to.y, up: to.up || 0, n: 2, rgb: shotRGB(shooter), dur: 460, blocking: true });
                 if (j === shots - 1) setTimeout(function () { land(1); }, 90);
                 redraw();
               }, j * railGap);
@@ -734,7 +736,18 @@
        strike one of them and glance off; the rest go over their heads and on, for
        nothing. `outcome`: { kill, supp, glance } as shares 0-1, `figs`, where the
        fallen stood, and `all`, where every man stood. */
-    var SPARKS = '255,220,150';
+    /* Where a round strikes them: a deflection pings off their armour and flies on;
+       one that kills throws a spray on away from the shooter, as the target bleeds
+       (outcome.blood; `hitFx: 'sparks'` for a hull, a drone or a Xeno's plates). */
+    function strike(role, at, outcome, from, to, delay, fat) {
+      if (role === 'glance') {
+        add({ kind: 'ricochet', x: at.x, y: at.y, up: (to.up || 0) + 0.6, seed: Math.floor(Math.random() * 1000), delay: delay, dur: 380 + delay, blocking: true });
+      } else if (role === 'kill') {
+        add({ kind: 'spray', x: at.x, y: at.y, up: (to.up || 0) + 0.6, dx: at.x - from.x, dy: at.y - from.y,
+          rgb: (outcome && outcome.blood) || '170,30,25', spark: !!(outcome && outcome.hitFx === 'sparks'),
+          n: fat ? 16 : 10, seed: Math.floor(Math.random() * 1000), delay: delay, dur: 560 + delay, blocking: true });
+      }
+    }
     /* A critical hit on a hull: a shower of sparks off it for each, one after another. */
     function crits(to, n) {
       for (var i = 0; i < (n || 0); i++) {
@@ -869,10 +882,10 @@
             rgb: shotRGB(shooter), delay: at, dur: (lr.over ? 330 : 250) + at, blocking: true });
           if (lr.glance) {
             // turned by their armour: sparks off it
-            add({ kind: 'impact', x: dest.x, y: dest.y, up: (to.up || 0) + 0.6, n: 1, rgb: SPARKS, delay: at + 200, dur: 420 + at, blocking: true });
+            strike('glance', dest, outcome, from, to, at + 200);
           } else if (plan[i] === 'kill') {
             // where it strikes (a hull: sparks off it)
-            add({ kind: 'impact', x: dest.x, y: dest.y, up: (to.up || 0) + 0.6, n: f.tracer.fat ? 2 : 1, rgb: outcome.blood || shotRGB(shooter), delay: at + 200, dur: 460 + at, blocking: true });
+            strike('kill', dest, outcome, from, to, at + 200, f.tracer.fat);
           } else if (lr.low) {
             // the dirt kicked up at their feet
             add({ kind: 'miss', x: dest.x, y: dest.y, up: to.up, delay: at + 200, dur: 520 + at, blocking: true });
@@ -956,5 +969,14 @@
     var n = (L.far || 0) + (L.glance || 0) + (L.near || 0) + (L.kill || 0) || 1;
     return { kill: (L.kill || 0) / n, supp: (L.near || 0) / n, glance: (L.glance || 0) / n };
   }
-  root.PMCFire = { GLOWS: GLOWS, make: make, troop: troop, DRAWN_EACH: DRAWN_EACH, shares: shares, XENO_BLUE: '110,190,255', BUG_GREEN: '150,220,80' };
+  /* What a round that kills throws off its target: a man's blood (PMC, Rebels), a
+     bug's green ichor, blue sparks off a Xeno, sparks off a hull or a drone. */
+  function bleedOf(t, R) {
+    if (!t) return { blood: '170,30,25', hitFx: 'blood' };
+    if (R.isMachine(t) || R.has(t, 'Drone unit')) return { blood: '255,205,130', hitFx: 'sparks' };
+    if (R.isXeno(t)) return { blood: '120,190,255', hitFx: 'sparks' };
+    if (t.faction === 'bugs' || /bug|swarm|larv/.test(t.art || '')) return { blood: '110,175,45', hitFx: 'blood' };
+    return { blood: '170,30,25', hitFx: 'blood' };
+  }
+  root.PMCFire = { GLOWS: GLOWS, make: make, troop: troop, DRAWN_EACH: DRAWN_EACH, shares: shares, bleedOf: bleedOf, XENO_BLUE: '110,190,255', BUG_GREEN: '150,220,80' };
 })(typeof window !== 'undefined' ? window : globalThis);

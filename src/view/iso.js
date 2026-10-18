@@ -868,6 +868,18 @@
     var ang = hash(salt | 0, seed & 255, 17) * Math.PI * 2, rr = 0.75 + 0.35 * hash(seed & 255, salt | 0, 19);
     return { dx: sp.sx * 0.3 + Math.cos(ang) * a(8.5) * rr, dy: sp.sy * 0.3 + Math.sin(ang) * a(4.2) * rr, mi: n - 1 };
   }
+  /* Where the men a squad loses will lie, as table offsets from the unit: as the
+     board lays them (casualtySpot, from `before` down to `after`), the i-th body
+     salted by how many remains already lay before it (`len0`). The rounds that
+     kill them go there. */
+  function fallSpots(u, before, after, len0) {
+    var out = [];
+    for (var n = before, i = 0; n > after && i < 12; n--, i++) {
+      var cs = casualtySpot(u, n, ((len0 || 0) + i) * 7 + n);
+      out.push({ x: (cs.dx / K + cs.dy / (K / 2)) / 2, y: (cs.dy / (K / 2) - cs.dx / K) / 2 });
+    }
+    return out;
+  }
   function drawBody(g, sx, sy, b) {
     /* The last of a gun crew to fall leaves the gun: knocked out where it stood. */
     if (b.piece && PIECE3D[b.art]) { pieceWreck(g, b, toWorld(sx, sy)); return; }
@@ -1122,6 +1134,6 @@
         isArmoured(unit && unit.art));
     },
     ellipse: ellipse, ellipseRing: ellipseRing, poly: poly, tile: tile, rect: rect,
-    casualtySpot: casualtySpot, drawBody: drawBody, drawWreck: drawWreck, wreckFire: wreckFire, smoking: smoking, damageSmoke: damageSmoke
+    casualtySpot: casualtySpot, fallSpots: fallSpots, drawBody: drawBody, drawWreck: drawWreck, wreckFire: wreckFire, smoking: smoking, damageSmoke: damageSmoke
   };
 })(window);

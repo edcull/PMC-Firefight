@@ -295,16 +295,16 @@
     if (!shot || shot.missed || TRIAL.indexOf(spec.p) < 0) return null;
     var t = shot.t, s0 = shot.sum;
     if (shot.mach) {
-      return Object.assign(root.PMCFire.shares(s0.ladder || {}), { figs: [{ x: TO.x, y: TO.y }], blood: '255,200,120',
+      return Object.assign(root.PMCFire.shares(s0.ladder || {}), root.PMCFire.bleedOf(t, R), { figs: [{ x: TO.x, y: TO.y }],
         crit: Math.round((s0.ladder || {}).crit || 0) });
     }
     // (the men drawn falling: the average rounded, as the target is shown after)
     var before = Math.max(1, t.before || 1), lost = Math.max(0, before - Math.max(0, t.models));
     var figs = I.formationTable(Math.min(10, before)).map(function (o) { return { x: TO.x + o.dx, y: TO.y + o.dy }; });
-    // the men who fall are the last of the formation, as the squad is drawn after
-    var fallen = figs.slice(Math.max(0, Math.min(figs.length, Math.round(figs.length * (before - lost) / before))));
+    // the rounds that kill go where the bench will lay the men they kill (as the shot lands, below)
+    var fallen = I.fallSpots(t, before, before - lost, (view.tbodies || []).length).map(function (o) { return { x: TO.x + o.x, y: TO.y + o.y }; });
     // the rounds shared out as the rules' ladder for the average shot has them (shoot.js, missRungs)
-    return Object.assign(root.PMCFire.shares(s0.ladder || {}), { figs: fallen.length ? fallen : figs, all: figs });
+    return Object.assign(root.PMCFire.shares(s0.ladder || {}), root.PMCFire.bleedOf(t, R), { figs: fallen.length ? fallen : figs, all: figs });
   }
   function targetLine() {
     var t = mark(), p = R.profile(view.target) || {};
