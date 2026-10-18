@@ -1054,7 +1054,7 @@
         else if (!R.isMachine(t)) {
           view.tbodies = view.tbodies || [];
           for (var n = t.before; n > Math.max(0, t.models); n--) {
-            var cs = I.casualtySpot(t, n, view.tbodies.length * 7 + n);
+            var cs = I.casualtySpot(t, n, view.tbodies.length * 7 + n, t.before);
             view.tbodies.push({ dx: cs.dx, dy: cs.dy, side: t.side, art: t.art, mi: cs.mi, flip: view.tbodies.length % 3 === 0 });
           }
           if (t.before > t.models && view.sound && SFX && SFX.casualty) SFX.casualty();

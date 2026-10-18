@@ -859,24 +859,39 @@
     corpses[key] = c;
     return c;
   }
-  // where the model a squad loses was standing: the last one, in its old formation
-  function casualtySpot(u, nBefore, salt) {
+  /* Where the model a squad loses lies. Given `top`, how many it had as the attack
+     began, the i-th man it kills (i = top - nBefore) is one of the formation it
+     stood in then, in an order fixed for the squad, and he lies where he stood,
+     fallen a little out from it: `sx`, `sy` are where he stood, for the round
+     that kills him (fallSpots). Without it, or past the men drawn, the last one
+     in its old formation, flung toward the edge of the base. */
+  function casualtySpot(u, nBefore, salt, top) {
     var n = Math.max(1, Math.min(MAX_FIGS, nBefore || 1)), sp = formation(n)[0];
     var seed = 0, sid = String(u.id || u.code || '');
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
+    var t0 = Math.max(1, top || nBefore || 1), shown = Math.min(MAX_FIGS, t0), i = t0 - (nBefore || 1);
+    if (top && i >= 0 && i < shown) {
+      var F = formation(shown), order = F.map(function (f, k) { return k; });
+      order.sort(function (p, r) { return hash(p, seed & 255, shown) - hash(r, seed & 255, shown); });
+      var st = F[order[i]];
+      var out = (st.sx || st.sy) ? Math.atan2(st.sy * 2, st.sx) : hash(salt | 0, seed & 255, 17) * Math.PI * 2;
+      var push = a(1.5) + a(1.5) * hash(seed & 255, salt | 0, 19);
+      return { dx: st.sx + Math.cos(out) * push, dy: st.sy + Math.sin(out) * push * 0.5, sx: st.sx, sy: st.sy, mi: n - 1 };
+    }
     // flung out toward the edge of the base, so the fallen are not lost under the living
     var ang = hash(salt | 0, seed & 255, 17) * Math.PI * 2, rr = 0.75 + 0.35 * hash(seed & 255, salt | 0, 19);
-    return { dx: sp.sx * 0.3 + Math.cos(ang) * a(8.5) * rr, dy: sp.sy * 0.3 + Math.sin(ang) * a(4.2) * rr, mi: n - 1 };
+    var dx0 = sp.sx * 0.3 + Math.cos(ang) * a(8.5) * rr, dy0 = sp.sy * 0.3 + Math.sin(ang) * a(4.2) * rr;
+    return { dx: dx0, dy: dy0, sx: dx0, sy: dy0, mi: n - 1 };
   }
-  /* Where the men a squad loses will lie, as table offsets from the unit: as the
-     board lays them (casualtySpot, from `before` down to `after`), the i-th body
+  /* Where the men a squad loses stood, as table offsets from the unit: the men the
+     board will lay dead (casualtySpot, from `before` down to `after`), the i-th
      salted by how many remains already lay before it (`len0`). The rounds that
-     kill them go there. */
+     kill them strike them there. */
   function fallSpots(u, before, after, len0) {
     var out = [];
     for (var n = before, i = 0; n > after && i < 12; n--, i++) {
-      var cs = casualtySpot(u, n, ((len0 || 0) + i) * 7 + n);
-      out.push({ x: (cs.dx / K + cs.dy / (K / 2)) / 2, y: (cs.dy / (K / 2) - cs.dx / K) / 2 });
+      var cs = casualtySpot(u, n, ((len0 || 0) + i) * 7 + n, before);
+      out.push({ x: (cs.sx / K + cs.sy / (K / 2)) / 2, y: (cs.sy / (K / 2) - cs.sx / K) / 2 });
     }
     return out;
   }
