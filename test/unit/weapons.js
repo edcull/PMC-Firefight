@@ -122,7 +122,7 @@ all(['hpv', 'hmgteam', 'rautocannon'], 'chain');
 is('lifv', 'chain+missile');
 is('hifv', 'chain+missile x2');
 // the heavy autocannon squad puts three heavy rounds through its own fire
-is('rheavyac', 'chain+shellbig');
+is('rheavyac', 'chain+shell');
 // the guard have carbines through the ranks as well as rifles
 is('rguard', 'small+smg');
 is('rlflak', 'burst');

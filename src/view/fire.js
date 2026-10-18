@@ -89,7 +89,11 @@
                (fire does not go over their heads) */
             if (plan) {
               var role = plan[j], ux = dx / len, uy = dy / len;
-              if (role === 'kill') { var figs = outcome.figs || [], fg = figs.length ? figs[kills++ % figs.length] : to; aim = { x: fg.x, y: fg.y, up: to.up }; }
+              if (role === 'kill') {
+                var figs = outcome.figs || [], kk = kills++, fg = figs.length ? figs[kk % figs.length] : to; aim = { x: fg.x, y: fg.y, up: to.up };
+                // the man it washes over drops as it reaches him
+                if (outcome.onKill) setTimeout(function () { if (alive()) outcome.onKill(kk); }, FLAME_JET * 0.6);
+              }
               else if (role === 'glance') { var all = outcome.all || outcome.figs || [], gm = all.length ? all[j % all.length] : to; aim = { x: gm.x, y: gm.y, up: to.up }; }
               else if (role === 'supp') { var sh = 0.4 + Math.random() * 0.7; aim = { x: aim.x - ux * sh, y: aim.y - uy * sh, up: to.up }; }
               else { var fs = 0.9 + Math.random() * 0.7; aim = { x: aim.x - ux * fs, y: aim.y - uy * fs, up: to.up }; }
@@ -143,7 +147,7 @@
               // each pulse by its part in the volley: into a man, into the ground at their feet, or past them
               var lr = lineRound(plan[j], plan[j] === 'kill' ? kills++ : 0, outcome, from, to);
               add({ kind: 'pulse', from: pick(from, j), to: lr.to, low: lr.low, over: lr.over, rgb: rgb, dur: lr.over ? 320 : 260, blocking: true });
-              if (lr.glance || plan[j] === 'kill') strike(lr.glance ? 'glance' : 'kill', lr.to, outcome, from, to, 220);
+              if (lr.glance || plan[j] === 'kill') strike(lr.glance ? 'glance' : 'kill', lr.to, outcome, from, to, 220, false, lr.k);
               else if (!lr.over) add({ kind: 'impact', x: lr.to.x, y: lr.to.y, up: to.up || 0, n: 1, rgb: rgb, delay: 220, dur: 680, blocking: true });
             } else add({ kind: 'pulse', from: pick(from, j), to: to, rgb: rgb, dur: 260, blocking: true });
             if (land) setTimeout(function () { land(j === n - 1 ? 1 : 0); }, 250);
@@ -546,7 +550,7 @@
                 // each line leaves its own barrel, spread through a squad rather than the two at the front
                 var rl = rlplan ? lineRound(rlplan[j], rlplan[j] === 'kill' ? rlk++ : 0, oc, from, to) : { to: to };
                 add({ kind: 'rail', from: R.isMachine(shooter) ? pick(from, j) : spread(from, j, shots), to: rl.to, low: rl.low, over: rl.over, rgb: shotRGB(shooter), dur: 380, blocking: true });
-                if (rlplan && (rl.glance || rlplan[j] === 'kill')) strike(rl.glance ? 'glance' : 'kill', rl.to, oc, from, to, 0, true);
+                if (rlplan && (rl.glance || rlplan[j] === 'kill')) strike(rl.glance ? 'glance' : 'kill', rl.to, oc, from, to, 0, true, rl.k);
                 else if (rlplan && !rl.over) add({ kind: 'impact', x: rl.to.x, y: rl.to.y, up: to.up || 0, n: 2, rgb: shotRGB(shooter), dur: 460, blocking: true });
                 if (j === shots - 1) setTimeout(function () { land(1); }, 90);
                 redraw();
@@ -739,7 +743,10 @@
     /* Where a round strikes them: a deflection pings off their armour and flies on;
        one that kills throws a spray on away from the shooter, as the target bleeds
        (outcome.blood; `hitFx: 'sparks'` for a hull, a drone or a Xeno's plates). */
-    function strike(role, at, outcome, from, to, delay, fat) {
+    /* (`k`, for a kill: the how-manyth man the attack kills, told to outcome.onKill as
+       the round strikes him, so he drops then) */
+    function strike(role, at, outcome, from, to, delay, fat, k) {
+      if (role === 'kill' && outcome && outcome.onKill && k != null) setTimeout(function () { if (alive()) outcome.onKill(k); }, delay || 0);
       if (role === 'glance') {
         add({ kind: 'ricochet', x: at.x, y: at.y, up: (to.up || 0) + 0.6, seed: Math.floor(Math.random() * 1000), delay: delay, dur: 380 + delay, blocking: true });
       } else if (role === 'kill') {
@@ -823,7 +830,7 @@
       var jitter = (Math.random() - 0.5) * 0.9;
       if (role === 'kill') {
         var figs = outcome.figs || [], fig = figs.length ? figs[k % figs.length] : to;
-        return { to: { x: fig.x, y: fig.y, up: to.up } };
+        return { to: { x: fig.x, y: fig.y, up: to.up }, k: k };
       }
       if (role === 'glance') {
         // into one of them, the fallen or not, and turned by the armour: sparks off it
@@ -885,7 +892,7 @@
             strike('glance', dest, outcome, from, to, at + 200);
           } else if (plan[i] === 'kill') {
             // where it strikes (a hull: sparks off it)
-            strike('kill', dest, outcome, from, to, at + 200, f.tracer.fat);
+            strike('kill', dest, outcome, from, to, at + 200, f.tracer.fat, lr.k);
           } else if (lr.low) {
             // the dirt kicked up at their feet
             add({ kind: 'miss', x: dest.x, y: dest.y, up: to.up, delay: at + 200, dur: 520 + at, blocking: true });

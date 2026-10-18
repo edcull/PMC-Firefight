@@ -357,7 +357,7 @@
           } else if (!u0._collar) {
             var left = u.alive ? (u.models || 0) : u.fled ? seen.models : 0;
             for (var n = seen.models; n > left; n--) {
-              var cs = ISO.casualtySpot(u, n, rem.length * 7 + n, seen.models);
+              var cs = ISO.casualtySpot(u, n, rem.length * 7 + n, u0._rg ? u0._rg.n0 : seen.models);
               rem.push({ kind: 'body', of: u.id, x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, side: u.side, paint: u.paint || null,
                 art: u.art, mi: cs.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
               // the last of a gun crew to fall leaves the gun behind, knocked out where it stood
@@ -879,9 +879,14 @@
       g.fillText('?', p.x, p.y - l);
       g.restore();
     }
+    function regroupNow(u0) {
+      var sl = ISO.regroupSlots(u0._rg, nowMs());
+      if (!sl) { delete u0._rg; return undefined; }
+      return sl;
+    }
     function drawUnitOn(u, opts) {
       var g = B.pctx;
-      if (opts.hop || opts.walk || opts.arc || u.aboard || ISO.animates(u) || ISO.smoking(u) ||
+      if (opts.hop || opts.walk || opts.arc || opts.slots || u.aboard || ISO.animates(u) || ISO.smoking(u) ||
           (ISO.turning && ISO.turning(u)) || g.globalAlpha !== 1 || !g.getTransform || window.__noMachineCache) { ISO.drawUnit(g, u, opts); return; }
       var tr = g.getTransform(), p = ISO.toScreen(opts.at.x, opts.at.y);
       var dx = tr.a * p.x + tr.e, dy = tr.d * p.y + tr.f, ix = Math.floor(dx), iy = Math.floor(dy);
@@ -1207,7 +1212,9 @@
             // a unit that has acted is not dimmed: the label says which have still to go (below)
             activated: false,
             selected: ui.selected === u,
-            morale: R.currentMorale(u)
+            morale: R.currentMorale(u),
+            // a squad losing men to an attack: each where he is, the fallen gone, the rest closing up
+            slots: it.unit._rg ? regroupNow(it.unit) : undefined
           });
           if (arr.alpha != null) B.pctx.restore();
           if (u.hidden) B.pctx.restore();
