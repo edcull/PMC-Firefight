@@ -1175,6 +1175,42 @@
               : i % 4 === 0 ? 'rgba(255,196,120,' + (1 - k) + ')' : 'rgba(168,150,120,' + (0.9 - k) + ')');
         }
         if (f.rgb && k < 0.5) I.ellipse(g, p2.x, p2.y - I.K * 0.3, I.K * 0.45 * (1 - k * 2), I.K * 0.35 * (1 - k * 2), 'rgba(' + f.rgb + ',' + (0.6 - k * 1.2) + ')');
+      } else if (f.kind === 'spray') {
+        // a round into them: a spray thrown on away from the shooter — blood or ichor
+        // falling, or bright sparks off a hull or a Xeno's plates
+        var pq = I.toScreen(f.x, f.y); pq.y -= liftAt(f);
+        var pd = I.toScreen(f.x + (f.dx || 1), f.y + (f.dy || 0)); pd.y -= liftAt(f);
+        var dl = Math.hypot(pd.x - pq.x, pd.y - pq.y) || 1, base = Math.atan2((pd.y - pq.y) / dl, (pd.x - pq.x) / dl);
+        var tq = k * (f.dur - (f.delay || 0)) / 1000, nq = f.n || 10;
+        for (var qi = 0; qi < nq; qi++) {
+          var g1 = Math.sin((qi + 1) * 12.9898 + (f.seed || 0) * 78.233) * 43758.5453; g1 -= Math.floor(g1);
+          var g2 = Math.sin((qi + 1) * 39.3468 + (f.seed || 0) * 11.135) * 43758.5453; g2 -= Math.floor(g2);
+          var qa = base + (g1 - 0.5) * (f.spark ? 1.6 : 1.0), qv = I.K * (f.spark ? 3 + g2 * 3 : 1.4 + g2 * 1.8);
+          var qx = Math.cos(qa) * qv * tq, qy = Math.sin(qa) * qv * tq * 0.5 - I.K * (f.spark ? 1.5 : 0.8) * tq + I.K * (f.spark ? 4 : 7) * tq * tq;
+          var qa2 = Math.max(0, 1 - k * (f.spark ? 1.1 : 0.9));
+          var qc = f.spark && qi % 3 === 0 ? '255,250,230' : f.rgb;
+          I.rect(g, pq.x + qx, pq.y + qy, I.PIXEL * (f.spark || qi % 4 ? 1 : 1.5), I.PIXEL * (f.spark || qi % 4 ? 1 : 1.5), 'rgba(' + qc + ',' + qa2 + ')');
+        }
+        if (f.spark && k < 0.2) I.ellipse(g, pq.x, pq.y, I.K * 0.3 * (1 - k * 5), I.K * 0.22 * (1 - k * 5), 'rgba(255,245,220,' + (0.8 - k * 4) + ')');
+      } else if (f.kind === 'ricochet') {
+        // a round turned by armour: a ping of light where it struck, a fleck of spall, and the round flying off
+        var pr = I.toScreen(f.x, f.y); pr.y -= liftAt(f);
+        var r1 = Math.sin(((f.seed || 0) + 1) * 12.9898) * 43758.5453; r1 -= Math.floor(r1);
+        var ra = -Math.PI / 2 + (r1 - 0.5) * 2.6, rl = I.K * 3.2;
+        if (k < 0.25) I.ellipse(g, pr.x, pr.y, I.K * 0.22 * (1 - k * 4), I.K * 0.16 * (1 - k * 4), 'rgba(255,248,225,' + (0.95 - k * 3.8) + ')');
+        g.save();
+        g.strokeStyle = 'rgba(255,232,170,' + (0.9 * (1 - k)) + ')';
+        g.lineWidth = I.PIXEL;
+        g.beginPath();
+        g.moveTo(pr.x + Math.cos(ra) * rl * Math.max(0, k - 0.3), pr.y + Math.sin(ra) * rl * Math.max(0, k - 0.3) * 0.7);
+        g.lineTo(pr.x + Math.cos(ra) * rl * k, pr.y + Math.sin(ra) * rl * k * 0.7);
+        g.stroke();
+        g.restore();
+        for (var rs = 0; rs < 4; rs++) {
+          var rb = ra + Math.PI + (rs - 1.5) * 0.7;
+          I.rect(g, pr.x + Math.cos(rb) * I.K * 0.7 * k, pr.y + Math.sin(rb) * I.K * 0.35 * k + I.K * 1.5 * k * k, I.PIXEL, I.PIXEL,
+            'rgba(210,200,180,' + (0.8 - k * 0.8) + ')');
+        }
       } else if (f.kind === 'sparks') {
         // a critical hit on a hull: a shower of sparks thrown up and out, falling as they cool
         var ps = I.toScreen(f.x, f.y); ps.y -= liftAt(f);

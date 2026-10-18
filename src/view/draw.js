@@ -357,7 +357,7 @@
           } else if (!u0._collar) {
             var left = u.alive ? (u.models || 0) : u.fled ? seen.models : 0;
             for (var n = seen.models; n > left; n--) {
-              var cs = ISO.casualtySpot(u, n, rem.length * 7 + n);
+              var cs = ISO.casualtySpot(u, n, rem.length * 7 + n, seen.models);
               rem.push({ kind: 'body', of: u.id, x: seen.x, y: seen.y, dx: cs.dx, dy: cs.dy, side: u.side, paint: u.paint || null,
                 art: u.art, mi: cs.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
               // the last of a gun crew to fall leaves the gun behind, knocked out where it stood

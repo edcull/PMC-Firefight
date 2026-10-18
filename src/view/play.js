@@ -246,11 +246,13 @@
     function roundOutcome(target, to, res) {
       var f = res && res.fx;
       if (!f || f.far == null || !target || !target.id) return null;
-      var sh = window.PMCFire.shares(f);
-      if (R.isMachine(target)) return Object.assign(sh, { figs: [{ x: to.x, y: to.y }], blood: '255,200,120', crit: f.crit || 0 });
+      var sh = Object.assign(window.PMCFire.shares(f), window.PMCFire.bleedOf(target, R));
+      if (R.isMachine(target)) return Object.assign(sh, { figs: [{ x: to.x, y: to.y }], crit: f.crit || 0 });
       var before = Math.max(1, f.before || 1), n = Math.max(1, Math.min(ISO.MAX_FIGS || 10, before));
       var figs = ISO.formationTable(n).map(function (o) { return { x: to.x + o.dx, y: to.y + o.dy }; });
-      var fallen = figs.slice(Math.max(0, Math.min(n, Math.round(n * (before - (f.lost || 0)) / before))));
+      // the rounds that kill go where the board will lay the men they kill
+      var fallen = ISO.fallSpots(target, before, before - (f.lost || 0), (B.vc.remains || []).length)
+        .map(function (o) { return { x: to.x + o.x, y: to.y + o.y }; });
       return Object.assign(sh, { figs: fallen.length ? fallen : figs, all: figs });
     }
     /* The replay waits on the table being busy. Most weapons put their first

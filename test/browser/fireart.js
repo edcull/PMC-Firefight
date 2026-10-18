@@ -384,6 +384,29 @@ async function fireAndWatch(p, code, ms) {
   ok('every rail line goes with a shell, barrel to spot', pair.rails.length > 0 && pair.rails.every(l => pair.bolts.indexOf(l) >= 0),
     JSON.stringify(pair));
 
+  head('Rounds into them spray, rounds off their armour ricochet');
+  await stage(p, ['regular', 'veterans']);
+  const strikes = await p.evaluate(async () => {
+    const s = window.PMC_STATE();
+    const a = s.units.find(x => x.side === 'A' && x.key === 'regular');
+    const t = s.units.find(x => x.side === 'B' && x.key === 'veterans');
+    async function kinds(res) {
+      window.__testShoot(a, t, res);
+      const seen = {};
+      for (let i = 0; i < 50; i++) {
+        window.__fxkinds().forEach(k => { seen[k] = 1; });
+        await new Promise(r => setTimeout(r, 40));
+      }
+      return seen;
+    }
+    return {
+      kill: await kinds({ hits: 4, fx: { far: 0, glance: 0, near: 0, kill: 10, before: t.size, lost: 3 } }),
+      glance: await kinds({ hits: 0, fx: { far: 0, glance: 10, near: 0, kill: 0, before: t.size, lost: 0 } })
+    };
+  });
+  ok('a volley that kills throws sprays off the men it kills', !!strikes.kill.spray && !strikes.kill.ricochet, Object.keys(strikes.kill).join(' '));
+  ok('...one their armour turns pings and ricochets off it', !!strikes.glance.ricochet && !strikes.glance.spray, Object.keys(strikes.glance).join(' '));
+
   head('A critical hit throws sparks off the hull');
   await stage(p, ['regular', 'veterans']);
   const sparks = await p.evaluate(async () => {
