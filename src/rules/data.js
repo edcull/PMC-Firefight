@@ -478,7 +478,7 @@
     raa: { p: 'shell', blast: 'frag' },
     rlightart: { p: 'arcbig', blast: 'frag' }, rmedart: { p: 'arcbig', n: 2, blast: 'frag' }, rheavyart: { p: 'arcbig', n: 3, blast: 'frag' },
     // the heavy autocannon squad hammers, then puts three heavy rounds through it
-    rheavyac: { p: 'chain', s: 'shellbig', sn: 3, blast: 'frag' },
+    rheavyac: { p: 'chain', s: 'shell', sn: 3, blast: 'frag' },
     rassaultcdo: { p: 'small', s: 'smg' }, rsabcdo: { p: 'small', s: 'smg' },
     rsnipercdo: { p: 'shell', s: 'pistol' },
     /* Miners carry Gauss Weapon (las-cutters) — a mining tool the rules let them

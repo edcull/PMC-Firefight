@@ -201,6 +201,28 @@
       var outcome = roundOutcome(target, to, res);
       // (with the rounds drawn one by one, each lands as it goes: no burst over the mark besides)
       var each = outcome && window.PMCFire.DRAWN_EACH.indexOf(spec.p) >= 0;
+      /* A squad that loses men and still stands: each man drops as the round that
+         kills him strikes (fire.js tells outcome.onKill; what comes down on a spot
+         drops them all as it lands), and once the attack is over the rest walk to
+         their places in the smaller formation (ISO.regroup, drawn by draw.js). */
+      var rg = null, f0 = res && res.fx;
+      if (outcome && f0 && f0.lost > 0 && !R.isMachine(target) && target.alive && f0.before - f0.lost > 0) {
+        rg = target._rg = ISO.regroup(target, f0.before, f0.before - f0.lost);
+        rg.byRound = each;
+        outcome.onKill = function (k) {
+          // (a volley may carry more killing rounds than the men it kills: each man dies once)
+          if (target._rg !== rg || !B.state || k >= rg.n0 - rg.n1) return;
+          rg.dead = Math.max(rg.dead, k + 1);
+          showLosses();
+          if (SFX && SFX.casualty) SFX.casualty();
+          render();
+        };
+      }
+      // the men down so far, on the unit as it is drawn (its bodies are laid from this: syncRemains)
+      function showLosses() {
+        var h = B.held[target.id];
+        if (h && rg) h.models = Math.max(rg.n1, rg.n0 - rg.dead);
+      }
       // `at`: where this round came down, when a salvo spreads its rounds round the mark
       function land(extra, at) {
         if (!B.state) return;
@@ -215,10 +237,24 @@
           fired = true; spawnDeaths(deaths);
           if (outcome && outcome.crit) SHOTS.crits(p, outcome.crit);      // a critical hit: sparks off the hull
           if (impact) impact(Math.max(250, endsAt - nowMs()));
+          // (the impact shows every loss at once; those still standing stand till their round strikes)
+          if (rg) { if (!rg.byRound) rg.dead = rg.n0; showLosses(); }
         }
       }
       var endsAt = nowMs() + 600;           // until the length of the shot is known
-      function finish(ms) { later(function () { if (done) done(); }, ms); }
+      function finish(ms) {
+        later(function () {
+          // the attack over: any still standing fall, and the rest close up, walking
+          if (rg && target._rg === rg && B.state) {
+            rg.dead = rg.n0; showLosses();
+            rg.walkAt = nowMs();
+            holdFor(rg.walkDur + 60);
+            later(function () { if (target._rg === rg) delete target._rg; render(); if (done) done(); }, rg.walkDur + 40);
+            return;
+          }
+          if (done) done();
+        }, ms);
+      }
 
       // the secondary goes off alongside the primary, a beat later
       if (spec.s && !SHOTS.paired(spec)) later(function () {

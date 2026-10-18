@@ -630,6 +630,30 @@ async function pickAndFire(p, key, ms) {
   ok('after Fire, the rounds: far miss, near miss, deflected, hit', /far miss.*near miss.*deflected.*hit/.test(rounds) && pcs.length === 4 &&
     Math.abs(pcs.reduce((a, b) => a + b, 0) - 100) <= 2, rounds);
 
+  // men falling as their rounds strike them, then the rest walking to their new places
+  const fall = await p.evaluate(async () => {
+    window.__viewer.pick('lmgteam');
+    await new Promise(r => setTimeout(r, 200));
+    window.__viewer.range(6);
+    await new Promise(r => setTimeout(r, 100));
+    const tab = document.querySelector('[data-tab="opts"]'); if (tab) tab.click();
+    document.querySelector('[data-do="fire"]').click();
+    const seen = { midFall: false, walking: false, maxDead: 0, n0: 0, n1: 0 };
+    for (let i = 0; i < 90; i++) {
+      const st = window.__viewer.state(), rg = st.trg;
+      if (rg) {
+        seen.n0 = rg.n0; seen.n1 = rg.n1; seen.maxDead = Math.max(seen.maxDead, rg.dead);
+        if (rg.dead > 0 && !rg.walkAt) seen.midFall = true;
+        if (rg.walkAt) seen.walking = true;
+      }
+      seen.bodies = (st.tbodies || []).length; seen.done = !rg;
+      await new Promise(r => setTimeout(r, 40));
+    }
+    return seen;
+  });
+  ok('the casualties fall as they are hit, while the shot is still going', fall.midFall && fall.n0 > fall.n1, JSON.stringify(fall));
+  ok('...then the rest walk to their new places, and it is over', fall.walking && fall.done && fall.bodies === fall.n0 - fall.n1, JSON.stringify(fall));
+
   // the terrain boxes: +2 FP for the firer, +2 Defence for the target, in the Fire! line
   const terr = await p.evaluate(() => {
     const tab = document.querySelector('[data-tab="opts"]'); if (tab) tab.click();

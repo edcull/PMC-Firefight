@@ -674,10 +674,12 @@
 
     // every surviving model, in ranks, drawn from the back of the base forwards
     var n = Math.max(1, Math.min(MAX_FIGS, u.models || 1));
+    // a squad mid-attack is drawn man by man where each is (regroupSlots)
+    if (opts.slots) n = Math.max(1, opts.slots.length);
     // one height for a man, whatever squad he is in — see fitScale
     var scale = MODEL;
     var pose = opts.pose || statusPose(st, art);
-    var spots = around ? garrisonSpots(around, n, at)
+    var spots = opts.slots ? opts.slots : around ? garrisonSpots(around, n, at)
       : opts.lineAt && opts.lineAt.length === n ? lineSpots(opts.lineAt, at) : formation(n);
     var seed = 0, sid = String(u.id || u.code || '');
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
@@ -719,10 +721,11 @@
       spots = [];
     }
     for (var k = 0; k < spots.length; k++) {
-      var mi = spots.length - 1 - k;                   // the front rank is the specialists
+      var mi = spots[k].mi != null ? spots[k].mi : spots.length - 1 - k;   // the front rank is the specialists
       var jx = ((hash(mi + 1, seed & 255, 7) * 2 - 1) * 3) | 0;
       var jy = ((hash(seed & 255, mi + 1, 11) * 2 - 1) * 2) | 0;
       var step = (pose === 'stand' && opts.walk) ? (opts.walk + mi) % 2 : 0;
+      if (spots[k].step) step = spots[k].step % 2;      // a man walking to his new place
       // a unit that has acted this turn is drawn darker, the whole squad in shade
       var c = sprite(u.paint || u.side, art, mi, pose, step, scale * fitScale(art, mi), Math.min(2, spots[k].rank) + (opts.activated ? 3 : 0), u.mount);
       var mx = p.x + spots[k].sx + jx, my = p.y + spots[k].sy + jy;
@@ -871,8 +874,7 @@
     for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
     var t0 = Math.max(1, top || nBefore || 1), shown = Math.min(MAX_FIGS, t0), i = t0 - (nBefore || 1);
     if (top && i >= 0 && i < shown) {
-      var F = formation(shown), order = F.map(function (f, k) { return k; });
-      order.sort(function (p, r) { return hash(p, seed & 255, shown) - hash(r, seed & 255, shown); });
+      var F = formation(shown), order = fallOrder(u, t0);
       var st = F[order[i]];
       var out = (st.sx || st.sy) ? Math.atan2(st.sy * 2, st.sx) : hash(salt | 0, seed & 255, 17) * Math.PI * 2;
       var push = a(1.5) + a(1.5) * hash(seed & 255, salt | 0, 19);
@@ -882,6 +884,40 @@
     var ang = hash(salt | 0, seed & 255, 17) * Math.PI * 2, rr = 0.75 + 0.35 * hash(seed & 255, salt | 0, 19);
     var dx0 = sp.sx * 0.3 + Math.cos(ang) * a(8.5) * rr, dy0 = sp.sy * 0.3 + Math.sin(ang) * a(4.2) * rr;
     return { dx: dx0, dy: dy0, sx: dx0, sy: dy0, mi: n - 1 };
+  }
+  /* The men of a squad of `n` in the order an attack kills them: indices into its
+     formation, fixed for the squad. */
+  function fallOrder(u, n) {
+    var shown = Math.max(1, Math.min(MAX_FIGS, n || 1)), seed = 0, sid = String(u.id || u.code || '');
+    for (var q = 0; q < sid.length; q++) seed = (seed * 31 + sid.charCodeAt(q)) | 0;
+    var order = [];
+    for (var k = 0; k < shown; k++) order.push(k);
+    order.sort(function (p, r) { return hash(p, seed & 255, shown) - hash(r, seed & 255, shown); });
+    return order;
+  }
+  /* A squad losing men to an attack: it stands as it stood (`n0` men), each man
+     dropping as the round that kills him lands (`dead`, how many have so far), and
+     when the attack is over (`walkAt`) the survivors walk to their places in the
+     smaller formation (`n1`). regroupSlots says where each man is drawn now, or
+     null once they are all in place. */
+  function regroup(u, n0, n1) { return { u: u, n0: n0, n1: n1, dead: 0, walkAt: 0, walkDur: 750 }; }
+  function regroupSlots(rg, now) {
+    var s0 = Math.max(1, Math.min(MAX_FIGS, rg.n0)), s1 = Math.max(0, Math.min(MAX_FIGS, rg.n1));
+    var F0 = formation(s0), order = fallOrder(rg.u, rg.n0), lost = Math.max(0, s0 - s1);
+    var gone = order.slice(0, lost), down = order.slice(0, Math.min(lost, rg.dead || 0));
+    var slot = function (k) { return { sx: F0[k].sx, sy: F0[k].sy, rank: F0[k].rank, mi: s0 - 1 - k, step: 0 }; };
+    var keep = [];
+    for (var k = 0; k < s0; k++) if (down.indexOf(k) < 0) keep.push(k);
+    if (!rg.walkAt || now < rg.walkAt) return keep.map(slot);
+    var f = (now - rg.walkAt) / rg.walkDur;
+    if (f >= 1 || !s1) return null;
+    var e = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;      // eased: setting off, then settling
+    var F1 = formation(s1), surv = keep.filter(function (k) { return gone.indexOf(k) < 0; });
+    return surv.map(function (k, i) {
+      var a0 = F0[k], b0 = F1[i] || a0, moving = Math.abs(b0.sx - a0.sx) + Math.abs(b0.sy - a0.sy) > 0.5;
+      return { sx: a0.sx + (b0.sx - a0.sx) * e, sy: a0.sy + (b0.sy - a0.sy) * e, rank: e < 0.5 ? a0.rank : b0.rank,
+        mi: s0 - 1 - k, step: moving ? 1 + (Math.floor(now / 130) + k) % 2 : 0 };
+    });
   }
   /* Where the men a squad loses stood, as table offsets from the unit: the men the
      board will lay dead (casualtySpot, from `before` down to `after`), the i-th
@@ -1149,6 +1185,6 @@
         isArmoured(unit && unit.art));
     },
     ellipse: ellipse, ellipseRing: ellipseRing, poly: poly, tile: tile, rect: rect,
-    casualtySpot: casualtySpot, fallSpots: fallSpots, drawBody: drawBody, drawWreck: drawWreck, wreckFire: wreckFire, smoking: smoking, damageSmoke: damageSmoke
+    casualtySpot: casualtySpot, fallSpots: fallSpots, regroup: regroup, regroupSlots: regroupSlots, drawBody: drawBody, drawWreck: drawWreck, wreckFire: wreckFire, smoking: smoking, damageSmoke: damageSmoke
   };
 })(window);

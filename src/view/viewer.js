@@ -164,7 +164,12 @@
     if (k >= 1) { tg.spFill = null; return tg.sp; }
     return Math.round(f.from + (tg.sp - f.from) * k);
   }
-  function freshTarget() { view.tgt = null; view.lastShot = ''; view.rounds = ''; view.tbodies = []; view.tcollar = null; }
+  function freshTarget() { view.tgt = null; view.lastShot = ''; view.rounds = ''; view.tbodies = []; view.tcollar = null; view.trg = null; }
+  function trgSlots() {
+    var sl = I.regroupSlots(view.trg, performance.now());
+    if (!sl) { view.trg = null; return undefined; }
+    return sl;
+  }
   /* What became of the average shot's rounds, as the rules' ladder has them (shoot.js,
      missRungs) and the animation draws them: the shares of the volley that went
      wide, into the dirt or the cover, off their armour, and into them. */
@@ -408,6 +413,8 @@
         walk: m === u ? view.walkFrame : 0,
         arc: m === u && view.walking ? (view.arc || 0) : 0,
         status: m === u && !R.isMachine(m) ? view.status : (m !== u && !R.isMachine(m) ? R.status(m) : 'ready'),
+        // the target losing men: each where he is, the fallen gone, the rest closing up
+        slots: m !== u && view.trg ? trgSlots() : undefined,
         // getting up as it arrives is a pose, not a state
         pose: m === u && !R.isMachine(m) && arr.pose || undefined,
         morale: R.isMachine(m) ? 0 : R.currentMorale(m)
@@ -567,6 +574,7 @@
     if (!targetGone(tg) && (I.animates(tg) || R.status(tg) !== 'ready')) busy = true;
     if (view.tcollar) busy = true;
     if (view.tgt && view.tgt.spFill) busy = true;      // its Suppression bar still filling
+    if (view.trg) busy = true;                          // its men falling, and closing up
     frame();
     if (busy) start();
     else { last = 0; if (fire) smoulder(); }
@@ -1040,23 +1048,45 @@
     if (spec.t) from.third = from.poolFor ? from.poolFor(spec.t) : mountFrom(spec.t);
     var shot = rollShot(), hits = shot ? shot.hits : 0;
     syncSound();
-    play(spec, from, to, hits, u, roundOutcome(shot, spec));
+    var outcome = roundOutcome(shot, spec), t = shot && shot.t;
+    /* A squad that loses men and still stands: each man drops as the round that
+       kills him strikes (outcome.onKill, from fire.js), his body where he fell, and
+       once the attack is over the rest walk to their places in the smaller
+       formation (I.regroup; drawn in frame). */
+    view.trg = null;
+    if (outcome && t && !shot.missed && !shot.mach && !t.expended && t.alive !== false && t.before > t.models && t.models > 0) {
+      var rg = view.trg = I.regroup(t, t.before, t.models);
+      outcome.onKill = function (k) {
+        if (view.trg !== rg || k >= t.before - t.models) return;
+        rg.dead = Math.max(rg.dead, k + 1);
+        layBodies(t, Math.min(rg.dead, t.before - t.models));     // (more killing rounds than men lost: a man is only killed once)
+        if (view.sound && SFX && SFX.casualty) SFX.casualty();
+        start();
+      };
+    }
+    var ms = play(spec, from, to, hits, u, outcome);
     start();
+    if (view.trg) {
+      var rg2 = view.trg;
+      setTimeout(function () {
+        if (view.trg !== rg2) return;
+        // the attack over: any still standing fall, and the rest close up, walking
+        rg2.dead = rg2.n0; layBodies(t, t.before - t.models);
+        rg2.walkAt = performance.now();
+        start();
+        setTimeout(function () { if (view.trg === rg2) view.trg = null; start(); }, rg2.walkDur + 60);
+      }, Math.max(600, ms || 0) + 80);
+    }
     // what the shot left is shown once it has landed
     if (shot && !shot.missed) {
-      var t = shot.t;
       setTimeout(function () {
         view.tgt = { models: t.models, sp: t.sp, damage: t.damage, alive: t.alive, expended: !!t.expended,
           spFill: t.sp ? { from: 0, t0: Date.now(), dur: SP_FILL_MS } : null };
         setTimeout(drawControls, SP_FILL_MS + 30);       // the readout once the bar has filled
         // the fallen, where the battle lays them; penal troops broken run, and their collars go off
         if (t.expended) targetCollars(Object.assign({}, t, { models: t.before }));
-        else if (!R.isMachine(t)) {
-          view.tbodies = view.tbodies || [];
-          for (var n = t.before; n > Math.max(0, t.models); n--) {
-            var cs = I.casualtySpot(t, n, view.tbodies.length * 7 + n, t.before);
-            view.tbodies.push({ dx: cs.dx, dy: cs.dy, side: t.side, art: t.art, mi: cs.mi, flip: view.tbodies.length % 3 === 0 });
-          }
+        else if (!R.isMachine(t) && !view.trg) {
+          layBodies(t, t.before - Math.max(0, t.models));
           if (t.before > t.models && view.sound && SFX && SFX.casualty) SFX.casualty();
         }
         drawControls(); start();
@@ -1069,6 +1099,15 @@
      scored so there is something to see land. Nothing is resolved here. */
   var SHOTS = root.PMCFire.make({ add: function (f) { FX.add(f); start(); }, redraw: start });
   function glowRGB() { return root.PMCFire.XENO_BLUE; }
+  // the target's first `n` dead laid where they fell (those not laid already), as the battle lays them
+  function layBodies(t, n) {
+    view.tbodies = view.tbodies || [];
+    for (var i = view.tbodies.length; i < n; i++) {
+      var m = t.before - i, cs = I.casualtySpot(t, m, view.tbodies.length * 7 + m, t.before);
+      view.tbodies.push({ dx: cs.dx, dy: cs.dy, side: t.side, art: t.art, mi: cs.mi, flip: view.tbodies.length % 3 === 0 });
+    }
+  }
+  // how long the attack plays
   function play(spec, from, to, hits, u, outcome) {
     var dist = R.unitDist(u, to);
     // (the secondary and third weapons share the attack's outcome out the same way as the primary)
@@ -1076,7 +1115,7 @@
     if (spec.t) setTimeout(function () { SHOTS.secondary(spec.t, u, from.third || from, to, hits, spec.tn, outcome); start(); }, 330);
     // (with the rounds drawn one by one, each lands as it goes: no burst over the mark besides)
     var sparked = false;
-    SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, outcome: outcome,
+    return SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, outcome: outcome,
       land: function (extra, at) {
         if (!outcome || DRAWN_EACH.indexOf(spec.p) < 0) SHOTS.hit(u, at || to, hits, extra);
         // a critical hit: sparks off the hull, as the first round lands
