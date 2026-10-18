@@ -205,13 +205,13 @@
          kills him strikes (fire.js tells outcome.onKill; what comes down on a spot
          drops them all as it lands), and once the attack is over the rest walk to
          their places in the smaller formation (ISO.regroup, drawn by draw.js). */
-      var rg = null, f0 = res && res.fx;
+      var rg = null, f0 = res && res.fx, game = B.state;     // (a later battle's board is not this shot's to hold up)
       if (outcome && f0 && f0.lost > 0 && !R.isMachine(target) && target.alive && f0.before - f0.lost > 0) {
         rg = target._rg = ISO.regroup(target, f0.before, f0.before - f0.lost);
         rg.byRound = each;
         outcome.onKill = function (k) {
           // (a volley may carry more killing rounds than the men it kills: each man dies once)
-          if (target._rg !== rg || !B.state || k >= rg.n0 - rg.n1) return;
+          if (target._rg !== rg || B.state !== game || k >= rg.n0 - rg.n1) return;
           rg.dead = Math.max(rg.dead, k + 1);
           showLosses();
           if (SFX && SFX.casualty) SFX.casualty();
@@ -245,7 +245,7 @@
       function finish(ms) {
         later(function () {
           // the attack over: any still standing fall, and the rest close up, walking
-          if (rg && target._rg === rg && B.state) {
+          if (rg && target._rg === rg && B.state === game) {
             rg.dead = rg.n0; showLosses();
             rg.walkAt = nowMs();
             holdFor(rg.walkDur + 60);
