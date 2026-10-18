@@ -309,7 +309,7 @@
     // the rounds that kill go where the bench will lay the men they kill (as the shot lands, below)
     var fallen = I.fallSpots(t, before, before - lost, (view.tbodies || []).length).map(function (o) { return { x: TO.x + o.x, y: TO.y + o.y }; });
     // the rounds shared out as the rules' ladder for the average shot has them (shoot.js, missRungs)
-    return Object.assign(root.PMCFire.shares(s0.ladder || {}), root.PMCFire.bleedOf(t, R), { figs: fallen.length ? fallen : figs, all: figs });
+    return Object.assign(root.PMCFire.shares(s0.ladder || {}), root.PMCFire.bleedOf(t, R), { figs: fallen.length ? fallen : figs, all: figs, minKill: fallen.length });
   }
   function targetLine() {
     var t = mark(), p = R.profile(view.target) || {};

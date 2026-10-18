@@ -865,8 +865,8 @@
   /* Where the model a squad loses lies. Given `top`, how many it had as the attack
      began, the i-th man it kills (i = top - nBefore) is one of the formation it
      stood in then, in an order fixed for the squad, and he lies where he stood,
-     fallen a little out from it: `sx`, `sy` are where he stood, for the round
-     that kills him (fallSpots). Without it, or past the men drawn, the last one
+     where the round struck him: `sx`, `sy` are that spot, for the round that
+     kills him (fallSpots). Without it, or past the men drawn, the last one
      in its old formation, flung toward the edge of the base. */
   function casualtySpot(u, nBefore, salt, top) {
     var n = Math.max(1, Math.min(MAX_FIGS, nBefore || 1)), sp = formation(n)[0];
@@ -876,9 +876,8 @@
     if (top && i >= 0 && i < shown) {
       var F = formation(shown), order = fallOrder(u, t0);
       var st = F[order[i]];
-      var out = (st.sx || st.sy) ? Math.atan2(st.sy * 2, st.sx) : hash(salt | 0, seed & 255, 17) * Math.PI * 2;
-      var push = a(1.5) + a(1.5) * hash(seed & 255, salt | 0, 19);
-      return { dx: st.sx + Math.cos(out) * push, dy: st.sy + Math.sin(out) * push * 0.5, sx: st.sx, sy: st.sy, mi: n - 1 };
+      // he goes down where the round struck him
+      return { dx: st.sx, dy: st.sy, sx: st.sx, sy: st.sy, mi: n - 1 };
     }
     // flung out toward the edge of the base, so the fallen are not lost under the living
     var ang = hash(salt | 0, seed & 255, 17) * Math.PI * 2, rr = 0.75 + 0.35 * hash(seed & 255, salt | 0, 19);

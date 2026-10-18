@@ -289,7 +289,7 @@
       // the rounds that kill go where the board will lay the men they kill
       var fallen = ISO.fallSpots(target, before, before - (f.lost || 0), (B.vc.remains || []).length)
         .map(function (o) { return { x: to.x + o.x, y: to.y + o.y }; });
-      return Object.assign(sh, { figs: fallen.length ? fallen : figs, all: figs });
+      return Object.assign(sh, { figs: fallen.length ? fallen : figs, all: figs, minKill: fallen.length });
     }
     /* The replay waits on the table being busy. Most weapons put their first
        effect up a moment after they are called (a timer, not at once), and in
