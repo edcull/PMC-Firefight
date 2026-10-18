@@ -84,20 +84,25 @@
       addFx({ kind: 'hold', x: veh.x, y: veh.y, dur: u.boarding.dur + 60, blocking: true });
     }
 
-    /* A unit walking or driving on from a table edge, shown coming in from the
-       nearest edge (or from `start`, where the scenario says it came out) to
-       where it was put. Where the side comes on through entry points (a
-       compound's corridors), it comes in at the mouth of the nearest one and
-       walks the way round to its spot, not through the walls. */
+    /* A unit walking or driving on from a table edge, shown coming in square to
+       the nearest edge (or from `start`, where the scenario says it came out) to
+       where it was put. Where the side comes on through entry points (its edge
+       strip, a compound's corridors), it comes in at the nearest one, across from
+       its spot as far as the mouth allows, and walks the way round to it, not
+       through the walls. */
     function entryStart(u) {
       var sc = B.state.sc || {}, boxes = (sc.entry && sc.entry[u.side]) || null;
       if (!boxes || !boxes.length) return null;
       var best = null, bd = Infinity;
       boxes.forEach(function (b) { var d = R.rectPointDist(b, u.x, u.y); if (d < bd) { bd = d; best = b; } });
-      // the middle of the mouth, on whichever table edge the entry point opens on to
-      var W = R.BOARD.w, H = R.BOARD.h, mx = best.x + best.w / 2, my = best.y + best.h / 2;
+      /* on whichever table edge the entry point opens on to, straight out from the
+         unit's spot (within the mouth): a side coming on along its whole edge comes on
+         square to it, each unit across from where it ends up, not fanning out from the
+         middle of the edge */
+      var W = R.BOARD.w, H = R.BOARD.h;
+      var cy = Math.max(best.y + 0.3, Math.min(best.y + best.h - 0.3, u.y)), cx = Math.max(best.x + 0.3, Math.min(best.x + best.w - 0.3, u.x));
       var m = Math.min(best.x, W - best.x - best.w, best.y, H - best.y - best.h);
-      return m === best.x ? { x: 0.2, y: my } : m === W - best.x - best.w ? { x: W - 0.2, y: my } : m === best.y ? { x: mx, y: 0.2 } : { x: mx, y: H - 0.2 };
+      return m === best.x ? { x: 0.2, y: cy } : m === W - best.x - best.w ? { x: W - 0.2, y: cy } : m === best.y ? { x: cx, y: 0.2 } : { x: cx, y: H - 0.2 };
     }
     function walkOn(u, start) {
       var dl = u.x, dr = R.BOARD.w - u.x, dt = u.y, db = R.BOARD.h - u.y, m = Math.min(dl, dr, dt, db);
@@ -112,12 +117,6 @@
         var route = R.pathTo(B.state, ghost, 999, { x: u.x, y: u.y });
         if (route && route.length >= 2) path = route.map(function (q) { return { x: q.x, y: q.y }; });
       }
-      /* ...and it is seen coming on: from off the table, a few inches out beyond the
-         edge it crosses, so a unit put down right at the edge still marches in. */
-      var OUT = 3, W = R.BOARD.w, H = R.BOARD.h, e0 = path[0];
-      var off = e0.x <= 0.6 ? { x: -OUT, y: e0.y } : e0.x >= W - 0.6 ? { x: W + OUT, y: e0.y }
-        : e0.y <= 0.6 ? { x: e0.x, y: -OUT } : e0.y >= H - 0.6 ? { x: e0.x, y: H + OUT } : null;
-      if (off) path.unshift(off);
       focusUnit(u, false, true);
       animateMove(u, path, false);
       /* Arriving within 12" of the enemy invites a free shot (p. 30). The engine

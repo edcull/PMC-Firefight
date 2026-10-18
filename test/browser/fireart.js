@@ -388,20 +388,21 @@ async function fireAndWatch(p, code, ms) {
   ok('every rail line goes with a shell, barrel to spot', pair.rails.length > 0 && pair.rails.every(l => pair.bolts.indexOf(l) >= 0),
     JSON.stringify(pair));
 
-  /* A unit coming on at a table edge is seen marching in from off the table, not
-     appearing on its spot, even put down right at the edge. */
-  head('A unit coming on walks in from off the table');
+  /* A unit coming on at a table edge comes on square to it, from the edge across
+     from its spot: a side coming on along its whole edge does not fan out from
+     the middle of it. */
+  head('A unit coming on walks in square to its table edge');
   await stage(p, ['regular', 'veterans']);
   const entry = await p.evaluate(async () => {
     const s = window.PMC_STATE();
     const u = s.units.find(x => x.side === 'A' && x.key === 'regular');
-    u.x = 1; u.y = 20;
+    u.x = 3; u.y = 20;
     const first = window.__walkOn(u.id);
     for (let i = 0; i < 80 && window.__busy(); i++) await new Promise(r => setTimeout(r, 50));
     return { first, end: window.__drawnAt(u.id) };
   });
-  ok('it is first drawn off the table, beyond the edge it crosses', entry.first && entry.first.x < 0, JSON.stringify(entry.first));
-  ok('...and ends on its spot', entry.end && Math.abs(entry.end.x - 1) < 0.05 && Math.abs(entry.end.y - 20) < 0.05, JSON.stringify(entry.end));
+  ok('it comes on at the table edge, across from its spot, not from the middle of the edge', entry.first && entry.first.x < 0.5 && Math.abs(entry.first.y - 20) < 0.05, JSON.stringify(entry.first));
+  ok('...and ends on its spot', entry.end && Math.abs(entry.end.x - 3) < 0.05 && Math.abs(entry.end.y - 20) < 0.05, JSON.stringify(entry.end));
 
   head('Rounds into them spray, rounds off their armour ricochet');
   await stage(p, ['regular', 'veterans']);
