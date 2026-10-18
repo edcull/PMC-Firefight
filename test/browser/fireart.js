@@ -66,6 +66,8 @@ async function stage(p, mine) {
 /* Fire with the given unit and watch the effects go by, sampling often enough to
    catch a bolt that is only up for 300ms. */
 async function fireAndWatch(p, code, ms) {
+  // the last attack played out first: a shot that kills has its survivors close up before the next one goes
+  for (let i = 0; i < 100 && await p.evaluate(() => window.__busy && window.__busy()); i++) await p.waitForTimeout(40);
   const started = await p.evaluate((c) => {
     const s = window.PMC_STATE();
     const u = s.units.find(x => x.side === 'A' && x.code === c);

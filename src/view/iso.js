@@ -913,11 +913,36 @@
     if (f >= 1 || !s1) return null;
     var e = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;      // eased: setting off, then settling
     var F1 = formation(s1), surv = keep.filter(function (k) { return gone.indexOf(k) < 0; });
+    if (!rg.to) rg.to = closest(surv.map(function (k) { return F0[k]; }), F1);
     return surv.map(function (k, i) {
-      var a0 = F0[k], b0 = F1[i] || a0, moving = Math.abs(b0.sx - a0.sx) + Math.abs(b0.sy - a0.sy) > 0.5;
+      var a0 = F0[k], b0 = F1[rg.to[i]] || a0, moving = Math.abs(b0.sx - a0.sx) + Math.abs(b0.sy - a0.sy) > 0.5;
       return { sx: a0.sx + (b0.sx - a0.sx) * e, sy: a0.sy + (b0.sy - a0.sy) * e, rank: e < 0.5 ? a0.rank : b0.rank,
         mi: s0 - 1 - k, step: moving ? 1 + (Math.floor(now / 130) + k) % 2 : 0 };
     });
+  }
+  /* Which new place each survivor takes: the arrangement that has them walk least
+     (the sum of the squares of the distances, on the table), so each closes up
+     into the gap beside him rather than crossing the squad. A greedy start, then
+     any two who would both walk less by swapping places swap, until none would. */
+  function closest(from, to) {
+    var tab = function (p) { var t = p.sx / (2 * K), d = p.sy / K; return { x: t + d, y: d - t }; };
+    var A = from.map(tab), Bp = to.map(tab), n = A.length;
+    var cost = function (i, j) { var dx = A[i].x - Bp[j].x, dy = A[i].y - Bp[j].y; return dx * dx + dy * dy; };
+    var pick = [], used = [];
+    for (var i = 0; i < n; i++) {
+      var best = -1;
+      for (var j = 0; j < Bp.length; j++) if (!used[j] && (best < 0 || cost(i, j) < cost(i, best))) best = j;
+      pick.push(best); used[best] = true;
+    }
+    for (var pass = 0, better = true; better && pass < 40; pass++) {
+      better = false;
+      for (var p = 0; p < n; p++) for (var q = p + 1; q < n; q++) {
+        if (cost(p, pick[q]) + cost(q, pick[p]) < cost(p, pick[p]) + cost(q, pick[q]) - 1e-9) {
+          var tmp = pick[p]; pick[p] = pick[q]; pick[q] = tmp; better = true;
+        }
+      }
+    }
+    return pick;
   }
   /* Where the men a squad loses stood, as table offsets from the unit: the men the
      board will lay dead (casualtySpot, from `before` down to `after`), the i-th
@@ -1185,6 +1210,6 @@
         isArmoured(unit && unit.art));
     },
     ellipse: ellipse, ellipseRing: ellipseRing, poly: poly, tile: tile, rect: rect,
-    casualtySpot: casualtySpot, fallSpots: fallSpots, regroup: regroup, regroupSlots: regroupSlots, drawBody: drawBody, drawWreck: drawWreck, wreckFire: wreckFire, smoking: smoking, damageSmoke: damageSmoke
+    casualtySpot: casualtySpot, fallSpots: fallSpots, regroup: regroup, regroupSlots: regroupSlots, closestPlaces: closest, drawBody: drawBody, drawWreck: drawWreck, wreckFire: wreckFire, smoking: smoking, damageSmoke: damageSmoke
   };
 })(window);
