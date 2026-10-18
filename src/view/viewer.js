@@ -164,7 +164,17 @@
     if (k >= 1) { tg.spFill = null; return tg.sp; }
     return Math.round(f.from + (tg.sp - f.from) * k);
   }
-  function freshTarget() { view.tgt = null; view.lastShot = ''; view.tbodies = []; view.tcollar = null; }
+  function freshTarget() { view.tgt = null; view.lastShot = ''; view.rounds = ''; view.tbodies = []; view.tcollar = null; }
+  /* What became of the average shot's rounds, as the rules' ladder has them (shoot.js,
+     missRungs) and the animation draws them: the shares of the volley that went
+     wide, into the dirt or the cover, off their armour, and into them. */
+  function roundsLine(L) {
+    if (!L) return '';
+    var n = (L.far || 0) + (L.near || 0) + (L.glance || 0) + (L.kill || 0);
+    if (!n) return '';
+    var pc = function (v) { return Math.round(100 * (v || 0) / n) + '%'; };
+    return 'Rounds: ' + pc(L.far) + ' far miss · ' + pc(L.near) + ' near miss · ' + pc(L.glance) + ' deflected · ' + pc(L.kill) + ' hit';
+  }
   function targetGone(t) { return !t.alive || (!R.isMachine(t) && t.models <= 0); }
   // every unit, by army, to pick a target from
   function targetOptions() {
@@ -249,6 +259,7 @@
     var ex;
     try { ex = R.expectedShot(st, a, t, 'fire', bonuses()); } catch (e) { return null; }
     var sum = { hits: ex.avgHits, lost: ex.casualties, sp: ex.sp, dmg: ex.damage, ladder: ex.ladder };
+    view.rounds = roundsLine(ex.ladder);
     var avg = function (k) { return sum[k]; };
     var one = function (v) { return (Math.round(v * 10) / 10).toString(); };
     // the target as the average shot leaves it
@@ -1382,6 +1393,7 @@
     if (lab) lab.textContent = 'Range — ' + view.range + '"';
     if (el('vfpline')) el('vfpline').textContent = fpLine();
     if (el('vtgtline')) el('vtgtline').textContent = targetLine();
+    if (el('vrounds')) el('vrounds').hidden = true;
     // every Fire button: the options' and the weapon editor's
     var why = fireBarred();
     el('vctl').querySelectorAll('[data-do="fire"]').forEach(function (fb) {
@@ -1423,7 +1435,8 @@
       '</div>';
     // what Fire shoots at, chosen from every unit; what the shots have left of it
     h += '<div class="vgrp"><label for="vtarget">Target</label><select id="vtarget" class="vselect">' + targetOptions() + '</select>' +
-      '<p class="vtgtline" id="vtgtline">' + esc(targetLine()) + '</p></div>';
+      '<p class="vtgtline" id="vtgtline">' + esc(targetLine()) + '</p>' +
+      '<p class="vtgtline" id="vrounds"' + (view.rounds ? '' : ' hidden') + '>' + esc(view.rounds || '') + '</p></div>';
     // how far off it stands, and what Fire! brings to bear at that range
     h += '<div class="vgrp"><label for="vrange" id="vrangelab">Range — ' + view.range + '"</label>' +
       '<input type="range" id="vrange" min="' + RANGE_MIN + '" max="' + RANGE_MAX + '" step="1" value="' + view.range + '">' +
