@@ -404,6 +404,8 @@
       return true;
     };
     // test hooks: drive a unit through the bar the way a player would
+    // a unit walking on from the table edge to where it stands: where it is first drawn
+    window.__walkOn = function (id) { var u = byId(id); if (!u) return null; B.walkOn(u); return { x: u.ax, y: u.ay }; };
     window.__select = function (u) { if (!u) return false; select(u); return ui.selected === u; };
     window.__actionState = function (id) { return ui.selected ? actionState(ui.selected, id) : null; };
     window.__specials = function () { return specialsFor(ui.selected).map(function (x) { return x.id; }); };
