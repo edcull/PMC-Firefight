@@ -119,24 +119,36 @@
 
     /* ================= payment (p. 84) =================
        Roll BattleTier x PriorityLevel D6 twice. Winner takes the higher total, loser
-       the lower, a draw gives both the lower. Tough Negotiators re-rolls up to half
-       the dice, rounding up, of its own roll; the second result stands. */
+       the lower, a draw gives both the lower. Then Tough Negotiators re-rolls up to
+       half the dice, rounding up, of the roll that pays it; the second result
+       stands, even if it is worse, and the rolls are not handed out again: it only
+       ever changes its own pay, never the other side's. */
     function rollPayment(battleTier, pl) {
       var n = battleTier * pl, dice = [];
       for (var i = 0; i < n; i++) dice.push(d6());
       return dice;
     }
     function sum(a) { return a.reduce(function (x, y) { return x + y; }, 0); }
+    // the dice of the roll that pays `side`: the winner the higher, the loser (and both, in a draw) the lower
+    function payingDice(dice, side, winner, co) {
+      var a = (dice && dice.A) || [], b = (dice && dice.B) || [], hi = sum(a) >= sum(b) ? a : b, lo = hi === a ? b : a;
+      // PR Masters turns its own draw into a victory for payment purposes too
+      var won = winner === side || (winner === null && hasDoctrine(co, 'S5'));
+      return (won ? hi : lo).slice();
+    }
     function negotiate(dice) {
-      var n = Math.ceil(dice.length / 2), out = dice.slice(), swapped = [];
-      // re-roll the lowest dice — the sensible use of the doctrine
-      var order = out.map(function (v, i) { return { v: v, i: i }; }).sort(function (a, b) { return a.v - b.v; });
-      for (var k = 0; k < n; k++) {
+      var n = Math.ceil(dice.length / 2), out = dice.slice(), swapped = [], idx2 = [];
+      /* re-roll the lowest dice — the sensible use of the doctrine: the average die
+         is 3.5, so a 1, 2 or 3 is worth rolling again and a 4 or better never is */
+      var order = out.map(function (v, i) { return { v: v, i: i }; }).sort(function (a, b) { return a.v - b.v; })
+        .filter(function (o) { return o.v <= 3; });
+      for (var k = 0; k < Math.min(n, order.length); k++) {
         var idx = order[k].i, was = out[idx], now = d6();
         out[idx] = now;
         swapped.push({ was: was, now: now });
+        idx2.push(idx);
       }
-      return { dice: out, swapped: swapped };
+      return { dice: out, swapped: swapped, idx: idx2 };
     }
     /* A tribe is territorial (p. 140): in a scenario with an attacker and a
        defender, once the payment dice are shared out, a winning tribe counts its
@@ -154,8 +166,9 @@
        two rolls, the winner paid the higher and the loser the lower) — before anyone
        re-rolls, so a player choosing Plunderer or Tough Negotiators sees both rolls.
        A side with no player at it (a solo campaign's rival) makes its own re-rolls
-       here and now: Plunderer on a roll under the odds after a win, then Tough
-       Negotiators on its lowest half. `people`: the sides a player decides for. */
+       here and now: Plunderer on a roll under the odds after a win, then, once the
+       rolls are handed out, Tough Negotiators on the 1s, 2s and 3s of the roll that
+       pays it. `people`: the sides a player decides for. */
     function rollIncome(battleTier, pl, coA, coB, winner, people) {
       var out = { dice: { A: rollPayment(battleTier, pl), B: rollPayment(battleTier, pl) }, plunder: {}, neg: {} };
       [['A', coA], ['B', coB]].forEach(function (q) {
@@ -166,7 +179,12 @@
           if (sum(d) >= d.length * 3.5) out.plunder[sd] = { was: d.slice(), kept: true };
           else { var again = rollPayment(battleTier, pl); out.plunder[sd] = { was: d.slice(), now: again.slice() }; out.dice[sd] = again; }
         }
-        if (hasDoctrine(co, 'S2')) { var ng = negotiate(out.dice[sd]); out.neg[sd] = ng; out.dice[sd] = ng.dice; }
+      });
+      // (the rolls handed out first, every Plunderer re-roll made: then each rival negotiates its own pay)
+      [['A', coA], ['B', coB]].forEach(function (q) {
+        var sd = q[0], co = q[1];
+        if ((people || []).indexOf(sd) >= 0 || !hasDoctrine(co, 'S2')) return;
+        out.neg[sd] = negotiate(payingDice(out.dice, sd, winner, co));
       });
       return out;
     }
@@ -189,25 +207,27 @@
         return again;
       }
       a = loot(coA, 'A', a); b = loot(coB, 'B', b);
-      /* Tough Negotiators (p. 87): a player picks which dice to re-roll on seeing
-         them (preset.neg); a rival re-rolls its lowest half. */
-      if (pd.A) negA = pn.A || null; else if (hasDoctrine(coA, 'S2')) { negA = negotiate(a); a = negA.dice; }
-      if (pd.B) negB = pn.B || null; else if (hasDoctrine(coB, 'S2')) { negB = negotiate(b); b = negB.dice; }
       var hi = Math.max(sum(a), sum(b)), lo = Math.min(sum(a), sum(b));
-      var out = { diceA: a, diceB: b, negA: negA, negB: negB, plunder: plunder,
-        high: hi, low: lo, A: lo, B: lo, extra: { A: null, B: null }, thin: { A: false, B: false } };
       // PR Masters turns its own draw into a victory for payment purposes too
       var wA = winner === 'A' || (winner === null && hasDoctrine(coA, 'S5'));
       var wB = winner === 'B' || (winner === null && hasDoctrine(coB, 'S5'));
-      if (wA && !wB) { out.A = hi; out.B = lo; }
-      else if (wB && !wA) { out.B = hi; out.A = lo; }
-      else if (wA && wB) { out.A = hi; out.B = hi; }
-      // which set of dice each side was paid from, for the tribe's recalculation
+      // the roll each side is paid from: the winner the higher, the loser (both, in a draw) the lower
+      var pay = { A: payingDice({ A: a, B: b }, 'A', winner, coA), B: payingDice({ A: a, B: b }, 'B', winner, coB) };
+      /* Tough Negotiators (p. 87), once the rolls are handed out: up to half the dice
+         of the roll that pays it re-rolled — a player's own pick (preset.neg), a
+         rival's its 1s to 3s. It changes that side's pay only; the rolls are not
+         handed out again. */
+      if (pd.A) negA = pn.A || null; else if (hasDoctrine(coA, 'S2')) negA = negotiate(pay.A);
+      if (pd.B) negB = pn.B || null; else if (hasDoctrine(coB, 'S2')) negB = negotiate(pay.B);
+      if (negA) pay.A = negA.dice.slice();
+      if (negB) pay.B = negB.dice.slice();
+      var out = { diceA: a, diceB: b, negA: negA, negB: negB, plunder: plunder, payDice: pay,
+        high: hi, low: lo, A: sum(pay.A), B: sum(pay.B), extra: { A: null, B: null }, thin: { A: false, B: false } };
+      // the dice each side was paid from, for the tribe's recalculation
       if (attackDefend) {
-        var hiDice = sum(a) >= sum(b) ? a : b, loDice = hiDice === a ? b : a;
         out.territory = { A: null, B: null };
         [['A', coA, wA && !wB, wB && !wA], ['B', coB, wB && !wA, wA && !wB]].forEach(function (q) {
-          var dice = out[q[0]] === hi && q[2] ? hiDice : loDice;
+          var dice = pay[q[0]];
           var t = territorial(q[1], dice, q[2], q[3]);
           if (t) { out.territory[q[0]] = t; out[q[0]] = t.total; }
         });
@@ -402,7 +422,7 @@
     return {
       fieldableTier: fieldableTier, maxBattleTier: maxBattleTier, levelsFor: levelsFor,
       canStandard: canStandard, rollBattleTier: rollBattleTier, rollScenario: rollScenario, foresight: foresight, foreIgnore: foreIgnore,
-      swapAllowance: swapAllowance, rollPayment: rollPayment, rollIncome: rollIncome, sum: sum, negotiate: negotiate,
+      swapAllowance: swapAllowance, rollPayment: rollPayment, rollIncome: rollIncome, sum: sum, negotiate: negotiate, payingDice: payingDice,
       territorial: territorial, payment: payment, expFor: expFor, tpFor: tpFor,
       traumaThreshold: traumaThreshold, rollTrauma: rollTrauma, salvage: salvage, rollTP: rollTP,
       weakCandidates: weakCandidates, rebirth: rebirth

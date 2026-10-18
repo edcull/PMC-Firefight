@@ -1595,9 +1595,9 @@
       case 'negotiate': {
         var nst = camp.post && camp.post.steps[0];
         if (!nst || nst.kind !== 'negotiate' || !(nst.sel || []).length) return;
-        var npr = camp.post.pre, dice = npr.dice[nst.side].slice(), sw = [];
+        // the dice of the roll that pays it, re-rolled: the rolls themselves (the other side's pay) are left as they are
+        var npr = camp.post.pre, dice = C.payingDice(npr.dice, nst.side, camp.post.report.winner, camp.companies[nst.side]), sw = [];
         nst.sel.forEach(function (i) { var was = dice[i]; dice[i] = 1 + Math.floor(Math.random() * 6); sw.push({ was: was, now: dice[i] }); });
-        npr.dice[nst.side] = dice;
         npr.neg[nst.side] = { dice: dice.slice(), swapped: sw, idx: nst.sel.slice() };
         save(); render(); return;
       }

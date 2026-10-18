@@ -102,13 +102,45 @@ console.log('\nCMP-1 Every payment die is rolled at once, before anyone re-rolls
   const inc = C.rollIncome(3, 1, me, rival, 'A', ['A']);
   ok('both sides\' dice are rolled together', inc.dice.A.length === 3 && inc.dice.B.length === 3);
   ok('...a player\'s own are left for them to decide on', !inc.neg.A);
-  ok('...a rival with Tough Negotiators has made its re-rolls already', !!inc.neg.B && inc.neg.B.swapped.length === 2);
+  // (on the roll that pays it — the loser's, here — and only its 1s to 3s: a 4 or better is never worth rolling again)
+  ok('...a rival with Tough Negotiators has made its re-rolls already, on the roll that pays it',
+    !!inc.neg.B && inc.neg.B.dice.length === 3 && inc.neg.B.swapped.length <= 2 && inc.neg.B.swapped.every((w) => w.was <= 3), JSON.stringify(inc.neg.B));
   const pay = C.payment(3, 1, me, rival, 'A', false, { dice: inc.dice, plunder: inc.plunder, neg: inc.neg });
   const t = (d) => d.reduce((a, b) => a + b, 0);
   ok('the payment uses exactly those dice', pay.diceA.join() === inc.dice.A.join() && pay.diceB.join() === inc.dice.B.join() &&
-    pay.A === Math.max(t(inc.dice.A), t(inc.dice.B)) && pay.B === Math.min(t(inc.dice.A), t(inc.dice.B)), pay.A + ' / ' + pay.B);
+    pay.A === Math.max(t(inc.dice.A), t(inc.dice.B)) && pay.B === t(inc.neg.B.dice), pay.A + ' / ' + pay.B);
   const both = C.rollIncome(3, 1, me, rival, 'B', ['A', 'B']);
   ok('two players (hotseat): nobody\'s dice are re-rolled for them', !both.neg.A && !both.neg.B);
+})();
+
+console.log('\nTough Negotiators re-rolls the roll that pays it, once the rolls are handed out (p. 87)');
+(function () {
+  const me = C.newCompany('Mine', { faction: 'pmc' }), foe = C.newCompany('Foe', { faction: 'pmc' });
+  me.doctrines = ['S2'];
+  const t = (d) => d.reduce((a, b) => a + b, 0);
+  // the winner's own roll came to 2 (1 and 1), the other to 9 (4 and 5): the winner is paid the 9
+  const dice = { A: [1, 1], B: [4, 5] };
+  ok('the winner negotiates over the higher roll, whoever rolled it', C.payingDice(dice, 'A', 'A', me).join() === '4,5');
+  ok('...the loser over the lower', C.payingDice(dice, 'B', 'A', foe).join() === '1,1');
+  // it re-rolls the 4 to a 6: it is paid 11, and the loser's 2 is untouched
+  let pay = C.payment(1, 2, me, foe, 'A', false, { dice: dice, neg: { A: { dice: [6, 5], swapped: [{ was: 4, now: 6 }], idx: [0] } } });
+  ok('a winner\'s re-roll raises its own pay', pay.A === 11, String(pay.A));
+  ok('...and never the loser\'s', pay.B === 2, String(pay.B));
+  // a loser negotiating: its lower roll re-rolled past the winner's stays its own pay, and the rolls are not handed out again
+  pay = C.payment(1, 2, me, foe, 'B', false, { dice: dice, neg: { A: { dice: [6, 6], swapped: [], idx: [0, 1] } } });
+  ok('a loser\'s re-roll that beats the winner\'s pay is still only its own', pay.A === 12 && pay.B === 9, pay.A + ' / ' + pay.B);
+  // a rival: only its 1s to 3s, up to half the dice
+  const ng = C.negotiate([1, 4, 6, 2, 5]);
+  ok('a rival never re-rolls a 4 or better', ng.swapped.length === 2 && ng.swapped.every((w) => w.was <= 3), JSON.stringify(ng.swapped));
+  ok('...and nothing at all off a roll of 4s and up', C.negotiate([4, 5, 6]).swapped.length === 0);
+  // a solo rival winning: its re-roll goes on the higher roll it is paid from
+  let raised = 0;
+  for (let i = 0; i < 300; i++) {
+    const r = C.payment(1, 2, foe, me, 'B', false, null);
+    if (r.negB && r.B !== r.high && r.B !== t(r.payDice.B)) raised = -9999;
+    if (r.negB && r.B === t(r.payDice.B)) raised++;
+  }
+  ok('a rival is paid the higher roll as it re-rolled it', raised > 0);
 })();
 
 console.log('\nCMP-2 Surrounded, but Steady counts in the Rally phase only (p. 89)');
