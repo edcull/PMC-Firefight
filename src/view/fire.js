@@ -179,6 +179,7 @@
             setTimeout(function () {
               if (!alive()) return;
               // where the weapon entry says (`blast: 'frag'`), it goes off as a fragmentation blast instead
+              down(aim);
               if (blast === 'frag') fragBlast(aim, big ? 1.8 : 1.15, j);
               else plasmaSplash(aim, rgb, big);
               if (land && j === n - 1) land(2, aim);
@@ -235,6 +236,7 @@
             setTimeout(function () {
               if (!alive()) return;
               // one big burst where it strikes: no scatter, the whole charge in one place
+              down(to);
               add({ kind: 'orbburst', x: to.x, y: to.y, up: to.up, rgb: rgb, huge: true, dur: 1000, blocking: true });
               if (SFX) { SFX.impact(); SFX.impact(0.08); }
               if (land && j === n - 1) land(2, to);
@@ -299,6 +301,7 @@
             add({ kind: 'molotov', from: spread(from, j, n), to: aim, seed: j, dur: fl, blocking: true });
             setTimeout(function () {
               if (!alive()) return;
+              down(aim);
               add({ kind: 'firesplash', x: aim.x, y: aim.y, up: aim.up, seed: j, dur: 1500, blocking: true });
               if (SFX) { SFX.splat(); SFX.flamepuff(0.05); }
               if (land && j === n - 1) land(2, aim);
@@ -326,6 +329,7 @@
             add({ kind: 'frag', from: spread(from, j, n), to: aim, seed: j, dur: fl, blocking: true });
             setTimeout(function () {
               if (!alive()) return;
+              down(aim);
               fragBlast(aim, 1, j);
               if (land && j === n - 1) land(3, aim);
             }, fl);
@@ -395,6 +399,7 @@
                 add({ kind: 'glob', from: F, to: aim, dur: sflight, big: sbig, blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
+                  down(aim);
                   add({ kind: 'splat', x: aim.x, y: aim.y, up: aim.up, big: sbig, dur: 620, blocking: true });
                   if (SFX) SFX.splat();
                   if (j === globs - 1) land(sbig ? 3 : 1, aim);
@@ -428,6 +433,7 @@
                 }
                 setTimeout(function () {
                   // where the weapon entry says (`blast: 'frag'`), each round goes off as a fragmentation blast
+                  down(sto);
                   if (alive() && spec.blast === 'frag') fragBlast(sto, big ? 1.5 : 1.05, j);
                   land(big ? 4 : 2, oc ? sto : undefined);
                 }, flightMs);
@@ -465,6 +471,7 @@
                 if (SFX) SFX.incoming(flight / 1000 - 0.45, 0.45);
                 setTimeout(function () {
                   // where the weapon entry says (`blast: 'frag'`), each round goes off as a fragmentation blast
+                  down(aim);
                   if (alive() && spec.blast === 'frag') fragBlast(aim, heavy ? 1.5 : 1.05, i);
                   land(heavy ? 4 : 3, aim);
                 }, flight);
@@ -492,6 +499,7 @@
                   sam: samLaunch(spec, shooter, to) });
                 setTimeout(function () {
                   // where the weapon entry says (`blast: 'frag'`), each missile goes off as a fragmentation blast
+                  down(mto);
                   if (alive() && spec.blast === 'frag') fragBlast(mto, 1.2, j);
                   land(3, oc ? mto : undefined);
                 }, mflight);
@@ -520,6 +528,7 @@
                 });
                 setTimeout(function () {
                   // as `blast: 'frag'` asks: each rocket a smaller blast, scattered about the mark
+                  down(rto);
                   if (alive() && spec.blast === 'frag') fragBlast(rto, 0.8, i);
                   land(i === rn - 1 ? 3 : 0, oc ? rto : undefined);
                 }, rflight);
@@ -604,6 +613,7 @@
                 add({ kind: 'glob', from: pick(from, j), to: aim, dur: sfl, big: style === 'spitbig', blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
+                  down(aim);
                   add({ kind: 'splat', x: aim.x, y: aim.y, up: aim.up, dur: 560, blocking: true });
                   if (SFX) SFX.splat();
                 }, sfl);
@@ -633,6 +643,7 @@
                 add({ kind: 'lob', from: from.pod ? pick(throwFrom, j) : spread(throwFrom, j, thrown), to: aim, dur: flight, heavy: style === 'arcbig', blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
+                  down(aim);
                   if (R.weaponSpec(shooter).blast === 'frag') { fragBlast(aim, style === 'arcbig' ? 1.5 : 1.05, j); return; }
                   add({ kind: 'impact', x: aim.x, y: aim.y, up: aim.up, n: 4, dur: 380, blocking: true });
                   if (SFX) SFX.impact();
@@ -656,6 +667,7 @@
                 add({ kind: 'bolt', from: pick(from, j), to: sto, dur: 300, heavy: style === 'shellbig', blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
+                  down(sto);
                   if (R.weaponSpec(shooter).blast === 'frag') fragBlast(sto, style === 'shellbig' ? 1.5 : 1.05, j);
                   else secondaryLands(shooter, sto, style === 'shellbig' ? 3 : 2);
                 }, 300);
@@ -692,6 +704,7 @@
                 add({ kind: 'missile', from: pick(from, j), to: mto, seed: j, dur: 900, blocking: true });
                 setTimeout(function () {
                   if (!alive()) return;
+                  down(mto);
                   if (R.weaponSpec(shooter).blast === 'frag') fragBlast(mto, 1.2, j);
                   else secondaryLands(shooter, mto, 3);
                 }, 900);
@@ -712,6 +725,7 @@
                 var rto = landing(oc, rkp, j, 5, to, from, rocketSpot(to, j));
                 add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pick(from, j).mz, dur: 180, big: true, blocking: true });
                 add({ kind: 'missile', from: pick(from, j), to: oc ? rto : to, rocket: true, seed: j, dur: 420, blocking: true });
+                setTimeout(function () { if (alive()) down(rto); }, 420);
                 if (R.weaponSpec(shooter).blast === 'frag') setTimeout(function () { if (alive()) fragBlast(rto, 0.8, j); }, 420);
                 else if (oc) setTimeout(function () { if (alive()) secondaryLands(shooter, rto, 2); }, 420);
                 else if (j === 4) setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 420);
@@ -790,6 +804,14 @@
        of it, and misses only if none of these. Off
        to either side, or short and over along the line of fire. `plan` is the
        volley's roundPlan; `def` where the round would have come down otherwise. */
+    /* A round coming down where it was meant to kill (landing tags the spot): the man
+       it kills drops now — or, a lone round killing several, all of them. */
+    function down(spot) {
+      if (!spot || spot.kill == null || !spot.oc || !spot.oc.onKill) return;
+      var k0 = spot.kill, k1 = spot.killAll ? Math.max(k0 + 1, spot.oc.minKill || 1) : k0 + 1;
+      spot.kill = null;
+      for (var k = k0; k < k1; k++) spot.oc.onKill(k);
+    }
     function landing(outcome, plan, j, n, to, from, def) {
       if (!outcome) return def;
       var lx = to.x - from.x, ly = to.y - from.y, ll = Math.hypot(lx, ly) || 1;
@@ -809,13 +831,18 @@
       if (n <= 1) {
         // a lone round is the whole attack: on the men if it kills, among their feet if it
         // pins them at all, off one of them if it reached them, and wide only if none of these
-        if (kill > 0) return onMan(0);
+        if (kill > 0) { var lone = onMan(0); lone.kill = 0; lone.killAll = true; lone.oc = outcome; return lone; }
         if (supp > 0) { var near = onMan(Math.floor(Math.random() * Math.max(1, figs.length))); return { x: near.x + (Math.random() - 0.5) * 0.6, y: near.y + (Math.random() - 0.5) * 0.6, up: to.up }; }
         if ((outcome.glance || 0) > 0) return onAny();
         return off(1.2 + Math.random() * 1.2);
       }
       var role = plan ? plan[j] : 'over';
-      if (role === 'kill') return onMan(plan.slice(0, j).filter(function (r) { return r === 'kill'; }).length);
+      if (role === 'kill') {
+        // the how-manyth killing round: the man it kills drops as it comes down (down)
+        var kk = plan.slice(0, j).filter(function (r) { return r === 'kill'; }).length, ks = onMan(kk);
+        ks.kill = kk; ks.oc = outcome;
+        return ks;
+      }
       if (role === 'supp') return off(0.5 + Math.random() * 0.7);
       if (role === 'glance') return onAny();
       return off(1.6 + Math.random() * 1.2);
