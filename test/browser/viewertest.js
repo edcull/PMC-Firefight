@@ -616,6 +616,20 @@ async function pickAndFire(p, key, ms) {
   await p.evaluate(() => window.__viewer.pick('regular'));
   ok('another unit is not left mid-detonation', !(await p.evaluate(() => window.__viewer.state().collar)));
 
+  // what became of the rounds, after Fire: the four shares of the volley, adding up
+  const rounds = await p.evaluate(async () => {
+    window.__viewer.pick('regular');
+    await new Promise(r => setTimeout(r, 200));
+    const tab = document.querySelector('[data-tab="opts"]'); if (tab) tab.click();
+    document.querySelector('[data-do="fire"]').click();
+    await new Promise(r => setTimeout(r, 1200));
+    const e = document.getElementById('vrounds');
+    return e && !e.hidden ? e.textContent : '';
+  });
+  const pcs = (rounds.match(/(\d+)%/g) || []).map(v => +v.slice(0, -1));
+  ok('after Fire, the rounds: far miss, near miss, deflected, hit', /far miss.*near miss.*deflected.*hit/.test(rounds) && pcs.length === 4 &&
+    Math.abs(pcs.reduce((a, b) => a + b, 0) - 100) <= 2, rounds);
+
   // the terrain boxes: +2 FP for the firer, +2 Defence for the target, in the Fire! line
   const terr = await p.evaluate(() => {
     const tab = document.querySelector('[data-tab="opts"]'); if (tab) tab.click();
