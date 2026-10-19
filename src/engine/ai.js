@@ -821,8 +821,6 @@
       var s0 = u.startSize || u.size;
       return s0 ? Math.max(0, 1 - (u.models || 0) / s0) : 0;
     }
-    // (experiments: switches the measuring harness sets, scripts/balance/versus.js; none in a game)
-    function tune(k) { var t = E.state.cfg && E.state.cfg.aiTune; return !!t && !!t[k]; }
     function rolledAI(u) { var r = E.state.cfg && E.state.cfg.aiRolled; return !!r && !!r[u.side]; }
     function hardAI(u) { return tableAI(u) && !soloOpFor(u) && !rolledAI(u); }
     // how a charge at t would go, the expected hits each way in its first round (the rules' own odds)

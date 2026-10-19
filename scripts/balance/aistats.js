@@ -139,7 +139,7 @@ for (let i = 0; i < N; i++) {
   ['A', 'B'].forEach((h) => {                      // h: the side that chooses
     const r = h === 'A' ? 'B' : 'A';
     const cfg = { tier, pl: 1, scenario: sc, armyA: armyA.slice(), armyB: armyB.slice(), nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel',
-      mode: 'demo', planet, campaign: true, terrainSetup: 'auto', aiRolled: { [r]: true }, aiTune: process.env.AITUNE ? JSON.parse(process.env.AITUNE) : null };
+      mode: 'demo', planet, campaign: true, terrainSetup: 'auto', aiRolled: { [r]: true } };
     let e;
     try { e = play(cfg, s0); } catch (err) { out.errs++; return; }
     const T = { A: tally(), B: tally() };
