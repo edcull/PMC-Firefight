@@ -828,6 +828,24 @@
       var mine = R.assaultOdds(E.state, u, t).avgHits, theirs = R.assaultOdds(E.state, t, u).avgHits;
       return { mine: mine, theirs: theirs };
     }
+    // (experiments: switches the measuring harness sets, scripts/balance/versus.js; none in a game)
+    function tune(k) { var t = E.state.cfg && E.state.cfg.aiTune; return !!t && !!t[k]; }
+    /* Which of its units a choosing side activates next: the shots first — the best
+       of them first, so the fire lands before the charges — and a unit that means to
+       charge last, into an enemy the shooting has pinned and thinned. */
+    function wouldCharge(u) {
+      if (R.isMachine(u) || R.status(u) !== 'ready' || R.has(u, 'Cumbersome Weapon')) return false;
+      var ne = nearestEnemy(u);
+      if (!ne || !R.canAssault(u, ne.unit, E.state) || ne.dist > chargeAllow(u) || !canReachCharge(u, ne.unit)) return false;
+      var edge = chargeEdge(u, ne.unit);
+      return edge.mine >= 1 && edge.mine >= edge.theirs;
+    }
+    function orderActivations(side, list) {
+      if (!list.length || !hardAI(list[0]) || !tune('order')) return null;
+      var key = list.map(function (u) { return { u: u, c: wouldCharge(u) ? 1 : 0, s: bestTarget(u).score }; });
+      key.sort(function (a, b) { return a.c - b.c || b.s - a.s; });
+      return key.map(function (k) { return k.u; });
+    }
     function chooseBehaviour(u) {
       var ne = nearestEnemy(u), b, why;
       var ap = assaultPlan(u), shot = bestTarget(u, 'fire');
@@ -1542,7 +1560,7 @@
 
     return {
       threatTarget: threatTarget, aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
-      gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
+      gapToFoes: gapToFoes, canStand: canStand, orderActivations: orderActivations, expectedHits: expectedHits, bestTarget: bestTarget,
       nearestEnemy: nearestEnemy, aiAct: aiAct, aiCharge: aiCharge, coverMove: coverMove, aiStands: aiStands, scoreSpot: scoreSpot
     };
   };
