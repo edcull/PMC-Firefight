@@ -206,6 +206,38 @@
       });
       return boxes[cnt.indexOf(Math.min.apply(null, cnt))];
     }
+    /* (experiment 'deploy', set by the measuring harness) A side the computer runs —
+       not the solitaire OpFor — chooses where each unit stands among the legal spots
+       of its ground, rather than taking the first: cover, and for a unit that shoots a
+       view across the table toward the enemy's ground; for one that fights hand to hand,
+       ground further forward; near its friends, but not on top of them. */
+    function smartDeploy(side) {
+      var t = E.state.cfg && E.state.cfg.aiTune;
+      var rolled = E.state.cfg && E.state.cfg.aiRolled;
+      return !!t && !!t.deploy && isAI(side) && !(E.state.solo && side === 'B') && !(rolled && rolled[side]);
+    }
+    function deploySpotScore(u, side, c) {
+      var foe = zoneCentre(other(side)), mid = { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
+      var mach = R.isMachine(u), shooter = (u.fp || 0) > 0 && (u.range || 0) >= 12 && !((u.assault || 0) > (u.fp || 0));
+      var s = 0;
+      if (!mach) s += 2 * (R.coverAt(E.state, c.x, c.y, u) || 0);
+      var terr = R.TERRAIN[R.terrainAt(E.state, c.x, c.y)] || {};
+      if (shooter && terr.fp) s += 2;
+      if (shooter) {
+        var ghost = { x: c.x, y: c.y, alive: true, side: side, of: u };
+        [foe, mid, { x: mid.x, y: mid.y - 12 }, { x: mid.x, y: mid.y + 12 }].forEach(function (p) {
+          if (R.hasLoS(E.state, ghost, { x: p.x, y: p.y, alive: true, side: other(side) })) s += 1.5;
+        });
+        s -= 0.03 * R.inches(c.x, c.y, foe.x, foe.y);
+      } else s -= 0.15 * R.inches(c.x, c.y, foe.x, foe.y);
+      E.state.units.forEach(function (f) {
+        if (f === u || f.side !== side || !f.alive || f.x < 0 || f.aboard) return;
+        var d = R.inches(c.x, c.y, f.x, f.y);
+        if (d < 3) s -= 2;
+        else if (d < 10) s += 0.3;
+      });
+      return s;
+    }
     function autoDeploy(side, limit) {
       var circ = E.state.sc && E.state.sc.defCircle && E.state.sc.defender === side
         ? E.state.sc.defCircle : null;
@@ -228,6 +260,7 @@
           }
           if (gsp.length) { var g = gsp[Math.floor(Math.random() * gsp.length)]; R.enterBuilding(E.state, u, g.piece, g.sec); return; }
         }
+        var smart = smartDeploy(side) && !R.has(u, 'Stationary Artillery'), cands = [];
         for (var attempt = 0; attempt < 400; attempt++) {
           var x, y;
           if (circ) {
@@ -254,7 +287,13 @@
           if (!deployOK(side, x, y, u)) continue;
           if (R.barredAt(E.state, u, x, y)) continue;
           if (R.unitNear(E.state, x, y, u, 1)) continue;
+          if (smart) { cands.push({ x: x, y: y }); if (cands.length < 30) continue; break; }
           u.x = x; u.y = y; return;
+        }
+        if (cands.length) {
+          var bs = -Infinity, bc = null;
+          cands.forEach(function (c) { var sc = deploySpotScore(u, side, c); if (sc > bs) { bs = sc; bc = c; } });
+          u.x = bc.x; u.y = bc.y; return;
         }
         /* Nowhere clear inside the zone — the ground is full or blocked. Spiral out
            from the middle of the zone for the nearest legal spot rather than dumping
