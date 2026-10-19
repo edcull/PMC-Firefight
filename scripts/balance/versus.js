@@ -43,7 +43,7 @@ for (let i = 0; i < N; i++) {
   const sc = pick(SC), planet = pick(PL), s0 = Math.floor(Math.random() * 2e9) + 1;
   ['A', 'B'].forEach((h) => {                      // h: the side that chooses
     const cfg = { tier, pl: 1, scenario: sc, armyA: armyA.slice(), armyB: armyB.slice(), nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel',
-      mode: 'demo', planet, campaign: true, terrainSetup: 'auto', aiRolled: { [h === 'A' ? 'B' : 'A']: true } };
+      mode: 'demo', planet, campaign: true, terrainSetup: 'auto', aiRolled: { [h === 'A' ? 'B' : 'A']: true }, aiTune: process.env.AITUNE ? JSON.parse(process.env.AITUNE) : null };
     let w;
     try { w = play(cfg, s0); } catch (err) { errs++; return; }
     const k = w == null ? 'draw' : w === h ? 'chose' : 'rolled';
