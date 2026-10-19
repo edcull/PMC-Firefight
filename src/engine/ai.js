@@ -822,7 +822,7 @@
       return s0 ? Math.max(0, 1 - (u.models || 0) / s0) : 0;
     }
     function rolledAI(u) { var r = E.state.cfg && E.state.cfg.aiRolled; return !!r && !!r[u.side]; }
-    function hardAI(u) { return tableAI(u) && !soloOpFor(u) && !rolledAI(u); }
+    function hardAI(u) { return tableAI(u) && !soloOpFor(u) && !rolledAI(u) && !(tune('nomach') && R.isMachine(u)); }
     // how a charge at t would go, the expected hits each way in its first round (the rules' own odds)
     function chargeEdge(u, t) {
       var mine = R.assaultOdds(E.state, u, t).avgHits, theirs = R.assaultOdds(E.state, t, u).avgHits;
@@ -1099,6 +1099,13 @@
         }
       }
 
+      /* (experiment 'regroup') a unit near its breaking point with no good shot shakes
+         its Suppression off rather than spend the activation on a poor one */
+      if (!preB && hardAI(u) && tune('regroup') && R.status(u) === 'ready' && (u.sp || 0) >= 2 &&
+        (u.sp || 0) >= (R.currentMorale ? R.currentMorale(u) : u.morale || 4) - 1 && (bestTarget(u, 'fire').score || 0) < 1) {
+        logLine('ai', u.label + ' — chooses: close to breaking, no shot worth it: regroups.');
+        regroupNow(u); return;
+      }
       var behaviour = preB || rollBehaviour(u);
       // Defensive and Neutral OpFor engage the biggest threat; everyone else the best shot (SOL-6)
       var shot = soloI && (behaviour === 'defensive' || behaviour === 'neutral') ? threatTarget(u, 'fire') : bestTarget(u, 'fire');
