@@ -38,6 +38,12 @@ row('  auxiliary only (pinned)', (t) => t.shotsAux / Math.max(1, t.shots), pc);
 row('  range, inches', (t) => t.shotDist / Math.max(1, t.shots));
 row('  hits a shot', (t) => t.hits / Math.max(1, t.shots), f2);
 row('  no hit at all', (t) => t.zeroHit / Math.max(1, t.shots), pc);
+// what the shots needed on the D10 (a hit on that or more; a 9 always lands one)
+row('  needing 2- (sure)', (t) => [0, 1, 2].reduce((a, k) => a + ((t.need || {})[k] || 0), 0) / Math.max(1, t.shots), pc);
+row('  needing 3-5', (t) => [3, 4, 5].reduce((a, k) => a + ((t.need || {})[k] || 0), 0) / Math.max(1, t.shots), pc);
+row('  needing 6-8', (t) => [6, 7, 8].reduce((a, k) => a + ((t.need || {})[k] || 0), 0) / Math.max(1, t.shots), pc);
+row('  needing 9+ (a long shot)', (t) => [9, 10].reduce((a, k) => a + ((t.need || {})[k] || 0), 0) / Math.max(1, t.shots), pc);
+row('  ...of those, on the move', (t) => [9, 10].reduce((a, k) => a + ((t.needMove || {})[k] || 0), 0) / Math.max(1, [9, 10].reduce((a, k) => a + ((t.need || {})[k] || 0), 0)), pc);
 row('SP inflicted / battle', (t) => t.sp / t.battles);
 row('men killed / battle', (t) => t.men / t.battles);
 row('hull damage dealt / battle', (t) => t.machineDmg / t.battles);

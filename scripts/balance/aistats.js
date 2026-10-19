@@ -26,6 +26,7 @@ function tally() {
     battles: 0, wins: 0, draws: 0, turns: 0,
     decide: {}, holds: 0, holdNoShot: 0,
     moves: 0, inches: 0,
+    need: {}, needMove: {},
     shots: 0, shotsStill: 0, shotsHalf: 0, shotsAux: 0, hits: 0, zeroHit: 0, shotDist: 0,
     sp: 0, men: 0, machineDmg: 0,
     charges: 0, chargeWon: 0, chargeLost: 0, chargeStopped: 0, chargeDog: 0,
@@ -59,11 +60,12 @@ function play(cfg, s0) {
 // read one battle's log into the two sides' tallies (T.A, T.B)
 function read(e, T) {
   const L = e.state().log;
-  let turn = 0, actor = null, lastAttack = null, pendingHold = null, charge = null;
+  let turn = 0, inRally = false, actor = null, lastAttack = null, pendingHold = null, charge = null;
   const settleHold = () => { if (pendingHold) { T[pendingHold].holdNoShot++; pendingHold = null; } };
   L.forEach((l) => {
     const text = l.text || '', s = sideOf(text);
-    if (l.t === 'turn') { const m = /^Turn (\d+)/.exec(text); if (m) turn = +m[1]; settleHold(); return; }
+    if (l.t === 'turn') { const m = /^Turn (\d+)/.exec(text); if (m) turn = +m[1]; inRally = false; settleHold(); return; }
+    if (l.t === 'phase' && /Rally phase/.test(text)) { inRally = true; settleHold(); return; }
     if (l.t === 'ai') {
       const d = / — chooses: .*: (\w+)\.$/.exec(text) || / — behaviour D6 .* = -?\d+: (\w+)\.$/.exec(text);
       if (d && s) { settleHold(); T[s].decide[d[1]] = (T[s].decide[d[1]] || 0) + 1; T[s].activations++; actor = s; }
@@ -83,6 +85,13 @@ function read(e, T) {
       if (/half range/.test(math)) st.shotsHalf++;
       if (/auxiliary/.test(text)) st.shotsAux++;
       const h = /→ (\d+) hit/.exec(math), d = / at ([\d.]+)"/.exec(text);
+      // what the shot needed on the D10 to hit at all (Defence − modifiers): 1 or less is sure, 10+ only a 9 does it
+      const mr = /D10 rolls (\d+).*= (-?\d+) vs Defence (\d+)/.exec(math);
+      if (mr) {
+        const need = Math.max(0, Math.min(10, +mr[3] - (+mr[2] - +mr[1]) + 1));
+        st.need[need] = (st.need[need] || 0) + 1;
+        if (!/stationary/.test(math)) st.needMove[need] = (st.needMove[need] || 0) + 1;
+      }
       if (h) { st.hits += +h[1]; if (+h[1] === 0) st.zeroHit++; }
       if (d) st.shotDist += +d[1];
       lastAttack = s;
@@ -115,7 +124,8 @@ function read(e, T) {
     if (l.t === 'rally' && s) {
       const m = /removes (\d+) SP/.exec(text);
       if (m) T[s].rallied += +m[1];
-      if (/regroup/i.test(text)) T[s].regroups++;
+      // (outside the Rally phase, a unit's own Pass/Regroup action)
+      if (!inRally && / rallies:|regroup/i.test(text)) T[s].regroups++;
     }
   });
   settleHold();
