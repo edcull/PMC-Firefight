@@ -82,6 +82,21 @@ difference is how they decide. A battle marks its rolling side `cfg.aiRolled`.
 for s in 11 22 33 44; do node scripts/balance/versus.js 30 $s > /tmp/v$s.json & done; wait
 ```
 
-With the noise at about ±3 points over 240 battles, judge an AI change by this
-against the last run, and keep it only if the choosing side's share goes up.
-October 2026: 59.6% (the first version: chosen behaviour, fire on the hurt).
+The noise is about ±3 points over 320 battles and ±2 over 640: judge an AI change
+over 640 (two runs of four seeds, e.g. 11 22 33 44 and 55 66 77 88) against the last
+640, and keep it only if the choosing side's share goes up by more than that.
+
+October 2026, 640 battles: **57.5%** (chosen behaviour, fire on the hurt). By faction
+the gain is nearly all bugs (~67%) and xeno (~62%); PMC and rebels are about even.
+Tried and dropped, each within the noise or worse:
+
+| Change | Share |
+|---|---|
+| no preference for hurt targets | 56.8% (640) |
+| shots activate first, chargers last | 55.8% (320) |
+| hulls roll the table, infantry choose | 57.7% (320) |
+| a unit near breaking with no good shot regroups | 59.4% (640) |
+| ...and fire piled onto what was already shot this turn | 53.4% (320) |
+| charge at even odds rather than 1.25× | 58.5% (240) |
+| never hold to shoot: always advance | 56.0% (240) |
+| advance if Assault > Firepower, else hold | 57.3% (240) |

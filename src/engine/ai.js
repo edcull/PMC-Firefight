@@ -660,8 +660,6 @@
        out of the fight, where the same fire spread round takes nothing. */
     function focusPref(t) {
       var p = hurt(t);
-      // (experiment 'focus2') ...and one already under this side's fire this turn: the shots pile up, and cross
-      if (tune('focus2') && (t.shotFrom || []).length) p += 0.5;
       if (!R.isMachine(t)) {
         var m = R.currentMorale ? R.currentMorale(t) : t.morale || 4;
         p += Math.min(0.6, (t.sp || 0) / Math.max(1, m * 2));
@@ -685,7 +683,7 @@
         if (!t.alive || t.side === u.side || !onTable(t) || husk(t)) return;
         var e = expectedHits(u, t, mode || 'fire', opts);
         if (e > best.score) best = { t: t, score: e };
-        if (e >= 0) cands.push({ t: t, score: e, tie: e, pref: hardAI(u) && !tune('nofocus') ? focusPref(t) : 0 });
+        if (e >= 0) cands.push({ t: t, score: e, tie: e, pref: hardAI(u) ? focusPref(t) : 0 });
       });
       var pick = prioritise(u, cands, opts);
       return pick && pick.score > 0 ? { t: pick.t, score: pick.score } : best;
@@ -824,29 +822,11 @@
       return s0 ? Math.max(0, 1 - (u.models || 0) / s0) : 0;
     }
     function rolledAI(u) { var r = E.state.cfg && E.state.cfg.aiRolled; return !!r && !!r[u.side]; }
-    function hardAI(u) { return tableAI(u) && !soloOpFor(u) && !rolledAI(u) && !(tune('nomach') && R.isMachine(u)); }
+    function hardAI(u) { return tableAI(u) && !soloOpFor(u) && !rolledAI(u); }
     // how a charge at t would go, the expected hits each way in its first round (the rules' own odds)
     function chargeEdge(u, t) {
       var mine = R.assaultOdds(E.state, u, t).avgHits, theirs = R.assaultOdds(E.state, t, u).avgHits;
       return { mine: mine, theirs: theirs };
-    }
-    // (experiments: switches the measuring harness sets, scripts/balance/versus.js; none in a game)
-    function tune(k) { var t = E.state.cfg && E.state.cfg.aiTune; return !!t && !!t[k]; }
-    /* Which of its units a choosing side activates next: the shots first — the best
-       of them first, so the fire lands before the charges — and a unit that means to
-       charge last, into an enemy the shooting has pinned and thinned. */
-    function wouldCharge(u) {
-      if (R.isMachine(u) || R.status(u) !== 'ready' || R.has(u, 'Cumbersome Weapon')) return false;
-      var ne = nearestEnemy(u);
-      if (!ne || !R.canAssault(u, ne.unit, E.state) || ne.dist > chargeAllow(u) || !canReachCharge(u, ne.unit)) return false;
-      var edge = chargeEdge(u, ne.unit);
-      return edge.mine >= 1 && edge.mine >= edge.theirs;
-    }
-    function orderActivations(side, list) {
-      if (!list.length || !hardAI(list[0]) || !tune('order')) return null;
-      var key = list.map(function (u) { return { u: u, c: wouldCharge(u) ? 1 : 0, s: bestTarget(u).score }; });
-      key.sort(function (a, b) { return a.c - b.c || b.s - a.s; });
-      return key.map(function (k) { return k.u; });
     }
     function chooseBehaviour(u) {
       var ne = nearestEnemy(u), b, why;
@@ -1101,13 +1081,6 @@
         }
       }
 
-      /* (experiment 'regroup') a unit near its breaking point with no good shot shakes
-         its Suppression off rather than spend the activation on a poor one */
-      if (!preB && hardAI(u) && tune('regroup') && R.status(u) === 'ready' && (u.sp || 0) >= 2 &&
-        (u.sp || 0) >= (R.currentMorale ? R.currentMorale(u) : u.morale || 4) - 1 && (bestTarget(u, 'fire').score || 0) < 1) {
-        logLine('ai', u.label + ' — chooses: close to breaking, no shot worth it: regroups.');
-        regroupNow(u); return;
-      }
       var behaviour = preB || rollBehaviour(u);
       // Defensive and Neutral OpFor engage the biggest threat; everyone else the best shot (SOL-6)
       var shot = soloI && (behaviour === 'defensive' || behaviour === 'neutral') ? threatTarget(u, 'fire') : bestTarget(u, 'fire');
@@ -1569,7 +1542,7 @@
 
     return {
       threatTarget: threatTarget, aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
-      gapToFoes: gapToFoes, canStand: canStand, orderActivations: orderActivations, expectedHits: expectedHits, bestTarget: bestTarget,
+      gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
       nearestEnemy: nearestEnemy, aiAct: aiAct, aiCharge: aiCharge, coverMove: coverMove, aiStands: aiStands, scoreSpot: scoreSpot
     };
   };

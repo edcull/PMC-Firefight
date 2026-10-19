@@ -270,7 +270,7 @@
       if (state.solo && state.activeSide === 'B') {
         // the OpFor phase starts with the unit furthest from the players (p. 147)
         list.sort(function (a, b) { return K.gapToFoes(b) - K.gapToFoes(a); });
-      } else list = K.orderActivations(state.activeSide, list) || list.sort(function (a, b) { return K.bestTarget(b).score - K.bestTarget(a).score; });
+      } else list.sort(function (a, b) { return K.bestTarget(b).score - K.bestTarget(a).score; });
       var u = list[0];
       ui.selected = u; ui.mode = 'idle'; ui.moves = []; ui.targets = []; ui.preview = null;
       focusUnit(u);
