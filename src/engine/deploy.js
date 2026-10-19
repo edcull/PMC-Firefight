@@ -74,7 +74,13 @@
       var cap = Math.ceil(mine.length / 2);             // "no more than half", rounded up (p. 27)
       var n = 0;
       mine.forEach(function (u) { u.reserve = false; });
-      mine.forEach(function (u) {
+      /* A teleport turret first, then any other turret: neither can move, so set down
+         at the start it stands wherever the deployment zone put it, where held back it
+         comes down where it is wanted (a teleport turret, out where the force is going)
+         — and only so many can be held. */
+      var rank = function (u) { return R.has(u, 'Turret') ? (R.has(u, 'Teleport') ? 2 : 1) : 0; };
+      var turretFirst = mine.slice().sort(function (a, b) { return rank(b) - rank(a); });
+      turretFirst.forEach(function (u) {
         if (!R.has(u, 'Battlefield Insertion') || u.aboard) return;
         if (R.has(u, 'Stationary Artillery')) return;    // an emplaced gun is never in reserve
         if (n >= cap || mimicFull(u)) return;
