@@ -127,3 +127,25 @@ it. Battles fought before the statistics were kept are listed without them. A
 player's own decisions are not logged as the computer's are: for the player's side
 `activations` and `decide` read 0; the shots, moves, charges and losses are counted
 alike.
+
+### Debug tracking: where everything stood, turn by turn
+
+A campaign raised with **Debug tracking** ticked (the new-campaign form, or the
+online lobby, the host's to set; off by default) keeps each battle turn by turn
+(`src/rules/battletrack.js`): the table once (its terrain and objectives), then a
+look as deployed, as each turn's activations are done (before the Rally phase) and
+at the end, giving every unit on the table (side, kind, position, men, Stress,
+status, the ground under it and its cover) and each objective's holder. The last
+ten battles of the campaign keep theirs (about 10 KB a battle); the export carries
+them, and `tracks.js` sets the player's side beside the computer's:
+
+```
+node server/admin.js export-campaign "4x" 4x.json
+node scripts/balance/tracks.js 4x.json             # all tracked battles against the computer
+node scripts/balance/tracks.js 4x.json --battles   # ...and each on its own
+```
+
+It reads how much of each side is in cover (and on what ground), how close it
+keeps to its own units and to the enemy, how near the objectives and how many it
+holds a turn, how far it moves a turn and how much of it stays put, and how wide,
+deep and far from the enemy it deployed.

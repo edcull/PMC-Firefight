@@ -475,6 +475,12 @@
 
     /* What the campaign needs back from a battle: one line per unit that took the
        field, with who it broke and what it cost. Built once, when the game ends. */
+    // the battle's track with a last look at the table, where it is tracked at all
+    function trackEnd() {
+      if (!E.state.cfg.track) return null;
+      if (E.trackTurn) E.trackTurn('end');
+      return E.state.track || null;
+    }
     function battleReport(winner) {
       E.state.units.forEach(function (u) { R.syncMen(u, E.state.turn, E.state.namesTaken); });
       var byId = {};
@@ -530,6 +536,8 @@
         /* what each side did and what came of it, read off the log (battlestats.js):
            kept on the campaign's line for the battle, for the balance scripts */
         stats: root.PMCBattleStats ? root.PMCBattleStats.ofBattle(E.state.log, { winner: winner, turns: E.state.turn, ai: { A: isAI('A'), B: isAI('B') } }) : null,
+        // turn by turn, where the campaign was raised with Debug tracking (battletrack.js)
+        track: trackEnd(),
         units: Object.keys(lines).map(function (k) { return lines[k]; }),
         casualties: casualtyList()
       };

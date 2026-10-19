@@ -41,7 +41,9 @@ function battlesOf(state) {
     out.push({ player: player || null, turn: e.turn, scenario: e.scenario, tier: e.tier, pl: e.pl, against: e.against || null,
       winner: e.winner, duel: !!e.duel, coop: !!e.coop,
       // against the computer: the other side run by it (or, for a line with no statistics, any that was not a duel)
-      vsAI: st ? (!!st.B && st.B.ai && !(st.A && st.A.ai)) : !e.duel, stats: st });
+      vsAI: st ? (!!st.B && st.B.ai && !(st.A && st.A.ai)) : !e.duel, stats: st,
+      // turn by turn, where a campaign raised with Debug tracking kept it (battletrack.js)
+      track: e.track || null });
   });
   take(state.log, null);
   Object.keys(state.players || {}).forEach((k) => take((state.players[k] || {}).log, (state.players[k] || {}).name || k));
