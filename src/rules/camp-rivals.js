@@ -521,18 +521,25 @@
     /* One campaign turn of development, in the archetype's own direction. */
     function developRival(co) {
       var a = archetype(co.archetype);
+      /* Saving for its next Company Tier: a share of what it has earned since it last
+         looked at its books goes into a pot (`saved`) that nothing but the promotion
+         touches, up to what the promotion costs; the rest is spent as it comes. A lean
+         force puts more by, one that recruits for a living less. (It used to bank every
+         coin once money was all the promotion wanted — at Tier IV, 200 for Tier V, some
+         twenty turns of buying nothing.) */
+      var nextCost = co.tier < 5 ? COMPANY_COST[co.tier + 1] || 0 : 0;
+      var share = a.lean ? 0.75 : a.spend === 'recruit' ? 0.35 : a.spend === 'machines' ? 0.4 : 0.5;
+      if (co.saved == null) co.saved = Math.ceil(co.kUC * share);           // a save from before the pot: put some by now
+      var income = co.purse0 != null ? Math.max(0, co.kUC - co.purse0) : 0;
+      co.saved = Math.max(0, Math.min(nextCost, co.kUC, co.saved + Math.ceil(income * share)));
+      // (and a promotion it can pay for now takes the whole of its cost before anything else)
+      if (nextCost && co.kUC >= nextCost && canPromoteCompany(co).ok) co.saved = nextCost;
+      // spent around: put out of reach while it shops, back for the promotion (below)
+      var held = co.saved;
+      co.kUC -= held;
       var did = shedCommand(co).concat(rehireCommand(co));    // first call on the money, when it is due
       // what its weights name above 0
       function wanted(p) { return weightIn(a, p) > 0; }
-      /* Banking for its next Company Tier: the promotion affordable now, or short only of
-         the money (canPromoteCompany). Then nothing else is bought — no new hulls or trading
-         up, no hires on its own account — so the
-         money goes on the promotion. */
-      function banking() {
-        if (co.tier >= 5) return false;
-        var pc = canPromoteCompany(co);
-        return pc.ok || (pc.faults || []).every(function (f) { return /costs/.test(f); });
-      }
       // the lowest Tier it hires on its own account: its own, or one below for a force that fills up on numbers (tier −1)
       var lowestHire = Math.max(1, co.tier - ((a.tier || 0) < 0 ? 1 : 0));
       // the hulls it keeps: its own count (machinesMax), else twice its skirmish force's most (hulls a Priority Level)
@@ -683,10 +690,7 @@
       }
       // a company that recruits for a living keeps buying while it can afford to
       // ...though a company within reach of a Company Tier banks the money instead
-      var nextCost = COMPANY_COST[co.tier + 1];
-      var saving = nextCost && co.kUC >= nextCost * 0.6 && canPromoteCompany(co).faults
-        .every(function (f) { return /costs/.test(f); });
-      if (a.spend === 'recruit' && !saving && !banking()) {
+      if (a.spend === 'recruit') {
         // (up to a size that suits its Company Tier: a company of a hundred Recruits fields no better army than one of twenty)
         for (var n = 0; n < 3 && co.roster.length < rosterRoom(co); n++) {
           var pool2 = R.listFor(co.faction).filter(function (p) {
@@ -712,13 +716,12 @@
       // (and a force with hulls of its own to keep — the Bastion's guns — buys them however else it spends)
       /* A soft transport (an unarmoured or light truck) is a stopgap for the low Tiers:
          as soon as the company may field an armoured carrier its list wants, and has the
-         money (only what is beyond the promotion's cost while it saves for one), the
-         truck goes for the carrier — two a time at most. */
+         money (beyond what it has put by), the truck goes for the carrier — two a time at most. */
       function softTransport(q) { return q.transport > 0 && q.cls === 'vehicle' && !q.noSlot && (q.def || 0) < 12 && (q.str || 0) < 10; }
       for (var sw = 0; sw < 2; sw++) {
         var soft = co.roster.filter(function (e) { return e.rid !== co.cmdRid && softTransport(profile(e.key)); })[0];
         if (!soft) break;
-        var purse = banking() ? co.kUC - (COMPANY_COST[co.tier + 1] || 0) : co.kUC;
+        var purse = co.kUC;
         var carriers = R.listFor(co.faction).filter(function (p) {
           return p.transport > 0 && p.cls === 'vehicle' && !p.noSlot && !softTransport(p) && p.tier <= co.tier && wanted(p) && !capped(p) &&
             canRecruit(co, p.key).ok && recruitCost(co, p.key) <= purse;
@@ -730,24 +733,19 @@
         did.push({ what: 'recruit', text: 'traded the ' + soft.name + ' for a ' + ca.entry.name });
       }
 
-      /* Saving for a Company Tier stops new hulls, but not replacing lost ones: a force
-         that rides keeps at least a Priority Level 2 army's minimum of them (twice its
-         skirmish `hulls.min`), or the machines it is built around wear away battle by
-         battle while the money waits for the promotion. It balances the two: only money
-         beyond the promotion's cost goes on a replacement (`spare`), so the hulls come
-         back without holding the company at its Tier. */
+      /* A force that rides keeps at least a Priority Level 2 army's minimum of hulls
+         (twice its skirmish `hulls.min`), or the machines it is built around wear away
+         battle by battle: lost ones are replaced, whatever else it spends on. */
       var hullFloor = Math.round(((a.hulls && a.hulls.min) || 0) * 2);
       var hullsNow = co.roster.filter(function (e) { return profile(e.key).cls !== 'infantry'; }).length;
-      var spare = co.kUC - (COMPANY_COST[co.tier + 1] || 0);
-      var bankingNow = banking(), replacing = bankingNow && hullsNow < hullFloor && spare > 0;
-      if ((a.spend === 'machines' || hullsKept) && (!bankingNow || replacing)) {
-        var cap = replacing ? hullFloor : hullsKept || 3, bought = 0;
+      var replacing = hullsNow < hullFloor;
+      if (a.spend === 'machines' || hullsKept || replacing) {
+        var cap = hullsKept || Math.max(a.spend === 'machines' ? 3 : 0, hullFloor), bought = 0;
         while (bought < 2 && co.roster.filter(function (e) { return profile(e.key).cls !== 'infantry'; }).length < cap) {
           if (!hullsKept && co.kUC < 16) break;
           var hulls = R.listFor(co.faction).filter(function (p) {
             // (a free hull, a Xenotripod's Tier I turret, comes in only to close a gap, like any free unit)
-            return p.cls !== 'infantry' && !p.noSlot && wanted(p) && !capped(p) && canRecruit(co, p.key).ok && recruitCost(co, p.key) > 0 && (!hullsKept || p.tier <= co.tier) &&
-              (!replacing || recruitCost(co, p.key) <= co.kUC - (COMPANY_COST[co.tier + 1] || 0));
+            return p.cls !== 'infantry' && !p.noSlot && wanted(p) && !capped(p) && canRecruit(co, p.key).ok && recruitCost(co, p.key) > 0 && (!hullsKept || p.tier <= co.tier);
           }).sort(function (x, y) { return y.tier - x.tier; });
           if (!hulls.length) break;
           var top = hulls[0].tier, pickH = leaning(hulls.filter(function (p) { return p.tier === top; }));
@@ -759,12 +757,12 @@
         }
         /* ...and once it has all it means to keep, the smallest goes for a bigger one
            when the money is there: the guns grow with the force. */
-        if (hullsKept && !bankingNow) {
+        if (hullsKept) {
           var owned = co.roster.filter(function (e) { var q = profile(e.key); return q.cls !== 'infantry' && !q.noSlot && wanted(q); });
           if (owned.length >= cap) {
             var small = owned.slice().sort(function (x, y) { return profile(x.key).tier - profile(y.key).tier; })[0];
             var bigger = R.listFor(co.faction).filter(function (p) {
-              return p.cls !== 'infantry' && !p.noSlot && wanted(p) && p.tier <= co.tier && p.tier >= profile(small.key).tier + 1 && canRecruit(co, p.key).ok;
+              return p.cls !== 'infantry' && !p.noSlot && wanted(p) && !capped(p) && p.tier <= co.tier && p.tier >= profile(small.key).tier + 1 && canRecruit(co, p.key).ok;
             });
             if (bigger.length && small.rid !== co.cmdRid) {
               var nb = recruit(co, leaning(bigger).key);
@@ -779,10 +777,8 @@
 
       /* A company sitting on money it has no use for hires. Anything it is saving
          toward a Company Tier is left alone — that promotion is worth more. */
-      var next = COMPANY_COST[co.tier + 1];
-      var savingFor = next && canPromoteCompany(co).faults.every(function (f) { return /costs/.test(f); });
       // (a lean force — the Elite — keeps the money for promotions and its next Tier instead)
-      if (!a.lean && (!savingFor || co.kUC > next * 2)) {
+      if (!a.lean) {
         for (var w = 0; w < 4 && co.kUC >= 24 && co.roster.length < rosterRoom(co); w++) {
           var want = R.listFor(co.faction).filter(function (p) {
             return p.cls === 'infantry' && !isLeaderP(p) && wanted(p) &&
@@ -797,6 +793,8 @@
         }
       }
 
+      // the pot back: legality first, then the promotion it was put by for
+      co.kUC += held;
       fillGaps();
       /* A swarm about to grow needs a Leader Bug for every smaller army it will
          still be asked to field, since its Overmind will be too big to lead them. */
@@ -815,6 +813,7 @@
       if (pr.ok) {
         var leftTier = co.tier;
         promoteCompany(co);
+        co.saved = 0;                                 // spent on it: the pot starts again for the next
         co.wantCmdTier = leftTier;
         did = did.concat(rehireCommand(co));
         var creed = creedOf(co);
@@ -836,6 +835,9 @@
         var n = co.roster.length;
         if (deepen(co, t, 1) && co.roster.length > n) did.push({ what: 'recruit', text: 'hired back up to a legal Tier ' + R.ROMAN[t] + ' army' });
       });
+      // (what it spent on legality came out of the pot only if nothing else was left)
+      co.saved = Math.min(co.saved, co.kUC);
+      co.purse0 = co.kUC;                             // the books as it left them: what comes in next is income
       return did;
     }
 
