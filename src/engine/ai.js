@@ -819,7 +819,10 @@
       var s0 = u.startSize || u.size;
       return s0 ? Math.max(0, 1 - (u.models || 0) / s0) : 0;
     }
-    function hardAI(u) { var h = E.state.cfg && E.state.cfg.aiHard; return !!h && !!h[u.side] && tableAI(u) && !soloOpFor(u); }
+    function hardAI(u) {
+      var h = E.state.cfg && E.state.cfg.aiHard;
+      return (R.opt(E.state, 'hardAI') || (!!h && !!h[u.side])) && tableAI(u) && !soloOpFor(u);
+    }
     // how a charge at t would go, the expected hits each way in its first round (the rules' own odds)
     function chargeEdge(u, t) {
       var mine = R.assaultOdds(E.state, u, t).avgHits, theirs = R.assaultOdds(E.state, t, u).avgHits;

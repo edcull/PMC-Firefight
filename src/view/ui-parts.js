@@ -194,7 +194,7 @@
     return '<div class="opt-list">' + root.PMC.OPTIONS.filter(function (d) { return !camp || d.camp !== false; }).map(function (d) {
       // the name only; what it does, and where it is in the book, in its tooltip (tips.js)
       return '<label class="opt-row"><input type="checkbox" data-opt="' + d.key + '"' + (on && on[d.key] ? ' checked' : '') + (attrs || '') + '>' +
-        '<span class="opt-name" data-tip="' + esc(d.text) + '" data-tip-title="' + esc(d.name + ' \u00b7 p. ' + d.page) + '">' + esc(d.name) + '</span></label>';
+        '<span class="opt-name" data-tip="' + esc(d.text) + '" data-tip-title="' + esc(d.name + (d.page ? ' \u00b7 p. ' + d.page : '')) + '">' + esc(d.name) + '</span></label>';
     }).join('') +
       // a campaign's Close Encounters: how often a contract is fought inside a compound (Appendix 1)
       (camp ? '<label class="opt-row opt-sel"><span class="opt-name" data-tip="How often a contract is fought inside a compound — corridors, rooms and doors; vehicles and aircraft stay at home." data-tip-title="Close Encounters \u00b7 p. 157">Close Encounters</span>' +
