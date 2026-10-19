@@ -102,6 +102,10 @@ Tried and dropped, each within the noise or worse:
 | advance if Assault > Firepower, else hold | 57.3% (240) |
 | half range weighed in where it moves (in it, and out of the enemy's) | 54.2% (640) |
 | deploys by choice: cover, a view for shooters, forward for assault troops | 58.7% (640): no change in losses or damage either |
+| cover from a player's tracked campaign (baseline re-run 57.4%): deploys and enters from its edge in cover near its own units | 56.0% (640) |
+| ...cover weighed more in where it moves | 52.7% (640) |
+| ...keeps within 6" of its nearest friend instead of clear of every friend within 4" | 54.9% (640) |
+| ...all three | 54.6% (640): in cover 42% of the time (from 26%), nearest friend 6.0" (from 8.8"), more shots, fewer units lost, and still fewer wins — Find and secure 40% |
 
 Read off the logs (`aistats.js`, `aistats-report.js`; each run one line of JSON, the
 report adds runs up and sets the two sides side by side): the choosing side's edge is activity — no turns
@@ -109,6 +113,13 @@ spent holding without a shot, 20% more shots, a quarter more Suppression — whi
 quality of each shot is the table's (1.9 hits, about half hitting nothing, a fifth
 within half range). Units move about 5 times a battle in some 32 activations: most
 fight from where they were deployed.
+
+The cover trial came from a player's tracked campaign (10 battles, all won): the
+AI stood in cover a fifth as often as the player (5% to 24%) and twice as far from
+its nearest friend (9.9" to 5.6"). Made to do the same, the AI does it, and loses
+more to the table: cover within reach costs an Advance (no stationary shot) and
+the pull away from the objectives costs ground. The table is not a player, though:
+whether it pays against one is for the next tracked campaigns to say.
 
 ## A player's battles against the AI
 
