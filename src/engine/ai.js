@@ -660,6 +660,8 @@
        out of the fight, where the same fire spread round takes nothing. */
     function focusPref(t) {
       var p = hurt(t);
+      // (experiment 'focus2') ...and one already under this side's fire this turn: the shots pile up, and cross
+      if (tune('focus2') && (t.shotFrom || []).length) p += 0.5;
       if (!R.isMachine(t)) {
         var m = R.currentMorale ? R.currentMorale(t) : t.morale || 4;
         p += Math.min(0.6, (t.sp || 0) / Math.max(1, m * 2));
