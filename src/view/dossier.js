@@ -373,6 +373,7 @@
   var wantName = '';                                 // what the new campaign is called
   var wantOptions = {};
   var wantSystem = true;                             // ...and whether it is fought across a star system (camp-system.js)                              // ...and the optional rules it is fought under (R.OPTIONS)
+  var wantTrack = false;                             // Debug tracking: every battle of it kept turn by turn (battletrack.js)
   /* Every slot on the new-campaign page starts in colours of its own, rolled — the
      players' and up to nine AI forces' — none worn twice. */
   /* A force's name to start from, as the online founding gives one: the player's own
@@ -807,7 +808,7 @@
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
       get wantRivals() { return wantRivals; }, get wantRivalArmies() { return wantRivalArmies; }, get wantHotAi() { return wantHotAi; },
-      get wantColours() { return wantColours; }, get wantName() { return wantName; }, get wantOptions() { return wantOptions; }, get wantSystem() { return wantSystem; },
+      get wantColours() { return wantColours; }, get wantName() { return wantName; }, get wantOptions() { return wantOptions; }, get wantSystem() { return wantSystem; }, get wantTrack() { return wantTrack; },
       get wantRivalColours() { return wantRivalColours; }, get rivColourFor() { return rivColourFor; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
@@ -1541,7 +1542,7 @@
           var hai = [];
           for (var hi = 0; hi < wantHotAi; hi++) hai.push({ faction: wantRivalArmies[hi] || 'random', colour: wantRivalColours[hi] || null });
           var nmBox2 = el('camp-name'); if (nmBox2) wantName = nmBox2.value.trim();
-          kitOnline().newLocal({ name: wantName || null, factions: [fac, secondFaction || 'pmc'], colours: [wantColours.A, wantColours.B], ai: hai, options: R.cleanOptions(wantOptions) });
+          kitOnline().newLocal({ name: wantName || null, factions: [fac, secondFaction || 'pmc'], colours: [wantColours.A, wantColours.B], ai: hai, options: R.cleanOptions(wantOptions), debugTrack: wantTrack });
           return;
         }
         // a name to start from; the player settles it on the founding screen
@@ -1551,6 +1552,7 @@
         var nmBox = el('camp-name'); if (nmBox) wantName = nmBox.value.trim();
         if (wantName) camp.title = wantName;
         camp.options = R.cleanOptions(wantOptions);  // the optional rules, for every battle of it
+        if (wantTrack) camp.debugTrack = true;       // and every battle of it kept turn by turn
         if (wantColours.A) { draft.colour = wantColours.A; draft.colourChosen = true; }
         draft.name = defaultForceName(fac, 'A');
         draft.archs = [];                          // the world is always rolled
@@ -1913,6 +1915,7 @@
       else if (ev.target.id === 'camp-hotai') { wantHotAi = +ev.target.value || 0; render(); }
       else if (ev.target.hasAttribute && ev.target.hasAttribute('data-opt') && ev.target.closest('#camp-opts')) { wantOptions = root.PMCUi.readOptions(el('camp-opts')); }
       else if (ev.target.id === 'camp-system') { wantSystem = ev.target.value === 'system'; }
+      else if (ev.target.id === 'camp-track') { wantTrack = !!ev.target.checked; }
       else if (ev.target.classList && ev.target.classList.contains('rivarmy')) { wantRivalArmies[+ev.target.getAttribute('data-i')] = ev.target.value; }
       else if (ev.target.id === 'camp-pl') {
         var want = +ev.target.value;
@@ -1956,7 +1959,7 @@
       var setup = el('setup');
       if (setup) setup.hidden = true;
       wantMode = mode === 'hotseat' ? 'hotseat' : 'solo';
-      wantName = ''; wantOptions = {}; rollColours();
+      wantName = ''; wantOptions = {}; wantTrack = false; rollColours();
       Store.use(null);
       camp = null; reset();
       open('hub');

@@ -677,6 +677,7 @@
           secretSwaps: E.camp.mode === 'hotseat',
           planet: E.contract.planet,
           options: E.camp.options || {},             // the campaign's optional rules
+          track: !!E.camp.debugTrack,                // Debug tracking, set when it was raised: kept turn by turn
           world: E.contract.world || null,           // Other Worlds, rolled with the contract
           // a Close Encounters battle's compound: the campaign's own for this table, if it has one laid out by hand
           compoundPlan: root.PMCCompound ? root.PMCCompound.planFor(E.camp.compounds, R.boardFor(E.contract.pl)) : null

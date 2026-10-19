@@ -97,7 +97,29 @@
     /* ---- the view port, as the rules below call it ---- */
     function logLine(t, text, math) {
       if (state) state.log.push({ t: t, text: text, math: math });
+      /* a campaign's Debug tracking: where everything stands as deployed (the first
+         turn begun, before anything enters) and as each turn's activations are done */
+      if (state && state.cfg && state.cfg.track) {
+        if (t === 'turn' && /^Turn 1 /.test(text || '')) trackTurn('deploy');
+        else if (t === 'phase' && text === 'Rally phase.') trackTurn('turn');
+      }
       V.log(t, text, math);
+    }
+    /* A look at the table for a battle tracked turn by turn (battletrack.js): as
+       deployed, at the end of each turn's activations, and when it is over (the
+       battle report asks). */
+    function trackTurn(when) {
+      var BT = root.PMCBattleTrack, tr = state && state.track, last = tr && tr.turns[tr.turns.length - 1];
+      if (!BT || !state.cfg || !state.cfg.track) return;
+      if (last && last.when === when && last.turn === state.turn) return;
+      BT.record(state, {
+        R: R, board: R.BOARD, onTable: function (u) { return K.onTable(u); },
+        holders: function () {
+          return (state.objectives || []).map(function (o) {
+            try { return SC.holderOf(state, o.x, o.y, 4, SC.areaOf(o)) || null; } catch (e) { return null; }
+          });
+        }
+      }, when);
     }
     /* A result card used to sit on screen until the player pressed Continue,
        and the phase it belonged to carried on from the button. Nobody presses
@@ -1680,6 +1702,7 @@
       fortify: fortify,
       glowRGB: glowRGB,
       isAI: isAI,
+      trackTurn: trackTurn,
       landUnit: landUnit,
       logLine: logLine,
       lookAtDeployment: lookAtDeployment,

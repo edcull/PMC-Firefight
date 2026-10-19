@@ -3,6 +3,10 @@
    and a unit with nobody in reach takes the Move, not a short Advance. */
 'use strict';
 const { R, Engine } = require('../../server/rules.js');
+/* These checks are of the behaviour table (p. 147): the computer's sides here roll on
+   it, as the solitaire OpFor always does, rather than choosing (engine/ai.js). */
+{ const create = Engine.create; Engine.create = function () { const e = create.apply(this, arguments), start = e.start;
+  e.start = (cfg) => start(Object.assign({ aiRolled: { A: true, B: true } }, cfg)); return e; }; }
 let seed = 13;
 Math.random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
 

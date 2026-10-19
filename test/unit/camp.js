@@ -1229,18 +1229,24 @@ head('Campaign rivals recruit by the same weighted list');
 
 head('Campaign rivals work towards their next Company Tier');
 (function () {
-  // grown until money is all that stands between it and its next Tier
-  var co = C.newCompany('B', { faction: 'pmc' }); C.foundRival(co, 'armour', []);
-  var pc = C.canPromoteCompany(co), g = 0;
-  while (g++ < 60) {
-    C.idleTurn(co); pc = C.canPromoteCompany(co);
-    if (co.tier >= 3 && !pc.ok && pc.faults.every(function (f) { return /costs/.test(f); })) break;
-  }
+  // made ready for its next Tier but for the money: everything else its promotion asks is there
+  var co = C.newCompany('B', { faction: 'pmc' }); C.foundRival(co, 'swarm', []); C.catchUp(co, 2);
+  co.kUC = 999;
+  for (var k = 0; k < 12 && !C.canPromoteCompany(co).ok; k++) C.recruit(co, 'regular');
+  co.kUC = 0;
+  var pc = C.canPromoteCompany(co);
   ok('a rival reaches the point where only the money is short', !pc.ok && pc.faults.every(function (f) { return /costs/.test(f); }), true, (pc.faults || []).join(' | '));
-  co.kUC = pc.cost - 5;
-  var before = co.kUC, n0 = co.roster.length;
+  // a turn's pay: a share goes into the pot for the promotion, and the rest is spent
+  co.saved = 0; co.purse0 = 0; co.kUC = 16;
+  var n0 = co.roster.length;
   C.developRival(co);
-  ok('...then it banks: nothing bought, nothing hired', [co.kUC, co.roster.length], [before, n0]);
+  ok('...then it puts a share of its pay by for the promotion', co.saved, Math.ceil(16 * 0.35));
+  ok('...spends the rest, not sitting on it', co.kUC < 16 && co.roster.length > n0, true, co.kUC + ' left of 16, ' + co.saved + ' of it put by');
+  ok('...and never dips into what it has put by', co.kUC >= co.saved, true);
+  // the pot grows turn by turn
+  var s0 = co.saved; co.kUC += 10;
+  C.developRival(co);
+  ok('...and the next pay adds its share to the pot', co.saved, Math.min(pc.cost, s0 + Math.ceil(10 * 0.35)));
   co.kUC = pc.cost + 2;
   var t0 = co.tier;
   C.developRival(co);
@@ -1298,14 +1304,14 @@ head('Rebel Tactics by personality and part in the scenario');
   }
   ok('a Cavalry company with every hull lost, the money there for its next Tier...', set, 6);
   ok('...buys hulls back even while it saves for the promotion', hulls >= 6, true, hulls + ' hulls over 6 companies');
-  // ...but only with the money beyond the promotion's cost: with none spare, the promotion comes first
+  // ...but a promotion it can pay for now comes first: with nothing beyond its cost, no hull is bought
   var co2 = C.newCompany('T', { faction: 'pmc' }); C.foundRival(co2, 'aircav', []); C.catchUp(co2, 2);
   co2.kUC = 999;
   for (var j = 0; j < 8 && !C.canPromoteCompany(co2).ok; j++) C.recruit(co2, 'regular');
   co2.roster = co2.roster.filter(function (e) { return R.profile(e.key).cls === 'infantry'; });
   co2.kUC = C.COMPANY_COST[co2.tier + 1];
   var did = C.developRival(co2) || [];
-  ok('...and with no money to spare it keeps it for the promotion: no hull bought', [co2.roster.filter(function (e) { return R.profile(e.key).cls !== 'infantry'; }).length,
+  ok('...and with nothing beyond the promotion\u2019s cost it promotes instead: no hull bought', [co2.roster.filter(function (e) { return R.profile(e.key).cls !== 'infantry'; }).length,
     did.filter(function (d) { return /took delivery/.test(d.text); }).length], [0, 0]);
 })();
 ok('Special Ops plays the behaviour table untempered', C.aiTemper({ archetype: 'marksmen' }), null);

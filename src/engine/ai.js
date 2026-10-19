@@ -647,12 +647,25 @@
       worth.forEach(function (c) { c.fit = weaponFit(u, c.t, opts); c.sup = suppressionRank(c.t); });
       worth.sort(function (a, b) {
         if (a.fit !== b.fit) return a.fit - b.fit;
+        // a Hard side finishes what it has started: the hurt, the pinned, the nearly broken (focusPref)
+        if (Math.abs((a.pref || 0) - (b.pref || 0)) > 0.05) return (b.pref || 0) - (a.pref || 0);
         if (threatFirst && Math.abs(a.threat - b.threat) > 0.05) return b.threat - a.threat;
         return a.sup - b.sup || b.tie - a.tie;
       });
       return worth[0];
     }
 
+    /* Focus fire, for a Hard side: of the shots worth taking, the one at a unit already
+       hurt, Suppressed or near its breaking point — fire that finishes a unit takes it
+       out of the fight, where the same fire spread round takes nothing. */
+    function focusPref(t) {
+      var p = hurt(t);
+      if (!R.isMachine(t)) {
+        var m = R.currentMorale ? R.currentMorale(t) : t.morale || 4;
+        p += Math.min(0.6, (t.sp || 0) / Math.max(1, m * 2));
+      }
+      return p;
+    }
     function bestTarget(u, mode, opts) {
       var best = { t: null, score: -1 };
       /* Protecting the VIP: "whenever an OpFor unit can attack the VIP unit, it
@@ -670,7 +683,7 @@
         if (!t.alive || t.side === u.side || !onTable(t) || husk(t)) return;
         var e = expectedHits(u, t, mode || 'fire', opts);
         if (e > best.score) best = { t: t, score: e };
-        if (e >= 0) cands.push({ t: t, score: e, tie: e });
+        if (e >= 0) cands.push({ t: t, score: e, tie: e, pref: hardAI(u) ? focusPref(t) : 0 });
       });
       var pick = prioritise(u, cands, opts);
       return pick && pick.score > 0 ? { t: pick.t, score: pick.score } : best;
@@ -795,7 +808,49 @@
 
     /* The behaviour table (p. 147), rolled for every unit as it activates —
        a hull or an aircraft as much as a squad. */
+    /* A side the computer runs (but the solitaire OpFor) does not roll on the behaviour
+       table: it chooses, by what is in front of it — a charge it should win, a good
+       shot from where it is, ground to close when nothing is in range, cover when it is
+       badly hurt — and concentrates its fire. Same rules, same dice for everything else.
+       The solitaire OpFor keeps the book's table (p. 147); so does a side the battle's
+       set-up marks `cfg.aiRolled` — never a game's, only the tests and the harness that
+       measures the choosing AI against the table (scripts/balance). */
+    // how badly a unit is hurt, 0 to 1: the men it has lost, or the Structure
+    function hurt(u) {
+      if (R.isMachine(u)) return u.str ? Math.min(1, (u.damage || 0) / u.str) : 0;
+      var s0 = u.startSize || u.size;
+      return s0 ? Math.max(0, 1 - (u.models || 0) / s0) : 0;
+    }
+    function rolledAI(u) { var r = E.state.cfg && E.state.cfg.aiRolled; return !!r && !!r[u.side]; }
+    function hardAI(u) { return tableAI(u) && !soloOpFor(u) && !rolledAI(u); }
+    // how a charge at t would go, the expected hits each way in its first round (the rules' own odds)
+    function chargeEdge(u, t) {
+      var mine = R.assaultOdds(E.state, u, t).avgHits, theirs = R.assaultOdds(E.state, t, u).avgHits;
+      return { mine: mine, theirs: theirs };
+    }
+    function chooseBehaviour(u) {
+      var ne = nearestEnemy(u), b, why;
+      var ap = assaultPlan(u), shot = bestTarget(u, 'fire');
+      var edge = ne && !R.has(u, 'Cumbersome Weapon') && R.canAssault(u, ne.unit, E.state) && ne.dist <= chargeAllow(u) &&
+        canReachCharge(u, ne.unit) && (!ap || ap.push) ? chargeEdge(u, ne.unit) : null;
+      if (edge && edge.mine >= 1 && edge.mine >= edge.theirs * 1.25 && edge.mine >= (shot.score || 0)) {
+        b = 'assault'; why = 'a charge it should win (' + edge.mine.toFixed(1) + ' hits to ' + edge.theirs.toFixed(1) + ')';
+      } else if (hurt(u) >= 0.6 && R.enemyWithinRange(E.state, u) && !objectivePull(u)) {
+        b = 'defensive'; why = 'badly hurt: cover first';
+      } else if (!R.enemyWithinRange(E.state, u)) {
+        b = 'offensive'; why = 'nothing in range: closes';
+      } else if (shot.t && shot.score >= 0.8 && !objectivePull(u)) {
+        b = 'neutral'; why = 'a good shot from here';
+      } else {
+        b = 'offensive'; why = shot.t ? 'a poor shot from here: moves up' : 'nothing to shoot: moves up';
+      }
+      // units with Cumbersome Weapons may not Advance (p. 57): they shoot from where they are
+      if (R.has(u, 'Cumbersome Weapon') && b === 'offensive' && shot.t) b = 'neutral';
+      logLine('ai', u.label + ' — chooses: ' + why + ': ' + b + '.');
+      return b;
+    }
     function rollBehaviour(u) {
+      if (hardAI(u)) return chooseBehaviour(u);
       var roll = R.d6(), mods = 0, why = [];
       var fp = u.fp || 0, as = u.assault || 0;
       if (as >= 2 * fp && as > 0) { mods += 2; why.push('Assault ≥ 2× Firepower +2'); }

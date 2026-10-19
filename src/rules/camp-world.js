@@ -191,6 +191,7 @@
           campaign: true, mode: 'ai',
           planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto',
           options: R.cleanOptions(W.options), world: k.world || null,
+          track: !!W.debugTrack,                           // the host's Debug tracking: the battle kept turn by turn
           compoundPlan: compoundFor(W, R.boardFor(k.pl))
         }
       };
@@ -213,6 +214,7 @@
           campaign: true, mode: 'hotseat', readyUp: true,
           planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto',
           options: R.cleanOptions(W.options), world: k.world || null,
+          track: !!W.debugTrack,                           // the host's Debug tracking: the battle kept turn by turn
           compoundPlan: compoundFor(W, R.boardFor(k.pl))
         }
       };
@@ -242,6 +244,7 @@
           campaign: true, mode: 'ai', netCoop: true,
           planet: k.planet && k.planet !== 'random' ? k.planet : null, terrainSetup: 'auto',
           options: R.cleanOptions(W.options), world: k.world || null,
+          track: !!W.debugTrack,                           // the host's Debug tracking: the battle kept turn by turn
           compoundPlan: compoundFor(W, { w: 48, h: 48 }),
           solo: { coop: true, faction: A.faction || 'pmc', opFaction: k.opFaction, names: [A.name, B.name] }
         }
@@ -328,7 +331,8 @@
       if (!o || typeof o !== 'object') return o;
       const sw = (x) => (x && typeof x === 'object' && ('A' in x || 'B' in x) ? Object.assign({}, x, { A: x.B, B: x.A }) : x);
       const out = Object.assign({}, o);
-      ['sides', 'payment', 'loss', 'kUC', 'balances'].forEach((k) => { if (out[k]) out[k] = sw(out[k]); });
+      ['sides', 'payment', 'loss', 'kUC', 'balances', 'stats'].forEach((k) => { if (out[k]) out[k] = sw(out[k]); });
+      if (out.track && root.PMCBattleTrack) out.track = root.PMCBattleTrack.flip(out.track);
       if (out.winner === 'A' || out.winner === 'B') out.winner = out.winner === 'A' ? 'B' : 'A';
       return out;
     }
@@ -341,7 +345,7 @@
       const r = post.report || {}, pre = post.pre || {}, outPre = {};
       Object.keys(pre).forEach((k) => { outPre[k] = swapAB(pre[k]); });
       return {
-        report: Object.assign({}, r, { winner: flipSide(r.winner), units: (r.units || []).map((u) => Object.assign({}, u, { side: flipSide(u.side) })),
+        report: Object.assign({}, r, { winner: flipSide(r.winner), stats: swapAB(r.stats), track: r.track && root.PMCBattleTrack ? root.PMCBattleTrack.flip(r.track) : r.track || null, units: (r.units || []).map((u) => Object.assign({}, u, { side: flipSide(u.side) })),
           casualties: (r.casualties || []).map((c) => Object.assign({}, c, { side: flipSide(c.side) })) }),
         pre: outPre, steps: (post.steps || []).map((s) => Object.assign({}, s, { side: flipSide(s.side) }))
       };
@@ -455,7 +459,7 @@
         }));
         const out = { phase: W.phase, name: W.name, slot: i, host: i === 0, slots: slots, invite: row && W.phase === 'lobby' ? row.invite : null,
           listed: !!(row && row.listed), chat: (W.chat || []).slice(-60), waiting: waitingOn(W, i), over: W.over || null,
-          options: R.cleanOptions(W.options), compounds: W.compounds || {}, starSystem: !!W.starSystem };
+          options: R.cleanOptions(W.options), compounds: W.compounds || {}, starSystem: !!W.starSystem, debugTrack: !!W.debugTrack };
         if (W.phase === 'lobby') return out;
         const p = W.players[i] || {};
         const v = viewOf(W, i, p.contract ? p.contract.vs : p.pending ? p.pending.vs : p.post ? p.post.vs : null);
@@ -573,6 +577,12 @@
         lobbySystem(W, i, a) {
           if (i !== 0) return no('the host decides where the contracts are found');
           W.starSystem = !!a.on;
+          return { ok: true };
+        },
+        // the host: Debug tracking — every battle of the campaign kept turn by turn (battletrack.js), for the balance scripts
+        lobbyTrack(W, i, a) {
+          if (i !== 0) return no('the host decides on debug tracking');
+          W.debugTrack = !!a.on;
           return { ok: true };
         },
         /* the host: a compound laid out by hand for one size of table ('WxH'), or

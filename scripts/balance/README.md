@@ -68,3 +68,84 @@ The AI's attack plan (ai.js `assaultPlan`) did better than every other plan trie
 holds the attacker back is the scenario (p. 55): half the force on in turn 1 and the
 rest from turn 3 against a defender already dug in round the centre, with the
 fortifications on top. Those are the book's rules, so they stay.
+
+## The choosing AI against the behaviour table
+
+A side the computer runs chooses each unit's behaviour (engine/ai.js
+`chooseBehaviour`) rather than rolling the solitaire table (p. 147), which only the
+solitaire OpFor still rolls. `versus.js` measures the one against the other: the same
+two armies, scenario and planet fought twice, the sides swapped, so the only
+difference is how they decide. A battle marks its rolling side `cfg.aiRolled`.
+
+```sh
+# 30 pairs (60 battles) a run; four runs at once on different seeds for 240
+for s in 11 22 33 44; do node scripts/balance/versus.js 30 $s > /tmp/v$s.json & done; wait
+```
+
+The noise is about ±3 points over 320 battles and ±2 over 640: judge an AI change
+over 640 (two runs of four seeds, e.g. 11 22 33 44 and 55 66 77 88) against the last
+640, and keep it only if the choosing side's share goes up by more than that.
+
+October 2026, 640 battles: **57.5%** (chosen behaviour, fire on the hurt). By faction
+the gain is nearly all bugs (~67%) and xeno (~62%); PMC and rebels are about even.
+Tried and dropped, each within the noise or worse:
+
+| Change | Share |
+|---|---|
+| no preference for hurt targets | 56.8% (640) |
+| shots activate first, chargers last | 55.8% (320) |
+| hulls roll the table, infantry choose | 57.7% (320) |
+| a unit near breaking with no good shot regroups | 59.4% (640) |
+| ...and fire piled onto what was already shot this turn | 53.4% (320) |
+| charge at even odds rather than 1.25× | 58.5% (240) |
+| never hold to shoot: always advance | 56.0% (240) |
+| advance if Assault > Firepower, else hold | 57.3% (240) |
+| half range weighed in where it moves (in it, and out of the enemy's) | 54.2% (640) |
+| deploys by choice: cover, a view for shooters, forward for assault troops | 58.7% (640): no change in losses or damage either |
+
+Read off the logs (`aistats.js`, `aistats-report.js`; each run one line of JSON, the
+report adds runs up and sets the two sides side by side): the choosing side's edge is activity — no turns
+spent holding without a shot, 20% more shots, a quarter more Suppression — while the
+quality of each shot is the table's (1.9 hits, about half hitting nothing, a fifth
+within half range). Units move about 5 times a battle in some 32 activations: most
+fight from where they were deployed.
+
+## A player's battles against the AI
+
+Every battle's report carries what each side did (`src/rules/battlestats.js`, the
+same tally `aistats.js` reads), and a campaign keeps it on the battle's line of its
+log. On the server, one campaign (or several of the same name) with all of it:
+
+```sh
+node server/admin.js export-campaign "4x"          # by name or title; writes pmc-campaign-4x-<date>.json
+node scripts/balance/aistats-report.js ...         # (for comparison, the AI against itself)
+```
+
+The file has every battle with its statistics (`A` is always the player's side) and
+a `summary` adding up the player's side and the computer's over every battle against
+it. Battles fought before the statistics were kept are listed without them. A
+player's own decisions are not logged as the computer's are: for the player's side
+`activations` and `decide` read 0; the shots, moves, charges and losses are counted
+alike.
+
+### Debug tracking: where everything stood, turn by turn
+
+A campaign raised with **Debug tracking** ticked (the new-campaign form, or the
+online lobby, the host's to set; off by default) keeps each battle turn by turn
+(`src/rules/battletrack.js`): the table once (its terrain and objectives), then a
+look as deployed, as each turn's activations are done (before the Rally phase) and
+at the end, giving every unit on the table (side, kind, position, men, Stress,
+status, the ground under it and its cover) and each objective's holder. The last
+ten battles of the campaign keep theirs (about 10 KB a battle); the export carries
+them, and `tracks.js` sets the player's side beside the computer's:
+
+```
+node server/admin.js export-campaign "4x" 4x.json
+node scripts/balance/tracks.js 4x.json             # all tracked battles against the computer
+node scripts/balance/tracks.js 4x.json --battles   # ...and each on its own
+```
+
+It reads how much of each side is in cover (and on what ground), how close it
+keeps to its own units and to the enemy, how near the objectives and how many it
+holds a turn, how far it moves a turn and how much of it stays put, and how wide,
+deep and far from the enemy it deployed.
