@@ -100,3 +100,10 @@ Tried and dropped, each within the noise or worse:
 | charge at even odds rather than 1.25× | 58.5% (240) |
 | never hold to shoot: always advance | 56.0% (240) |
 | advance if Assault > Firepower, else hold | 57.3% (240) |
+| half range weighed in where it moves (in it, and out of the enemy's) | 54.2% (640) |
+
+Read off the logs (`aistats.js`): the choosing side's edge is activity — no turns
+spent holding without a shot, 20% more shots, a quarter more Suppression — while the
+quality of each shot is the table's (1.9 hits, about half hitting nothing, a fifth
+within half range). Units move about 5 times a battle in some 32 activations: most
+fight from where they were deployed.

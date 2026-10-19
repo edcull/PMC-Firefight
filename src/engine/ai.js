@@ -1514,7 +1514,6 @@
         else if (ap.medD - od > 6) s -= 1.2 * (ap.medD - od - 6);
       }
       var ghost = { x: c.x, y: c.y, alive: true, of: u };
-      var posTune = hardAI(u) && tune('pos');
       var exposure = 0, opportunity = 0;
       E.state.units.forEach(function (e) {
         if (!e.alive || e.side === u.side || husk(e)) return;
@@ -1523,13 +1522,6 @@
         if (!R.hasLoS(E.state, e, ghost)) return;
         if (d <= u.range) opportunity += 1.4;
         if (d <= e.range) exposure += 1.0;
-        /* (experiment 'pos') the choosing AI also weighs half range (+2 to hit, p. 30):
-           a spot that brings an enemy inside its own half range is worth more, and one
-           inside an enemy's half range costs more — half that in cover. */
-        if (posTune) {
-          if (d <= u.range / 2) opportunity += 1.2;
-          if (d <= e.range / 2) exposure += cover > 0 ? 0.4 : 0.8;
-        }
       });
       E.state.units.forEach(function (f) {
         if (!f.alive || f === u || f.side !== u.side) return;
