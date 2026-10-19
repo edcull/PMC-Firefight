@@ -1373,6 +1373,23 @@
       c.forEach(function (q, n) { if (n === 0) B.ctx.moveTo(q.x, q.y); else B.ctx.lineTo(q.x, q.y); });
       B.ctx.closePath(); B.ctx.clip();
     }
+    /* An objective's ring as a round counter: `clock.need` arcs with a gap between,
+       starting at the top and running clockwise, the first `clock.n` solid in the
+       holding side's ink, the rest dashed in the unheld ring's pale ink. */
+    function drawHoldClock(o, clock) {
+      var p = hud(o.x, o.y, liftOf(o.x, o.y)), z = cam.z;
+      var rx = Math.SQRT2 * 4 * K * z, ry = rx / 2, n = clock.need, gap = 0.24;
+      for (var k = 0; k < n; k++) {
+        var a0 = -Math.PI / 2 + k * 2 * Math.PI / n + gap / 2, a1 = -Math.PI / 2 + (k + 1) * 2 * Math.PI / n - gap / 2;
+        var held = k < clock.n && clock.side;
+        B.ctx.setLineDash(held ? [] : [6, 6]);
+        B.ctx.lineWidth = held ? 5 : 3; B.ctx.strokeStyle = 'rgba(8,10,14,.5)';
+        B.ctx.beginPath(); B.ctx.ellipse(p.x, p.y, rx, ry, 0, a0, a1); B.ctx.stroke();
+        B.ctx.lineWidth = held ? 2.8 : 1.4; B.ctx.strokeStyle = held ? sideInk(clock.side) : 'rgba(235,240,248,.6)';
+        B.ctx.beginPath(); B.ctx.ellipse(p.x, p.y, rx, ry, 0, a0, a1); B.ctx.stroke();
+      }
+      B.ctx.setLineDash([]);
+    }
     function isoRing(cx, cy, rad, lift) {
       var p = hud(cx, cy, lift), z = cam.z;
       B.ctx.beginPath();
@@ -1720,7 +1737,7 @@
 
       // objective control radius
       B.ctx.save(); clipTable();
-      B.state.objectives.forEach(function (o) {
+      B.state.objectives.forEach(function (o, oi) {
         var hb = B.heldBy(o), col = hb ? sideInk(hb) : 'rgba(235,240,248,.6)';
         /* A control room (Critical control) is held by whoever is inside it, so the
            room itself is marked — its floor outlined just inside the walls, tinted
@@ -1735,6 +1752,11 @@
           B.ctx.closePath();
         }
         if (room && hb) { shape(); B.ctx.fillStyle = sideInk(hb); B.ctx.globalAlpha = 0.12; B.ctx.fill(); B.ctx.globalAlpha = 1; }
+        /* One won by holding it so many End phases running (Secure the area, Find
+           and secure): the ring split into one arc a round, those held filled in
+           the colours of the side holding it, those to go dashed as before. */
+        var clock = !room && root.PMCScen && root.PMCScen.holdClock ? root.PMCScen.holdClock(B.state, oi) : null;
+        if (clock && clock.need > 1) { drawHoldClock(o, clock); return; }
         B.ctx.setLineDash([6, 6]);
         B.ctx.lineWidth = 3; B.ctx.strokeStyle = 'rgba(8,10,14,.5)';
         shape(); B.ctx.stroke();
