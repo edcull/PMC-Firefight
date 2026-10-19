@@ -527,6 +527,9 @@
         attackDefend: !!(E.state.sc && E.state.sc.attacker),
         routed: { A: E.state.routed.A, B: E.state.routed.B },
         turns: E.state.turn,
+        /* what each side did and what came of it, read off the log (battlestats.js):
+           kept on the campaign's line for the battle, for the balance scripts */
+        stats: root.PMCBattleStats ? root.PMCBattleStats.ofBattle(E.state.log, { winner: winner, turns: E.state.turn, ai: { A: isAI('A'), B: isAI('B') } }) : null,
         units: Object.keys(lines).map(function (k) { return lines[k]; }),
         casualties: casualtyList()
       };

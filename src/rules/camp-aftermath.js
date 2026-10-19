@@ -392,7 +392,9 @@
       campaign.log.push({
         turn: out.turn, scenario: report.scenario, tier: report.battleTier, pl: report.pl,
         winner: report.winner, kUC: { A: out.payment.A, B: out.payment.B },
-        against: coB.name
+        against: coB.name,
+        // what each side did in it (battlestats.js), A being the player's
+        stats: report.stats || null
       });
       if (campaign.log.length > 40) campaign.log.shift();
       /* A rival keeps its own record of the battles it fought — against the

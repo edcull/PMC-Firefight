@@ -109,3 +109,21 @@ spent holding without a shot, 20% more shots, a quarter more Suppression — whi
 quality of each shot is the table's (1.9 hits, about half hitting nothing, a fifth
 within half range). Units move about 5 times a battle in some 32 activations: most
 fight from where they were deployed.
+
+## A player's battles against the AI
+
+Every battle's report carries what each side did (`src/rules/battlestats.js`, the
+same tally `aistats.js` reads), and a campaign keeps it on the battle's line of its
+log. On the server, one campaign (or several of the same name) with all of it:
+
+```sh
+node server/admin.js export-campaign "4x"          # by name or title; writes pmc-campaign-4x-<date>.json
+node scripts/balance/aistats-report.js ...         # (for comparison, the AI against itself)
+```
+
+The file has every battle with its statistics (`A` is always the player's side) and
+a `summary` adding up the player's side and the computer's over every battle against
+it. Battles fought before the statistics were kept are listed without them. A
+player's own decisions are not logged as the computer's are: for the player's side
+`activations` and `decide` read 0; the shots, moves, charges and losses are counted
+alike.

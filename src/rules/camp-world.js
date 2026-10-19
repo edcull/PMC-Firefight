@@ -328,7 +328,7 @@
       if (!o || typeof o !== 'object') return o;
       const sw = (x) => (x && typeof x === 'object' && ('A' in x || 'B' in x) ? Object.assign({}, x, { A: x.B, B: x.A }) : x);
       const out = Object.assign({}, o);
-      ['sides', 'payment', 'loss', 'kUC', 'balances'].forEach((k) => { if (out[k]) out[k] = sw(out[k]); });
+      ['sides', 'payment', 'loss', 'kUC', 'balances', 'stats'].forEach((k) => { if (out[k]) out[k] = sw(out[k]); });
       if (out.winner === 'A' || out.winner === 'B') out.winner = out.winner === 'A' ? 'B' : 'A';
       return out;
     }
@@ -341,7 +341,7 @@
       const r = post.report || {}, pre = post.pre || {}, outPre = {};
       Object.keys(pre).forEach((k) => { outPre[k] = swapAB(pre[k]); });
       return {
-        report: Object.assign({}, r, { winner: flipSide(r.winner), units: (r.units || []).map((u) => Object.assign({}, u, { side: flipSide(u.side) })),
+        report: Object.assign({}, r, { winner: flipSide(r.winner), stats: swapAB(r.stats), units: (r.units || []).map((u) => Object.assign({}, u, { side: flipSide(u.side) })),
           casualties: (r.casualties || []).map((c) => Object.assign({}, c, { side: flipSide(c.side) })) }),
         pre: outPre, steps: (post.steps || []).map((s) => Object.assign({}, s, { side: flipSide(s.side) }))
       };
