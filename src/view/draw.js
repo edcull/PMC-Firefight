@@ -379,7 +379,10 @@
               art: u.art, mi: cq.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
           }
         }
-        u0._seen = { here: here, x: u.x, y: u.y, models: u.models || 0, aboard: u.alive && u.aboard ? u.aboard : null };
+        /* ...where it is drawn, not where the rules have it: a squad shot and then moved
+           on in the same batch stands where it was hit until its move plays, and its
+           dead lie there, not at the end of the move */
+        u0._seen = { here: here, x: here ? dispX(u) : u.x, y: here ? dispY(u) : u.y, models: u.models || 0, aboard: u.alive && u.aboard ? u.aboard : null };
         // a unit the engine has sent back to the OpFor pool is off the table now
         if (u.wave === 'pool' && u.x < 0) u0._seen = { here: false, x: -1, y: -1, models: u.models };
       });

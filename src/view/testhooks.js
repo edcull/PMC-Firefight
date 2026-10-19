@@ -126,6 +126,8 @@
     window.__viewRect = function () { return viewRect(); };
     window.__seats = function () { return B.seats.slice(); };
     // the dead lying on the table, by the unit they fell from
+    // where a unit's dead lie (the unit's place on the table each body is laid from)
+    window.__bodySpots = function (id) { return (B.vc.remains || []).filter(function (r) { return r.kind === 'body' && !r.piece && r.of === id; }).map(function (r) { return { x: r.x, y: r.y }; }); };
     window.__bodies = function () { var o = {}; (B.vc.remains || []).forEach(function (r) { if (r.kind === 'body' && !r.piece) o[r.of || '?'] = (o[r.of || '?'] || 0) + 1; }); return o; };
     window.__mySide = function () { return mySide(); };
     window.__placingSide = function () { return placingSide(); };
