@@ -685,7 +685,7 @@
         if (!t.alive || t.side === u.side || !onTable(t) || husk(t)) return;
         var e = expectedHits(u, t, mode || 'fire', opts);
         if (e > best.score) best = { t: t, score: e };
-        if (e >= 0) cands.push({ t: t, score: e, tie: e, pref: hardAI(u) ? focusPref(t) : 0 });
+        if (e >= 0) cands.push({ t: t, score: e, tie: e, pref: hardAI(u) && !tune('nofocus') ? focusPref(t) : 0 });
       });
       var pick = prioritise(u, cands, opts);
       return pick && pick.score > 0 ? { t: pick.t, score: pick.score } : best;
