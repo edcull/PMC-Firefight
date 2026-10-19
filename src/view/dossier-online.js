@@ -729,13 +729,13 @@
       // the force's own changes
       var co = camp.companies.A;
       if (attr('data-recruit')) {
-        var rk = attr('data-recruit'), drone = t.hasAttribute('data-asdrone'), riders = t.hasAttribute('data-asriders');
+        var rk = attr('data-recruit');
         var rp = E.profile(rk), cost = C.recruitCost(co, rk), word = C.money(co);
         E.ask({
-          kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (drone ? ' (drone)' : riders ? ' (Riders)' : '') + '?',
+          kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + '?', choices: E.recruitChoices(rp), preview: E.recruitPreview(co, rp),
           text: cost ? 'It costs ' + cost + ' ' + word + '. You have ' + co.kUC + ' ' + word + ', leaving ' + (co.kUC - cost) + ' ' + word + '.' + E.recruitWarn(co, rp) : 'It costs nothing.' + E.recruitWarn(co, rp),
           okLabel: C.words(co).recruit + (cost ? ' for ' + cost + ' ' + word : ''),
-          onOk: function () { cmd('recruit', { key: rk, drone: drone, riders: riders }); }
+          onOk: function (v, pick) { cmd('recruit', { key: rk, prop: pick.prop || null, drone: pick.drone === 'drone', riders: pick.riders === 'riders', mount: pick.mount || null }); }
         });
         return true;
       }

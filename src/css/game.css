@@ -1706,11 +1706,27 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
   background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
   padding: 16px; width: min(380px, 100%);
   box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+  /* a question with choices and a picture can be taller than a phone: it scrolls, its answer row kept in sight */
+  max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain;
 }
+.askbox .askrow { position: sticky; bottom: -16px; margin-bottom: -16px; padding: 10px 0 16px; background: var(--panel); }
 .askbox h3 { font-family: var(--display); font-size: 15px; margin: 0 0 6px; color: var(--ink); letter-spacing: .02em; }
 .askbox p { margin: 0 0 12px; font-size: 13px; color: var(--ink-dim); line-height: 1.5; }
 .askbox p.danger { color: var(--bad); }
 .askrow { display: flex; gap: 8px; margin-top: 12px; }
+/* options to pick in a question (a recruit's propulsion, its crew): a row of tiles, what the picked one does beneath */
+.askpick { margin-top: 10px; }
+.askpic { display: flex; justify-content: center; margin-top: 8px; }
+.askpic canvas { width: 180px; height: 140px; }
+.askpick > label { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 5px; }
+.askopts { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.askopt { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-2); color: var(--ink); cursor: pointer; font: inherit; }
+.askopt svg { width: 22px; height: 22px; color: var(--ink-dim); }
+.askopt b { font-size: 12px; font-weight: 600; }
+.askopt:hover { border-color: var(--ink-dim); }
+.askopt.on { border-color: var(--alpha); }
+.askopt.on svg, .askopt.on b { color: var(--alpha); }
+.askpick > small { display: block; margin-top: 5px; font-size: 12px; line-height: 1.4; color: var(--ink-dim); }
 .askrow .start { margin: 0; flex: 1; }
 .askrow .start.danger {
   background: color-mix(in srgb, var(--bad) 16%, transparent);

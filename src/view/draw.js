@@ -379,7 +379,10 @@
               art: u.art, mi: cq.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
           }
         }
-        u0._seen = { here: here, x: u.x, y: u.y, models: u.models || 0, aboard: u.alive && u.aboard ? u.aboard : null };
+        /* ...where it is drawn, not where the rules have it: a squad shot and then moved
+           on in the same batch stands where it was hit until its move plays, and its
+           dead lie there, not at the end of the move */
+        u0._seen = { here: here, x: here ? dispX(u) : u.x, y: here ? dispY(u) : u.y, models: u.models || 0, aboard: u.alive && u.aboard ? u.aboard : null };
         // a unit the engine has sent back to the OpFor pool is off the table now
         if (u.wave === 'pool' && u.x < 0) u0._seen = { here: false, x: -1, y: -1, models: u.models };
       });
@@ -2025,12 +2028,24 @@
         // still to act this turn: a small arrow ahead of the code
         var toGo = B.state.phase === 'battle' && !B.state.over && !u2.activated;
         var tw = B.ctx.measureText(code).width;
-        var w = tw + 8 + icons * 11 + (mark ? 12 : 0) + (toGo ? 10 : 0);
+        // its Tier, a small numeral ahead of the code (not on a counter still hidden)
+        var tier = veiled ? '' : R.ROMAN[u2.setTier || u2.tier] || '';
+        B.ctx.font = '700 8px "IBM Plex Mono", monospace';
+        var tierW = tier ? B.ctx.measureText(tier).width + 4 : 0;
+        B.ctx.font = '600 10px Oxanium, system-ui, sans-serif';
+        var w = tw + 8 + tierW + icons * 11 + (mark ? 12 : 0) + (toGo ? 10 : 0);
         B.ctx.fillStyle = 'rgba(8,11,16,.72)';
         B.ctx.fillRect(p.x - w / 2, p.y - 10, w, 13);
         if (toGo) readyMark(p.x - w / 2 + 7, p.y - 3.5);
+        var x0 = p.x - w / 2 + 4 + (toGo ? 10 : 0);
+        if (tier) {
+          B.ctx.fillStyle = 'rgba(231,236,244,.62)';
+          B.ctx.font = '700 8px "IBM Plex Mono", monospace';
+          B.ctx.fillText(tier, x0 + (tierW - 4) / 2, p.y - 1);
+          B.ctx.font = '600 10px Oxanium, system-ui, sans-serif';
+        }
         B.ctx.fillStyle = sideInk(u2.paint || u2.side);  // a co-op's second commando in its own colours
-        var tx = p.x - w / 2 + 4 + (toGo ? 10 : 0) + tw / 2;
+        var tx = x0 + tierW + tw / 2;
         B.ctx.fillText(code, tx, p.y);
         var ix = tx + tw / 2 + 6.5;
         if (honoured) { chevron(ix, p.y - 4.5, 4.6); ix += 11; }

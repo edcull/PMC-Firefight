@@ -40,7 +40,7 @@
         return { ok: true };
       },
       recruit(camp, side, a) {
-        return C.recruit(camp.companies[side], text(a.key, 40), { drone: !!a.drone, riders: !!a.riders });
+        return C.recruit(camp.companies[side], text(a.key, 40), { prop: a.prop ? text(a.prop, 12) : null, drone: !!a.drone, riders: !!a.riders, mount: a.mount ? text(a.mount, 12) : null });
       },
       disband(camp, side, a) {
         const co = camp.companies[side], e = entry(co, a.rid);
