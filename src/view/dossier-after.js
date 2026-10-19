@@ -502,6 +502,8 @@
       h += '<h3>The ' + C.words(co).force + '</h3><div class="dlist">';
       rec.units.forEach(function (u) {
         if (u.rested != null) {
+          // one that sat out with no Trauma to shake off, and nothing else to say: not listed
+          if (!u.rested && !u.tpNow && !u.workshop) return;
           h += '<div class="dcard rested"><div class="dtop"><b class="dname">' + esc(u.name) + '</b>' +
             '<span class="dtag">sat this one out</span>' +
             (u.workshop ? '<span class="dtag warn">in the workshop</span>' : '') + '</div>';
