@@ -1031,9 +1031,6 @@
       text: 'A unit may attack only one of the two enemy units closest to it (vehicles, aircraft and infantry each counted apart; indirect fire and marking excepted).' },
     { key: 'bookkeeper', name: 'Bad, worse, the bookkeeper', page: 167,
       text: 'An army routs when the Tiers of its destroyed units add up to half its composition points, rather than when half its units are gone.' },
-    /* not the book's: how the computer plays its side (engine/ai.js chooseBehaviour) */
-    { key: 'hardAI', name: 'Hard AI', page: null,
-      text: 'The computer\u2019s forces choose what each unit does instead of rolling on the behaviour table, and concentrate their fire. The same rules and dice as yours; no bonuses. (The solitaire OpFor keeps the book\u2019s table.)' },
     { key: 'otherWorlds', name: 'Other Worlds', page: 164,
       text: 'Gravity, atmosphere and anomalies rolled for the battle (for each contract, in a campaign): low or high gravity, no air, toxic air or fog, radiation, time anomalies or an unexplained weakness.' },
     // a campaign sets how often its contracts are fought inside a compound instead (camp: false)

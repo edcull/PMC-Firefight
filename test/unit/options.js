@@ -15,9 +15,8 @@ function ok(name, cond, note) {
 const json = (o) => JSON.stringify(o);
 
 console.log('\nThe list');
-// (a page for the book's own; the Hard AI is this game's, not the book's)
 ok('each option has a key, a name, a page and what it does', R.OPTIONS.length >= 2 &&
-  R.OPTIONS.every((d) => /^[a-zA-Z]+$/.test(d.key) && d.name && (d.page > 0 || d.key === 'hardAI') && d.text));
+  R.OPTIONS.every((d) => /^[a-zA-Z]+$/.test(d.key) && d.name && d.page > 0 && d.text));
 ok('cleaned: only the options there are, each on or left out', json(R.cleanOptions({ onlyTwo: true, bookkeeper: false, bogus: true })) === '{"onlyTwo":true}');
 ok('..."true" from a form counts, anything else does not', json(R.cleanOptions({ onlyTwo: 'true', bookkeeper: 1 })) === '{"onlyTwo":true}');
 ok('...nothing at all is all off', json(R.cleanOptions(undefined)) === '{}' && json(R.cleanOptions('x')) === '{}');

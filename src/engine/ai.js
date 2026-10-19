@@ -808,21 +808,21 @@
 
     /* The behaviour table (p. 147), rolled for every unit as it activates —
        a hull or an aircraft as much as a squad. */
-    /* A Hard AI side (cfg.aiHard, a campaign setting) does not roll on the behaviour
+    /* A side the computer runs (but the solitaire OpFor) does not roll on the behaviour
        table: it chooses, by what is in front of it — a charge it should win, a good
        shot from where it is, ground to close when nothing is in range, cover when it is
-       badly hurt. Same rules, same dice for everything else; the solitaire OpFor keeps
-       the book's table (p. 147). */
+       badly hurt — and concentrates its fire. Same rules, same dice for everything else.
+       The solitaire OpFor keeps the book's table (p. 147); so does a side the battle's
+       set-up marks `cfg.aiRolled` — never a game's, only the tests and the harness that
+       measures the choosing AI against the table (scripts/balance). */
     // how badly a unit is hurt, 0 to 1: the men it has lost, or the Structure
     function hurt(u) {
       if (R.isMachine(u)) return u.str ? Math.min(1, (u.damage || 0) / u.str) : 0;
       var s0 = u.startSize || u.size;
       return s0 ? Math.max(0, 1 - (u.models || 0) / s0) : 0;
     }
-    function hardAI(u) {
-      var h = E.state.cfg && E.state.cfg.aiHard;
-      return (R.opt(E.state, 'hardAI') || (!!h && !!h[u.side])) && tableAI(u) && !soloOpFor(u);
-    }
+    function rolledAI(u) { var r = E.state.cfg && E.state.cfg.aiRolled; return !!r && !!r[u.side]; }
+    function hardAI(u) { return tableAI(u) && !soloOpFor(u) && !rolledAI(u); }
     // how a charge at t would go, the expected hits each way in its first round (the rules' own odds)
     function chargeEdge(u, t) {
       var mine = R.assaultOdds(E.state, u, t).avgHits, theirs = R.assaultOdds(E.state, t, u).avgHits;

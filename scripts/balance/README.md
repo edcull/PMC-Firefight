@@ -68,3 +68,20 @@ The AI's attack plan (ai.js `assaultPlan`) did better than every other plan trie
 holds the attacker back is the scenario (p. 55): half the force on in turn 1 and the
 rest from turn 3 against a defender already dug in round the centre, with the
 fortifications on top. Those are the book's rules, so they stay.
+
+## The choosing AI against the behaviour table
+
+A side the computer runs chooses each unit's behaviour (engine/ai.js
+`chooseBehaviour`) rather than rolling the solitaire table (p. 147), which only the
+solitaire OpFor still rolls. `versus.js` measures the one against the other: the same
+two armies, scenario and planet fought twice, the sides swapped, so the only
+difference is how they decide. A battle marks its rolling side `cfg.aiRolled`.
+
+```sh
+# 30 pairs (60 battles) a run; four runs at once on different seeds for 240
+for s in 11 22 33 44; do node scripts/balance/versus.js 30 $s > /tmp/v$s.json & done; wait
+```
+
+With the noise at about ±3 points over 240 battles, judge an AI change by this
+against the last run, and keep it only if the choosing side's share goes up.
+October 2026: 59.6% (the first version: chosen behaviour, fire on the hurt).
