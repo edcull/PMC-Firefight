@@ -523,17 +523,22 @@
       var a = archetype(co.archetype);
       /* Saving for its next Company Tier: a share of what it has earned since it last
          looked at its books goes into a pot (`saved`) that nothing but the promotion
-         touches, up to what the promotion costs; the rest is spent as it comes. A lean
+         touches, up to what the promotion costs; the rest is spent as it comes (below:
+         only once money is all the promotion wants). A lean
          force puts more by, one that recruits for a living less. (It used to bank every
          coin once money was all the promotion wanted — at Tier IV, 200 for Tier V, some
          twenty turns of buying nothing.) */
       var nextCost = co.tier < 5 ? COMPANY_COST[co.tier + 1] || 0 : 0;
       var share = a.lean ? 0.75 : a.spend === 'recruit' ? 0.35 : a.spend === 'machines' ? 0.4 : 0.5;
-      if (co.saved == null) co.saved = Math.ceil(co.kUC * share);           // a save from before the pot: put some by now
+      /* ...only once money is all the promotion still wants: while it lacks the armies
+         a Company Tier asks for, every coin goes on getting them, and nothing is put by. */
+      var pc0 = nextCost ? canPromoteCompany(co) : null;
+      var moneyOnly = !!pc0 && (pc0.ok || (pc0.faults || []).every(function (f) { return /costs/.test(f); }));
+      if (co.saved == null) co.saved = moneyOnly ? Math.ceil(co.kUC * share) : 0;   // a save from before the pot: put some by now
       var income = co.purse0 != null ? Math.max(0, co.kUC - co.purse0) : 0;
-      co.saved = Math.max(0, Math.min(nextCost, co.kUC, co.saved + Math.ceil(income * share)));
+      co.saved = moneyOnly ? Math.max(0, Math.min(nextCost, co.kUC, co.saved + Math.ceil(income * share))) : 0;
       // (and a promotion it can pay for now takes the whole of its cost before anything else)
-      if (nextCost && co.kUC >= nextCost && canPromoteCompany(co).ok) co.saved = nextCost;
+      if (pc0 && pc0.ok && co.kUC >= nextCost) co.saved = nextCost;
       // spent around: put out of reach while it shops, back for the promotion (below)
       var held = co.saved;
       co.kUC -= held;
