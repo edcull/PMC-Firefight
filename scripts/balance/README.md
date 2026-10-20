@@ -144,7 +144,26 @@ System counts only guns within 12".
 
 Against the table it loses fewer units (about 1.3 a battle to 1.7) and fires more
 from where it stands; it is not in cover more often (it keeps out of sight instead).
-Crossing open ground together, with fire support, is the next step.
+### Bounding (dropped)
+
+Crossing open ground together, with fire support: a unit in safe ground (risk 0.5
+or less) whose move would end on watched ground (1.5 or more) waits at the edge of
+cover, firing if it has a shot or closing up within the safe ground; the turn after
+any unit of its side has waited, every unit at the edge crosses, and none waits
+more than a turn. Measured on the seeds the covered approaches were (baseline
+re-run 59.0%):
+
+| Change | Share |
+|---|---|
+| wait at the edge, then cross together | 56.5% (640) |
+| ...and, the side crossing, units not crossing give it covering fire (Fire! at a shot rather than move) | 55.0% (640) |
+| ...watched ground from 1.0 rather than 1.5 | 54.1% (640) |
+
+It waits in about 3-4% of activations, and the turn spent costs more than the
+crossing saves: the table does not pile its fire onto the one unit out in the open,
+which is what crossing together guards against, and the objectives are lost the
+while. Whether a player punishes the lone runner enough to change that is for the
+tracked campaigns to show.
 
 ## A player's battles against the AI
 
