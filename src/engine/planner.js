@@ -103,6 +103,89 @@
       return total;
     }
 
+    /* ---- The fitted evaluation ----
+       How a position's features predict the winner, fitted by logistic regression on
+       2,000 battles between the AI as it is (scripts/balance/evalfit.js, October 2026):
+       on battles it never saw it calls the winner 73.5% of the time (80.7% by turns
+       5-7), against 67.9% for "more worth left wins". Units still in the fight (a rout
+       reads them) count the most, then objectives held and progress to a held win; Stress,
+       broken units and the losses to be expected count against; fire to bring counts for
+       little of itself. Refit when the AI or the rules change (evaldata.js, evalfit.js). */
+    var EVAL = { worth: 0.018, worthShare: 0.387, unitsShare: 3.849, broken: -0.303, stress: -0.554, held: 0.606, clock: 2.005, fire: -0.040, risk: -0.167 };
+
+    /* What a's shot at t does to the features, on average: the enemy's Stress (its mean,
+       over its units on the table), whether it breaks t, whether it takes t out of the
+       fight, and the worth it takes off. Signed for the side shooting: good for it is +. */
+    function shotDelta(a, t, mode) {
+      var ex;
+      try { ex = R.expectedShot(E.state, a, t, mode, {}); } catch (e) { return 0; }
+      var foes = E.state.units.filter(function (f) { return f.side === t.side && R.countsForVictory(f); });
+      var onTable = foes.filter(function (f) { return f.alive && !f.fled && f.x >= 0 && !f.aboard && !R.isMachine(f); }).length || 1;
+      var d = 0;
+      if (R.isMachine(t)) {
+        if ((t.damage || 0) + (ex.damage || 0) >= (t.str || 1)) d += EVAL.unitsShare / (foes.length || 1);
+      } else {
+        var left = Math.max(0, t.models - (ex.casualties || 0)), sp = (t.sp || 0) + (ex.sp || 0);
+        if (left <= 0) d += EVAL.unitsShare / (foes.length || 1);
+        else {
+          var m0 = R.currentMorale(t) || 1, m1 = R.currentMorale(Object.assign({}, t, { models: left })) || 1;
+          var st0 = Math.min(3, (t.sp || 0) / m0), st1 = Math.min(3, sp / m1);
+          d -= EVAL.stress * (st1 - st0) / onTable;                      // (theirs: good for us when it rises)
+          if (sp > 2 * m1 && (t.sp || 0) <= 2 * m0) d -= EVAL.broken;
+        }
+      }
+      var w0 = worthNow(t), w1 = worth(t, Math.max(0, t.models - (ex.casualties || 0)), (t.sp || 0) + (ex.sp || 0), (t.damage || 0) + (ex.damage || 0));
+      return d + EVAL.worth * (w0 - w1);
+    }
+    function bestDeltaFrom(u, c, mode) {
+      var g = ghostAt(u, c), best = { t: null, v: 0 };
+      E.state.units.forEach(function (t) {
+        if (!t.alive || t.side === u.side || t.x < 0 || t.aboard || t.fp === undefined) return;
+        if (!R.canShoot(E.state, g, t, mode, {})) return;
+        var half = R.unitDist(g, t) <= (u.range || 0) / 2 ? 1 : 0;
+        var v = cached('d|' + u.id + '|' + mode + '|' + t.id + '|' + half + '|' + (R.levelOf(E.state, g) > 0 ? 1 : 0), function () { return shotDelta(g, t, mode); });
+        if (v > best.v) best = { t: t, v: v };
+      });
+      return best;
+    }
+    // objectives this side would hold with u at c (a count, as the evaluation's own feature)
+    function heldAt(u, c) {
+      if (!E.state.objectives || !E.state.objectives.length) return 0;
+      return cached('h|' + u.id + '|' + Math.round(c.x * 2) + ',' + Math.round(c.y * 2), function () {
+        var ox = u.x, oy = u.y, ob = u.bld, n = 0;
+        try {
+          if (c.x !== ox || c.y !== oy) { u.x = c.x; u.y = c.y; u.bld = null; }
+          E.state.objectives.forEach(function (o) {
+            var h = SC.holderOf(E.state, o.x, o.y, 4, SC.areaOf(o));
+            if (h === u.side) n++; else if (h) n--;
+          });
+        } finally { u.x = ox; u.y = oy; u.bld = ob; }
+        return n;
+      });
+    }
+    /* The planner judging by the fitted evaluation: each option's worth is how far it is
+       expected to move the side's chance of winning (in the evaluation's log-odds) — the
+       shot's effect on the enemy, the ground held, the losses to be expected standing
+       there — turned into the utility AI's units by `ke`, on top of the spot's base
+       score (the way to the goal, which the evaluation does not see). */
+    function chooseByEval(u, cands, here, opts) {
+      memo = {};
+      try {
+        var ke = (opts && opts.ke) || 10, canAdvance = !(opts && opts.noAdvance);
+        var at = { x: u.x, y: u.y };
+        var fireNow = u.fp != null ? bestDeltaFrom(u, at, 'fire') : { t: null, v: 0 };
+        var heldHere = heldAt(u, at), riskHere = threatAt(u, at);
+        var val = function (shotV, held, risk) { return shotV + EVAL.held * (held - heldHere) + EVAL.risk * (risk - riskHere); };
+        var best = { kind: fireNow.t ? 'fire' : 'hold', t: fireNow.t, score: here + ke * val(fireNow.v, heldHere, riskHere) };
+        cands.forEach(function (cd) {
+          var shot = canAdvance && u.fp != null ? bestDeltaFrom(u, cd.c, 'advance') : { v: 0 };
+          var s = cd.base + ke * val(shot.v, heldAt(u, cd.c), threatAt(u, cd.c));
+          if (s > best.score + 0.3) best = { kind: 'move', c: cd.c, score: s };
+        });
+        return best;
+      } finally { memo = null; }
+    }
+
     /* ---- The ground, in the same currency ----
        What the objectives are worth to a side, as they would stand with this unit
        somewhere: each objective held counts its worth, each the enemy holds counts
@@ -273,7 +356,7 @@
       } finally { memo = null; }
     }
 
-    return { planChoose: choose, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom, planGoal: goalFor,
+    return { planChoose: choose, planChooseEval: chooseByEval, planEvalWeights: EVAL, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom, planGoal: goalFor,
       planFeatures: features, PLAN_FEATURES: FEATURES };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEnginePlanner;

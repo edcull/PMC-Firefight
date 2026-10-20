@@ -1344,8 +1344,9 @@
       if ((aiExp(u, 'plan') || aiExp(u, 'plan2')) && !E.state.compound && behaviour !== 'flee' && behaviour !== 'assault' && !R.isFlying(u)) {
         scored.sort(function (a, b) { return b.s - a.s; });
         var cands = scored.slice(0, 8).map(function (o) { return { c: o.c, base: scoreSpot(u, o.c, goal, behaviour, look, { noShots: true }) }; });
-        var pick = E.planChoose(u, cands, scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look, { noShots: true }),
-          { k: tuneOf('k', 2.5), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0 });
+        var hereBase = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look, { noShots: true });
+        var pOpts = { k: tuneOf('k', 2.5), ke: tuneOf('ke', 10), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0 };
+        var pick = aiExp(u, 'eval') ? E.planChooseEval(u, cands, hereBase, pOpts) : E.planChoose(u, cands, hereBase, pOpts);
         if (pick.kind === 'fire' && pick.t) { logLine('ai', u.label + ' — the planner: Fire! from where it stands.'); fire(u, pick.t, 'fire'); return; }
         best = pick.kind === 'move' ? pick.c : null;
       }
