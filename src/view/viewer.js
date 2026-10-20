@@ -263,15 +263,18 @@
        same result: hits, casualties, Suppression, Damage. */
     var ex;
     try { ex = R.expectedShot(st, a, t, 'fire', bonuses()); } catch (e) { return null; }
-    var sum = { hits: ex.avgHits, lost: ex.casualties, sp: ex.sp, dmg: ex.damage, ladder: ex.ladder };
+    var sum = { hits: ex.avgHits, lost: ex.casualties, sp: ex.sp, dmg: ex.damage, kill: ex.kill || 0, ladder: ex.ladder };
     view.rounds = roundsLine(ex.ladder);
     var avg = function (k) { return sum[k]; };
     var one = function (v) { return (Math.round(v * 10) / 10).toString(); };
     // the target as the average shot leaves it
     var mach = R.isMachine(t);
+    /* A hull takes the average Damage, as a squad loses its average casualties, and
+       is knocked out only once that is past its Structure, as the battle has it
+       (applyDamage); the chance the dice would do it is shown beside. */
     if (mach) {
       t.damage = Math.round(avg('dmg'));
-      if (t.damage >= t.str) t.alive = false;
+      if (t.damage > t.str) t.alive = false;
     } else {
       t.models = Math.max(0, t.before - Math.round(avg('lost')));
       if (t.models <= 0) t.alive = false;
@@ -283,7 +286,7 @@
     view.lastShot = avg('hits') < 0.05 ? 'No hits'
       : 'Average ' + one(avg('hits')) + ' hit' + (one(avg('hits')) === '1' ? '' : 's') + ' \u2192 ' +
         (mach ? one(avg('dmg')) + ' Damage' : one(avg('lost')) + ' casualt' + (one(avg('lost')) === '1' ? 'y' : 'ies')) +
-        (mach ? '' : ' \u00b7 ' + one(avg('sp')) + ' SP');
+        (mach ? ' \u00b7 ' + Math.round(100 * avg('kill')) + '% to knock it out' : ' \u00b7 ' + one(avg('sp')) + ' SP');
     return { hits: hits, t: t, sum: sum, mach: mach };
   }
   /* What each round of a volley is drawn doing: the rules' ladder of what became of
@@ -301,7 +304,7 @@
     var t = shot.t, s0 = shot.sum;
     if (shot.mach) {
       return Object.assign(root.PMCFire.shares(s0.ladder || {}), root.PMCFire.bleedOf(t, R), { figs: [{ x: TO.x, y: TO.y }],
-        crit: Math.round((s0.ladder || {}).crit || 0) });
+        crit: Math.round((s0.ladder || {}).crit || 0), hull: true });
     }
     // (the men drawn falling: the average rounded, as the target is shown after)
     var before = Math.max(1, t.before || 1), lost = Math.max(0, before - Math.max(0, t.models));
@@ -1089,8 +1092,9 @@
         start();
       };
     }
-    // Suppressive Fire on a shot that hits: the ground kicked up round them besides, as in the battle
-    var supp = hits > 0 && R.has(u, 'Suppressive Fire') && !(t && R.campFlag && (R.campFlag(t, 'nerves') || R.campFlag(t, 'shielding')));
+    // Suppressive Fire on a shot that hits: the ground kicked up round them besides, as in the battle —
+    // only round a unit with Morale to shake, not a hull (shoot.js marks it so)
+    var supp = hits > 0 && R.has(u, 'Suppressive Fire') && !(t && R.isMachine(t)) && !(t && R.campFlag && (R.campFlag(t, 'nerves') || R.campFlag(t, 'shielding')));
     var ms = play(spec, from, to, hits, u, outcome, supp);
     start();
     if (view.trg) {

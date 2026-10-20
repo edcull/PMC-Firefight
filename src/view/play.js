@@ -284,7 +284,7 @@
       var f = res && res.fx;
       if (!f || f.far == null || !target || !target.id) return null;
       var sh = Object.assign(window.PMCFire.shares(f), window.PMCFire.bleedOf(target, R));
-      if (R.isMachine(target)) return Object.assign(sh, { figs: [{ x: to.x, y: to.y }], crit: f.crit || 0 });
+      if (R.isMachine(target)) return Object.assign(sh, { figs: [{ x: to.x, y: to.y }], crit: f.crit || 0, hull: true });
       var before = Math.max(1, f.before || 1), n = Math.max(1, Math.min(ISO.MAX_FIGS || 10, before));
       var figs = ISO.formationTable(n).map(function (o) { return { x: to.x + o.dx, y: to.y + o.dy }; });
       // the rounds that kill go where the board will lay the men they kill

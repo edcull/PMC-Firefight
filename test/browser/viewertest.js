@@ -299,6 +299,22 @@ async function pickAndFire(p, key, ms) {
   ok('an advanced strike craft lobs four orbs', adv.spec.p === 'orb' && adv.spec.n === 4 && !!adv.seen.orb && !adv.seen.rail, adv.kinds.join(' '));
   const delta = await pickAndFire(p, 'xdelta3', 1800);
   ok('core Deltas fire their SMGs, every round splashing', delta.spec.p === 'smg' && !!delta.seen.tracer && !!delta.seen.impact, delta.kinds.join(' '));
+  /* a splashing stream's bursts are its Suppression coming down: among a squad, not
+     on a hull, which has no Morale — at most the one burst where the shot lands */
+  const bursts = async (tgt) => {
+    await p.evaluate((t) => { window.__viewer.pick('hmgteam'); window.__viewer.set('target', t); window.__viewer.range(6); }, tgt);
+    await p.waitForTimeout(80);
+    await p.evaluate(() => window.__viewer.fire());
+    let most = 0; const t0 = Date.now();
+    while (Date.now() - t0 < 1600) {
+      most = Math.max(most, (await p.evaluate(() => window.__viewer.fx())).filter(k => k === 'impact').length);
+      await p.waitForTimeout(30);
+    }
+    return most;
+  };
+  const onSquad = await bursts('regular'), onHull = await bursts('hunter');
+  ok('a heavy machine gun splashes its rounds among a squad, not on a hull', onSquad > 1 && onHull <= 1, onSquad + ' / ' + onHull);
+  await p.evaluate(() => window.__viewer.set('target', 'regular'));
   const heps = await pickAndFire(p, 'xeps5', 1600);
   ok('advanced Epsilons fire five rail lines', heps.spec.p === 'rail' && heps.spec.n === 5 && !!heps.seen.rail, heps.kinds.join(' '));
   const tur = await pickAndFire(p, 'xdturret3', 1800);
