@@ -223,6 +223,22 @@ charges and hulls make no difference. `charge` and `drive` stay behind their swi
 off in every game, to build on; the refit's weights are in the table above, not in
 `planner.js`.
 
+Looking ahead (phase 3, `AIEXP=look`): the planner's best options that differ (the
+best of each kind, and moves at least 3" apart; `lk` 3) are each played out in a copy
+of the battle (`engine.js fork`, `api.sim`): the unit's activation as the option has
+it, then the enemy's one reply as the AI would choose it, every option under the same
+seeded dice (`ls` samples), and the copy read by the fitted evaluation. The choice:
+the option's base plus `kl` (default ke) times the change in log-odds.
+
+| Change | Share |
+|---|---|
+| `look` (3 options, 1 sample of the dice) | 52.3% |
+| `look,ls=3` (3 samples) | 51.3% |
+
+Both on the right side of 50, neither past the noise; it costs little (a copy is
+about 1 ms, a battle some seconds), so there is room to look further: more replies,
+the rest of the turn, more options.
+
 With the pairs seeded on their own, scenarios without objectives (Meeting
 engagement, Demolish) come out the same battle for battle whatever the ground is worth:
 only Secure and control, Find and secure, Invasion and Takeover can move, and of those

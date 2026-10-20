@@ -213,6 +213,7 @@ Each phase is measured with SPRT against an opponent pool, and kept only if it w
 - **Next.**
   - Refit the evaluation on battles played by the new AI. *Done: it forecasts better (75.2% of winners called) but plays no better (48.2% against the AI as it is); not kept.*
   - Extend the planner to the choices it does not yet see: charges, vehicles (`aiDrive`) and buildings. *Charges and gun hulls tried: no change (48–50%); kept behind `AIEXP=charge` and `AIEXP=drive`. Buildings not yet.*
+  - Phase 3 started: a one-reply lookahead (`AIEXP=look`, `engine.js fork`): 52.3% and 51.3% against the AI as it is, within the noise. The copies are cheap (about 1 ms each), so deeper replies are affordable.
   - What this says: the one-step judge has taken what it can from better weights and more options. The gain left is in looking further ahead (phase 3), where a choice's worth shows over the enemy's reply and the next turn, not the next shot.
   - Then the turn-horizon search (phase 3).
 
