@@ -119,6 +119,10 @@
     function shotDelta(a, t, mode) {
       var ex;
       try { ex = R.expectedShot(E.state, a, t, mode, {}); } catch (e) { return 0; }
+      return lossDelta(t, ex);
+    }
+    // what losing ex (men, Suppression, Damage, on average) does to t's side, in the evaluation's log-odds
+    function lossDelta(t, ex) {
       var foes = E.state.units.filter(function (f) { return f.side === t.side && R.countsForVictory(f); });
       var onTable = foes.filter(function (f) { return f.alive && !f.fled && f.x >= 0 && !f.aboard && !R.isMachine(f); }).length || 1;
       var d = 0;
@@ -136,6 +140,20 @@
       }
       var w0 = worthNow(t), w1 = worth(t, Math.max(0, t.models - (ex.casualties || 0)), (t.sp || 0) + (ex.sp || 0), (t.damage || 0) + (ex.damage || 0));
       return d + EVAL.worth * (w0 - w1);
+    }
+    /* A charge, in the same currency: the first round each way (R.assaultOdds), a hit
+       on a squad as the assault's own table has it (damage.js resolveAssaultHits: a
+       man down on 4+, 1 SP on 2-3), what it does to them less what their answer does
+       to us. A hull or a gun answers with Damage, which this leaves out. */
+    var PER_HIT = { c: 0.5, sp: 1 / 3 + 1 };
+    function chargeDelta(u, t) {
+      var mine, theirs;
+      try { mine = R.assaultOdds(E.state, u, t).avgHits; theirs = R.isMachine(u) ? 0 : R.assaultOdds(E.state, t, u).avgHits; } catch (e) { return 0; }
+      var hurt = function (who, hits) {
+        if (R.isMachine(who)) return { damage: hits * 0.5 };
+        return { casualties: Math.min(who.models, hits * PER_HIT.c), sp: hits * PER_HIT.sp };
+      };
+      return lossDelta(t, hurt(t, mine)) - lossDelta(u, hurt(u, theirs));
     }
     function bestDeltaFrom(u, c, mode) {
       var g = ghostAt(u, c), best = { t: null, v: 0 };
@@ -176,12 +194,22 @@
         var fireNow = u.fp != null ? bestDeltaFrom(u, at, 'fire') : { t: null, v: 0 };
         var heldHere = heldAt(u, at), riskHere = threatAt(u, at);
         var val = function (shotV, held, risk) { return shotV + EVAL.held * (held - heldHere) + EVAL.risk * (risk - riskHere); };
-        var best = { kind: fireNow.t ? 'fire' : 'hold', t: fireNow.t, score: here + ke * val(fireNow.v, heldHere, riskHere) };
+        var best = { kind: fireNow.t ? 'fire' : 'hold', t: fireNow.t, base: here, score: here + ke * val(fireNow.v, heldHere, riskHere) };
+        var all = [best];
         cands.forEach(function (cd) {
           var shot = canAdvance && u.fp != null ? bestDeltaFrom(u, cd.c, 'advance') : { v: 0 };
           var s = cd.base + ke * val(shot.v, heldAt(u, cd.c), threatAt(u, cd.c));
-          if (s > best.score + 0.3) best = { kind: 'move', c: cd.c, score: s };
+          all.push({ kind: 'move', c: cd.c, base: cd.base, score: s - 0.3 });
+          if (s > best.score + 0.3) best = { kind: 'move', c: cd.c, base: cd.base, score: s };
         });
+        // a charge the AI could make (opts.charge, an enemy in reach), weighed the same way
+        if (opts && opts.charge) {
+          var sc = here + ke * chargeDelta(u, opts.charge);
+          all.push({ kind: 'charge', t: opts.charge, base: here, score: sc - 0.3 });
+          if (sc > best.score + 0.3) best = { kind: 'charge', t: opts.charge, base: here, score: sc };
+        }
+        // (every option, best first, for a lookahead to choose among: ai.js lookahead)
+        best.all = all.sort(function (a, b) { return b.score - a.score; });
         return best;
       } finally { memo = null; }
     }
@@ -356,7 +384,13 @@
       } finally { memo = null; }
     }
 
-    return { planChoose: choose, planChooseEval: chooseByEval, planEvalWeights: EVAL, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom, planGoal: goalFor,
+    // the evaluation's log-odds for a side as the battle stands (its bias left out: it is the same for every option)
+    function planValue(side) {
+      var f = features(side), v = 0;
+      Object.keys(EVAL).forEach(function (k) { v += EVAL[k] * (f[k] || 0); });
+      return v;
+    }
+    return { planValue: planValue, planChoose: choose, planChooseEval: chooseByEval, planEvalWeights: EVAL, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom, planGoal: goalFor,
       planFeatures: features, PLAN_FEATURES: FEATURES };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEnginePlanner;

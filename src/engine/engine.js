@@ -272,7 +272,7 @@
        out before the screen saw any of it. There it goes one activation at a
        time and waits to be asked for the next, which is what paces a game
        nobody is playing. */
-    var draining = false, paced = false;
+    var draining = false, paced = false, sim = false;
     function canAI() {
       /* An answer owed holds the AI: a player's Martyrdom answer holds its charge,
          and a Last Stand asked for, or the End phase asking a player to carry on
@@ -282,7 +282,7 @@
         !state.martyrAsk && !state.oppAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk && isAI(state.activeSide);
     }
     function maybeAI() {
-      if (draining || !canAI()) return;
+      if (sim || draining || !canAI()) return;
       draining = true;
       try {
         if (paced) { aiStep(); return; }
@@ -1675,6 +1675,16 @@
     ['PMCEngineMarks', './marks.js'],
     ['PMCEngineSave', './save.js']
   ];
+  /* A copy of the battle for the AI to look ahead in (ai.js lookahead): both sides the
+     AI's, nothing drawn or heard, and nothing played but what it is asked (api.sim). */
+  function fork() {
+    var f = create();
+    var snap = JSON.parse(JSON.stringify(K.snapshot()));
+    snap.cfg.aiSides = ['A', 'B']; snap.cfg.sim = true;
+    f.load(snap);
+    f.sim.on();
+    return f;
+  }
   function kitContext() {
     var own = {
       GEN: GEN,
@@ -1691,6 +1701,7 @@
       addFx: addFx,
       afterChain: afterChain,
       afterTerrain: afterTerrain,
+      fork: fork,
       animateMove: animateMove,
       beginTurn: beginTurn,
       boardAnim: boardAnim,
@@ -2628,7 +2639,33 @@
         relocCap: relocCap, relocSpotOK: relocSpotOK, wantsManualTerrain: K.wantsManualTerrain
       },
       STANDARD: STANDARD,
-      SPECIAL_SLOTS: SPECIAL_SLOTS
+      SPECIAL_SLOTS: SPECIAL_SLOTS,
+      /* A copy made by fork(): a unit's activation played as the AI was told to play it
+         (state.forcePick, read in ai.js), the other side's one reply, and what the fitted
+         evaluation makes of the result for a side (an ended battle: a win or loss outright). */
+      sim: {
+        on: function () { sim = true; },
+        act: function (id, pick) {
+          var u = K.unitById(id);
+          if (!state || state.over || !u || !u.alive) return false;
+          state.forcePick = { id: id, pick: pick };
+          ui.selected = u;
+          try { K.aiAct(u); } finally { if (state) delete state.forcePick; }
+          return true;
+        },
+        reply: function (side) {
+          if (!state || state.over || state.activeSide !== side || !canAI()) return false;
+          return aiStep();
+        },
+        // the next n activations, whichever side's they are, as the AI chooses them
+        steps: function (n) {
+          for (var i = 0; i < n && state && !state.over && canAI(); i++) aiStep();
+        },
+        value: function (side) {
+          if (state.over) { var w = state.report && state.report.winner; return w === side ? 10 : w ? -10 : 0; }
+          return K.planValue(side);
+        }
+      }
     };
     ['intent', 'snapshot', 'load', 'concede'].forEach(function (k) { api[k] = onBoard(api[k]); });
     Object.keys(api.query).forEach(function (k) { api.query[k] = onBoard(api.query[k]); });

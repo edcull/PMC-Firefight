@@ -1,29 +1,46 @@
-# PMC 2670 — Firefight · v0.2
+# PMC 2670 — Firefight · v0.3
 
 A browser-based digital skirmish of **PMC 2670**, the sci-fi miniatures wargame by
 Marcin Gerkowicz (Assault Publishing). It plays the book's rules on a 4′ × 4′
 isometric table (6′ × 4′ at Priority Level 3), with movement, range and line of sight measured in real inches,
 edge to edge.
 
-## What's in v0.2
+## What's in v0.3
+
+v0.3 plays the whole rulebook, its appendices included, most of the additions as
+options switched on for a battle or a campaign.
 
 - **All four armies:** PMC, Rebels, Space Bugs and Xenotripods, with their army
   rules, doctrines, tactics and every unit profile.
 - **The six standard scenarios and the six solitaire scenarios.** The solitaire
-  OpFor is run by the book's behaviour table.
+  OpFor is run by the book's behaviour table, or chosen by hand.
+- **The optional rules:** "There can be only two!", "Bad, worse, the
+  bookkeeper" and Other Worlds (Appendix 2).
+- **Close Encounters (Appendix 1):** fighting inside compounds, laid out by the
+  game or by hand: corridors, rooms and doors, hidden movement, Covering Fire!
+  and Opportunity Fire, dangerous sections, special equipment and the Automated
+  defence system, with the Clearing out, Critical control and Besieged scenarios.
+- **Priority Level 3** on a 6′ × 4′ table.
 - **Ways to play:**
   - against the AI;
   - solitaire;
   - online against another player;
   - co-op against the OpFor, online.
 - **Campaigns:**
-  - single player against AI rival forces;
+  - single player against AI rival forces, with contracts placed across a
+    charted star system (planets with their own conditions, influence and
+    events) or offered as a plain list;
   - online "world" campaigns: a lobby with player and AI slots, contracts
-    against the AI, and duels between players.
+    against the AI, duels between players and co-operative contracts;
+  - Close Encounters battles in a campaign, at a frequency set when it is raised.
 - **Accounts on a game server:** sign-in or guest play, email activation and
   password resets, campaigns kept on the server, and "your move" badges and
   emails.
 - **A force builder and a unit viewer.**
+- **The AI:** a utility AI that plans covered approaches across the table, and a
+  planner that judges its options by a fitted evaluation of who is winning. Against
+  a player it also looks ahead, playing its best few options out in copies of the
+  battle against the reply it expects (see [docs/ai-research.md](docs/ai-research.md)).
 
 The rules were last checked against the rulebook in
 [docs/rules-review-57a1b3d.md](docs/rules-review-57a1b3d.md), which also records
@@ -91,6 +108,34 @@ briefing lists the ones in play.
   cut a drone vehicle's link; time anomalies let a side act again on a 5+; an
   unexplained weakness takes 1 off Movement, Firepower, Assault and Morale (and
   costs a Trauma point in a campaign).
+- **Close Encounters** (Appendix 1, p. 157): adds the compound scenarios to the
+  list (below). In a campaign it is a frequency instead: off, one contract in
+  ten, half of them or every one is fought inside a compound.
+- **Automated defence system** (p. 160): in a Close Encounters battle, a control
+  panel and three automatic guns in the middle of the compound, belonging to
+  neither side, that fire at the nearest unit of either at the start of every
+  Action phase. A unit at the panel may take control of them.
+
+### Close Encounters
+
+Battles inside a compound: rooms, halls and corridors on a 3″ grid, joined by
+doors (some locked), with no vehicles or aircraft and no indirect fire.
+
+- **The compound** is laid out by the game for each battle, or by hand on the
+  battlefield step's editor (paint cells as corridor, room or solid; set each
+  join open, a door or a wall; mark rooms dangerous). A hand-built compound is
+  kept on the device; an online room's host or a campaign's host lays one out
+  for everyone.
+- **Hidden movement** (Clearing out, Critical control): every unit starts as a
+  counter, moving up to 6″ unseen, revealed when an enemy sees it, and then
+  Fire at Will!. Advanced Sensors and Sixth Sense can Detect counters within 12″.
+- **Reaction fire:** Covering Fire! from a friend within 6″ at the start of an
+  activation, and Opportunity Fire at a unit crossing an enemy's sight.
+- **Dangerous sections** explode or burn; **special equipment** (Satchel
+  Charges, Ballistic Barrier, Stun, Incendiary and Vacuum grenades) is picked on
+  the battlefield step, four pieces a Priority Level.
+- **Scenarios:** Clearing out and Critical control, and Besieged for solitaire
+  (or online co-op).
 
 ### Solitaire
 
@@ -150,6 +195,10 @@ carry on or surrender.
   once the vehicle is damaged.
 - **The tag** beside a unit's code (W, R, C, L, B, F, H, ~) names the terrain it
   counts as being in.
+- **Range rings:** a selected unit shows its full and half range, its minimum
+  range if it has one, and a 6″ ring for a limited anti-tank weapon.
+- **Objectives held over time** (Secure and control, Find and secure) carry a
+  ring split into one arc per round needed, filling as the holder keeps them.
 - **Combat results**, on the right, keeps a card for every roll: shots,
   assaults, rallies and initiative.
 - **Objectives**, in the header, shows the scenario, who attacks, and what wins it.
@@ -189,6 +238,14 @@ There are two kinds:
 |---|---|
 | **Single player** | You against AI rival forces |
 | **Online** | A world on the server: players and AI forces in slots, contracts against the AI, duels between players, and co-operative contracts, played at each player's own pace |
+
+**The star system.** A single-player campaign charts a star system when it is
+founded (or later, from the hub): four to seven planets, each with its own kind of
+world and conditions, the rival forces' homes and the company's base. Contracts
+are pinned at sites on the planets' maps; winning one moves influence over that
+planet to you, losing moves it back, and events (a reactor breach, a storm
+season, an uprising…) change a planet's conditions for a few turns. The
+new-campaign form can choose a plain list of offers instead.
 
 A **co-operative contract** (p. 150) is offered to another player from the
 other forces, as a challenge is: once they accept, a Battle Tier, a solitaire
@@ -245,10 +302,15 @@ The full file layout and every test are described in [docs/DEVELOPMENT.md](docs/
 
 ## Not implemented
 
-Planned in [docs/roadmap.md](docs/roadmap.md):
+Still to come (see [docs/roadmap.md](docs/roadmap.md)):
 
-- **Appendix 1, Close Encounters (v0.4):** corridors, doors, hidden movement,
-  reaction fire and its scenarios.
+- **Priority Level 4.**
+- **Solitaire options in online co-op:** choosing the OpFor and placing counters
+  by hand work on one device; an online co-op room rolls the OpFor and lets the
+  game place the counters.
+- **Hotseat** is off the main menu for now (its skirmish and campaign are kept
+  working), so co-operative contracts in a two-player hotseat campaign without AI
+  forces are not offered.
 
 Not planned:
 

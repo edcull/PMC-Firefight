@@ -207,6 +207,60 @@ weights live in `planner.js` (EVAL) and `evalweights.json`. Refit them when the 
 the rules change: the AI that plays the battles the evaluation is fitted on is now this
 one.
 
+Next, against the AI as it now is (`OPP=current`, 640 battles each, 50% = no change,
+noise about ±2):
+
+| Change | Share |
+|---|---|
+| the evaluation refitted on 2,000 battles the planner played (75.2% called, log loss 0.491, against 73.5% and 0.521) | 48.2% |
+| the planner weighing a charge (`charge`, chargeDelta: the first round each way) instead of the hand rule | 48.4% |
+| ...as well as the hand rule (`charge`, as kept behind the switch) | 50.0% |
+| a gun hull judged by the planner (`drive`): Fire! from here or the best eight spots | 50.1% |
+
+Nothing kept: a better forecast of who wins did not choose better (the refit counts a
+unit's Stress for less, and the planner's shots are judged mostly by it), and the
+charges and hulls make no difference. `charge` and `drive` stay behind their switches,
+off in every game, to build on; the refit's weights are in the table above, not in
+`planner.js`.
+
+Looking ahead (phase 3, `AIEXP=look`): the planner's best options that differ (the
+best of each kind, and moves at least 3" apart; `lk` 3) are each played out in a copy
+of the battle (`engine.js fork`, `api.sim`): the unit's activation as the option has
+it, then the enemy's one reply as the AI would choose it, every option under the same
+seeded dice (`ls` samples), and the copy read by the fitted evaluation. The choice:
+the option's base plus `kl` (default ke) times the change in log-odds.
+
+| Change | Share |
+|---|---|
+| `look` (3 options, 1 sample of the dice) | 52.3% |
+| `look,ls=3` (3 samples) | 51.3% |
+
+Then, deeper, wider and weighted otherwise (the first four on the same seeds, the
+last two on fresh ones):
+
+| Change | Share |
+|---|---|
+| `lr=4` (four activations after its own, either side's) | 49.4% |
+| `lr=8` | 52.7% |
+| `lk=5` (five options) | 52.4% |
+| `lk=5,lr=4` | 50.0% |
+| `kl=150` (the play-out weighed three times over) | 53.0% |
+| `kl=400` | 52.0% |
+| `kl=0` (the same few options, by their base alone: a control) | 43.0% |
+| `kl=150`, fresh seeds | 51.8% |
+| `kl=150,ls=3`, fresh seeds | 51.2% |
+
+The one-reply lookahead comes out at about 52% over seven runs (4,480 battles), some
+2.7 standard errors over 50: a small gain, and the first since the fitted evaluation.
+The control says the play-out carries the choice: among the same few options, the way
+to the goal alone loses 7 points. Looking further (`lr` 4) adds nothing, as the AI's
+own later choices in the copy add their noise. It costs about 25 ms a decision (a
+battle with one side looking ahead some 1.8 s against 0.4 s), nothing to a player, but
+enough to slow the AI-against-AI tests several times over. So it is on where the AI
+plays a person (`ai.js looks`: the other side not the computer's) and off where the
+computer plays itself — demos, these runs and the tests' AI battles — where
+`AIEXP=look` turns it on for the choosing side and `AIEXP=nolook` off.
+
 With the pairs seeded on their own, scenarios without objectives (Meeting
 engagement, Demolish) come out the same battle for battle whatever the ground is worth:
 only Secure and control, Find and secure, Invasion and Takeover can move, and of those
