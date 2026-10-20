@@ -1444,8 +1444,8 @@
 
     /* ---- Looking ahead (phase 3, docs/ai-research.md) ----
        The planner's best few options (`lk`, 3), each played out in a copy of the battle
-       (E.fork): this unit's activation as the option has it, then the enemy's one reply,
-       the AI as it is choosing it; the copy's position read by the fitted evaluation.
+       (E.fork): this unit's activation as the option has it, then the enemy's one reply
+       (or `lr` activations, either side's), the AI as it is choosing them; the copy's position read by the fitted evaluation.
        Every option sees the same dice (`ls` samples of them), so they differ by what they
        do and not by luck. The option's worth: its base (the way to the goal, which the
        evaluation does not see) and `kl` times how far it moves the side's log-odds. */
@@ -1477,7 +1477,9 @@
       try {
         var f = E.fork();
         f.sim.act(u.id, { kind: o.kind, t: o.t ? o.t.id : null, c: o.c ? { x: o.c.x, y: o.c.y } : null });
-        f.sim.reply(u.side === 'A' ? 'B' : 'A');
+        // the enemy's one reply, or (`lr`) that many activations after this one, either side's
+        var lr = tuneOf('lr', 1);
+        if (lr > 1) f.sim.steps(lr); else f.sim.reply(u.side === 'A' ? 'B' : 'A');
         return f.sim.value(u.side);
       } catch (e) {
         return E.planValue(u.side);

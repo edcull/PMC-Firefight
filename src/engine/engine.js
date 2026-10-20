@@ -2657,6 +2657,10 @@
           if (!state || state.over || state.activeSide !== side || !canAI()) return false;
           return aiStep();
         },
+        // the next n activations, whichever side's they are, as the AI chooses them
+        steps: function (n) {
+          for (var i = 0; i < n && state && !state.over && canAI(); i++) aiStep();
+        },
         value: function (side) {
           if (state.over) { var w = state.report && state.report.winner; return w === side ? 10 : w ? -10 : 0; }
           return K.planValue(side);

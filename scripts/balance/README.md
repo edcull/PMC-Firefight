@@ -235,9 +235,29 @@ the option's base plus `kl` (default ke) times the change in log-odds.
 | `look` (3 options, 1 sample of the dice) | 52.3% |
 | `look,ls=3` (3 samples) | 51.3% |
 
-Both on the right side of 50, neither past the noise; it costs little (a copy is
-about 1 ms, a battle some seconds), so there is room to look further: more replies,
-the rest of the turn, more options.
+Then, deeper, wider and weighted otherwise (the first four on the same seeds, the
+last two on fresh ones):
+
+| Change | Share |
+|---|---|
+| `lr=4` (four activations after its own, either side's) | 49.4% |
+| `lr=8` | 52.7% |
+| `lk=5` (five options) | 52.4% |
+| `lk=5,lr=4` | 50.0% |
+| `kl=150` (the play-out weighed three times over) | 53.0% |
+| `kl=400` | 52.0% |
+| `kl=0` (the same few options, by their base alone: a control) | 43.0% |
+| `kl=150`, fresh seeds | 51.8% |
+| `kl=150,ls=3`, fresh seeds | 51.2% |
+
+The one-reply lookahead comes out at about 52% over seven runs (4,480 battles), some
+2.7 standard errors over 50: a small gain, and the first since the fitted evaluation.
+The control says the play-out carries the choice: among the same few options, the way
+to the goal alone loses 7 points. Looking further (`lr` 4) adds nothing, as the AI's
+own later choices in the copy add their noise. It costs about 25 ms a decision (a
+battle with one side looking ahead some 1.8 s against 0.4 s), nothing to a player, but
+enough to slow the AI-against-AI tests several times over; it stays behind
+`AIEXP=look` for now.
 
 With the pairs seeded on their own, scenarios without objectives (Meeting
 engagement, Demolish) come out the same battle for battle whatever the ground is worth:
