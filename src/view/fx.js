@@ -246,19 +246,7 @@
           I.ellipse(g, fx2 + wob, fy2 - ft * I.K * 0.35, sz, sz * 0.72,
             col + Math.max(0, (0.85 - ft * 0.45) * (1 - dying)) + ')');
         }
-        // and what is left burning on the ground at the far end
-        if (k > 0.3) {
-          var gp3 = I.toScreen(f.to.x, f.to.y); gp3.y -= liftB(f);
-          for (var bn = 0; bn < 9; bn++) {
-            var ba = bn * 0.7 + f.t0 * 0.006;
-            var bd = I.K * (0.3 + (bn % 3) * 0.35);
-            var lick = Math.abs(Math.sin(f.t0 * 0.02 + bn));
-            I.ellipse(g, gp3.x + Math.cos(ba) * bd, gp3.y + Math.sin(ba) * bd * 0.5 - lick * 5,
-              I.PIXEL * 2, I.PIXEL * 3,
-              (lick > 0.6 ? 'rgba(255,214,120,' : 'rgba(224,116,40,') +
-              Math.max(0, 0.7 - dying) + ')');
-          }
-        }
+        // (what is left burning where it reaches is the Molotov's pool: fire.js adds a firesplash)
       } else if (f.kind === 'missile') {
         /* A missile does not fly the straight line a shell does. It is pushed
            out of the tube cold and level, the motor lights, it bends up into a
@@ -831,13 +819,13 @@
         var fs0 = I.toScreen(f.x, f.y); fs0.y -= liftAt(f);
         var fr = I.K * (f.big ? 1.3 : 1);
         var seed = (f.seed || 0) * 1.7 + f.t0 * 0.001;
-        // the flash as it breaks
-        if (k < 0.18) {
+        // the flash as it breaks (a flamer's fuel, `pool`, has no bottle to break)
+        if (k < 0.18 && !f.pool) {
           var fk = k / 0.18;
           I.ellipse(g, fs0.x, fs0.y - fr * 0.3, fr * (0.4 + fk * 0.9), fr * (0.3 + fk * 0.6), 'rgba(255,244,200,' + (0.95 * (1 - fk)) + ')');
         }
         // glass thrown out, glinting
-        if (k < 0.5) {
+        if (k < 0.5 && !f.pool) {
           for (var gs = 0; gs < 9; gs++) {
             var ga2 = gs * 0.7 + seed, gd = (k / 0.5) * fr * (0.6 + (gs % 3) * 0.25);
             I.rect(g, fs0.x + Math.cos(ga2) * gd, fs0.y + Math.sin(ga2) * gd * 0.5 - Math.sin((k / 0.5) * Math.PI) * fr * 0.5,
