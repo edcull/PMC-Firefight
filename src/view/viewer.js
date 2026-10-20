@@ -305,7 +305,7 @@
     var t = shot.t, s0 = shot.sum;
     if (shot.mach) {
       return Object.assign(root.PMCFire.shares(s0.ladder || {}), root.PMCFire.bleedOf(t, R), { figs: [{ x: TO.x, y: TO.y }],
-        crit: Math.round((s0.ladder || {}).crit || 0) });
+        crit: Math.round((s0.ladder || {}).crit || 0), hull: true });
     }
     // (the men drawn falling: the average rounded, as the target is shown after)
     var before = Math.max(1, t.before || 1), lost = Math.max(0, before - Math.max(0, t.models));

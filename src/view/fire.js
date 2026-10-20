@@ -570,7 +570,8 @@
         }
 
         default:
-          playStream(spec.p, shooter, from, to, hits, land, spec.splash, o.outcome);
+          // (the bursts of a splashing stream are its Suppression coming down: not on a hull, which has no Morale to shake)
+          playStream(spec.p, shooter, from, to, hits, land, spec.splash && !(o.outcome && o.outcome.hull), o.outcome);
           return Math.max(820, streamLength(spec.p, hits) + 320);
       }
     }
