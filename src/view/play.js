@@ -236,6 +236,7 @@
         if (!fired) {
           fired = true; spawnDeaths(deaths);
           if (outcome && outcome.crit) SHOTS.crits(p, outcome.crit);      // a critical hit: sparks off the hull
+          if (f0 && f0.supp) SHOTS.suppress(to);                         // Suppressive Fire: the ground kicked up round them
           if (impact) impact(Math.max(250, endsAt - nowMs()));
           // (the impact shows every loss at once; those still standing stand till their round strikes)
           if (rg) showLosses();

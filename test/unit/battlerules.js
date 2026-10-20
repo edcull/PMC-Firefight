@@ -34,18 +34,20 @@ function labels(parts) { return parts.map(function (p) { return p.label; }); }
 
 /* ---------------------------------------------------- Suppressive Fire */
 console.log('\nSUPPRESSIVE FIRE (p. 59)');
-var told = 0, tried = 0;
+var told = 0, tried = 0, flagged = 0;
 for (var i = 0; i < 400; i++) {
   var mortar = unit('mortarteam', { x: 10, y: 10 }), mark = unit('recruits', { side: 'B', x: 10, y: 40 });
   var r = R.shoot(table([mortar, mark]), mortar, mark, 'fire', {});
   if (r.hits > 0) { tried++; if (r.log.some(function (l) { return /Suppressive Fire \+2 SP/.test(l.text); })) told++; }
+  if (r.hits > 0 && r.fx && r.fx.supp) flagged++;
 }
 ok('an Indirect Fire mortar, firing basic, still adds +2 SP', tried > 0 && told === tried, told + ' of ' + tried + ' hitting volleys');
+ok('...and tells the board, to kick the ground up round them', flagged === tried, flagged + ' of ' + tried);
 var auxHits = 0, auxSupp = 0;
 for (var j = 0; j < 400; j++) {
   var hmg = unit('mortarteam', { x: 10, y: 10 }), near = unit('recruits', { side: 'B', x: 10, y: 16 });
   var ra = R.shoot(table([hmg, near]), hmg, near, 'fire', { aux: true });
-  if (ra.hits > 0) { auxHits++; if (ra.log.some(function (l) { return /Suppressive Fire/.test(l.text); })) auxSupp++; }
+  if (ra.hits > 0) { auxHits++; if (ra.log.some(function (l) { return /Suppressive Fire/.test(l.text); }) || (ra.fx && ra.fx.supp)) auxSupp++; }
 }
 ok('...but not with its auxiliary weapon', auxHits > 0 && auxSupp === 0, auxSupp + ' of ' + auxHits);
 

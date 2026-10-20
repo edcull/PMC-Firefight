@@ -258,6 +258,18 @@
       if (SFX) { SFX.impact(); if (extra) SFX.impact(0.06); }
     }
 
+    /* Suppressive Fire (p. 59): the rounds that did not hit anyone still walk the
+       ground round the unit, kicking dirt up on every side of it for a moment
+       after the shot lands, so the extra Suppression has something to show for it. */
+    function suppress(to) {
+      for (var i = 0; i < 9; i++) {
+        var a = i * 2.4 + 0.4, r = 1.1 + (i % 3) * 0.55;
+        add({ kind: 'impact', x: to.x + Math.cos(a) * r, y: to.y + Math.sin(a) * r * 0.8, up: to.up || 0,
+          n: 1 + (i % 2), delay: 60 + i * 70, dur: 420 + 60 + i * 70, blocking: true });
+      }
+      if (SFX) { SFX.impact(0.05); setTimeout(function () { if (SFX) SFX.impact(0.04); }, 260); }
+    }
+
     /* An aircraft's missiles leave on the line the craft is flying and turn
        onto the mark from there, rather than climbing over it: it is already
        above everything, so the climb read as the missile going the wrong way.
@@ -951,7 +963,7 @@
     return {
       FIRE: FIRE, streamLength: streamLength, glowRGB: glowRGB, shotRGB: shotRGB,
       primary: primary, secondary: playSecondary, paired: paired, crits: crits, stream: playStream, energy: playEnergy, orbs: playOrbs,
-      flameJets: flameJets, spread: spread, pick: pick, hit: hit, curve: curveFor
+      flameJets: flameJets, spread: spread, pick: pick, hit: hit, suppress: suppress, curve: curveFor
     };
   }
 
