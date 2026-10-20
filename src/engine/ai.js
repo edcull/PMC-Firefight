@@ -848,7 +848,22 @@
     /* RISK_W: how much dearer a step is per gun watching it (measured: 0.25 the best
        of 0.25, 0.5 and 1 against the behaviour table); HERE_W: the price of ending
        the move where guns can see it */
-    var CELL = 1, RISK_W = 0.25, HERE_W = 0.8, exCache = {}, routeCache = {};
+    var CELL = 1, RISK_W = 0.25, HERE_W = 0.8, exCache = {}, routeCache = {}, groundCache = null;
+    /* What each cell's ground is — passable or not, and its cover — for as long as
+       the terrain is as it was (a piece brought down or set burning changes it). */
+    function groundGrid(cols, rows) {
+      var sig = E.state.terrain.map(function (r) { return r.kind + (r.burning ? '*' : '') + r.x + ',' + r.y + ',' + r.w + ',' + r.h; }).join(';');
+      if (groundCache && groundCache.state === E.state && groundCache.sig === sig && groundCache.cols === cols && groundCache.rows === rows) return groundCache;
+      var n = cols * rows, open = new Uint8Array(n), cov = new Float32Array(n);
+      for (var k = 0; k < n; k++) {
+        var x = (k % cols + 0.5) * CELL, y = ((k / cols | 0) + 0.5) * CELL;
+        var T = R.TERRAIN[R.terrainAt(E.state, x, y)] || {};
+        open[k] = T.impassable ? 0 : 1;
+        if (open[k]) cov[k] = R.coverAt(E.state, x, y) || 0;
+      }
+      groundCache = { state: E.state, sig: sig, cols: cols, rows: rows, open: open, cov: cov };
+      return groundCache;
+    }
     function exposureGrid(side) {
       var foes = E.state.units.filter(function (e) {
         return e.alive && e.side !== side && onTable(e) && !husk(e) && e.fp != null && R.status(e) !== 'broken';
@@ -857,13 +872,17 @@
       var hit = exCache[side];
       if (hit && hit.state === E.state && hit.key === key) return hit;
       var cols = Math.ceil(R.BOARD.w / CELL), rows = Math.ceil(R.BOARD.h / CELL), n = cols * rows;
-      var g = { state: E.state, key: key, cols: cols, rows: rows, ex: new Float32Array(n), exNear: new Float32Array(n), cov: new Float32Array(n), open: new Uint8Array(n) };
+      var gr = groundGrid(cols, rows);
+      var g = { state: E.state, key: key, cols: cols, rows: rows, ex: new Float32Array(n), exNear: new Float32Array(n), cov: gr.cov, open: gr.open };
+      // (nothing moves while it is worked out: R.losBatch has each gun's footing found once)
+      R.losBatch(function () { fillExposure(g, foes, n, cols); });
+      exCache[side] = g;
+      return g;
+    }
+    function fillExposure(g, foes, n, cols) {
       for (var k = 0; k < n; k++) {
-        var x = (k % cols + 0.5) * CELL, y = ((k / cols | 0) + 0.5) * CELL;
-        var kind = R.terrainAt(E.state, x, y), T = R.TERRAIN[kind] || {};
-        g.open[k] = T.impassable ? 0 : 1;
         if (!g.open[k]) continue;
-        g.cov[k] = R.coverAt(E.state, x, y) || 0;
+        var x = (k % cols + 0.5) * CELL, y = ((k / cols | 0) + 0.5) * CELL;
         var ghost = { x: x, y: y, alive: true, of: null };
         for (var f = 0; f < foes.length; f++) {
           var e = foes[f], d = Math.max(0, R.inches(x, y, e.x, e.y) - UR);
@@ -875,8 +894,6 @@
           if (d <= 12) g.exNear[k] += w;
         }
       }
-      exCache[side] = g;
-      return g;
     }
     function cellOf(g, x, y) {
       var i = Math.max(0, Math.min(g.cols - 1, Math.floor(x / CELL))), j = Math.max(0, Math.min(g.rows - 1, Math.floor(y / CELL)));

@@ -462,7 +462,24 @@
     // the terrain a unit (or a token at x, y) is in, as a one-kind list
     // the rim's offsets from the middle, worked out once (footprint gives the same points)
     var RIM_DX = null, RIM_DY = null, RIM_R = null;
+    /* Inside losBatch (below) nothing moves, so what a unit stands in and how high it
+       stands are worked out once a unit, not once a line: the AI's exposure grid asks
+       the same few guns about every inch of the table. */
+    var BATCH = null;
+    function losBatch(fn) {
+      if (BATCH) return fn();
+      BATCH = { kinds: new Map(), level: new Map() };
+      try { return fn(); } finally { BATCH = null; }
+    }
     function kindsUnder(state, u, x, y) {
+      if (BATCH && u && x == null && y == null) {
+        var kb = BATCH.kinds.get(u);
+        if (!kb) { kb = kindsUnderNow(state, u); BATCH.kinds.set(u, kb); }
+        return kb;
+      }
+      return kindsUnderNow(state, u, x, y);
+    }
+    function kindsUnderNow(state, u, x, y) {
       if (u && u.bld) return [u.bld.kind];
       var px = x != null ? x : u.x, py = y != null ? y : u.y;
       if (RIM_R !== UNIT_R) {
@@ -538,6 +555,7 @@
        across the line). A point at either end — a piece of terrain, a spot on the
        ground — is just itself. Which ground each end stands on (on a hill, in a
        wood) is judged from its middle, whichever line is drawn. */
+    var LOS_SIDES = [[1, 1], [-1, -1], [1, -1], [-1, 1]];
     function lineClear(state, a, b) {
       if (lineClearAt(state, a, b, a.x, a.y, b.x, b.y)) return true;
       var ra = a && a.side ? UNIT_R * 0.8 : 0, rb = b && b.side ? UNIT_R * 0.8 : 0;
@@ -545,8 +563,9 @@
       var dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
       if (len < 1e-6) return false;
       var nx = -dy / len, ny = dx / len;
-      var sides = [[1, 1], [-1, -1], [1, -1], [-1, 1]];
-      for (var k = 0; k < sides.length; k++) {
+      var sides = LOS_SIDES;
+      // with a point at either end the last two lines are the first two again: not drawn twice
+      for (var k = 0, kn = ra && rb ? 4 : 2; k < kn; k++) {
         var sa = sides[k][0] * ra, sb = sides[k][1] * rb;
         if (lineClearAt(state, a, b, a.x + nx * sa, a.y + ny * sa, b.x + nx * sb, b.y + ny * sb)) return true;
       }
@@ -670,6 +689,14 @@
        building gives Firepower but no height to see over anyone. The Firepower
        for height is levelOf's and the building's own (shoot.js). */
     function sightLevel(state, u) {
+      if (BATCH && u) {
+        var lb = BATCH.level.get(u);
+        if (lb === undefined) { lb = sightLevelNow(state, u); BATCH.level.set(u, lb); }
+        return lb;
+      }
+      return sightLevelNow(state, u);
+    }
+    function sightLevelNow(state, u) {
       if (u && u.bld) return u.bld.kind !== 'bunker' && sectionHigh(u.bld, sectionRect(u)) ? 2 : 0;
       return levelOf(state, u);
     }
@@ -827,7 +854,7 @@
       inPoly: inPoly, pieceDepth: pieceDepth, placePiece: placePiece, turnPoint: turnPoint,
       turnPiece: turnPiece, shapePiece: shapePiece, terrainAt: terrainAt, terrainOf: terrainOf, nearestFree: nearestFree, walkField: walkField,
       footprint: footprint, kindsUnder: kindsUnder, coverAt: coverAt, segRect: segRect,
-      pointSegDist: pointSegDist, hasLoS: hasLoS, lineClear: lineClear, doorOpen: doorOpen, doorFront: doorFront, DOOR_REACH: DOOR_REACH, groundLevel: groundLevel,
+      pointSegDist: pointSegDist, hasLoS: hasLoS, losBatch: losBatch, lineClear: lineClear, doorOpen: doorOpen, doorFront: doorFront, DOOR_REACH: DOOR_REACH, groundLevel: groundLevel,
       levelOf: levelOf, tooHighToHover: tooHighToHover, onHill: onHill, unitNear: unitNear
     };
   };
