@@ -379,11 +379,10 @@
     lighteng: { p: 'smg' }, engineers: { p: 'smg' },
     // assault troops carry grenades as well as carbines, and throw them (p. 64)
     shock: { p: 'frag', n: 2, s: 'smg' }, commandos: { p: 'frag', n: 2, s: 'smg' },
-    // battle armour sweeps a room with carbines, then follows up with energy charges
-    ecobats: { p: 'smg', s: 'energy', sn: 2, at: AT_ROCKETS }, bats: { p: 'smg', s: 'energy', sn: 2, blast: 'frag', at: AT_ROCKETS },
-    // the Protectors go in close the same way; the hi-mobility ones with three charges
-    protectors: { p: 'smg', s: 'energy', sn: 2, blast: 'frag', at: AT_ROCKETS },
-    protectorshm: { p: 'smg', s: 'energy', sn: 3, blast: 'frag', at: AT_ROCKETS },
+    /* battle armour fires its SMGs, and its shoulder rockets only at a hull within
+       6" (Anti-tank (limited)); the Protectors the same */
+    ecobats: { p: 'smg', at: AT_ROCKETS }, bats: { p: 'smg', at: AT_ROCKETS },
+    protectors: { p: 'smg', at: AT_ROCKETS }, protectorshm: { p: 'smg', at: AT_ROCKETS },
     // the forward observers carry rifles, and fire them like any rifle team
     observers: { p: 'small' }, sharpshooters: { p: 'shell', s: 'pistol' },
     lrrp: { p: 'rail', n: 2 },

@@ -128,7 +128,7 @@ is('rguard', 'small+smg');
 is('rlflak', 'burst');
 is('rmflak', 'burst+burst');
 // every heavy infantry unit, whatever its Tier
-all(['ecobats', 'bats'], 'smg+energy');
+all(['ecobats', 'bats'], 'smg');
 
 is('lcv', 'shell+pistol x2');
 
@@ -182,8 +182,8 @@ is('enforcers', 'smg');
 all(['lighteng', 'engineers'], 'smg');
 // assault troops go in with a carbine and a pair of grenades (p. 64)
 all(['shock', 'commandos'], 'frag+smg x2');
-// the Protectors sweep with carbines and follow up with energy charges
-all(['protectors', 'protectorshm'], 'smg+energy');
+// the Protectors fire their SMGs, rockets only at a hull within 6"
+all(['protectors', 'protectorshm'], 'smg');
 // irregulars scavenge carbines, and the Holy Warriors go in close with them
 is('irregulars', 'smg');
 all(['racolytes', 'rfanatics'], 'smg');
