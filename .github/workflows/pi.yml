@@ -50,6 +50,16 @@ jobs:
         with:
           ref: ${{ env.SHA }}
 
+      # the menu's version as of this deploy (package.json's, and the moment, UTC
+      # YYMMDDHHmm), as the published site stamps its own (pages.yml); only the
+      # stamp, not the whole build, so nothing more is installed on the Pi
+      - name: Stamp the version
+        run: |
+          VER="v$(node -p 'require("./package.json").version').$(date -u +%y%m%d%H%M)"
+          sed -i -E "s|(<p class=\"menu-ver\" id=\"menu-ver\">)v[0-9.]+(</p>)|\1$VER\2|" index.html
+          grep -q "menu-ver\">$VER<" index.html
+          echo "Stamped $VER"
+
       - name: Copy the code into place
         run: |
           rsync -a --delete \
