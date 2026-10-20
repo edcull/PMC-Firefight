@@ -194,7 +194,18 @@ of staying. Measured again with the fix, and with the fitted evaluation (below):
 |---|---|
 | planner, worth and ground (`plan2,ground`), fixed | 52.3% |
 | planner judging by the fitted evaluation (`plan2,eval`, ke 10) | 52.7% |
-| ...ke 25 | **54.1%** |
+| ...ke 25 | 54.1%, 51.3% on fresh seeds (52.7% over 1,280) |
+| ...ke 50 | **56.1%, 52.7% on fresh seeds (54.4% over 1,280)** — kept |
+| ...ke 100 | 54.3% |
+
+The planner judging by the fitted evaluation at ke 50 is now the choosing AI's own
+(`ai.js planned`); `AIEXP=noplan` turns it off, to measure against. The evaluation:
+`evaldata.js` records positions and results from battles between the AI as it is,
+`evalfit.js` fits them (logistic regression, tested on battles it never saw: 73.5% of
+winners called, 80.7% by turns 5-7, against 67.9% for "more worth left wins"), and the
+weights live in `planner.js` (EVAL) and `evalweights.json`. Refit them when the AI or
+the rules change: the AI that plays the battles the evaluation is fitted on is now this
+one.
 
 With the pairs seeded on their own, scenarios without objectives (Meeting
 engagement, Demolish) come out the same battle for battle whatever the ground is worth:

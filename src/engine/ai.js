@@ -830,6 +830,11 @@
       var c = E.state.cfg || {}, x = c.aiExp;
       return !!x && !!x[name] && hardAI(u) && (!c.aiExpSide || c.aiExpSide === u.side);
     }
+    /* The planner (planner.js) judges the choosing AI's moves and shots by the fitted
+       evaluation: how far each option is expected to move its chance of winning.
+       Against the AI without it, 54.4% over 1,280 battles (scripts/balance/README.md).
+       'noplan' turns it off, for the harness to measure against. */
+    function planned(u) { return hardAI(u) && !aiExp(u, 'noplan') && !E.state.compound; }
     function tuneOf(k, d) { var x = E.state.cfg && E.state.cfg.aiExp; return x && x[k] != null && x[k] !== true ? +x[k] : d; }
     /* ---- Covered approaches ----
        Not "stand in cover" but "get there unseen": the table as a grid of 1" cells,
@@ -1311,7 +1316,7 @@
       if (soloI && behaviour === 'neutral' && !pull) { neutralHold(u, shot); return; }
       if (soloI && behaviour === 'defensive' && !pull && !shot.forced && defensiveHold(u)) return;
       // ((experiment) with the planner judging every shot, it weighs this Fire! against moving: below)
-      if (!pull && (behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4 && !(aiExp(u, 'plan2') && !shot.forced)) {
+      if (!pull && (behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4 && !(planned(u) && !shot.forced)) {
         fire(u, shot.t, 'fire'); return;
       }
 
@@ -1339,14 +1344,15 @@
         scored.push({ c: c, s: s });
         if (s > bestScore) { bestScore = s; best = c; }
       });
-      /* (experiment) the planner judges: the best eight spots, and Fire! from here, in
-         what each can expect to do to the enemy less what standing there costs (planner.js) */
-      if ((aiExp(u, 'plan') || aiExp(u, 'plan2')) && !E.state.compound && behaviour !== 'flee' && behaviour !== 'assault' && !R.isFlying(u)) {
+      /* The planner judges: the best eight spots, and Fire! from here, by how far each
+         is expected to move the side's chance of winning (planner.js, the fitted evaluation) */
+      if (planned(u) && behaviour !== 'flee' && behaviour !== 'assault' && !R.isFlying(u)) {
         scored.sort(function (a, b) { return b.s - a.s; });
         var cands = scored.slice(0, 8).map(function (o) { return { c: o.c, base: scoreSpot(u, o.c, goal, behaviour, look, { noShots: true }) }; });
         var hereBase = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look, { noShots: true });
-        var pOpts = { k: tuneOf('k', 2.5), ke: tuneOf('ke', 10), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0 };
-        var pick = aiExp(u, 'eval') ? E.planChooseEval(u, cands, hereBase, pOpts) : E.planChoose(u, cands, hereBase, pOpts);
+        // (ke 50: of 10, 25, 50 and 100 measured, the best; 'worth' tries the earlier worth-currency judge instead)
+        var pOpts = { k: tuneOf('k', 2.5), ke: tuneOf('ke', 50), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0 };
+        var pick = aiExp(u, 'worth') ? E.planChoose(u, cands, hereBase, pOpts) : E.planChooseEval(u, cands, hereBase, pOpts);
         if (pick.kind === 'fire' && pick.t) { logLine('ai', u.label + ' — the planner: Fire! from where it stands.'); fire(u, pick.t, 'fire'); return; }
         best = pick.kind === 'move' ? pick.c : null;
       }

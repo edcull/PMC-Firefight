@@ -200,6 +200,21 @@ Each phase is measured with SPRT against an opponent pool, and kept only if it w
 - **Keep the utility AI.** It becomes the move generator, the rollout policy and the fallback when time runs out. Nothing built so far is wasted.
 - **Explainability.** Log the top candidates and their evaluated values in the battle log (`ai` lines), as the choices are now. That keeps the AI debuggable and lets players see why it acted.
 
+## 5a. Progress (October 2026)
+
+- **Phase 0 (measurement).** Each battle pair is now seeded independently (`versus.js`). `OPP=current` measures a change against the AI as it is, so 50% means no change.
+- **Phase 1 (evaluation).**
+  - Fitted on 1,987 battles: `evaldata.js` records the positions, `evalfit.js` fits them, and `planner.js` holds the weights (EVAL).
+  - Tested on battles it never saw, it calls the winner 73.5% of the time (80.7% by turns 5–7), against 67.9% for "more worth left wins".
+  - Units still in the fight weigh the most, then objectives held and progress to a held win. Stress, broken units and expected losses count against. Firepower in hand counts for little.
+- **Phase 2 (one-ply).** The planner judges the utility AI's best spots, and Fire! from where the unit stands, by how far each is expected to move that chance of winning. That is **54.4%** over 1,280 battles against the AI without it, and it is now the default.
+  - A bug first hid every gain: the planner's copy of a unit was blocked from sight by the unit itself.
+  - Before the evaluation was fitted, judging in hand-chosen currencies (worth, ground) measured only 49–52%.
+- **Next.**
+  - Refit the evaluation on battles played by the new AI.
+  - Extend the planner to the choices it does not yet see: charges, vehicles (`aiDrive`) and buildings.
+  - Then the turn-horizon search (phase 3).
+
 ## 6. Risks
 
 - **Evaluation quality.** If the evaluation misjudges positions, search makes the AI confidently wrong. Phase 1's prediction check is the guard.
