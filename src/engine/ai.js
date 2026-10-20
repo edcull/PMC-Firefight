@@ -850,6 +850,16 @@
        evaluation: how far each option is expected to move its chance of winning.
        Against the AI without it, 54.4% over 1,280 battles (scripts/balance/README.md).
        'noplan' turns it off, for the harness to measure against. */
+    /* The lookahead (below) where the AI plays a person: about 2 points of the win share
+       against the AI without it, at some 25 ms a decision (scripts/balance/README.md).
+       Not where the computer plays itself (a demo, the balance runs, the tests' AI
+       battles), which it would slow several times over: there 'look' turns it on for
+       the choosing side, to measure, and 'nolook' off. Never inside a copy. */
+    function looks(u) {
+      if (E.state.cfg.sim || aiExp(u, 'nolook')) return false;
+      var foe = u.side === 'A' ? 'B' : 'A';
+      return aiExp(u, 'look') || (E.state.cfg.aiSides || []).indexOf(foe) < 0;
+    }
     function planned(u) { return hardAI(u) && !aiExp(u, 'noplan') && !E.state.compound; }
     function tuneOf(k, d) { var x = E.state.cfg && E.state.cfg.aiExp; return x && x[k] != null && x[k] !== true ? +x[k] : d; }
     /* ---- Covered approaches ----
@@ -1392,8 +1402,8 @@
         var pOpts = { k: tuneOf('k', 2.5), ke: tuneOf('ke', 50), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0,
           charge: planCharge && chargeable && !((ap0 = assaultPlan(u)) && !ap0.push) ? ne.unit : null };
         var pick = forced ? forcedPick(forced) : aiExp(u, 'worth') ? E.planChoose(u, cands, hereBase, pOpts) : E.planChooseEval(u, cands, hereBase, pOpts);
-        // (experiment 'look') the best few played out in copies of the battle, with the enemy's reply
-        if (!forced && aiExp(u, 'look') && !E.state.cfg.sim && pick.all) pick = lookahead(u, pick, pOpts.ke);
+        // the best few played out in copies of the battle, with the enemy's reply (looks, below)
+        if (!forced && looks(u) && pick.all) pick = lookahead(u, pick, pOpts.ke);
         if (pick.kind === 'fire' && pick.t) { logLine('ai', u.label + ' — the planner: Fire! from where it stands.'); fire(u, pick.t, 'fire'); return; }
         if (pick.kind === 'charge') { logLine('ai', u.label + ' — the planner: charges ' + pick.t.label + '.'); aiCharge(u, pick.t); return; }
         best = pick.kind === 'move' ? pick.c : null;

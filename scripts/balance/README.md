@@ -256,8 +256,10 @@ The control says the play-out carries the choice: among the same few options, th
 to the goal alone loses 7 points. Looking further (`lr` 4) adds nothing, as the AI's
 own later choices in the copy add their noise. It costs about 25 ms a decision (a
 battle with one side looking ahead some 1.8 s against 0.4 s), nothing to a player, but
-enough to slow the AI-against-AI tests several times over; it stays behind
-`AIEXP=look` for now.
+enough to slow the AI-against-AI tests several times over. So it is on where the AI
+plays a person (`ai.js looks`: the other side not the computer's) and off where the
+computer plays itself — demos, these runs and the tests' AI battles — where
+`AIEXP=look` turns it on for the choosing side and `AIEXP=nolook` off.
 
 With the pairs seeded on their own, scenarios without objectives (Meeting
 engagement, Demolish) come out the same battle for battle whatever the ground is worth:
