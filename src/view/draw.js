@@ -1844,11 +1844,19 @@
           B.ctx.setLineDash([]);
         }
         if (u.fp !== null) {
+          // the reach of its weapon as it stands (dug in, a gun reaches 24", p. 94), half of it, and any Minimum Range
+          var reach = R.shotRange ? R.shotRange(u) : u.range, minR = R.shotMinRange ? R.shotMinRange(u) || 0 : 0;
           B.ctx.setLineDash([4, 5]);
           B.ctx.strokeStyle = 'rgba(232,193,90,.5)'; B.ctx.lineWidth = 1.2;
-          isoRing(eye.x, eye.y, u.range + 2 * UR, eyeLift); B.ctx.stroke();
+          isoRing(eye.x, eye.y, reach + 2 * UR, eyeLift); B.ctx.stroke();
           B.ctx.strokeStyle = 'rgba(232,193,90,.3)';
-          isoRing(eye.x, eye.y, u.range / 2 + 2 * UR, eyeLift); B.ctx.stroke();
+          isoRing(eye.x, eye.y, reach / 2 + 2 * UR, eyeLift); B.ctx.stroke();
+          // nothing closer than its Minimum Range can be shot (a mortar's 12"): a closer dash, as the 6" one
+          if (minR) {
+            B.ctx.setLineDash([2, 4]);
+            B.ctx.strokeStyle = 'rgba(232,193,90,.5)';
+            isoRing(eye.x, eye.y, minR + 2 * UR, eyeLift); B.ctx.stroke();
+          }
           /* Anti-tank (limited): anti-tank only within 6", where at a hull it
              fires its anti-tank weapon (battle armour's rockets, a rider's RPG) */
           if (R.has(u, 'Anti-tank (limited)') && !R.hasExact(u, 'Anti-tank')) {

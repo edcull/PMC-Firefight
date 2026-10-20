@@ -529,23 +529,34 @@
       var tk = toScreen(edge + d, FROM.y);
       g.fillText(d + '"', tk.x, tk.y - I.K * 0.7);
     }
-    /* Anti-tank (limited): anti-tank only within 6", where at a hull it fires its
-       anti-tank weapon — the mark on the line where that begins, as the battle's ring */
+    /* Marks on the line, as the battle's rings: the weapon's reach as it stands
+       (MAX), its Minimum Range if it has one (MIN), and for Anti-tank (limited) the
+       6" inside which it is anti-tank and at a hull fires its anti-tank weapon (AT).
+       None is drawn under the target, where it would only hide it. */
     var sh = shooter();
-    // (closer than that the target stands inside it, and the mark would only be drawn under it)
-    if (sh && view.range > 6 && R.has(sh, 'Anti-tank (limited)') && !R.hasExact(sh, 'Anti-tank')) {
-      var at6 = toScreen(edge + 6, FROM.y);
-      g.strokeStyle = 'rgba(228,105,63,.8)'; g.lineWidth = 1.4;
-      g.beginPath(); g.moveTo(at6.x, at6.y - I.K * 1.1); g.lineTo(at6.x, at6.y + I.K * 0.1); g.stroke();
+    function lineMark(d, label, rgb) {
+      if (Math.abs(d - view.range) < 1.5) return;
+      var q = toScreen(edge + d, FROM.y);
+      g.strokeStyle = 'rgba(' + rgb + ',.8)'; g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(q.x, q.y - I.K * 1.1); g.lineTo(q.x, q.y + I.K * 0.1); g.stroke();
       g.font = '600 9px "IBM Plex Mono", monospace';
-      g.fillStyle = 'rgba(228,105,63,.9)';
-      g.fillText('6" AT', at6.x, at6.y - I.K * 1.25);
+      g.fillStyle = 'rgba(' + rgb + ',.9)';
+      g.fillText(d + '" ' + label, q.x, q.y - I.K * 1.25);
+    }
+    if (sh && sh.fp != null) {
+      var reach = R.shotRange(sh), minR = R.shotMinRange(sh) || 0;
+      // (beyond the target it is off the stage: the range below says it instead)
+      if (reach < view.range) lineMark(reach, 'MAX', '232,193,90');
+      if (minR) lineMark(minR, 'MIN', '232,193,90');
+      // (closer than 6" the target stands inside it)
+      if (view.range > 6 && R.has(sh, 'Anti-tank (limited)') && !R.hasExact(sh, 'Anti-tank')) lineMark(6, 'AT', '228,105,63');
     }
     // ...and the range itself, under the middle of the gap (at the target's edge the figures would hide it)
     var re = toScreen(edge + view.range / 2, FROM.y);
     g.font = '600 10px "IBM Plex Mono", monospace';
     g.fillStyle = 'rgba(170,190,215,.75)';
-    g.fillText('\u2190 ' + view.range + '" \u2192', re.x, re.y + I.K * 0.15);
+    var maxR = sh && sh.fp != null ? R.shotRange(sh) : 0;
+    g.fillText('\u2190 ' + view.range + '" \u2192' + (maxR > view.range ? '  max ' + maxR + '"' : maxR && maxR === view.range ? '  (max)' : ''), re.x, re.y + I.K * 0.15);
   }
 
   function tick(t) {
