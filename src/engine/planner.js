@@ -264,11 +264,6 @@
           // (a move must be worth its trouble: the same margin the utility AI asks)
           if (s > best.score + 0.3) best = { kind: 'move', c: cd.c, score: s };
         });
-        // a charge the AI could make (opts.charge, an enemy in reach), weighed the same way
-        if (opts && opts.charge) {
-          var sc = here + ke * chargeDelta(u, opts.charge);
-          if (sc > best.score + 0.3) best = { kind: 'charge', t: opts.charge, score: sc };
-        }
         return best;
       } finally { memo = null; }
     }
