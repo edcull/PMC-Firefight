@@ -144,7 +144,117 @@ System counts only guns within 12".
 
 Against the table it loses fewer units (about 1.3 a battle to 1.7) and fires more
 from where it stands; it is not in cover more often (it keeps out of sight instead).
-Crossing open ground together, with fire support, is the next step.
+### Against the AI as it is (OPP=current)
+
+The table has stopped telling changes apart: what a player would punish, it does
+not. `OPP=current` measures a change against the choosing AI as it stands, both
+sides choosing and only one with the experiment, so 50% is no change. October 2026,
+640 battles each (seeds 11 to 88):
+
+| Change | Share |
+|---|---|
+| none (the harness's own check) | 50.0% |
+| the only holder keeps its objective | 50.5% |
+| keeps within 6" of a friend, not clear of every friend within 4" | 50.1% |
+| waits at the edge of cover, then crosses together | 49.4% |
+| ...with covering fire from the units not crossing | 46.4% |
+
+Nothing kept: the first three are no change, and the covering fire costs (a unit
+that stops to shoot is not taking ground). The experiments are measured with
+`AIEXP=name OPP=current node scripts/balance/versus.js 40 <seed>` (vrun-style over
+eight seeds); the switch (`cfg.aiExp`, `ai.js aiExp`) stays for the next one.
+
+### The planner and the commander (harness-only, not on in any game)
+
+`src/engine/planner.js` (see `docs/ai-research.md`): options weighed in one
+currency, a unit's worth (Tier value doubling each Tier, times what is left of it and
+how far Suppression has it from breaking) — the worth a shot can take off its target
+less the worth it risks standing there through the enemy's turn, from the rules' own
+expected shot. The commander assigns units to the objectives the scenario needs, in
+strength. Against the AI as it is (OPP=current, seeds seeded per pair), 640 each:
+
+| Change | Share |
+|---|---|
+| planner over the eight best spots and Fire! (`plan`, k 2.5) | 51.0% |
+| ...k 1 / k 5 | 49.6% / 49.9% |
+| planner also weighing every defensive and neutral shot (`plan2`) | 50.5% |
+| commander (`cmd`) | 49.9% |
+| both (`plan2,cmd`) | 49.2% |
+| a yardstick: never moves, fires from where it stands (`static`, 320) | 19.2% (Secure 0%, Find 8%) |
+| planner with the ground priced too (`plan2,ground`, objective worth 4) | 51.1% (Secure 49%, against 44% without) |
+| ...objective worth 10 | 50.9% |
+| ...worth 4, and the commander | 49.6% |
+
+**Those planner runs were skewed by a bug** (fixed October 2026): the planner judged a
+spot from a copy of the unit, and the unit itself, still standing where it was, blocked
+its copy's sight — Fire! from where it stood read as worth nothing, and so did the risk
+of staying. Measured again with the fix, and with the fitted evaluation (below):
+
+| Change | Share |
+|---|---|
+| planner, worth and ground (`plan2,ground`), fixed | 52.3% |
+| planner judging by the fitted evaluation (`plan2,eval`, ke 10) | 52.7% |
+| ...ke 25 | 54.1%, 51.3% on fresh seeds (52.7% over 1,280) |
+| ...ke 50 | **56.1%, 52.7% on fresh seeds (54.4% over 1,280)** — kept |
+| ...ke 100 | 54.3% |
+
+The planner judging by the fitted evaluation at ke 50 is now the choosing AI's own
+(`ai.js planned`); `AIEXP=noplan` turns it off, to measure against. The evaluation:
+`evaldata.js` records positions and results from battles between the AI as it is,
+`evalfit.js` fits them (logistic regression, tested on battles it never saw: 73.5% of
+winners called, 80.7% by turns 5-7, against 67.9% for "more worth left wins"), and the
+weights live in `planner.js` (EVAL) and `evalweights.json`. Refit them when the AI or
+the rules change: the AI that plays the battles the evaluation is fitted on is now this
+one.
+
+With the pairs seeded on their own, scenarios without objectives (Meeting
+engagement, Demolish) come out the same battle for battle whatever the ground is worth:
+only Secure and control, Find and secure, Invasion and Takeover can move, and of those
+only Secure did, by some 5 points on 107 battles (within its noise).
+
+The planner does choose differently (in some 4 of 10 decisions it is given, mostly
+holding where the utility AI would move) and changes nothing; the yardstick shows how
+much the AI's movement is already worth (some 30 points, nearly all objectives). The
+planner prices only fire and risk; what decides these battles is the ground, which its
+currency does not hold yet.
+
+### Bounding (dropped)
+
+Crossing open ground together, with fire support: a unit in safe ground (risk 0.5
+or less) whose move would end on watched ground (1.5 or more) waits at the edge of
+cover, firing if it has a shot or closing up within the safe ground; the turn after
+any unit of its side has waited, every unit at the edge crosses, and none waits
+more than a turn. Measured on the seeds the covered approaches were (baseline
+re-run 59.0%):
+
+| Change | Share |
+|---|---|
+| wait at the edge, then cross together | 56.5% (640) |
+| ...and, the side crossing, units not crossing give it covering fire (Fire! at a shot rather than move) | 55.0% (640) |
+| ...watched ground from 1.0 rather than 1.5 | 54.1% (640) |
+
+It waits in about 3-4% of activations, and the turn spent costs more than the
+crossing saves: the table does not pile its fire onto the one unit out in the open,
+which is what crossing together guards against, and the objectives are lost the
+while. Whether a player punishes the lone runner enough to change that is for the
+tracked campaigns to show.
+
+### Keeping an objective (dropped)
+
+An offensive unit standing on an objective walks off to another (its own counts
+8" worse for being held), and offensive is the choice two times in three. Kept
+there instead when no friend else holds it:
+
+| Change | Share |
+|---|---|
+| the only holder stays, every scenario | 57.2% (640; baseline 59.0%) |
+| ...only where holding over time wins (Secure and control, Find and secure) | 58.6% (640) |
+| ...measured on Secure and control alone | 59.1% against 59.8% (640 each) |
+
+No gain: the hold is broken by fire far more than by walking off. (The share by
+scenario in a mixed run is noisy, about ±5 at 107 battles a scenario, and one change
+anywhere shifts every later battle's dice: a scenario that looks better or worse
+there wants a run of its own, `SCEN=secure`.)
 
 ## A player's battles against the AI
 

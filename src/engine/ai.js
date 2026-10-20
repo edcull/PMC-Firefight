@@ -823,6 +823,19 @@
     }
     function rolledAI(u) { var r = E.state.cfg && E.state.cfg.aiRolled; return !!r && !!r[u.side]; }
     function hardAI(u) { return tableAI(u) && !soloOpFor(u) && !rolledAI(u); }
+    /* An experiment the balance harness switches on (cfg.aiExp, scripts/balance/versus.js),
+       to measure before it is kept: for the choosing AI, and only for the side
+       cfg.aiExpSide names where it names one (against the AI as it is). No game sets it. */
+    function aiExp(u, name) {
+      var c = E.state.cfg || {}, x = c.aiExp;
+      return !!x && !!x[name] && hardAI(u) && (!c.aiExpSide || c.aiExpSide === u.side);
+    }
+    /* The planner (planner.js) judges the choosing AI's moves and shots by the fitted
+       evaluation: how far each option is expected to move its chance of winning.
+       Against the AI without it, 54.4% over 1,280 battles (scripts/balance/README.md).
+       'noplan' turns it off, for the harness to measure against. */
+    function planned(u) { return hardAI(u) && !aiExp(u, 'noplan') && !E.state.compound; }
+    function tuneOf(k, d) { var x = E.state.cfg && E.state.cfg.aiExp; return x && x[k] != null && x[k] !== true ? +x[k] : d; }
     /* ---- Covered approaches ----
        Not "stand in cover" but "get there unseen": the table as a grid of 1" cells,
        each with how many enemy guns can see it and reach it (its exposure) and the
@@ -1233,6 +1246,8 @@
          closest enemy unit. If there are no valid targets, it makes a Move towards
          the closest enemy" — a Move, so it does not shoot as well. */
       var killAll = soloI && behaviour === 'assault';
+      // (experiment, a yardstick) never moves or charges: fires from where it stands, or holds
+      if (aiExp(u, 'static')) { if (shot.t && shot.score > 0) { fire(u, shot.t, 'fire'); return; } u.activated = true; endActivation(u); return; }
 
       /* A garrison (p. 41) shoots from where it is, charges only an enemy in the
          next section, and comes out when it wants to press on and has nothing to
@@ -1300,7 +1315,8 @@
       var pull = (behaviour === 'defensive' || behaviour === 'neutral') && !shot.forced ? objectivePull(u) : null;
       if (soloI && behaviour === 'neutral' && !pull) { neutralHold(u, shot); return; }
       if (soloI && behaviour === 'defensive' && !pull && !shot.forced && defensiveHold(u)) return;
-      if (!pull && (behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4) {
+      // ((experiment) with the planner judging every shot, it weighs this Fire! against moving: below)
+      if (!pull && (behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4 && !(planned(u) && !shot.forced)) {
         fire(u, shot.t, 'fire'); return;
       }
 
@@ -1320,13 +1336,26 @@
       var allowance = behaviour === 'flee' || killAll || noAdv ? u.move + moveBonus(u, 'move') : u.move;
       var look = R.groundLookup(E.state);             // the ground under every spot, read off the shared grid
       var here = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look);
-      var best = null, bestScore = here + 0.6;
+      var best = null, bestScore = here + 0.6, scored = [];
       R.reachable(E.state, u, allowance).forEach(function (c) {
         if (thinned(c)) return;
         if (!canStand(u, c)) return;
         var s = scoreSpot(u, c, goal, behaviour, look);
+        scored.push({ c: c, s: s });
         if (s > bestScore) { bestScore = s; best = c; }
       });
+      /* The planner judges: the best eight spots, and Fire! from here, by how far each
+         is expected to move the side's chance of winning (planner.js, the fitted evaluation) */
+      if (planned(u) && behaviour !== 'flee' && behaviour !== 'assault' && !R.isFlying(u)) {
+        scored.sort(function (a, b) { return b.s - a.s; });
+        var cands = scored.slice(0, 8).map(function (o) { return { c: o.c, base: scoreSpot(u, o.c, goal, behaviour, look, { noShots: true }) }; });
+        var hereBase = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look, { noShots: true });
+        // (ke 50: of 10, 25, 50 and 100 measured, the best; 'worth' tries the earlier worth-currency judge instead)
+        var pOpts = { k: tuneOf('k', 2.5), ke: tuneOf('ke', 50), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0 };
+        var pick = aiExp(u, 'worth') ? E.planChoose(u, cands, hereBase, pOpts) : E.planChooseEval(u, cands, hereBase, pOpts);
+        if (pick.kind === 'fire' && pick.t) { logLine('ai', u.label + ' — the planner: Fire! from where it stands.'); fire(u, pick.t, 'fire'); return; }
+        best = pick.kind === 'move' ? pick.c : null;
+      }
       if (best) {
         // Covering Fire! (p. 158): a friend fires first on the enemy waiting where the move ends
         if (E.state.compound && behaviour !== 'flee') coverMove(u, best);
@@ -1603,6 +1632,11 @@
         if (t) return { x: t.unit.x, y: t.unit.y };
       }
       var goals = goalPoints(u);
+      // (experiment) the commander's assignment, where it gives one (planner.js)
+      if (aiExp(u, 'cmd') && E.state.objectives.length && goals === E.state.objectives) {
+        var given = E.planGoal(u, goals);
+        if (given) return given;
+      }
       var standing = goals.filter(function (o) { return objDist(u, o) <= objReach(o); })[0];
       if (standing && behaviour !== 'offensive') return standing;
       var best = null, bd = Infinity;
@@ -1624,7 +1658,8 @@
        line falls on the half-inch. */
     function thinned(c) { return !E.state.compound && ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)); }
 
-    function scoreSpot(u, c, goal, behaviour, look) {
+    // (opts.noShots: without its own count of shots and sightlines, which the planner weighs itself)
+    function scoreSpot(u, c, goal, behaviour, look, opts) {
       /* Run for Your Lives! (p. 147): "moving as far as possible away from any
          player-controlled units" — the distance from the nearest enemy is all that
          counts; cover and the goal do not come into it (SOL-12). */
@@ -1684,6 +1719,7 @@
         });
         s += led * 1.5 - exposure * 1.2;
       }
+      if (opts && opts.noShots) return s;
       if (behaviour === 'defensive') s += opportunity * 1.2 - exposure * 0.9;
       else s += opportunity * 1.6 - exposure * 0.3;
       return s;

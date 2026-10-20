@@ -45,6 +45,9 @@ async function pastFronts(p) {
   for (let i = 0; i < 600; i++) {
     const at = await p.evaluate(() => {
       const b = document.querySelector('#camp-body .camp-dock [data-go="afterhub"]');
+      // (the other forces' battles still being fought: the dossier shows them under way, no dock yet)
+      const c = window.PMC_CAMPAIGN && window.PMC_CAMPAIGN.get && window.PMC_CAMPAIGN.get();
+      if (!b && c && c.fronts && !c.post) return 'fighting';
       if (!b) return 'none';
       if (b.disabled) return 'fighting';
       return document.querySelectorAll('#camp-body .cpan.front').length ? 'reported' : 'none';
