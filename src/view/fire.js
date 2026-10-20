@@ -73,30 +73,55 @@
     var FLAME_JET = 620, FLAME_GAP = 165;
     function flameJets(from, to, n, onLand, outcome) {
       var dx = to.x - from.x, dy = to.y - from.y;
-      var plan = outcome ? roundPlan(n, outcome) : null, kills = 0;
+      var plan = outcome ? roundPlan(n, outcome) : null;
       var len = Math.max(0.001, Math.sqrt(dx * dx + dy * dy));
       var px = -dy / len, py = dx / len;               // across the line of fire
       var span = (n - 1) * FLAME_GAP + FLAME_JET;      // how long the roar has to hold
+      /* The jets sweep the target from one side to the other, not dotted about it:
+         the j-th is that far across, and each does its part in the attack where the
+         sweep has got to — a jet that kills washes over the man nearest it, one that
+         pins them licks at their feet, one their armour turns plays over whoever is
+         there, and one that does nothing falls short (fire does not go over them). */
+      var ux = dx / len, uy = dy / len;
+      var across = function (f) { return (f.x - to.x) * px + (f.y - to.y) * py; };
+      var all = outcome ? outcome.all || outcome.figs || [] : [];
+      var wide = Math.max(0.6, all.reduce(function (w, f) { return Math.max(w, Math.abs(across(f))); }, 0) + 0.25);
+      var at = function (j) { return n > 1 ? -wide + 2 * wide * j / (n - 1) : 0; };
+      var roles = null, killOf = [];
+      if (plan) {
+        // each killing jet where the sweep crosses the man it kills, the rest in the order dealt
+        var figs = outcome.figs || [], free = [], k, j0;
+        for (j0 = 0; j0 < n; j0++) free.push(j0);
+        roles = new Array(n);
+        var kN = plan.filter(function (r) { return r === 'kill'; }).length;
+        for (k = 0; k < kN; k++) {
+          var f = figs.length ? figs[k % figs.length] : to, best = 0;
+          free.forEach(function (s, i) { if (Math.abs(at(s) - across(f)) < Math.abs(at(free[best]) - across(f))) best = i; });
+          var slot = free.splice(best, 1)[0];
+          roles[slot] = 'kill'; killOf[slot] = k;
+        }
+        plan.filter(function (r) { return r !== 'kill'; }).forEach(function (r, i) { roles[free[i]] = r; });
+      }
       for (var i = 0; i < n; i++) {
         (function (j) {
           setTimeout(function () {
             if (!alive()) return;
-            // barely off the mark: the jets converge rather than sweeping a line
-            var off = (j - (n - 1) / 2) * 0.45;
-            var aim = { x: to.x + px * off, y: to.y + py * off, up: to.up };
-            /* by its part in the attack: a jet that kills washes over the men who fall,
-               one that pins them licks at their feet, and one that does nothing falls short
-               (fire does not go over their heads) */
-            if (plan) {
-              var role = plan[j], ux = dx / len, uy = dy / len;
+            var off = at(j), aim = { x: to.x + px * off, y: to.y + py * off, up: to.up };
+            if (roles) {
+              var role = roles[j];
+              // whoever stands nearest the sweep
+              var nearest = function (fs) {
+                return fs.reduce(function (b, f) { return !b || Math.abs(across(f) - off) < Math.abs(across(b) - off) ? f : b; }, null) || aim;
+              };
               if (role === 'kill') {
-                var figs = outcome.figs || [], kk = kills++, fg = figs.length ? figs[kk % figs.length] : to; aim = { x: fg.x, y: fg.y, up: to.up };
+                var kk = killOf[j], kf = outcome.figs || [], fg = kf.length ? kf[kk % kf.length] : to;
+                aim = { x: fg.x, y: fg.y, up: to.up };
                 // the man it washes over drops as it reaches him
                 if (outcome.onKill) setTimeout(function () { if (alive()) outcome.onKill(kk); }, FLAME_JET * 0.6);
               }
-              else if (role === 'glance') { var all = outcome.all || outcome.figs || [], gm = all.length ? all[j % all.length] : to; aim = { x: gm.x, y: gm.y, up: to.up }; }
-              else if (role === 'supp') { var sh = 0.4 + Math.random() * 0.7; aim = { x: aim.x - ux * sh, y: aim.y - uy * sh, up: to.up }; }
-              else { var fs = 0.9 + Math.random() * 0.7; aim = { x: aim.x - ux * fs, y: aim.y - uy * fs, up: to.up }; }
+              else if (role === 'glance') { var gm = nearest(all); aim = { x: gm.x, y: gm.y, up: to.up }; }
+              else if (role === 'supp') aim = { x: aim.x - ux * 0.6, y: aim.y - uy * 0.6, up: to.up };
+              else aim = { x: aim.x - ux * 1.2, y: aim.y - uy * 1.2, up: to.up };
             }
             if (SFX) { if (j === 0) SFX.flame(0, span / 1000); else SFX.flamepuff(); }
             add({ kind: 'flame', from: from, to: aim, dur: FLAME_JET, blocking: true });
