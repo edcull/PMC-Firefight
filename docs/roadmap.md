@@ -1,6 +1,8 @@
 # Roadmap: v0.2 and v0.3
 
-`package.json` is already at 0.2.0. This plan names what v0.2 is (the game as
+*v0.3 is done (`package.json` 0.3.0), and so are v0.4 and v0.5: see Progress below.*
+
+`package.json` was at 0.2.0 when this was written. This plan names what v0.2 is (the game as
 it stands), what v0.3 adds (the rulebook's remaining parts, most of them as
 options a player switches on) and what v0.4 adds (Close Encounters).
 

@@ -129,8 +129,8 @@ file it came from. `viewer.html` works the same way.
 - `npm run build` stamps each script tag with a fingerprint of the file, then
   inlines everything into `build/firefight.html` and `build/viewer.html`, draws
   `build/units.html`, and builds the site in `build/site/`.
-- The version is `package.json`'s (`0.2.0`). The main menu shows it with the
-  moment of the build, as `v0.2.0.YYMMDDHHmm`; `npm run build` restamps it when
+- The version is `package.json`'s (`0.3.0`). The main menu shows it with the
+  moment of the build, as `v0.3.0.YYMMDDHHmm`; `npm run build` restamps it when
   a script changes or the version does.
 - The published site (GitHub Pages, `.github/workflows/pages.yml`, on every push
   to main) is `index.html` with every script folded, in order, into one minified
