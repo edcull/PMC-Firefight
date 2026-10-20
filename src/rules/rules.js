@@ -1228,10 +1228,16 @@
   /* The full descriptor for a unit's gun. Campaign upgrades and Battle Honours
      can change what a unit carries, so anything the unit has picked up is
      honoured over the table. */
-  function weaponSpec(u) {
+  /* `target`, where the shot has one: a unit with Anti-tank (limited) firing at a
+     vehicle or aircraft within 6" (the reach that makes it anti-tank) fires what
+     its entry's `at` says instead: battle armour's rockets, a rider's RPG. */
+  function weaponSpec(u, target) {
     if (!u) return { p: 'small', n: 1, sn: 1 };
     if (u.fp === null || u.fp === undefined || hasOwn(u, 'Unarmed')) return { p: 'none', n: 1, sn: 1 };
     var w = WEAPONS[u.key] || guessWeapon(u);
+    if (w.at && target && isMachine(target) && !hasExact(u, 'Anti-tank') && antiTank(u, unitDist(u, target))) {
+      return { p: w.at.p, s: null, n: w.at.n || 1, sn: 1, blast: w.at.blast || null, at: true };
+    }
     // dug in, a field piece fires over open sights: big shells straight at the target (p. 94)
     if (DUG_WEAPONS[u.key] && dugIn(u)) w = DUG_WEAPONS[u.key];
     // `n` is how many the primary puts out at once; `sn` the same for the secondary

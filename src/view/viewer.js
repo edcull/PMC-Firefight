@@ -1184,13 +1184,15 @@
     if (w.glow) out.glow = w.glow;
     if (w.orb) out.orb = w.orb;
     if (w.blast) out.blast = w.blast;
+    // what Anti-tank (limited) fires at a hull within 6": kept as it is (no control for it here)
+    if (w.at) out.at = w.at;
     return out;
   }
   function same(a, b) { return JSON.stringify(tidy(entry0(a))) === JSON.stringify(tidy(entry0(b))); }
   function entry0(w) {
     w = w || {};
     return { p: w.p || 'small', n: w.n || 1, s: w.s || null, sn: w.sn || 1, t: w.t || null, tn: w.tn || 1, splash: !!w.splash,
-      launch: w.launch || null, glow: w.glow || null, orb: w.orb || null, blast: w.blast || null };
+      launch: w.launch || null, glow: w.glow || null, orb: w.orb || null, blast: w.blast || null, at: w.at || null };
   }
   function changedKeys() { return Object.keys(STORE.changed()).sort(); }
   function edited() { FX.clear(); drawControls(); frame(); }
