@@ -1328,13 +1328,24 @@
       var allowance = behaviour === 'flee' || killAll || noAdv ? u.move + moveBonus(u, 'move') : u.move;
       var look = R.groundLookup(E.state);             // the ground under every spot, read off the shared grid
       var here = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look);
-      var best = null, bestScore = here + 0.6;
+      var best = null, bestScore = here + 0.6, scored = [];
       R.reachable(E.state, u, allowance).forEach(function (c) {
         if (thinned(c)) return;
         if (!canStand(u, c)) return;
         var s = scoreSpot(u, c, goal, behaviour, look);
+        scored.push({ c: c, s: s });
         if (s > bestScore) { bestScore = s; best = c; }
       });
+      /* (experiment) the planner judges: the best eight spots, and Fire! from here, in
+         what each can expect to do to the enemy less what standing there costs (planner.js) */
+      if (aiExp(u, 'plan') && !E.state.compound && behaviour !== 'flee' && behaviour !== 'assault' && !R.isFlying(u)) {
+        scored.sort(function (a, b) { return b.s - a.s; });
+        var cands = scored.slice(0, 8).map(function (o) { return { c: o.c, base: scoreSpot(u, o.c, goal, behaviour, look, { noShots: true }) }; });
+        var pick = E.planChoose(u, cands, scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look, { noShots: true }),
+          { k: tuneOf('k', 2.5), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance') });
+        if (pick.kind === 'fire' && pick.t) { logLine('ai', u.label + ' — the planner: Fire! from where it stands.'); fire(u, pick.t, 'fire'); return; }
+        best = pick.kind === 'move' ? pick.c : null;
+      }
       if (best) {
         // Covering Fire! (p. 158): a friend fires first on the enemy waiting where the move ends
         if (E.state.compound && behaviour !== 'flee') coverMove(u, best);
@@ -1632,7 +1643,8 @@
        line falls on the half-inch. */
     function thinned(c) { return !E.state.compound && ((Math.round(c.x * 2) % 2) || (Math.round(c.y * 2) % 2)); }
 
-    function scoreSpot(u, c, goal, behaviour, look) {
+    // (opts.noShots: without its own count of shots and sightlines, which the planner weighs itself)
+    function scoreSpot(u, c, goal, behaviour, look, opts) {
       /* Run for Your Lives! (p. 147): "moving as far as possible away from any
          player-controlled units" — the distance from the nearest enemy is all that
          counts; cover and the goal do not come into it (SOL-12). */
@@ -1692,6 +1704,7 @@
         });
         s += led * 1.5 - exposure * 1.2;
       }
+      if (opts && opts.noShots) return s;
       if (behaviour === 'defensive') s += opportunity * 1.2 - exposure * 0.9;
       else s += opportunity * 1.6 - exposure * 0.3;
       return s;

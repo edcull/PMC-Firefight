@@ -44,7 +44,12 @@ function play(cfg, s0) {
 }
 let chose = 0, rolled = 0, draw = 0, errs = 0;
 const byScen = {}, byFac = {};
+const BASE = seed;
 for (let i = 0; i < N; i++) {
+  /* each pair from its own seed (the run's and its index): what one battle does with
+     the dice cannot change the armies, scenario or dice of any other, so two runs
+     differing only in an experiment fight the same battles, pair for pair */
+  seed = (BASE * 7919 + (i + 1) * 104729) % 2147483647 || 1;
   const tier = 1 + Math.floor(Math.random() * 3), fa = pick(FACS), fb = pick(FACS);
   const armyA = R.rollArmy(tier, 1, null, fa), armyB = R.rollArmy(tier, 1, null, fb);
   const sc = process.env.SCEN || pick(SC), planet = pick(PL), s0 = Math.floor(Math.random() * 2e9) + 1;

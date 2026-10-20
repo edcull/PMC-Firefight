@@ -1658,6 +1658,7 @@
     ['PMCEngineTerrainSetup', './terrainsetup.js'],
     ['PMCEngineDeploy', './deploy.js'],
     ['PMCEngineAI', './ai.js'],
+    ['PMCEnginePlanner', './planner.js'],
     ['PMCEngineArrivals', './arrivals.js'],
     ['PMCEngineSolo', './solo.js'],
     ['PMCEngineEndPhase', './endphase.js'],
