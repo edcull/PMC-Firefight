@@ -86,7 +86,8 @@ The noise is about ±3 points over 320 battles and ±2 over 640: judge an AI cha
 over 640 (two runs of four seeds, e.g. 11 22 33 44 and 55 66 77 88) against the last
 640, and keep it only if the choosing side's share goes up by more than that.
 
-October 2026, 640 battles: **57.5%** (chosen behaviour, fire on the hurt). By faction
+October 2026, 1280 battles: **59.5%** with covered approaches (below), against 57.65%
+before them on the same seeds. Before that, 640 battles: 57.5% (chosen behaviour, fire on the hurt). By faction
 the gain is nearly all bugs (~67%) and xeno (~62%); PMC and rebels are about even.
 Tried and dropped, each within the noise or worse:
 
@@ -120,6 +121,30 @@ its nearest friend (9.9" to 5.6"). Made to do the same, the AI does it, and lose
 more to the table: cover within reach costs an Advance (no stationary shot) and
 the pull away from the objectives costs ground. The table is not a player, though:
 whether it pays against one is for the next tracked campaigns to say.
+
+### Covered approaches (kept)
+
+Not "stand in cover" but "get there unseen" (`engine/ai.js`, the choosing AI only):
+the table as a grid of 1" cells, each with the enemy guns that can see and reach it
+and the cover standing there gives. For a unit and its goal, the cost of the way
+there from every cell (Dijkstra out from the goal), each step dearer by the guns
+watching it (`RISK_W`); its move weighs that way, and what it costs to end the move
+where it stands (`HERE_W`). Deploying and walking on from its edge, it looks over 24
+legal spots and takes the one whose way forward is least watched, near its friends.
+A unit minds exposure as its rules say: cover is nothing to Battle Armour or a hull
+that does not walk, Stealth and armour make a gun less of a worry, and a Cloaking
+System counts only guns within 12".
+
+| Price per watching gun (`RISK_W`) | Share |
+|---|---|
+| 0.25 | 59.0%, 60.0% (two runs of 640; baseline 57.4%, 57.9%) — kept |
+| 0.5 | 58.2% (640) |
+| 1 | 55.4% (640) |
+| 0.5, ending the move watched priced 2 not 0.8 | 57.8% (640) |
+
+Against the table it loses fewer units (about 1.3 a battle to 1.7) and fires more
+from where it stands; it is not in cover more often (it keeps out of sight instead).
+Crossing open ground together, with fire support, is the next step.
 
 ## A player's battles against the AI
 
