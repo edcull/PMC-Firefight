@@ -49,8 +49,14 @@
       return Math.max(0, before - after);
     }
 
-    // a unit as it would stand at c: for the rules' sight, reach and cover to read
-    function ghostAt(u, c) { return Object.assign({}, u, { x: c.x, y: c.y, bld: null }); }
+    /* A unit as it would stand at c, for the rules' sight, reach and cover to read: the
+       unit itself where it stands; elsewhere a copy that the rules' line of sight knows
+       for it (`of`), so the unit, still standing where it is, does not hide its own
+       copy (space.js hasLoS). */
+    function ghostAt(u, c) {
+      if (c.x === u.x && c.y === u.y) return u;
+      return Object.assign({}, u, { x: c.x, y: c.y, bld: null, of: u });
+    }
 
     /* Planning one activation: the expected values are kept for its length, keyed by
        what changes them — who shoots whom, from half range or not, the cover at the
@@ -69,7 +75,7 @@
         if (!t.alive || t.side === u.side || t.x < 0 || t.aboard || t.fp === undefined) return;
         if (!R.canShoot(E.state, g, t, mode, {})) return;
         var half = R.unitDist(g, t) <= (u.range || 0) / 2 ? 1 : 0;
-        var v = cached('s|' + mode + '|' + t.id + '|' + half + '|' + (R.levelOf(E.state, g) > 0 ? 1 : 0), function () { return shotValue(g, t, mode); });
+        var v = cached('s|' + u.id + '|' + mode + '|' + t.id + '|' + half + '|' + (R.levelOf(E.state, g) > 0 ? 1 : 0), function () { return shotValue(g, t, mode); });
         if (v > best.v) best = { t: t, v: v };
       });
       return best;
@@ -87,9 +93,9 @@
         if (R.inches(e.x, e.y, c.x, c.y) > (e.range || 0) + 3) return;
         if (!R.canShoot(E.state, e, g, 'fire', {})) return;
         var half = R.unitDist(e, g) <= (e.range || 0) / 2 ? 1 : 0;
-        var v = cached('t|' + e.id + '|' + cover + '|' + half, function () { return shotValue(e, g, 'fire'); });
+        var v = cached('t|' + u.id + '|' + e.id + '|' + cover + '|' + half, function () { return shotValue(e, g, 'fire'); });
         // how many of ours it has to choose from (this one at c, and the rest where they stand)
-        var choices = cached('n|' + e.id, function () {
+        var choices = cached('n|' + u.id + '|' + e.id, function () {
           return mine.filter(function (f) { return f !== u && R.canShoot(E.state, e, f, 'fire', {}); }).length;
         }) + 1;
         total += v / choices;
@@ -215,7 +221,60 @@
       return i == null ? null : objs[i];
     }
 
-    return { planChoose: choose, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom, planGoal: goalFor };
+    /* ---- What a position looks like, for the evaluation ----
+       A side's standing as numbers, each its own less the enemy's: what it has left
+       (worth, on the table or still to come, and as a share of what it began with;
+       units left as a share, which a rout reads), how close to breaking (broken units,
+       Stress against Morale), the ground (objectives held, progress to a win by
+       holding), and the fire each can bring now and the losses each can expect.
+       scripts/balance/evaldata.js records them through battles, and evalfit.js fits
+       how they predict the winner. */
+    var FEATURES = ['worth', 'worthShare', 'unitsShare', 'broken', 'stress', 'held', 'clock', 'fire', 'risk'];
+    function sideNumbers(side) {
+      var out = { worth: 0, start: 0, units: 0, units0: 0, broken: 0, stress: 0, n: 0, held: 0, clock: 0, fire: 0, risk: 0 };
+      E.state.units.forEach(function (u) {
+        if (u.side !== side || !R.countsForVictory(u)) return;
+        out.units0++; out.start += tierValue(u);
+        if (!u.alive || u.fled) return;
+        out.units++;
+        out.worth += worthNow(u);
+        if (u.x < 0 || u.aboard) return;
+        if (!R.isMachine(u)) {
+          if (R.status(u) === 'broken') out.broken++;
+          out.stress += Math.min(3, (u.sp || 0) / (R.currentMorale(u) || 1)); out.n++;
+        }
+        if (u.fp != null && R.status(u) !== 'broken') out.fire += bestShotFrom(u, { x: u.x, y: u.y }, 'fire').v;
+        out.risk += threatAt(u, { x: u.x, y: u.y });
+      });
+      (E.state.objectives || []).forEach(function (o, i) {
+        var h = SC.holderOf(E.state, o.x, o.y, 4, SC.areaOf(o));
+        if (h === side) out.held++;
+        var c = SC.holdClock ? SC.holdClock(E.state, i) : null;
+        if (c && c.side === side) out.clock = Math.max(out.clock, c.n / (c.need || 1));
+      });
+      return out;
+    }
+    function features(side) {
+      memo = {};
+      try {
+        var a = sideNumbers(side), b = sideNumbers(side === 'A' ? 'B' : 'A');
+        var share = function (x, y) { return y ? x / y : 0; };
+        return {
+          worth: a.worth - b.worth,
+          worthShare: share(a.worth, a.start) - share(b.worth, b.start),
+          unitsShare: share(a.units, a.units0) - share(b.units, b.units0),
+          broken: a.broken - b.broken,
+          stress: share(a.stress, a.n) - share(b.stress, b.n),
+          held: a.held - b.held,
+          clock: a.clock - b.clock,
+          fire: a.fire - b.fire,
+          risk: a.risk - b.risk
+        };
+      } finally { memo = null; }
+    }
+
+    return { planChoose: choose, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom, planGoal: goalFor,
+      planFeatures: features, PLAN_FEATURES: FEATURES };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEnginePlanner;
 })(typeof window !== 'undefined' ? window : global);

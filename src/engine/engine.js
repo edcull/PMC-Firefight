@@ -103,6 +103,11 @@
         if (t === 'turn' && /^Turn 1 /.test(text || '')) trackTurn('deploy');
         else if (t === 'phase' && text === 'Rally phase.') trackTurn('turn');
       }
+      // the balance scripts' record of a position, as each turn's activations are done (planner.js planFeatures)
+      if (state && state.cfg && state.cfg.evalLog && t === 'phase' && text === 'Rally phase.') {
+        state.evalLog = state.evalLog || [];
+        state.evalLog.push({ turn: state.turn, f: K.planFeatures('A') });
+      }
       V.log(t, text, math);
     }
     /* A look at the table for a battle tracked turn by turn (battletrack.js): as
