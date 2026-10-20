@@ -263,15 +263,19 @@
        same result: hits, casualties, Suppression, Damage. */
     var ex;
     try { ex = R.expectedShot(st, a, t, 'fire', bonuses()); } catch (e) { return null; }
-    var sum = { hits: ex.avgHits, lost: ex.casualties, sp: ex.sp, dmg: ex.damage, ladder: ex.ladder };
+    var sum = { hits: ex.avgHits, lost: ex.casualties, sp: ex.sp, dmg: ex.damage, kill: ex.kill || 0, ladder: ex.ladder };
     view.rounds = roundsLine(ex.ladder);
     var avg = function (k) { return sum[k]; };
     var one = function (v) { return (Math.round(v * 10) / 10).toString(); };
     // the target as the average shot leaves it
     var mach = R.isMachine(t);
+    /* A hull is shown knocked out only when the shot is more likely than not to do
+       it — Damage past its Structure, as the battle has it (applyDamage) — not
+       whenever the average Damage reaches it; otherwise it is left as damaged as
+       the average says, short of going. */
     if (mach) {
-      t.damage = Math.round(avg('dmg'));
-      if (t.damage >= t.str) t.alive = false;
+      if (avg('kill') >= 0.5) { t.damage = Math.max(t.str + 1, Math.round(avg('dmg'))); t.alive = false; }
+      else t.damage = Math.min(t.str, Math.round(avg('dmg')));
     } else {
       t.models = Math.max(0, t.before - Math.round(avg('lost')));
       if (t.models <= 0) t.alive = false;
@@ -283,7 +287,7 @@
     view.lastShot = avg('hits') < 0.05 ? 'No hits'
       : 'Average ' + one(avg('hits')) + ' hit' + (one(avg('hits')) === '1' ? '' : 's') + ' \u2192 ' +
         (mach ? one(avg('dmg')) + ' Damage' : one(avg('lost')) + ' casualt' + (one(avg('lost')) === '1' ? 'y' : 'ies')) +
-        (mach ? '' : ' \u00b7 ' + one(avg('sp')) + ' SP');
+        (mach ? ' \u00b7 ' + Math.round(100 * avg('kill')) + '% to knock it out' : ' \u00b7 ' + one(avg('sp')) + ' SP');
     return { hits: hits, t: t, sum: sum, mach: mach };
   }
   /* What each round of a volley is drawn doing: the rules' ladder of what became of

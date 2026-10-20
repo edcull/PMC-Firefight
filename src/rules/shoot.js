@@ -392,6 +392,25 @@
         var dm = dmgMod(state, a, t);
         var hull = everyFall(function () { var d = resolveDamage(u, 1, m.pierce, dm); return { d: d.damage, k: d.struck, c: d.crits }; });
         out.damage = out.avgHits * hull.d;
+        /* and the chance it is knocked out, which the average Damage alone does not
+           say: a hull goes only once its Damage is past its Structure (applyDamage),
+           and a big average can come from a few shots that wreck it and many that
+           leave it running. What one hit does, as odds of each Damage... */
+        var per = everyFall(function () { var o = {}; o[resolveDamage(u, 1, m.pierce, dm).damage] = 1; return o; });
+        var left = (t.str || 0) - (t.damage || 0);
+        out.kill = 0;
+        for (r = 0; r <= 9; r++) {
+          // ...summed over this face's hits, and the share of the sums past what is left of it
+          var sums = { 0: 1 };
+          for (var n = hitsAt(r); n > 0; n--) {
+            var next = {};
+            Object.keys(sums).forEach(function (s) {
+              Object.keys(per).forEach(function (d) { var k = +s + +d; next[k] = (next[k] || 0) + sums[s] * per[d]; });
+            });
+            sums = next;
+          }
+          Object.keys(sums).forEach(function (s) { if (+s > left) out.kill += sums[s] / 10; });
+        }
         for (r = 0; r <= 9; r++) addLadder(r, hull.k, 0, 0);
         lad.crit = out.avgHits * hull.c;              // the critical hits, on average
         out.ladder = lad;
