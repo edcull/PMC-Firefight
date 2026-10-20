@@ -70,62 +70,32 @@
        and walks the cone across the frontage, in two or three jets, each one
        laid a little off the last — which is why it takes ground rather than
        picking a target out of it. */
-    var FLAME_JET = 620, FLAME_GAP = 165;
+    var FLAME_JET = 1000, FLAME_GAP = 230;
+    /* The jets, as they were before the rounds were dealt out by the ladder: each
+       barely off the mark, converging rather than sweeping a line, and the fuel
+       left burning where it comes down — the Molotov's pool of fire (`firesplash`,
+       with no bottle to break). The men it kills go down as the fire takes, all
+       together (outcome.onKill). */
     function flameJets(from, to, n, onLand, outcome) {
       var dx = to.x - from.x, dy = to.y - from.y;
-      var plan = outcome ? roundPlan(n, outcome) : null;
       var len = Math.max(0.001, Math.sqrt(dx * dx + dy * dy));
       var px = -dy / len, py = dx / len;               // across the line of fire
       var span = (n - 1) * FLAME_GAP + FLAME_JET;      // how long the roar has to hold
-      /* The jets sweep the target from one side to the other, not dotted about it:
-         the j-th is that far across, and each does its part in the attack where the
-         sweep has got to — a jet that kills washes over the man nearest it, one that
-         pins them licks at their feet, one their armour turns plays over whoever is
-         there, and one that does nothing falls short (fire does not go over them). */
-      var ux = dx / len, uy = dy / len;
-      var across = function (f) { return (f.x - to.x) * px + (f.y - to.y) * py; };
-      var all = outcome ? outcome.all || outcome.figs || [] : [];
-      var wide = Math.max(0.6, all.reduce(function (w, f) { return Math.max(w, Math.abs(across(f))); }, 0) + 0.25);
-      var at = function (j) { return n > 1 ? -wide + 2 * wide * j / (n - 1) : 0; };
-      var roles = null, killOf = [];
-      if (plan) {
-        // each killing jet where the sweep crosses the man it kills, the rest in the order dealt
-        var figs = outcome.figs || [], free = [], k, j0;
-        for (j0 = 0; j0 < n; j0++) free.push(j0);
-        roles = new Array(n);
-        var kN = plan.filter(function (r) { return r === 'kill'; }).length;
-        for (k = 0; k < kN; k++) {
-          var f = figs.length ? figs[k % figs.length] : to, best = 0;
-          free.forEach(function (s, i) { if (Math.abs(at(s) - across(f)) < Math.abs(at(free[best]) - across(f))) best = i; });
-          var slot = free.splice(best, 1)[0];
-          roles[slot] = 'kill'; killOf[slot] = k;
-        }
-        plan.filter(function (r) { return r !== 'kill'; }).forEach(function (r, i) { roles[free[i]] = r; });
-      }
       for (var i = 0; i < n; i++) {
         (function (j) {
           setTimeout(function () {
             if (!alive()) return;
-            var off = at(j), aim = { x: to.x + px * off, y: to.y + py * off, up: to.up };
-            if (roles) {
-              var role = roles[j];
-              // whoever stands nearest the sweep
-              var nearest = function (fs) {
-                return fs.reduce(function (b, f) { return !b || Math.abs(across(f) - off) < Math.abs(across(b) - off) ? f : b; }, null) || aim;
-              };
-              if (role === 'kill') {
-                var kk = killOf[j], kf = outcome.figs || [], fg = kf.length ? kf[kk % kf.length] : to;
-                aim = { x: fg.x, y: fg.y, up: to.up };
-                // the man it washes over drops as it reaches him
-                if (outcome.onKill) setTimeout(function () { if (alive()) outcome.onKill(kk); }, FLAME_JET * 0.6);
-              }
-              else if (role === 'glance') { var gm = nearest(all); aim = { x: gm.x, y: gm.y, up: to.up }; }
-              else if (role === 'supp') aim = { x: aim.x - ux * 0.6, y: aim.y - uy * 0.6, up: to.up };
-              else aim = { x: aim.x - ux * 1.2, y: aim.y - uy * 1.2, up: to.up };
-            }
+            var off = (j - (n - 1) / 2) * 0.45;
+            var aim = { x: to.x + px * off, y: to.y + py * off, up: to.up };
             if (SFX) { if (j === 0) SFX.flame(0, span / 1000); else SFX.flamepuff(); }
             add({ kind: 'flame', from: from, to: aim, dur: FLAME_JET, blocking: true });
-            if (onLand && j === n - 1) setTimeout(onLand, 360);
+            // where it reaches, the fuel burning on the ground
+            add({ kind: 'firesplash', pool: true, x: aim.x, y: aim.y, up: aim.up, seed: j, delay: FLAME_JET * 0.35, dur: 1500 + FLAME_JET * 0.35, blocking: true });
+            if (j === n - 1) setTimeout(function () {
+              if (!alive()) return;
+              if (outcome && outcome.onKill) for (var k = 0; k < 10; k++) outcome.onKill(k);
+              if (onLand) onLand();
+            }, 360);
             redraw();
           }, j * FLAME_GAP);
         })(i);
@@ -577,7 +547,7 @@
 
         /* A cone of fire. Nothing flies: the ground between burns. */
         case 'flame': {
-          var span = flameJets(from, to, 6, function () { land(2); }, oc);
+          var span = flameJets(from, to, 8, function () { land(2); }, oc);
           return span + 220;
         }
 
@@ -775,7 +745,7 @@
           return;
         }
         case 'flame':
-          flameJets(from, to, 4, null, oc);
+          flameJets(from, to, 6, null, oc);
           return;
         default:
           playStream(style, shooter, from, to, hits, null, null, oc);
@@ -1036,7 +1006,7 @@
   /* The styles whose rounds are drawn landing one by one when a shot carries its
      outcome: each puts its own strike or dirt down, so nothing more is burst over
      the mark as the shot lands. */
-  var DRAWN_EACH = ['none', 'small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail', 'flame'];
+  var DRAWN_EACH = ['none', 'small', 'spine', 'pistol', 'smg', 'burst', 'chain', 'energy', 'rail'];
   /* The rules' ladder for a shot (shoot.js, missRungs: far misses, deflections,
      near misses and kills, as counts or shares) as the shares roundPlan deals the
      rounds out by. */
