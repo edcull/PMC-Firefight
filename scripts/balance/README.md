@@ -185,6 +185,17 @@ strength. Against the AI as it is (OPP=current, seeds seeded per pair), 640 each
 | ...objective worth 10 | 50.9% |
 | ...worth 4, and the commander | 49.6% |
 
+**Those planner runs were skewed by a bug** (fixed October 2026): the planner judged a
+spot from a copy of the unit, and the unit itself, still standing where it was, blocked
+its copy's sight — Fire! from where it stood read as worth nothing, and so did the risk
+of staying. Measured again with the fix, and with the fitted evaluation (below):
+
+| Change | Share |
+|---|---|
+| planner, worth and ground (`plan2,ground`), fixed | 52.3% |
+| planner judging by the fitted evaluation (`plan2,eval`, ke 10) | 52.7% |
+| ...ke 25 | **54.1%** |
+
 With the pairs seeded on their own, scenarios without objectives (Meeting
 engagement, Demolish) come out the same battle for battle whatever the ground is worth:
 only Secure and control, Find and secure, Invasion and Takeover can move, and of those
