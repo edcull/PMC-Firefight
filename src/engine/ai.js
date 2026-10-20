@@ -1241,6 +1241,8 @@
          closest enemy unit. If there are no valid targets, it makes a Move towards
          the closest enemy" — a Move, so it does not shoot as well. */
       var killAll = soloI && behaviour === 'assault';
+      // (experiment, a yardstick) never moves or charges: fires from where it stands, or holds
+      if (aiExp(u, 'static')) { if (shot.t && shot.score > 0) { fire(u, shot.t, 'fire'); return; } u.activated = true; endActivation(u); return; }
 
       /* A garrison (p. 41) shoots from where it is, charges only an enemy in the
          next section, and comes out when it wants to press on and has nothing to

@@ -164,6 +164,30 @@ that stops to shoot is not taking ground). The experiments are measured with
 `AIEXP=name OPP=current node scripts/balance/versus.js 40 <seed>` (vrun-style over
 eight seeds); the switch (`cfg.aiExp`, `ai.js aiExp`) stays for the next one.
 
+### The planner and the commander (harness-only, not on in any game)
+
+`src/engine/planner.js` (see `docs/ai-research.md`): options weighed in one
+currency, a unit's worth (Tier value doubling each Tier, times what is left of it and
+how far Suppression has it from breaking) — the worth a shot can take off its target
+less the worth it risks standing there through the enemy's turn, from the rules' own
+expected shot. The commander assigns units to the objectives the scenario needs, in
+strength. Against the AI as it is (OPP=current, seeds seeded per pair), 640 each:
+
+| Change | Share |
+|---|---|
+| planner over the eight best spots and Fire! (`plan`, k 2.5) | 51.0% |
+| ...k 1 / k 5 | 49.6% / 49.9% |
+| planner also weighing every defensive and neutral shot (`plan2`) | 50.5% |
+| commander (`cmd`) | 49.9% |
+| both (`plan2,cmd`) | 49.2% |
+| a yardstick: never moves, fires from where it stands (`static`, 320) | 19.2% (Secure 0%, Find 8%) |
+
+The planner does choose differently (in some 4 of 10 decisions it is given, mostly
+holding where the utility AI would move) and changes nothing; the yardstick shows how
+much the AI's movement is already worth (some 30 points, nearly all objectives). The
+planner prices only fire and risk; what decides these battles is the ground, which its
+currency does not hold yet.
+
 ### Bounding (dropped)
 
 Crossing open ground together, with fire support: a unit in safe ground (risk 0.5
