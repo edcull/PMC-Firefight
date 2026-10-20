@@ -36,5 +36,26 @@ if (v && R.isMachine(v)) {
   const exv = R.expectedShot(at(a, v), a, v, 'fire', {});
   ok('a machine takes Damage on average (4/6 + 2/6 a hit)', exv.casualties === 0 && near(exv.damage, exv.avgHits * (4 / 6 + 2 / 6)), JSON.stringify(exv));
 }
+
+/* the chance a hull is knocked out (Damage past its Structure), worked out, not
+   read off the average: Battle armour troopers at 6", Anti-tank (limited), into a
+   Hunter's front — an average Damage past its Structure, knocked out about half the time */
+function shotAt(akey, tkey, range) {
+  const sh = unit(akey, 'A', 6, { y: 8, facing: 0 }), tt = unit(tkey, 'B', 6 + range + 2 * R.UNIT_R, { y: 8, facing: Math.PI });
+  return { sh, tt, st: at(sh, tt) };
+}
+{
+  const { sh, tt, st } = shotAt('bats', 'hunter', 6), ex = R.expectedShot(st, sh, tt, 'fire', {});
+  let kills = 0, N = 3000;
+  for (let i = 0; i < N; i++) {
+    const s = shotAt('bats', 'hunter', 6); s.st.log = [];
+    R.shoot(s.st, s.sh, s.tt, 'fire', {});
+    if (!s.tt.alive) kills++;
+  }
+  ok('an average Damage past the Structure is not a certain kill', ex.damage > tt.str && ex.kill > 0.3 && ex.kill < 0.8, ex.damage + ' / ' + ex.kill);
+  ok('the knock-out chance is what the dice give', Math.abs(ex.kill - kills / N) < 0.05, ex.kill + ' vs ' + kills / N);
+  const far = shotAt('bats', 'hunter', 10), exf = R.expectedShot(far.st, far.sh, far.tt, 'fire', {});
+  ok('past 6" the limited Anti-tank is gone, and the chance with it', exf.kill < ex.kill, String(exf.kill));
+}
 console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

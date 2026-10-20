@@ -64,6 +64,10 @@ function ok(name, cond, note) {
   const rifle = await fireAndWatch(2600);
   ok('a heavy MG team’s hitting burst throws more of the ground up than a rifle team’s', hmg.impacts >= 4 && hmg.impacts > rifle.impacts,
     hmg.impacts + ' impacts at once against ' + rifle.impacts);
+  // ...round a unit with Morale to shake only: a hull has Structure, and none of it goes up round that
+  await setUp('hmgteam', 'hunter', 14);
+  const onHull = await fireAndWatch(2600);
+  ok('...and none of it round a hull', onHull.impacts <= 1, onHull.impacts + ' impacts at once against a Hunter');
 
   console.log('\npage errors: ' + (errs.length ? errs.join(' | ') : 'none'));
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
