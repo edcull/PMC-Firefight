@@ -172,7 +172,8 @@
         }
       }
       // auxiliary fire is a sidearm: a pistol, an energy bolt or spit, never the main weapon
-      var spec = res && res.aux ? R.auxSpec(shooter) : R.weaponSpec(shooter);
+      // (at a hull within 6", a unit with Anti-tank (limited) fires its anti-tank weapon: R.weaponSpec)
+      var spec = res && res.aux ? R.auxSpec(shooter) : R.weaponSpec(shooter, target);
       /* A gunship fires from its airframe and is hit on its airframe, not on the
          ground it happens to be over. Every point a shot is drawn between carries
          how high above its own ground it sits. */
@@ -235,6 +236,7 @@
         if (!fired) {
           fired = true; spawnDeaths(deaths);
           if (outcome && outcome.crit) SHOTS.crits(p, outcome.crit);      // a critical hit: sparks off the hull
+          if (f0 && f0.supp) SHOTS.suppress(to);                         // Suppressive Fire: the ground kicked up round them
           if (impact) impact(Math.max(250, endsAt - nowMs()));
           // (the impact shows every loss at once; those still standing stand till their round strikes)
           if (rg) showLosses();

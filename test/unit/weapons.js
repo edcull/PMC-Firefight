@@ -72,8 +72,8 @@ is('acv', 'shellbig+rail x3');
 is('hengveh', 'plasmabolt');
 
 head('Arcing projectiles, and how many tubes fire at once');
-// support hulls fire in batteries: two tubes, then three
-is('impsupport', 'rocket');
+// support hulls fire in batteries: a ripple of six rockets, then three tubes
+is('impsupport', 'rocket x6');
 is('lsupport', 'arcbig x3');
 is('msupport', 'arcbig+arcbig x5');
 // the advanced support hull's heavy plasma cannon: four bolts, each bursting
@@ -128,7 +128,7 @@ is('rguard', 'small+smg');
 is('rlflak', 'burst');
 is('rmflak', 'burst+burst');
 // every heavy infantry unit, whatever its Tier
-all(['ecobats', 'bats'], 'smg+energy');
+all(['ecobats', 'bats'], 'smg');
 
 is('lcv', 'shell+pistol x2');
 
@@ -182,8 +182,8 @@ is('enforcers', 'smg');
 all(['lighteng', 'engineers'], 'smg');
 // assault troops go in with a carbine and a pair of grenades (p. 64)
 all(['shock', 'commandos'], 'frag+smg x2');
-// the Protectors sweep with carbines and follow up with energy charges
-all(['protectors', 'protectorshm'], 'smg+energy');
+// the Protectors fire their SMGs, rockets only at a hull within 6"
+all(['protectors', 'protectorshm'], 'smg');
 // irregulars scavenge carbines, and the Holy Warriors go in close with them
 is('irregulars', 'smg');
 all(['racolytes', 'rfanatics'], 'smg');
@@ -193,19 +193,19 @@ is('rpow', 'smg');
 all(['rassaultcdo', 'rsabcdo'], 'small+smg');
 // the rider gangs come past throwing Molotovs (Incendiary Ammunition)
 is('rridergang', 'none+molotov');
-// and from the rider warriors up one of them fires an RPG while the rest throw
+// and from the rider warriors up they throw Molotovs, one of them carrying an RPG for a hull within 6" (its `at`)
 ['rriderwar', 'rhellriders', 'rlegendary'].forEach(function (k) {
-  var w = spec(k);
-  ok(R.profile(k).name + ': an RPG and Molotovs', w.p === 'shell' && w.n === 1 && w.s === 'molotov' && !w.t && w.blast === 'frag', fmt(w));
+  var w = spec(k), at = R.WEAPONS[k].at;
+  ok(R.profile(k).name + ': Molotovs, and an RPG for a hull', w.p === 'molotov' && w.n === 2 && !w.s && at && at.p === 'shell' && at.blast === 'frag', fmt(w));
 });
-// the rocket leaves the RPG man's shoulder, and he throws nothing else
+// the RPG round leaves the man carrying it; the Molotovs come from all of them
 (function () {
   require('../../src/view/fire.js');
   var pool = [{ gun: 'molotov', id: 0 }, { gun: 'molotov', id: 1 }, { gun: 'rpg', id: 2 }, { gun: 'molotov', id: 3 }];
-  var from = global.PMCFire.troop({ x: 0, y: 0 }, spec('rhellriders'), pool);
-  var ids = function (st) { return from.poolFor(st).pool.map(function (m) { return m.id; }).join(','); };
-  ok('the RPG fires from the man carrying it', from.mz.id === 2, 'from ' + from.mz.id);
-  ok('...the Molotovs from the rest', ids('molotov') === '0,1,3', ids('molotov'));
+  var rpg = global.PMCFire.troop({ x: 0, y: 0 }, { p: 'shell', n: 1, sn: 1 }, pool.slice());
+  ok('the RPG fires from the man carrying it', rpg.mz.id === 2, 'from ' + rpg.mz.id);
+  var mol = global.PMCFire.troop({ x: 0, y: 0 }, spec('rhellriders'), pool.slice());
+  ok('...the Molotovs from every rider', mol.pool.map(function (m) { return m.id; }).join(',') === '0,1,2,3');
 })();
 
 head('And a rifle is still a rifle');
@@ -285,6 +285,28 @@ head('A dug-in rebel gun fires its shells level');
   var w = R.weaponSpec(Object.assign({}, R.profile(k), { dugIn: true }));
   ok(R.profile(k).name + ', dug in', w.p === 'shellbig' && w.blast === 'frag', fmt(w) + (w.blast ? ' ' + w.blast : ''));
 });
+
+/* Anti-tank (limited) makes a shot anti-tank only at 6" or closer: then, at a
+   hull, battle armour fires its shoulder rockets and a rider his RPG, instead of
+   the gun it fires at anything else. */
+head('Anti-tank (limited) at a hull within 6" fires its anti-tank weapon');
+(function () {
+  function at(k, side, x) { return Object.assign({}, R.profile(k), { side: side, x: x, y: 10, alive: true }); }
+  var bat = at('bats', 'A', 10), rider = at('rhellriders', 'A', 10), near = at('lpv', 'B', 14), far = at('lpv', 'B', 30), squad = at('regular', 'B', 13);
+  var b1 = R.weaponSpec(bat, near), b2 = R.weaponSpec(bat, far), b3 = R.weaponSpec(bat, squad), b0 = R.weaponSpec(bat);
+  ok('battle armour at a hull within 6": three rockets, fragmentation', b1.p === 'rocket' && b1.n === 3 && b1.blast === 'frag' && !b1.s, fmt(b1));
+  ok('...at one further off, or at a squad, or with no target: its SMGs', b2.p === 'smg' && b3.p === 'smg' && b0.p === 'smg');
+  var r1 = R.weaponSpec(rider, near), r2 = R.weaponSpec(rider, squad);
+  ok('a rider at a hull within 6": one RPG round, fragmentation', r1.p === 'shell' && r1.n === 1 && r1.blast === 'frag', fmt(r1));
+  ok('...at anything else: Molotovs', r2.p === 'molotov' && r2.n === 2, fmt(r2));
+  // a unit with full Anti-tank, or none, fires as it always does
+  var plain = at('regular', 'A', 10);
+  ok('a unit without the rule fires its own gun at the hull', R.weaponSpec(plain, near).p === R.weaponSpec(plain).p);
+  // the table's `at` passes the weapon editor's check, and a malformed one does not
+  var D = global.PMCData;
+  ok('the editor keeps an entry\u2019s `at`', JSON.stringify(D.weaponEntry({ p: 'smg', at: { p: 'rocket', n: 3, blast: 'frag' } }).at) === '{"p":"rocket","n":3,"blast":"frag"}');
+  ok('...and turns away one it cannot draw', D.weaponEntry({ p: 'smg', at: { p: 'nonsense' } }) === null && D.weaponEntry({ p: 'smg', at: { p: 'rocket', n: 9 } }) === null);
+})();
 
 /* A profile the table has never heard of still has to fire like something. */
 head('An unlisted profile is read from the rules it carries');

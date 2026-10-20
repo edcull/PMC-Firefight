@@ -2525,6 +2525,9 @@
         actionState: function (u, id) { return K.actionState(u, id); },
         // how much the AI likes a spot, for a behaviour (the tests ask)
         scoreSpot: function (u, c, goal, behaviour) { return K.scoreSpot(u, c, goal, behaviour); },
+        // the choosing AI's covered approaches: what standing at a spot costs a unit, and the spot it puts one down on
+        riskAt: function (u, x, y) { return K.riskAt(u, x, y); },
+        aiPlace: function (u, spots) { return K.aiPlace(u, spots); },
         // one AI unit's activation, as runAI does it (the tests force a behaviour roll)
         // the Rally phase's flight on its own, for the tests
         fleeBroken: acting(function () { K.fleeBroken(); }),

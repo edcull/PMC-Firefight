@@ -326,7 +326,7 @@
        arc     a lobbed projectile, up and over
        arcbig  the same, heavier and higher
        missile a guided missile: smoke, and it turns onto the target
-       rocket  unguided rockets, off the rails in a salvo
+       rocket  unguided rockets, off the rails in a salvo of `n` (`sn`, `tn`), one to six
        flame   a cone of fire
        rail    an instant white line that fades — Gauss weapons and las-cutters
        spit    a glob of acid in a low wet lob, splashing green (bugs)
@@ -364,6 +364,9 @@
                off where they land: 'frag', a fragmentation blast (a bigger one
                for orbbig, shellbig and arcbig, a smaller one for each rocket of
                a ripple), or by default a burst of plasma or the round's own */
+  // what Anti-tank (limited) fires at a hull within 6" (an entry's `at`, below)
+  var AT_ROCKETS = { p: 'rocket', n: 3, blast: 'frag' };   // battle armour's shoulder rockets
+  var AT_RPG = { p: 'shell', blast: 'frag' };               // a rider's RPG
   var WEAPONS = {
     /* ---- PMC infantry ---- */
     recruits: { p: 'small' },
@@ -376,11 +379,10 @@
     lighteng: { p: 'smg' }, engineers: { p: 'smg' },
     // assault troops carry grenades as well as carbines, and throw them (p. 64)
     shock: { p: 'frag', n: 2, s: 'smg' }, commandos: { p: 'frag', n: 2, s: 'smg' },
-    // battle armour sweeps a room with carbines, then follows up with energy charges
-    ecobats: { p: 'smg', s: 'energy', sn: 2 }, bats: { p: 'smg', s: 'energy', sn: 2, blast: 'frag' },
-    // the Protectors go in close the same way; the hi-mobility ones with three charges
-    protectors: { p: 'smg', s: 'energy', sn: 2, blast: 'frag' },
-    protectorshm: { p: 'smg', s: 'energy', sn: 3, blast: 'frag' },
+    /* battle armour fires its SMGs, and its shoulder rockets only at a hull within
+       6" (Anti-tank (limited)); the Protectors the same */
+    ecobats: { p: 'smg', at: AT_ROCKETS }, bats: { p: 'smg', at: AT_ROCKETS },
+    protectors: { p: 'smg', at: AT_ROCKETS }, protectorshm: { p: 'smg', at: AT_ROCKETS },
     // the forward observers carry rifles, and fire them like any rifle team
     observers: { p: 'small' }, sharpshooters: { p: 'shell', s: 'pistol' },
     lrrp: { p: 'rail', n: 2 },
@@ -434,7 +436,7 @@
     lengveh: { p: 'chain', s: 'flame', splash: true },
     hengveh: { p: 'plasmabolt' },
     // support hulls fire in batteries: two tubes, then three
-    impsupport: { p: 'rocket', blast: 'frag' }, lsupport: { p: 'arcbig', n: 3, blast: 'frag' },
+    impsupport: { p: 'rocket', n: 6, blast: 'frag' }, lsupport: { p: 'arcbig', n: 3, blast: 'frag' },
     msupport: { p: 'arcbig', n: 5, s: 'arcbig', sn: 5, blast: 'frag' },
     // the advanced support hull's heavy plasma cannon: four bolts, each one bursting
     // an energy howitzer: three heavy orbs lobbed over, bursting blue
@@ -448,8 +450,8 @@
     adaptedcraft: { p: 'small' }, lightcraft: { p: 'small' },
     heavycraft: { p: 'small' }, flyingcp: { p: 'small' },
     // the flexible strike craft rakes with its nose gun under a rocket rack; the transport has a door gun
-    fsc: { p: 'burst', s: 'rocket', blast: 'frag' }, tsc: { p: 'small', s: 'rocket', blast: 'frag' },
-    gunboat: { p: 'chain', s: 'rocket', splash: true, blast: 'frag' }, hsc: { p: 'missile', n: 3, s: 'rocket', blast: 'frag' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3, blast: 'frag' },
+    fsc: { p: 'burst', s: 'rocket', sn: 6, blast: 'frag' }, tsc: { p: 'small', s: 'rocket', sn: 6, blast: 'frag' },
+    gunboat: { p: 'chain', s: 'rocket', sn: 6, splash: true, blast: 'frag' }, hsc: { p: 'missile', n: 3, s: 'rocket', sn: 6, blast: 'frag' }, asc: { p: 'shellbig', n: 3, s: 'rail', sn: 3, blast: 'frag' },
     // the light VTOL drone carries no gun worth the name: a light sidearm's crack
     vtoldrone: { p: 'pistol' },
     // the interceptor: a pair of air-to-air missiles off the rails, then the cannon
@@ -467,11 +469,11 @@
     renlightened: { p: 'small' }, rmujahideen: { p: 'small' },
     /* Mounted Warriors ride in throwing Molotovs from the saddle (Incendiary
        Ammunition); from the rider warriors up, one of them carries an RPG
-       (Anti-tank (limited)), and the rocket leaves his shoulder. */
+       (Anti-tank (limited)), and the rocket leaves his shoulder at a hull within 6". */
     rridergang: { p: 'none', s: 'molotov', sn: 2 },
-    rriderwar: { p: 'shell', s: 'molotov', sn: 2, blast: 'frag' },
-    rhellriders: { p: 'shell', s: 'molotov', sn: 2, blast: 'frag' },
-    rlegendary: { p: 'shell', s: 'molotov', sn: 2, blast: 'frag' },
+    rriderwar: { p: 'molotov', n: 2, at: AT_RPG },
+    rhellriders: { p: 'molotov', n: 2, at: AT_RPG },
+    rlegendary: { p: 'molotov', n: 2, at: AT_RPG },
     rlmg: { p: 'burst' }, rautocannon: { p: 'chain', splash: true },
     rat: { p: 'shell', blast: 'frag' },
     // the insurgents' AA weapons are old shoulder guns: they fire a shell, not a guided missile
@@ -497,9 +499,9 @@
        gun-truck throwing charges over its machine gun, then a proper autocannon,
        and at the top a rocket rack over one. */
     rtechnical: { p: 'small' },
-    ricv: { p: 'chain', s: 'rocket', splash: true, blast: 'frag' },
+    ricv: { p: 'chain', s: 'rocket', sn: 6, splash: true, blast: 'frag' },
     rlicv: { p: 'chain', splash: true },
-    rhicv: { p: 'shellbig', n: 2, s: 'rocket', blast: 'frag' },
+    rhicv: { p: 'shellbig', n: 2, s: 'rocket', sn: 6, blast: 'frag' },
     rltv: { p: 'small' }, ritv: { p: 'chain', splash: true },
     // the super-heavy carries a gun in the back as well as its autocannon
     rshtv: { p: 'chain', s: 'shell', sn: 2, splash: true },
@@ -557,6 +559,10 @@
     xsturret3: { p: 'none' }, xsturret4: { p: 'none' }, xsturret5: { p: 'none' }
   };
 
+  /* `at`: what a unit with Anti-tank (limited) fires instead, at a vehicle or
+     aircraft within 6", where the rule makes the shot anti-tank (rules.js
+     weaponSpec): a style, how many, and its blast; nothing else of the entry goes
+     with it. */
   /* What an entry may say, for the weapon editor and for the game server that
      keeps an admin's changes to this table (server/app.js weaponsApi) */
   var WEAPON_FIELDS = {
@@ -578,7 +584,13 @@
     if (w.s !== undefined && w.s !== null && (F.styles.indexOf(w.s) < 0 || w.s === 'none')) return null;
     if (w.t !== undefined && w.t !== null && (F.styles.indexOf(w.t) < 0 || w.t === 'none')) return null;
     if (w.splash !== undefined && typeof w.splash !== 'boolean') return null;
-    var known = ['p', 'n', 's', 'sn', 't', 'tn', 'splash', 'launch', 'glow', 'orb', 'blast'];
+    var known = ['p', 'n', 's', 'sn', 't', 'tn', 'splash', 'launch', 'glow', 'orb', 'blast', 'at'];
+    if (w.at !== undefined && w.at !== null) {
+      var a = w.at;
+      if (typeof a !== 'object' || F.styles.indexOf(a.p) < 0 || a.p === 'none' || !count(a.n)) return null;
+      if (Object.keys(a).some(function (k) { return ['p', 'n', 'blast'].indexOf(k) < 0; })) return null;
+      if (a.blast !== undefined && a.blast !== null && F.blast.indexOf(a.blast) < 0) return null;
+    }
     if (Object.keys(w).some(function (k) { return known.indexOf(k) < 0; })) return null;
     var ok = true;
     ['launch', 'glow', 'orb', 'blast'].forEach(function (f) { if (w[f] !== undefined && w[f] !== null && F[f].indexOf(w[f]) < 0) ok = false; });
@@ -589,6 +601,7 @@
     if (w.t) { out.t = w.t; if (w.tn > 1) out.tn = w.tn; }
     if (w.splash) out.splash = true;
     ['launch', 'glow', 'orb', 'blast'].forEach(function (f) { if (w[f]) out[f] = w[f]; });
+    if (w.at) { out.at = { p: w.at.p }; if (w.at.n > 1) out.at.n = w.at.n; if (w.at.blast) out.at.blast = w.at.blast; }
     return out;
   }
 

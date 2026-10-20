@@ -1,7 +1,8 @@
 /* Where the player's units stood and where the computer's did, read out of the
    battles a campaign tracked turn by turn (its Debug tracking, set when it was
    raised; battletrack.js). Takes the file the server exports
-   (node server/admin.js export-campaign <name> file.json) and sets the two sides
+   (node server/admin.js export-campaign <name> file.json, or the full dump of
+   every campaign, admin.js campaigns) and sets the two sides
    side by side, per look at the table (each turn's, its activations done): how much of each
    is in cover and what ground, how close it keeps to its own and to the enemy,
    how near the objectives and how many it holds, how far it moves a turn and how
@@ -98,8 +99,10 @@ function print(title, S) {
 
 const all = { player: blank(), ai: blank() };
 let tracked = 0, untracked = 0;
+// export-campaign lists each campaign's battles; the full dump (admin.js campaigns) has only its state, read the same way
+const { battlesOf } = require('../../server/admin.js');
 (data.campaigns || []).forEach((c) => {
-  (c.battles || []).forEach((b) => {
+  (c.battles || (c.state ? battlesOf(c.state) : [])).forEach((b) => {
     if (!b.track) { untracked++; return; }
     if (!b.vsAI) return;                           // a duel between players is no measure of the computer
     tracked++;
