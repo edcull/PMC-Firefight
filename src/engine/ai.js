@@ -1345,7 +1345,7 @@
         scored.sort(function (a, b) { return b.s - a.s; });
         var cands = scored.slice(0, 8).map(function (o) { return { c: o.c, base: scoreSpot(u, o.c, goal, behaviour, look, { noShots: true }) }; });
         var pick = E.planChoose(u, cands, scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look, { noShots: true }),
-          { k: tuneOf('k', 2.5), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance') });
+          { k: tuneOf('k', 2.5), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0 });
         if (pick.kind === 'fire' && pick.t) { logLine('ai', u.label + ' — the planner: Fire! from where it stands.'); fire(u, pick.t, 'fire'); return; }
         best = pick.kind === 'move' ? pick.c : null;
       }

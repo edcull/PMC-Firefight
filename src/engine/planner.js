@@ -17,7 +17,7 @@
 (function (root) {
   'use strict';
   root.PMCEnginePlanner = function (E) {
-    var R = E.R, UR = E.UR;
+    var R = E.R, SC = E.SC, UR = E.UR;
 
     // what a Tier is worth: each doubles it, as a recruit's cost does (camp-company RECRUIT_COST)
     function tierValue(u) { return Math.pow(2, Math.max(0, (u.tier || 1) - 1)); }
@@ -97,24 +97,58 @@
       return total;
     }
 
+    /* ---- The ground, in the same currency ----
+       What the objectives are worth to a side, as they would stand with this unit
+       somewhere: each objective held counts its worth, each the enemy holds counts
+       against, one nobody holds nothing. An objective's worth is `gw` (a few units'
+       worth) and grows with the progress either side has toward a win by holding it
+       over time (SC.holdClock: Secure and control's same two, Find and secure's prize)
+       — taking it from the enemy then, or keeping it, counts for the more. */
+    function objWorth(i, gw) {
+      var w = gw, clock = SC.holdClock ? SC.holdClock(E.state, i) : null;
+      if (clock && clock.side && clock.n > 0) w *= 1 + clock.n / Math.max(1, clock.need - 1);
+      return w;
+    }
+    function controlValue(side, gw) {
+      var v = 0;
+      E.state.objectives.forEach(function (o, i) {
+        var h = SC.holderOf(E.state, o.x, o.y, 4, SC.areaOf(o));
+        if (h) v += (h === side ? 1 : -1) * objWorth(i, gw);
+      });
+      return v;
+    }
+    // the ground's worth to u's side with u standing at c (the board as it is otherwise)
+    function groundAt(u, c, gw) {
+      if (!E.state.objectives || !E.state.objectives.length) return 0;
+      return cached('g|' + Math.round(c.x * 2) + ',' + Math.round(c.y * 2), function () {
+        var ox = u.x, oy = u.y, ob = u.bld;
+        var moved = c.x !== ox || c.y !== oy;
+        try {
+          if (moved) { u.x = c.x; u.y = c.y; u.bld = null; }
+          return controlValue(u.side, gw);
+        } finally { u.x = ox; u.y = oy; u.bld = ob; }
+      });
+    }
+
     /* The choice, for a unit about to move or shoot: `cands` are the utility AI's best
        spots ({ c, base }, base its score without shots and sightlines), `here` its
        score where it stands. Each spot is worth its base plus, in the planner's
        currency, what it can shoot from there less what standing there costs it; Fire!
        from where it stands is weighed the same way. `k` turns worth into the utility
-       AI's units (an inch of the way to the goal is 0.6). Returns { kind: 'fire', t },
+       AI's units (an inch of the way to the goal is 0.6); `ground`, the worth of an
+       objective (0 or none: the ground is not weighed). Returns { kind: 'fire', t },
        { kind: 'move', c } or { kind: 'hold' }. */
     function choose(u, cands, here, opts) {
       memo = {};
       try {
-        var k = (opts && opts.k) || 2.5, canAdvance = !(opts && opts.noAdvance);
+        var k = (opts && opts.k) || 2.5, canAdvance = !(opts && opts.noAdvance), gw = opts && opts.ground;
         var at = { x: u.x, y: u.y };
         var fireNow = u.fp != null ? bestShotFrom(u, at, 'fire') : { t: null, v: 0 };
-        var riskHere = threatAt(u, at);
-        var best = { kind: fireNow.t ? 'fire' : 'hold', t: fireNow.t, score: here + k * (fireNow.v - riskHere) };
+        var riskHere = threatAt(u, at), groundHere = gw ? groundAt(u, at, gw) : 0;
+        var best = { kind: fireNow.t ? 'fire' : 'hold', t: fireNow.t, score: here + k * (fireNow.v - riskHere + groundHere) };
         cands.forEach(function (cd) {
           var shot = canAdvance && u.fp != null ? bestShotFrom(u, cd.c, 'advance') : { v: 0 };
-          var s = cd.base + k * (shot.v - threatAt(u, cd.c));
+          var s = cd.base + k * (shot.v - threatAt(u, cd.c) + (gw ? groundAt(u, cd.c, gw) : 0));
           // (a move must be worth its trouble: the same margin the utility AI asks)
           if (s > best.score + 0.3) best = { kind: 'move', c: cd.c, score: s };
         });
