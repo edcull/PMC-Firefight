@@ -479,13 +479,13 @@
     function countsIn(state, u, r) {
       if (!u || !u.side || u.x < 0) return false;
       if (u.bld) return u.bld === r;
-      if (kindsUnder(state, u)[0] !== r.kind) return false;
+      // (the rim against the piece first, as that is cheap and most pieces fail it)
       var n = 0;
       for (var k = 0; k < RIM; k++) {
         var an = k / RIM * Math.PI * 2;
         if (inRect(u.x + Math.cos(an) * UNIT_R, u.y + Math.sin(an) * UNIT_R, r)) n++;
       }
-      return n >= RIM / 2;
+      return n >= RIM / 2 && kindsUnder(state, u)[0] === r.kind;
     }
     // the Defence bonus the ground gives a unit (or a token) standing at x, y
     function coverAt(state, x, y, u) {

@@ -4,6 +4,11 @@
 
      node scripts/balance/versus.js <pairs> [seed]
 
+   AIEXP=name[,name=value]  an experiment for the choosing side (ai.js aiExp)
+   OPP=current              its opponent the choosing AI as it is, not the table: the
+                            experiment measured against today's AI (50% is no change)
+   SCEN=secure              one scenario only
+
    Prints one line of JSON: the battles, the choosing side's wins, the table's, the
    draws, its share (a draw half each) and the same by scenario and by faction. */
 'use strict';
@@ -15,6 +20,8 @@ Math.random = () => { seed = (seed * 16807) % 2147483647; return seed / 21474836
 const FACS = ['pmc', 'rebel', 'bugs', 'xeno'], SC = ['meeting', 'secure', 'find', 'invasion', 'demolish', 'takeover'];
 const PL = ['desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const EXP = (process.env.AIEXP || '').split(',').filter(Boolean).reduce((o, k) => { const [n, v] = k.split('='); o[n] = v == null ? true : v; return o; }, {});
+const CURRENT = process.env.OPP === 'current';
 function play(cfg, s0) {
   seed = s0;
   const e = Engine.create();
@@ -37,13 +44,20 @@ function play(cfg, s0) {
 }
 let chose = 0, rolled = 0, draw = 0, errs = 0;
 const byScen = {}, byFac = {};
+const BASE = seed;
 for (let i = 0; i < N; i++) {
+  /* each pair from its own seed (the run's and its index): what one battle does with
+     the dice cannot change the armies, scenario or dice of any other, so two runs
+     differing only in an experiment fight the same battles, pair for pair */
+  seed = (BASE * 7919 + (i + 1) * 104729) % 2147483647 || 1;
   const tier = 1 + Math.floor(Math.random() * 3), fa = pick(FACS), fb = pick(FACS);
   const armyA = R.rollArmy(tier, 1, null, fa), armyB = R.rollArmy(tier, 1, null, fb);
-  const sc = pick(SC), planet = pick(PL), s0 = Math.floor(Math.random() * 2e9) + 1;
+  const sc = process.env.SCEN || pick(SC), planet = pick(PL), s0 = Math.floor(Math.random() * 2e9) + 1;
   ['A', 'B'].forEach((h) => {                      // h: the side that chooses
     const cfg = { tier, pl: 1, scenario: sc, armyA: armyA.slice(), armyB: armyB.slice(), nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel',
-      mode: 'demo', planet, campaign: true, terrainSetup: 'auto', aiRolled: { [h === 'A' ? 'B' : 'A']: true } };
+      mode: 'demo', planet, campaign: true, terrainSetup: 'auto',
+      // h chooses with the experiment; the other side rolls the table, or chooses as the AI is now
+      aiRolled: CURRENT ? null : { [h === 'A' ? 'B' : 'A']: true }, aiExp: EXP, aiExpSide: h };
     let w;
     try { w = play(cfg, s0); } catch (err) { errs++; return; }
     const k = w == null ? 'draw' : w === h ? 'chose' : 'rolled';
