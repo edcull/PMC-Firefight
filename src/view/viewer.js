@@ -269,13 +269,12 @@
     var one = function (v) { return (Math.round(v * 10) / 10).toString(); };
     // the target as the average shot leaves it
     var mach = R.isMachine(t);
-    /* A hull is shown knocked out only when the shot is more likely than not to do
-       it — Damage past its Structure, as the battle has it (applyDamage) — not
-       whenever the average Damage reaches it; otherwise it is left as damaged as
-       the average says, short of going. */
+    /* A hull takes the average Damage, as a squad loses its average casualties, and
+       is knocked out only once that is past its Structure, as the battle has it
+       (applyDamage); the chance the dice would do it is shown beside. */
     if (mach) {
-      if (avg('kill') >= 0.5) { t.damage = Math.max(t.str + 1, Math.round(avg('dmg'))); t.alive = false; }
-      else t.damage = Math.min(t.str, Math.round(avg('dmg')));
+      t.damage = Math.round(avg('dmg'));
+      if (t.damage > t.str) t.alive = false;
     } else {
       t.models = Math.max(0, t.before - Math.round(avg('lost')));
       if (t.models <= 0) t.alive = false;
