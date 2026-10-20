@@ -1356,7 +1356,9 @@
       var look = R.groundLookup(E.state);             // the ground under every spot, read off the shared grid
       var here = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look);
       var best = null, bestScore = here + 0.6, scored = [];
-      R.reachable(E.state, u, allowance).forEach(function (c) {
+      // in a lookahead's copy, the option it was told to play (engine.js sim.act): nothing to weigh
+      var forced = E.state.forcePick && E.state.forcePick.id === u.id ? E.state.forcePick.pick : null;
+      if (!forced) R.reachable(E.state, u, allowance).forEach(function (c) {
         if (thinned(c)) return;
         if (!canStand(u, c)) return;
         var s = scoreSpot(u, c, goal, behaviour, look);
@@ -1372,7 +1374,9 @@
         // (ke 50: of 10, 25, 50 and 100 measured, the best; 'worth' tries the earlier worth-currency judge instead)
         var pOpts = { k: tuneOf('k', 2.5), ke: tuneOf('ke', 50), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0,
           charge: planCharge && chargeable && !((ap0 = assaultPlan(u)) && !ap0.push) ? ne.unit : null };
-        var pick = aiExp(u, 'worth') ? E.planChoose(u, cands, hereBase, pOpts) : E.planChooseEval(u, cands, hereBase, pOpts);
+        var pick = forced ? forcedPick(forced) : aiExp(u, 'worth') ? E.planChoose(u, cands, hereBase, pOpts) : E.planChooseEval(u, cands, hereBase, pOpts);
+        // (experiment 'look') the best few played out in copies of the battle, with the enemy's reply
+        if (!forced && aiExp(u, 'look') && !E.state.cfg.sim && pick.all) pick = lookahead(u, pick, pOpts.ke);
         if (pick.kind === 'fire' && pick.t) { logLine('ai', u.label + ' — the planner: Fire! from where it stands.'); fire(u, pick.t, 'fire'); return; }
         if (pick.kind === 'charge') { logLine('ai', u.label + ' — the planner: charges ' + pick.t.label + '.'); aiCharge(u, pick.t); return; }
         best = pick.kind === 'move' ? pick.c : null;
@@ -1420,6 +1424,54 @@
     }
 
     function fire(u, t, mode) { resolveShot(u, t, mode, {}); }
+
+    /* ---- Looking ahead (phase 3, docs/ai-research.md) ----
+       The planner's best few options (`lk`, 3), each played out in a copy of the battle
+       (E.fork): this unit's activation as the option has it, then the enemy's one reply,
+       the AI as it is choosing it; the copy's position read by the fitted evaluation.
+       Every option sees the same dice (`ls` samples of them), so they differ by what they
+       do and not by luck. The option's worth: its base (the way to the goal, which the
+       evaluation does not see) and `kl` times how far it moves the side's log-odds. */
+    function lookahead(u, pick, ke) {
+      // options that differ: the best of each kind, and moves at least 3" from one another
+      var top = [], gap = tuneOf('lg', 3);
+      pick.all.forEach(function (o) {
+        if (top.length >= tuneOf('lk', 3)) return;
+        var same = top.some(function (q) {
+          return q.kind === o.kind && (o.kind !== 'move' || R.inches(q.c.x, q.c.y, o.c.x, o.c.y) < gap);
+        });
+        if (!same) top.push(o);
+      });
+      if (top.length < 2) return pick;
+      var n = tuneOf('ls', 1), kl = tuneOf('kl', ke), v0 = E.planValue(u.side), best = null;
+      var seed0 = (E.state.turn * 7919 + idHash(u.id) * 104729) % 2147483647 || 1;
+      top.forEach(function (o) {
+        var sum = 0;
+        for (var i = 0; i < n; i++) sum += playOut(u, o, seed0 + i * 31337);
+        o.look = o.base + kl * (sum / n - v0);
+        if (!best || o.look > best.look) best = o;
+      });
+      return best;
+    }
+    function idHash(id) { var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 65521; return h; }
+    function playOut(u, o, seed) {
+      var real = Math.random, sd = seed;
+      Math.random = function () { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+      try {
+        var f = E.fork();
+        f.sim.act(u.id, { kind: o.kind, t: o.t ? o.t.id : null, c: o.c ? { x: o.c.x, y: o.c.y } : null });
+        f.sim.reply(u.side === 'A' ? 'B' : 'A');
+        return f.sim.value(u.side);
+      } catch (e) {
+        return E.planValue(u.side);
+      } finally { Math.random = real; R.setBoard(E.state.cfg.board || { w: 48, h: 48 }); }
+    }
+    // an option handed to a copy (by id and spot) as the planner names it here
+    function forcedPick(fp) {
+      var t = null;
+      if (fp.t) E.state.units.forEach(function (x) { if (x.id === fp.t) t = x; });
+      return { kind: fp.kind, t: t, c: fp.c };
+    }
 
     /* Before one of the AI's moves in a compound: the enemies that will have it in
        their sights where the move ends, nearest first — a friend within 6" gives

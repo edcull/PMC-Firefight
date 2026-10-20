@@ -194,17 +194,22 @@
         var fireNow = u.fp != null ? bestDeltaFrom(u, at, 'fire') : { t: null, v: 0 };
         var heldHere = heldAt(u, at), riskHere = threatAt(u, at);
         var val = function (shotV, held, risk) { return shotV + EVAL.held * (held - heldHere) + EVAL.risk * (risk - riskHere); };
-        var best = { kind: fireNow.t ? 'fire' : 'hold', t: fireNow.t, score: here + ke * val(fireNow.v, heldHere, riskHere) };
+        var best = { kind: fireNow.t ? 'fire' : 'hold', t: fireNow.t, base: here, score: here + ke * val(fireNow.v, heldHere, riskHere) };
+        var all = [best];
         cands.forEach(function (cd) {
           var shot = canAdvance && u.fp != null ? bestDeltaFrom(u, cd.c, 'advance') : { v: 0 };
           var s = cd.base + ke * val(shot.v, heldAt(u, cd.c), threatAt(u, cd.c));
-          if (s > best.score + 0.3) best = { kind: 'move', c: cd.c, score: s };
+          all.push({ kind: 'move', c: cd.c, base: cd.base, score: s - 0.3 });
+          if (s > best.score + 0.3) best = { kind: 'move', c: cd.c, base: cd.base, score: s };
         });
         // a charge the AI could make (opts.charge, an enemy in reach), weighed the same way
         if (opts && opts.charge) {
           var sc = here + ke * chargeDelta(u, opts.charge);
-          if (sc > best.score + 0.3) best = { kind: 'charge', t: opts.charge, score: sc };
+          all.push({ kind: 'charge', t: opts.charge, base: here, score: sc - 0.3 });
+          if (sc > best.score + 0.3) best = { kind: 'charge', t: opts.charge, base: here, score: sc };
         }
+        // (every option, best first, for a lookahead to choose among: ai.js lookahead)
+        best.all = all.sort(function (a, b) { return b.score - a.score; });
         return best;
       } finally { memo = null; }
     }
@@ -379,7 +384,13 @@
       } finally { memo = null; }
     }
 
-    return { planChoose: choose, planChooseEval: chooseByEval, planEvalWeights: EVAL, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom, planGoal: goalFor,
+    // the evaluation's log-odds for a side as the battle stands (its bias left out: it is the same for every option)
+    function planValue(side) {
+      var f = features(side), v = 0;
+      Object.keys(EVAL).forEach(function (k) { v += EVAL[k] * (f[k] || 0); });
+      return v;
+    }
+    return { planValue: planValue, planChoose: choose, planChooseEval: chooseByEval, planEvalWeights: EVAL, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom, planGoal: goalFor,
       planFeatures: features, PLAN_FEATURES: FEATURES };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEnginePlanner;
