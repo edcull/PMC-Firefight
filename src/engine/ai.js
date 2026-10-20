@@ -823,6 +823,18 @@
     }
     function rolledAI(u) { var r = E.state.cfg && E.state.cfg.aiRolled; return !!r && !!r[u.side]; }
     function hardAI(u) { return tableAI(u) && !soloOpFor(u) && !rolledAI(u); }
+    /* An experiment the balance harness switches on (cfg.aiExp, scripts/balance/versus.js),
+       to measure before it is kept: for the choosing AI, and only for the side
+       cfg.aiExpSide names where it names one (against the AI as it is). No game sets it. */
+    function aiExp(u, name) {
+      var c = E.state.cfg || {}, x = c.aiExp;
+      return !!x && !!x[name] && hardAI(u) && (!c.aiExpSide || c.aiExpSide === u.side);
+    }
+    function tuneOf(k, d) { var x = E.state.cfg && E.state.cfg.aiExp; return x && x[k] != null && x[k] !== true ? +x[k] : d; }
+    function crossing(side) {
+      var t = E.state.turn;
+      return E.state.units.some(function (f) { return f.side === side && f.alive && f.edgeWait === t - 1; });
+    }
     /* ---- Covered approaches ----
        Not "stand in cover" but "get there unseen": the table as a grid of 1" cells,
        each with how many enemy guns can see it and reach it (its exposure) and the
@@ -1327,6 +1339,27 @@
         var s = scoreSpot(u, c, goal, behaviour, look);
         if (s > bestScore) { bestScore = s; best = c; }
       });
+      if (best && aiExp(u, 'bound') && !E.state.compound && behaviour !== 'flee' && behaviour !== 'assault' && !R.isFlying(u)) {
+        var safeR = tuneOf('safe', 0.5), openR = tuneOf('open', 1.5);
+        if (riskAt(u, u.x, u.y) <= safeR && riskAt(u, best.x, best.y) >= openR && !crossing(u.side)) {
+          u.edgeWait = E.state.turn;
+          var safe = null, ss = here + 0.6;
+          R.reachable(E.state, u, allowance).forEach(function (c) {
+            if (thinned(c) || !canStand(u, c) || riskAt(u, c.x, c.y) > safeR) return;
+            var sc2 = scoreSpot(u, c, goal, behaviour, look);
+            if (sc2 > ss) { ss = sc2; safe = c; }
+          });
+          if (!safe && shot.t && shot.score > 0.4) {
+            logLine('ai', u.label + ' waits at the edge of cover for the rest, and fires.');
+            fire(u, shot.t, 'fire'); return;
+          }
+          logLine('ai', u.label + ' waits at the edge of cover for the rest.');
+          best = safe;
+        } else if (aiExp(u, 'support') && crossing(u.side) && riskAt(u, best.x, best.y) < openR && shot.t && shot.score > 0.4) {
+          logLine('ai', u.label + ' gives the crossing covering fire.');
+          fire(u, shot.t, 'fire'); return;
+        }
+      }
       if (best) {
         // Covering Fire! (p. 158): a friend fires first on the enemy waiting where the move ends
         if (E.state.compound && behaviour !== 'flee') coverMove(u, best);
@@ -1605,6 +1638,9 @@
       var goals = goalPoints(u);
       var standing = goals.filter(function (o) { return objDist(u, o) <= objReach(o); })[0];
       if (standing && behaviour !== 'offensive') return standing;
+      if (standing && aiExp(u, 'keep') && E.state.objectives.indexOf(standing) >= 0 && !E.state.units.some(function (f) {
+        return f !== u && f.alive && f.side === u.side && R.status(f) !== 'broken' && objDist(f, standing) <= objReach(standing);
+      })) return standing;
       var best = null, bd = Infinity;
       goals.forEach(function (o) {
         var crowd = E.state.units.filter(function (f) {
@@ -1670,7 +1706,16 @@
         if (d <= u.range) opportunity += 1.4;
         if (d <= e.range) exposure += 1.0;
       });
-      E.state.units.forEach(function (f) {
+      if (aiExp(u, 'coh')) {
+        var nf = Infinity;
+        E.state.units.forEach(function (f) {
+          if (!f.alive || f === u || f.side !== u.side || f.x < 0 || f.aboard) return;
+          var fd = R.inches(c.x, c.y, f.x, f.y);
+          nf = Math.min(nf, fd);
+          if (fd <= 2.5) s -= 1.3;
+        });
+        if (nf < Infinity) s -= 0.4 * Math.max(0, nf - 6);
+      } else E.state.units.forEach(function (f) {
         if (!f.alive || f === u || f.side !== u.side) return;
         if (R.inches(c.x, c.y, f.x, f.y) <= 4) s -= 1.3;
       });
