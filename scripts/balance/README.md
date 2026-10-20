@@ -165,6 +165,23 @@ which is what crossing together guards against, and the objectives are lost the
 while. Whether a player punishes the lone runner enough to change that is for the
 tracked campaigns to show.
 
+### Keeping an objective (dropped)
+
+An offensive unit standing on an objective walks off to another (its own counts
+8" worse for being held), and offensive is the choice two times in three. Kept
+there instead when no friend else holds it:
+
+| Change | Share |
+|---|---|
+| the only holder stays, every scenario | 57.2% (640; baseline 59.0%) |
+| ...only where holding over time wins (Secure and control, Find and secure) | 58.6% (640) |
+| ...measured on Secure and control alone | 59.1% against 59.8% (640 each) |
+
+No gain: the hold is broken by fire far more than by walking off. (The share by
+scenario in a mixed run is noisy, about ±5 at 107 battles a scenario, and one change
+anywhere shifts every later battle's dice: a scenario that looks better or worse
+there wants a run of its own, `SCEN=secure`.)
+
 ## A player's battles against the AI
 
 Every battle's report carries what each side did (`src/rules/battlestats.js`, the
