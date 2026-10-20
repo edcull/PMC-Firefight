@@ -1308,7 +1308,8 @@
       var pull = (behaviour === 'defensive' || behaviour === 'neutral') && !shot.forced ? objectivePull(u) : null;
       if (soloI && behaviour === 'neutral' && !pull) { neutralHold(u, shot); return; }
       if (soloI && behaviour === 'defensive' && !pull && !shot.forced && defensiveHold(u)) return;
-      if (!pull && (behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4) {
+      // ((experiment) with the planner judging every shot, it weighs this Fire! against moving: below)
+      if (!pull && (behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4 && !(aiExp(u, 'plan2') && !shot.forced)) {
         fire(u, shot.t, 'fire'); return;
       }
 
@@ -1338,7 +1339,7 @@
       });
       /* (experiment) the planner judges: the best eight spots, and Fire! from here, in
          what each can expect to do to the enemy less what standing there costs (planner.js) */
-      if (aiExp(u, 'plan') && !E.state.compound && behaviour !== 'flee' && behaviour !== 'assault' && !R.isFlying(u)) {
+      if ((aiExp(u, 'plan') || aiExp(u, 'plan2')) && !E.state.compound && behaviour !== 'flee' && behaviour !== 'assault' && !R.isFlying(u)) {
         scored.sort(function (a, b) { return b.s - a.s; });
         var cands = scored.slice(0, 8).map(function (o) { return { c: o.c, base: scoreSpot(u, o.c, goal, behaviour, look, { noShots: true }) }; });
         var pick = E.planChoose(u, cands, scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look, { noShots: true }),
@@ -1622,6 +1623,11 @@
         if (t) return { x: t.unit.x, y: t.unit.y };
       }
       var goals = goalPoints(u);
+      // (experiment) the commander's assignment, where it gives one (planner.js)
+      if (aiExp(u, 'cmd') && E.state.objectives.length && goals === E.state.objectives) {
+        var given = E.planGoal(u, goals);
+        if (given) return given;
+      }
       var standing = goals.filter(function (o) { return objDist(u, o) <= objReach(o); })[0];
       if (standing && behaviour !== 'offensive') return standing;
       var best = null, bd = Infinity;

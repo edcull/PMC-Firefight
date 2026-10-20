@@ -122,7 +122,66 @@
       } finally { memo = null; }
     }
 
-    return { planChoose: choose, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom };
+    /* ---- The commander ----
+       Once a turn, for a side: which objectives it goes for — the scenario's need
+       (two in Secure and control, the one in Find and secure, otherwise all) ranked
+       by how near its force is, whether it holds them already and what enemy strength
+       stands round them — and which of its units go to each, nearest first, until
+       each has more worth than the enemy there; the rest where they are most needed.
+       A unit's goal is then its assignment (ai.js pickGoal). */
+    var NEAR = 9;
+    function strengthNear(side, o, own) {
+      var w = 0;
+      E.state.units.forEach(function (f) {
+        if (!f.alive || f.x < 0 || f.aboard || (own ? f.side !== side : f.side === side) || R.status(f) === 'broken') return;
+        if (R.inches(f.x, f.y, o.x, o.y) <= NEAR) w += worthNow(f);
+      });
+      return w;
+    }
+    function orders(side, objs) {
+      var c = E.state.cmdPlan = E.state.cmdPlan || {};
+      var key = E.state.turn + '|' + E.state.units.filter(function (f) { return f.alive && f.x >= 0; }).length;
+      if (c[side] && c[side].key === key) return c[side].by;
+      var scen = E.state.cfg && E.state.cfg.scenario;
+      var need = scen === 'secure' ? 2 : scen === 'find' ? 1 : objs.length;
+      var mine = E.state.units.filter(function (f) {
+        return f.alive && f.side === side && f.x >= 0 && !f.aboard && R.status(f) !== 'broken' && R.holdsGround(f) && !R.isFlying(f);
+      });
+      if (!mine.length) { c[side] = { key: key, by: {} }; return {}; }
+      var ranked = objs.map(function (o, i) {
+        var avg = mine.reduce(function (a, f) { return a + R.inches(f.x, f.y, o.x, o.y); }, 0) / mine.length;
+        var enemy = strengthNear(side, o, false), ours = strengthNear(side, o, true);
+        var pri = (o.owner === side ? 1.5 : 1) / (1 + enemy / (ours + 1)) / (1 + avg / 24);
+        return { o: o, i: i, enemy: enemy, pri: pri, got: 0 };
+      }).sort(function (a, b) { return b.pri - a.pri; }).slice(0, Math.max(1, need));
+      var by = {};
+      var free = mine.slice();
+      // each chosen objective first gets strength enough to outweigh the enemy there, nearest units first
+      ranked.forEach(function (r) {
+        var want = r.enemy * 1.3 + 1;
+        free.sort(function (a, b) { return R.inches(a.x, a.y, r.o.x, r.o.y) - R.inches(b.x, b.y, r.o.x, r.o.y); });
+        while (free.length && r.got < want) { var f = free.shift(); by[f.id] = r.i; r.got += worthNow(f); }
+      });
+      // the rest go where the shortfall is greatest, or failing that the nearest chosen one
+      free.forEach(function (f) {
+        var bestR = null, bs = -Infinity;
+        ranked.forEach(function (r) {
+          var sc = (r.enemy * 1.3 + 1 - r.got) - R.inches(f.x, f.y, r.o.x, r.o.y) / 12;
+          if (sc > bs) { bs = sc; bestR = r; }
+        });
+        if (bestR) { by[f.id] = bestR.i; bestR.got += worthNow(f); }
+      });
+      c[side] = { key: key, by: by };
+      return by;
+    }
+    // the objective the commander gives this unit, or null (none to give, or none for it)
+    function goalFor(u, objs) {
+      if (!objs || !objs.length) return null;
+      var i = orders(u.side, objs)[u.id];
+      return i == null ? null : objs[i];
+    }
+
+    return { planChoose: choose, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom, planGoal: goalFor };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEnginePlanner;
 })(typeof window !== 'undefined' ? window : global);
