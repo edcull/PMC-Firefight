@@ -373,6 +373,7 @@
   var wantName = '';                                 // what the new campaign is called
   var wantOptions = {};
   var wantSystem = true;                             // ...and whether it is fought across a star system (camp-system.js)                              // ...and the optional rules it is fought under (R.OPTIONS)
+  var wantTrack = false;                             // Debug tracking: every battle of it kept turn by turn (battletrack.js)
   /* Every slot on the new-campaign page starts in colours of its own, rolled — the
      players' and up to nine AI forces' — none worn twice. */
   /* A force's name to start from, as the online founding gives one: the player's own
@@ -500,9 +501,60 @@
       kind: 'confirm', title: 'Promote ' + e.name + ' to ' + q.name + '?',
       text: 'It costs ' + c.exp + ' EXP' + (c.kUC ? ' and ' + c.kUC + ' ' + word : '') + '. It becomes ' + q.name + ' (Tier ' + ROMAN[q.tier] +
         (q.group ? ', ' + q.group : '') + ') and keeps its honours, traumas and history. This cannot be undone.',
+      // what it becomes, drawn: on its own drive and crew, mounted as it is, where the new kind may be
+      preview: function () {
+        var rides = !!e.riders && R.canRide(q);
+        return recruitPreview(co, q)({ prop: R.propsFor(q).indexOf(e.prop) >= 0 ? e.prop : null, drone: e.drone && R.canBeDrone(q) ? 'drone' : 'crew',
+          riders: rides ? 'riders' : 'foot', mount: R.canMount(q, rides) ? e.mount : null });
+      },
       okLabel: 'Promote',
       onOk: onOk
     });
+  }
+  /* What a recruit is taken on as, picked in the question that asks for the money:
+     a ground vehicle's propulsion (p. 36), and a hull's crew or Drone Control (p. 37). */
+  function recruitChoices(p) {
+    var out = [], U = root.PMCUi;
+    var props = R.propsFor(p);
+    if (props.length) out.push({ id: 'prop', label: 'Propulsion', value: R.defaultDrive(p) || 'none', opts: props.map(function (k) {
+      var Q = R.PROPULSION[k];
+      return { v: k, name: Q.name, note: Q.note, icon: U.DRIVE_ICON[k] };
+    }) });
+    if (R.canBeDrone(p)) out.push({ id: 'drone', label: 'Crew', value: 'crew', opts: [
+      { v: 'crew', name: 'Crewed', note: 'A crew aboard: it earns experience and promotion.', icon: U.CREW_ICON },
+      { v: 'drone', name: 'Drone', note: 'Drone Control: +1 Structure, no crew, never earns experience \u2014 but Hackers can reach it.', icon: U.DRONE_ICON }
+    ] });
+    /* the Riders upgrade, "decided when that unit is recruited. The decision is final"
+       (p. 97), and what they ride (Appendix 3) */
+    if (R.canRide(p)) out.push({ id: 'riders', label: 'Mounted', value: 'foot', opts: [
+      { v: 'foot', name: 'On foot', note: 'As the unit stands.', icon: U.CREW_ICON },
+      { v: 'riders', name: 'Riders', note: 'Half the models, Movement 10 and the Riders rule. Final once recruited.' }
+    ] });
+    if (R.canRide(p) || R.canMount(p, false)) out.push({ id: 'mount', label: 'Mount', value: 'none', when: R.canMount(p, false) ? null : { id: 'riders', v: 'riders' },
+      opts: R.MOUNT_ORDER.map(function (k) { var M = R.MOUNTS[k]; return { v: k, name: k === 'none' ? 'Standard' : M.name, note: M.note }; }) });
+    return out;
+  }
+  // a choice that only counts with another made (a mount, once the squad rides)
+  function choiceLive(spec, c) {
+    if (!c.when) return true;
+    var on = (spec.choices || []).filter(function (o) { return o.id === c.when.id; })[0];
+    return !!on && on.value === c.when.v;
+  }
+  // what the question's choices stand at: { id: value }, the ones that count
+  function picksOf(spec) {
+    var out = {};
+    (spec.choices || []).forEach(function (c) { if (choiceLive(spec, c)) out[c.id] = c.value; });
+    return out;
+  }
+  /* The recruit as the choices have it, drawn (paintPortraits) as the dossier draws
+     its units: its drive, crew or drone, on foot or mounted. */
+  function recruitPreview(co, p) {
+    return function (pick) {
+      return '<div class="askpic"><canvas class="dportrait" data-key="' + esc(p.key) + '" data-side="' + (co === (camp && camp.companies.B) ? 'B' : 'A') + '"' +
+        ' data-colour="' + esc(colourOf(co)) + '"' + (pick.prop && pick.prop !== 'none' ? ' data-prop="' + esc(pick.prop) + '"' : '') +
+        (pick.drone === 'drone' ? ' data-drone="1"' : '') + (pick.riders === 'riders' ? ' data-riders="1"' : '') +
+        (pick.mount && pick.mount !== 'none' ? ' data-mount="' + esc(pick.mount) + '"' : '') + ' role="img" aria-label="' + esc(p.name) + '"></canvas></div>';
+    };
   }
   /* A vehicle or aircraft above the company's Tier: at Priority Level 1 nothing above
      the Battle Tier may be fielded, so until the company catches up it fights at PL2 only */
@@ -590,6 +642,19 @@
     var box = el('camp-askbox');
     var h = '<h3>' + esc(spec.title) + '</h3>';
     if (spec.text) h += '<p' + (spec.danger ? ' class="danger"' : '') + '>' + esc(spec.text) + '</p>';
+    /* `choices`: what is to be picked before saying yes (a vehicle's propulsion, its
+       crew), each a row of options; the one picked says what it does beneath */
+    // a picture of what is being asked about, drawn as the choices now stand
+    if (spec.preview) h += spec.preview(picksOf(spec));
+    (spec.choices || []).forEach(function (c, ci) {
+      if (!choiceLive(spec, c)) return;
+      var now = c.opts.filter(function (o) { return o.v === c.value; })[0] || c.opts[0];
+      h += '<div class="askpick"><label>' + esc(c.label) + '</label><div class="askopts" role="radiogroup" aria-label="' + esc(c.label) + '">' +
+        c.opts.map(function (o) {
+          return '<button type="button" class="askopt' + (o === now ? ' on' : '') + '" role="radio" aria-checked="' + (o === now) +
+            '" data-askopt="' + ci + '" data-v="' + esc(o.v) + '">' + (o.icon || '') + '<b>' + esc(o.name) + '</b></button>';
+        }).join('') + '</div>' + (now.note ? '<small>' + esc(now.note) + '</small>' : '') + '</div>';
+    });
     if (spec.kind === 'text') {
       h += '<input class="tin" id="ask-input" maxlength="' + (spec.max || 28) + '" value="' +
         esc(spec.value || '') + '">';
@@ -605,6 +670,7 @@
     }
     box.innerHTML = h;
     el('camp-ask').hidden = false;
+    if (spec.preview) paintPortraits(box);
     var input = el('ask-input');
     if (input) { input.focus(); input.select(); }
   }
@@ -618,8 +684,9 @@
     if (!spec) return;
     var input = el('ask-input');
     var value = input ? input.value.trim() : true;
+    var picks = picksOf(spec);
     closeAsk();
-    if (spec.onOk) spec.onOk(value);
+    if (spec.onOk) spec.onOk(value, picks);
   }
   // `then`: what waits on the note being read — however it is closed
   function note(title, text, then) { ask({ kind: 'note', title: title, text: text, then: then }); }
@@ -741,7 +808,7 @@
       get camp() { return camp; }, get colourOpen() { return colourOpen; }, get wantMode() { return wantMode; },
       get wantFaction() { return wantFaction; }, get wantB() { return wantB; }, get openModal() { return openModal; },
       get wantRivals() { return wantRivals; }, get wantRivalArmies() { return wantRivalArmies; }, get wantHotAi() { return wantHotAi; },
-      get wantColours() { return wantColours; }, get wantName() { return wantName; }, get wantOptions() { return wantOptions; }, get wantSystem() { return wantSystem; },
+      get wantColours() { return wantColours; }, get wantName() { return wantName; }, get wantOptions() { return wantOptions; }, get wantSystem() { return wantSystem; }, get wantTrack() { return wantTrack; },
       get wantRivalColours() { return wantRivalColours; }, get rivColourFor() { return rivColourFor; },
       get hubPane() { return hubPane; }, get promoRid() { return promoRid; },
       get hubSide() { return camp && camp.mode === 'hotseat' ? hubSide : 'A'; },
@@ -852,7 +919,7 @@
   var KIT_ONLINE = null;
   function kitOnline() {
     return KIT_ONLINE || (KIT_ONLINE = root.PMCDossierOnline({
-      C: C, R: R, ROMAN: ROMAN, esc: esc, note: note, ask: ask, tip: tip, profile: profile, root: root, askPromote: askPromote, recruitWarn: recruitWarn,
+      C: C, R: R, ROMAN: ROMAN, esc: esc, note: note, ask: ask, tip: tip, profile: profile, root: root, askPromote: askPromote, recruitWarn: recruitWarn, recruitChoices: recruitChoices, recruitPreview: recruitPreview,
       get camp() { return camp; }, set camp(v) { camp = v; }, get view() { return view; }, set view(v) { view = v; },
       get draft() { return draft; }, set draft(v) { draft = v; }, get online() { return online; }, set online(v) { online = v; },
       set hubSide(v) { hubSide = v === 'B' ? 'B' : 'A'; }, get drawState() { return drawState; }, get upState() { return upState; },
@@ -1242,14 +1309,14 @@
     if (t.hasAttribute('data-rtab')) { rosterTab = t.getAttribute('data-rtab'); openModal = null; render(); return; }
     if (t.hasAttribute('data-recruit')) {
       // recruiting spends the money: say what it costs, and what there is, before it is spent
-      var rk = t.getAttribute('data-recruit'), asDrone = t.hasAttribute('data-asdrone'), asRiders = t.hasAttribute('data-asriders');
+      var rk = t.getAttribute('data-recruit');
       var rp = profile(rk), rcost = C.recruitCost(co, rk), purse = co.kUC, coinWord = C.money(co);
       ask({
-        kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (asDrone ? ' (drone)' : asRiders ? ' (Riders)' : '') + '?',
+        kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + '?', choices: recruitChoices(rp), preview: recruitPreview(co, rp),
         text: (rcost ? 'It costs ' + rcost + ' ' + coinWord + '. You have ' + purse + ' ' + coinWord +
           ', leaving ' + (purse - rcost) + ' ' + coinWord + '.' : 'It costs nothing. You have ' + purse + ' ' + coinWord + '.') + recruitWarn(co, rp),
         okLabel: C.words(co).recruit + (rcost ? ' for ' + rcost + ' ' + coinWord : ''),
-        onOk: function () { C.recruit(co, rk, { drone: asDrone, riders: asRiders }); save(); render(); }
+        onOk: function (v, pick) { C.recruit(co, rk, { prop: pick.prop || null, drone: pick.drone === 'drone', riders: pick.riders === 'riders', mount: pick.mount || null }); save(); render(); }
       });
       return;
     }
@@ -1475,7 +1542,7 @@
           var hai = [];
           for (var hi = 0; hi < wantHotAi; hi++) hai.push({ faction: wantRivalArmies[hi] || 'random', colour: wantRivalColours[hi] || null });
           var nmBox2 = el('camp-name'); if (nmBox2) wantName = nmBox2.value.trim();
-          kitOnline().newLocal({ name: wantName || null, factions: [fac, secondFaction || 'pmc'], colours: [wantColours.A, wantColours.B], ai: hai, options: R.cleanOptions(wantOptions) });
+          kitOnline().newLocal({ name: wantName || null, factions: [fac, secondFaction || 'pmc'], colours: [wantColours.A, wantColours.B], ai: hai, options: R.cleanOptions(wantOptions), debugTrack: wantTrack });
           return;
         }
         // a name to start from; the player settles it on the founding screen
@@ -1485,6 +1552,7 @@
         var nmBox = el('camp-name'); if (nmBox) wantName = nmBox.value.trim();
         if (wantName) camp.title = wantName;
         camp.options = R.cleanOptions(wantOptions);  // the optional rules, for every battle of it
+        if (wantTrack) camp.debugTrack = true;       // and every battle of it kept turn by turn
         if (wantColours.A) { draft.colour = wantColours.A; draft.colourChosen = true; }
         draft.name = defaultForceName(fac, 'A');
         draft.archs = [];                          // the world is always rolled
@@ -1595,9 +1663,9 @@
       case 'negotiate': {
         var nst = camp.post && camp.post.steps[0];
         if (!nst || nst.kind !== 'negotiate' || !(nst.sel || []).length) return;
-        var npr = camp.post.pre, dice = npr.dice[nst.side].slice(), sw = [];
+        // the dice of the roll that pays it, re-rolled: the rolls themselves (the other side's pay) are left as they are
+        var npr = camp.post.pre, dice = C.payingDice(npr.dice, nst.side, camp.post.report.winner, camp.companies[nst.side]), sw = [];
         nst.sel.forEach(function (i) { var was = dice[i]; dice[i] = 1 + Math.floor(Math.random() * 6); sw.push({ was: was, now: dice[i] }); });
-        npr.dice[nst.side] = dice;
         npr.neg[nst.side] = { dice: dice.slice(), swapped: sw, idx: nst.sel.slice() };
         save(); render(); return;
       }
@@ -1782,6 +1850,13 @@
     var host = el('camp');
     if (!host) return;
     host.addEventListener('click', function (ev) {
+      // an option picked in the question: it stays open, showing what was picked
+      var ao = ev.target.closest && ev.target.closest('[data-askopt]');
+      if (ao && asking && asking.choices) {
+        var ch = asking.choices[+ao.getAttribute('data-askopt')];
+        if (ch) { ch.value = ao.getAttribute('data-v'); ask(asking); }
+        return;
+      }
       var a = ev.target.closest && ev.target.closest('[data-ask]');
       if (a) {
         if (a.getAttribute('data-ask') === 'ok') answerAsk(); else closeAsk();
@@ -1840,6 +1915,7 @@
       else if (ev.target.id === 'camp-hotai') { wantHotAi = +ev.target.value || 0; render(); }
       else if (ev.target.hasAttribute && ev.target.hasAttribute('data-opt') && ev.target.closest('#camp-opts')) { wantOptions = root.PMCUi.readOptions(el('camp-opts')); }
       else if (ev.target.id === 'camp-system') { wantSystem = ev.target.value === 'system'; }
+      else if (ev.target.id === 'camp-track') { wantTrack = !!ev.target.checked; }
       else if (ev.target.classList && ev.target.classList.contains('rivarmy')) { wantRivalArmies[+ev.target.getAttribute('data-i')] = ev.target.value; }
       else if (ev.target.id === 'camp-pl') {
         var want = +ev.target.value;
@@ -1883,7 +1959,7 @@
       var setup = el('setup');
       if (setup) setup.hidden = true;
       wantMode = mode === 'hotseat' ? 'hotseat' : 'solo';
-      wantName = ''; wantOptions = {}; rollColours();
+      wantName = ''; wantOptions = {}; wantTrack = false; rollColours();
       Store.use(null);
       camp = null; reset();
       open('hub');

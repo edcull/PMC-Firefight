@@ -88,6 +88,17 @@ function ok(name, cond, note) {
   await p.waitForTimeout(200);
   const form = await p.evaluate(() => { const s = document.getElementById('camp-system'); return s ? s.value : null; });
   ok('a new single-player campaign is fought across a star system unless asked otherwise', form === 'system', String(form));
+  // Debug tracking: off unless ticked; ticked, the campaign raised keeps its battles turn by turn (battletrack.js)
+  const tr = await p.evaluate(() => {
+    const b = document.getElementById('camp-track');
+    if (!b) return null;
+    const was = b.checked;
+    b.click();
+    document.querySelector('#camp-body [data-go="newcamp"]').click();
+    const c = window.PMC_CAMPAIGN.get();
+    return { was: was, on: !!(c && c.debugTrack) };
+  });
+  ok('...not tracked turn by turn unless Debug tracking is ticked; ticked, it is', !!tr && !tr.was && tr.on, JSON.stringify(tr));
   const old = await p.evaluate(() => {
     const C = window.PMCCamp;
     const camp = C.newCampaign({ mode: 'solo', nameA: 'Old Guard', factionA: 'pmc' });

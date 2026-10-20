@@ -486,6 +486,18 @@
       deployText: function () { return ENTRY_TEXT; },
       zoneFor: function (state, side) { return state.sc.zones[side]; },
       hint: 'Three objectives. Hold all three at once, or the same two for three turns running, and it ends early. Breaking the enemy is not a win here — only ground is.',
+      /* the rounds an objective has counted towards the same two held three End
+         phases running: the side holding the pair, and how many it has (draw.js
+         marks them on the objective's ring) */
+      holdClock: function (state, i) {
+        var st = state.sc.streak, out = { need: 3, n: 0, side: null };
+        if (!st) return out;
+        ['A', 'B'].forEach(function (s) {
+          var k = st[s];
+          if (k && k.n > 0 && k.key && k.key.split(',').indexOf(String(i)) >= 0) { out.n = k.n; out.side = s; }
+        });
+        return out;
+      },
       check: function (state) {
         // p. 51 gives no rout clause: ground is the only thing that counts
         var held = { A: [], B: [] };
@@ -574,6 +586,12 @@
         return state.units.filter(function (u) {
           return u.side === side && u.alive && u.reserve && u.wave === 2;
         }).slice(0, state.cfg.pl);
+      },
+      // the found objective, held three End phases running: who has how many (draw.js marks them on its ring)
+      holdClock: function (state) {
+        var h = state.sc.hold;
+        if (!state.sc.found || !h) return null;
+        return h.A > 0 ? { need: 3, n: h.A, side: 'A' } : h.B > 0 ? { need: 3, n: h.B, side: 'B' } : { need: 3, n: 0, side: null };
       },
       check: function (state) {
         var found = state.sc.found;
@@ -1281,6 +1299,13 @@
      in every scenario — including the three that have no rout clause of their own —
      and then the scenario's own conditions. Both sides meeting a condition in the
      same End phase is a draw (p. 49), which each scenario's check already handles. */
+  /* An objective won by holding it for so many End phases running: how many it
+     needs, how many the side holding it has, and which side ({ need, n, side }),
+     or null for one that is not. */
+  function holdClock(state, i) {
+    var sc = state && state.cfg && SCENARIOS[state.cfg.scenario];
+    return sc && sc.holdClock && state.sc ? sc.holdClock(state, i) : null;
+  }
   function check(state) {
     var ga = annihilated(state, 'A'), gb = annihilated(state, 'B');
     if (ga && gb) return { winner: null, text: 'Neither company has anything left on the table — a draw.', routed: ['A', 'B'] };
@@ -1350,7 +1375,7 @@
     SCENARIOS: SCENARIOS, ORDER: ORDER, CE_ORDER: CE_ORDER,
     begin: begin, deploy: deploy, lastStandBarricades: lastStandBarricades, lzOK: lzOK, lzSpots: lzSpots, autoLZs: autoLZs, setLZs: setLZs, zoneFor: zoneFor, deployOK: deployOK,
     reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
-    gunRule: gunRule, freeToHold: freeToHold, holderOf: holderOf, areaOf: areaOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
+    gunRule: gunRule, freeToHold: freeToHold, holderOf: holderOf, holdClock: holdClock, areaOf: areaOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
     rollRoles: rollRoles, bestDefence: bestDefence,
     searchSpots: searchSpots, checkArea: checkArea,
     boxesFor: function (state, side, u) {

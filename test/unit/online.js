@@ -92,6 +92,8 @@ function ok(name, cond, note) {
     view(brann).name === 'The Long War' && online.list(brann).some((c) => c.name === 'The Long War'));
   ok('only the host sets the optional rules', !cmd(brann, 'lobbyOptions', { options: { onlyTwo: true } }).ok &&
     cmd(ash, 'lobbyOptions', { options: { onlyTwo: true, otherWorlds: true, bogus: true } }).ok && JSON.stringify(view(brann).options) === '{"onlyTwo":true,"otherWorlds":true}', JSON.stringify(view(brann).options));
+  ok('only the host turns on debug tracking (every battle kept turn by turn)', !view(brann).debugTrack && !cmd(brann, 'lobbyTrack', { on: true }).ok &&
+    cmd(ash, 'lobbyTrack', { on: true }).ok && view(brann).debugTrack === true);
   // a compound laid out by hand for the 4' x 4' table: the host's to lay out, and only one that can be fought in
   const CMP = global.PMCCompound, plan44 = CMP.generatedPlan(48, 48);
   ok('only the host lays out a compound for the campaign', !cmd(brann, 'setCompound', { size: '48x48', plan: plan44 }).ok &&
@@ -159,6 +161,7 @@ function ok(name, cond, note) {
   const room = lobby.rooms.get(go.battle);
   ok('a private room: the player’s seat held, the AI’s side with nobody in it', room && room.settings.private && room.seats.A.id === 'u' + ash.userId && !room.seats.B);
   ok('...fought under the campaign\u2019s optional rules', room && room.table.engine.state().cfg.options.onlyTwo === true && !room.table.engine.state().cfg.options.bogus);
+  ok('...tracked turn by turn, as the host asked', room && room.table.engine.state().cfg.track === true);
   ok('...in the compound the host laid out for its table, if it is a 4\u2032 \u00d7 4\u2032 one', room && (room.table.cfg.pl >= 3 ? room.table.cfg.compoundPlan === null
     : room.table.cfg.compoundPlan && room.table.cfg.compoundPlan.cells === plan44.cells), 'PL ' + (room && room.table.cfg.pl));
   ok('...on the world the contract was offered with (Other Worlds, rolled before the contract)', room && !!room.table.engine.state().cfg.world &&
@@ -202,6 +205,7 @@ function ok(name, cond, note) {
   ok('...its report added to the aftermath kept on the log', (s.log[0].after.elsewhere || []).length === els.length);
   ok('...and the forces free again', camp(cole).online.busyAi.length === 0);
   ok('...kept on the log, to be read again', s.log.length === 1 && s.log[0].after && s.log[0].against === aiName);
+  ok('...with its track, the campaign tracked', !!s.log[0].track && !!s.log[0].track.table && s.log[0].track.turns.length >= 1);
   ok('...and fresh offers for the new turn', s.offersTurn === s.turn && s.offers.length >= 1);
   ok('the room is closed', !lobby.rooms.has(go.battle));
 
@@ -285,6 +289,12 @@ function ok(name, cond, note) {
   ok('the aftermath for both: each paid, each turn on by one', s.companies.A.kUC > kA && s2.companies.A.kUC > kB && s.turn === tA + 1 && s2.turn === tB + 1, [kA, s.companies.A.kUC, kB, s2.companies.A.kUC].join());
   ok('...each reads it as their own (Brann won theirs, Ash lost theirs)', s2.online.after.winner === 'A' && s.online.after.winner === 'B');
   ok('...on each player’s log, against the other', s.log[s.log.length - 1].against === 'Red Dawn' && s2.log[s2.log.length - 1].against === 'Iron Wolves');
+  ok('...each with the track, turned round for Brann (their own force as A)', (() => {
+    const ta = s.log[s.log.length - 1].track, tb = s2.log[s2.log.length - 1].track;
+    const sides = (t) => t.turns[t.turns.length - 1].units.map((u) => u.side).join('');
+    // (forfeited before anyone deployed, the table is empty: battletrack.js's own test turns the units round)
+    return !!ta && !!tb && sides(tb) === sides(ta).replace(/A/g, 'x').replace(/B/g, 'A').replace(/x/g, 'B') && tb !== ta;
+  })());
   ok('...and the duel is over: both free again', !s.online.duel && !s2.online.duel && view(ash).waiting === 'either');
   void sb;
 

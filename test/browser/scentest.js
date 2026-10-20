@@ -89,11 +89,22 @@ async function playOne(p, id) {
   });
   await p.waitForTimeout(500);
 
+  /* (under a loaded machine the AIs' deployment can still be playing out when the
+     battle opens: give it until the battle is under way and the table is idle) */
+  for (let i = 0; i < 30; i++) {
+    const settled = await p.evaluate(() => {
+      const s = window.PMC_STATE();
+      return s.phase === 'battle' && !(window.__busy && window.__busy()) && !s.units.some(u => u.x < 0 && !u.reserve && !u.aboard);
+    });
+    if (settled) break;
+    await drain(p); await p.waitForTimeout(200);
+  }
   const deployed = await p.evaluate(() => {
     const s = window.PMC_STATE();
-    return s.units.filter(u => u.x < 0 && !u.reserve && !u.aboard).length;
+    const left = s.units.filter(u => u.x < 0 && !u.reserve && !u.aboard);
+    return { n: left.length, who: left.map(u => u.side + ' ' + u.key + (u.wave ? ' wave ' + u.wave : '') + (u.alive ? '' : ' dead') + (u.fled ? ' fled' : '')).join(', '), phase: s.phase, turn: s.turn };
   });
-  ok('every unit is placed or held back', deployed === 0, deployed + ' left unplaced');
+  ok('every unit is placed or held back', deployed.n === 0, deployed.n + ' left unplaced' + (deployed.n ? ' (' + deployed.who + '; ' + deployed.phase + ', turn ' + deployed.turn + ')' : ''));
 
   const t0 = Date.now();
   let over = null;
@@ -131,11 +142,12 @@ async function playOne(p, id) {
   }, setup.wavedIds);
   if (id !== 'meeting' && id !== 'secure') {
     /* A scenario reserve must reach the table; a force the scenario held nobody
-       back from has nothing to bring on, which is not a fault. */
+       back from has nothing to bring on, which is not a fault, and nor is a battle
+       settled by turn 2, before the reserves are due (Demolish's come from turn 2). */
     ok('the scenario reserves came on during the battle',
-      after.cameOn > 0 || setup.waved === 0,
+      after.cameOn > 0 || setup.waved === 0 || after.turn <= 2,
       after.cameOn + ' of ' + setup.waved + ' held back by the scenario came on (' +
-        after.arrivals + ' arrivals still in the log)');
+        after.arrivals + ' arrivals still in the log)' + (after.turn <= 2 && !after.cameOn ? ', the battle over by turn ' + after.turn : ''));
   }
   if (id === 'find') {
     // a rout can settle Find and secure before anyone reaches a location, which is

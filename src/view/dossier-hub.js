@@ -70,6 +70,9 @@
           '<option value="list"' + (E.wantSystem ? '' : ' selected') + '>A plain list of offers</option></select>' +
           '<p class="hint small">A star system turns Other Worlds on: every planet has conditions of its own.</p></div>';
         if (U.optionBoxes) h += '<div class="field camp-opts" id="camp-opts"><label>Optional rules</label>' + U.optionBoxes(E.wantOptions, '', true) + '</div>';
+        // Debug tracking: every battle kept turn by turn (battletrack.js), for analysing the AI
+        h += '<div class="field camp-track"><label>Debugging</label><div class="opt-list"><label class="opt-row"><input type="checkbox" id="camp-track"' + (E.wantTrack ? ' checked' : '') + '>' +
+          '<span class="opt-name" data-tip="Keeps where every unit stood, turn by turn, and who held each objective, in the campaign\u2019s last ten battles: for analysing the AI (scripts/balance/tracks.js)." data-tip-title="Debug tracking">Debug tracking</span></label></div></div>';
         // one line: how many AI forces (an odd number: with yours, the forces pair off for each round), a save file to load instead, and Raise the force
         // (hotseat: none, or an even number — with the two players, the forces pair off)
         h += '<div class="olob-bar"><label class="olob-n">AI forces <select id="' + (hot ? 'camp-hotai' : 'camp-rivals') + '">' + (hot ? [0, 2, 4, 6, 8] : [1, 3, 5, 7, 9]).map(function (n) {

@@ -334,6 +334,9 @@
         '<p class="hint small">A star system turns Other Worlds on: every planet has conditions of its own.</p></div>';
       // the optional rules every battle of it is fought under: the host's to set, read by the rest
       if (U.optionBoxes) h += '<div class="field olob-opts" id="olob-opts"><label>Optional rules</label>' + U.optionBoxes(L.options, host ? '' : ' disabled', true) + '</div>';
+      // Debug tracking: every battle kept turn by turn, for the balance scripts (the host's to say)
+      h += '<div class="field camp-track"><label>Debugging</label><div class="opt-list"><label class="opt-row"><input type="checkbox" id="olob-track"' + (L.debugTrack ? ' checked' : '') + (host ? '' : ' disabled') + '>' +
+        '<span class="opt-name" data-tip="Keeps where every unit stood, turn by turn, and who held each objective, in the campaign\u2019s last ten battles: for analysing the AI (scripts/balance/tracks.js)." data-tip-title="Debug tracking">Debug tracking</span></label></div></div>';
       /* as the skirmish room has it, above the chat: the way out a quiet link, and the
          one thing to do next the full-width button (ready, then the host's Start) */
       h += '<div class="lob-acts olob-acts"><button class="lnk" data-go="omulti">Leave</button>';
@@ -729,13 +732,13 @@
       // the force's own changes
       var co = camp.companies.A;
       if (attr('data-recruit')) {
-        var rk = attr('data-recruit'), drone = t.hasAttribute('data-asdrone'), riders = t.hasAttribute('data-asriders');
+        var rk = attr('data-recruit');
         var rp = E.profile(rk), cost = C.recruitCost(co, rk), word = C.money(co);
         E.ask({
-          kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + (drone ? ' (drone)' : riders ? ' (Riders)' : '') + '?',
+          kind: 'confirm', title: C.words(co).recruit + ' ' + rp.name + '?', choices: E.recruitChoices(rp), preview: E.recruitPreview(co, rp),
           text: cost ? 'It costs ' + cost + ' ' + word + '. You have ' + co.kUC + ' ' + word + ', leaving ' + (co.kUC - cost) + ' ' + word + '.' + E.recruitWarn(co, rp) : 'It costs nothing.' + E.recruitWarn(co, rp),
           okLabel: C.words(co).recruit + (cost ? ' for ' + cost + ' ' + word : ''),
-          onOk: function () { cmd('recruit', { key: rk, drone: drone, riders: riders }); }
+          onOk: function (v, pick) { cmd('recruit', { key: rk, prop: pick.prop || null, drone: pick.drone === 'drone', riders: pick.riders === 'riders', mount: pick.mount || null }); }
         });
         return true;
       }
@@ -922,6 +925,7 @@
       }
       if (target.id === 'olob-pub') { cmd('lobbyListed', { on: !!target.checked }); return true; }
       if (target.id === 'olob-sys') { cmd('lobbySystem', { on: target.value === 'system' }); return true; }
+      if (target.id === 'olob-track') { cmd('lobbyTrack', { on: !!target.checked }); return true; }
       if (target.hasAttribute('data-opt') && target.closest('#olob-opts')) { cmd('lobbyOptions', { options: U.readOptions(document.getElementById('olob-opts')) }); return true; }
       if (target.hasAttribute('data-olob-ai')) { cmd('lobbySlot', { i: +target.getAttribute('data-olob-ai'), kind: target.checked ? 'ai' : 'open' }); return true; }
       if (target.hasAttribute('data-olob-army')) { cmd('lobbyFaction', { i: +target.getAttribute('data-olob-army'), faction: target.value }); return true; }

@@ -295,7 +295,14 @@
       var chk = canRecruit(co, key);
       if (!chk.ok) return chk;
       co.kUC -= chk.cost;
-      var e = newEntry(key, Object.assign({ co: co }, opts || {}));
+      // only what the hull may take: a propulsion it can run on, Drone Control where it may have it
+      var o = Object.assign({}, opts || {}), p = profile(key);
+      if (o.prop && R.propsFor(p).indexOf(o.prop) < 0) o.prop = null;
+      if (o.prop === 'none') o.prop = null;
+      if (o.drone && !R.canBeDrone(p)) o.drone = false;
+      if (o.riders && !R.canRide(p)) o.riders = false;
+      if (!o.mount || o.mount === 'none' || !R.MOUNTS[o.mount] || !R.canMount(p, o.riders)) o.mount = null;
+      var e = newEntry(key, Object.assign({ co: co }, o));
       co.roster.push(e);
       return { ok: true, entry: e, cost: chk.cost };
     }

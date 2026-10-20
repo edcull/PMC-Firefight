@@ -647,12 +647,25 @@
       worth.forEach(function (c) { c.fit = weaponFit(u, c.t, opts); c.sup = suppressionRank(c.t); });
       worth.sort(function (a, b) {
         if (a.fit !== b.fit) return a.fit - b.fit;
+        // a Hard side finishes what it has started: the hurt, the pinned, the nearly broken (focusPref)
+        if (Math.abs((a.pref || 0) - (b.pref || 0)) > 0.05) return (b.pref || 0) - (a.pref || 0);
         if (threatFirst && Math.abs(a.threat - b.threat) > 0.05) return b.threat - a.threat;
         return a.sup - b.sup || b.tie - a.tie;
       });
       return worth[0];
     }
 
+    /* Focus fire, for a Hard side: of the shots worth taking, the one at a unit already
+       hurt, Suppressed or near its breaking point — fire that finishes a unit takes it
+       out of the fight, where the same fire spread round takes nothing. */
+    function focusPref(t) {
+      var p = hurt(t);
+      if (!R.isMachine(t)) {
+        var m = R.currentMorale ? R.currentMorale(t) : t.morale || 4;
+        p += Math.min(0.6, (t.sp || 0) / Math.max(1, m * 2));
+      }
+      return p;
+    }
     function bestTarget(u, mode, opts) {
       var best = { t: null, score: -1 };
       /* Protecting the VIP: "whenever an OpFor unit can attack the VIP unit, it
@@ -670,7 +683,7 @@
         if (!t.alive || t.side === u.side || !onTable(t) || husk(t)) return;
         var e = expectedHits(u, t, mode || 'fire', opts);
         if (e > best.score) best = { t: t, score: e };
-        if (e >= 0) cands.push({ t: t, score: e, tie: e });
+        if (e >= 0) cands.push({ t: t, score: e, tie: e, pref: hardAI(u) ? focusPref(t) : 0 });
       });
       var pick = prioritise(u, cands, opts);
       return pick && pick.score > 0 ? { t: pick.t, score: pick.score } : best;
@@ -795,7 +808,194 @@
 
     /* The behaviour table (p. 147), rolled for every unit as it activates —
        a hull or an aircraft as much as a squad. */
+    /* A side the computer runs (but the solitaire OpFor) does not roll on the behaviour
+       table: it chooses, by what is in front of it — a charge it should win, a good
+       shot from where it is, ground to close when nothing is in range, cover when it is
+       badly hurt — and concentrates its fire. Same rules, same dice for everything else.
+       The solitaire OpFor keeps the book's table (p. 147); so does a side the battle's
+       set-up marks `cfg.aiRolled` — never a game's, only the tests and the harness that
+       measures the choosing AI against the table (scripts/balance). */
+    // how badly a unit is hurt, 0 to 1: the men it has lost, or the Structure
+    function hurt(u) {
+      if (R.isMachine(u)) return u.str ? Math.min(1, (u.damage || 0) / u.str) : 0;
+      var s0 = u.startSize || u.size;
+      return s0 ? Math.max(0, 1 - (u.models || 0) / s0) : 0;
+    }
+    function rolledAI(u) { var r = E.state.cfg && E.state.cfg.aiRolled; return !!r && !!r[u.side]; }
+    function hardAI(u) { return tableAI(u) && !soloOpFor(u) && !rolledAI(u); }
+    /* ---- Covered approaches ----
+       Not "stand in cover" but "get there unseen": the table as a grid of 1" cells,
+       each with how many enemy guns can see it and reach it (its exposure) and the
+       cover standing there gives; from it, for a unit and the place it is making
+       for, the cost of the way there from every cell, open watched ground costing
+       more than its length. How much a unit minds exposure is its own: cover is
+       nothing to Battle Armour or a hull that does not walk (p. 59), Stealth makes
+       a distant gun less of a worry, and a Cloaking System cannot be drawn a bead
+       on from further than 12" (p. 129). */
+    /* RISK_W: how much dearer a step is per gun watching it (measured: 0.25 the best
+       of 0.25, 0.5 and 1 against the behaviour table); HERE_W: the price of ending
+       the move where guns can see it */
+    var CELL = 1, RISK_W = 0.25, HERE_W = 0.8, exCache = {}, routeCache = {};
+    function exposureGrid(side) {
+      var foes = E.state.units.filter(function (e) {
+        return e.alive && e.side !== side && onTable(e) && !husk(e) && e.fp != null && R.status(e) !== 'broken';
+      });
+      var key = E.state.terrain.length + '|' + foes.map(function (e) { return e.id + ':' + e.x.toFixed(1) + ',' + e.y.toFixed(1) + R.status(e); }).join(';');
+      var hit = exCache[side];
+      if (hit && hit.state === E.state && hit.key === key) return hit;
+      var cols = Math.ceil(R.BOARD.w / CELL), rows = Math.ceil(R.BOARD.h / CELL), n = cols * rows;
+      var g = { state: E.state, key: key, cols: cols, rows: rows, ex: new Float32Array(n), exNear: new Float32Array(n), cov: new Float32Array(n), open: new Uint8Array(n) };
+      for (var k = 0; k < n; k++) {
+        var x = (k % cols + 0.5) * CELL, y = ((k / cols | 0) + 0.5) * CELL;
+        var kind = R.terrainAt(E.state, x, y), T = R.TERRAIN[kind] || {};
+        g.open[k] = T.impassable ? 0 : 1;
+        if (!g.open[k]) continue;
+        g.cov[k] = R.coverAt(E.state, x, y) || 0;
+        var ghost = { x: x, y: y, alive: true, of: null };
+        for (var f = 0; f < foes.length; f++) {
+          var e = foes[f], d = Math.max(0, R.inches(x, y, e.x, e.y) - UR);
+          if (d > (e.range || 0) + 2) continue;
+          if (!R.hasLoS(E.state, e, ghost)) continue;
+          // a Suppressed gun shoots less well; a pinned one barely
+          var w = R.status(e) === 'suppressed' ? 0.6 : 1;
+          g.ex[k] += w;
+          if (d <= 12) g.exNear[k] += w;
+        }
+      }
+      exCache[side] = g;
+      return g;
+    }
+    function cellOf(g, x, y) {
+      var i = Math.max(0, Math.min(g.cols - 1, Math.floor(x / CELL))), j = Math.max(0, Math.min(g.rows - 1, Math.floor(y / CELL)));
+      return j * g.cols + i;
+    }
+    // how a unit takes exposure: { cloak, cover, v } (v: how much it minds being seen at all)
+    function riskProfile(u) {
+      var walker = !R.isMachine(u) || !!(R.propOf && R.propOf(u) && R.propOf(u).cover);
+      return {
+        cloak: R.has(u, 'Cloaking System'),
+        cover: walker && !R.has(u, 'Battle Armour'),
+        v: (R.has(u, 'Stealth') ? 0.6 : 1) * (R.has(u, 'Battle Armour') || R.isMachine(u) ? 0.6 : 1)
+      };
+    }
+    function cellRisk(g, pf, k) {
+      var e = pf.cloak ? g.exNear[k] : g.ex[k];
+      if (!e) return 0;
+      return Math.min(e, 4) * pf.v / (1 + (pf.cover ? g.cov[k] : 0));
+    }
+    function riskAt(u, x, y) {
+      var g = exposureGrid(u.side);
+      return cellRisk(g, riskProfile(u), cellOf(g, x, y));
+    }
+    /* The cost of the way from every cell to the goal, each step its length made
+       dearer by the exposure of the cell it steps into (Dijkstra out from the goal). */
+    function routeField(u, goal) {
+      var g = exposureGrid(u.side), pf = riskProfile(u), g0 = cellOf(g, goal.x, goal.y);
+      var key = u.side + '|' + g0 + '|' + (pf.cloak ? 1 : 0) + (pf.cover ? 1 : 0) + pf.v;
+      var hit = routeCache[key];
+      if (hit && hit.g === g) return hit.f;
+      var n = g.cols * g.rows, cols = g.cols, dist = new Float32Array(n).fill(Infinity);
+      var heap = [], hk = [];
+      function push(c, d) {
+        heap.push(d); hk.push(c);
+        var i = heap.length - 1;
+        while (i > 0) { var pi = (i - 1) >> 1; if (heap[pi] <= heap[i]) break; swap(i, pi); i = pi; }
+      }
+      function swap(a, b) { var t = heap[a]; heap[a] = heap[b]; heap[b] = t; t = hk[a]; hk[a] = hk[b]; hk[b] = t; }
+      function pop() {
+        var top = hk[0], last = heap.length - 1;
+        swap(0, last); heap.pop(); hk.pop();
+        var i = 0;
+        for (;;) { var l = 2 * i + 1, r = l + 1, m = i;
+          if (l < heap.length && heap[l] < heap[m]) m = l;
+          if (r < heap.length && heap[r] < heap[m]) m = r;
+          if (m === i) break; swap(i, m); i = m; }
+        return top;
+      }
+      dist[g0] = 0; push(g0, 0);
+      var DX = [1, -1, 0, 0, 1, 1, -1, -1], DY = [0, 0, 1, -1, 1, -1, 1, -1];
+      while (heap.length) {
+        var d0 = heap[0], c = pop();
+        if (d0 > dist[c]) continue;
+        var ci = c % cols, cj = c / cols | 0;
+        for (var q = 0; q < 8; q++) {
+          var ni = ci + DX[q], nj = cj + DY[q];
+          if (ni < 0 || nj < 0 || ni >= cols || nj >= g.rows) continue;
+          var nb = nj * cols + ni;
+          if (!g.open[nb]) continue;
+          // stepping out of nb into c: the exposure paid is where it stands on the way, nb's
+          var step = (q < 4 ? 1 : Math.SQRT2) * CELL * (1 + RISK_W * cellRisk(g, pf, nb));
+          if (dist[c] + step < dist[nb]) { dist[nb] = dist[c] + step; push(nb, dist[nb]); }
+        }
+      }
+      var f = function (x, y) {
+        var v = dist[cellOf(g, x, y)];
+        return v < Infinity ? v : R.inches(x, y, goal.x, goal.y) * 3;
+      };
+      routeCache[key] = { g: g, f: f };
+      if (Object.keys(routeCache).length > 64) { routeCache = {}; routeCache[key] = { g: g, f: f }; }
+      return f;
+    }
+
+    /* Where the choosing AI puts a unit down, deploying or walking on from its table
+       edge: the spot whose way forward to its goal is the least
+       exposed — not necessarily one in cover itself — and not far from its friends. */
+    function placeGoal(u, spots) {
+      var pts = goalPoints(u), mx = 0, my = 0;
+      spots.forEach(function (c) { mx += c.x; my += c.y; });
+      mx /= spots.length; my /= spots.length;
+      if (!pts.length) {
+        var foes = E.state.units.filter(function (e) { return e.alive && e.side !== u.side && onTable(e); });
+        if (!foes.length) return { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
+        pts = foes;
+      }
+      var best = pts[0], bd = Infinity;
+      pts.forEach(function (o) { var d = R.inches(mx, my, o.x, o.y); if (d < bd) { bd = d; best = o; } });
+      return { x: best.x, y: best.y };
+    }
+    function aiPlace(u, spots) {
+      if (!spots.length) return null;
+      var goal = placeGoal(u, spots), rf = routeField(u, goal), best = null, bs = -Infinity;
+      spots.forEach(function (c) {
+        var near = Infinity;
+        E.state.units.forEach(function (f) {
+          if (f === u || !f.alive || f.side !== u.side || f.x < 0 || f.aboard || f.reserve) return;
+          near = Math.min(near, R.inches(c.x, c.y, f.x, f.y));
+        });
+        var v = -0.6 * rf(c.x, c.y) - 1.2 * riskAt(u, c.x, c.y) + Math.random() * 0.3;
+        if (near < Infinity) v -= 0.2 * Math.max(0, near - 8) + (near < 2.5 ? 1 : 0);
+        if (v > bs) { bs = v; best = c; }
+      });
+      return best;
+    }
+    // how a charge at t would go, the expected hits each way in its first round (the rules' own odds)
+    function chargeEdge(u, t) {
+      var mine = R.assaultOdds(E.state, u, t).avgHits, theirs = R.assaultOdds(E.state, t, u).avgHits;
+      return { mine: mine, theirs: theirs };
+    }
+    function chooseBehaviour(u) {
+      var ne = nearestEnemy(u), b, why;
+      var ap = assaultPlan(u), shot = bestTarget(u, 'fire');
+      var edge = ne && !R.has(u, 'Cumbersome Weapon') && R.canAssault(u, ne.unit, E.state) && ne.dist <= chargeAllow(u) &&
+        canReachCharge(u, ne.unit) && (!ap || ap.push) ? chargeEdge(u, ne.unit) : null;
+      if (edge && edge.mine >= 1 && edge.mine >= edge.theirs * 1.25 && edge.mine >= (shot.score || 0)) {
+        b = 'assault'; why = 'a charge it should win (' + edge.mine.toFixed(1) + ' hits to ' + edge.theirs.toFixed(1) + ')';
+      } else if (hurt(u) >= 0.6 && R.enemyWithinRange(E.state, u) && !objectivePull(u)) {
+        b = 'defensive'; why = 'badly hurt: cover first';
+      } else if (!R.enemyWithinRange(E.state, u)) {
+        b = 'offensive'; why = 'nothing in range: closes';
+      } else if (shot.t && shot.score >= 0.8 && !objectivePull(u)) {
+        b = 'neutral'; why = 'a good shot from here';
+      } else {
+        b = 'offensive'; why = shot.t ? 'a poor shot from here: moves up' : 'nothing to shoot: moves up';
+      }
+      // units with Cumbersome Weapons may not Advance (p. 57): they shoot from where they are
+      if (R.has(u, 'Cumbersome Weapon') && b === 'offensive' && shot.t) b = 'neutral';
+      logLine('ai', u.label + ' — chooses: ' + why + ': ' + b + '.');
+      return b;
+    }
     function rollBehaviour(u) {
+      if (hardAI(u)) return chooseBehaviour(u);
       var roll = R.d6(), mods = 0, why = [];
       var fp = u.fp || 0, as = u.assault || 0;
       if (as >= 2 * fp && as > 0) { mods += 2; why.push('Assault ≥ 2× Firepower +2'); }
@@ -1447,7 +1647,11 @@
       // inside a compound, the walk there round the walls (R.walkField), not the line through them
       var wf = E.state.compound ? R.walkField(E.state, goal.x, goal.y, u.side) : null;
       var gd = wf ? wf(c.x, c.y) : Infinity;
-      s -= 0.6 * (gd < Infinity ? gd : R.inches(c.x, c.y, goal.x, goal.y));
+      if (!wf && hardAI(u)) {
+        /* the choosing AI: the way there priced by what watches it, and the price of
+           standing here once the enemy's turn comes round */
+        s -= 0.6 * routeField(u, goal)(c.x, c.y) + HERE_W * riskAt(u, c.x, c.y);
+      } else s -= 0.6 * (gd < Infinity ? gd : R.inches(c.x, c.y, goal.x, goal.y));
       /* Attacking a held position (assaultPlan): no further than 6" out in front of the
          force until it goes in; then the objective pulls, whatever else is near. */
       var ap = assaultPlan(u);
@@ -1488,7 +1692,7 @@
     return {
       threatTarget: threatTarget, aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
       gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
-      nearestEnemy: nearestEnemy, aiAct: aiAct, aiCharge: aiCharge, coverMove: coverMove, aiStands: aiStands, scoreSpot: scoreSpot
+      nearestEnemy: nearestEnemy, aiPlace: aiPlace, aiPlaces: function (u) { return hardAI(u) && !E.state.compound; }, riskAt: riskAt, aiAct: aiAct, aiCharge: aiCharge, coverMove: coverMove, aiStands: aiStands, scoreSpot: scoreSpot
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineAI;

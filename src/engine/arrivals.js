@@ -351,6 +351,7 @@
       var entry = entryFor(u);
       if (entry && entry.length) {
         // 12" clear of the enemy if it can be, closer only if it cannot (p. 30)
+        var choosy = E.aiPlaces(u), cands = [];
         for (var pass = 0; pass < 2; pass++) {
           for (var e = 0; e < 600; e++) {
             // which band — which table edge, which corner — is chosen fresh each time
@@ -362,8 +363,12 @@
             if (R.TERRAIN[R.terrainAt(E.state, q.x, q.y)].impassable) continue;
             if (R.unitNear(E.state, q.x, q.y, u, 1)) continue;
             if (!pass && !clearOfEnemy(u, q)) continue;
-            return { x: q.x, y: q.y, why: 'from its own table edge' };
+            // the choosing AI looks over a few legal spots and picks (ai.js aiPlace); anyone else takes the first
+            if (!choosy) return { x: q.x, y: q.y, why: 'from its own table edge' };
+            cands.push(q);
+            if (cands.length >= 24) break;
           }
+          if (cands.length) { var pk = E.aiPlace(u, cands); return { x: pk.x, y: pk.y, why: 'from its own table edge' }; }
         }
         return null;
       }

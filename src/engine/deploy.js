@@ -74,7 +74,13 @@
       var cap = Math.ceil(mine.length / 2);             // "no more than half", rounded up (p. 27)
       var n = 0;
       mine.forEach(function (u) { u.reserve = false; });
-      mine.forEach(function (u) {
+      /* A teleport turret first, then any other turret: neither can move, so set down
+         at the start it stands wherever the deployment zone put it, where held back it
+         comes down where it is wanted (a teleport turret, out where the force is going)
+         — and only so many can be held. */
+      var rank = function (u) { return R.has(u, 'Turret') ? (R.has(u, 'Teleport') ? 2 : 1) : 0; };
+      var turretFirst = mine.slice().sort(function (a, b) { return rank(b) - rank(a); });
+      turretFirst.forEach(function (u) {
         if (!R.has(u, 'Battlefield Insertion') || u.aboard) return;
         if (R.has(u, 'Stationary Artillery')) return;    // an emplaced gun is never in reserve
         if (n >= cap || mimicFull(u)) return;
@@ -222,6 +228,7 @@
           }
           if (gsp.length) { var g = gsp[Math.floor(Math.random() * gsp.length)]; R.enterBuilding(E.state, u, g.piece, g.sec); return; }
         }
+        var choosy = E.aiPlaces(u), cands = [];
         for (var attempt = 0; attempt < 400; attempt++) {
           var x, y;
           if (circ) {
@@ -248,8 +255,11 @@
           if (!deployOK(side, x, y, u)) continue;
           if (R.barredAt(E.state, u, x, y)) continue;
           if (R.unitNear(E.state, x, y, u, 1)) continue;
+          // the choosing AI looks over a few legal spots and picks (ai.js aiPlace); anyone else takes the first
+          if (choosy) { cands.push({ x: x, y: y }); if (cands.length < 24 && attempt < 399) continue; break; }
           u.x = x; u.y = y; return;
         }
+        if (cands.length) { var pk = E.aiPlace(u, cands); u.x = pk.x; u.y = pk.y; return; }
         /* Nowhere clear inside the zone — the ground is full or blocked. Spiral out
            from the middle of the zone for the nearest legal spot rather than dumping
            the unit on a table edge it has no right to be on. */

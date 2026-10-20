@@ -172,7 +172,8 @@
         }
       }
       // auxiliary fire is a sidearm: a pistol, an energy bolt or spit, never the main weapon
-      var spec = res && res.aux ? R.auxSpec(shooter) : R.weaponSpec(shooter);
+      // (at a hull within 6", a unit with Anti-tank (limited) fires its anti-tank weapon: R.weaponSpec)
+      var spec = res && res.aux ? R.auxSpec(shooter) : R.weaponSpec(shooter, target);
       /* A gunship fires from its airframe and is hit on its airframe, not on the
          ground it happens to be over. Every point a shot is drawn between carries
          how high above its own ground it sits. */
@@ -235,6 +236,7 @@
         if (!fired) {
           fired = true; spawnDeaths(deaths);
           if (outcome && outcome.crit) SHOTS.crits(p, outcome.crit);      // a critical hit: sparks off the hull
+          if (f0 && f0.supp) SHOTS.suppress(to);                         // Suppressive Fire: the ground kicked up round them
           if (impact) impact(Math.max(250, endsAt - nowMs()));
           // (the impact shows every loss at once; those still standing stand till their round strikes)
           if (rg) showLosses();
@@ -371,6 +373,8 @@
          Suppression can fill over the rest of the attack. */
       (deaths || []).forEach(function (d) {
         var h = d.u && B.held[d.u.id];
+        // the men it still had as it was last drawn: what fades out is what was standing there
+        d.shown = h ? h.models : d.u && d.u._seen ? d.u._seen.models : null;
         if (!h) return;
         if (!d.u.alive) { delete B.held[d.u.id]; return; }
         h.models = d.u.models; h.damage = d.u.damage;
@@ -379,7 +383,7 @@
         addFx({
           // the unit itself, so what fades into the ground is what was there: its kind, its colours, its men
           kind: 'ghost', x: d.x, y: d.y, unit: d.u, side: d.u.side, code: d.u.code,
-          models: Math.max(1, d.u.size), dur: 700, blocking: true
+          models: Math.max(1, d.shown || d.u.size), dur: 700, blocking: true
         });
       });
       if (deaths && deaths.length && SFX) SFX.casualty();

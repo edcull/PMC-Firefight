@@ -340,11 +340,7 @@
             root.PMCUi.freeMark(p.key) + '<b>' + esc(p.name) + '</b>', esc(statLine(p) + ((p.rules || []).length ? ' · ' + p.rules.join(', ') : '')), price);
           /* the Riders upgrade, "decided when that unit is recruited. The decision is
              final" (p. 97): a squad that may take it is recruited on foot or mounted */
-          if (R.canRide(p)) h += row('class="cu cu-riders" data-recruit="' + p.key + '" data-asriders="1"' + off, p.tier,
-            '<b>' + esc(p.name) + ' \u2014 Riders</b>', 'Half the models, Movement 10 and the Riders rule; final once recruited', price);
-          // the same hull or craft, flown remotely (p. 37)
-          if (R.canBeDrone(p)) h += row('class="cu cu-drone" data-recruit="' + p.key + '" data-asdrone="1"' + off, p.tier,
-            '<b>' + esc(p.name) + ' — drone</b>', '+1 Structure, no crew, no experience; can be hacked', price);
+          // (a hull's propulsion and crew, and whether a squad rides and on what, are picked as it is recruited: recruitChoices)
         });
       });
       h += '</div>';

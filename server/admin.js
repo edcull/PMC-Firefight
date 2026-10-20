@@ -16,6 +16,8 @@
      node server/admin.js prune-games <days> [--yes]        finished and abandoned battles older than that, gone
      node server/admin.js campaigns [n]      the campaigns kept: id, kind, name, turn, owner (and an online one's players)
      node server/admin.js delete-campaign <id> [--yes]      a campaign gone (an online one for all its players)
+     node server/admin.js export-campaign <name> [file]     a campaign in full, by its name or title (every one that
+                                             matches), with each battle's statistics and a player-against-AI summary
 
    DATA_DIR says where the database is, as for the server (default: data/ beside server.js). */
 'use strict';
@@ -26,6 +28,66 @@ const Auth = require('./auth.js');
 // where the server keeps it: the same rule as server.js
 const DATA = process.env.DATA_DIR || (process.env.CAMPAIGNS_DIR ? path.dirname(path.resolve(process.env.CAMPAIGNS_DIR)) : path.join(__dirname, '..', 'data'));
 const FILE = path.join(DATA, 'pmc.db');
+
+/* A campaign's battles, from every log it keeps — a campaign's own (solo, hotseat),
+   each player's in a campaign of several (online) — each line with the statistics
+   its battle recorded (src/rules/battlestats.js), A always the player's side. Older
+   battles, fought before the statistics were kept, come without them. */
+function battlesOf(state) {
+  const out = [];
+  const take = (log, player) => (log || []).forEach((e) => {
+    if (!e || e.scenario == null) return;
+    const st = e.stats || null;
+    out.push({ player: player || null, turn: e.turn, scenario: e.scenario, tier: e.tier, pl: e.pl, against: e.against || null,
+      winner: e.winner, duel: !!e.duel, coop: !!e.coop,
+      // against the computer: the other side run by it (or, for a line with no statistics, any that was not a duel)
+      vsAI: st ? (!!st.B && st.B.ai && !(st.A && st.A.ai)) : !e.duel, stats: st,
+      // turn by turn, where a campaign raised with Debug tracking kept it (battletrack.js)
+      track: e.track || null });
+  });
+  take(state.log, null);
+  Object.keys(state.players || {}).forEach((k) => take((state.players[k] || {}).log, (state.players[k] || {}).name || k));
+  return out;
+}
+// every campaign whose name or title is `name` (or, failing an exact match, contains it), in full with its battles
+function exportCampaigns(db, name) {
+  const want = String(name).toLowerCase();
+  const all = db.allCampaigns(1e6).map((c) => db.campaign(c.id)).filter(Boolean);
+  const names = (c) => [c.name, c.state && c.state.title, c.state && c.state.name].filter(Boolean).map((x) => String(x).toLowerCase());
+  let hit = all.filter((c) => names(c).indexOf(want) >= 0);
+  if (!hit.length) hit = all.filter((c) => names(c).some((x) => x.indexOf(want) >= 0));
+  const BS = require('../src/rules/battlestats.js');
+  return {
+    kind: 'campaign battles', exported: new Date().toISOString(),
+    campaigns: hit.map((c) => {
+      const owner = db.userById(c.owner), battles = battlesOf(c.state);
+      const vs = battles.filter((x) => x.vsAI && x.stats);
+      let human = null, ai = null;
+      vs.forEach((x) => { human = BS.add(human, x.stats.A); ai = BS.add(ai, x.stats.B); });
+      return {
+        id: c.id, kind: c.kind, name: c.name, title: (c.state && c.state.title) || null, owner: owner ? owner.name : null,
+        turn: c.turn || 0, created: c.created, updated: c.updated,
+        players: c.kind === 'online' ? db.members(c.id).map((m) => ({ side: m.side, name: m.name })) : null,
+        battles: battles,
+        // the player's side and the computer's, every battle against it with statistics added up
+        summary: { battles: battles.length, againstAI: battles.filter((x) => x.vsAI).length, withStats: vs.length, player: human, ai: ai },
+        state: c.state
+      };
+    })
+  };
+}
+// a few lines to read at the console: how the player fared against the computer
+function battleSummary(c) {
+  const s = c.summary, P = s.player, A = s.ai;
+  const lines = [c.name + (c.title ? ' (' + c.title + ')' : '') + ' — ' + c.kind + ', turn ' + c.turn + ', ' + s.battles + ' battles, ' +
+    s.againstAI + ' against the computer, ' + s.withStats + ' of those with statistics'];
+  if (P && A && P.battles) {
+    const per = (t, k) => (t[k] / t.battles).toFixed(1);
+    lines.push('  player: won ' + P.wins + ' of ' + P.battles + '; a battle: ' + per(P, 'shots') + ' shots, ' + per(P, 'sp') + ' SP and ' + per(P, 'men') + ' men inflicted, ' + per(P, 'unitsLost') + ' units lost');
+    lines.push('  AI:     won ' + A.wins + ' of ' + A.battles + '; a battle: ' + per(A, 'shots') + ' shots, ' + per(A, 'sp') + ' SP and ' + per(A, 'men') + ' men inflicted, ' + per(A, 'unitsLost') + ' units lost');
+  }
+  return lines.join('\n');
+}
 
 async function main(argv) {
   const db = DB.open(FILE), auth = Auth.create({ db: db });
@@ -153,6 +215,17 @@ async function main(argv) {
       say('Removed ' + what + '.');
       return 0;
     }
+    if (cmd === 'export-campaign') {
+      if (!a) { say('Which campaign? export-campaign <name> [file] (see: campaigns).'); return 1; }
+      const out = exportCampaigns(db, a);
+      if (!out.campaigns.length) { say('No campaign called ' + a + ' (see: campaigns).'); return 1; }
+      const slug = String(a).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'campaign';
+      const to = b || 'pmc-campaign-' + slug + '-' + new Date().toISOString().slice(0, 10) + '.json';
+      require('fs').writeFileSync(to, JSON.stringify(out, null, 1));
+      out.campaigns.forEach((c) => say(battleSummary(c)));
+      say('Written to ' + to + '.');
+      return 0;
+    }
     if (cmd === 'backup') {
       const to = a || path.join(DATA, 'backup-' + new Date().toISOString().slice(0, 10) + '.db');
       await db.backup(to);
@@ -160,10 +233,11 @@ async function main(argv) {
       return 0;
     }
     say('Usage: node server/admin.js users | create <name> <password> [admin] [email] | activate <name> | reset-password <name> <password> | admin <name> on|off | delete <name> [--yes] | backup [file] | stats\n' +
-      '       games [n] | game <code> | delete-game <code> [--yes] | prune-games <days> [--yes] | campaigns [n] | delete-campaign <id> [--yes]');
+      '       games [n] | game <code> | delete-game <code> [--yes] | prune-games <days> [--yes] | campaigns [n] | delete-campaign <id> [--yes]\n' +
+      '       export-campaign <name> [file]');
     return cmd ? 1 : 0;
   } finally { db.close(); }
 }
 
 if (require.main === module) main(process.argv.slice(2)).then((code) => process.exit(code), (e) => { console.error(e); process.exit(1); });
-module.exports = { main: main };
+module.exports = { main: main, exportCampaigns: exportCampaigns, battlesOf: battlesOf };

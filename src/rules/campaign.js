@@ -1120,6 +1120,8 @@
   function rollPayment(battleTier, pl) { return (KIT_CONTRACT || kitContract()).rollPayment(battleTier, pl); }
   function sum(a) { return (KIT_CONTRACT || kitContract()).sum(a); }
   function negotiate(dice) { return (KIT_CONTRACT || kitContract()).negotiate(dice); }
+  // the dice of the roll that pays a side (camp-contract.js): what Tough Negotiators re-rolls
+  function payingDice(dice, side, winner, co) { return (KIT_CONTRACT || kitContract()).payingDice(dice, side, winner, co); }
   function rollIncome(battleTier, pl, coA, coB, winner, people) { return (KIT_CONTRACT || kitContract()).rollIncome(battleTier, pl, coA, coB, winner, people); }
   function territorial(co, dice, won, lost) { return (KIT_CONTRACT || kitContract()).territorial(co, dice, won, lost); }
   function payment(battleTier, pl, coA, coB, winner, attackDefend, preset) { return (KIT_CONTRACT || kitContract()).payment(battleTier, pl, coA, coB, winner, attackDefend, preset); }
@@ -2201,7 +2203,7 @@
 
     maxBattleTier: maxBattleTier, rollBattleTier: rollBattleTier, rollScenario: rollScenario, foresight: foresight, foreIgnore: foreIgnore,
     swapAllowance: swapAllowance,
-    rollPayment: rollPayment, rollIncome: rollIncome, negotiate: negotiate, payment: payment,
+    rollPayment: rollPayment, rollIncome: rollIncome, negotiate: negotiate, payingDice: payingDice, payment: payment,
     expFor: expFor, tpFor: tpFor, traumaThreshold: traumaThreshold, rollTrauma: rollTrauma,
     salvage: salvage, aftermath: aftermath, developRival: developRival,
     pickForce: pickForce, evenWorld: evenWorld, battleElsewhere: battleElsewhere, elsewherePairs: elsewherePairs,

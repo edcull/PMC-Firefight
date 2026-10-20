@@ -379,7 +379,10 @@
               art: u.art, mi: cq.mi, flip: (rem.length % 3 === 0) !== !!u.faceL });
           }
         }
-        u0._seen = { here: here, x: u.x, y: u.y, models: u.models || 0, aboard: u.alive && u.aboard ? u.aboard : null };
+        /* ...where it is drawn, not where the rules have it: a squad shot and then moved
+           on in the same batch stands where it was hit until its move plays, and its
+           dead lie there, not at the end of the move */
+        u0._seen = { here: here, x: here ? dispX(u) : u.x, y: here ? dispY(u) : u.y, models: u.models || 0, aboard: u.alive && u.aboard ? u.aboard : null };
         // a unit the engine has sent back to the OpFor pool is off the table now
         if (u.wave === 'pool' && u.x < 0) u0._seen = { here: false, x: -1, y: -1, models: u.models };
       });
@@ -1370,6 +1373,23 @@
       c.forEach(function (q, n) { if (n === 0) B.ctx.moveTo(q.x, q.y); else B.ctx.lineTo(q.x, q.y); });
       B.ctx.closePath(); B.ctx.clip();
     }
+    /* An objective's ring as a round counter: `clock.need` arcs with a gap between,
+       starting at the top and running clockwise, the first `clock.n` solid in the
+       holding side's ink, the rest dashed in the unheld ring's pale ink. */
+    function drawHoldClock(o, clock) {
+      var p = hud(o.x, o.y, liftOf(o.x, o.y)), z = cam.z;
+      var rx = Math.SQRT2 * 4 * K * z, ry = rx / 2, n = clock.need, gap = 0.24;
+      for (var k = 0; k < n; k++) {
+        var a0 = -Math.PI / 2 + k * 2 * Math.PI / n + gap / 2, a1 = -Math.PI / 2 + (k + 1) * 2 * Math.PI / n - gap / 2;
+        var held = k < clock.n && clock.side;
+        B.ctx.setLineDash(held ? [] : [6, 6]);
+        B.ctx.lineWidth = held ? 5 : 3; B.ctx.strokeStyle = 'rgba(8,10,14,.5)';
+        B.ctx.beginPath(); B.ctx.ellipse(p.x, p.y, rx, ry, 0, a0, a1); B.ctx.stroke();
+        B.ctx.lineWidth = held ? 2.8 : 1.4; B.ctx.strokeStyle = held ? sideInk(clock.side) : 'rgba(235,240,248,.6)';
+        B.ctx.beginPath(); B.ctx.ellipse(p.x, p.y, rx, ry, 0, a0, a1); B.ctx.stroke();
+      }
+      B.ctx.setLineDash([]);
+    }
     function isoRing(cx, cy, rad, lift) {
       var p = hud(cx, cy, lift), z = cam.z;
       B.ctx.beginPath();
@@ -1717,7 +1737,7 @@
 
       // objective control radius
       B.ctx.save(); clipTable();
-      B.state.objectives.forEach(function (o) {
+      B.state.objectives.forEach(function (o, oi) {
         var hb = B.heldBy(o), col = hb ? sideInk(hb) : 'rgba(235,240,248,.6)';
         /* A control room (Critical control) is held by whoever is inside it, so the
            room itself is marked — its floor outlined just inside the walls, tinted
@@ -1732,6 +1752,11 @@
           B.ctx.closePath();
         }
         if (room && hb) { shape(); B.ctx.fillStyle = sideInk(hb); B.ctx.globalAlpha = 0.12; B.ctx.fill(); B.ctx.globalAlpha = 1; }
+        /* One won by holding it so many End phases running (Secure the area, Find
+           and secure): the ring split into one arc a round, those held filled in
+           the colours of the side holding it, those to go dashed as before. */
+        var clock = !room && root.PMCScen && root.PMCScen.holdClock ? root.PMCScen.holdClock(B.state, oi) : null;
+        if (clock && clock.need > 1) { drawHoldClock(o, clock); return; }
         B.ctx.setLineDash([6, 6]);
         B.ctx.lineWidth = 3; B.ctx.strokeStyle = 'rgba(8,10,14,.5)';
         shape(); B.ctx.stroke();
@@ -1819,11 +1844,27 @@
           B.ctx.setLineDash([]);
         }
         if (u.fp !== null) {
+          // the reach of its weapon as it stands (dug in, a gun reaches 24", p. 94), half of it, and any Minimum Range
+          var reach = R.shotRange ? R.shotRange(u) : u.range, minR = R.shotMinRange ? R.shotMinRange(u) || 0 : 0;
           B.ctx.setLineDash([4, 5]);
           B.ctx.strokeStyle = 'rgba(232,193,90,.5)'; B.ctx.lineWidth = 1.2;
-          isoRing(eye.x, eye.y, u.range + 2 * UR, eyeLift); B.ctx.stroke();
+          isoRing(eye.x, eye.y, reach + 2 * UR, eyeLift); B.ctx.stroke();
           B.ctx.strokeStyle = 'rgba(232,193,90,.3)';
-          isoRing(eye.x, eye.y, u.range / 2 + 2 * UR, eyeLift); B.ctx.stroke();
+          isoRing(eye.x, eye.y, reach / 2 + 2 * UR, eyeLift); B.ctx.stroke();
+          // nothing closer than its Minimum Range can be shot (a mortar's 12"): a closer dash, as the 6" one
+          if (minR) {
+            B.ctx.setLineDash([2, 4]);
+            B.ctx.strokeStyle = 'rgba(232,193,90,.5)';
+            isoRing(eye.x, eye.y, minR + 2 * UR, eyeLift); B.ctx.stroke();
+          }
+          /* Anti-tank (limited): anti-tank only within 6", where at a hull it
+             fires its anti-tank weapon (battle armour's rockets, a rider's RPG) */
+          if (R.has(u, 'Anti-tank (limited)') && !R.hasExact(u, 'Anti-tank')) {
+            // (in the range rings' own colour, as they are; a closer dash tells it apart)
+            B.ctx.setLineDash([2, 4]);
+            B.ctx.strokeStyle = 'rgba(232,193,90,.5)'; B.ctx.lineWidth = 1.2;
+            isoRing(eye.x, eye.y, 6 + 2 * UR, eyeLift); B.ctx.stroke();
+          }
           B.ctx.setLineDash([]);
         }
         // the enemies the move would put in reach, and the ones it would expose it to
@@ -2025,12 +2066,24 @@
         // still to act this turn: a small arrow ahead of the code
         var toGo = B.state.phase === 'battle' && !B.state.over && !u2.activated;
         var tw = B.ctx.measureText(code).width;
-        var w = tw + 8 + icons * 11 + (mark ? 12 : 0) + (toGo ? 10 : 0);
+        // its Tier, a small numeral ahead of the code (not on a counter still hidden)
+        var tier = veiled ? '' : R.ROMAN[u2.setTier || u2.tier] || '';
+        B.ctx.font = '700 8px "IBM Plex Mono", monospace';
+        var tierW = tier ? B.ctx.measureText(tier).width + 4 : 0;
+        B.ctx.font = '600 10px Oxanium, system-ui, sans-serif';
+        var w = tw + 8 + tierW + icons * 11 + (mark ? 12 : 0) + (toGo ? 10 : 0);
         B.ctx.fillStyle = 'rgba(8,11,16,.72)';
         B.ctx.fillRect(p.x - w / 2, p.y - 10, w, 13);
         if (toGo) readyMark(p.x - w / 2 + 7, p.y - 3.5);
+        var x0 = p.x - w / 2 + 4 + (toGo ? 10 : 0);
+        if (tier) {
+          B.ctx.fillStyle = 'rgba(231,236,244,.62)';
+          B.ctx.font = '700 8px "IBM Plex Mono", monospace';
+          B.ctx.fillText(tier, x0 + (tierW - 4) / 2, p.y - 1);
+          B.ctx.font = '600 10px Oxanium, system-ui, sans-serif';
+        }
         B.ctx.fillStyle = sideInk(u2.paint || u2.side);  // a co-op's second commando in its own colours
-        var tx = p.x - w / 2 + 4 + (toGo ? 10 : 0) + tw / 2;
+        var tx = x0 + tierW + tw / 2;
         B.ctx.fillText(code, tx, p.y);
         var ix = tx + tw / 2 + 6.5;
         if (honoured) { chevron(ix, p.y - 4.5, 4.6); ix += 11; }

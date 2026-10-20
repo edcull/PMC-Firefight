@@ -126,6 +126,8 @@
     window.__viewRect = function () { return viewRect(); };
     window.__seats = function () { return B.seats.slice(); };
     // the dead lying on the table, by the unit they fell from
+    // where a unit's dead lie (the unit's place on the table each body is laid from)
+    window.__bodySpots = function (id) { return (B.vc.remains || []).filter(function (r) { return r.kind === 'body' && !r.piece && r.of === id; }).map(function (r) { return { x: r.x, y: r.y }; }); };
     window.__bodies = function () { var o = {}; (B.vc.remains || []).forEach(function (r) { if (r.kind === 'body' && !r.piece) o[r.of || '?'] = (o[r.of || '?'] || 0) + 1; }); return o; };
     window.__mySide = function () { return mySide(); };
     window.__placingSide = function () { return placingSide(); };
@@ -367,6 +369,7 @@
           kind: f.kind,
           // a ghost's unit: what fades into the ground where a unit was wiped out
           unit: f.unit ? { key: f.unit.key, art: f.unit.art, side: f.unit.side } : null,
+          models: f.models != null ? f.models : null,
           // how high the effect starts: its lift plus, when it leaves a barrel,
           // how far that barrel sits above the ground
           up: (f.up || 0) + (f.mz ? -f.mz.dy : 0),
@@ -404,6 +407,8 @@
       return true;
     };
     // test hooks: drive a unit through the bar the way a player would
+    // a unit walking on from the table edge to where it stands: where it is first drawn
+    window.__walkOn = function (id) { var u = byId(id); if (!u) return null; B.walkOn(u); return { x: u.ax, y: u.ay }; };
     window.__select = function (u) { if (!u) return false; select(u); return ui.selected === u; };
     window.__actionState = function (id) { return ui.selected ? actionState(ui.selected, id) : null; };
     window.__specials = function () { return specialsFor(ui.selected).map(function (x) { return x.id; }); };

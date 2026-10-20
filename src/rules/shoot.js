@@ -557,6 +557,8 @@
         var unpinned = Math.min(res.pinned, Math.max(0, res.tableSp - res.sp));
         fx = ladder(missRungs(roll, total, dres, t, penOf(parts)), res.downs, res.pinned - unpinned,
           hits - res.downs - res.pinned + unpinned, res.sp - res.tableSp);
+        // Suppressive Fire told: the board kicks the ground up round them besides (fire.js suppress)
+        if (supp) fx.supp = true;
       } else if (mountOf(t) && mountOf(t).shotSP && !campFlag(t, 'nerves') && !campFlag(t, 'shielding')) {
         // a horse shies at being shot at, hit or not (Appendix 3)
         applyResult(state, t, { casualties: 0, sp: mountOf(t).shotSP, rolls: [], notes: [] }, log, a);

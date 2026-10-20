@@ -283,6 +283,18 @@
       if (SFX) { SFX.impact(); if (extra) SFX.impact(0.06); }
     }
 
+    /* Suppressive Fire (p. 59): the rounds that did not hit anyone still walk the
+       ground round the unit, kicking dirt up on every side of it for a moment
+       after the shot lands, so the extra Suppression has something to show for it. */
+    function suppress(to) {
+      for (var i = 0; i < 9; i++) {
+        var a = i * 2.4 + 0.4, r = 1.1 + (i % 3) * 0.55;
+        add({ kind: 'impact', x: to.x + Math.cos(a) * r, y: to.y + Math.sin(a) * r * 0.8, up: to.up || 0,
+          n: 1 + (i % 2), delay: 60 + i * 70, dur: 420 + 60 + i * 70, blocking: true });
+      }
+      if (SFX) { SFX.impact(0.05); setTimeout(function () { if (SFX) SFX.impact(0.04); }, 260); }
+    }
+
     /* An aircraft's missiles leave on the line the craft is flying and turn
        onto the mark from there, rather than climbing over it: it is already
        above everything, so the climb read as the missile going the wrong way.
@@ -537,7 +549,7 @@
 
         /* Unguided rockets, off the rails in a ripple. */
         case 'rocket': {
-          var rn = 6;                                   // the full ripple, whatever hit
+          var rn = Math.max(1, Math.min(6, spec.n || 1));  // the salvo its weapon fires (the weapon table's ×), whatever hit
           var rflight = 420, rplan = oc ? roundPlan(rn, oc) : null;
           if (SFX) SFX.rocket(hits);
           for (var r = 0; r < rn; r++) {
@@ -741,20 +753,21 @@
           return;
         }
         case 'rocket': {
-          // a rack of unguided rockets, rippling off in a salvo
-          if (SFX) SFX.rocket(3);
-          var rkp = oc ? roundPlan(5, oc) : null;
-          for (var q5 = 0; q5 < 5; q5++) {
+          // a rack of unguided rockets, rippling off in a salvo of as many as its weapon fires (the weapon table's ×)
+          var rk = Math.max(1, Math.min(6, count || 1));
+          if (SFX) SFX.rocket(Math.min(3, rk));
+          var rkp = oc ? roundPlan(rk, oc) : null;
+          for (var q5 = 0; q5 < rk; q5++) {
             (function (j) {
               setTimeout(function () {
                 if (!alive()) return;
-                var rto = landing(oc, rkp, j, 5, to, from, rocketSpot(to, j));
+                var rto = landing(oc, rkp, j, rk, to, from, rocketSpot(to, j));
                 add({ kind: 'muzzle', x: from.x, y: from.y, up: from.up, mz: pick(from, j).mz, dur: 180, big: true, blocking: true });
                 add({ kind: 'missile', from: pick(from, j), to: oc ? rto : to, rocket: true, seed: j, dur: 420, blocking: true });
                 setTimeout(function () { if (alive()) down(rto); }, 420);
                 if (R.weaponSpec(shooter).blast === 'frag') setTimeout(function () { if (alive()) fragBlast(rto, 0.8, j); }, 420);
                 else if (oc) setTimeout(function () { if (alive()) secondaryLands(shooter, rto, 2); }, 420);
-                else if (j === 4) setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 420);
+                else if (j === rk - 1) setTimeout(function () { if (alive()) secondaryLands(shooter, to, 3); }, 420);
                 redraw();
               }, j * 78);
             })(q5);
@@ -976,7 +989,7 @@
     return {
       FIRE: FIRE, streamLength: streamLength, glowRGB: glowRGB, shotRGB: shotRGB,
       primary: primary, secondary: playSecondary, paired: paired, crits: crits, stream: playStream, energy: playEnergy, orbs: playOrbs,
-      flameJets: flameJets, spread: spread, pick: pick, hit: hit, curve: curveFor
+      flameJets: flameJets, spread: spread, pick: pick, hit: hit, suppress: suppress, curve: curveFor
     };
   }
 
