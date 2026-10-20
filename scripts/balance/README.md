@@ -144,6 +144,26 @@ System counts only guns within 12".
 
 Against the table it loses fewer units (about 1.3 a battle to 1.7) and fires more
 from where it stands; it is not in cover more often (it keeps out of sight instead).
+### Against the AI as it is (OPP=current)
+
+The table has stopped telling changes apart: what a player would punish, it does
+not. `OPP=current` measures a change against the choosing AI as it stands, both
+sides choosing and only one with the experiment, so 50% is no change. October 2026,
+640 battles each (seeds 11 to 88):
+
+| Change | Share |
+|---|---|
+| none (the harness's own check) | 50.0% |
+| the only holder keeps its objective | 50.5% |
+| keeps within 6" of a friend, not clear of every friend within 4" | 50.1% |
+| waits at the edge of cover, then crosses together | 49.4% |
+| ...with covering fire from the units not crossing | 46.4% |
+
+Nothing kept: the first three are no change, and the covering fire costs (a unit
+that stops to shoot is not taking ground). The experiments are measured with
+`AIEXP=name OPP=current node scripts/balance/versus.js 40 <seed>` (vrun-style over
+eight seeds); the switch (`cfg.aiExp`, `ai.js aiExp`) stays for the next one.
+
 ### Bounding (dropped)
 
 Crossing open ground together, with fire support: a unit in safe ground (risk 0.5
