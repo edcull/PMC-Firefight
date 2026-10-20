@@ -181,6 +181,14 @@ strength. Against the AI as it is (OPP=current, seeds seeded per pair), 640 each
 | commander (`cmd`) | 49.9% |
 | both (`plan2,cmd`) | 49.2% |
 | a yardstick: never moves, fires from where it stands (`static`, 320) | 19.2% (Secure 0%, Find 8%) |
+| planner with the ground priced too (`plan2,ground`, objective worth 4) | 51.1% (Secure 49%, against 44% without) |
+| ...objective worth 10 | 50.9% |
+| ...worth 4, and the commander | 49.6% |
+
+With the pairs seeded on their own, scenarios without objectives (Meeting
+engagement, Demolish) come out the same battle for battle whatever the ground is worth:
+only Secure and control, Find and secure, Invasion and Takeover can move, and of those
+only Secure did, by some 5 points on 107 battles (within its noise).
 
 The planner does choose differently (in some 4 of 10 decisions it is given, mostly
 holding where the utility AI would move) and changes nothing; the yardstick shows how
