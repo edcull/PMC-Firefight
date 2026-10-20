@@ -1849,6 +1849,15 @@
           isoRing(eye.x, eye.y, u.range + 2 * UR, eyeLift); B.ctx.stroke();
           B.ctx.strokeStyle = 'rgba(232,193,90,.3)';
           isoRing(eye.x, eye.y, u.range / 2 + 2 * UR, eyeLift); B.ctx.stroke();
+          /* Anti-tank (limited): anti-tank only within 6", where at a hull it
+             fires its anti-tank weapon (battle armour's rockets, a rider's RPG) */
+          if (R.has(u, 'Anti-tank (limited)') && !R.hasExact(u, 'Anti-tank')) {
+            B.ctx.setLineDash([5, 4]);
+            B.ctx.strokeStyle = 'rgba(8,10,14,.45)'; B.ctx.lineWidth = 3;
+            isoRing(eye.x, eye.y, 6 + 2 * UR, eyeLift); B.ctx.stroke();
+            B.ctx.strokeStyle = 'rgba(255,92,72,.9)'; B.ctx.lineWidth = 1.5;
+            isoRing(eye.x, eye.y, 6 + 2 * UR, eyeLift); B.ctx.stroke();
+          }
           B.ctx.setLineDash([]);
         }
         // the enemies the move would put in reach, and the ones it would expose it to

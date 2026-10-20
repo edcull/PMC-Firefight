@@ -529,6 +529,18 @@
       var tk = toScreen(edge + d, FROM.y);
       g.fillText(d + '"', tk.x, tk.y - I.K * 0.7);
     }
+    /* Anti-tank (limited): anti-tank only within 6", where at a hull it fires its
+       anti-tank weapon — the mark on the line where that begins, as the battle's ring */
+    var sh = shooter();
+    // (closer than that the target stands inside it, and the mark would only be drawn under it)
+    if (sh && view.range > 6 && R.has(sh, 'Anti-tank (limited)') && !R.hasExact(sh, 'Anti-tank')) {
+      var at6 = toScreen(edge + 6, FROM.y);
+      g.strokeStyle = 'rgba(228,105,63,.8)'; g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(at6.x, at6.y - I.K * 1.1); g.lineTo(at6.x, at6.y + I.K * 0.1); g.stroke();
+      g.font = '600 9px "IBM Plex Mono", monospace';
+      g.fillStyle = 'rgba(228,105,63,.9)';
+      g.fillText('6" AT', at6.x, at6.y - I.K * 1.25);
+    }
     // ...and the range itself, under the middle of the gap (at the target's edge the figures would hide it)
     var re = toScreen(edge + view.range / 2, FROM.y);
     g.font = '600 10px "IBM Plex Mono", monospace';
@@ -1013,7 +1025,9 @@
   function fireNow() {
     if (view.status === 'destroyed' || onTow() || outOfArc() || outOfRange()) return;
     showWide();
-    var u = unit(), spec = R.weaponSpec(u);
+    /* (at a hull within 6", a unit with Anti-tank (limited) fires its anti-tank
+       weapon instead, as in the battle: R.weaponSpec with the target) */
+    var u = unit(), spec = R.weaponSpec(u, mark());
     // a flier shoots from its airframe, not from the grass under it, and is shot at there
     var from = { x: u.x, y: u.y, up: I.flyLift(u) }, to = { x: TO.x, y: TO.y, up: I.flyLift(mark()) };
     // troopers turn to the mark, and every round leaves one of their own barrels
@@ -1064,7 +1078,9 @@
         start();
       };
     }
-    var ms = play(spec, from, to, hits, u, outcome);
+    // Suppressive Fire on a shot that hits: the ground kicked up round them besides, as in the battle
+    var supp = hits > 0 && R.has(u, 'Suppressive Fire') && !(t && R.campFlag && (R.campFlag(t, 'nerves') || R.campFlag(t, 'shielding')));
+    var ms = play(spec, from, to, hits, u, outcome, supp);
     start();
     if (view.trg) {
       var rg2 = view.trg;
@@ -1108,16 +1124,17 @@
     }
   }
   // how long the attack plays
-  function play(spec, from, to, hits, u, outcome) {
+  function play(spec, from, to, hits, u, outcome, supp) {
     var dist = R.unitDist(u, to);
     // (the secondary and third weapons share the attack's outcome out the same way as the primary)
     if (spec.s && !SHOTS.paired(spec)) setTimeout(function () { SHOTS.secondary(spec.s, u, from.second || from, to, hits, spec.sn, outcome); start(); }, 150);
     if (spec.t) setTimeout(function () { SHOTS.secondary(spec.t, u, from.third || from, to, hits, spec.tn, outcome); start(); }, 330);
     // (with the rounds drawn one by one, each lands as it goes: no burst over the mark besides)
-    var sparked = false;
+    var sparked = false, kicked = false;
     return SHOTS.primary(spec, u, from, to, { hits: hits, dist: dist, outcome: outcome,
       land: function (extra, at) {
         if (!outcome || DRAWN_EACH.indexOf(spec.p) < 0) SHOTS.hit(u, at || to, hits, extra);
+        if (supp && !kicked) { kicked = true; SHOTS.suppress(to); }
         // a critical hit: sparks off the hull, as the first round lands
         if (outcome && outcome.crit && !sparked) { sparked = true; SHOTS.crits(at || to, outcome.crit); }
       } });
@@ -1981,6 +1998,8 @@
     fxRGB: function () { return FX.rgbs(); },
     state: function () { return Object.assign({}, view); },
     spec: function () { return R.weaponSpec(unit()); },
+    // what Fire! fires at the target as it stands (an anti-tank weapon at a hull within 6")
+    shotSpec: function () { return R.weaponSpec(unit(), mark()); },
     // the weapon editor: as an admin (or not), what is changed, and the lines to paste back
     admin: function (on) { if (on !== undefined) becomeAdmin(on); return admin; },
     edits: function () { return STORE.changed(); },
