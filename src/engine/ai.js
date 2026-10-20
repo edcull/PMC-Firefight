@@ -396,6 +396,22 @@
         if (pax.length) { embarkOne(u, pax[0]); return; }
       }
 
+      /* (experiment 'drive') A gun hull judged by the planner as a squad is: Fire! from
+         here, or the best eight spots in its Movement (an Advance), by the fitted evaluation. */
+      if (planned(u) && aiExp(u, 'drive') && !R.isFlying(u) && u.fp != null && !shot.forced && !R.has(u, 'Cumbersome Weapon') && !outOfReach(u)) {
+        var goalV = pickGoal(u, 'offensive'), lookV = R.groundLookup(E.state), scV = [];
+        R.reachable(E.state, u, u.move).forEach(function (c) {
+          if (thinned(c) || !canStand(u, c)) return;
+          scV.push({ c: c, s: scoreSpot(u, c, goalV, 'offensive', lookV) });
+        });
+        scV.sort(function (a, b) { return b.s - a.s; });
+        var candsV = scV.slice(0, 8).map(function (o) { return { c: o.c, base: scoreSpot(u, o.c, goalV, 'offensive', lookV, { noShots: true }) }; });
+        var pickV = E.planChooseEval(u, candsV, scoreSpot(u, { x: u.x, y: u.y }, goalV, 'offensive', lookV, { noShots: true }), { ke: tuneOf('ke', 50) });
+        if (pickV.kind === 'fire' && pickV.t) { logLine('ai', u.label + ' — the planner: Fire! from where it stands.'); fire(u, pickV.t, 'fire'); return; }
+        if (pickV.kind === 'move') return aiRoll(u, pickV.c, false, { close: true });
+        logLine('ai', u.label + ' — the planner: holds.');
+        u.activated = true; endActivation(u); return;
+      }
       if (soloB) {
         // (the roll, for a side that has only now found no special action to take)
         if (!opFor) { bhV = rollBehaviour(u); if (bhV === 'defensive' || bhV === 'neutral') shot = threatTarget(u, 'fire'); }
@@ -1292,7 +1308,10 @@
            someone else or only moving (a hull on 7+ included). */
         else if (shot.forced && shot.t) { fire(u, shot.t, 'fire'); return; }
       }
-      if (behaviour === 'assault' && ne && R.canAssault(u, ne.unit, E.state) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon')) {
+      // (experiment 'charge': besides the hand rule's charges, the planner may charge, weighed against shooting and moving, below)
+      var chargeable = ne && R.canAssault(u, ne.unit, E.state) && ne.dist <= chargeAllow(u) && canReachCharge(u, ne.unit) && !R.has(u, 'Cumbersome Weapon');
+      var planCharge = planned(u) && aiExp(u, 'charge'), ap0;
+      if (behaviour === 'assault' && chargeable) {
         var nt = ne.unit;
         martyrFirst(u, nt, function (m) {
           var snap = snapshotAlive();
@@ -1351,9 +1370,11 @@
         var cands = scored.slice(0, 8).map(function (o) { return { c: o.c, base: scoreSpot(u, o.c, goal, behaviour, look, { noShots: true }) }; });
         var hereBase = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look, { noShots: true });
         // (ke 50: of 10, 25, 50 and 100 measured, the best; 'worth' tries the earlier worth-currency judge instead)
-        var pOpts = { k: tuneOf('k', 2.5), ke: tuneOf('ke', 50), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0 };
+        var pOpts = { k: tuneOf('k', 2.5), ke: tuneOf('ke', 50), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0,
+          charge: planCharge && chargeable && !((ap0 = assaultPlan(u)) && !ap0.push) ? ne.unit : null };
         var pick = aiExp(u, 'worth') ? E.planChoose(u, cands, hereBase, pOpts) : E.planChooseEval(u, cands, hereBase, pOpts);
         if (pick.kind === 'fire' && pick.t) { logLine('ai', u.label + ' — the planner: Fire! from where it stands.'); fire(u, pick.t, 'fire'); return; }
+        if (pick.kind === 'charge') { logLine('ai', u.label + ' — the planner: charges ' + pick.t.label + '.'); aiCharge(u, pick.t); return; }
         best = pick.kind === 'move' ? pick.c : null;
       }
       if (best) {

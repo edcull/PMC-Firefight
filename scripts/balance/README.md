@@ -207,6 +207,22 @@ weights live in `planner.js` (EVAL) and `evalweights.json`. Refit them when the 
 the rules change: the AI that plays the battles the evaluation is fitted on is now this
 one.
 
+Next, against the AI as it now is (`OPP=current`, 640 battles each, 50% = no change,
+noise about ±2):
+
+| Change | Share |
+|---|---|
+| the evaluation refitted on 2,000 battles the planner played (75.2% called, log loss 0.491, against 73.5% and 0.521) | 48.2% |
+| the planner weighing a charge (`charge`, chargeDelta: the first round each way) instead of the hand rule | 48.4% |
+| ...as well as the hand rule (`charge`, as kept behind the switch) | 50.0% |
+| a gun hull judged by the planner (`drive`): Fire! from here or the best eight spots | 50.1% |
+
+Nothing kept: a better forecast of who wins did not choose better (the refit counts a
+unit's Stress for less, and the planner's shots are judged mostly by it), and the
+charges and hulls make no difference. `charge` and `drive` stay behind their switches,
+off in every game, to build on; the refit's weights are in the table above, not in
+`planner.js`.
+
 With the pairs seeded on their own, scenarios without objectives (Meeting
 engagement, Demolish) come out the same battle for battle whatever the ground is worth:
 only Secure and control, Find and secure, Invasion and Takeover can move, and of those

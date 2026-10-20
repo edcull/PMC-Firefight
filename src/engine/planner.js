@@ -119,6 +119,10 @@
     function shotDelta(a, t, mode) {
       var ex;
       try { ex = R.expectedShot(E.state, a, t, mode, {}); } catch (e) { return 0; }
+      return lossDelta(t, ex);
+    }
+    // what losing ex (men, Suppression, Damage, on average) does to t's side, in the evaluation's log-odds
+    function lossDelta(t, ex) {
       var foes = E.state.units.filter(function (f) { return f.side === t.side && R.countsForVictory(f); });
       var onTable = foes.filter(function (f) { return f.alive && !f.fled && f.x >= 0 && !f.aboard && !R.isMachine(f); }).length || 1;
       var d = 0;
@@ -136,6 +140,20 @@
       }
       var w0 = worthNow(t), w1 = worth(t, Math.max(0, t.models - (ex.casualties || 0)), (t.sp || 0) + (ex.sp || 0), (t.damage || 0) + (ex.damage || 0));
       return d + EVAL.worth * (w0 - w1);
+    }
+    /* A charge, in the same currency: the first round each way (R.assaultOdds), a hit
+       on a squad as the assault's own table has it (damage.js resolveAssaultHits: a
+       man down on 4+, 1 SP on 2-3), what it does to them less what their answer does
+       to us. A hull or a gun answers with Damage, which this leaves out. */
+    var PER_HIT = { c: 0.5, sp: 1 / 3 + 1 };
+    function chargeDelta(u, t) {
+      var mine, theirs;
+      try { mine = R.assaultOdds(E.state, u, t).avgHits; theirs = R.isMachine(u) ? 0 : R.assaultOdds(E.state, t, u).avgHits; } catch (e) { return 0; }
+      var hurt = function (who, hits) {
+        if (R.isMachine(who)) return { damage: hits * 0.5 };
+        return { casualties: Math.min(who.models, hits * PER_HIT.c), sp: hits * PER_HIT.sp };
+      };
+      return lossDelta(t, hurt(t, mine)) - lossDelta(u, hurt(u, theirs));
     }
     function bestDeltaFrom(u, c, mode) {
       var g = ghostAt(u, c), best = { t: null, v: 0 };
@@ -182,6 +200,11 @@
           var s = cd.base + ke * val(shot.v, heldAt(u, cd.c), threatAt(u, cd.c));
           if (s > best.score + 0.3) best = { kind: 'move', c: cd.c, score: s };
         });
+        // a charge the AI could make (opts.charge, an enemy in reach), weighed the same way
+        if (opts && opts.charge) {
+          var sc = here + ke * chargeDelta(u, opts.charge);
+          if (sc > best.score + 0.3) best = { kind: 'charge', t: opts.charge, score: sc };
+        }
         return best;
       } finally { memo = null; }
     }
@@ -241,6 +264,11 @@
           // (a move must be worth its trouble: the same margin the utility AI asks)
           if (s > best.score + 0.3) best = { kind: 'move', c: cd.c, score: s };
         });
+        // a charge the AI could make (opts.charge, an enemy in reach), weighed the same way
+        if (opts && opts.charge) {
+          var sc = here + ke * chargeDelta(u, opts.charge);
+          if (sc > best.score + 0.3) best = { kind: 'charge', t: opts.charge, score: sc };
+        }
         return best;
       } finally { memo = null; }
     }
