@@ -1686,14 +1686,16 @@
   ];
   /* A copy of the battle for the AI to look ahead in (ai.js lookahead): both sides the
      AI's, nothing drawn or heard, and nothing played but what it is asked (api.sim). */
-  function fork() {
+  // (`json`: the battle as snapshotJSON wrote it, when the caller has it already)
+  function fork(json) {
     var f = create();
-    var snap = JSON.parse(JSON.stringify(K.snapshot()));
+    var snap = JSON.parse(json || snapshotJSON());
     snap.cfg.aiSides = ['A', 'B']; snap.cfg.sim = true;
     f.load(snap);
     f.sim.on();
     return f;
   }
+  function snapshotJSON() { return JSON.stringify(K.snapshot()); }
   function kitContext() {
     var own = {
       GEN: GEN,
@@ -1711,6 +1713,7 @@
       afterChain: afterChain,
       afterTerrain: afterTerrain,
       fork: fork,
+      snapshotJSON: snapshotJSON,
       animateMove: animateMove,
       beginTurn: beginTurn,
       boardAnim: boardAnim,
@@ -2533,7 +2536,14 @@
       start: start,
       intent: intent,
       snapshot: K.snapshot,
-      load: K.load,
+      /* A battle laid out from a snapshot: paced as one begun afresh would be (newGame),
+         so a copy that thinks the OpFor's answer out ahead (aiworker.js) gives no more of
+         it than the battle itself would. */
+      load: function (snap) {
+        var got = K.load(snap);
+        paced = !!(state && state.cfg && state.cfg.aiSides && state.cfg.aiSides.length === 2);
+        return got;
+      },
       state: function () { return state; },
       sel: function () { return ui; },
       over: function () { return state && state.over; },
@@ -2546,6 +2556,8 @@
         R.answering(function () { if (canAI()) drainAI(); });
         return true;
       },
+      // the OpFor's answer, now, owed or not: a copy of the battle thinking it out ahead (aiworker.js)
+      aiNow: function () { R.answering(function () { if (canAI()) drainAI(); }); },
       report: function () { return state && state.report; },
       /* A side walking away from the battle (a forfeit, online): it ends there, the
          other side the winner, with the report the engine makes of any end. */
@@ -2685,7 +2697,7 @@
         }
       }
     };
-    ['intent', 'snapshot', 'load', 'concede', 'runAI'].forEach(function (k) { api[k] = onBoard(api[k]); });
+    ['intent', 'snapshot', 'load', 'concede', 'runAI', 'aiNow'].forEach(function (k) { api[k] = onBoard(api[k]); });
     Object.keys(api.query).forEach(function (k) { api.query[k] = onBoard(api.query[k]); });
     return api;
   }

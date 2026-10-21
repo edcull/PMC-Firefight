@@ -17,4 +17,8 @@ module.exports = [{
   files: ['src/**/*.js', 'server/**/*.js', 'scripts/**/*.js', 'server.js'],
   languageOptions: { ecmaVersion: 2022, sourceType: 'script', globals },
   rules: { 'no-undef': 'error', 'no-dupe-keys': 'error' }
+}, {
+  // the page's AI worker, and the list of scripts it loads (net.js aiWorker)
+  files: ['src/engine/aiworker.js', 'src/engine/files.js'],
+  languageOptions: { globals: { self: 'readonly', importScripts: 'readonly' } }
 }];

@@ -173,16 +173,48 @@
      main menu's Continue list): starting another battle leaves the last one kept. */
   var SAVE_KEY = 'pmc-live-battle', SAVE_V = 1;     // where the one battle was kept, before there could be several
   var AI_MARK = '*ai';                               // where a kept battle's OpFor answered (Local.settleAI)
+  /* The one worker this page thinks ahead in (Local.thinkAhead), made when a
+     battle is set up (putOff), so it has its scripts by the OpFor's first answer:
+     false where there can be none. It is asked only once it has said it is ready
+     (aiwReady); an answer owed before then is thought out on the page. Its
+     scripts are this build's (the version the menu shows). */
+  var AIW = null, aiwReady = false, aiwSeq = 0, aiwWait = {};
+  function aiWorker() {
+    if (AIW !== null) return AIW;
+    AIW = false;
+    try {
+      // (PMC_NO_AIWORKER: thought out on the page, as before — the tests set it to compare the two)
+      if (!root.Worker || !root.location || root.location.protocol === 'file:' || root.PMC_NO_AIWORKER) return AIW;
+      var ver = root.document && root.document.getElementById('menu-ver');
+      var w = new root.Worker('src/engine/aiworker.js' + (ver ? '?v=' + encodeURIComponent(ver.textContent.trim()) : ''));
+      w.onmessage = function (m) {
+        if (m.data && m.data.ready) { aiwReady = true; return; }
+        var cb = m.data && aiwWait[m.data.id];
+        if (cb) cb(m.data);
+      };
+      // one that cannot load (the one-file build has no scripts beside it) is not asked again
+      w.onerror = function (e) {
+        AIW = false; aiwReady = false;
+        Object.keys(aiwWait).forEach(function (k) { var cb = aiwWait[k]; if (cb) cb(null); });
+        if (e && e.preventDefault) e.preventDefault();
+      };
+      AIW = w;
+    } catch (e) { AIW = false; }
+    return AIW;
+  }
   var IDX = 'pmc-battles', ONE = 'pmc-battle:';
   function dice(seed) {
     var a = seed >>> 0;
-    return function () {                              // mulberry32
+    var roll = function () {                          // mulberry32
       a = (a + 0x6D2B79F5) >>> 0;
       var t = a;
       t = Math.imul(t ^ (t >>> 15), t | 1);
       t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
+    // where they have got to, for a copy of the battle to roll on from (aiworker.js, the same dice)
+    roll.at = function () { return a; };
+    return roll;
   }
   function fingerprint(st) {
     if (!st) return '';
@@ -484,6 +516,7 @@
   Local.prototype.putOff = function (engine) {
     var net = this;
     engine.deferAI(function () { net.aiSoon(); });
+    aiWorker();
   };
   Local.prototype.aiSoon = function () {
     var net = this;
@@ -491,12 +524,40 @@
     function go() {
       if (!net.aiWait) return;
       clearTimeout(net.aiWait); net.aiWait = null;
-      net.settleAI();
+      net.thinkAhead();
     }
     net.aiWait = setTimeout(go, net.aiWhen ? 6000 : 250);
     if (root.requestAnimationFrame) root.requestAnimationFrame(function () {
       setTimeout(function () { if (net.aiWhen) net.aiWhen(go); else go(); }, 0);
     });
+  };
+  /* The OpFor's answer thought out first in a worker (aiworker.js), off the
+     page, which then gives it with the costly part of the thinking to hand
+     (ai.js ahead) and does not stand still for it. The worker's answer is taken
+     only for the battle and the moment it was asked about: an intent that comes
+     meanwhile has the page give the answer at once, as before, and what the
+     worker sends after that is let go. No worker (a page opened from a file,
+     the one-file build, an old browser), or one that fails: the page thinks it
+     out itself. */
+  Local.prototype.thinkAhead = function () {
+    var net = this, engine = this.engine, w = aiWorker(), A = root.PMCEngineAI && root.PMCEngineAI.ahead;
+    if (!engine || !engine.owedAI()) return;
+    if (!w || !aiwReady || !A || !this.rng || !this.rng.at) { this.settleAI(); return; }
+    var id = ++aiwSeq, guard = null;
+    function back(m) {
+      clearTimeout(guard); delete aiwWait[id];
+      if (net.aiAsk !== id) return;
+      net.aiAsk = null;
+      if (net.engine !== engine || !engine.owedAI()) return;
+      if (m && m.ok) A.give(m.got);
+      try { net.settleAI(); } finally { A.drop(); }
+    }
+    this.aiAsk = id;
+    aiwWait[id] = back;
+    // (a worker that has stopped answering, without a word: the page waits no longer for it)
+    guard = setTimeout(back, 10000);
+    try { w.postMessage({ id: id, snap: JSON.stringify(engine.snapshot()), rng: this.rng.at() }); }
+    catch (e) { back(null); }
   };
   Local.prototype.settleAI = function () {
     var engine = this.engine;

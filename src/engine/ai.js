@@ -13,6 +13,15 @@
   var EX_SHARED = [], EX_SHARED_N = 8;
   // ...and the ground grids under them (groundGrid), by the table alone: every copy of a battle has the battle's
   var GROUND_SHARED = [], GROUND_SHARED_N = 4;
+  /* What a copy of the battle thinking ahead (aiworker.js) has already worked
+     out, given here before the battle itself thinks (ahead.give): the worth of
+     each option the lookahead plays out, by everything a play-out is made from
+     (the battle as written down, the unit, the option, the dice), and the
+     exposure grids of the battle itself, by their own keys (EX_SHARED). Nothing
+     is taken that the battle would not have worked out the same: what it asks
+     for that is not here, it works out as ever. ahead.begin..take is the copy's
+     side, noting what it works out. */
+  var PLAY_KNOWN = null, MADE = null, HITS = { hit: 0, miss: 0 };
   root.PMCEngineAI = function (E) {
     var R = E.R, SC = E.SC, SFX = E.SFX, UR = E.UR, abAssault = E.abAssault,
         abRally = E.abRally, abRepair = E.abRepair, activeUnits = E.activeUnits, alreadySafe = E.alreadySafe,
@@ -949,6 +958,8 @@
       R.losBatch(function () { fillExposure(g, foes, n, cols); });
       exCache[side] = g;
       EX_SHARED.unshift({ sig: sig, g: { ex: g.ex, exNear: g.exNear, cov: g.cov, open: g.open } });
+      // (noted for the battle itself, not the copies: they are what the play-outs already stand for)
+      if (MADE && !E.state.cfg.sim) MADE.ex.push(EX_SHARED[0]);
       if (EX_SHARED.length > EX_SHARED_N) EX_SHARED.pop();
       return g;
     }
@@ -1564,9 +1575,11 @@
       if (top.length < 2) return pick;
       var n = tuneOf('ls', 1), kl = tuneOf('kl', ke), v0 = E.planValue(u.side), best = null;
       var seed0 = (E.state.turn * 7919 + idHash(u.id) * 104729) % 2147483647 || 1;
+      // the battle as every copy of it is made from (E.fork): written down once, for them all
+      var snap = E.snapshotJSON();
       top.forEach(function (o) {
         var sum = 0;
-        for (var i = 0; i < n; i++) sum += playOut(u, o, seed0 + i * 31337);
+        for (var i = 0; i < n; i++) sum += playOut(u, o, seed0 + i * 31337, snap);
         o.look = o.base + kl * (sum / n - v0);
         if (!best || o.look > best.look) best = o;
       });
@@ -1618,16 +1631,25 @@
       return best;
     }
     function idHash(id) { var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 65521; return h; }
-    function playOut(u, o, seed) {
+    function playOut(u, o, seed, snap) {
+      var pick = { kind: o.kind, t: o.t ? o.t.id : null, c: o.c ? { x: o.c.x, y: o.c.y } : null };
+      // (a play-out is made of nothing but these: the copy is made from `snap`, the dice from `seed`)
+      var key = snap + '\n' + u.id + '|' + JSON.stringify(pick) + '|' + seed;
+      if (PLAY_KNOWN) {
+        if (PLAY_KNOWN.has(key)) { HITS.hit++; return PLAY_KNOWN.get(key); }
+        HITS.miss++;
+      }
       var real = Math.random, sd = seed;
       Math.random = function () { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
       try {
-        var f = E.fork();
-        f.sim.act(u.id, { kind: o.kind, t: o.t ? o.t.id : null, c: o.c ? { x: o.c.x, y: o.c.y } : null });
+        var f = E.fork(snap);
+        f.sim.act(u.id, pick);
         // the enemy's one reply, or (`lr`) that many activations after this one, either side's
         var lr = tuneOf('lr', 1);
         if (lr > 1) f.sim.steps(lr); else f.sim.reply(u.side === 'A' ? 'B' : 'A');
-        return f.sim.value(u.side);
+        var v = f.sim.value(u.side);
+        if (MADE) MADE.plays.push([key, v]);
+        return v;
       } catch (e) {
         return E.planValue(u.side);
       } finally { Math.random = real; R.setBoard(E.state.cfg.board || { w: 48, h: 48 }); }
@@ -1969,6 +1991,28 @@
       gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
       nearestEnemy: nearestEnemy, aiPlace: aiPlace, aiPlaces: function (u) { return hardAI(u) && !E.state.compound; }, riskAt: riskAt, aiOrder: aiOrder, aiAct: aiAct, aiCharge: aiCharge, coverMove: coverMove, aiStands: aiStands, scoreSpot: scoreSpot
     };
+  };
+  /* The lookahead's work done ahead, in a copy of the battle (PLAY_KNOWN, above):
+     begin and take on the copy's side, give and drop on the battle's. What is
+     handed over is plain data, for a worker's message. */
+  root.PMCEngineAI.ahead = {
+    begin: function () { MADE = { plays: [], ex: [] }; },
+    take: function () {
+      var m = MADE;
+      MADE = null;
+      return m && { plays: m.plays, ex: m.ex.map(function (e) { return { sig: e.sig, ex: e.g.ex, exNear: e.g.exNear, cov: e.g.cov, open: e.g.open }; }) };
+    },
+    give: function (got) {
+      PLAY_KNOWN = new Map((got && got.plays) || []);
+      ((got && got.ex) || []).slice(0, EX_SHARED_N).reverse().forEach(function (e) {
+        EX_SHARED.unshift({ sig: e.sig, g: { ex: e.ex, exNear: e.exNear, cov: e.cov, open: e.open } });
+      });
+      EX_SHARED.length = Math.min(EX_SHARED.length, EX_SHARED_N);
+      HITS.hit = HITS.miss = 0;
+    },
+    drop: function () { PLAY_KNOWN = null; },
+    // how many of the play-outs asked for since the last give were there already (the tests)
+    hits: function () { return { hit: HITS.hit, miss: HITS.miss }; }
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineAI;
 })(typeof window !== 'undefined' ? window : global);
