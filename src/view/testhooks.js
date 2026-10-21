@@ -346,7 +346,8 @@
     window.__vc = function () { return B.vc; };
     // the board drawn now, whatever the animation loop is doing (render leaves it to the loop while one runs)
     window.__drawNow = function () { drawBoard(); };
-    window.__rebuildScene = function () { var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.opened = null; drawBoard(); };
+    // (baked at once, not a slice at a time: the test looks at the table straight after)
+    window.__rebuildScene = function () { var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.opened = null; c.baking = false; c.bakeNow = true; drawBoard(); };
     window.__tapTerrain = function (i) {
       var r = ui.terrain[i];
       if (!r) return false;

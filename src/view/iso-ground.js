@@ -351,7 +351,7 @@
       }
 
       if (!sliced) { latRows(gy0, gy1); soilRows(cy0, cy1); return finish(); }
-      // a slice at a time: the lattice, the soil, each piece's floor, then the rest in one go
+      // a slice at a time: the lattice, the soil, each piece's floor, then the rest in three (finish)
       var steps = [];
       for (var ly = gy0; ly < gy1; ly += 24) steps.push(latRows.bind(null, ly, Math.min(gy1, ly + 24)));
       for (var sy = cy0; sy < cy1; sy += 48) steps.push(soilRows.bind(null, sy, Math.min(cy1, sy + 48)));
@@ -364,14 +364,17 @@
         if (steps.length) { CLIP = null; setTimeout(next, 0); return; }
         setTimeout(function () {
           mine();
-          var out;
-          try { out = finish(); } finally { CLIP = null; }
-          sliced(out);
+          try { finish(sliced); } finally { CLIP = null; }
         }, 0);
       })();
       return null;
 
-      function finish() {
+      /* The plate finished: the floors, the board's edge, the tracks and the hills,
+         then the craters, then the scatter and the copy handed back. In one go; or,
+         for a sliced bake, `then(plate)` once the last is done, each of the three a
+         task of its own (they run in the same order on the same dice, so the same
+         pixels come of it). */
+      function finish(then) {
       /* --- every terrain rectangle, painted as the rectangle it is --- */
       if (!floorsDone) terrain.forEach(floorOf1);
 
@@ -454,6 +457,20 @@
         }
       }
 
+      if (!then) { craters(); return scatter(); }
+      setTimeout(function () {
+        mine();
+        try { craters(); } finally { CLIP = null; }
+        setTimeout(function () {
+          mine();
+          var out;
+          try { out = scatter(); } finally { CLIP = null; }
+          then(out);
+        }, 0);
+      }, 0);
+      return null;
+
+      function craters() {
       // craters pitting the churned ground
       terrain.filter(function (r) { return r.kind === 'crater'; }).forEach(function (r) {
         var cr = rng(seed + Math.round(r.x * 17 + r.y * 7));
@@ -496,6 +513,9 @@
         });
       });
 
+      }
+
+      function scatter() {
       // scatter: tufts of grass and stones over open ground only
       for (var s3 = 0; s3 < 3400; s3++) {
         var gx2 = rand() * B.W, gy2 = rand() * B.H;
@@ -511,6 +531,7 @@
       out.getContext('2d').drawImage(cv, 0, 0);
       cv.width = cv.height = 0;                      // (the working plate let go of at once: 22 MB)
       return out;
+      }
       }
     }
 
