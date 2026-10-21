@@ -162,8 +162,10 @@
       <button class="lnk" id="btn-menu-sound">Sound on</button>
       <button class="lnk" id="btn-menu-gfx" title="Low graphics: a lighter board, and nothing moving between actions — for phones that struggle">Graphics high</button>
       <button class="lnk" data-skirmish="demo" id="btn-menu-demo" title="Watch two AI forces fight it out" hidden>Demo</button>
-      <!-- who is signed in, or the way to sign in (net/account.js), at the row's right end -->
-      <button type="button" class="user-chip menu-chip" hidden></button>
+      <!-- who is signed in, or the way to sign in (net/account.js), at the row's right end: drawn
+           from the start as account.js will draw it (greyed until it knows), so the row does not
+           grow and move along when it does -->
+      <button type="button" class="user-chip menu-chip" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>Sign in</span></button>
     </p>
     <p class="menu-note" id="menu-note" role="status" hidden></p>
     <!-- written by scripts/build.js whenever what the page loads has changed -->

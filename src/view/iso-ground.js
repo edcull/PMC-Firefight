@@ -246,9 +246,15 @@
         CLIP = clipNow;
       }
       mine();
+      /* Baked where the processor can read it back (willReadFrequently): the
+         hills' floors and the craters are painted into rows and patches read
+         back out of the plate, and a plate on the graphics card read back holds
+         the page until the card has drawn everything sent to it — seconds, for
+         the menu's backdrop. Finished, it is copied onto a canvas of the usual
+         kind (finish, below), which the board draws every frame. */
       var cv = document.createElement('canvas');
       cv.width = B.PIXW; cv.height = B.PIXH;
-      var g = cv.getContext('2d');
+      var g = cv.getContext('2d', { willReadFrequently: true });
       var img = g.createImageData(B.PIXW, B.PIXH), d = img.data;
 
       /* --- noise on a coarse lattice, read back per pixel --- */
@@ -500,7 +506,11 @@
         else if (roll > 0.12) pebble(g, p2.x, p2.y, 1 + (rand() * 2.4 | 0), rand);
         else dot(g, p2.x, p2.y, rand() > 0.5 ? GP.track[0] : GP.track[1], 1);
       }
-      return cv;
+      var out = document.createElement('canvas');
+      out.width = cv.width; out.height = cv.height;
+      out.getContext('2d').drawImage(cv, 0, 0);
+      cv.width = cv.height = 0;                      // (the working plate let go of at once: 22 MB)
+      return out;
       }
     }
 

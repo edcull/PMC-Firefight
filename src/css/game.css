@@ -2038,6 +2038,10 @@ button.crow-go::after { content: '\203A'; margin-left: auto; padding-left: 8px; 
      is wide, and everything below it is the console. A tall phone gets far
      more room for the Actions, Results, Unit and Forces panes; a short one
      (landscape) keeps at least ~170px of console. */
+  /* --hdr is the header's height as game.js measures it; until it has, the
+     phone's one-row header as it is drawn, not the desktop's, or the table
+     and everything under it come in 22px low and jump up (a layout shift). */
+  :root { --hdr: calc(30px + env(safe-area-inset-top, 0px)); }
   :root { --board: min(100vw, calc(100vh - var(--hdr, 52px) - 170px)); }
   @supports (height: 100dvh) {
     :root { --board: min(100vw, calc(100dvh - var(--hdr, 52px) - 170px)); }
