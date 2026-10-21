@@ -285,6 +285,10 @@ turns, 12" from the AI's own, never taken); against the AI it is no better, the 
 walking into the other side's fire. The landing zones are the objectives too, so out
 of sight is often also out of the fight.
 
+The free-objective runner is on where the AI plays a person, as the lookahead is
+(`ai.js grabs`): a player who leaves an objective empty for turns should find it
+taken. `AIEXP=grab,grabfree` turns it on in these runs, `AIEXP=nograb` off.
+
 With the pairs seeded on their own, scenarios without objectives (Meeting
 engagement, Demolish) come out the same battle for battle whatever the ground is worth:
 only Secure and control, Find and secure, Invasion and Takeover can move, and of those

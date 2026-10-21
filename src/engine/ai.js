@@ -1397,8 +1397,8 @@
       /* The planner judges: the best eight spots, and Fire! from here, by how far each
          is expected to move the side's chance of winning (planner.js, the fitted evaluation) */
       if (planned(u) && behaviour !== 'flee' && behaviour !== 'assault' && !R.isFlying(u)) {
-        // (experiment 'grab') the side's runner for an objective it does not hold: each inch nearer it counts
-        var runTo = !forced && aiExp(u, 'grab') ? runnerFor(u) : null, gp = tuneOf('gp', 1.5);
+        // the side's runner for an objective it does not hold (runnerFor, grabs): each inch nearer it counts
+        var runTo = !forced && grabs(u) ? runnerFor(u) : null, gp = tuneOf('gp', 1.5);
         var closer = function (c) { return runTo ? gp * (R.inches(u.x, u.y, runTo.x, runTo.y) - R.inches(c.x, c.y, runTo.x, runTo.y)) : 0; };
         if (runTo) scored.forEach(function (o) { o.s += closer(o.c); });
         scored.sort(function (a, b) { return b.s - a.s; });
@@ -1509,6 +1509,16 @@
        every objective the side does not hold, its nearest unit that is not already
        holding one of the side's, the planner's to move (a scenario won by holding
        ground: Secure and control, Takeover, Invasion's zones...). */
+    /* Runners where the AI plays a person, as the lookahead is (looks): against the AI
+       a runner for a free objective is no better (49%, scripts/balance/README.md), the
+       other side never leaving its gun off it; a person who leaves an objective empty
+       for turns on end should find it taken. 'grab' turns it on in AI-against-AI play
+       ('grabfree' for free objectives only), 'nograb' off. Never inside a copy. */
+    function grabs(u) {
+      if (E.state.cfg.sim || aiExp(u, 'nograb')) return false;
+      var foe = u.side === 'A' ? 'B' : 'A';
+      return aiExp(u, 'grab') || (E.state.cfg.aiSides || []).indexOf(foe) < 0;
+    }
     function runnerFor(u) {
       var objs = E.state.objectives || [];
       if (!objs.length || goalPoints(u) !== objs) return null;
@@ -1516,8 +1526,8 @@
         return planned(f) && !R.isFlying(f) && !f.bld && !objs.some(function (o) { return o.owner === u.side && R.inches(f.x, f.y, o.x, o.y) <= 4; });
       });
       var best = null, bd = Infinity;
-      // (`grabfree`: only an objective nobody holds, in a scenario won by holding ground)
-      var freeOnly = aiExp(u, 'grabfree');
+      // only an objective nobody holds, in a scenario won by holding ground (but for the experiment 'grab' alone)
+      var freeOnly = aiExp(u, 'grabfree') || !aiExp(u, 'grab');
       if (freeOnly && ['secure', 'takeover', 'invasion'].indexOf(E.state.scen.id) < 0) return null;
       objs.forEach(function (o) {
         if (o.owner === u.side || (freeOnly && o.owner)) return;
