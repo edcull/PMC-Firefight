@@ -11,6 +11,8 @@
      copies of the battle (engine.js fork) ask for the very grid the battle has
      just worked out, before anything in them has moved. */
   var EX_SHARED = [], EX_SHARED_N = 8;
+  // ...and the ground grids under them (groundGrid), by the table alone: every copy of a battle has the battle's
+  var GROUND_SHARED = [], GROUND_SHARED_N = 4;
   root.PMCEngineAI = function (E) {
     var R = E.R, SC = E.SC, SFX = E.SFX, UR = E.UR, abAssault = E.abAssault,
         abRally = E.abRally, abRepair = E.abRepair, activeUnits = E.activeUnits, alreadySafe = E.alreadySafe,
@@ -912,6 +914,12 @@
     function groundGrid(cols, rows) {
       var sig = E.state.terrain.map(function (r) { return r.kind + (r.burning ? '*' : '') + r.x + ',' + r.y + ',' + r.w + ',' + r.h; }).join(';');
       if (groundCache && groundCache.state === E.state && groundCache.sig === sig && groundCache.cols === cols && groundCache.rows === rows) return groundCache;
+      // (what a cell's ground is reads the terrain and nothing else: R.terrainAt, R.coverAt)
+      var whole = cols + 'x' + rows + '|' + !!E.state.compound + '|' + JSON.stringify(E.state.terrain);
+      for (var gi = 0; gi < GROUND_SHARED.length; gi++) {
+        var gs = GROUND_SHARED[gi];
+        if (gs.whole === whole) return (groundCache = { state: E.state, sig: sig, cols: cols, rows: rows, open: gs.open, cov: gs.cov });
+      }
       var n = cols * rows, open = new Uint8Array(n), cov = new Float32Array(n);
       for (var k = 0; k < n; k++) {
         var x = (k % cols + 0.5) * CELL, y = ((k / cols | 0) + 0.5) * CELL;
@@ -920,6 +928,8 @@
         if (open[k]) cov[k] = R.coverAt(E.state, x, y) || 0;
       }
       groundCache = { state: E.state, sig: sig, cols: cols, rows: rows, open: open, cov: cov };
+      GROUND_SHARED.unshift({ whole: whole, open: open, cov: cov });
+      if (GROUND_SHARED.length > GROUND_SHARED_N) GROUND_SHARED.pop();
       return groundCache;
     }
     function exposureGrid(side) {
