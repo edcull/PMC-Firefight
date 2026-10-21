@@ -40,8 +40,9 @@ options switched on for a battle or a campaign.
 - **The AI:** a utility AI that plans covered approaches across the table, and a
   planner that judges its options by a fitted evaluation of who is winning. Against
   a player it also looks ahead, playing its best few options out in copies of the
-  battle against the reply it expects, and sends a unit for any objective left
-  empty in a scenario won by holding ground (see [docs/ai-research.md](docs/ai-research.md)).
+  battle against the reply it expects; it sends a unit for any objective left
+  empty, or held by you while your hold clock runs, in a scenario won by holding
+  ground, and pushes in together once an attack on a held position goes in (see [docs/ai-research.md](docs/ai-research.md)).
 
 The rules were last checked against the rulebook in
 [docs/rules-review-57a1b3d.md](docs/rules-review-57a1b3d.md), which also records
