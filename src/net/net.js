@@ -299,7 +299,10 @@
     }, 0);
     return this;
   };
-  Local.prototype.disconnect = function () { this.live = false; this.engine = null; };
+  Local.prototype.disconnect = function () {
+    this.live = false; this.engine = null;
+    if (this.aiWait) { clearTimeout(this.aiWait); this.aiWait = null; }
+  };
   Local.prototype.rename = function (name) { this.me.name = name; remember(name); };
 
   Local.prototype.begin = function (cfg, seats) {

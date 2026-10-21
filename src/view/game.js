@@ -106,6 +106,7 @@
     /* A battle started from this screen runs in this tab, whatever was here
        before — somebody who has just come out of a networked game and pressed
        New battle is starting a local one, not sending anything to a server. */
+    dropLocal();
     net = new window.PMCNet.Local();
     wireNet(net);
     net.connect();
@@ -136,6 +137,7 @@
     loadAutoAdvance(cfg.mode);
     resetShow();
     setPaused(false);
+    dropLocal();
     net = new window.PMCNet.Local();
     wireNet(net);
     net.connect();
@@ -157,6 +159,7 @@
   /* Join a battle already running on a server: the seat is given, the table
      arrives by itself. */
   function joinBattle(transport, seat) {
+    dropLocal();
     net = transport;
     seats = seat ? [seat] : [];
     watching = !seat;
@@ -908,8 +911,16 @@
     clearBoard();
     if (window.PMCMenu && window.PMCMenu.paint) window.PMCMenu.paint();
   };
+  /* A battle in this tab, given up for another (or for none): let go of, so
+     nothing it still had to do — the OpFor's answer, put off (net.js aiSoon) —
+     comes later onto the board of the next. (It is kept on this device, the
+     answer owed with it: picked up again, it comes then.) */
+  function dropLocal() {
+    if (net && window.PMCNet && net instanceof window.PMCNet.Local) net.disconnect();
+  }
   function clearBoard() {
     resetShow();
+    dropLocal();
     net = null; mirror = null; Q = null; state = null;
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
     ui.preview = null; ui.hover = null; ui.insertion = null; ui.reservePick = null; ui.digHover = null;

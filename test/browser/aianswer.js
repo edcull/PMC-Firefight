@@ -103,6 +103,31 @@ function ok(name, cond, note) {
   ok('the save marks where each answer came', back && back.aiMarks && back.marks >= 3, back && back.marks + ' marks');
   ok('...and plays back to the same place', back && back.asKept);
   ok('...as it does with the answers given at once, the old way', back && back.asOld);
+
+  console.log('\n  A NEW BATTLE STRAIGHT AFTER');
+  // a tap that leaves the OpFor's answer owed, and at once another battle: the old one says nothing more
+  const left = await p.evaluate(async () => {
+    const L = window.PMCNet.Local.prototype, flush = L.flush, sent = [];
+    L.flush = function () { sent.push(this); return flush.apply(this, arguments); };
+    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+    for (let i = 0; i < 200 && (!window.__mySide() || window.__busy() || window.__aiOwed() || !document.getElementById('resolution').hidden); i++) {
+      const c = document.getElementById('res-continue'); if (c && !document.getElementById('resolution').hidden) c.click();
+      await wait(50);
+    }
+    const u = window.__eligibleUnits()[0];
+    if (!u || !window.__select(u)) return null;
+    window.__sendIntent({ k: 'action', id: 'skip' });
+    const owed = window.__aiOwed();
+    sent.length = 0;
+    window.PMC_NEWGAME({ tier: 2, pl: 1, mode: 'ai', planet: 'barren', scenario: 'meeting', nameA: 'Next', nameB: 'Them',
+      armyA: ['cmd2', 'regular', 'regular'], armyB: ['cmd2', 'regular', 'regular'] });
+    const now = sent[sent.length - 1];
+    await wait(7000);
+    L.flush = flush;
+    return { owed, fromOld: sent.filter(n => n !== now).length, name: window.PMC_STATE().cfg.nameA };
+  });
+  ok('the old battle\u2019s answer never comes onto the new one\u2019s board', left && left.owed && left.fromOld === 0 && left.name === 'Next',
+    JSON.stringify(left));
   ok('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   await b.close();
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
