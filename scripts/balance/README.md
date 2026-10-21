@@ -289,6 +289,26 @@ The free-objective runner is on where the AI plays a person, as the lookahead is
 (`ai.js grabs`): a player who leaves an objective empty for turns should find it
 taken. `AIEXP=grab,grabfree` turns it on in these runs, `AIEXP=nograb` off.
 
+From two more of a player's battles: a Demolish attack left at its own edge for twelve
+turns while its battle armour charged alone, and a Secure battle where the AI piled
+four units onto the one objective it held while the player held the other two out to
+the win. So, where the AI plays a person, also (`grabs`):
+
+- **the push together** (`pushgo` in these runs): attacking a held position, once the
+  attack goes in (`assaultPlan`'s push), every unit's step nearer the objective counts;
+- **one holder an objective:** only the unit nearest an objective the side holds stays
+  to hold it, the rest are free to run;
+- **the clock contested:** an objective the enemy holds gets a runner while its hold
+  clock is running (`SC.holdClock`), to be broken before it wins.
+
+| Change | Share |
+|---|---|
+| `pushgo`, Demolish only (2 and 5 an inch) | 49.8%, 50.5% |
+| `pushgo`, Takeover only | 51.3% |
+| all of it together (`look,grab,grabfree` against `look`) | 48.9% |
+
+Neutral against the AI, as the runners were; on where the AI plays a person.
+
 With the pairs seeded on their own, scenarios without objectives (Meeting
 engagement, Demolish) come out the same battle for battle whatever the ground is worth:
 only Secure and control, Find and secure, Invasion and Takeover can move, and of those

@@ -1399,6 +1399,12 @@
       if (planned(u) && behaviour !== 'flee' && behaviour !== 'assault' && !R.isFlying(u)) {
         // the side's runner for an objective it does not hold (runnerFor, grabs): each inch nearer it counts
         var runTo = !forced && grabs(u) ? runnerFor(u) : null, gp = tuneOf('gp', 1.5);
+        /* Attacking a held position, once the attack goes in (assaultPlan's push: time
+           short, or the defenders outnumbered), every unit's step nearer the objective
+           counts, so the push goes in together — where the AI plays a person (grabs), or
+           with the experiment 'pushgo' (against the AI: no better, 50-51%) */
+        var apP = !forced && (aiExp(u, 'pushgo') || grabs(u)) ? assaultPlan(u) : null;
+        if (apP && apP.push) { runTo = apP.o; gp = tuneOf('pg', 2); }
         var closer = function (c) { return runTo ? gp * (R.inches(u.x, u.y, runTo.x, runTo.y) - R.inches(c.x, c.y, runTo.x, runTo.y)) : 0; };
         if (runTo) scored.forEach(function (o) { o.s += closer(o.c); });
         scored.sort(function (a, b) { return b.s - a.s; });
@@ -1522,15 +1528,28 @@
     function runnerFor(u) {
       var objs = E.state.objectives || [];
       if (!objs.length || goalPoints(u) !== objs) return null;
-      var mine = activeUnits(u.side).filter(function (f) {
-        return planned(f) && !R.isFlying(f) && !f.bld && !objs.some(function (o) { return o.owner === u.side && R.inches(f.x, f.y, o.x, o.y) <= 4; });
-      });
-      var best = null, bd = Infinity;
       // only an objective nobody holds, in a scenario won by holding ground (but for the experiment 'grab' alone)
       var freeOnly = aiExp(u, 'grabfree') || !aiExp(u, 'grab');
       if (freeOnly && ['secure', 'takeover', 'invasion'].indexOf(E.state.scen.id) < 0) return null;
+      var all = activeUnits(u.side).filter(function (f) { return planned(f) && !R.isFlying(f) && !f.bld; });
+      // one holder for each objective the side holds, its nearest unit there: the rest are free to go
+      var holders = [];
       objs.forEach(function (o) {
-        if (o.owner === u.side || (freeOnly && o.owner)) return;
+        if (o.owner !== u.side) return;
+        var h = null, hd = Infinity;
+        all.forEach(function (f) { var d = R.inches(f.x, f.y, o.x, o.y); if (d <= 4 && d < hd) { hd = d; h = f; } });
+        if (h) holders.push(h);
+      });
+      var mine = all.filter(function (f) { return holders.indexOf(f) < 0; });
+      var best = null, bd = Infinity;
+      objs.forEach(function (o, i) {
+        if (o.owner === u.side) return;
+        /* ...and one the enemy holds while its hold clock is running (Secure and control's
+           same two for three turns): there to be broken before it wins */
+        if (freeOnly && o.owner) {
+          var ck = SC.holdClock(E.state, i);
+          if (!(ck && ck.side === o.owner && ck.n >= 1)) return;
+        }
         var near = null, nd = Infinity;
         mine.forEach(function (f) { var d = R.inches(f.x, f.y, o.x, o.y); if (d < nd) { nd = d; near = f; } });
         if (near === u && nd < bd) { bd = nd; best = o; }
