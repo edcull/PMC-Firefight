@@ -400,13 +400,15 @@
          here, or the best eight spots in its Movement (an Advance), by the fitted evaluation. */
       if (planned(u) && aiExp(u, 'drive') && !R.isFlying(u) && u.fp != null && !shot.forced && !R.has(u, 'Cumbersome Weapon') && !outOfReach(u)) {
         var goalV = pickGoal(u, 'offensive'), lookV = R.groundLookup(E.state), scV = [];
-        R.reachable(E.state, u, u.move).forEach(function (c) {
+        var forcedV = E.state.forcePick && E.state.forcePick.id === u.id ? E.state.forcePick.pick : null;
+        if (!forcedV) R.reachable(E.state, u, u.move).forEach(function (c) {
           if (thinned(c) || !canStand(u, c)) return;
           scV.push({ c: c, s: scoreSpot(u, c, goalV, 'offensive', lookV) });
         });
         scV.sort(function (a, b) { return b.s - a.s; });
         var candsV = scV.slice(0, 8).map(function (o) { return { c: o.c, base: scoreSpot(u, o.c, goalV, 'offensive', lookV, { noShots: true }) }; });
-        var pickV = E.planChooseEval(u, candsV, scoreSpot(u, { x: u.x, y: u.y }, goalV, 'offensive', lookV, { noShots: true }), { ke: tuneOf('ke', 50) });
+        var pickV = forcedV ? forcedPick(forcedV) : E.planChooseEval(u, candsV, scoreSpot(u, { x: u.x, y: u.y }, goalV, 'offensive', lookV, { noShots: true }), { ke: tuneOf('ke', 50) });
+        if (!forcedV && looks(u) && pickV.all) pickV = lookahead(u, pickV, tuneOf('ke', 50));
         if (pickV.kind === 'fire' && pickV.t) { logLine('ai', u.label + ' — the planner: Fire! from where it stands.'); fire(u, pickV.t, 'fire'); return; }
         if (pickV.kind === 'move') return aiRoll(u, pickV.c, false, { close: true });
         logLine('ai', u.label + ' — the planner: holds.');
@@ -843,8 +845,8 @@
        to measure before it is kept: for the choosing AI, and only for the side
        cfg.aiExpSide names where it names one (against the AI as it is). No game sets it. */
     function aiExp(u, name) {
-      var c = E.state.cfg || {}, x = c.aiExp;
-      return !!x && !!x[name] && hardAI(u) && (!c.aiExpSide || c.aiExpSide === u.side);
+      var c = E.state.cfg || {}, x = c.aiExpSide && c.aiExpSide !== u.side ? c.aiExpOpp : c.aiExp;
+      return !!x && !!x[name] && hardAI(u);
     }
     /* The planner (planner.js) judges the choosing AI's moves and shots by the fitted
        evaluation: how far each option is expected to move its chance of winning.
@@ -1395,11 +1397,15 @@
       /* The planner judges: the best eight spots, and Fire! from here, by how far each
          is expected to move the side's chance of winning (planner.js, the fitted evaluation) */
       if (planned(u) && behaviour !== 'flee' && behaviour !== 'assault' && !R.isFlying(u)) {
+        // (experiment 'grab') the side's runner for an objective it does not hold: each inch nearer it counts
+        var runTo = !forced && aiExp(u, 'grab') ? runnerFor(u) : null, gp = tuneOf('gp', 1.5);
+        var closer = function (c) { return runTo ? gp * (R.inches(u.x, u.y, runTo.x, runTo.y) - R.inches(c.x, c.y, runTo.x, runTo.y)) : 0; };
+        if (runTo) scored.forEach(function (o) { o.s += closer(o.c); });
         scored.sort(function (a, b) { return b.s - a.s; });
-        var cands = scored.slice(0, 8).map(function (o) { return { c: o.c, base: scoreSpot(u, o.c, goal, behaviour, look, { noShots: true }) }; });
+        var cands = scored.slice(0, 8).map(function (o) { return { c: o.c, base: scoreSpot(u, o.c, goal, behaviour, look, { noShots: true }) + closer(o.c) }; });
         var hereBase = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look, { noShots: true });
         // (ke 50: of 10, 25, 50 and 100 measured, the best; 'worth' tries the earlier worth-currency judge instead)
-        var pOpts = { k: tuneOf('k', 2.5), ke: tuneOf('ke', 50), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0,
+        var pOpts = { fireAll: aiExp(u, 'lfire'), rk: tuneOf('rk', 1), k: tuneOf('k', 2.5), ke: tuneOf('ke', 50), noAdvance: noAdv || killAll || R.campFlag(u, 'noAdvance'), ground: aiExp(u, 'ground') ? tuneOf('gw', 4) : 0,
           charge: planCharge && chargeable && !((ap0 = assaultPlan(u)) && !ap0.push) ? ne.unit : null };
         var pick = forced ? forcedPick(forced) : aiExp(u, 'worth') ? E.planChoose(u, cands, hereBase, pOpts) : E.planChooseEval(u, cands, hereBase, pOpts);
         // the best few played out in copies of the battle, with the enemy's reply (looks, below)
@@ -1452,6 +1458,23 @@
 
     function fire(u, t, mode) { resolveShot(u, t, mode, {}); }
 
+    /* (experiments) Which of the side's units acts next (engine.js aiStep, which
+       otherwise takes the one with the best shot): 'orddelta' the one whose Fire! from
+       where it stands moves the evaluation most; 'ordthreat' the one in most danger
+       where it stands. True when it has put the list in order. */
+    function aiOrder(list) {
+      var u = list[0];
+      if (!u || !planned(u)) return false;
+      var key = null;
+      if (aiExp(u, 'orddelta')) key = function (x) { return E.planDeltaHere(x); };
+      else if (aiExp(u, 'ordthreat')) key = function (x) { return E.planThreat(x, { x: x.x, y: x.y }); };
+      if (!key) return false;
+      var k = {};
+      list.forEach(function (x) { k[x.id] = key(x); });
+      list.sort(function (a, b) { return k[b.id] - k[a.id]; });
+      return true;
+    }
+
     /* ---- Looking ahead (phase 3, docs/ai-research.md) ----
        The planner's best few options (`lk`, 3), each played out in a copy of the battle
        (E.fork): this unit's activation as the option has it, then the enemy's one reply
@@ -1465,7 +1488,9 @@
       pick.all.forEach(function (o) {
         if (top.length >= tuneOf('lk', 3)) return;
         var same = top.some(function (q) {
-          return q.kind === o.kind && (o.kind !== 'move' || R.inches(q.c.x, q.c.y, o.c.x, o.c.y) < gap);
+          if (q.kind !== o.kind) return false;
+          if (o.kind === 'move') return R.inches(q.c.x, q.c.y, o.c.x, o.c.y) < gap;
+          return !aiExp(u, 'lfire') || q.t === o.t;
         });
         if (!same) top.push(o);
       });
@@ -1477,6 +1502,28 @@
         for (var i = 0; i < n; i++) sum += playOut(u, o, seed0 + i * 31337);
         o.look = o.base + kl * (sum / n - v0);
         if (!best || o.look > best.look) best = o;
+      });
+      return best;
+    }
+    /* The objective this unit should run for, if it is the side's runner for one: for
+       every objective the side does not hold, its nearest unit that is not already
+       holding one of the side's, the planner's to move (a scenario won by holding
+       ground: Secure and control, Takeover, Invasion's zones...). */
+    function runnerFor(u) {
+      var objs = E.state.objectives || [];
+      if (!objs.length || goalPoints(u) !== objs) return null;
+      var mine = activeUnits(u.side).filter(function (f) {
+        return planned(f) && !R.isFlying(f) && !f.bld && !objs.some(function (o) { return o.owner === u.side && R.inches(f.x, f.y, o.x, o.y) <= 4; });
+      });
+      var best = null, bd = Infinity;
+      // (`grabfree`: only an objective nobody holds, in a scenario won by holding ground)
+      var freeOnly = aiExp(u, 'grabfree');
+      if (freeOnly && ['secure', 'takeover', 'invasion'].indexOf(E.state.scen.id) < 0) return null;
+      objs.forEach(function (o) {
+        if (o.owner === u.side || (freeOnly && o.owner)) return;
+        var near = null, nd = Infinity;
+        mine.forEach(function (f) { var d = R.inches(f.x, f.y, o.x, o.y); if (d < nd) { nd = d; near = f; } });
+        if (near === u && nd < bd) { bd = nd; best = o; }
       });
       return best;
     }
@@ -1830,7 +1877,7 @@
     return {
       threatTarget: threatTarget, aiRelocate: aiRelocate, aiInsert: aiInsert, aiPadFor: aiPadFor, flightTurn: flightTurn,
       gapToFoes: gapToFoes, canStand: canStand, expectedHits: expectedHits, bestTarget: bestTarget,
-      nearestEnemy: nearestEnemy, aiPlace: aiPlace, aiPlaces: function (u) { return hardAI(u) && !E.state.compound; }, riskAt: riskAt, aiAct: aiAct, aiCharge: aiCharge, coverMove: coverMove, aiStands: aiStands, scoreSpot: scoreSpot
+      nearestEnemy: nearestEnemy, aiPlace: aiPlace, aiPlaces: function (u) { return hardAI(u) && !E.state.compound; }, riskAt: riskAt, aiOrder: aiOrder, aiAct: aiAct, aiCharge: aiCharge, coverMove: coverMove, aiStands: aiStands, scoreSpot: scoreSpot
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineAI;
