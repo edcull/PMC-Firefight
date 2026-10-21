@@ -4,6 +4,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -32,6 +33,22 @@ const TYPES = {
    source, the saved campaigns and anything hidden are not part of the app and
    are not handed out — the campaigns have a route of their own, which says
    what a client may see of them. */
+/* Text is sent gzipped to a browser that takes it: the bundle is a third the size
+   (1.9 MB to 0.6 MB), which counts on a phone. Each file is compressed once for
+   each version of it and kept, so a busy server is not compressing the same bytes
+   over and over. */
+const PACK = /^(text\/|application\/json|image\/svg)/;
+const PACKED = new Map();                         // file -> { etag, body }
+const PACK_MAX = 64;
+function packed(file, etag) {
+  const had = PACKED.get(file);
+  if (had && had.etag === etag) return had.body;
+  const body = zlib.gzipSync(fs.readFileSync(file), { level: 6 });
+  if (PACKED.size >= PACK_MAX) PACKED.delete(PACKED.keys().next().value);
+  PACKED.set(file, { etag: etag, body: body });
+  return body;
+}
+
 const CLOSED = [/^server[\\/]/, /^campaigns[\\/]/, /^data[\\/]/, /^node_modules[\\/]/, /(^|[\\/])\./];
 
 function create(rootDir, opts) {
@@ -72,21 +89,30 @@ function create(rootDir, opts) {
       try { st = fs.statSync(file); } catch (e) { return false; }
     }
 
-    const etag = '"' + st.size.toString(16) + '-' + st.mtimeMs.toString(16) + '"';
+    const type = TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream';
+    const gzip = PACK.test(type) && st.size > 1024 && /\bgzip\b/.test(req.headers['accept-encoding'] || '');
+    // (the gzipped copy is another representation, with an ETag of its own)
+    const base = st.size.toString(16) + '-' + st.mtimeMs.toString(16);
+    const etag = '"' + base + (gzip ? '-gz' : '') + '"';
     if (req.headers['if-none-match'] === etag) {
       res.writeHead(304, { etag: etag });
       res.end();
       return true;
     }
-    const type = TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream';
-    res.writeHead(200, {
-      'content-type': type,
-      'content-length': st.size,
-      'etag': etag,
-      'cache-control': maxAge ? 'public, max-age=' + maxAge : 'no-cache'
-    });
+    /* The bundle (dist/, scripts/bundle.js) is asked for under its content's own
+       fingerprint (?v=...): a new build is a new address, so it may be kept for good.
+       Everything else is checked each time (the ETag makes that a 304 when unchanged). */
+    const forGood = /^\/dist\//.test(req.url) && /[?&]v=[0-9a-f]+/.test(req.url);
+    const cache = forGood ? 'public, max-age=31536000, immutable' : maxAge ? 'public, max-age=' + maxAge : 'no-cache';
+    let body = null;
+    if (gzip) { try { body = packed(file, etag); } catch (e) { body = null; } }
+    const head = { 'content-type': type, 'etag': etag, 'cache-control': cache, 'content-length': body ? body.length : st.size };
+    if (PACK.test(type)) head.vary = 'Accept-Encoding';
+    if (body) head['content-encoding'] = 'gzip';
+    res.writeHead(200, head);
     if (req.method === 'HEAD') { res.end(); return true; }
-    fs.createReadStream(file).pipe(res);
+    if (body) res.end(body);
+    else fs.createReadStream(file).pipe(res);
     return true;
   };
 }
