@@ -52,7 +52,7 @@ jobs:
 
       # the menu's version as of this deploy (package.json's, and the moment, UTC
       # YYMMDDHHmm), as the published site stamps its own (pages.yml); only the
-      # stamp, not the whole build, so nothing more is installed on the Pi
+      # stamp, not the whole build (the bundle below is all of it the Pi needs)
       - name: Stamp the version
         run: |
           VER="v$(node -p 'require("./package.json").version').$(date -u +%y%m%d%H%M)"
@@ -60,12 +60,25 @@ jobs:
           grep -q "menu-ver\">$VER<" index.html
           echo "Stamped $VER"
 
+      # the page as the published site has it (pages.yml): its hundred-odd scripts
+      # folded into one minified file, dist/game.js (scripts/bundle.js) — one request
+      # and one parse instead of a hundred. terser goes in a folder of its own, so the
+      # server's packages (better-sqlite3) are not installed, or built, for it.
+      - name: Bundle the page
+        run: |
+          npm install --prefix "$RUNNER_TEMP/bundler" --no-save --no-audit --no-fund terser@5
+          NODE_PATH="$RUNNER_TEMP/bundler/node_modules" node scripts/bundle.js
+
       - name: Copy the code into place
         run: |
           rsync -a --delete \
             --exclude .git --exclude .github --exclude node_modules \
             --exclude /campaigns --exclude /build --exclude /test \
             ./ "$APP_DIR/"
+          # the bundled page in place of the one that loads every script on its own
+          mkdir -p "$APP_DIR/dist"
+          cp build/site/dist/game.js "$APP_DIR/dist/game.js"
+          cp build/site/index.html "$APP_DIR/index.html"
           echo "$BRANCH @ ${SHA::7}" > "$APP_DIR/deployed.txt"
 
       # the server's packages (better-sqlite3), as the lock file has them; nothing for
