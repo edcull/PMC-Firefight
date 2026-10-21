@@ -1943,7 +1943,7 @@
         return;
       }
       if (camp && camp.pending && resumeItsBattle()) return;
-      if (camp && camp.pending) { camp.pending = null; save(); }   // a battle abandoned mid-flight
+      if (camp && camp.pending) { camp.pending = null; delete camp.battle; save(); }   // a battle abandoned mid-flight
       open(view === 'aftermath' ? 'aftermath' : 'hub');
     }
     /* The campaign's battle, kept in this browser while something else was played:
@@ -1994,6 +1994,13 @@
     if (setupBtn) setupBtn.addEventListener('click', enter);
     function took(got) {
       camp = got;
+      /* Its battle, kept with it in the account (keepBattle): taken into this browser
+         to be gone back to here — before a pending battle with nothing kept is dropped */
+      if (camp && camp.battle && root.PMCNet && root.PMCNet.importBattle) root.PMCNet.importBattle(camp.battle, Store.lid());
+      // ...and one taken here before, its battle since done with on another device: not offered again
+      if (camp && !camp.pending && root.PMCNet && root.PMCNet.savedBattles) root.PMCNet.savedBattles().forEach(function (b) {
+        if (b.campaign && b.campLid === Store.lid()) root.PMCNet.forgetBattle(b.id);
+      });
       // a battle abandoned mid-flight — unless it was kept, and is waiting to be gone back to
       if (camp && camp.pending && !keptBattle()) camp.pending = null;
       if (camp && camp.companies && C.evenWorld(camp)) save();   // a campaign from before the forces paired off
@@ -2067,8 +2074,26 @@
   if (root.PMCTestHooks) root.PMCTestHooks.dossier({
     get camp() { return camp; }, get contract() { return contract; }, autoPick: autoPick, render: render, C: C
   });
+  /* A campaign battle in progress goes to the account with its campaign (net.js keeps
+     it after every activation and hands it here), so it can be gone back to from any
+     device: kept on the campaign as `battle`, the campaign saved a few seconds after the
+     first of a burst of them; dropped from it when the battle is done with. */
+  var battleSave = null;
+  function keepBattle(book) {
+    if (online || !camp || !book || !book.cfg || (book.cfg.campLid && book.cfg.campLid !== Store.lid())) return;
+    if (book.over) {
+      if (!camp.battle || camp.battle.id !== book.id) return;
+      delete camp.battle;
+      if (battleSave) { clearTimeout(battleSave); battleSave = null; }
+      save();
+      return;
+    }
+    camp.battle = JSON.parse(JSON.stringify(book));
+    // (at most one save every few seconds, however fast the activations come)
+    if (!battleSave) battleSave = setTimeout(function () { battleSave = null; if (camp && camp.battle) save(); }, 4000);
+  }
   root.PMC_CAMPAIGN = {
-    open: open, close: close, onFinish: onFinish,
+    open: open, close: close, onFinish: onFinish, keepBattle: keepBattle,
     enter: function (mode) { if (enterCampaign) enterCampaign(mode); },
     // a new campaign begun from the menu's cards, and one gone back to from its Continue list
     fresh: function (mode) { if (enterFresh) enterFresh(mode); },

@@ -60,6 +60,21 @@
        or ground beyond the enemy for cross fire. Hiding comes first: rebel infantry
        landed for the flank or for overwatch at the cost of being seen died faster
        than it did anything. */
+    /* Teleport turrets are pads to jump to: worth the more the more ground they cover
+       between them, so each goes down away from the side's others — out by its own
+       units, the objectives, good ground and the flanks, not stacked in one place. */
+    function telePad(f) { return R.has(f, 'Turret') && R.has(f, 'Teleport'); }
+    function padGap(u, c) {
+      if (!telePad(u)) return Infinity;
+      var d = Infinity;
+      E.state.units.forEach(function (f) {
+        if (f === u || !f.alive || f.side !== u.side || f.x < 0 || f.reserve || f.aboard || !telePad(f)) return;
+        d = Math.min(d, R.inches(c.x, c.y, f.x, f.y));
+      });
+      return d;
+    }
+    // a spot's cost for a teleport turret within 12" of another of the side's
+    function padSpread(u, c) { var d = padGap(u, c); return d === Infinity ? 0 : -0.6 * Math.max(0, 12 - d); }
     function aiInsert(u, done) {
       done = done || function () {};
       var want = null, wd = Infinity;
@@ -69,6 +84,16 @@
         if (d < wd) { wd = d; want = o; }
       });
       var foes = E.state.units.filter(function (e) { return e.alive && e.side !== u.side && onTable(e) && !husk(e); });
+      /* a teleport turret makes for whichever objective or friend the side's pads cover
+         least: one turret by each, rather than all of them round the same one */
+      if (telePad(u)) {
+        var anchors = (E.state.objectives || []).concat(E.state.units.filter(function (f) {
+          return f.alive && f.side === u.side && onTable(f) && !f.aboard && !telePad(f);
+        }));
+        var lone = null, ld = -1;
+        anchors.forEach(function (a) { var g = Math.min(padGap(u, a), 40); if (g > ld) { ld = g; lone = a; } });
+        if (lone) want = { x: lone.x, y: lone.y };
+      }
       var focus = want || (foes.length ? {
         x: foes.reduce(function (s, e) { return s + e.x; }, 0) / foes.length,
         y: foes.reduce(function (s, e) { return s + e.y; }, 0) / foes.length
@@ -88,7 +113,7 @@
         var sa = sightAt(u, p, stealth), cover = R.coverAt(E.state, p.x, p.y, u) || 0;
         var near = friends.some(function (f) { return R.inches(f.x, f.y, p.x, p.y) <= 10; });
         var sc = -6 * sa.seen - 0.8 * sa.threat + 2 * cover + (sa.seen === 0 && sa.sees > 0 ? 3 : 0) +
-          (near ? 1.5 : 0) - 0.25 * R.inches(p.x, p.y, focus.x, focus.y);
+          (near ? 1.5 : 0) - 0.25 * R.inches(p.x, p.y, focus.x, focus.y) + padSpread(u, p);
         // and, between spots as safe as each other, the purpose: a long-ranged Stealth unit's
         // overwatch from 18" out, or ground beyond the enemy for cross fire
         if (sa.seen < 0.3) {
@@ -1020,7 +1045,7 @@
           if (f === u || !f.alive || f.side !== u.side || f.x < 0 || f.aboard || f.reserve) return;
           near = Math.min(near, R.inches(c.x, c.y, f.x, f.y));
         });
-        var v = -0.6 * rf(c.x, c.y) - 1.2 * riskAt(u, c.x, c.y) + Math.random() * 0.3;
+        var v = -0.6 * rf(c.x, c.y) - 1.2 * riskAt(u, c.x, c.y) + Math.random() * 0.3 + padSpread(u, c);
         if (near < Infinity) v -= 0.2 * Math.max(0, near - 8) + (near < 2.5 ? 1 : 0);
         if (v > bs) { bs = v; best = c; }
       });
