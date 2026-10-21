@@ -287,6 +287,7 @@ class Lobby {
     }
     room.table = table;
     this.rooms.set(room.id, room);
+    table.wake();
     return room;
   }
   /* An online campaign's battle that is over but whose campaign never took its
