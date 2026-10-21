@@ -822,7 +822,8 @@
          weld and rivet heads. A fine texture laid over those plates, pinned to
          the machine so it rides along with it rather than swimming as it moves. */
       function texOn(pts, kind) {
-        if (dead || !g.createPattern) return;
+        // (nor on the board's probe for where a machine is drawn, which must read no canvas back: draw.js)
+        if (dead || !g.createPattern || g.__probe) return;
         var pat = texPattern(g, kind);
         if (!pat) return;
         if (pat.setTransform && typeof DOMMatrix !== 'undefined') pat.setTransform(new DOMMatrix().translateSelf(Math.round(P0.x), Math.round(P0.y)));

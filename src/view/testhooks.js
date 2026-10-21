@@ -121,6 +121,8 @@
     window.__insertionSpotsNow = function () { return ui.insertion ? ui.insertion.spots : null; };
     window.__tapInsertion = function (q) { placeInsertion(q); };
     window.__sendIntent = function (it) { send(it); };
+    // a battle in this browser: whether the OpFor's answer to the last intent is still to come (net.js settleAI)
+    window.__aiOwed = function () { var n = B.net; return !!(n && n.engine && n.engine.owedAI && n.engine.owedAI()); };
     window.__lookAt = function (x, y) { var q = ISO.toScreen(x, y); centreOn(q.x, q.y, true); render(); };
     // the part of the table on screen, in table pixels: { sx, sy, sw, sh }
     window.__viewRect = function () { return viewRect(); };

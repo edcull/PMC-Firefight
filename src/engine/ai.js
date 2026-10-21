@@ -6,6 +6,11 @@
    E as it is now. It hands back the functions below. */
 (function (root) {
   'use strict';
+  /* Exposure grids (exposureGrid, below) shared by every game this page or process
+     runs, the latest few, by everything a line of sight reads: the lookahead's
+     copies of the battle (engine.js fork) ask for the very grid the battle has
+     just worked out, before anything in them has moved. */
+  var EX_SHARED = [], EX_SHARED_N = 8;
   root.PMCEngineAI = function (E) {
     var R = E.R, SC = E.SC, SFX = E.SFX, UR = E.UR, abAssault = E.abAssault,
         abRally = E.abRally, abRepair = E.abRepair, activeUnits = E.activeUnits, alreadySafe = E.alreadySafe,
@@ -925,12 +930,33 @@
       var hit = exCache[side];
       if (hit && hit.state === E.state && hit.key === key) return hit;
       var cols = Math.ceil(R.BOARD.w / CELL), rows = Math.ceil(R.BOARD.h / CELL), n = cols * rows;
+      var sig = exposureSig(side), sh = null;
+      for (var si = 0; si < EX_SHARED.length && !sh; si++) if (EX_SHARED[si].sig === sig) sh = EX_SHARED[si].g;
+      if (sh) return (exCache[side] = { state: E.state, key: key, cols: cols, rows: rows, ex: sh.ex, exNear: sh.exNear, cov: sh.cov, open: sh.open });
       var gr = groundGrid(cols, rows);
       var g = { state: E.state, key: key, cols: cols, rows: rows, ex: new Float32Array(n), exNear: new Float32Array(n), cov: gr.cov, open: gr.open };
       // (nothing moves while it is worked out: R.losBatch has each gun's footing found once)
       R.losBatch(function () { fillExposure(g, foes, n, cols); });
       exCache[side] = g;
+      EX_SHARED.unshift({ sig: sig, g: { ex: g.ex, exNear: g.exNear, cov: g.cov, open: g.open } });
+      if (EX_SHARED.length > EX_SHARED_N) EX_SHARED.pop();
       return g;
+    }
+    /* Everything a grid is worked out from: the table's size, the world (a fog),
+       every piece of terrain and every unit, as they stand — a unit as the save
+       writes it (its cargo by id, its building by place), less where the board
+       is drawing it, which no line of sight reads. Two battles that agree on all
+       of it, a battle and its copy, get the same grid. */
+    function exposureSig(side) {
+      var st = E.state;
+      return side + '|' + R.BOARD.w + 'x' + R.BOARD.h + '|' + JSON.stringify(R.worldOf(st)) + '|' + JSON.stringify(st.compound || null) +
+        '|' + JSON.stringify(st.terrain) + '|' + JSON.stringify(st.units, function (k, v) {
+          if (st.units.indexOf(this) < 0) return v;           // (a unit's own fields, not ones of the same name inside them)
+          if (k === 'cargo') return (v || []).map(function (c) { return c && c.id; });
+          if (k === 'bld') return v ? st.terrain.indexOf(v) : null;
+          if (k === 'ax' || k === 'ay' || k === 'boarding' || k === 'arriveAt' || k === 'dropFrom') return undefined;
+          return v;
+        });
     }
     function fillExposure(g, foes, n, cols) {
       for (var k = 0; k < n; k++) {

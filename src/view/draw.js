@@ -917,16 +917,26 @@
       sg.imageSmoothingEnabled = smooth;
       ISO.drawUnit(sg, u, opts);
       sg.setTransform(1, 0, 0, 1, 0, 0);
-      /* Where it was drawn, read off a quarter-size copy: the patch itself is
-         never read back, which would have the browser draw it a different way
-         (on the processor rather than the graphics card) from the frame it goes
-         into, and a machine would change its look as it stopped and started. */
-      var n = S / PROBE;
+      /* Where it was drawn, read off a quarter-size drawing of it of its own:
+         the patch itself is never read back, which would have the browser draw
+         it a different way (on the processor rather than the graphics card)
+         from the frame it goes into, and a machine would change its look as it
+         stopped and started. Nor is the probe copied down from the patch: that
+         reads the graphics card back too, and holds the page until it has
+         finished everything queued for it. Drawn afresh on the processor, the
+         probe waits for nothing, so long as nothing on the card is drawn into
+         it: a rebel machine's texture tile is, and is left off (it only specks
+         plates already painted). Undimmed: the dimming is its own scratch
+         canvas on the card, and it covers no pixel the hull does not. */
+      var n = S / PROBE, k = sc / PROBE;
       if (!mProbe) { mProbe = document.createElement('canvas'); }
       if (mProbe.width !== n) { mProbe.width = n; mProbe.height = n; }
       var pg = mProbe.getContext('2d', { willReadFrequently: true });
-      pg.clearRect(0, 0, n, n); pg.imageSmoothingEnabled = true;
-      pg.drawImage(mScratch, 0, 0, S, S, 0, 0, n, n);
+      pg.__probe = true;                               // (a machine leaves off its scrap texture, below)
+      pg.setTransform(1, 0, 0, 1, 0, 0); pg.clearRect(0, 0, n, n); pg.imageSmoothingEnabled = true;
+      pg.setTransform(k, 0, 0, k, (ax + fx - sc * p.x) / PROBE, (ay + fy - sc * p.y) / PROBE);
+      ISO.drawUnit(pg, u, opts.activated ? Object.assign({}, opts, { activated: false }) : opts);
+      pg.setTransform(1, 0, 0, 1, 0, 0);
       var d = pg.getImageData(0, 0, n, n).data, x0 = n, y0 = n, x1 = -1, y1 = -1;
       for (var y = 0; y < n; y++) {
         var row = y * n * 4;

@@ -187,8 +187,8 @@ function wrap(db) {
     statUsers: db.prepare('SELECT COUNT(*) n, SUM(active = 0) inactive, SUM(email IS NOT NULL) emails FROM users'),
     statGames: db.prepare("SELECT status, COUNT(*) n FROM games GROUP BY status"),
     // the console's look at the battles and campaigns (admin.js)
-    allGames: db.prepare('SELECT id, code, name, status, settings, seats, result, created, updated, (SELECT COUNT(*) FROM game_intents i WHERE i.game_id = games.id) AS moves FROM games ORDER BY updated DESC LIMIT ?'),
-    gamesByCode: db.prepare('SELECT id, code, name, status, settings, seats, result, created, updated, (SELECT COUNT(*) FROM game_intents i WHERE i.game_id = games.id) AS moves FROM games WHERE code = ? ORDER BY id DESC'),
+    allGames: db.prepare('SELECT id, code, name, status, settings, seats, result, created, updated, (SELECT COUNT(*) FROM game_intents i WHERE i.game_id = games.id AND i.seat != \'*\') AS moves FROM games ORDER BY updated DESC LIMIT ?'),
+    gamesByCode: db.prepare('SELECT id, code, name, status, settings, seats, result, created, updated, (SELECT COUNT(*) FROM game_intents i WHERE i.game_id = games.id AND i.seat != \'*\') AS moves FROM games WHERE code = ? ORDER BY id DESC'),
     dropGame: db.prepare('DELETE FROM games WHERE id = ?'),
     oldGames: db.prepare("SELECT id FROM games WHERE status != 'battle' AND updated < ?"),
     endedGames: db.prepare("SELECT * FROM games WHERE status != 'battle' ORDER BY id"),

@@ -172,6 +172,7 @@
      Any number are kept, each under an id of its own, with an index of them (the
      main menu's Continue list): starting another battle leaves the last one kept. */
   var SAVE_KEY = 'pmc-live-battle', SAVE_V = 1;     // where the one battle was kept, before there could be several
+  var AI_MARK = '*ai';                               // where a kept battle's OpFor answered (Local.settleAI)
   var IDX = 'pmc-battles', ONE = 'pmc-battle:';
   function dice(seed) {
     var a = seed >>> 0;
@@ -298,7 +299,10 @@
     }, 0);
     return this;
   };
-  Local.prototype.disconnect = function () { this.live = false; this.engine = null; };
+  Local.prototype.disconnect = function () {
+    this.live = false; this.engine = null;
+    if (this.aiWait) { clearTimeout(this.aiWait); this.aiWait = null; }
+  };
   Local.prototype.rename = function (name) { this.me.name = name; remember(name); };
 
   Local.prototype.begin = function (cfg, seats) {
@@ -308,8 +312,9 @@
     var seed = (Math.random() * 4294967296) >>> 0;
     this.rng = dice(seed);
     // a demo is only watched: there is nothing to come back to
-    this.book = isDemo(cfg) ? null : { v: SAVE_V, id: newId(), cfg: clone(cfg), seats: this.seats.slice(), seed: seed, intents: [], at: Date.now(), began: Date.now() };
+    this.book = isDemo(cfg) ? null : { v: SAVE_V, id: newId(), cfg: clone(cfg), seats: this.seats.slice(), seed: seed, intents: [], at: Date.now(), began: Date.now(), aiMarks: true };
     this.engine = root.PMCEngine.create(recorder(this));
+    this.putOff(this.engine);
     /* The board is handed the engine before the battle is laid out, because
        laying it out is itself a stream of events — the terrain rolled, the
        scenario read out, the deployment zones — and they have to arrive
@@ -334,10 +339,17 @@
     this.rng = dice(book.seed);
     this.replaying = [];
     var engine = this.engine = root.PMCEngine.create(recorder(this));
+    /* A book that marks where the OpFor answered (aiMarks) is played back with
+       the answer put off to its mark, as it was played; one from before then had
+       it answer at once, and is played back that way. */
+    engine.deferAI(book.aiMarks ? function () { } : null);
     this.rolling(function () {
       engine.start(cfg);
       var broke = 0;
-      book.intents.forEach(function (x) { try { engine.intent(x[0], x[1]); } catch (e) { broke++; if (broke === 1 && root.console) console.warn('replaying the saved battle', e); } });
+      book.intents.forEach(function (x) {
+        try { if (x[1] && x[1].k === AI_MARK) engine.runAI(); else engine.intent(x[0], x[1]); }
+        catch (e) { broke++; if (broke === 1 && root.console) console.warn('replaying the saved battle', e); }
+      });
     });
     var logs = this.replaying;
     this.replaying = null;
@@ -347,6 +359,9 @@
       return false;
     }
     this.book = book;
+    book.aiMarks = true;                               // (from here on it is kept the new way)
+    this.putOff(engine);
+    if (engine.owedAI()) this.aiSoon();
     this.emit('engine', { engine: engine, local: true });
     this.emit('started', { seat: this.seats[0], cfg: cfg, local: true, resumed: true });
     var st = engine.state();
@@ -427,6 +442,9 @@
 
   Local.prototype.intent = function (it) {
     if (!this.engine) return false;
+    // the OpFor's answer to the last one, if it has not come yet, comes before this
+    this.settleAI();
+    if (!this.engine) return false;
     this.events = [];
     var res, seat = this.seatNow(it);
     // kept whether or not it is allowed: a refusal may have rolled a die on the way
@@ -451,6 +469,50 @@
     }
     this.flush();
     if (this.engine.over()) this.emit('over', { report: this.engine.report(), over: this.engine.over() });
+    return true;
+  };
+
+  /* The OpFor's answer, put off (engine.js maybeAI) until the board has drawn
+     what the player did, so the tap that asked is answered at once and the
+     computer thinks in a task of its own. It comes once the board says it has
+     drawn it all and the table is still (aiWhen, which the board sets: replay.js
+     afterShow), never before the next frame; without a board, after that frame;
+     and on a page drawing nothing (hidden) a few seconds on. It comes before any
+     other intent, whenever that is (settleAI), so the battle runs as it would
+     have with the answer given at once. The save marks where it came (AI_MARK),
+     and a battle played back from it gives the answer there. */
+  Local.prototype.putOff = function (engine) {
+    var net = this;
+    engine.deferAI(function () { net.aiSoon(); });
+  };
+  Local.prototype.aiSoon = function () {
+    var net = this;
+    if (net.aiWait) return;
+    function go() {
+      if (!net.aiWait) return;
+      clearTimeout(net.aiWait); net.aiWait = null;
+      net.settleAI();
+    }
+    net.aiWait = setTimeout(go, net.aiWhen ? 6000 : 250);
+    if (root.requestAnimationFrame) root.requestAnimationFrame(function () {
+      setTimeout(function () { if (net.aiWhen) net.aiWhen(go); else go(); }, 0);
+    });
+  };
+  Local.prototype.settleAI = function () {
+    var engine = this.engine;
+    if (!engine || !engine.owedAI()) return false;
+    if (this.book) this.book.intents.push([null, { k: AI_MARK }]);
+    this.events = [];
+    try { this.rolling(function () { engine.runAI(); }); }
+    catch (e) {
+      this.keep();
+      this.emit('error', { text: 'the computer could not take its turn: ' + (e && e.message) });
+      this.flush([]);
+      return false;
+    }
+    this.keep();
+    this.flush();
+    if (engine.over()) this.emit('over', { report: engine.report(), over: engine.over() });
     return true;
   };
 

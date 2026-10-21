@@ -106,6 +106,7 @@
     /* A battle started from this screen runs in this tab, whatever was here
        before — somebody who has just come out of a networked game and pressed
        New battle is starting a local one, not sending anything to a server. */
+    dropLocal();
     net = new window.PMCNet.Local();
     wireNet(net);
     net.connect();
@@ -136,6 +137,7 @@
     loadAutoAdvance(cfg.mode);
     resetShow();
     setPaused(false);
+    dropLocal();
     net = new window.PMCNet.Local();
     wireNet(net);
     net.connect();
@@ -157,6 +159,7 @@
   /* Join a battle already running on a server: the seat is given, the table
      arrives by itself. */
   function joinBattle(transport, seat) {
+    dropLocal();
     net = transport;
     seats = seat ? [seat] : [];
     watching = !seat;
@@ -226,6 +229,8 @@
   function wireNet(transport) {
     // a battle running in this tab hands its engine straight over
     transport.on('engine', function (m) { useEngine(m.engine); });
+    // ...and its OpFor thinks once the board has drawn what the player did (net.js aiSoon)
+    if (window.PMCNet && transport instanceof window.PMCNet.Local) transport.aiWhen = function (go) { REPLAY.afterShow(go); };
     transport.on('turn', function (m) {
       if (m.live) { state = mirror ? mirror.state() : state; }
       else if (mirror) { state = mirror.load(m.state); }
@@ -906,8 +911,16 @@
     clearBoard();
     if (window.PMCMenu && window.PMCMenu.paint) window.PMCMenu.paint();
   };
+  /* A battle in this tab, given up for another (or for none): let go of, so
+     nothing it still had to do — the OpFor's answer, put off (net.js aiSoon) —
+     comes later onto the board of the next. (It is kept on this device, the
+     answer owed with it: picked up again, it comes then.) */
+  function dropLocal() {
+    if (net && window.PMCNet && net instanceof window.PMCNet.Local) net.disconnect();
+  }
   function clearBoard() {
     resetShow();
+    dropLocal();
     net = null; mirror = null; Q = null; state = null;
     ui.selected = null; ui.mode = 'idle'; ui.targets = []; ui.moves = []; ui.terrain = []; ui.sections = [];
     ui.preview = null; ui.hover = null; ui.insertion = null; ui.reservePick = null; ui.digHover = null;
@@ -979,7 +992,7 @@
      and the functions and fixed values they use. testhooks.js is only there
      as the page runs from the repository; the published builds leave it out. */
   var hookBoard = {
-    get walkOn() { return walkOn; },
+    get walkOn() { return walkOn; }, get net() { return net; },
     get FIRE() { return FIRE; }, get STANDARD() { return STANDARD; }, get VIEW_H() { return VIEW_H; },
     get VIEW_W() { return VIEW_W; }, get burrows() { return burrows; }, get gaitOf() { return gaitOf; },
     get held() { return held; }, get arrivalQueued() { return arrivalQueued; }, get loop() { return loop; }, get muster() { return muster; }, get shownAs() { return shownAs; }, get STANDING() { return STANDING; },

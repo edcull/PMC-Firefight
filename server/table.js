@@ -23,6 +23,9 @@ const compoundOf = (p) => (p && CMP ? CMP.cleanPlan(p) : null);
    turn is a handful; a rally phase across thirty units with a Psychic Wave in
    it is a few hundred. Well past that and something has gone wrong. */
 const MAX_EVENTS = 4000;
+/* Where the OpFor answered, kept among the intents (seat AI_SEAT, intent AI_MARK):
+   a battle played again from them gives the answer there (settleAI, restore). */
+const AI_SEAT = '*', AI_MARK = '*ai';
 /* A battle's own dice (multiplayer plan, phase 2): seeded, so the same intents
    played again from the same seed give the same battle. mulberry32, as the
    browser's own saved battles use (net.js). */
@@ -104,7 +107,39 @@ class Table {
       // a flier's height is a drawing matter; the client works it out for itself
       flyLift: () => 0
     });
+    this.aiWait = null;
+    this.engine.deferAI(() => this.aiSoon());
   }
+
+  /* ---- the OpFor's answer, put off ----
+     The OpFor's answer to a player (engine.js maybeAI) is not worked out inside
+     the intent that asked for it: that intent's events go out to both players
+     first, and the computer thinks on the next turn of the event loop, with
+     whatever else the server has to do (the other rooms) let in between. It comes
+     before any other intent of this battle's (intent, below), so the battle runs
+     as it would have with the answer given at once, and it is kept among the
+     intents where it came, so a battle played again gives it there (restore). */
+  aiSoon() {
+    if (this.aiWait || this.quiet) return;
+    this.aiWait = setImmediate(() => { this.aiWait = null; this.settleAI(); });
+  }
+  settleAI() {
+    if (this.stopped || !this.engine.owedAI()) return false;
+    this.events = [];
+    this.keep(AI_SEAT, { k: AI_MARK });
+    let threw = null;
+    try { this.rolling(() => this.engine.runAI()); } catch (e) { threw = e; }
+    if (threw) {
+      this.log('the OpFor threw: ' + ((threw && threw.stack) || threw));
+      this.room.everyone().forEach((p) => this.resync(p));
+      return false;
+    }
+    this.flush();
+    if (this.engine.over() && !this.stopped) this.finish(this.engine.report());
+    return true;
+  }
+  // brought back and put at a room (lobby.js): an answer still owed when it was kept comes now
+  wake() { if (!this.stopped && this.engine.owedAI()) this.aiSoon(); }
 
   rec(ev) {
     if (!this.quiet && this.events.length < MAX_EVENTS) this.events.push(ev);
@@ -283,13 +318,22 @@ class Table {
     this.cfg = game.cfg;
     this.rng = dice(game.seed);
     this.quiet = true;
+    /* A battle that marks where the OpFor answered is played again with the
+       answer put off to its marks, as it was played; one kept before there were
+       marks had it answer at once, and is played again that way. (Nothing is
+       put off out of sight: what is owed at the end waits for wake.) */
+    const marked = intents.some((r) => r.intent && r.intent.k === AI_MARK);
+    this.engine.deferAI(marked ? () => { } : null);
     try {
       this.rolling(() => this.engine.start(this.cfg));
       intents.forEach((r) => {
-        try { this.rolling(() => this.engine.intent(r.seat, r.intent)); } catch (e) { /* refused, or threw: as it did the first time */ }
+        try {
+          if (r.intent && r.intent.k === AI_MARK) this.rolling(() => this.engine.runAI());
+          else this.rolling(() => this.engine.intent(r.seat, r.intent));
+        } catch (e) { /* refused, or threw: as it did the first time */ }
         this.n++;
       });
-    } finally { this.quiet = false; this.events = []; }
+    } finally { this.quiet = false; this.events = []; this.engine.deferAI(() => this.aiSoon()); }
     // it ended while being put back (it was over and not yet marked so): nothing more to do with it
     if (this.engine.over()) this.stopped = true;
   }
@@ -325,6 +369,11 @@ class Table {
   intent(player, it) {
     if (this.stopped) return player.fail('the battle has ended');
     if (!player.seat) return player.fail('watchers cannot act');
+    // the table's own mark, never a player's to send (it would change how the battle plays again)
+    if (it && it.k === AI_MARK) return player.send('refused', { intent: it, why: 'not allowed' });
+    // the OpFor's answer to the last intent, if it has not come yet, comes before this
+    this.settleAI();
+    if (this.stopped) return player.fail('the battle has ended');
     this.events = [];
     let res, threw = null;
     try { res = this.rolling(() => this.engine.intent(player.seat, it)); }
@@ -408,7 +457,7 @@ class Table {
     if (this.lobby) this.lobby.finished(this.room, report, this.gameId);
   }
 
-  stop() { this.stopped = true; }
+  stop() { this.stopped = true; if (this.aiWait) { clearImmediate(this.aiWait); this.aiWait = null; } }
 
   // the side a seat plays: its own, but in a cooperative game both seats play side A
   sideOf(seat) { return seat && this.cfg && this.cfg.netCoop ? 'A' : seat; }

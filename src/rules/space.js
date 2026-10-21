@@ -468,8 +468,17 @@
     var BATCH = null;
     function losBatch(fn) {
       if (BATCH) return fn();
-      BATCH = { kinds: new Map(), level: new Map() };
+      BATCH = { kinds: new Map(), level: new Map(), of: null, walls: null, standers: null };
       try { return fn(); } finally { BATCH = null; }
+    }
+    /* ...and the pieces that can stop a line (lineClearAt), and the units that can
+       stand in its way, are picked out of the table once, not once a line. */
+    function batchFor(state) {
+      if (BATCH.of === state) return BATCH;
+      BATCH.of = state;
+      BATCH.walls = state.terrain.filter(function (r) { var t = TERRAIN[r.kind]; return t.blocks || t.hill || r.burning; });
+      BATCH.standers = state.units.filter(function (u) { return (u.alive || u.wreckLoS) && !u.aboard && u.x >= 0; });
+      return BATCH;
     }
     function kindsUnder(state, u, x, y) {
       if (BATCH && u && x == null && y == null) {
@@ -597,8 +606,9 @@
     }
     // one line of sight, from (ax, ay) by a to (bx, by) by b
     function lineClearAt(state, a, b, ax, ay, bx, by) {
-      for (var i = 0; i < state.terrain.length; i++) {
-        var r = state.terrain[i], t = TERRAIN[r.kind];
+      var bt = BATCH && batchFor(state), terrain = bt ? bt.walls : state.terrain;
+      for (var i = 0; i < terrain.length; i++) {
+        var r = terrain[i], t = TERRAIN[r.kind];
         // a compound's burning section "counts as passable area terrain which blocks line of sight" (p. 159): as a wood does
         if (!t.blocks && !t.hill && !r.burning) continue;
         var aIn = inRect(a.x, a.y, r), bIn = inRect(b.x, b.y, r);
@@ -632,8 +642,14 @@
          down over its friends as one on the crown does (a reinforced building,
          squat and slit-windowed, does not). */
       var aLv = -1, bLv = -1;                            // how high each end stands: asked only if someone is in the way
-      for (var j = 0; j < state.units.length; j++) {
-        var u = state.units[j];
+      /* A unit further off the line's box than standsInWay ever looks is not in
+         the way, and is passed by before anything else is asked of it. */
+      var M = state.compound ? Math.max(3.5, UNIT_R * 0.9) : UNIT_R * 0.9;
+      var bx0 = Math.min(ax, bx) - M, bx1 = Math.max(ax, bx) + M, by0 = Math.min(ay, by) - M, by1 = Math.max(ay, by) + M;
+      var units = bt ? bt.standers : state.units;
+      for (var j = 0; j < units.length; j++) {
+        var u = units[j];
+        if (u.x < bx0 || u.x > bx1 || u.y < by0 || u.y > by1) continue;
         if ((!u.alive && !u.wreckLoS) || u === a || u === b || u.aboard || u.x < 0) continue;
         // a ghost (where a unit might stand) is not hidden by the unit itself, where it stands now
         if (u === a.of || u === b.of) continue;

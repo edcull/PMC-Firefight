@@ -23,7 +23,8 @@ async function drain(p) {
    while it is still animating the last one waits its turn behind it. So wait
    for the table to be still before driving it. */
 async function settle(p) {
-  await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 15000 }).catch(() => {});
+  // (the other side's answer to the last tap, too: it is thought out once the table is still, net.js aiSoon)
+  await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0 && !window.__aiOwed(), null, { timeout: 15000 }).catch(() => {});
 }
 // the End phase asks the player at this screen to withdraw or surrender: carry on
 async function carryOn(p) {

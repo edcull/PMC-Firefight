@@ -9,7 +9,7 @@ const browser = ['window', 'document', 'navigator', 'location', 'history', 'loca
   'HTMLCanvasElement', 'OffscreenCanvas', 'Path2D', 'ImageData', 'DOMMatrix', 'Event', 'CustomEvent', 'KeyboardEvent',
   'PointerEvent', 'DOMParser', 'TextEncoder', 'TextDecoder', 'alert', 'confirm', 'btoa', 'atob', 'crypto'];
 const shared = ['console', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'queueMicrotask', 'structuredClone'];
-const node = ['global', 'module', 'require', 'process', 'Buffer', '__dirname'];
+const node = ['global', 'module', 'require', 'process', 'Buffer', '__dirname', 'setImmediate', 'clearImmediate'];
 const globals = {};
 browser.concat(shared, node).forEach((g) => { globals[g] = 'readonly'; });
 globals.module = 'writable';

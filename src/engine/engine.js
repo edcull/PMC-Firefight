@@ -272,7 +272,12 @@
        out before the screen saw any of it. There it goes one activation at a
        time and waits to be asked for the next, which is what paces a game
        nobody is playing. */
-    var draining = false, paced = false, sim = false;
+    /* A battle played in this browser (net.js Local) puts the OpFor's answer off
+       (deferAI): the player's own action is drawn first, and the computer thinks
+       after, in a task of its own, not inside the tap that asked for it. It is
+       owed (aiOwed) until runAI pays it, which Local does before anything else is
+       asked of the engine, so nothing comes between the two. */
+    var draining = false, paced = false, sim = false, deferAI = null, aiOwed = false;
     function canAI() {
       /* An answer owed holds the AI: a player's Martyrdom answer holds its charge,
          and a Last Stand asked for, or the End phase asking a player to carry on
@@ -283,6 +288,10 @@
     }
     function maybeAI() {
       if (sim || draining || !canAI()) return;
+      if (deferAI && !paced) { if (!aiOwed) { aiOwed = true; deferAI(); } return; }
+      drainAI();
+    }
+    function drainAI() {
       draining = true;
       try {
         if (paced) { aiStep(); return; }
@@ -2528,6 +2537,15 @@
       state: function () { return state; },
       sel: function () { return ui; },
       over: function () { return state && state.over; },
+      // the OpFor's answer put off, and paid (maybeAI, above)
+      deferAI: function (fn) { deferAI = fn || null; },
+      owedAI: function () { return aiOwed; },
+      runAI: function () {
+        if (!aiOwed) return false;
+        aiOwed = false;
+        R.answering(function () { if (canAI()) drainAI(); });
+        return true;
+      },
       report: function () { return state && state.report; },
       /* A side walking away from the battle (a forfeit, online): it ends there, the
          other side the winner, with the report the engine makes of any end. */
@@ -2667,7 +2685,7 @@
         }
       }
     };
-    ['intent', 'snapshot', 'load', 'concede'].forEach(function (k) { api[k] = onBoard(api[k]); });
+    ['intent', 'snapshot', 'load', 'concede', 'runAI'].forEach(function (k) { api[k] = onBoard(api[k]); });
     Object.keys(api.query).forEach(function (k) { api.query[k] = onBoard(api.query[k]); });
     return api;
   }
