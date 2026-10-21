@@ -475,6 +475,12 @@
           var big = c < 1 + (r.w * r.h > 50 ? 1 : 0);
           var rad = big ? 1.6 + cr() * 1.2 : 0.5 + cr() * 0.9;
           var cs = spotIn(r, Math.min(rad * 0.95, Math.min(r.w, r.h) / 2 - 0.2), cr);
+          /* ...and no bigger than the ground round it: where the field is too small or
+             narrow for the bowl (spotIn settling for less room), a bowl drawn at full size
+             hung half off the field, and a squad standing in it was, by the rules, in the
+             open. Its lip of thrown earth (a tenth more) inside the outline too. */
+          rad = Math.min(rad, depthIn(r, cs.x, cs.y) / 1.1);
+          if (rad < 0.35) continue;
           bowls.push({ x: cs.x, y: cs.y, rad: rad });
         }
         // far ones first, so a nearer bowl's lip overlaps the one behind it
