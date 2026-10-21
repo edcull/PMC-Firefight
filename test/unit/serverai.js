@@ -1,7 +1,7 @@
 /* The OpFor of a battle on the server answers after the intent that asked for it
    has gone out (table.js settleAI): the player's own events reach both players
-   first, and the computer thinks on the next turn of the event loop. Nothing of
-   the battle's comes between the two, the database marks where each answer came,
+   first, and the computer thinks it out ahead in a worker thread (aipool.js),
+   handing the table what it came to. Nothing of the battle's comes between the two, the database marks where each answer came,
    and a battle brought back from it plays to the same place — as it does kept
    before there were marks, with the answer given at once. */
 'use strict';
@@ -14,6 +14,10 @@ function ok(name, cond, note) {
   console.log('  ' + (cond ? '✓' : '✗') + ' ' + name + (note ? '  — ' + note : ''));
 }
 const tick = () => new Promise((r) => setImmediate(r));
+// until the table has given the answer it owes (thought out ahead in a worker thread, aipool.js, it takes as long as the thinking)
+async function answered(t) {
+  for (const until = Date.now() + 20000; t.engine.owedAI() && Date.now() < until;) await new Promise((r) => setTimeout(r, 5));
+}
 
 // a room of one player at seat A, its socket a list of what it was sent
 function room() {
@@ -34,23 +38,30 @@ function where(t) {
   return JSON.stringify([s.turn, s.phase, s.activeSide, s.log.map((l) => l.text), s.units.map((u) => [u.id, u.x, u.y, u.models, u.sp, u.alive])]);
 }
 
-(async () => {
+// a battle at a table, the player's units skipping their actions one after another; the answers' stats on the side
+async function play(worker) {
+  if (worker) delete process.env.PMC_NO_AIWORKER; else process.env.PMC_NO_AIWORKER = '1';
   let seed = 4242;
   Math.random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   const r = room(), db = store();
   const t = new Table(r.room, null, { store: db });
+  // each answer the table gave: how long the event loop was held for it, and how much of the lookahead it was handed
+  const answers = [], give = t.settleAI.bind(t);
+  t.settleAI = () => {
+    const owed = t.engine.owedAI(), t0 = process.hrtime.bigint(), res = give();
+    if (owed) answers.push(Object.assign({ ms: Number(process.hrtime.bigint() - t0) / 1e6 }, global.PMCEngineAI.ahead.hits()));
+    return res;
+  };
   t.begin({ tier: 2, pl: 1, scenario: 'meeting', armyA: R.rollArmy(2, 1, null, 'pmc'), armyB: R.rollArmy(2, 1, null, 'rebel'),
     nameA: 'A', nameB: 'OpFor', colourA: 'ochre', colourB: 'steel', mode: 'ai', planet: 'sparse', terrainSetup: 'auto' });
   const say = (it) => t.intent(r.player, it);
   say({ k: 'autodeploy' }); say({ k: 'start' });
-
-  console.log('\nThe answer after the intent');
   let asked = 0, owed = 0, sentFirst = 0, came = 0;
   for (let g = 0; g < 400 && asked < 12 && !t.engine.over(); g++) {
     const s = t.engine.state();
     if (s.faceAsk) { say({ k: 'vfaceall' }); continue; }
-    if (s.endAsk) { say({ k: 'enddone' }); await tick(); continue; }
-    if (s.phase !== 'battle' || s.activeSide !== 'A' || t.engine.owedAI()) { await tick(); continue; }
+    if (s.endAsk) { say({ k: 'enddone' }); await answered(t); continue; }
+    if (s.phase !== 'battle' || s.activeSide !== 'A' || t.engine.owedAI()) { await answered(t); await tick(); continue; }
     const u = s.units.find((x) => x.side === 'A' && x.alive && x.x >= 0 && !x.activated && !x.aboard);
     if (!u) { await tick(); continue; }
     say({ k: 'select', id: u.id });
@@ -61,14 +72,32 @@ function where(t) {
     if (t.engine.owedAI()) owed++;
     // the player's own events went out before the computer thought
     if (r.sent.slice(before).some((m) => m.t === 'turn')) sentFirst++;
-    await tick();
+    await answered(t);
     if (!t.engine.owedAI() && r.sent.length > before + 1) came++;
   }
+  await answered(t);
+  return { r, db, t, asked, owed, sentFirst, came, answers, say };
+}
+const sum = (a, k) => a.reduce((n, x) => n + x[k], 0);
+
+(async () => {
+  console.log('\nThe answer after the intent');
+  const w = await play(true), o = await play(false);
+  const { r, db, t, asked, owed, sentFirst, came, say } = w;
   ok('the player acted, and the OpFor answered', asked >= 6 && came >= 3, asked + ' actions, ' + came + ' answered');
   ok('...each answer still to come when the intent was over', owed === came, owed + ' owed');
   ok('...the player’s own events sent out first', sentFirst === came, sentFirst + ' of ' + came);
   const marks = db.rows.filter((x) => x.intent.k === '*ai');
   ok('the database marks where each answer came', marks.length >= came && marks.every((x) => x.seat === '*'), marks.length + ' marks');
+
+  console.log('\nThought out ahead, off the event loop');
+  /* (nearly all of it: the battle's own engine may weigh an option the worker's fresh copy did not,
+     its exposure grid kept from earlier in the same position (ai.js exposureGrid), and plays that out itself) */
+  ok('the table was handed the lookahead by its worker thread, not playing it out itself', sum(w.answers, 'hit') > 0 && sum(w.answers, 'miss') * 10 <= sum(w.answers, 'hit'),
+    sum(w.answers, 'hit') + ' play-outs handed over, ' + sum(w.answers, 'miss') + ' played out on the event loop');
+  ok('the same battle without the worker comes out the same', where(w.t) === where(o.t) && o.answers.length === w.answers.length && sum(o.answers, 'hit') === 0,
+    w.answers.length + ' answers either way');
+  console.log('    the event loop held for the answers: ' + Math.round(sum(w.answers, 'ms')) + ' ms with the worker, ' + Math.round(sum(o.answers, 'ms')) + ' ms without');
 
   console.log('\nA mark is the table’s own');
   const n0 = db.rows.length;
@@ -80,6 +109,7 @@ function where(t) {
   const kept = (rows) => { const b = new Table(room().room, null, {}); b.restore({ id: 1, cfg: t.cfg, seed: db.kept.seed }, rows); return b; };
   ok('...plays to the same place from its marks', where(kept(db.rows)) === live);
   ok('...and from the intents alone, the answers given at once (a battle kept before the marks)', where(kept(db.rows.filter((x) => x.intent.k !== '*ai'))) === live);
+  require('../../server/aipool.js').close();
   console.log('\n' + pass + ' checks passed, ' + fail + ' failed.');
   process.exit(fail ? 1 : 0);
 })();
