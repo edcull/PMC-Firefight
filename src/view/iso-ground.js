@@ -451,10 +451,19 @@
       // craters pitting the churned ground
       terrain.filter(function (r) { return r.kind === 'crater'; }).forEach(function (r) {
         var cr = rng(seed + Math.round(r.x * 17 + r.y * 7));
+        /* a crater field on a hill lies on the plateau, as its churned floor is painted
+           above: its scorch and bowls lifted with it wherever they are over the hill (left
+           on the ground they were drawn a hill's height below where the rules have them) */
+        var lift = function (x, y) {
+          if (!r.onHill) return 0;
+          for (var hq = 0; hq < hills.length; hq++) if (depthIn(hills[hq], x, y) > 0) return ELEV;
+          return 0;
+        };
         /* scorch where the shells burst, then craters of every size: one or two
            big ones, a scatter of small, each kept inside the field's outline */
         for (var sc2 = 0; sc2 < Math.round(r.w * r.h / 10); sc2++) {
           var ss = spotIn(r, 0.8, cr), sp4 = toScreen(ss.x, ss.y);
+          sp4 = { x: sp4.x, y: sp4.y - lift(ss.x, ss.y) };
           for (var sd2 = 0; sd2 < 60; sd2++) {
             var sa = cr() * Math.PI * 2, sdd = Math.sqrt(cr()) * K * (0.6 + cr() * 0.6);
             dot(g, sp4.x + Math.cos(sa) * sdd * 1.4, sp4.y + Math.sin(sa) * sdd * 0.7, cr() > 0.5 ? 'rgba(18,14,10,.55)' : 'rgba(34,27,19,.45)', 1);
@@ -471,7 +480,7 @@
         // far ones first, so a nearer bowl's lip overlaps the one behind it
         bowls.sort(function (b1, b2) { return (b1.x + b1.y) - (b2.x + b2.y); }).forEach(function (bw) {
           var p = toScreen(bw.x, bw.y);
-          bowl(g, p.x, p.y, bw.rad * K, cr);
+          bowl(g, p.x, p.y - lift(bw.x, bw.y), bw.rad * K, cr);
         });
       });
 
