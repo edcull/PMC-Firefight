@@ -979,7 +979,7 @@
      and the functions and fixed values they use. testhooks.js is only there
      as the page runs from the repository; the published builds leave it out. */
   var hookBoard = {
-    get walkOn() { return walkOn; },
+    get walkOn() { return walkOn; }, get net() { return net; },
     get FIRE() { return FIRE; }, get STANDARD() { return STANDARD; }, get VIEW_H() { return VIEW_H; },
     get VIEW_W() { return VIEW_W; }, get burrows() { return burrows; }, get gaitOf() { return gaitOf; },
     get held() { return held; }, get arrivalQueued() { return arrivalQueued; }, get loop() { return loop; }, get muster() { return muster; }, get shownAs() { return shownAs; }, get STANDING() { return STANDING; },
