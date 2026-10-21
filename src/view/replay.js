@@ -301,8 +301,20 @@
         render();
         stepWatched();
         scheduleReturn();
+        whenIdle(shownNow);
       }
     };
+    /* What waits for the show to be over: everything that has happened drawn,
+       and nothing on the table still moving. The OpFor thinks then (net.js
+       aiSoon), where a frame held up is one nobody is watching move; a card
+       left up to read is no reason to wait. */
+    var afterShown = [];
+    // (a show still running calls again at its end, above; a table still moving, once it stops)
+    function afterShow(cb) { afterShown.push(cb); if (!replaying()) whenIdle(shownNow); }
+    function shownNow() {
+      if (!afterShown.length || replaying() || busy()) return;
+      afterShown.splice(0).forEach(function (cb) { cb(); });
+    }
     // is anything that has already happened still to be drawn, or being drawn?
     function replaying() { return show.queue.length > 0 || show.waiting; }
     /* The AI's attack or targeted ability: the camera following it pulls back to
@@ -578,6 +590,7 @@
     }
 
     return {
+      afterShow: afterShow,
       arrivalQueued: arrivalQueued,
       held: held,
       moveQueued: moveQueued,

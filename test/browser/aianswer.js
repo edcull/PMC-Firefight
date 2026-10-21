@@ -1,6 +1,7 @@
 /* The OpFor answers a player in a battle of their own, not inside the tap that
    asked: the player's move is the engine's whole work in that tap, and the
-   computer thinks after the board has drawn it (net.js settleAI). Nothing else
+   computer thinks once the board has drawn it, the move walked to its end and
+   the table still (net.js aiSoon, settleAI). Nothing else
    comes between the two, and the save marks where the answer came, so the
    battle kept on this device plays back to the same place — the new way, and
    the old way too, with the answer given at once. */
@@ -35,6 +36,16 @@ function ok(name, cond, note) {
   await p.waitForTimeout(800);
 
   console.log('\n  THE ANSWER AFTER THE TAP');
+  // what the board was doing each time the OpFor thought
+  await p.evaluate(() => {
+    window.__thoughtWhile = [];
+    const L = window.PMCNet.Local.prototype, o = L.settleAI;
+    L.settleAI = function () {
+      const owed = this.engine && this.engine.owedAI();
+      if (owed) window.__thoughtWhile.push({ busy: window.__busy(), queue: window.__showQueue() });
+      return o.apply(this, arguments);
+    };
+  });
   // the player's units move up, one an activation; each move asked for in a tap of its own
   let acts = 0, owedAfter = 0, settled = 0;
   const until = Date.now() + 150000;
@@ -69,6 +80,10 @@ function ok(name, cond, note) {
   }
   ok('the player moved, and the other side answered', acts >= 6 && settled >= 3, acts + ' moves, ' + settled + ' answered');
   ok('...each answer still to come when the tap was over', owedAfter === settled && owedAfter > 0, owedAfter + ' owed after the tap');
+  const thought = await p.evaluate(() => window.__thoughtWhile);
+  const drawing = thought.filter(t => t.busy || t.queue);
+  ok('...and thought out once the player’s move was drawn, the table still', thought.length >= settled && !drawing.length,
+    thought.length + ' times, ' + drawing.length + ' while the board was drawing');
 
   console.log('\n  THE BATTLE KEPT');
   await p.waitForTimeout(500);

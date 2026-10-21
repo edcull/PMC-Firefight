@@ -471,8 +471,10 @@
 
   /* The OpFor's answer, put off (engine.js maybeAI) until the board has drawn
      what the player did, so the tap that asked is answered at once and the
-     computer thinks in a task of its own. It comes after the next frame, or
-     a moment later on a page that is drawing none (hidden); and before any
+     computer thinks in a task of its own. It comes once the board says it has
+     drawn it all and the table is still (aiWhen, which the board sets: replay.js
+     afterShow), never before the next frame; without a board, after that frame;
+     and on a page drawing nothing (hidden) a few seconds on. It comes before any
      other intent, whenever that is (settleAI), so the battle runs as it would
      have with the answer given at once. The save marks where it came (AI_MARK),
      and a battle played back from it gives the answer there. */
@@ -488,8 +490,10 @@
       clearTimeout(net.aiWait); net.aiWait = null;
       net.settleAI();
     }
-    net.aiWait = setTimeout(go, 250);
-    if (root.requestAnimationFrame) root.requestAnimationFrame(function () { setTimeout(go, 0); });
+    net.aiWait = setTimeout(go, net.aiWhen ? 6000 : 250);
+    if (root.requestAnimationFrame) root.requestAnimationFrame(function () {
+      setTimeout(function () { if (net.aiWhen) net.aiWhen(go); else go(); }, 0);
+    });
   };
   Local.prototype.settleAI = function () {
     var engine = this.engine;

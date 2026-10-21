@@ -226,6 +226,8 @@
   function wireNet(transport) {
     // a battle running in this tab hands its engine straight over
     transport.on('engine', function (m) { useEngine(m.engine); });
+    // ...and its OpFor thinks once the board has drawn what the player did (net.js aiSoon)
+    if (window.PMCNet && transport instanceof window.PMCNet.Local) transport.aiWhen = function (go) { REPLAY.afterShow(go); };
     transport.on('turn', function (m) {
       if (m.live) { state = mirror ? mirror.state() : state; }
       else if (mirror) { state = mirror.load(m.state); }
