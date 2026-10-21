@@ -73,6 +73,7 @@
       }
       E.camp.post = null;
       E.camp.pending = null;
+      delete E.camp.battle;                 // its battle, kept for the account (dossier.js keepBattle), done with
       if (!E.camp.fronts) keepAfter();
       save();
       E.view = 'aftermath';

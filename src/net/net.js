@@ -246,6 +246,23 @@
     ls(ONE + id, null); indexDrop(id);
   }
   function clone(o) { return o === undefined ? null : JSON.parse(JSON.stringify(o)); }
+  /* A campaign's battle kept with its campaign in the account (dossier.js keepBattle),
+     taken into this browser when the campaign is opened here: kept as a battle of this
+     browser's, to be gone back to — unless this browser has the same battle further on. */
+  function importBattle(book, lid) {
+    if (!book || !book.id || book.v !== SAVE_V || !book.cfg || !book.intents || isDemo(book.cfg)) return false;
+    // the campaign as this browser knows it (its own id for it, given when it was taken from the account)
+    if (lid) { book = clone(book); book.cfg.campLid = lid; }
+    var have = readJSON(ONE + book.id);
+    if (have && have.intents && have.intents.length >= book.intents.length) return false;
+    try { ls(ONE + book.id, JSON.stringify(book)); indexPut(book); return true; } catch (e) { return false; }
+  }
+  // a campaign battle's keeping told to its campaign, to go to the account with it (over: it is done with)
+  function toCampaign(book, over) {
+    var C = root.PMC_CAMPAIGN;
+    if (!book || !book.cfg || !book.cfg.campaign || !C || !C.keepBattle) return;
+    try { C.keepBattle(over ? { cfg: book.cfg, id: book.id, over: true } : book); } catch (e) { }
+  }
 
   // the engine's work, done with this battle's own dice
   Local.prototype.rolling = function (fn) {
@@ -255,21 +272,21 @@
   };
   Local.prototype.keep = function () {
     if (!this.book || !this.engine || isDemo(this.book.cfg)) return;
-    if (this.engine.over()) { forgetBattle(this.book.id); this.book = null; return; }
+    if (this.engine.over()) { toCampaign(this.book, true); forgetBattle(this.book.id); this.book = null; return; }
     var st = this.engine.state();
     this.book.fp = fingerprint(st);
     this.book.turn = st.turn || 0;
     this.book.at = Date.now();
     /* A save that fails (storage full, or blocked in a private window) is said once
        (hotseat review HB-12): a refresh would lose the battle, and the players should know. */
-    try { ls(ONE + this.book.id, JSON.stringify(this.book)); indexPut(this.book); this.unsaved = false; }
+    try { ls(ONE + this.book.id, JSON.stringify(this.book)); indexPut(this.book); this.unsaved = false; toCampaign(this.book); }
     catch (e) {
       if (!this.unsaved) this.emit('unsaved', { text: 'This battle could not be saved on this device (its storage is full or blocked): a refresh now would lose it.' });
       this.unsaved = true;
     }
   };
   // thrown away from the menu, or given up: not offered again
-  Local.prototype.forget = function () { if (this.book) forgetBattle(this.book.id); this.book = null; };
+  Local.prototype.forget = function () { if (this.book) { toCampaign(this.book, true); forgetBattle(this.book.id); } this.book = null; };
 
   Local.prototype.connect = function (name) {
     if (name) { this.me.name = name; remember(name); }
@@ -502,7 +519,7 @@
     defaultURL: defaultURL,
     // a battle this browser was playing when the page went away
     savedBattle: savedBattle,
-    savedBattles: savedBattles,
+    savedBattles: savedBattles, importBattle: importBattle,
     forgetBattle: forgetBattle,
     /* Is there a server to talk to at all? A page served over http has one; a
        file:// page or the published single file does not. */

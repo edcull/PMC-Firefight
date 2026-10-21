@@ -193,18 +193,19 @@
       (mine ? ' \u00b7 ' + (mine === 1 ? 'one waiting on you' : mine + ' waiting on you') : '');
     c.classList.toggle('yourmove-card', !!mine);
   }
-  /* Where a game is played: on this device (Offline, a screen — with a cloud and a
-     tick when it is backed up to the account as well), or over the server (Online,
-     a globe), each its own coloured tag so the two cannot be taken for each other. */
+  /* Where a game is kept: on this device only (a screen), on this device and backed
+     up to the account (a screen and a cloud: Synced), in the account only (a cloud), or
+     played over the server (Online, a globe) — each said in words, so a game kept safe
+     in the account never reads as unsaved. */
   var SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
   var SCREEN = '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/>';
   var GLOBE = '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>';
   var CLOUD = '<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18z"/><path d="M9.5 13l2 2 3.5-3.5"/>';
   var WHERE = {
-    local: '<span class="cont-where off" title="Played on this device, kept in this browser">' + SVG + SCREEN + '</svg>Offline</span>',
+    local: '<span class="cont-where off" title="Kept in this browser only: not backed up to an account">' + SVG + SCREEN + '</svg>This device</span>',
     server: '<span class="cont-where on" title="Played online, kept on the server">' + SVG + GLOBE + '</svg>Online</span>',
-    both: '<span class="cont-where off" title="Played on this device, and backed up to your account">' + SVG + SCREEN + '</svg>Offline' + SVG + CLOUD + '</svg></span>',
-    account: '<span class="cont-where off" title="Kept on the server, in your account; played on this device">' + SVG + CLOUD + '</svg>Offline</span>'
+    both: '<span class="cont-where off" title="Kept on this device and backed up to your account: it can be continued on any device you sign in on">' + SVG + SCREEN + '</svg>Synced' + SVG + CLOUD + '</svg></span>',
+    account: '<span class="cont-where off" title="Kept in your account on the server; opened here, it is played on this device">' + SVG + CLOUD + '</svg>In your account</span>'
   };
   var delAsked = null;
   function drawList() {
