@@ -193,9 +193,17 @@
         var at = { x: u.x, y: u.y };
         var fireNow = u.fp != null ? bestDeltaFrom(u, at, 'fire') : { t: null, v: 0 };
         var heldHere = heldAt(u, at), riskHere = threatAt(u, at);
-        var val = function (shotV, held, risk) { return shotV + EVAL.held * (held - heldHere) + EVAL.risk * (risk - riskHere); };
+        // (`rk`, a tuning: the losses to be expected where it stands counted that many times over)
+        var rk = (opts && opts.rk) || 1;
+        var val = function (shotV, held, risk) { return shotV + EVAL.held * (held - heldHere) + rk * EVAL.risk * (risk - riskHere); };
         var best = { kind: fireNow.t ? 'fire' : 'hold', t: fireNow.t, base: here, score: here + ke * val(fireNow.v, heldHere, riskHere) };
         var all = [best];
+        // (experiment 'lfire', for a lookahead) every target it could Fire! at from here, not only the best
+        if (opts && opts.fireAll && u.fp != null) E.state.units.forEach(function (t) {
+          if (t === fireNow.t || !t.alive || t.side === u.side || t.x < 0 || t.aboard || t.fp === undefined) return;
+          if (!R.canShoot(E.state, u, t, 'fire', {})) return;
+          all.push({ kind: 'fire', t: t, base: here, score: here + ke * val(shotDelta(u, t, 'fire'), heldHere, riskHere) });
+        });
         cands.forEach(function (cd) {
           var shot = canAdvance && u.fp != null ? bestDeltaFrom(u, cd.c, 'advance') : { v: 0 };
           var s = cd.base + ke * val(shot.v, heldAt(u, cd.c), threatAt(u, cd.c));
@@ -390,7 +398,12 @@
       Object.keys(EVAL).forEach(function (k) { v += EVAL[k] * (f[k] || 0); });
       return v;
     }
-    return { planValue: planValue, planChoose: choose, planChooseEval: chooseByEval, planEvalWeights: EVAL, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom, planGoal: goalFor,
+    // the best a unit's Fire! from where it stands does, in the evaluation's log-odds
+    function deltaHere(u) {
+      memo = {};
+      try { return u.fp != null ? bestDeltaFrom(u, { x: u.x, y: u.y }, 'fire').v : 0; } finally { memo = null; }
+    }
+    return { planDeltaHere: deltaHere, planValue: planValue, planChoose: choose, planChooseEval: chooseByEval, planEvalWeights: EVAL, planWorth: worthNow, planThreat: threatAt, planShot: bestShotFrom, planGoal: goalFor,
       planFeatures: features, PLAN_FEATURES: FEATURES };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEnginePlanner;

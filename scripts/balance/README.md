@@ -261,6 +261,34 @@ plays a person (`ai.js looks`: the other side not the computer's) and off where 
 computer plays itself — demos, these runs and the tests' AI battles — where
 `AIEXP=look` turns it on for the choosing side and `AIEXP=nolook` off.
 
+Then, with the lookahead as the yardstick where it matters (`OPPEXP=look`: the other
+side looking ahead too), 640 battles each:
+
+| Change | Share |
+|---|---|
+| `orddelta`: the unit whose Fire! moves the evaluation most acts first (against the AI without the lookahead) | 50.8% |
+| `ordthreat`: the unit in most danger acts first (same) | 46.8% |
+| `lfire`: every target as an option for the lookahead, not only the best | 49.9% |
+| ...and five options (`lk=5`) | 50.2% |
+| `charge`, the planner's charge, played out by the lookahead | 49.8% |
+| `drive`, gun hulls by the planner, played out by the lookahead | 51.6% |
+| `rk=3`, `rk=8`: the planner's risk counted 3 and 8 times over | 50.0%, 50.0% |
+| `grab`: a runner for each objective the side does not hold, each inch nearer counting 1.5 | 48.4% |
+| ...4 an inch | 48.6% |
+| `grabfree`: only for an objective nobody holds, in Secure, Takeover and Invasion | 49.0% (Secure 45%, on about 107 battles) |
+| `lzsight` (Invasion only): the attacker's landing zones out of the defenders' sight | 46.7%, dropped |
+
+Nothing kept. The risk weighting changes nothing with the lookahead on, as the
+lookahead's play-out, not the planner's risk, makes the choice among the options. The
+objective runner came from a player's battle (Secure: an objective nobody held for ten
+turns, 12" from the AI's own, never taken); against the AI it is no better, the runner
+walking into the other side's fire. The landing zones are the objectives too, so out
+of sight is often also out of the fight.
+
+The free-objective runner is on where the AI plays a person, as the lookahead is
+(`ai.js grabs`): a player who leaves an objective empty for turns should find it
+taken. `AIEXP=grab,grabfree` turns it on in these runs, `AIEXP=nograb` off.
+
 With the pairs seeded on their own, scenarios without objectives (Meeting
 engagement, Demolish) come out the same battle for battle whatever the ground is worth:
 only Secure and control, Find and secure, Invasion and Takeover can move, and of those

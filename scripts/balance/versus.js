@@ -5,6 +5,7 @@
      node scripts/balance/versus.js <pairs> [seed]
 
    AIEXP=name[,name=value]  an experiment for the choosing side (ai.js aiExp)
+   OPPEXP=name[,...]        ...and flags for the other side (say OPPEXP=look, to measure against the lookahead)
    OPP=current              its opponent the choosing AI as it is, not the table: the
                             experiment measured against today's AI (50% is no change)
    SCEN=secure              one scenario only
@@ -20,6 +21,9 @@ Math.random = () => { seed = (seed * 16807) % 2147483647; return seed / 21474836
 const FACS = ['pmc', 'rebel', 'bugs', 'xeno'], SC = ['meeting', 'secure', 'find', 'invasion', 'demolish', 'takeover'];
 const PL = ['desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const parseExp = (v) => (v || '').split(',').filter(Boolean).reduce((o, k) => { const [n, x] = k.split('='); o[n] = x == null ? true : x; return o; }, {});
+// OPPEXP: experiments for the other side (with OPP=current), to set one AI against another
+const OPPEXP = parseExp(process.env.OPPEXP);
 const EXP = (process.env.AIEXP || '').split(',').filter(Boolean).reduce((o, k) => { const [n, v] = k.split('='); o[n] = v == null ? true : v; return o; }, {});
 const CURRENT = process.env.OPP === 'current';
 function play(cfg, s0) {
@@ -57,7 +61,7 @@ for (let i = 0; i < N; i++) {
     const cfg = { tier, pl: 1, scenario: sc, armyA: armyA.slice(), armyB: armyB.slice(), nameA: 'A', nameB: 'B', colourA: 'ochre', colourB: 'steel',
       mode: 'demo', planet, campaign: true, terrainSetup: 'auto',
       // h chooses with the experiment; the other side rolls the table, or chooses as the AI is now
-      aiRolled: CURRENT ? null : { [h === 'A' ? 'B' : 'A']: true }, aiExp: EXP, aiExpSide: h };
+      aiRolled: CURRENT ? null : { [h === 'A' ? 'B' : 'A']: true }, aiExp: EXP, aiExpSide: h, aiExpOpp: OPPEXP };
     let w;
     try { w = play(cfg, s0); } catch (err) { errs++; return; }
     const k = w == null ? 'draw' : w === h ? 'chose' : 'rolled';
