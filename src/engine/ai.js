@@ -2010,7 +2010,7 @@
       EX_SHARED.length = Math.min(EX_SHARED.length, EX_SHARED_N);
       HITS.hit = HITS.miss = 0;
     },
-    drop: function () { PLAY_KNOWN = null; },
+    drop: function () { PLAY_KNOWN = null; HITS.hit = HITS.miss = 0; },
     // how many of the play-outs asked for since the last give were there already (the tests)
     hits: function () { return { hit: HITS.hit, miss: HITS.miss }; }
   };

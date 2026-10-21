@@ -16,6 +16,7 @@ const Hidden = require('./hidden.js');
 const Rules = require('./rules.js');
 const { R, SC, C, Engine } = Rules;
 const CMP = global.PMCCompound;
+const AIPOOL = require('./aipool.js');
 // a compound plan as the engine is handed it (it checks it fits the table itself), or null
 const compoundOf = (p) => (p && CMP ? CMP.cleanPlan(p) : null);
 
@@ -31,13 +32,16 @@ const AI_SEAT = '*', AI_MARK = '*ai';
    browser's own saved battles use (net.js). */
 function dice(seed) {
   let a = seed >>> 0;
-  return function () {
+  const roll = function () {
     a = (a + 0x6D2B79F5) >>> 0;
     let t = a;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+  // where they have got to, for a copy of the battle to roll on from (aiworker.js, the same dice)
+  roll.at = () => a;
+  return roll;
 }
 /* The names a force carries until its player gives it one: nothing at all, the
    muster screen's own fallback, or the seat name it was given for the other
@@ -121,7 +125,35 @@ class Table {
      intents where it came, so a battle played again gives it there (restore). */
   aiSoon() {
     if (this.aiWait || this.quiet) return;
-    this.aiWait = setImmediate(() => { this.aiWait = null; this.settleAI(); });
+    this.aiWait = setImmediate(() => { this.aiWait = null; this.thinkAhead(); });
+  }
+  /* The answer thought out first in a worker thread (aipool.js), off the event
+     loop; the table then gives it with the costly part of the thinking to hand
+     (ai.js ahead), the same answer as ever. What the worker sends is taken only
+     for this battle and the moment it was asked about: an intent that comes
+     meanwhile has the answer given at once (intent, below), and what comes after
+     that is let go. No worker, or one that fails or says nothing for ten seconds:
+     the table thinks it out itself. */
+  thinkAhead() {
+    const engine = this.engine, A = global.PMCEngineAI && global.PMCEngineAI.ahead;
+    if (this.stopped || !engine.owedAI()) return;
+    if (!A || !this.rng || !this.rng.at || !AIPOOL.available()) { this.settleAI(); return; }
+    const id = (this.aiAskN = (this.aiAskN || 0) + 1);
+    let guard = null;
+    const back = (m) => {
+      clearTimeout(guard);
+      if (this.aiAsk !== id) return;
+      this.aiAsk = null;
+      if (this.stopped || !engine.owedAI()) return;
+      if (m && m.ok) A.give(m.got);
+      try { this.settleAI(); } finally { A.drop(); }
+    };
+    this.aiAsk = id;
+    guard = setTimeout(back, 10000);
+    if (guard.unref) guard.unref();
+    let snap;
+    try { snap = JSON.stringify(engine.snapshot()); } catch (e) { back(null); return; }
+    AIPOOL.ask(snap, this.rng.at(), back);
   }
   settleAI() {
     if (this.stopped || !this.engine.owedAI()) return false;
@@ -457,7 +489,7 @@ class Table {
     if (this.lobby) this.lobby.finished(this.room, report, this.gameId);
   }
 
-  stop() { this.stopped = true; if (this.aiWait) { clearImmediate(this.aiWait); this.aiWait = null; } }
+  stop() { this.stopped = true; this.aiAsk = null; if (this.aiWait) { clearImmediate(this.aiWait); this.aiWait = null; } }
 
   // the side a seat plays: its own, but in a cooperative game both seats play side A
   sideOf(seat) { return seat && this.cfg && this.cfg.netCoop ? 'A' : seat; }
