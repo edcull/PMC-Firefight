@@ -1495,6 +1495,12 @@
            with the experiment 'pushgo' (against the AI: no better, 50-51%) */
         var apP = !forced && (aiExp(u, 'pushgo') || grabs(u)) ? assaultPlan(u) : null;
         if (apP && apP.push) { runTo = apP.o; gp = tuneOf('pg', 2); }
+        /* Find and secure, the enemy on its hold clock with the prize: every unit's step
+           nearer it counts, or the clock runs out with the side shooting from 20" away
+           (a player's games) — where the AI plays a person (grabs; 'noclock' turns it
+           off). Against the AI as it was: 52-53% (cg 8). */
+        var ckP = !forced && !runTo && grabs(u) && !aiExp(u, 'noclock') ? clockedObjective(u) : null;
+        if (ckP) { runTo = ckP; gp = tuneOf('cg', 8); }
         var closer = function (c) { return runTo ? gp * (R.inches(u.x, u.y, runTo.x, runTo.y) - R.inches(c.x, c.y, runTo.x, runTo.y)) : 0; };
         if (runTo) scored.forEach(function (o) { o.s += closer(o.c); });
         scored.sort(function (a, b) { return b.s - a.s; });
@@ -1617,12 +1623,24 @@
       var foe = u.side === 'A' ? 'B' : 'A';
       return aiExp(u, 'grab') || (E.state.cfg.aiSides || []).indexOf(foe) < 0;
     }
+    // Find and secure's prize, held by the enemy with its hold clock running (null if not)
+    function clockedObjective(u) {
+      if (!E.state.scen || E.state.scen.id !== 'find') return null;
+      var objs = E.state.objectives || [], best = null, bd = Infinity;
+      objs.forEach(function (o, i) {
+        var ck = SC.holdClock(E.state, i);
+        if (!ck || !ck.side || ck.side === u.side || ck.n < 1) return;
+        var d = R.inches(u.x, u.y, o.x, o.y);
+        if (d < bd) { bd = d; best = o; }
+      });
+      return best;
+    }
     function runnerFor(u) {
       var objs = E.state.objectives || [];
       if (!objs.length || goalPoints(u) !== objs) return null;
       // only an objective nobody holds, in a scenario won by holding ground (but for the experiment 'grab' alone)
       var freeOnly = aiExp(u, 'grabfree') || !aiExp(u, 'grab');
-      if (freeOnly && ['secure', 'takeover', 'invasion'].indexOf(E.state.scen.id) < 0) return null;
+      if (freeOnly && ['secure', 'takeover', 'invasion', 'find'].indexOf(E.state.scen.id) < 0) return null;
       var all = activeUnits(u.side).filter(function (f) { return planned(f) && !R.isFlying(f) && !f.bld; });
       // one holder for each objective the side holds, its nearest unit there: the rest are free to go
       var holders = [];
