@@ -314,6 +314,8 @@ storygraph.js      the story validator catches each way of writing a story wrong
                    Deep Contract validates, and its one-offs and Scorched Earth stay in range
 storyscenarios.js  the story's own scenarios: set up, their victory checks, every second-half battle
                    set up, and one battle of each played AI against AI (the scenario's own test)
+allyorders.js      the allies' orders in a story battle: Move, Attack and Hold here, given and kept once
+                   a turn, and the allies' AI answering each (only the allies act)
 storyfirsthalf.js  Deep Contract's first half: every battle under every choice set up and started (not
                    played), and the first half walked with made-up reports through the real aftermath
 storylevers.js     a story battle set up: Tier and PL, the enemy force, the cfg, and in the engine the
@@ -411,6 +413,8 @@ bundle.js          the published site: one bundle, no test hooks, and a battle p
 storyflow.js       story mode from the menu's Story card to the end of chapter 1: founding, the
                    chapter card, an event, the briefing and muster, the battle (conceded, not played),
                    the aftermath and debrief, the journal, and the Continue list
+allyorders.js      the allies' orders card beside the board: an order picked, put down with a tap, the
+                   marker drawn, and kept once the allies act on it
 founding.js        founding a force: its name, colours, roster and charter
 hotseatfound.js    a hotseat campaign founding both players' forces
 hotseatpick.js     a hotseat contract: each player picks their own force, then the battle starts

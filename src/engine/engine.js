@@ -2144,6 +2144,13 @@
       render();
       return yes;
     });
+    // story mode: the allies' one order, a marker on the table (storybattle.js)
+    on('allyorder', null, function (side, it) {
+      var why = K.giveAllyOrder(side, it);
+      if (why) { setHint(null, why); render(); return no(why); }
+      render();
+      return yes;
+    });
     /* Solitaire, the counters and objectives by hand (an option): one picked up and
        put down elsewhere while the force deploys, inside the scenario's rules. */
     on('marker', null, function (side, it) {

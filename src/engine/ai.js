@@ -381,6 +381,23 @@
         if (shot.t) { fire(u, shot.t, 'fire'); return; }
         u.activated = true; endActivation(u); return;
       }
+      /* Story mode: an ally's hull under the player's orders (storybattle.js). On
+         its way: a Move at full speed (Move here) or an Advance (Attack, Hold).
+         There: shoots; attacking, closes on the enemy round the marker. */
+      var ordV = E.orderActed(u);
+      if (ordV) {
+        var farV = R.inches(u.x, u.y, ordV.x, ordV.y) > E.orderReach();
+        logLine('ai', u.label + ' \u2014 under orders: ' + E.orderWord(ordV.kind).toLowerCase() + (farV ? ', on its way.' : ', there.'));
+        if (farV) return aiRoll(u, ordV, false, { close: true, noShoot: ordV.kind === 'move' });
+        if (shot.t && shot.score > 0.35) { fire(u, shot.t, 'fire'); return; }
+        if (ordV.kind === 'attack') {
+          var preyV = closestFoe({ x: ordV.x, y: ordV.y, side: u.side }, function (t) { return R.inches(ordV.x, ordV.y, t.x, t.y); });
+          if (preyV && preyV.dist <= 2 * E.orderReach() + 4) return aiRoll(u, preyV, false);
+        }
+        if (shot.t) { fire(u, shot.t, 'fire'); return; }
+        logLine('ai', u.label + ' holds where it was sent.');
+        u.activated = true; endActivation(u); return;
+      }
 
       // an AI hull rolls on the behaviour table like everything else (p. 147)
       var soloB = tableAI(u), opFor = soloOpFor(u);
@@ -1375,6 +1392,11 @@
       }
 
       var behaviour = preB || rollBehaviour(u);
+      /* Story mode: an ally under the player's orders (storybattle.js allyOrder).
+         The marker is the goal; on the way there nobody stops to fight over
+         ground, and once there each order is carried out its own way. */
+      var ord = E.orderActed(u), ordFar = !!ord && R.inches(u.x, u.y, ord.x, ord.y) > E.orderReach();
+      if (ord) behaviour = orderBehaviour(u, ord, ordFar, behaviour);
       // Defensive and Neutral OpFor engage the biggest threat; everyone else the best shot (SOL-6)
       var shot = soloI && (behaviour === 'defensive' || behaviour === 'neutral') ? threatTarget(u, 'fire') : bestTarget(u, 'fire');
       /* Kill Them All! (p. 147): "The unit makes an Assault action, charging at the
@@ -1387,6 +1409,15 @@
       /* A garrison (p. 41) shoots from where it is, charges only an enemy in the
          next section, and comes out when it wants to press on and has nothing to
          shoot at. Otherwise it holds the building. */
+      // ordered elsewhere: a garrison comes out on the side nearest the marker
+      if (u.bld && ordFar) {
+        var outO = R.exitSpots(E.state, u);
+        if (outO.length) {
+          outO.sort(function (a, b) { return R.inches(a.x, a.y, ord.x, ord.y) - R.inches(b.x, b.y, ord.x, ord.y); });
+          logLine('ai', u.label + ' comes out of the building, under orders.');
+          doExitBld(u, outO[0]); return;
+        }
+      }
       if (u.bld) {
         /* Run for Your Lives! (p. 147): a garrison gets out, through the wall away
            from the nearest enemy, and does not stop to shoot. With no way out it
@@ -1454,12 +1485,12 @@
       if (soloI && behaviour === 'neutral' && !pull) { neutralHold(u, shot); return; }
       if (soloI && behaviour === 'defensive' && !pull && !shot.forced && defensiveHold(u)) return;
       // ((experiment) with the planner judging every shot, it weighs this Fire! against moving: below)
-      if (!pull && (behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4 && !(planned(u) && !shot.forced)) {
+      if (!pull && (behaviour === 'defensive' || behaviour === 'neutral' || shot.forced) && shot.t && shot.score > 0.4 && !(planned(u) && !shot.forced) && (!ordFar || shot.forced)) {
         fire(u, shot.t, 'fire'); return;
       }
 
       // a cautious squad next to an empty building takes it rather than standing in the open
-      if ((behaviour === 'defensive' || behaviour === 'neutral') && R.coverAt(E.state, u.x, u.y, u) === 0 && Math.random() < 0.7) {
+      if ((behaviour === 'defensive' || behaviour === 'neutral') && !ordFar && R.coverAt(E.state, u.x, u.y, u) === 0 && Math.random() < 0.7) {
         var ins = R.enterTargets(E.state, u);
         if (ins.length) {
           ins.sort(function (a, b) { return R.rectPointDist(a.rect, u.x, u.y) - R.rectPointDist(b.rect, u.x, u.y); });
@@ -1467,10 +1498,11 @@
           doEnter(u, ins[0]); return;
         }
       }
-      var goal = pickGoal(u, behaviour);
+      var goal = ord ? orderGoal(u, ord, ordFar) : pickGoal(u, behaviour);
       /* An Advance (Movement, then a shot) unless it is running, charging in, or
-         carries a Cumbersome Weapon, which may not advance (p. 57): that is a Move. */
-      var noAdv = R.has(u, 'Cumbersome Weapon') || outOfReach(u);
+         carries a Cumbersome Weapon, which may not advance (p. 57): that is a Move.
+         Ordered to move: a Move, at the double, all the way. */
+      var noAdv = R.has(u, 'Cumbersome Weapon') || outOfReach(u) || (ordFar && ord.kind === 'move');
       var allowance = behaviour === 'flee' || killAll || noAdv ? u.move + moveBonus(u, 'move') : u.move;
       var look = R.groundLookup(E.state);             // the ground under every spot, read off the shared grid
       var here = scoreSpot(u, { x: u.x, y: u.y }, goal, behaviour, look);
@@ -1901,6 +1933,27 @@
       return o && goals.indexOf(o) >= 0 && o.owner !== u.side ? o : null;
     }
 
+    /* An ally's behaviour under orders (storybattle.js): on its way, Move and
+       Attack press on and Hold goes carefully, cover to cover; there, Move
+       fights from where it stands, Attack takes the fight to the enemy, and Hold
+       digs in. Only a unit running for its life (the roll) forgets the order there. */
+    function orderBehaviour(u, ord, far, rolled) {
+      var b;
+      if (ord.kind === 'move') b = far ? 'offensive' : rolled === 'flee' ? 'flee' : 'neutral';
+      else if (ord.kind === 'attack') b = rolled === 'assault' ? 'assault' : far ? 'offensive' : rolled === 'flee' ? 'defensive' : rolled === 'defensive' ? 'neutral' : rolled;
+      else b = far ? 'defensive' : rolled === 'flee' ? 'flee' : 'defensive';
+      logLine('ai', u.label + ' \u2014 under orders: ' + E.orderWord(ord.kind).toLowerCase() + (far ? ', on its way' : ', there') + ': ' + b + '.');
+      return b;
+    }
+    // where an ally under orders makes for: the marker, or attacking there, the enemy nearest it
+    function orderGoal(u, ord, far) {
+      if (ord.kind === 'attack' && !far) {
+        var prey = closestFoe({ x: ord.x, y: ord.y, side: u.side }, function (t) { return R.inches(ord.x, ord.y, t.x, t.y); });
+        if (prey && prey.dist <= 2 * E.orderReach() + 4) return { x: prey.unit.x, y: prey.unit.y };
+      }
+      return { x: ord.x, y: ord.y };
+    }
+
     function pickGoal(u, behaviour) {
       if (behaviour === 'flee') {
         var ne = nearestEnemy(u);
@@ -1966,6 +2019,13 @@
            standing here once the enemy's turn comes round */
         s -= 0.6 * routeField(u, goal)(c.x, c.y) + HERE_W * riskAt(u, c.x, c.y);
       } else s -= 0.6 * (gd < Infinity ? gd : R.inches(c.x, c.y, goal.x, goal.y));
+      /* An ally under orders keeps to the marker: beyond its reach (twice that,
+         attacking) every inch counts against the spot, the more so moving there. */
+      var ordS = u.ally && E.allyOrder(u);
+      if (ordS && behaviour !== 'flee') {
+        var odS = R.inches(c.x, c.y, ordS.x, ordS.y), rS = E.orderReach() * (ordS.kind === 'attack' ? 2 : 1);
+        if (odS > rS) s -= (ordS.kind === 'move' ? 2.5 : 1.5) * (odS - rS);
+      }
       /* Attacking a held position (assaultPlan): no further than 6" out in front of the
          force until it goes in; then the objective pulls, whatever else is near. */
       var ap = assaultPlan(u);

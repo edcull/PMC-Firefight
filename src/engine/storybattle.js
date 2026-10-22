@@ -12,6 +12,8 @@
      unready. Rolled here, and written to the battle log;
    - the allies' activations: side A's units the AI runs for the story, taking
      side A's activations in turn with the player's own (allyActs);
+   - the allies' orders: one marker the player puts down, and may move once a
+     turn, that the allies' AI answers (allyOrder; ai.js);
    - the target variant: the target killed, or with `capture` Broken and then
      reached, ends the battle (targetCheck, asked by scenarios.js). */
 (function (root) {
@@ -328,7 +330,51 @@
       return { terrain: terrain, rolls: [], generator: (cfg.story && cfg.story.mapName) || 'The mission\u2019s own ground' };
     }
 
+    /* The allies' orders: one marker for all of them, put down by the player and
+       moved at most once a turn (until an ally has acted on it, it can still be
+       put right). Move here: at the double, a Move with no shot on the way.
+       Attack here: Advance on it, and engage the enemy round it. Hold here: get
+       there, then take the best cover near it and shoot from there. Within
+       ORDER_REACH of the marker, a unit has arrived. Kept on the battle, so a save
+       and a replay carry it. */
+    var ORDER_KINDS = { move: 'Move here', attack: 'Attack here', hold: 'Hold here' }, ORDER_REACH = 4;
+    function allyOrder(u) {
+      var o = E.state && E.state.allyOrder;
+      return o && ORDER_KINDS[o.kind] && (!u || u.ally) ? o : null;
+    }
+    function orderReach() { return ORDER_REACH; }
+    function orderLocked() {
+      var o = E.state && E.state.allyOrder;
+      return !!(o && o.turn === E.state.turn && o.acted);
+    }
+    // { kind, x, y } (kind null: the order withdrawn); a reason it cannot be given, or null
+    function giveAllyOrder(side, it) {
+      var state = E.state;
+      if (!state.allies || side !== state.allies.side) return 'there are no allies to order';
+      if (state.phase !== 'battle' || state.over) return 'orders are given once the battle is under way';
+      if (orderLocked()) return 'the allies are already acting on this turn’s orders';
+      if (it.kind == null) {
+        if (state.allyOrder) E.logLine('note', 'The allies are left to their own judgement.');
+        state.allyOrder = null;
+        return null;
+      }
+      if (!ORDER_KINDS[it.kind]) return 'no such order';
+      var x = +it.x, y = +it.y;
+      if (!isFinite(x) || !isFinite(y) || x < 0 || y < 0 || x > R.BOARD.w || y > R.BOARD.h) return 'that is off the table';
+      state.allyOrder = { kind: it.kind, x: x, y: y, turn: state.turn, acted: false };
+      E.logLine('note', 'The allies’ orders: ' + ORDER_KINDS[it.kind].toLowerCase() + '.');
+      return null;
+    }
+    // an ally acting on the order: from now, this turn's order stands
+    function orderActed(u) {
+      var o = allyOrder(u);
+      if (o) { o.acted = true; o.turn = E.state.turn; }
+      return o;
+    }
+
     return {
+      allyOrder: allyOrder, orderReach: orderReach, orderLocked: orderLocked, giveAllyOrder: giveAllyOrder, orderActed: orderActed,
+      orderWord: function (k) { return ORDER_KINDS[k] || ''; },
       storySeeded: storySeeded, storyTerrain: storyTerrain, storyFixed: storyFixed,
       storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck,
       storyEndPhase: storyEndPhase, storyCheck: storyCheck, parleyHolds: parleyHolds
