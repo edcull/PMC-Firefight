@@ -92,5 +92,19 @@ const zero = variant((d) => { opt(d, 'c2.wake', 'pay').if = { meter: 'htx', gte:
 const wz = V.walk(zero, { walks: 50 });
 ok('a walk finds an event with every option closed', wz.noOptions['c2.wake'] > 0);
 
+console.log('\nDeep Contract');
+const dc = require('../../src/story/deep-contract.js');
+const dres = V.check(dc, OPTS);
+ok('passes with no errors', dres.ok, dres.errors.join(' | '));
+const dw = V.walk(dc, { walks: 3000 });
+ok('no walk gets stuck, and no event is left with no option open', !dw.stuck.length && !Object.keys(dw.noOptions).length,
+  dw.stuck.slice(0, 3).concat(Object.keys(dw.noOptions)).join(','));
+ok('every ending but Broken Company is reached', !dw.unreachedEndings.length, dw.unreachedEndings.join(','));
+ok('every node is reached by some walk', !dw.unreached.length, dw.unreached.join(','));
+const pc = (x) => 100 * (x || 0) / dw.walks;
+ok('each one-off comes up in roughly 5 to 15% of walks', pc(dw.oneOffs.sump) > 3 && pc(dw.oneOffs.sump) < 20 && pc(dw.oneOffs.relief) > 3 && pc(dw.oneOffs.relief) < 20,
+  'sump ' + pc(dw.oneOffs.sump).toFixed(1) + '%, relief ' + pc(dw.oneOffs.relief).toFixed(1) + '%');
+ok('Scorched Earth stays rare (target under 15%; the test allows 25%)', pc(dw.endings.scorched) < 25, pc(dw.endings.scorched).toFixed(1) + '%');
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -94,10 +94,11 @@
         if (e.meter) {
           if (!mdefs[e.meter]) err(at + ': no meter ' + e.meter);
           var m = M(e.meter);
-          if (!where.time) {
-            if (e.set != null || (e.add || 0) > 0) m.up[where.half] = (m.up[where.half] || 0) + 1;
-            if (e.set != null || (e.add || 0) < 0) m.down[where.half] = (m.down[where.half] || 0) + 1;
-          }
+          // a shared chapter's events (the interludes') come up in both halves
+          if (!where.time) (where.half === 'both' ? [1, 2] : [where.half]).forEach(function (h) {
+            if (e.set != null || (e.add || 0) > 0) m.up[h] = (m.up[h] || 0) + 1;
+            if (e.set != null || (e.add || 0) < 0) m.down[h] = (m.down[h] || 0) + 1;
+          });
         }
         if (e.reveal && !mdefs[e.reveal]) err(at + ': no meter ' + e.reveal + ' to reveal');
         if (e.roll) {
@@ -111,6 +112,7 @@
         }
         if (e.else) readEffects(e.else, at, where);
         if (e.next) {
+          levers(at, e.next.levers, where);
           if (e.next.battle) ref(at, e.next.battle, 'next.battle');
           if (e.next.event) ref(at, e.next.event, 'next.event');
         }
@@ -164,7 +166,7 @@
     var eventSigs = { 1: {}, 2: {} }, stateSigs = { 1: {}, 2: {} };
     var oneOffFlags = {};       // flag → the branches it opens a one-off at
     (def.chapters || []).forEach(function (ch) {
-      var half = ch.half || 1, where = { half: half, chapter: ch.id };
+      var half = ch.shared ? 'both' : ch.half || 1, where = { half: half, chapter: ch.id };
       readCond(ch.when, ch.id, 'route', ch.id);
       readEffects(ch.onStart, ch.id, where);
       readEffects(ch.passed, ch.id, where);
@@ -186,7 +188,7 @@
               if (k !== 'kUC') {
                 if (!mdefs[k]) err(oat + ': no meter ' + k + ' to pay with');
                 M(k).read.push({ at: oat, kind: 'choice' });
-                M(k).down[half] = (M(k).down[half] || 0) + 1;
+                (half === 'both' ? [1, 2] : [half]).forEach(function (h) { M(k).down[h] = (M(k).down[h] || 0) + 1; });
               }
             });
             readEffects(o.effects, oat, { half: half, chapter: ch.id, extreme: !!o.extreme });
@@ -203,14 +205,14 @@
             if (!queued) err(at + ': an event with nowhere to go after it');
           }
           var bs = opt.map(function (o) { return Object.keys(o.battle || {}).sort().join('+'); }).filter(Boolean).sort().join(' | ');
-          if (bs) {
+          if (bs && half !== 'both') {
             if (eventSigs[half][bs]) err(at + ': offers the same battle levers as ' + eventSigs[half][bs] + ' (' + bs + ')');
             else eventSigs[half][bs] = at;
           }
           var ss = opt.map(function (o) {
             return arr(o.effects).map(function (e) { return e.meter ? e.meter + (e.add > 0 ? '+' : '-') : e.flag ? 'flag' : Object.keys(e)[0]; }).sort().join(',');
           }).sort().join(' | ');
-          if (ss) {
+          if (ss && half !== 'both') {
             if (stateSigs[half][ss]) warn(at + ': offers the same state levers as ' + stateSigs[half][ss]);
             else stateSigs[half][ss] = at;
           }

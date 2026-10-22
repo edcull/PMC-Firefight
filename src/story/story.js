@@ -113,7 +113,7 @@
 
   /* ================= conditions ================= */
 
-  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman'];
+  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped'];
   var CMP = ['gte', 'lte', 'gt', 'lt', 'eq'];
 
   function cmp(v, c) {
@@ -143,6 +143,7 @@
       if (c.grade === 'failure') return !!g && !SUCCESS[g];
       return arr(c.grade).indexOf(g) >= 0;
     }
+    if (c.wiped) return cmp(st.lastWiped || 0, c.wiped);
     if (c.chapter != null) return cmp(st.chapterNo, typeof c.chapter === 'number' ? { eq: c.chapter } : c.chapter);
     if (c.played) return !!st.played[c.played];
     if (c.revealed) return !!st.revealed[c.revealed];
@@ -314,11 +315,13 @@
     if (depth > 200) throw new Error('Story loop at ' + (node && node.id));
     if (!node) { st.node = null; return; }
     st.node = node.id;
-    if (node._first && node._chapter !== st.chapter) startChapter(campaign, def._chapters[node._chapter]);
+    // (a shared chapter only holds events used from elsewhere, the interludes': it is never started)
+    var ch = def._chapters[node._chapter];
+    if (node._first && node._chapter !== st.chapter && !ch.shared) startChapter(campaign, ch);
     else if (node.type === 'event' || node.type === 'battle') checkpoint(campaign, 'node');
     var ctx = ctxOf(campaign);
-    // an option that settled things without a fight
-    if (node.type === 'battle' && st.pending && st.pending.skip) return skipTo(campaign, node, depth);
+    // an option, or a roll, that settled things without a fight
+    if (node.type === 'battle' && battleSpec(campaign).levers.skip) return skipTo(campaign, node, depth);
     if (node.type === 'branch') {
       var to = null;
       arr(node.when).some(function (w) { if (test(ctx, w.if)) { to = w.next; return true; } return false; });
@@ -453,16 +456,21 @@
     if (!node || node.type !== 'battle') return null;
     var spec = {
       node: node.id, scenario: node.scenario, variant: clone(node.variant) || null,
-      tier: node.tier || 'max', pl: node.pl || 1, planet: node.planet || null, tactics: node.tactics || null,
+      tier: node.tier || 'max', pl: node.pl || 1, planet: node.planet || null, tactics: node.tactics || null, role: node.role || null,
       enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, levers: clone(st.pending) || {}
     };
-    st.next.forEach(function (n) { if (n.battle === node.id) spec.levers = mergeLevers(spec.levers, n.levers || {}), spec.held = (spec.held || []).concat([n]); });
+    st.next.forEach(function (n) {
+      if (n.battle !== node.id) return;
+      spec.levers = mergeLevers(spec.levers, n.levers || {});
+      if (n.enemy) spec.enemy = Object.assign(spec.enemy || {}, { changes: arr(spec.enemy && spec.enemy.changes).concat(arr(n.enemy.changes || n.enemy)) });
+    });
     // the node's own adjustments, by what has happened: { if, levers }
     var ctx = ctxOf(campaign);
     arr(node.adjust).forEach(function (a) { if (test(ctx, a.if)) spec.levers = mergeLevers(spec.levers, a.levers); });
     if (spec.levers.scenario) spec.scenario = spec.levers.scenario;
     if (spec.levers.variant) spec.variant = mergeLevers(spec.variant, spec.levers.variant);
     if (spec.levers.tier) spec.tier = spec.levers.tier;
+    if (spec.levers.role) spec.role = spec.levers.role;
     return spec;
   }
 
@@ -499,7 +507,8 @@
     if (GRADES.indexOf(g) < 0) throw new Error('No grade ' + g);
     if (result && typeof result === 'object') {
       st.fielded = (result.units || []).filter(function (u) { return u.side === 'A' && u.rid; }).map(function (u) { return u.rid; });
-    }
+      st.lastWiped = (result.units || []).filter(function (u) { return u.side === 'A' && !u.free && (u.wiped || u.destroyed); }).length;
+    } else st.lastWiped = 0;
     st.lastGrade = g;
     var ctx = ctxOf(campaign, { grade: g });
     var on = node.on || {};
