@@ -40,7 +40,7 @@ What the story layer adds:
 1. **A story graph:** chapters and the nodes inside them, written as data.
 2. **Story state:** meters, flags, the current node, and a journal of what was chosen.
 3. **Conditions and effects:** a small vocabulary that lets the data read and change story state and the dossier.
-4. **Approach modifiers:** the hooks that turn "recon" or "air strike" into changes to `cfg` and to the opening of the battle.
+4. **Battle levers:** the hooks that let a story event change `cfg` and the opening of the battle (enemy list shown, strikes before turn 1, Readiness, allies…).
 5. **Outcome grading:** a report turned into a grade (decisive, victory, draw, defeat, rout).
 6. **Screens:** the chapter card, the briefing with its choices, the debrief, the journal.
 
@@ -125,9 +125,9 @@ flowchart TD
 - **3. The Hunt.** Decapitation, or Protecting the VIP turned around so the
   player snatches Varga. Killing her ends the hunt quickly, but she becomes a
   martyr. Capturing her is harder and opens the truce. Failing leaves her free.
-- **4. Pit Nine.** A mining town rises. The approaches here are about civilians:
+- **4. Pit Nine.** A mining town rises. The choices here are about civilians:
   Evacuation (they are protected), Crushing the Resistance (they are not), or
-  negotiate (it needs Sentiment, or Varga held).
+  talking your way in (it needs Sentiment, or Varga held).
 - **5. Into the Sump.** The Front falls back into the deep levels. The player
   follows, in Close Encounters, and meets bugs. A Deep Contract data core can be
   recovered here. It is the evidence the Whistleblower path needs, and HTX wants
@@ -171,44 +171,74 @@ each named unit that survived.
 
 ## 3. Decisions
 
-### Before the battle: the approach (short term)
+### Every decision is a story event
 
-Each battle chapter offers two to four **approaches**. An approach only changes
-this battle, apart from the meters it touches. The authored chapter says which
-approaches are offered and can adjust any of them.
+The player never sees a standard menu of approaches or a standard debrief
+checklist. **Every decision is a story event written for its place in the
+story:** a situation, the people in it, and two to four things to do about it.
+The air strike in chapter 3 is a particular strike on a particular target, with
+a pilot who has an opinion. The prisoners in chapter 4 are particular prisoners,
+and one of them has a name you will hear again.
 
-| Approach | What it does to the battle | What it costs |
+Under the writing, each option is made from a small, shared **kit of effects**.
+The kit is mechanical and reused. The events are not:
+
+| Kit | Effects | Used by events such as |
 |---|---|---|
-| **Recon first** | Roll D6 + Intel. On a success: the enemy's list and Rebel Tactic are shown before you muster, and you choose your deployment edge or role. On a failure: your scouts are spotted, and one recon unit starts the battle with D3 Suppression. | One unit rests this chapter. The enemy gets a turn to prepare: +1 Readiness (below). |
-| **Direct assault** | You are the attacker and the enemy gets no time to prepare. Nothing is revealed. | None |
-| **Air strike** | Before turn 1, D3 + PL strikes fall on enemy units. Each strike puts on Suppression, with a chance of a hit as from a heavy weapon. | kUC. Collateral: Sentiment −1, or −2 in a town. Needs HTX Standing ≥ 1 or a hired aircraft. |
-| **Infiltrate** | The battle becomes the matching solitaire scenario (Sabotage, Decapitation). You send a commando instead of the whole army. | Smaller force, so the risk is higher. Reward ×1.5. |
-| **Negotiate** | Only where the story allows it. Roll against Sentiment and flags. A success skips the battle, or lowers it a Tier. A failure means you are the defender, ambushed. | Varies |
-| **Wait them out** | The chapter is pushed back. Enemy Strength −1, Sentiment −1, Hive Growth +1. | Time |
+| **Battle levers** (this battle only) | Show the enemy's list or tactic before mustering. Set the player's role or deployment edge. Strikes before turn 1 (Suppression, with a chance of a hit). Starting Suppression on your own units. Enemy Readiness. Swap the scenario. Shrink the force to a commando. Add allies. Turn limit, terrain, planet, world. Skip the battle. | Scouting, bribes, bombardments, sabotage, a guide who knows the tunnels, a traitor in the convoy |
+| **State levers** (long term) | Meters, flags, kUC, EXP or Trauma for some or all units, recruit or lose a unit, a free upgrade, wake an enemy, an offscreen battle, a journal line | Prisoners, salvage, the fallen, reports to HTX, promises made to people |
+| **Rolls** | A roll against a meter, Intel or a flag, with an effect on each result | A bluff, an interrogation, a plan that might not work |
 
 **Readiness** is how prepared the enemy is for one battle. It starts at 0. Each
-point gives the enemy something chosen by the authored chapter, or by a default
+point gives the enemy something the event names, or something from a default
 table: barricades, one extra unit, a forced Last Stand, or defender's choice of
 deployment.
 
-Every approach is a small, named set of `cfg` changes plus a few rolls before the
-battle (section 5). New approaches are added as data, not code.
+The rules for writing them:
+- **No event is used twice.** Each one has its own id, and the validator refuses
+  an id it has seen before. Within an act, no two events may offer the same set
+  of levers (section 6).
+- **Every event shows a trade-off** you can see in the writing: what it costs
+  and who it hurts, even when the numbers are hidden.
+- **Long-term choices come back.** A flag set by an event is read by a later one
+  ("the prisoner you released is now the Front's sniper"). Every flag needs at
+  least one later reader, and the validator checks this. That is what makes a
+  decision feel long term.
+- **Generic events are only for side contracts.** Side contracts are the
+  repeatable money-earners between chapters. They draw from a small pool of
+  short events with conditions, so they stay varied, and none of them sets a
+  story flag.
 
-### After the battle (long term)
+### Before the battle (mostly short term)
 
-The debrief offers one to three decisions. Some are written for the chapter and
-some come from a common pool, drawn when the battle makes them apply:
+One event before each battle. It shapes how the fight starts. It can also leave
+a long-term mark. Act I, for example:
 
-| Decision | Options and the effects that lean on them |
-|---|---|
-| **Prisoners** (when you won and there were enemy casualties) | Hand them to HTX (HTX +1, Sentiment −1). Release them (Sentiment +1, Rebel Strength +1). Interrogate them (Intel +1, Loyalty −1 if it gets ugly). |
-| **Salvage** | Keep it (kUC). Give it to the town (Sentiment +1). Strip it for parts (one free upgrade). |
-| **The fallen** | Pay death benefits (kUC per KIA, Loyalty +1). Don't (Loyalty −1). |
-| **The report to HTX** | Honest (HTX ±, depending on what happened). Clean it up (flag `coverup`: it can come back later). |
-| **Pursue or hold** | Pursue: a short follow-up battle a Tier lower right away, with no rest between. Hold: the units rest. |
+| Chapter | The event | Options (and the levers under them) |
+|---|---|---|
+| 1. Landfall | *The port master's offer.* The port's own security chief offers his men, if HTX pays them. | Take them (allies, kUC −). Send them home (nothing). Ask what they know (show the enemy list; the port master remembers you were rude: Sentiment −1). |
+| 2. Refinery Siege | *The night shift.* Refinery workers are still inside, and the Front has offered them safe passage out. | Let them go (the enemy gets +1 Readiness, Sentiment +1, flag `nightshift_freed`). Keep them as a human shield (you choose the deployment, Sentiment −2, Loyalty −1). Get them to sabotage the Front's guns (roll on Intel: success is strikes before turn 1, failure is `nightshift_shot`). |
+| 2. Depot Raid | *Truck 14.* A driver will sell you the depot's guard rota. | Pay (kUC −, show the list). Grab him and question him (Intel +1, Loyalty −1, flag `driver_taken`). Go in blind but now, before the rota changes (you attack, enemy Readiness 0). |
+| 3. The Hunt | *Kill or capture.* HTX wants Varga dead. Your sergeant thinks she is worth more alive. | The HTX gunship (strikes before turn 1, HTX +1, `aim_kill`). A snatch team (swap to Decapitation, a commando only, `aim_capture`). Wait for her to move (Hive Growth +1, you pick the role). |
+| 4. Pit Nine | *The schoolhouse.* The Front has fortified the town school, with children still in it. | Clear it room by room (Close Encounters, no strikes, Sentiment +2 if you win). Shell it (strikes, Sentiment −4, flag `pit9_shelled`, Loyalty −1). Talk to the teacher (needs `nightshift_freed` or `varga_held`: skip the battle, or face an ambush). |
+| 5. Into the Sump | *The miners' map.* A captured miner offers a route through the old workings. | Trust him (the role is yours, but roll for a trap). Use HTX's surveys (the role is set, and HTX knows exactly where you are, flag `htx_tracking`). Blast a new way in (strikes, Hive Growth +2). |
 
-Story decisions written for a chapter (Varga's fate, the data core, the Act II
-branch) use the same screen and the same vocabulary of effects.
+### After the battle (mostly long term)
+
+One or two events after each battle, chosen by the grade and the flags. They
+decide what the fight meant. Act I, for example:
+
+| After | The event | Options |
+|---|---|---|
+| 1. Landfall | *The dead at the gate.* Rebel dead, and civilians among them. | Bury them openly (Sentiment +1, HTX −1). Let HTX "process" them (HTX +1, flag `gate_cleared`: the town remembers). |
+| 2. Refinery, won | *The ledger.* A rebel quartermaster's ledger shows where the Front gets its money. | Give it to HTX (HTX +1, Rebel Strength −2). Read it first (Intel +2, the first hint of the Deep Contract, flag `ledger_read`). Burn it, for a price the Front will pay (kUC +, Sentiment +1, `ledger_sold`). |
+| 2. Refinery, lost | *The survivors.* HTX blames you for the refinery. | Take the blame (HTX −1, Loyalty +1). Blame the garrison (HTX +0, Loyalty −1, the garrison commander is now hostile). |
+| 3. The Hunt, Varga held | *The cell.* Varga asks to talk to you, and only you. | Listen (Intel +1, flag `varga_talked`: opens the truce). Hand her straight to HTX (HTX +2, `varga_handed`, she may vanish). Hold her yourself as leverage (HTX −1, Rebel Strength −2, `varga_held`). |
+| 4. Pit Nine | *Payroll.* The town's payroll safe survived the fight. | Keep it (kUC ++, Loyalty +1, Sentiment −2). Return it to the miners (Sentiment +2). Return it to HTX (HTX +1). |
+| 5. Into the Sump | *The data core.* Your tech has it, and HTX asks for it on an open channel. | Hand it over (HTX +2). "Lost in the fighting" (`core_recovered`, `coverup`). Copy it, then hand it over (`core_recovered`, and a roll: HTX may notice). |
+
+The Act II branch itself is an event too, at the start of chapter 6. Which
+options it shows depends on the flags left by these Act I events.
 
 ### Success and failure
 
@@ -348,12 +378,14 @@ PMCStory.register({
   },
   chapters: [
     { id: 'c3', act: 1, title: 'The Hunt', intro: '…', nodes: [
-      { id: 'c3.brief', type: 'brief', text: '…', next: 'c3.approach' },
-      { id: 'c3.approach', type: 'approach', options: [
-        { id: 'recon',  use: 'recon' },
-        { id: 'snatch', use: 'infiltrate', scenario: 's_decap', text: 'Take her alive.',
-          effects: [{ flag: 'aim_capture', set: true }] },
-        { id: 'strike', use: 'airstrike', if: { meter: 'htx', gte: 1 } }
+      { id: 'c3.brief', type: 'brief', text: '…', next: 'c3.killorcapture' },
+      { id: 'c3.killorcapture', type: 'event', title: 'Kill or capture', text: '…', options: [
+        { id: 'gunship', text: 'Call in the HTX gunship.', if: { meter: 'htx', gte: 1 },
+          battle: { strikes: 'D3+PL' }, effects: [{ meter: 'htx', add: 1 }, { flag: 'aim_kill', set: true }] },
+        { id: 'snatch', text: 'Send the snatch team. Take her alive.',
+          battle: { scenario: 's_decap', commando: true }, effects: [{ flag: 'aim_capture', set: true }] },
+        { id: 'wait', text: 'Wait for her to move.',
+          battle: { role: 'choose' }, effects: [{ meter: 'hive', add: 1 }] }
       ], next: 'c3.battle' },
       { id: 'c3.battle', type: 'battle', enemy: 'front', scenario: 'secure', tier: '+0', pl: 1,
         planet: 'industrial', tactics: 'guerillas',
@@ -362,16 +394,17 @@ PMCStory.register({
                     { effects: [{ flag: 'varga_dead', set: true }, { meter: 'rebels', add: -2 }], next: 'c3.dead' }],
           failure: [{ effects: [{ flag: 'varga_free', set: true }, { meter: 'htx', add: -1 }], next: 'c3.free' }]
         } },
-      { id: 'c3.held', type: 'debrief', text: '…', decisions: ['prisoners', 'report'], next: 'c4' }
+      { id: 'c3.held', type: 'debrief', text: '…', events: ['c3.thecell'], next: 'c4' }
     ] }
   ],
   endings: [ { id: 'liberators', if: { all: [{ flag: 'truce' }, { meter: 'hive', lt: 8 }] }, text: '…' } ]
 });
 ```
 
-**Node types:** `brief` (text, then next), `approach`, `battle`, `debrief` (text
-and decisions), `choice` (a story decision on its own), `event` (effects applied
-at once, a roll is allowed), `interlude` (to the hub, with side contracts open),
+**Node types:** `brief` (text, then next), `event` (a written situation with
+options; an option's `battle` holds its battle levers and `effects` its state
+levers), `battle`, `debrief` (text, then its events, picked by grade and flags),
+`happening` (effects applied at once, with no choice; a roll is allowed), `interlude` (to the hub, with side contracts open),
 `branch` (goes to the first `when` that holds), `ending`.
 
 **Conditions:** `{ flag }`, `{ meter, gte|lte|lt|gt|eq }`, `{ grade }`,
@@ -393,12 +426,12 @@ being written twice.
 ```
 src/story/
   story.js          the engine: state, conditions, effects, walking the graph, grading (pure; runs in Node)
-  approaches.js     the approaches: what each one does to cfg, and the rolls before the battle
+  levers.js         the battle levers: what each one does to cfg, and the rolls before the battle
   validate.js       checks a story's graph (also used by the tests)
   scenarios-story.js  the custom scenarios for Acts II and III (from phase 5)
   deep-contract.js  the campaign's content
 src/view/
-  story-screens.js  the chapter card, briefing, approach, debrief, journal, ending
+  story-screens.js  the chapter card, briefing, events, debrief, journal, ending
 ```
 
 `story.js` follows the campaign files' conventions: no DOM, no storage, dice
@@ -409,7 +442,7 @@ campaign.story = {
   id, version, node,            // where we are
   meters: {...}, flags: {...},
   journal: [ { chapter, node, choice, grade, effects, turn } ],
-  pending: { approach, readiness, mods }   // between the approach and the battle
+  pending: { event, option, readiness, levers }   // between the event and the battle
 }
 ```
 
@@ -441,8 +474,9 @@ the AI (which plays copies of the battle) all see the same battle.
 2. **Chapter card:** act, chapter title, a short intro, the date on the moon.
 3. **Briefing:** the story text, the enemy dossier (what you know of them), and
    the meters this chapter touches.
-4. **Approach:** two to four cards. Each card shows what it does, what it costs,
-   and what you would need (greyed out with the reason if you can't take it).
+4. **The event before the battle:** the situation, then two to four options
+   written as things to do. Each option says plainly what it risks. An option you
+   can't take shows why ("You'd need the miners' trust").
    Then the existing muster.
 5. **Battle:** unchanged, apart from the prelude.
 6. **Debrief:** the grade, then the existing aftermath (pay, EXP, trauma,
@@ -459,7 +493,9 @@ the AI (which plays copies of the battle) all see the same battle.
 - **`test/unit/storygraph.js`** (the validator, run on every story):
   - every node can be reached, and every `next` leads somewhere real;
   - every battle has a failure branch;
-  - no state reachable by a walk leaves an approach or choice with zero options;
+  - no state reachable by a walk leaves an event with zero options;
+  - no event id is used twice, and no two events in an act offer the same set of levers;
+  - every flag an event sets is read by something later (a later event, a branch, an ending);
   - every path ends at an ending, and every ending can be reached;
   - every scenario, faction, archetype, unit key and effect named exists.
 - **A Monte Carlo walk** (`npm run story:sim`): ten thousand walks with random
@@ -476,8 +512,9 @@ the AI (which plays copies of the battle) all see the same battle.
 ## 7. Plan
 
 ### Phase 0: the story bible
-Settle the decisions in section 8. Write the chapter list for every path, with
-each node's purpose, its battle (scenario, enemy, Tier) and the meters it moves.
+Settle the decisions in section 8. Write the chapter list for every path: each
+event's situation and options in a line, each battle's scenario, enemy and Tier,
+and the meters and flags each one moves.
 Write no prose yet. Run it through the validator as soon as phase 1 exists.
 
 ### Phase 1: the story engine (Node only)
@@ -486,8 +523,8 @@ on the dossier, saving and loading. Tests. A tiny three-chapter test story
 exercises every node type.
 
 ### Phase 2: the battle hooks
-`approaches.js`: recon, direct assault, air strike, infiltrate, negotiate and
-wait, as changes to `cfg`. Readiness. The prelude step. Persistent enemy
+`levers.js`: every battle lever (enemy list shown, role, strikes, starting
+Suppression, scenario swap, commando, allies, skip) as a change to `cfg`. Readiness. The prelude step. Persistent enemy
 companies driven by meters. A spike on allies through side C. Tests for each
 hook, through the engine.
 
@@ -497,7 +534,7 @@ battle and aftermath. A browser test.
 
 ### Phase 4: Act I as a vertical slice
 Chapters 1 to 5, written in full and playable. Play-test for pacing, how much
-the approaches matter, and difficulty.
+the events' choices matter, and difficulty.
 
 ### Phase 5: custom scenarios
 Story scenario variants (`cfg.story.variant`). Then waves and the orbital
