@@ -296,7 +296,7 @@ a long-term mark. The first half, for example:
 | 2. Refinery Siege | *The night shift.* Refinery workers are still inside, and the Front has offered them safe passage out. | Let them go (the enemy gets +1 Readiness, Sentiment +1, flag `nightshift_freed`). Keep them as a human shield (you choose the deployment, Sentiment −2, Loyalty −1). Get them to sabotage the Front's guns (roll on Intel: success is strikes before turn 1, failure is `nightshift_shot`). |
 | 2. Depot Raid | *Truck 14.* A driver will sell you the depot's guard rota. | Pay (kUC −, show the list). Grab him and question him (Intel +1, Loyalty −1, flag `driver_taken`). Go in blind but now, before the rota changes (you attack, enemy Readiness 0). |
 | 3. The Hunt | *Kill or capture.* HTX wants Varga dead. Your sergeant thinks she is worth more alive. | The HTX gunship (strikes before turn 1, HTX +1, `aim_kill`). A snatch team (the target variant with `capture: true`, one Battle Tier down, `aim_capture`). Wait for her to move (Hive Growth +1, you pick the role). |
-| 4. Pit Nine | *The schoolhouse.* The Front has fortified the town school, with children still in it. | Clear it room by room (Close Encounters, Critical control, no strikes, Sentiment +2 if you win). Shell it, then storm the town (Secure and control, strikes, Sentiment −4, flag `pit9_shelled`, Loyalty −1). Talk to the teacher (needs `nightshift_freed` or `varga_held`: skip the battle, or, if the talks fail, a Meeting engagement with the ambush variant). |
+| 4. Pit Nine | *The schoolhouse.* The Front has fortified the town school, with children still in it. | Clear it room by room (Close Encounters, Critical control, no strikes; if you win, Sentiment +2 and flag `pit9_spared`). Shell it, then storm the town (Secure and control, strikes, Sentiment −4, Hive Growth +1 as the shelling cracks the lower levels, Loyalty −1, flag `pit9_shelled`). Talk to the teacher (needs `nightshift_freed` or `varga_held`; a roll on Sentiment, −1 if `gate_cleared` because her brother was at the gate. Success: no battle, Sentiment +2, `pit9_spared`. Failure: a Meeting engagement with the ambush variant). |
 | Into the Sump (one-off) | *The miners' map.* A captured miner offers a route through the old workings. | Trust him (the role is yours, but roll for a trap). Use HTX's surveys (the role is set, and HTX knows exactly where you are, flag `htx_tracking`). Blast a new way in (strikes, Hive Growth +2). |
 | The Relief (one-off) | *The handover.* Black Lantern's commander arrives with a letter from HTX and a smile. | Hand over the sector and leave (no battle; the second half opens with `htx_cut_off` and nothing to fight for but side contracts). Refuse (you choose the role). Fire first (strikes before turn 1, and the Front hears about it: Sentiment +1). |
 
@@ -309,14 +309,114 @@ decide what the fight meant. The first half, for example:
 |---|---|---|
 | 1. Landfall | *The dead at the gate.* Rebel dead, and civilians among them. | Bury them openly (Sentiment +1, HTX −1). Let HTX "process" them (HTX +1, flag `gate_cleared`: the town remembers). |
 | 2. Refinery, won | *The ledger.* A rebel quartermaster's ledger shows where the Front gets its money. | Give it to HTX (HTX +1, Rebel Strength −2). Read it first (Intel +2, the first hint of the Deep Contract, flag `ledger_read`). Sell it back to the Front (**extreme**: kUC +, Sentiment +1, HTX −1, `ledger_sold`). |
-| 2. Refinery, lost | *The survivors.* HTX blames you for the refinery. | Take the blame (HTX −1, Loyalty +1). Blame the garrison (HTX +0, Loyalty −1, the garrison commander is now hostile). |
+| 2. Refinery, lost | *The survivors.* HTX blames you for the refinery. | Take the blame (HTX −1, Loyalty +1). Blame the garrison (HTX +0, Loyalty −1, flag `garrison_blamed`: the garrison won't fight beside you again). |
+| 2. Depot Raid, won (sets `depot_raided`) | *The armoury.* The Front's heavy weapons are stacked in the depot, and there is more than you can carry. | Blow it all (Rebel Strength −2). Take the best of it (a free upgrade, Rebel Strength −1, HTX −1: HTX wanted it catalogued). Leave it for HTX to collect (HTX +1, Rebel Strength −1, Intel +1 from the crates' markings). |
+| 2. Depot Raid, failed | *The rota changed.* The Front knew you were coming. Someone talked. | Find the leak in your own ranks (a roll on Intel: success Loyalty +1, failure Loyalty −2 as the wrong man is blamed). Let it go (Rebel Strength +1). |
 | 3. The Hunt, Varga captured | *The cell.* Varga asks to talk to you, and only you. | Listen (Intel +1, flags `varga_talked` and `varga_held`: opens the truce). Hand her straight to HTX (HTX +2, `varga_handed`, she may vanish). Hold her yourself as leverage (HTX −1, Rebel Strength −2, `varga_held`). Let her go (**extreme**: HTX −2, Sentiment +2, `varga_released`). |
+| 3. The Hunt, Varga dead | *The martyr.* Her body is in your hands, and the whole moon knows it. | Send her home to the miners (Sentiment +1, Rebel Strength +1). Let HTX put her on display (HTX +1, Sentiment −3, Rebel Strength −1, flag `martyr_displayed`: the Front will come for it). Bury her quietly where no one will find her (Loyalty −1, nothing else, for now). |
 | 3. The Hunt, failed | *The sealed door.* Varga's people fall back into the old workings and weld the blast door behind them. HTX says the lower levels are off limits. | Let her go for now (`varga_free`). Blast the door and follow her down (**extreme**: Hive Growth +2, HTX −1, `sump_entered`). |
 | 4. Pit Nine | *Payroll.* The town's payroll safe survived the fight. | Keep it (kUC ++, Loyalty +1, Sentiment −2). Return it to the miners (Sentiment +2). Return it to HTX (HTX +1). |
-| Pit Nine, or Into the Sump | *The data core.* {soldier:tech} has it, and HTX asks for it on an open channel. | Hand it over (HTX +2). "Lost in the fighting" (`core_recovered`, `coverup`). Copy it, then hand it over (`core_recovered`, and a roll: HTX may notice). |
+| Pit Nine, or Into the Sump | *The data core.* {soldier:tech} has it, and HTX asks for it on an open channel. | Hand it over (HTX +2). "Lost in the fighting" (`core_recovered`, `coverup`, reveal Hive Growth). Copy it, then hand it over (HTX +1, `core_recovered`, and a roll on Intel: on a failure HTX notices, `htx_suspects`. With `ledger_read` there is no roll, since you know what to look for). |
+| Into the Sump | *What's down there.* The hive is real, and it is waking. | Report it to HTX (HTX +1, flag `htx_tracking`: they send survey teams after you). Tell the miners (Sentiment +2, flag `hive_known`: a common enemy). Keep it to yourselves (Intel +1). |
+| The Relief | *Black Lantern's wounded.* Their medics are pinned down, and their commander is calling for a truce to recover them. | Let them recover their wounded (Black Lantern Strength +1, flag `lantern_mercy`: their commander remembers). Finish it (Black Lantern Strength −2, Loyalty −1, Sentiment −1). Take them prisoner (Intel +2, Black Lantern Strength −1, HTX −1). |
 
 There is no branch screen at the end of the first half. The flags these events
 leave behind decide which threads the second half's pool offers (section 2).
+
+### The second half's events
+
+Every second-half chapter has an event before its battle and one after it,
+written the same way. These are the first release's, one line each. Phase 0
+fills in the rest of the detail.
+
+| Chapter (thread) | Before the battle | After the battle |
+|---|---|---|
+| *Retake the Refinery* (Front; when `refinery_lost`) | *The garrison's survivors* offer to fight. Take them (allies; not offered if `garrison_blamed`). Leave them out: "this is our fight" (Loyalty +1). | *The holdouts* surrender. Hand them to HTX (HTX +1, Sentiment −2, Rebel Strength −1). Let them walk (Sentiment +1, Rebel Strength +1). |
+| *Varga's Revenge* (Front; when `varga_dead` or `varga_free`) | *The challenge.* Her people ask to meet you. Meet them (the Parley scenario, Sentiment +1). Ambush the meeting (the ambush variant on your side, Sentiment −2, Loyalty −1, flag `parley_betrayed`). If `martyr_displayed`: enemy Readiness +2. | *The second chance* (if Varga is alive and the battle was won). Take her (`varga_captured`, then *The cell* again). Let her go (Sentiment +2, `varga_released`). |
+| *The Splinter Cell* (Front; fallback) | *The informant.* Pay him (kUC −, reveal Rebel Strength). Lean on him (Intel +1, Sentiment −1). | *The bomb-maker.* Hand him to HTX (HTX +1, Rebel Strength −1). Turn him (Intel +2, flag `informant`: shows the enemy list in *The Last Redoubt*). |
+| *The Ceasefire* (truce; when `varga_talked`, `varga_released`, `hive_known` or Sentiment 3 or more) | *Terms.* Offer the Deep Contract files (needs `core_recovered`: Sentiment +3, HTX −2). Offer HTX's money (needs HTX Standing 1 or more: kUC −). Promise nothing (a roll on Sentiment). Enemy Readiness +1 for each of `gate_cleared`, `pit9_shelled`, `parley_betrayed`. If `nightshift_shot`, Varga first wants the officer who gave the order: hand over {soldier:command} (the unit leaves, Loyalty −2) or refuse (Sentiment −1). | Won: flag `truce`, Rebel Strength −2. Then *Who keeps the peace.* Report the truce to HTX (HTX −1; `htx_cut_off` if HTX Standing is −2 or lower). Hide it from HTX (`coverup`). Share your supplies with the miners (kUC −, Sentiment +1, Loyalty −1). |
+| *Hold the Line* (truce; fallback) | *Who holds the gap.* Your units hold it (the rebel allies fall back first: Sentiment +1). The rebels hold it (allies take the front, Loyalty +1, Sentiment −1 for every allied unit lost). | *The rebel dead.* Honour them with your own (Sentiment +2, Loyalty −1). Leave it to their own people (nothing). |
+| *Outbreak at Pit Nine* (hive; when Hive Growth 3 or more, or `pit9_shelled`) | *The miners below.* Go in for them (Sentiment +2 if you win). Seal them in (no battle: Hive Growth −2, Sentiment −3, Loyalty −1, flag `miners_sealed`). With `pit9_spared`, the townsfolk guide you in (show the enemy list). | *Samples.* Give HTX a live one (HTX +2, Hive Growth +1, flag `sample_taken`). Burn it all (Hive Growth −1). |
+| *The Shafts* (hive; fallback) | *Charges.* Lay charges as you go (strikes before turn 1, Hive Growth +1). Go quietly (enemy Readiness 0, you pick the role). | *The collapse.* Bring the shafts down (Hive Growth −2, kUC −, HTX −1: it ends the Deep Contract; flag `shafts_collapsed`: fewer tunnel mouths in *Hive Heart*). Leave them open for HTX (HTX +1). |
+| *The Partner* (HTX; when `htx_suspects`, `htx_tracking`, or Black Lantern Strength 4 or more) | *Orders of its own.* Share your plans (Black Lantern Strength +1, Black Lantern as allies). Keep them in the dark (Black Lantern Strength −1, no allies). Plant a tracker on them (Intel +1, a roll on Intel: on a failure `htx_cut_off`). | *Black Lantern's prisoners.* Let them handle it (HTX +1, Sentiment −2, Black Lantern Strength +1). Take the prisoners from them (Sentiment +1, Black Lantern Strength −1, flag `lantern_crossed`). |
+| *Convoy* (HTX; fallback) | *The route.* The fast road (you attack). The mine road (Hive Growth +1, enemy Readiness 0). If `driver_taken`, his crew is waiting on the fast road (enemy Readiness +1). | *The cargo* (the data core if `core_recovered`, otherwise HTX ore). Deliver it as ordered (HTX +1). Skim it (kUC +, Loyalty +1, a roll: HTX may notice, `htx_suspects`). Give it to the miners (Sentiment +2, HTX −2, Rebel Strength +1). |
+| *The Leak* (HTX; when `core_recovered`, `ledger_read` or `sample_taken`) | *The uplink.* Hit it by night (the Strike scenario a Tier down). Talk your way into the HTX office (a roll on Intel; success means no battle). | *Publish.* Broadcast the core (flag `leaked`, `htx_cut_off`, HTX −5, Sentiment +3, Black Lantern Strength +2). If `varga_handed`, her name is in the files too, and the broadcast frees her (`varga_free`). Sell it back to HTX (kUC +++, HTX +1, flag `core_sold`). Give it to Varga (needs `varga_held` or `varga_talked`: Sentiment +2, Rebel Strength +1). |
+| Finales | One event each, before the battle, written for its thread: *The Last Redoubt* (`informant` shows the list), *Hive Heart* (`shafts_collapsed` means fewer tunnel mouths), *The Showdown* (with `lantern_mercy`, their commander offers terms, and the battle can be a Parley; with `lantern_crossed`, their commander is Determined). | The ending (section 2). The epilogue reads `miners_sealed`, `pit9_spared`, `core_sold`, `sample_taken` and Varga's flags. |
+
+### Interlude events
+
+Each interlude between chapters has one event before the hub opens, chosen by
+its conditions. These are where Loyalty, Intel and the slow meters move when
+there is no battle to move them:
+
+| Event | When | Options |
+|---|---|---|
+| *The wake* | Any unit was wiped out in the last battle | Pay the death benefits (kUC −, a sum for each dead unit; Loyalty +1). Don't (Loyalty −1). |
+| *Stand down* | Loyalty 0 or lower | Give the company a week off (no side contracts this interlude; Loyalty +1, Hive Growth +1). Push on (Loyalty −1, and a roll: a unit may leave). |
+| *The audit* | `coverup` is set | HTX's auditors want your logs. Doctor them (a roll on Intel: on a failure `htx_cut_off`). Hand them over (HTX −2, the cover-up is out, and `coverup` is cleared). |
+| *An offer from Black Lantern* | `htx_suspects` or `htx_cut_off` | They want to buy {unit:veteran}'s contract. Sell it (kUC ++, the unit leaves, Black Lantern Strength +1, Loyalty −1). Refuse (nothing). |
+| *Tunnel noises* | Hive Growth 4 or more, and the hive is revealed | Pay a demolition crew to collapse a shaft (kUC −, Hive Growth −1, HTX −1). Leave it (Hive Growth +1). |
+| *Word from the town* | Sentiment 2 or more | A miner brings news. Listen (Intel +1, or reveal Rebel Strength if it is still hidden). |
+
+### What moves each meter, and who reads each flag
+
+Every meter has written events that move it **both ways** in each half, apart
+from Hive Growth's rise with time. Every flag has a setter and at least one
+reader, and the validator checks both (section 6).
+
+| Meter | Raised by | Lowered by |
+|---|---|---|
+| HTX Standing | *The dead at the gate* (process), *The ledger* (give), *The armoury* (leave it), *The cell* (hand over), *The data core*, *Payroll* (to HTX), the gunship, *The holdouts*, *The bomb-maker*, *Samples*, *Convoy*, a Decisive win | *The dead at the gate* (bury), *The survivors*, a failed hunt, *The cell* (hold, release), *The sealed door*, *The ledger* (sell), *The armoury* (take), *Terms*, *Who keeps the peace*, *The collapse*, *The audit*, *Tunnel noises*, *Publish* |
+| Sentiment | *The dead at the gate* (bury), *The night shift* (free), *The ledger* (sell), *The cell* (release), *The schoolhouse* (clear, talk), *Payroll* (return), *The martyr* (send home), *What's down there*, *The challenge*, *Terms*, *Hold the Line*, *Outbreak*, *Publish*, *The handover* (fire first) | *The port master's offer* (ask), *The night shift* (shield), *The schoolhouse* (shell), *Payroll* (keep), *The martyr* (display), *The holdouts*, *The informant* (lean), *The challenge* (ambush), *Outbreak* (seal), *Black Lantern's prisoners*, *Black Lantern's wounded* (finish), low Sentiment each chapter |
+| Loyalty | *The survivors* (take the blame), *Payroll* (keep), *The rota changed* (found), *Retake the Refinery* (leave them out), *Hold the Line*, *Convoy* (skim), *The wake* (pay), *Stand down* | Landfall lost, *The night shift* (shield), *Truck 14* (grab), *The schoolhouse* (shell), *The survivors* (blame), *The martyr* (bury quietly), *The rota changed* (wrong man), *Terms* (hand over), *Who keeps the peace*, *Outbreak* (seal), *The wake* (don't), *Stand down* (push on), *An offer from Black Lantern* |
+| Intel | *Truck 14* (grab), *The ledger* (read), *The armoury* (leave it), *The cell* (listen), *What's down there*, *Black Lantern's wounded* (prisoners), *The informant*, *The bomb-maker*, *The Partner* (tracker), *Word from the town* | Spent: an option can cost Intel (`cost: { intel: 1 }`), and rolls on Intel can be raised by spending a point |
+| Rebel Strength | Depot left alone, *The rota changed*, refinery lost, *The martyr* (send home), *The holdouts* (let walk), *Convoy* (to the miners), *Publish* (to Varga), low Sentiment | *The ledger* (give), *The armoury*, *The cell* (hold), Varga killed, *The martyr* (display), *The holdouts* (hand over), *The bomb-maker*, the truce |
+| Hive Growth | Time from chapter 4, *Kill or capture* (wait), *The sealed door*, *The schoolhouse* (shell), *The miners' map* (blast), *Samples* (give), *Charges*, *Convoy* (mine road), *Stand down*, *Tunnel noises* (leave it), side contracts | *Outbreak* (seal), *Samples* (burn), *The collapse*, *Tunnel noises* (pay) |
+| Black Lantern Strength | Time (+1 a chapter in the second half while `htx_suspects` or `htx_cut_off`), *Black Lantern's wounded* (let them), *The Partner* (share), *Black Lantern's prisoners* (let them), *An offer from Black Lantern*, *Publish* | *Black Lantern's wounded* (finish, prisoners), *The Partner* (keep them in the dark), *Black Lantern's prisoners* (take them), a *Convoy* or *Strike* won against Black Lantern (−1 on a success) |
+
+| Flag | Set by | Read by |
+|---|---|---|
+| `nightshift_freed` | *The night shift* | *The schoolhouse* (talk) |
+| `nightshift_shot` | *The night shift* (a failed roll) | *Terms* |
+| `driver_taken` | *Truck 14* | The chapter 3 force (one fewer transport), *Convoy* |
+| `depot_raided` | Depot Raid won | The chapter 3 force (no mortar) |
+| `garrison_blamed` | *The survivors* | *Retake the Refinery* |
+| `refinery_lost` | The refinery job passed up and lost | The pool (*Retake the Refinery*) |
+| `gate_cleared` | *The dead at the gate* | *The schoolhouse* (talk), *Terms* |
+| `ledger_read` | *The ledger* | *The data core*, *The Leak* |
+| `ledger_sold` | *The ledger* (extreme) | The end of chapter 3 (The Relief), the truce's pressure |
+| `aim_kill`, `aim_capture` | *Kill or capture* | The chapter 3 battle (chapter-local, see below) |
+| `varga_captured` | The hunt won with `aim_capture`, *The second chance* | *The cell* |
+| `varga_held` | *The cell* | *The schoolhouse* (talk), *The Leak*, the truce's pressure |
+| `varga_talked` | *The cell* | *The Ceasefire*, *The Leak* |
+| `varga_handed` | *The cell* | *Publish* |
+| `varga_released` | *The cell*, *The second chance* | The end of chapter 3 (The Relief), *The Ceasefire* |
+| `varga_dead` | The hunt won without `aim_capture` | The Front's forces (the Avengers), *Varga's Revenge*, the epilogue |
+| `varga_free` | *The sealed door*, *Publish* | *Varga's Revenge*, the Front's pressure |
+| `martyr_displayed` | *The martyr* | *Varga's Revenge* |
+| `sump_entered` | *The sealed door* (extreme) | The end of chapter 3 (Into the Sump), the hive's pressure |
+| `hive_known` | *What's down there* | *The Ceasefire* |
+| `htx_tracking` | *The miners' map*, *What's down there* | *The Partner* |
+| `htx_suspects` | The Relief's trigger when the Sump wins, *The data core* (copy, failed), *Convoy* (skim) | *The Partner*, *An offer from Black Lantern*, Black Lantern Strength over time |
+| `htx_cut_off` | *The Relief*, *The audit*, *Who keeps the peace*, *The Partner* (tracker found), *Publish* | Pay, side contracts, *An offer from Black Lantern*, the endings |
+| `lantern_mercy` | *Black Lantern's wounded* | *The Showdown* |
+| `lantern_crossed` | *Black Lantern's prisoners* | *The Showdown* |
+| `pit9_shelled` | *The schoolhouse* | *Outbreak at Pit Nine*, *Terms* |
+| `pit9_spared` | *The schoolhouse* (clear or talk) | *Outbreak at Pit Nine*, the epilogue |
+| `core_recovered` | *The data core* | *Terms*, *Convoy*, *The Leak* |
+| `coverup` | *The data core*, *Who keeps the peace* | *The audit* |
+| `parley_betrayed` | *The challenge* | *Terms* |
+| `informant` | *The bomb-maker* | *The Last Redoubt* |
+| `miners_sealed` | *Outbreak at Pit Nine* | The epilogue |
+| `sample_taken` | *Samples* | *The Leak*, the epilogue |
+| `shafts_collapsed` | *The collapse* | *Hive Heart* |
+| `truce` | *The Ceasefire* won | The finales (allies), the endings |
+| `leaked` | *Publish* | The endings, side contracts' pay |
+| `core_sold` | *Publish* | The epilogue |
+
+**Chapter-local flags**, such as `aim_kill` and `aim_capture`, carry
+`local: true`. They are cleared when the chapter ends, and they only have to
+be read inside it.
 
 ### Success and failure
 
@@ -426,8 +526,9 @@ range can be balanced.
 ### Flags
 
 Named true or false facts: `varga_dead`, `varga_held`, `refinery_lost`,
-`core_recovered`, `coverup`, `civilians_evacuated`, and so on. Conditions read
-them. The ending table is mostly flags.
+`core_recovered`, `coverup`, `pit9_spared`, and so on. Conditions read
+them. The ending table is mostly flags. Section 3 lists every flag in the
+first release, with what sets it and what reads it.
 
 ### Growth, and scaling to the company
 
@@ -707,7 +808,9 @@ weights, so the story file decides what drives each thread.
 **Effects:** `{ meter, add|set }`, `{ flag, set }`, `{ kUC }`, `{ exp, to: 'all'|'fielded' }`,
 `{ tp }`, `{ recruit: key, free }`, `{ upgrade: 'random' }`, `{ leave: n }`
 (desertion), `{ next: {...} }` (a change to the next battle or event only),
-`{ journal: 'text' }`. Each effect is one small function in the story engine, and
+`{ journal: 'text' }`. An option can also carry a `cost`, such as
+`cost: { intel: 1 }` or `cost: { kUC: 2 }`, which is paid when it is chosen and
+makes it unavailable when it can't be paid. Each effect is one small function in the story engine, and
 the validator knows every name.
 
 Text can show state, for example `{name}`, `{enemy.front}` or
@@ -852,7 +955,8 @@ game keeps it from being broken by accident.
   - every battle has a failure branch;
   - no state reachable by a walk leaves an event with zero options;
   - no event id is used twice, and no two events in the same half offer the same set of battle levers (the same set of state levers is a warning);
-  - every flag an event sets is read by something later (a later event, a branch, an ending);
+  - every flag an event sets is read by something later (a later event, a branch, a force, an ending), and every flag read is set somewhere; a `local` flag is read inside its own chapter;
+  - every meter can be raised and lowered by written events in each half (Hive Growth's rise with time aside), and every meter is read by something;
   - every path ends at an ending, every ending can be reached, and the last ending has no condition;
   - in every reachable state, every thread the pool can offer has an eligible chapter (its fallback, if nothing else);
   - in the first half, the one-offs are reached only through options marked `extreme: true`, or the HTX Standing floor;
@@ -864,7 +968,10 @@ game keeps it from being broken by accident.
   ending is reached, the range of each meter, and the chapters nobody reaches.
   It also reports how often each one-off comes up (target 5 to 15% each), how
   often Scorched Earth happens (target under 15%), and how often a finale comes
-  with its thread's arc played. This is the balance tool for the writing.
+  with its thread's arc played, and, for every meter, its spread at the end of
+  each half and the events that moved it most. A meter that hardly moves, or a
+  flag that is almost never set, needs more writing. This is the balance tool
+  for the writing.
 - **No test plays a battle.** The story's tests never run the AI against itself.
   A battle is stood in for by a **made-up report**: a grade is drawn, and a
   report in `battleReport`'s shape is written to match it. Casualties, kills and
@@ -894,7 +1001,9 @@ and every chapter in the second half's pool with its thread and conditions: each
 event's situation and options in a line, each battle's scenario, enemy and Tier,
 and the meters and flags each one moves. That includes the extreme choices and
 the branch at the end of chapter 3 that reads them, the catch-all ending, and
-which finale each truce flag changes.
+which finale each truce flag changes. Keep section 3's two tables (what moves
+each meter, and who reads each flag) up to date as events are added, and fill
+any gap the validator finds with a written event, not a generic one.
 Write no prose yet. Run it through the validator as soon as phase 1 exists.
 
 ### Phase 1: the story engine (Node only)
