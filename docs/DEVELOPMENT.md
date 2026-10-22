@@ -58,6 +58,11 @@ src/
     offtable.js      the other forces' battles, fought AI against AI on a table nobody sees
     protocol.js      message names and legal settings, shared by browser and server
 
+  story/             story mode (docs/story-mode-plan.md): runs in Node as well as a browser
+    story.js         the engine: a story's graph, its meters and flags on the dossier, events and
+                     their effects, battles graded, the second half's pool, endings, checkpoints, ironman
+    validate.js      a story checked before anyone plays it, and the Monte Carlo walk over it
+
   view/              the browser
     game.js          the board: its state, and the modules below wired together
     view.js          the camera and zoom, the army colours, the header
@@ -149,6 +154,7 @@ npm run test:all              # everything
 node scripts/test.js camp     # any test whose name contains "camp"
 node scripts/test.js -j 2 -v  # two at a time, printing every test's output
 node scripts/test.js --speed 1 quick   # the browser tests at the real pace
+npm run story:sim             # every story checked, then walked 10,000 times (no battles)
 ```
 
 To keep a run short (on four cores: the quick set about 7½ minutes, everything
@@ -286,6 +292,9 @@ rebelcamp.js       the Rebel campaign
 bugcamp.js         the Space Bug campaign
 xenocamp.js        the Xenotripod campaign
 lowcamp.js         campaign fixes: income dice, Surrounded but Steady, the Rite of Rage
+story.js           story mode's engine: conditions, effects, grading, the pool and the finale,
+                   saving, checkpoints and ironman, on a small test story (test/story-fixture.js)
+storygraph.js      the story validator catches each way of writing a story wrong, and the walk
 ```
 
 **The code itself**
