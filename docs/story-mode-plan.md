@@ -172,6 +172,13 @@ How the chapters are chosen:
 - **Each pool chapter is played at most once.** Every thread has a fallback
   chapter, so there is always something to offer. The validator checks this
   (section 6).
+- **Threads are short arcs.** In the first release, each thread is a
+  two-chapter arc plus its finale, so any thread can finish in the three picks
+  there are. Longer arcs wait for a longer release.
+- **The number of picks is in the story data** (`picks: 3`). Play-testing, and
+  how often the Monte Carlo walk sees each thread reach its finale, decide
+  whether to raise it to 5. That makes the story 10 chapters, with no engine
+  work.
 
 Where the company stands is not one choice either. It comes from events, as
 flags: `truce` (from *The Ceasefire*), `leaked` (from *The Leak*), and
@@ -331,10 +338,11 @@ Each battle's enemy force is written for that battle, in three parts:
   the first two come.
 - **Filler, to fit the player's company:** the player founds their own
   company, so the story can't know in advance how big it is. The battle node
-  sets the Battle Tier and PL relative to the company (`tier: '+0'`). After the
+  sets the Battle Tier and PL relative to the company (`tier: 'max'`). After the
   core, optional units and changes, the force is topped up from a `fill` list
   until it reaches a share of that battle's composition points (`to: 1.0` is an
-  even fight). A meter can move the share. This is what keeps a written force
+  even fight), plus an allowance for the company's experience (below). A meter
+  can move the share. This is what keeps a written force
   fair against a company built in any way.
 - **Changes:** what events and flags do to the force. Add or remove a unit,
   swap one unit for another, give a unit an honour or an upgrade, Suppression
@@ -369,6 +377,63 @@ range can be balanced.
 Named true or false facts: `varga_dead`, `varga_held`, `refinery_lost`,
 `core_recovered`, `coverup`, `civilians_evacuated`, and so on. Conditions read
 them. The ending table is mostly flags.
+
+### Growth, and scaling to the company
+
+**The target:** by the finale the company is at **Company Tier III**, and
+ideally can field a **Tier III army at Priority Level 2**. The story gets it
+there with the campaign's own economy and promotion rules (pp. 84-86) unchanged.
+Company Tier II costs 1 kUC banked and Tier III costs 20, each with a legal army
+at every Tier up to it.
+
+| By the end of | Company Tier | Its battles, at most |
+|---|---|---|
+| Chapter 2 | II within reach | Tier I to II, PL 1 |
+| Chapter 4 (the first half) | II | Tier II, PL 1 |
+| Chapter 6 or 7 | III | Tier II to III, PL 1 |
+| The finale | III | Tier III, PL 2 if the company can field it |
+
+These are targets for tuning. The playthrough test measures them (section 6).
+
+How the story keeps a company on that curve:
+- **Pay.** Story battles use the campaign's payment rolls, plus a chapter bonus
+  written into each battle node and multiplied by HTX Standing. The bonus is the
+  main thing to tune.
+- **Rewards in kind.** Events can give a free unit, an upgrade or salvage. A
+  supply drop gives what the company is short of for the next Tier, read from
+  `fieldReport`'s fault ("no Tier III unit to lead it").
+- **Catching up, quietly.** Each interlude works out how far the company is from
+  the curve, in kUC towards the next Tier and in what it can field. When it is
+  behind, the interlude offers more side contracts, and better-paid ones. When it
+  is ahead, it offers fewer. Nothing is ever taken away.
+- **Cut off from HTX.** Once HTX has stopped paying, side contracts pay more,
+  so the curve can still be reached.
+- **No guarantee.** A company that keeps losing can fall behind. Scaling (below)
+  keeps its battles fair, and *Broken Company* is the floor.
+
+**Scaling battles to the company.** A battle node never gives a fixed Battle
+Tier or Priority Level. It gives them relative to what the company can field
+when the battle comes (`fieldableTier` and `levelsFor`, in `camp-contract.js`):
+- **Tier:** `tier: 'max'` or `'max-1'`, with `min` and `max` where a chapter
+  must keep its character. Landfall is always Tier I. A raid by a commando can
+  stay small.
+- **Priority Level:** `pl: 1` or `pl: 'max'`. The finale is `tier: 'max', pl: 'max'`,
+  so a company that can field PL 2 fights its finale at PL 2.
+- **The scenario** reads the Tier and PL: the table (PL 3's 6′ × 4′), how many
+  objectives there are, how many waves Hive Heart sends.
+
+**Scaling enemy forces to the company** happens in two ways:
+- **By Tier.** The core and the optional units can be written for each Tier
+  (`byTier: { 1: […], 2: […], 3: […] }`), or upgraded by swaps
+  (`{ atTier: 3, swap: ['reb_militia', 'reb_veterans'] }`). A Tier III battle
+  against the Front then looks like the Front at its best, not a pile of
+  militia.
+- **By points, and by experience.** The filler tops the force up to a share of
+  the battle's composition points (above). On top of that is an allowance for
+  how good the fielded company is: honours, upgrades and EXP counted as extra
+  points, at a value to be tuned in play-testing. A veteran company meets a
+  bigger force than a green one at the same Tier. The allowance is capped (say
+  +25%), so getting better always pays.
 
 ### Jobs passed up
 
@@ -511,7 +576,7 @@ PMCStory.register({
         { id: 'wait', text: 'Wait for her to move.',
           battle: { role: 'choose' }, effects: [{ meter: 'hive', add: 1 }] }
       ], next: 'c3.battle' },
-      { id: 'c3.battle', type: 'battle', enemy: { side: 'front', core: [/* … */] }, scenario: 'secure', tier: '+0', pl: 1,
+      { id: 'c3.battle', type: 'battle', enemy: { side: 'front', core: [/* … */] }, scenario: 'secure', tier: 'max', pl: 1,
         planet: 'industrial', tactics: 'guerillas',
         on: {
           success: [{ if: { flag: 'aim_capture' }, effects: [{ flag: 'varga_held', set: true }], next: 'c3.held' },
@@ -684,6 +749,12 @@ game keeps it from being broken by accident.
 - **One full playthrough in `test:all`:** every battle played as a paper battle
   (`offtable.playNow`), through the real aftermath. It checks that the company
   stays legal from start to finish, and that every enemy force can be set up and played.
+- **The growth curve** (`npm run story:curve`): the full playthrough over many
+  seeds. Between chapters, the company is run by the rivals' spending logic
+  (`developRival`), so it recruits and promotes as a sensible player would. It
+  reports the Company Tier, and the best Tier and PL the company can field, at
+  each chapter. The target is a median company at Tier III, able to field PL 2,
+  by the finale.
 - **A browser test:** the screens from a new story to the end of chapter 1.
 
 ---
@@ -704,7 +775,8 @@ exercises every node type.
 
 ### Phase 2: the battle hooks
 `levers.js`: every battle lever (enemy list shown, role, strikes, starting
-Suppression, scenario swap, commando, allies, skip) as a change to `cfg`. Readiness. The prelude step. Building
+Suppression, scenario swap, commando, allies, skip) as a change to `cfg`. Battle
+Tier and PL relative to what the company can field. Readiness. The prelude step. Building
 enemy forces from the battle's core, optional units and changes. A spike on allies through side C. Tests for each
 hook, through the engine.
 
@@ -725,7 +797,8 @@ phase 4 is still being play-tested.
 ### Phase 6: the second half and the endings
 The pool of chapters for every thread, threads' pressure and how chapters are
 offered, the finales, the endings and their epilogues: 8 chapters a playthrough
-in all. Balance with the Monte Carlo
+in all. Tune pay, rewards and the catch-up against the growth curve, and the
+enemy allowance against play-testing. Balance with the Monte Carlo
 walk and the paper-battle playthrough.
 
 ### Phase 7: polish
