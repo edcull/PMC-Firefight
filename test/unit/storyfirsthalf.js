@@ -111,6 +111,38 @@ dc.chapters.forEach((ch) => (ch.nodes || []).filter((n) => n.type === 'battle').
   ok(n.id + ' \u2014 ' + n.name + ': ' + note, same && named && laid, (same ? '' : 'not the same twice; ') + (named ? '' : 'named ' + a.st.scen.name + '; ') + (laid ? '' : 'the map not laid as written'));
 }));
 
+console.log('\nThe enemy, as much as the company knows');
+/* A new company knows little: word of the enemy, how big and what kind. The
+   Intel meter, the locals, an informant and the right choices tell it more. */
+function known(node, opt, flags, meters) {
+  const c = at(campaign(), node, flags, meters);
+  c.companies.A.kUC = 5;
+  if (opt) S.choose(c, opt);
+  const spec = S.battleSpec(c), co = c.companies.A;
+  const tier = L.tierFor(co, { tier: spec.tier, minTier: spec.minTier, maxTier: spec.maxTier }), pl = L.plFor(co, tier, spec.levers.pl || spec.pl);
+  const f = L.buildForce(spec.enemy, { campaign: c, tier, pl, allowance: L.allowance(co), readiness: spec.levers.readiness || 0 });
+  return L.describeForce(f, S.intel(c, spec), dc.sides[spec.enemy.side].faction);
+}
+const word = known('c1.portmaster', 'take');
+ok('a new company: only word of the enemy — ' + word.word, word.level === 0 && word.items.length === 0 && /^Word is: a (small|sizeable|large|very large) force/.test(word.word));
+const asked = known('c1.portmaster', 'ask');
+ok('asking the dockers: an outline — ' + asked.items.map((i) => i.name).join(' '), asked.level === 1 && asked.items.length > 0 && asked.items.every((i) => !i.tier));
+const net = known('c1.portmaster', 'take', {}, { intel: 3 });
+ok('Intel 3 gives an outline of every enemy', net.level === 1);
+const paid = known('c2d.truck', 'pay');
+ok('the guard rota bought: every unit, with its Tier', paid.level === 2 && paid.items.length > 0 && paid.items.every((i) => i.tier));
+const both = known('c1.portmaster', 'ask', {}, { intel: 3 });
+ok('intel adds up: the dockers and the network give the full list', both.level === 2);
+const town = known('c1.portmaster', 'take', {}, { sentiment: 3 });
+ok('the locals’ goodwill (Sentiment 3) gives an outline', town.level === 1);
+const capped = known('c2d.truck', 'pay', {}, { intel: 6, sentiment: 3 });
+ok('never more than the full list', capped.level === 2);
+const vargaOutline = known('c3.killorcapture', 'snatch', {}, { intel: 3 });
+ok('an outline names who leads them: ' + vargaOutline.items.map((i) => i.name).join(' '), vargaOutline.items.some((i) => /is with them|leads them/.test(i.name)));
+const hiveWord = (() => { const c = campaign(); c.story.chapter = 'sump'; c.story.node = 'sump.battle'; const spec = S.battleSpec(c);
+  const f = L.buildForce(spec.enemy, { campaign: c, tier: 1, pl: 1, allowance: 0 }); return L.describeForce(f, S.intel(c, spec), 'bugs'); })();
+ok('the hive is a swarm, not a force: ' + hiveWord.word, hiveWord.level === 0 && /swarm/.test(hiveWord.word));
+
 console.log('\nThe first half, played through with made-up results');
 const N = 40, tally = { done: 0, broken: 0, sump: 0, relief: 0, tierAt4: {}, kUC: [], battles: [], units: [] };
 for (let w = 0; w < N; w++) {

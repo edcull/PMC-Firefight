@@ -89,7 +89,7 @@ ok('...and the journal says it was skipped', st(c).journal.some((j) => j.node ==
 c = campaign();
 S.proceed(c);
 S.choose(c, 'gunship');
-ok('the gunship: HTX up, and the battle node shows the enemy because aim_kill is set', st(c).meters.htx === 2 && S.battleSpec(c).levers.showEnemy === true && S.battleSpec(c).levers.strikes === 'D3');
+ok('the gunship: HTX up, and the battle node shows the enemy because aim_kill is set', st(c).meters.htx === 2 && S.battleSpec(c).levers.intel === 2 && S.intel(c) === 2 && S.battleSpec(c).levers.strikes === 'D3');
 c = campaign();
 st(c).meters.htx = 0;
 S.proceed(c);

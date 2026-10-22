@@ -21,7 +21,7 @@
 
   var EFFECT_PARAMS = { add: 1, set: 1, local: 1, to: 1, free: 1, name: 1, pass: 1, fail: 1, else: 1, is: 1 };
   var FAILURE_GRADES = ['draw', 'defeat', 'rout'];
-  var LEVERS = ['showEnemy', 'role', 'edge', 'strikes', 'suppressOwn', 'readiness', 'scenario', 'variant', 'tier', 'pl',
+  var LEVERS = ['intel', 'role', 'edge', 'strikes', 'suppressOwn', 'readiness', 'scenario', 'variant', 'tier', 'pl',
     'allies', 'turns', 'terrain', 'planet', 'world', 'skip', 'tactics', 'name', 'map'];
 
   function check(def, opts) {
@@ -298,6 +298,11 @@
     /* ---- the story's own rules ---- */
     arr(def.everyChapter).forEach(function (e, i) { readEffects(e, 'everyChapter[' + i + ']', { half: 0, time: true }); });
     arr(def.everyBattle).forEach(function (e, i) { readEffects(e, 'everyBattle[' + i + ']', { half: 0, time: true }); });
+    // what the company knows of the enemy before a battle: { if, add, side }
+    arr(def.intel).forEach(function (r, i) {
+      readCond(r.if, 'intel[' + i + ']', 'table');
+      if (r.side && !(def.sides || {})[r.side]) err('intel[' + i + ']: no side "' + r.side + '"');
+    });
     Object.keys(def.threads || {}).forEach(function (tid) {
       var t = def.threads[tid];
       arr(t.pressure).forEach(function (w) {

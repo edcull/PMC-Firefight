@@ -30,7 +30,7 @@ module.exports = S.register({
       ], next: 'c1.battle' },
       { id: 'c1.battle', type: 'battle', scenario: 'find', tier: 'max', pl: 1,
         enemy: { side: 'front', faction: 'rebel', core: ['rmilitia', 'rciv'], optional: { meter: 'htx', per: 2, units: ['rinsurgents'] } },
-        adjust: [{ if: { flag: 'aim_kill' }, levers: { showEnemy: true } }],
+        adjust: [{ if: { flag: 'aim_kill' }, levers: { intel: 2 } }],
         on: {
           success: [{ if: { flag: 'aim_capture' }, effects: [{ flag: 'captured' }], next: 'c1.debrief' },
                     { effects: [{ flag: 'dead' }], next: 'c1.debrief' }],

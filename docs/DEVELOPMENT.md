@@ -66,7 +66,8 @@ src/
                      their effects, battles graded, the second half's pool, endings, checkpoints, ironman
     validate.js      a story checked before anyone plays it, and the Monte Carlo walk over it
     levers.js        a story battle set up: its Tier and PL for the company, the enemy force built from
-                     what the story wrote, the allies, Readiness, and the engine's cfg
+                     what the story wrote, the allies, Readiness, and the engine's cfg; the enemy told
+                     at the intel the company has (word of them, an outline, the full list)
     deep-contract.js Deep Contract, the first story, as data
     scenarios-story.js  the story's own scenarios (Hive Heart, Convoy, Breakout, Hold the Line,
                      Strike, Parley), loaded with the engine; never offered outside a story

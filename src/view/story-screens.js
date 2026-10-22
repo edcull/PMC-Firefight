@@ -153,19 +153,16 @@
       if (spec.variant && spec.variant.target) notes.push('The target: ' + spec.variant.target + (spec.variant.capture ? ', to be taken alive.' : '.'));
       if (spec.variant && spec.variant.ambush) notes.push(spec.variant.ambush === 'player' ? 'You spring the ambush.' : 'You are walking into an ambush.');
       if (notes.length) h += '<ul class="story-notes">' + notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';
-      if (seesEnemy(spec)) {
-        var f = L().buildForce(spec.enemy, { campaign: E.camp, tier: tier, pl: pl, allowance: L().allowance(co), readiness: spec.levers.readiness || 0 });
-        h += '<div class="story-enemy"><small>The enemy, as you know them</small><ul>' + f.picks.map(function (p) {
-          var pr = R.profile(p.key);
-          return '<li>' + esc(p.name || (pr ? pr.name : p.key)) + (pr ? ' <span class="ct">' + ROMAN[pr.tier] + '</span>' : '') + '</li>';
-        }).join('') + '</ul></div>';
-      } else h += '<p class="hint">You don’t know what they have.</p>';
+      /* The enemy, as much as the company knows: word of them, an outline, or every unit. */
+      var f = L().buildForce(spec.enemy, { campaign: E.camp, tier: tier, pl: pl, allowance: L().allowance(co), readiness: spec.levers.readiness || 0 });
+      var known = L().describeForce(f, S().intel(E.camp, spec), side.faction || (spec.enemy && spec.enemy.faction));
+      h += '<div class="story-enemy intel-' + known.level + '"><small>The enemy, as you know them</small><p>' + esc(known.word) + '</p>' +
+        (known.items.length ? '<ul>' + known.items.map(function (it) {
+          return '<li>' + esc(it.name) + (it.tier ? ' <span class="ct">' + ROMAN[it.tier] + '</span>' : '') + '</li>';
+        }).join('') + '</ul>' : '') +
+        (known.level < 2 ? '<small class="hint">Intel, the locals and the right questions tell you more.</small>' : '') + '</div>';
       h += '<div class="story-go"><button class="start" data-go="storymuster">Choose your force</button></div></div>';
       return h;
-    }
-    function seesEnemy(spec) {
-      var d = def();
-      return !!(spec.levers.showEnemy || (d.showEnemyIf && S().test(S().ctxOf(E.camp), d.showEnemyIf)));
     }
 
     function poolView(v) {

@@ -743,10 +743,26 @@
     return pick;
   }
 
+  /* How much the company knows of the enemy it is about to fight: 0, word of
+     them (how many, what kind); 1, an outline (roughly how many of each, and
+     who leads them); 2, the full list. The story's `intel` rules ({ if, add,
+     side }: the Intel meter, the locals' goodwill, a turned informant) and the
+     battle's own `intel` lever (a scout's report, a bribe) add up. */
+  function intel(campaign, spec) {
+    var def = storyOf(campaign);
+    spec = spec || battleSpec(campaign);
+    if (!def || !spec) return 0;
+    var ctx = ctxOf(campaign), side = spec.enemy && spec.enemy.side, n = (spec.levers && spec.levers.intel) || 0;
+    arr(def.intel).forEach(function (r) {
+      if ((!r.side || r.side === side) && (!r.if || test(ctx, r.if))) n += r.add == null ? 1 : r.add;
+    });
+    return Math.max(0, Math.min(2, n));
+  }
+
   root.PMCStory = {
     register: register, get: get, list: list, resolve: resolve,
     active: active, begin: begin, view: view, choose: choose, proceed: proceed,
-    battleSpec: battleSpec, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
+    battleSpec: battleSpec, intel: intel, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
     test: test, apply: apply, roll: roll, pressure: pressure, finaleChapter: finaleChapter,
     endingFor: endingFor, broken: broken, breakCompany: breakCompany,
     checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf,

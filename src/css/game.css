@@ -2490,6 +2490,8 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .story-notes { margin: 0 0 10px; padding-left: 18px; color: var(--ink-dim); }
 .story-enemy small { color: var(--ink-dim); }
 .story-enemy ul { margin: 4px 0 10px; padding-left: 18px; }
+.story-enemy p { margin: 4px 0 6px; }
+.story-enemy .hint { display: block; font-style: italic; }
 .story-roster { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
 .story-unit { padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink-dim); font: inherit; cursor: pointer; }
 .story-unit.on { border-color: var(--alpha); color: var(--ink); background: var(--on-bg); }

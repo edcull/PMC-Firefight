@@ -12,6 +12,8 @@
      battle's composition points, with an allowance for how good the company is;
    - the allies, built the same way, at the end of side A's list;
    - Readiness, the prelude (strikes, Suppression), the role, the variant.
+   - the enemy as the briefing tells it: word of them, an outline, or every
+     unit, by what the company knows (story.js `intel`).
 
    Like story.js it runs in Node, and nothing here plays the battle. */
 (function (root) {
@@ -160,6 +162,58 @@
     return { picks: picks, tactics: tactics, readiness: rd };
   }
 
+  /* ================= the enemy as the company knows them ================= */
+
+  /* The enemy force told at the intel the company has (story.js `intel`):
+     0, word of them: how big, and what kind; 1, an outline: roughly how many
+     of each kind, and who is with them by name; 2, every unit. Returns
+     { level, word, items }: a line, and a list (empty at 0). */
+  var KINDS = {
+    troops: { rebel: 'bands of fighters', bugs: 'broods', pmc: 'squads', one: { rebel: 'band of fighters', bugs: 'brood', pmc: 'squad' } },
+    support: { rebel: 'heavy weapons', bugs: 'spitters and spore throwers', pmc: 'support teams', one: { rebel: 'heavy weapon', bugs: 'spitter', pmc: 'support team' } },
+    vehicle: { rebel: 'vehicles', bugs: 'great beasts', pmc: 'vehicles', one: { rebel: 'vehicle', bugs: 'great beast', pmc: 'vehicle' } },
+    air: { rebel: 'aircraft', bugs: 'fliers', pmc: 'aircraft', one: { rebel: 'aircraft', bugs: 'flier', pmc: 'aircraft' } }
+  };
+  var ORDER = ['troops', 'support', 'vehicle', 'air'];
+  function kindOf(key) {
+    var p = R().profile(key);
+    if (!p) return 'troops';
+    if (p.cls === 'aircraft' || /Flying/.test(p.group || '')) return 'air';
+    if (p.cls === 'vehicle') return 'vehicle';
+    if (p.range >= 30 || /support|artillery|Spore|mortar/i.test(p.group || '')) return 'support';
+    return 'troops';
+  }
+  function about(n) { return n === 1 ? 'one' : n <= 3 ? 'two or three' : n <= 5 ? 'four or five' : 'half a dozen or more'; }
+  function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
+  function describeForce(force, level, faction) {
+    var picks = (force && force.picks) || [], fac = KINDS.troops[faction] ? faction : 'rebel';
+    var lead = function (p) { return C() && C().isLeaderKey(p.key); };
+    if (level >= 2) {
+      return { level: 2, word: 'You know what they have, to the last squad.', items: picks.map(function (p) {
+        var pr = R().profile(p.key);
+        return { name: p.name || (pr ? pr.name : p.key), tier: pr ? pr.tier : null };
+      }) };
+    }
+    var count = {};
+    picks.forEach(function (p) { if (!lead(p) && !p.name) { var k = kindOf(p.key); count[k] = (count[k] || 0) + 1; } });
+    var n = picks.length, swarm = fac === 'bugs';
+    var size = n <= 3 ? 'a small' : n <= 6 ? 'a sizeable' : n <= 9 ? 'a large' : 'a very large';
+    if (level < 1) {
+      var bits = [size + (swarm ? ' swarm' : ' force')];
+      bits.push(count.vehicle ? 'with ' + KINDS.vehicle[fac] : swarm ? 'all legs and jaws' : 'mostly on foot');
+      if (count.support) bits.push(KINDS.support[fac] + ' among them');
+      if (count.air) bits.push('something in the air');
+      return { level: 0, word: 'Word is: ' + bits.join(', ') + '. Nothing more.', items: [] };
+    }
+    var items = [];
+    picks.forEach(function (p) { if (p.name) items.push({ name: p.name + ' is with them.' }); });
+    if (picks.some(function (p) { return lead(p) && !p.name; })) items.push({ name: swarm ? 'Something leads them.' : 'A commander leads them.' });
+    ORDER.forEach(function (k) {
+      if (count[k]) items.push({ name: cap(about(count[k])) + ' ' + (count[k] === 1 ? KINDS[k].one[fac] : KINDS[k][fac]) + '.' });
+    });
+    return { level: 1, word: 'You have their outline: ' + size + (swarm ? ' swarm' : ' force') + '.', items: items };
+  }
+
   /* ================= the cfg ================= */
 
   var ROLE = { attacker: 'A', defender: 'B' };
@@ -235,7 +289,7 @@
         ambush: ambush,
         readiness: rd,
         barricades: rd >= 1 ? { B: 2 * pl } : null,
-        showEnemy: !!lv.showEnemy,
+        intel: S.intel(campaign, spec),
         edge: lv.edge || null,
         turns: lv.turns || (variant && variant.turns) || null,
         // the story scenarios' waves: so many a turn, by a meter (a battle's `waves`: base + 1 for each `per` points)
@@ -248,7 +302,7 @@
 
   root.PMCStoryLevers = {
     levelsFor: levelsFor, maxTier: maxTier, tierFor: tierFor, plFor: plFor,
-    buildForce: buildForce, allowance: allowance, fit: fit, toCfg: toCfg
+    buildForce: buildForce, describeForce: describeForce, kindOf: kindOf, allowance: allowance, fit: fit, toCfg: toCfg
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCStoryLevers;
 })(typeof window !== 'undefined' ? window : global);

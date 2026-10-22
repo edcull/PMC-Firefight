@@ -76,6 +76,7 @@ async function cards(p) {
   await p.screenshot({ path: path.join(SHOTS, 'story-briefing.png') });
   txt = await body(p);
   check('asking what they know: the mission’s briefing: its name, its ground, the story of it, then the rules and the enemy', /Hold the Port/i.test(txt) && /starport/i.test(txt) && /Front is coming through the terminal/.test(txt) && /Secure and control/i.test(txt) && /Battle Tier I/.test(txt) && /The enemy, as you know them/i.test(txt), txt.slice(0, 300));
+  check('...and, having asked, an outline of the enemy (not every unit)', /You have their outline/.test(txt) && /bands of fighters/.test(txt) && !/Word is:/.test(txt), txt.slice(txt.indexOf('The enemy'), txt.indexOf('The enemy') + 200));
   await go(p, '[data-go="storymuster"]');
   txt = await body(p);
   check('the muster picks a legal force for the battle', /A legal army/.test(txt) && await p.evaluate(() => !document.querySelector('[data-go="storyfight"]').disabled), txt.slice(0, 200));

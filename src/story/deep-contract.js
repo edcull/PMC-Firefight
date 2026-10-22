@@ -103,7 +103,18 @@
     id: 'deep-contract', name: 'Deep Contract', version: 1, length: 8,
     blurb: 'Kessler\'s Reach is a mining moon, and its miners have risen. HTX hires your company to restore order, quickly and quietly. HTX is hiding why they rose.',
     // the locals talk: with their trust, you know what you face before a battle
-    showEnemyIf: { meter: 'sentiment', gte: 3 },
+    /* What the company knows of the enemy before a battle (story.js `intel`):
+       word of them, an outline, or the full list. The Intel meter's network,
+       the locals' goodwill, an informant inside the Front, and knowing what
+       lives in the Sump each add a level; a battle's own `intel` lever (a
+       scout's report, a bribe, a guide) adds the rest. */
+    intel: [
+      { if: { meter: 'intel', gte: 3 }, add: 1 },
+      { if: { meter: 'intel', gte: 6 }, add: 1 },
+      { if: { meter: 'sentiment', gte: 3 }, add: 1 },
+      { if: { flag: 'informant' }, add: 1, side: 'front' },
+      { if: { flag: 'hive_known' }, add: 1, side: 'hive' }
+    ],
     // what the journal says the flags mean, as prose (a flag is never shown as a flag)
     flagText: {
       refinery_lost: 'The Front holds the refinery.', depot_raided: 'The Front\'s depot went up.',
@@ -119,9 +130,9 @@
     start: { faction: 'pmc', found: 'standard' },
     meters: {
       htx: { start: 1, shown: true, name: 'HTX Standing', uses: ['pay', 'strikes', 'supply'], thresholds: [{ gte: 2 }, { lte: -3 }] },
-      sentiment: { start: 0, name: 'Sentiment', uses: ['showEnemy', 'readiness'], thresholds: [{ gte: 3 }, { lte: -2 }, { lte: -3 }] },
+      sentiment: { start: 0, name: 'Sentiment', uses: ['intel', 'readiness'], thresholds: [{ gte: 3 }, { lte: -2 }, { lte: -3 }] },
       loyalty: { start: 1, shown: true, name: 'Loyalty', uses: ['reroll', 'suppression'], thresholds: [{ gte: 2 }, { lte: 0 }, { lte: -2 }] },
-      intel: { start: 1, min: 0, max: 6, shown: true, name: 'Intel', uses: ['reveal'], thresholds: [{ gte: 4 }, { gte: 6 }] },
+      intel: { start: 1, min: 0, max: 6, shown: true, name: 'Intel', uses: ['reveal', 'intel'], thresholds: [{ gte: 3 }, { gte: 4 }, { gte: 6 }] },
       rebels: { start: 5, min: 0, max: 10, name: 'Rebel Strength', uses: ['force'], thresholds: [{ lte: 0 }, { gte: 7 }] },
       hive: { start: 0, min: 0, max: 10, name: 'Hive Growth', uses: ['force', 'tunnel'], twoWay: [2], thresholds: [{ gte: 3 }, { gte: 5 }, { gte: 8 }] },
       lantern: { start: 2, min: 0, max: 10, name: 'Black Lantern Strength', uses: ['force'], thresholds: [{ gte: 4 }, { gte: 7 }] }
@@ -164,7 +175,7 @@
         { id: 'c1.portmaster', type: 'event', title: "The port master's offer", text: 'The port\'s security chief offers his men, if HTX pays them.', options: [
           { id: 'take', text: 'Take them.', battle: { allies: { side: 'port', faction: 'pmc', core: ['enforcers', 'enforcers'] } }, effects: [{ kUC: -1 }] },
           { id: 'send', text: 'Send them home.' },
-          { id: 'ask', text: 'Ask what they know, and not nicely.', battle: { showEnemy: true }, effects: [{ meter: 'sentiment', add: -1 }] }
+          { id: 'ask', text: 'Ask what they know, and not nicely.', battle: { intel: 1 }, effects: [{ meter: 'sentiment', add: -1 }] }
         ], next: 'c1.battle' },
         { id: 'c1.battle', type: 'battle', map: 'starport', scenario: 'secure', tier: 1, pl: 1, planet: 'industrial',
           // the first battle, lighter than most: the Front's strike on the port, not its army
@@ -222,8 +233,8 @@
         ] },
 
         { id: 'c2d.truck', type: 'event', title: 'Truck 14', text: 'A driver will sell you the depot\'s guard rota.', options: [
-          { id: 'pay', text: 'Pay him.', cost: { kUC: 1 }, why: 'You can\'t pay him.', battle: { showEnemy: true } },
-          { id: 'grab', text: 'Grab him and question him.', effects: [{ meter: 'intel', add: 1 }, { meter: 'loyalty', add: -1 }, { flag: 'driver_taken' }] },
+          { id: 'pay', text: 'Pay him.', cost: { kUC: 1 }, why: 'You can\'t pay him.', battle: { intel: 2 } },
+          { id: 'grab', text: 'Grab him and question him.', battle: { intel: 1 }, effects: [{ meter: 'intel', add: 1 }, { meter: 'loyalty', add: -1 }, { flag: 'driver_taken' }] },
           { id: 'blind', text: 'Go in blind, now, before the rota changes.', battle: { role: 'attacker', readiness: 0 } },
           { id: 'night', text: 'A small team, by night.', battle: { tier: 'max-1' } }
         ], next: 'c2d.battle' },
@@ -434,7 +445,7 @@
       poolChapter({ id: 'splinter', thread: 'front', fallback: true, title: 'The Splinter Cell',
         brief: 'A cell of the Front fights on in the hills.',
         before: { id: 'splinter.informant', title: 'The informant', text: 'A man in the cell will talk, for a price.', options: [
-          { id: 'pay', text: 'Pay him.', cost: { kUC: 1 }, why: 'You can\'t pay him.', battle: { showEnemy: true }, effects: [{ reveal: 'rebels' }] },
+          { id: 'pay', text: 'Pay him.', cost: { kUC: 1 }, why: 'You can\'t pay him.', battle: { intel: 2 }, effects: [{ reveal: 'rebels' }] },
           { id: 'lean', text: 'Lean on him.', effects: [{ meter: 'intel', add: 1 }, { meter: 'sentiment', add: -1 }] }
         ] },
         battle: { map: 'hills', scenario: 'find', enemy: front({ tactics: 'guerillas' }),
@@ -450,7 +461,7 @@
           { id: 'storm', text: 'Bombard and storm it.', if: { meter: 'htx', gte: 1 }, why: 'HTX won\'t lend the guns.', battle: { strikes: 'D6' }, effects: [{ meter: 'sentiment', add: -1 }] }
         ] },
         battle: { map: 'redoubt', scenario: 'takeover', role: 'attacker', tier: 'max', pl: 'max', enemy: front({ tactics: 'laststand', fill: { to: 1.0, from: ['rinsurgents', 'rhardened', 'rmilitia'], meter: 'rebels', step: 0.05 } }),
-          adjust: [{ if: { flag: 'informant' }, levers: { showEnemy: true } }, { if: { flag: 'truce' }, levers: { allies: { side: 'front', faction: 'rebel', core: ['rminers', 'rmilitia'] } } }],
+          adjust: [{ if: { flag: 'informant' }, levers: { intel: 1 } }, { if: { flag: 'truce' }, levers: { allies: { side: 'front', faction: 'rebel', core: ['rminers', 'rmilitia'] } } }],
           on: FINALE_ON } }),
 
       // the truce
@@ -496,7 +507,7 @@
         before: { id: 'outbreak.miners', title: 'The miners below', text: 'Miners are trapped below.', options: [
           { id: 'go', text: 'Go in for them.', effects: [{ flag: 'rescue', local: true }] },
           { id: 'seal', text: 'Seal them in.', battle: { skip: true }, effects: [{ meter: 'hive', add: -2 }, { meter: 'sentiment', add: -3 }, { meter: 'loyalty', add: -1 }, { flag: 'miners_sealed' }] },
-          { id: 'guided', text: 'Let the townsfolk guide you in.', if: { flag: 'pit9_spared' }, why: 'The town won\'t help you.', battle: { showEnemy: true } }
+          { id: 'guided', text: 'Let the townsfolk guide you in.', if: { flag: 'pit9_spared' }, why: 'The town won\'t help you.', battle: { intel: 1 } }
         ] },
         battle: { scenario: 'ce_clear', enemy: hive(),
           on: { success: [{ if: { flag: 'rescue' }, effects: [{ meter: 'sentiment', add: 2 }] }, {}], failure: [{ effects: [{ meter: 'hive', add: 1 }] }], skip: [{}] } },
@@ -533,7 +544,7 @@
       poolChapter({ id: 'partner', thread: 'htx', title: 'The Partner', when: { any: [{ flag: 'htx_suspects' }, { flag: 'htx_tracking' }, { meter: 'lantern', gte: 4 }] },
         brief: 'HTX sends Black Lantern to fight beside you, with orders of its own.',
         before: { id: 'partner.orders', title: 'Orders of its own', text: 'Black Lantern\'s officer asks to see your plans.', options: [
-          { id: 'share', text: 'Share your plans.', battle: { allies: { side: 'lantern', faction: 'pmc', core: ['regular', 'lmgteam'] }, showEnemy: true }, effects: [{ meter: 'lantern', add: 1 }] },
+          { id: 'share', text: 'Share your plans.', battle: { allies: { side: 'lantern', faction: 'pmc', core: ['regular', 'lmgteam'] }, intel: 1 }, effects: [{ meter: 'lantern', add: 1 }] },
           { id: 'dark', text: 'Keep them in the dark.', effects: [{ meter: 'lantern', add: -1 }] },
           { id: 'tracker', text: 'Plant a tracker on them.', cost: { intel: 1 }, why: 'You don\'t know enough about them.',
             effects: [{ meter: 'intel', add: 1 }, { roll: { d6: 4, meter: 'intel' }, fail: [{ flag: 'htx_cut_off' }] }] }
