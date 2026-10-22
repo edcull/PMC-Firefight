@@ -792,7 +792,13 @@
       if (x !== entry) (x.men || []).forEach(function (m) { taken[m.name] = 1; });
     });
     var before = JSON.stringify(entry.men || null);
-    entry.men = R.musterMen(u, entry.men, taken).map(function (m) { return m.role ? { name: m.name, rank: m.rank, role: m.role } : { name: m.name, rank: m.rank }; });
+    entry.men = R.musterMen(u, entry.men, taken).map(function (m) {
+      var o = m.role ? { name: m.name, rank: m.rank, role: m.role } : { name: m.name, rank: m.rank };
+      if (m.commander) o.commander = true;
+      return o;
+    });
+    // the officer at the head of the company's field command is its commander: never a casualty, never replaced
+    if (co && entry.rid === co.cmdRid && entry.men.length && !entry.men.some(function (m) { return m.commander; })) entry.men[0].commander = true;
     return JSON.stringify(entry.men) !== before;
   }
   /* The force's losses against everyone who has ever served in it. Everyone
@@ -1012,6 +1018,7 @@
     var cmd = newEntry(commandKey(co, 1), { free: true });
     co.roster.push(cmd);
     co.cmdRid = cmd.rid;
+    menOf(cmd, co);                 // its men named now, its officer the company's commander
     keys.forEach(function (k) {
       var s = R.splitPick(k);
       co.roster.push(newEntry(s.key, { prop: s.prop, drone: s.drone, riders: s.riders, mount: s.mount, co: co }));

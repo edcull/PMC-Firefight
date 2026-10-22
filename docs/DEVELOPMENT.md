@@ -314,6 +314,8 @@ storygraph.js      the story validator catches each way of writing a story wrong
                    Deep Contract validates, and its one-offs and Scorched Earth stay in range
 storyscenarios.js  the story's own scenarios: set up, their victory checks, every second-half battle
                    set up, and one battle of each played AI against AI (the scenario's own test)
+commander.js       the company's commander (the officer at the head of its field command): never a
+                   casualty or replaced, through the muster, a squad wiped out and the aftermath
 allyorders.js      the allies' orders in a story battle: Move, Attack and Hold here, given and kept once
                    a turn, and the allies' AI answering each (only the allies act)
 storyside.js       HTX's bonus by HTX Standing, and the side contracts: offered at an interlude, taken
