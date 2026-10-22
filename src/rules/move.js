@@ -152,11 +152,22 @@
        token standing there counts as in (kindsUnder) — for one table as it
        stands. It is the same for every unit, so it is worked out once for each
        layout of the terrain and shared by every field on it. */
-    var groundCache = { key: null, state: null, at: null, under: null };
+    /* ...and by every battle that has the same table: a copy of a battle (the AI's
+       lookahead, its worker) has the battle's terrain, so what has been worked out
+       of it is kept for the latest few tables, by everything that ground reads (the
+       pieces whole, and whether it is a compound's: terrainAt). */
+    var groundCache = { key: null, state: null, at: null, under: null }, GROUND_SHARED = [];
     function groundOf(state, N, tk) {
       var key = tk || terrainKey(state);
       if (groundCache.state !== state || groundCache.key !== key) {
-        groundCache = { key: key, state: state, at: new Uint8Array(N), under: new Uint8Array(N) };   // 0: not yet looked at
+        var whole = N + '|' + !!state.compound + '|' + JSON.stringify(state.terrain), sh = null;
+        for (var gi = 0; gi < GROUND_SHARED.length && !sh; gi++) if (GROUND_SHARED[gi].whole === whole) sh = GROUND_SHARED[gi];
+        if (!sh) {
+          sh = { whole: whole, at: new Uint8Array(N), under: new Uint8Array(N) };   // 0: not yet looked at
+          GROUND_SHARED.unshift(sh);
+          if (GROUND_SHARED.length > 4) GROUND_SHARED.pop();
+        }
+        groundCache = { key: key, state: state, at: sh.at, under: sh.under };
       }
       return groundCache;
     }
