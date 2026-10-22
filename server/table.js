@@ -331,6 +331,8 @@ class Table {
      otherwise the room's terms and forces are made into one here. */
   begin(cfg) {
     this.cfg = cfg || this.buildConfig();
+    // the AI as it now is (ai.js exposureGrid), kept with the battle: one kept from before plays back as it was
+    if (this.cfg.aiv == null) this.cfg.aiv = 2;
     this.events = [];
     const seed = (Math.random() * 4294967296) >>> 0;
     this.rng = dice(seed);

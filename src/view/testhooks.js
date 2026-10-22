@@ -324,6 +324,15 @@
         return (performance.now() - t0) / n;
       },
       paint: function () { var t0 = performance.now(); B.paintStructures(); return performance.now() - t0; },
+      // the structures repainted as when something comes down (in slices, onto a plate of its own): ms until it is in place
+      collapse: function () {
+        var was = B.vc.structs, piece = B.state.terrain.filter(function (r) { return r.kind === 'building'; })[0] || B.state.terrain[0];
+        var t0 = performance.now();
+        B.repaintTerrain([{ piece: piece }]);
+        return new Promise(function (res) {
+          (function wait() { if (B.vc.structs !== was) res(performance.now() - t0); else setTimeout(wait, 5); })();
+        });
+      },
       bake: function () {
         var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.opened = null; c.baking = false;
         B.drawBoard();                                  // starts the bake (it runs off this frame)
@@ -346,7 +355,8 @@
     window.__vc = function () { return B.vc; };
     // the board drawn now, whatever the animation loop is doing (render leaves it to the loop while one runs)
     window.__drawNow = function () { drawBoard(); };
-    window.__rebuildScene = function () { var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.opened = null; drawBoard(); };
+    // (baked at once, not a slice at a time: the test looks at the table straight after)
+    window.__rebuildScene = function () { var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.opened = null; c.baking = false; c.bakeNow = true; drawBoard(); };
     window.__tapTerrain = function (i) {
       var r = ui.terrain[i];
       if (!r) return false;

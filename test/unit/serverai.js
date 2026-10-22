@@ -91,9 +91,10 @@ const sum = (a, k) => a.reduce((n, x) => n + x[k], 0);
   ok('the database marks where each answer came', marks.length >= came && marks.every((x) => x.seat === '*'), marks.length + ' marks');
 
   console.log('\nThought out ahead, off the event loop');
-  /* (nearly all of it: the battle's own engine may weigh an option the worker's fresh copy did not,
-     its exposure grid kept from earlier in the same position (ai.js exposureGrid), and plays that out itself) */
-  ok('the table was handed the lookahead by its worker thread, not playing it out itself', sum(w.answers, 'hit') > 0 && sum(w.answers, 'miss') * 10 <= sum(w.answers, 'hit'),
+  /* (all of it: a battle begun now (cfg.aiv 2) keys its exposure grids by everything they read, so its
+     own engine weighs the very options the worker's fresh copy does — ai.js exposureGrid) */
+  ok('a battle begun now is kept with the AI it is played by', w.t.cfg.aiv === 2, String(w.t.cfg.aiv));
+  ok('the table was handed the lookahead by its worker thread, not playing it out itself', sum(w.answers, 'hit') > 0 && sum(w.answers, 'miss') === 0,
     sum(w.answers, 'hit') + ' play-outs handed over, ' + sum(w.answers, 'miss') + ' played out on the event loop');
   ok('the same battle without the worker comes out the same', where(w.t) === where(o.t) && o.answers.length === w.answers.length && sum(o.answers, 'hit') === 0,
     w.answers.length + ' answers either way');

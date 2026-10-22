@@ -231,24 +231,60 @@
     /* The table is painted onto two plates: the ground, which is expensive to bake
        and never changes, and the structures, which are cheap and have to be repainted
        whenever something is knocked down. */
-    function buildScene() {
-      B.vc.ground = ISO.bakeGround(B.state.terrain, B.state.seed, B.state.cfg.planet);
+    /* (`ground`: the plate already baked, a slice at a time, by drawBoardNow below;
+       `then`: the structures painted a slice at a time too, and the scene set up when
+       they are, for then) */
+    function buildScene(ground, then) {
+      B.vc.ground = ground || ISO.bakeGround(B.state.terrain, B.state.seed, B.state.cfg.planet);
       if (!B.vc.structs || B.vc.structs.width !== ISO.PIXW) {
         B.vc.structs = document.createElement('canvas');
         B.vc.structs.width = ISO.PIXW; B.vc.structs.height = ISO.PIXH;
       }
-      paintStructures();
-      B.vc.scene = B.vc.ground;
-      if (B.state.tset && B.state.phase === 'terrain') B.vc.tsetBaked = B.state.terrain.length;
+      function set() {
+        B.vc.scene = B.vc.ground;
+        if (B.state.tset && B.state.phase === 'terrain') B.vc.tsetBaked = B.state.terrain.length;
+      }
+      if (!then) { paintStructures(); set(); return; }
+      paintStructures(function () { if (B.state) set(); then(); });
     }
 
     // the pieces that can stand between the camera and a squad, and hide it (see drawBoard)
     var OPENS = { building: 1, bunker: 1, highwall: 1, bulkhead: 1, machinery: 1 };
-    function paintStructures() {
-      B.vc.props = ISO.buildProps(B.state.terrain, B.state.objectives, B.state.seed, B.state.cfg.planet);
-      var sg = B.vc.structs.getContext('2d');
-      sg.clearRect(0, 0, B.vc.structs.width, B.vc.structs.height);
-      B.vc.props.forEach(function (p) { ISO.drawProp(sg, p, liftOf(p.x, p.y)); });
+    /* `then`: painted a slice at a time, a few tens of milliseconds a task, and
+       then(true) once it is done — for a table being built, which nothing is
+       showing yet. The same pieces drawn in the same order: the same plate. A
+       paint begun meanwhile (a barricade put down, an objective moved) paints it
+       all itself, and the slices still to come are let go of (then(false)).
+       `fresh`: painted onto a plate of its own, the pieces and the buildings'
+       patches kept to one side with it, and all three put in place together once
+       it is done — for a table on show, which goes on showing the plate as it was
+       until then (something come down: under its dust, repaintTerrain). */
+    function paintStructures(then, fresh) {
+      var gen = B.vc.paintGen = (B.vc.paintGen || 0) + 1;
+      var plate = B.vc.structs;
+      if (fresh) { plate = document.createElement('canvas'); plate.width = B.vc.structs.width; plate.height = B.vc.structs.height; }
+      var props = ISO.buildProps(B.state.terrain, B.state.objectives, B.state.seed, B.state.cfg.planet), opened = [];
+      if (!fresh) { B.vc.props = props; B.vc.opened = opened; }
+      var sg = plate.getContext('2d');
+      if (!fresh) sg.clearRect(0, 0, plate.width, plate.height);
+      var steps = props.map(function (p) { return function () { ISO.drawProp(sg, p, liftOf(p.x, p.y)); }; });
+      props.filter(function (p) { return OPENS[p.kind]; }).forEach(function (p) { steps.push(function () { paintOpened(p, plate, opened); }); });
+      if (!then) { steps.forEach(function (f) { f(); }); return; }
+      (function next() {
+        if (B.vc.paintGen !== gen || !B.state) { then(false); return; }
+        var t0 = performance.now();
+        while (steps.length && performance.now() - t0 < 30) steps.shift()();
+        if (steps.length) { setTimeout(next, 0); return; }
+        if (fresh) {
+          var old = B.vc.structs;
+          B.vc.structs = plate; B.vc.props = props; B.vc.opened = opened;
+          if (old && old !== plate) old.width = old.height = 0;      // (the plate it stands in for let go of at once: 22 MB)
+        }
+        then(true);
+      })();
+    }
+    // a building's patch, cut from `plate` (the structures as they are painted), kept in `opened`
+    function paintOpened(p, plate, opened) {
       /* Each building that can stand in front of a squad also keeps its own
          patch (propBox), which drawBoard puts back over the units the depth
          sort has behind it or inside it. The patch is the building's own
@@ -257,34 +293,33 @@
          them. Inside the outline the standing patch is the plate, so a wall or
          a line of sandbags in front of the building stays in front of it.
          Small canvases, one per building: no plate-sized one (24 MB) nearly all
-         empty. */
-      var opens = B.vc.props.filter(function (p) { return OPENS[p.kind]; });
-      B.vc.opened = [];
-      opens.forEach(function (p) {
-        var b = propBox(p);
-        var cv = document.createElement('canvas');
-        cv.width = Math.max(1, b.w); cv.height = Math.max(1, b.h);
-        var og = cv.getContext('2d', { willReadFrequently: true });   // read back once, for its outline
-        og.translate(-b.x, -b.y);
-        ISO.drawProp(og, p, liftOf(p.x, p.y));
-        /* the plate's pixels, inside the building's outline — taken whole, so
-           its soft edges (the shadow at its foot) are the plate's own colour,
-           not that colour thinned and laid over itself again */
-        og.setTransform(1, 0, 0, 1, 0, 0);
-        var im = og.getImageData(0, 0, cv.width, cv.height), d = im.data;
-        for (var i = 3; i < d.length; i += 4) if (d[i]) d[i] = 255;
-        og.putImageData(im, 0, 0);
-        og.globalCompositeOperation = 'source-in';
-        og.drawImage(B.vc.structs, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
-        p._solid = { cv: cv, box: b };
-        B.vc.opened.push(p._solid);
-      });
+         empty. (Painted after every piece is on the plate: it takes the plate's own pixels.) */
+      var b = propBox(p);
+      var cv = document.createElement('canvas');
+      cv.width = Math.max(1, b.w); cv.height = Math.max(1, b.h);
+      var og = cv.getContext('2d', { willReadFrequently: true });   // read back once, for its outline
+      og.translate(-b.x, -b.y);
+      ISO.drawProp(og, p, liftOf(p.x, p.y));
+      /* the plate's pixels, inside the building's outline — taken whole, so
+         its soft edges (the shadow at its foot) are the plate's own colour,
+         not that colour thinned and laid over itself again */
+      og.setTransform(1, 0, 0, 1, 0, 0);
+      var im = og.getImageData(0, 0, cv.width, cv.height), d = im.data;
+      for (var i = 3; i < d.length; i += 4) if (d[i]) d[i] = 255;
+      og.putImageData(im, 0, 0);
+      og.globalCompositeOperation = 'source-in';
+      og.drawImage(plate, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+      p._solid = { cv: cv, box: b };
+      opened.push(p._solid);
     }
 
-    /* Something has come down: repaint the structures and let the player see it. */
+    /* Something has come down: repaint the structures and let the player see it.
+       Painted a slice at a time onto a plate of its own and put in place when it is
+       done (paintStructures), so the page does not stand still for it: the table
+       shows the plate as it was for that moment, under the dust of the collapse. */
     function repaintTerrain(wrecks) {
       if (!wrecks || !wrecks.length || !B.vc.structs) return;
-      paintStructures();
+      paintStructures(function (done) { if (done) render(); }, true);
       ui.vis = null; ui.visKey = '';
       wrecks.forEach(function (w) {
         var r = w.piece;
@@ -981,11 +1016,32 @@
           B.ctx.font = '600 15px Oxanium, system-ui, sans-serif';
           B.ctx.textAlign = 'center'; B.ctx.textBaseline = 'middle';
           B.ctx.fillText('Building the table…', B.VIEW_W / 2, B.VIEW_H / 2);
+          /* The ground baked a slice at a time (iso-ground.js bakeGroundSliced, the
+             same pixels as at once), each slice a task of its own, so the page goes
+             on answering while it is built: seconds, on a phone. Taken only if it
+             is still the table wanted when it is done: the same battle and terrain,
+             and no other bake begun or scene built since. (The tests' rebuilds,
+             bakeNow, bake at once, so the table is there when they look.) */
+          var gen = B.vc.bakeGen = (B.vc.bakeGen || 0) + 1, st0 = B.state, tk0 = JSON.stringify(B.state.terrain);
+          var now = B.vc.bakeNow || !ISO.bakeGroundSliced;
+          B.vc.bakeNow = false;
           setTimeout(function () {
-            if (!B.state) return;
-            buildScene();
-            B.vc.baking = false;
-            drawBoard();
+            if (!B.state || B.vc.bakeGen !== gen) return;
+            if (now) { buildScene(); B.vc.baking = false; drawBoard(); return; }
+            ISO.bakeGroundSliced(B.state.terrain, B.state.seed, B.state.cfg.planet, null, function (ground) {
+              if (B.vc.bakeGen !== gen || !B.vc.baking || B.vc.scene) return;
+              // (the terrain changed while it was baked: baked again, from what it is now)
+              if (B.state !== st0 || JSON.stringify(B.state.terrain) !== tk0) { B.vc.baking = false; drawBoard(); return; }
+              // (the structures a slice at a time too)
+              setTimeout(function () {
+                if (B.vc.bakeGen !== gen || B.vc.scene || !B.state) return;
+                buildScene(ground, function () {
+                  if (B.vc.bakeGen !== gen) return;
+                  B.vc.baking = false;
+                  drawBoard();
+                });
+              }, 0);
+            });
           }, 30);
         }
         return;

@@ -6,7 +6,7 @@
    out itself; and the battle kept plays back to the same place. */
 const { chromium } = require('playwright');
 const http = require('http');
-const { ROOT, startSkirmish, seedDice } = require('../where.js');
+const { ROOT, seedDice } = require('../where.js');
 const statics = require('../../server/static.js');
 
 let pass = 0, fail = 0;
@@ -33,8 +33,18 @@ async function play(b, url, worker) {
       return r;
     };
   });
-  await startSkirmish(p, { tier: 3, mode: 'ai', scenario: 'meeting', planet: 'desert', terrain: 'auto',
-    keys: ['cmd2', 'regular', 'regular', 'regular', 'rookie', 'rookie'] });
+  /* The same battle either way: both forces given, and the dice set afresh in the very task that
+     begins it (the battle's seed is drawn from them, and the menu's backdrop draws on them too, as
+     often as a busy machine lets it get round to it) */
+  await p.evaluate(() => {
+    if (window.PMCMenu) window.PMCMenu.close();
+    let sd = 2670;
+    Math.random = () => { sd = (Math.imul(sd, 1664525) + 1013904223) >>> 0; return sd / 4294967296; };
+    const force = ['cmd2', 'regular', 'regular', 'regular', 'rookie', 'rookie'];
+    window.PMC_NEWGAME({ tier: 3, pl: 1, scenario: 'meeting', armyA: force.slice(), armyB: force.slice(),
+      nameA: 'Test force', nameB: 'OpFor company', colourA: 'ochre', tactics: { A: null, B: null },
+      mode: 'ai', planet: 'desert', terrainSetup: 'auto' });
+  });
   await p.waitForTimeout(1200);
   const card = () => p.evaluate(() => !document.getElementById('resolution').hidden);
   const cont = () => p.evaluate(() => { const c = document.getElementById('res-continue'); if (c) c.click(); });
@@ -95,8 +105,8 @@ async function play(b, url, worker) {
   const w = await play(b, url, true), o = await play(b, url, false);
   const sum = (r, k) => r.answers.reduce((a, x) => a + x[k], 0);
   ok('the player moved, and the OpFor answered', w.acts >= 6 && w.answers.length >= 3, w.acts + ' moves, ' + w.answers.length + ' answers');
-  // (nearly all of it: see test/unit/serverai.js)
-  ok('...with the lookahead handed to the page, not played out on it', sum(w, 'hit') > 0 && sum(w, 'miss') * 10 <= sum(w, 'hit'),
+  // (all of it: see test/unit/serverai.js)
+  ok('...with the lookahead handed to the page, not played out on it', sum(w, 'hit') > 0 && sum(w, 'miss') === 0,
     sum(w, 'hit') + ' play-outs handed over, ' + sum(w, 'miss') + ' played out on the page');
   ok('the same battle without the worker comes out the same, move for move', w.battle === o.battle && o.answers.length === w.answers.length,
     w.answers.length + ' answers either way');

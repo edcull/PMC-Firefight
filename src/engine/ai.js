@@ -945,7 +945,15 @@
       var foes = E.state.units.filter(function (e) {
         return e.alive && e.side !== side && onTable(e) && !husk(e) && e.fp != null && R.status(e) !== 'broken';
       });
-      var key = E.state.terrain.length + '|' + foes.map(function (e) { return e.id + ':' + e.x.toFixed(1) + ',' + e.y.toFixed(1) + R.status(e); }).join(';');
+      /* The grid as last worked out for this battle serves while this key holds.
+         Kept by the guns alone (to a tenth of an inch) it could serve after a unit
+         that stands in a line of sight had moved, or a piece had burnt or come down,
+         so it hung on the order things were asked in; a battle begun with cfg.aiv 2
+         (net.js begin, table.js begin) keys it by every unit and every piece as a
+         line of sight reads them. A battle begun before keeps the old key, so it
+         plays back as it was played. */
+      var key = E.state.cfg.aiv >= 2 ? exposureKey(foes)
+        : E.state.terrain.length + '|' + foes.map(function (e) { return e.id + ':' + e.x.toFixed(1) + ',' + e.y.toFixed(1) + R.status(e); }).join(';');
       var hit = exCache[side];
       if (hit && hit.state === E.state && hit.key === key) return hit;
       var cols = Math.ceil(R.BOARD.w / CELL), rows = Math.ceil(R.BOARD.h / CELL), n = cols * rows;
@@ -962,6 +970,16 @@
       if (MADE && !E.state.cfg.sim) MADE.ex.push(EX_SHARED[0]);
       if (EX_SHARED.length > EX_SHARED_N) EX_SHARED.pop();
       return g;
+    }
+    // what the guns are, and everything their lines of sight read: every unit where it stands, and every piece as it is
+    function exposureKey(foes) {
+      var st = E.state;
+      return foes.map(function (e) { return e.id + ':' + R.status(e) + ':' + e.range; }).join(';') + '|' +
+        st.units.map(function (u) {
+          return u.id + ':' + u.x + ',' + u.y + (u.alive ? '' : u.wreckLoS ? 'w' : 'x') + (u.aboard ? 'a' : '') + (u.reserve ? 'r' : '') +
+            (u.bld ? 'b' + st.terrain.indexOf(u.bld) + '.' + (u.sec || 0) : '');
+        }).join(';') + '|' +
+        st.terrain.map(function (r) { return r.kind + (r.burning ? '*' : '') + (r.gone ? 'g' : '') + r.x + ',' + r.y + ',' + r.w + ',' + r.h; }).join(';');
     }
     /* Everything a grid is worked out from: the table's size, the world (a fog),
        every piece of terrain and every unit, as they stand — a unit as the save

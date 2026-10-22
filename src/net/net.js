@@ -339,6 +339,8 @@
 
   Local.prototype.begin = function (cfg, seats) {
     this.seats = seats && seats.length ? seats : ['A'];
+    // the AI as it now is (ai.js exposureGrid), kept with the battle: one kept from before plays back as it was
+    if (cfg && cfg.aiv == null) cfg.aiv = 2;
     this.cfg = cfg;
     this.events = [];
     var seed = (Math.random() * 4294967296) >>> 0;
