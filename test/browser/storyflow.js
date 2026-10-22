@@ -141,6 +141,15 @@ async function cards(p) {
   check('...and goes back to where the story was', /Deep Contract/.test(txt) && await p.evaluate(() => window.PMC_CAMPAIGN.get().story.chapter === 'c1'), txt.slice(0, 120));
   await p.screenshot({ path: path.join(SHOTS, 'story-interlude.png') });
 
+  console.log('\nThe ending');
+  // the story taken to an ending as it stands (the second half is not played here): its screen
+  await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); c.story.flags.varga_dead = true; c.story.flags.pit9_spared = true; c.story.ended = 'paidoff'; c.story.node = null; });
+  await go(p, '#camp-body [data-go="hub"]');
+  await go(p, '#camp-body .hubtake [data-go="story"]');
+  txt = await body(p);
+  check('the ending\u2019s screen: its title and text, the epilogue, and who stayed', /Paid Off/i.test(txt) && /Pit Four/.test(txt) && /school was open again/.test(txt) && /Who stayed/i.test(txt) && /from the first day/.test(txt), txt.slice(0, 400));
+  await p.screenshot({ path: path.join(SHOTS, 'story-ending.png'), fullPage: true });
+
   check('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   await b.close();
   console.log('\n' + (problems.length ? problems.length + ' failed: ' + problems.join('; ') : 'All passed.'));

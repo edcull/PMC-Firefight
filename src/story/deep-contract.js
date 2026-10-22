@@ -1,9 +1,9 @@
 /* PMC 2670 — Firefight : Deep Contract, the first story (docs/story-mode-plan.md)
 
-   The story bible as data (phase 0): every chapter, event, battle, thread and
-   ending in the plan, each event's situation and options in a line, and the
-   meters and flags each one moves. No prose yet: the text is the plan's own
-   one-liners, to be written properly once the slice has been played.
+   The story bible as data: every chapter, event, battle, thread and ending in
+   the plan, each event's situation and options in a line, and the meters and
+   flags each one moves. The prose is laid over it from deep-contract-text.js;
+   the side contracts, the endings and the epilogue carry their own words here.
 
    The second half fights the story's own scenarios (src/story/scenarios-story.js:
    Hive Heart, Convoy, Breakout, Hold the Line, Strike, Parley), their waves
@@ -669,13 +669,55 @@
     ],
 
     endings: [
-      { id: 'broken', broken: true, title: 'Broken Company', text: 'The company cannot field an army any more. It is finished, and Kessler\'s Reach goes on without it.' },
-      { id: 'scorched', title: 'Scorched Earth', text: 'The hive got away from everyone. HTX sterilised the moon from orbit, and you were lucky to be on the last shuttle out.', if: { flag: 'scorched' } },
-      { id: 'terminated', title: 'Contract Terminated', text: 'HTX turned on you, and Black Lantern finished the job. The company is betrayed, and runs.', if: { any: [{ flag: 'showdown_lost' }, { all: [{ flag: 'htx_cut_off' }, { flag: 'finale_lost' }] }] } },
-      { id: 'liberators', title: 'Liberators', text: 'The Front holds Kessler\'s Reach. The company is poor, and loyal to its own.', if: { all: [{ any: [{ flag: 'truce' }, { flag: 'leaked' }] }, { flag: 'finale_won' }, { meter: 'hive', lt: 8 }, { not: { flag: 'miners_sealed' } }] } },
-      { id: 'companyman', title: 'Company Man', text: 'The company is rich, and the moon is broken.', if: { all: [{ not: { any: [{ flag: 'truce' }, { flag: 'leaked' }, { flag: 'htx_cut_off' }] } }, { meter: 'hive', lt: 8 },
+      { id: 'broken', broken: true, title: 'Broken Company', text: 'There is not enough of {name} left to field an army. The last of it ships out on an ore freighter, in the hold, and Kessler’s Reach goes on without it.' },
+      { id: 'scorched', title: 'Scorched Earth', text: 'The hive got away from everyone. HTX ordered Kessler’s Reach sterilised from orbit, and {name} watched it burn from the last shuttle out.', if: { flag: 'scorched' } },
+      { id: 'terminated', title: 'Contract Terminated', text: 'HTX turned on {name}, and Black Lantern finished the job. The company is betrayed, unpaid and running, and its name is on a list it will not get off.', if: { any: [{ flag: 'showdown_lost' }, { all: [{ flag: 'htx_cut_off' }, { flag: 'finale_lost' }] }] } },
+      { id: 'liberators', title: 'Liberators', text: 'The Front holds Kessler’s Reach, and {name} helped it get there. The company leaves poorer than it came, and every one of its people knows why.', if: { all: [{ any: [{ flag: 'truce' }, { flag: 'leaked' }] }, { flag: 'finale_won' }, { meter: 'hive', lt: 8 }, { not: { flag: 'miners_sealed' } }] } },
+      { id: 'companyman', title: 'Company Man', text: 'HTX is satisfied. The ore trains run, the contract is paid in full with a bonus on top, and {name} leaves Kessler’s Reach rich. The moon it leaves behind is broken.', if: { all: [{ not: { any: [{ flag: 'truce' }, { flag: 'leaked' }, { flag: 'htx_cut_off' }] } }, { meter: 'hive', lt: 8 },
         { any: [{ meter: 'htx', gte: 2 }, { all: [{ flag: 'core_sold' }, { meter: 'htx', gte: 1 }] }] }] } },
-      { id: 'paidoff', title: 'Paid Off', text: 'The war ends without you deciding it. HTX pays what it owes, or doesn\'t, and the company ships out.' }
+      { id: 'paidoff', title: 'Paid Off', text: 'The war on Kessler’s Reach ends without {name} deciding it. HTX pays what it owes, or most of it, and the company ships out with its dead and its debts.' }
+    ],
+
+    /* The epilogue (story.js epilogue): for each thing it is about, the first
+       line that fits, in this order. Its conditions are read for the text only. */
+    epilogue: [
+      // the moon
+      { about: 'moon', ending: 'scorched', text: 'Kessler’s Reach burned for three days. HTX wrote the moon off against tax, and the Deep Contract was never mentioned again.' },
+      { about: 'moon', ending: 'liberators', text: 'The Front runs the mines now, badly at first and then less badly. The pits pay their own people for the first time in forty years.' },
+      { about: 'moon', ending: 'companyman', text: 'HTX’s ore trains run on time again. The miners went back down the shafts because there was nowhere else to go.' },
+      { about: 'moon', ending: 'terminated', text: 'Black Lantern held Kessler’s Reach for HTX for another eleven years.' },
+      { about: 'moon', if: { flag: 'truce' }, text: 'The truce lasted longer than anyone expected. The Front and HTX are still arguing over the terms.' },
+      { about: 'moon', text: 'Kessler’s Reach went back to work, after a fashion. Nobody there talks about the war, and nobody has forgotten it.' },
+      // Varga
+      { about: 'varga', if: { all: [{ flag: 'varga_dead' }, { flag: 'martyr_displayed' }] }, text: 'Ada Varga’s body hung at the port gates for a week. Every pit on the moon has her picture on a wall now.' },
+      { about: 'varga', if: { flag: 'varga_dead' }, text: 'Ada Varga is buried in Pit Four, under a stone her people cut themselves. Her brother still visits it.' },
+      { about: 'varga', if: { all: [{ flag: 'varga_handed' }, { not: { flag: 'varga_free' } }] }, text: 'Ada Varga was taken off the moon in an HTX prison ship. Nobody has heard from her since.' },
+      { about: 'varga', if: { flag: 'varga_spared' }, text: 'Ada Varga lived. She told anyone who asked that a mercenary had let her go, and that she never understood why.' },
+      { about: 'varga', if: { flag: 'varga_free' }, text: 'Ada Varga is still on Kessler’s Reach, still in charge of whatever the Front has become.' },
+      { about: 'varga', if: { flag: 'varga_held' }, text: 'Ada Varga left Kessler’s Reach in {name}’s custody, and was handed over at the next port, as the contract said.' },
+      { about: 'varga', if: { flag: 'varga_talked' }, text: 'Ada Varga told you why the miners rose. You have not forgotten it.' },
+      { about: 'varga', text: 'Nobody is sure what became of Ada Varga. In the pits, they say she is still down there.' },
+      // the hive
+      { about: 'hive', ending: 'scorched', text: 'Whatever was under the moon burned with it, or so HTX says.' },
+      { about: 'hive', if: { flag: 'sample_taken' }, text: 'HTX’s research division has a live sample of the hive, in a vault on a moon you have never heard of.' },
+      { about: 'hive', if: { flag: 'shafts_collapsed' }, text: 'The collapsed shafts stayed shut. Sometimes, in the deepest pits, the miners still hear digging.' },
+      { about: 'hive', if: { meter: 'hive', gte: 5 }, text: 'The hive is still down there, and still growing. HTX has stopped sending survey teams.' },
+      { about: 'hive', if: { flag: 'sump_entered' }, text: 'The hive under Kessler’s Reach went quiet. It has not gone away.' },
+      // Pit Nine and the town
+      { about: 'town', if: { flag: 'miners_sealed' }, text: 'The galleries you sealed under Pit Nine were never opened. There is a list of names on the pithead, and the company is not on it.' },
+      { about: 'town', if: { flag: 'pit9_shelled' }, text: 'Pit Nine rebuilt its school with the money it never got from HTX. The new one has no windows on the side facing the port.' },
+      { about: 'town', if: { flag: 'pit9_spared' }, text: 'The teacher from Pit Nine wrote to the company once, to say the school was open again.' },
+      // the paymasters
+      { about: 'htx', if: { flag: 'leaked' }, text: 'The Deep Contract files went out on every channel in the sector. HTX’s board resigned. Nobody went to prison.' },
+      { about: 'htx', if: { flag: 'core_sold' }, text: 'HTX paid very well for its files back, and has never hired {name} again.' },
+      { about: 'htx', if: { flag: 'htx_cut_off' }, text: 'HTX still owes {name} three months’ pay. The lawyers expect it to be settled in about eleven years.' },
+      // Black Lantern
+      { about: 'lantern', if: { flag: 'lantern_mercy' }, text: 'Black Lantern’s commander sent a case of something expensive to the company’s next posting, with no note.' },
+      { about: 'lantern', if: { flag: 'lantern_crossed' }, text: 'Black Lantern has not forgotten the prisoners. Neither has {name}.' },
+      // the company
+      { about: 'company', if: { meter: 'loyalty', gte: 2 }, text: 'The company that came off Kessler’s Reach was smaller than the one that landed, and closer.' },
+      { about: 'company', if: { meter: 'loyalty', lte: -1 }, text: 'Half the company signed on elsewhere before the next contract. The ones who stayed don’t talk about the moon.' },
+      { about: 'company', text: '{name} took the next contract, as companies do.' }
     ]
   }));
 

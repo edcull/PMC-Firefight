@@ -2515,3 +2515,7 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .story-cps { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin: 0 0 12px; }
 .story-badge { display: inline-block; padding: 2px 8px; border: 1px solid var(--amber); color: var(--amber); border-radius: 3px; font-family: var(--display); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
 .story-foot { display: flex; gap: 14px; flex-wrap: wrap; }
+.story-stayed { margin: 4px 0 14px; padding-left: 18px; }
+.story-stayed li { color: var(--ink-dim); }
+.story-stayed b { color: var(--ink); }
+.story-epilogue { margin: 10px 0; }

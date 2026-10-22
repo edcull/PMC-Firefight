@@ -106,6 +106,7 @@
       detour: null,                // a side contract being fought: { id, job, back, pay }
       tokens: {},                  // {unit:…} picks, kept for the chapter
       checkpoints: [],
+      founders: (campaign.companies && campaign.companies.A && campaign.companies.A.roster || []).map(function (e) { return e.rid; }),
       ended: null
     };
     Object.keys(meters).forEach(function (k) { campaign.story.history[k] = [{ ch: 0, v: meters[k] }]; });
@@ -750,6 +751,30 @@
     return e ? e.id : null;
   }
 
+  /* The ending's epilogue (the plan, section 2): the story's `epilogue`, a
+     list of { about, if, text }, the first that fits for each `about` (the
+     moon, Varga, the hive, the town, the company's paymasters...), in the order
+     they are written; then who stayed, from the company's own roster: the units
+     that came down with it on the first day, and the ones it honoured. */
+  function epilogue(campaign) {
+    var def = storyOf(campaign), st = campaign.story, ctx = ctxOf(campaign), done = {}, out = [];
+    if (!def || !st.ended) return { lines: [], stayed: [] };
+    arr(def.epilogue).forEach(function (e) {
+      if (e.about && done[e.about]) return;
+      if (e.ending && arr(e.ending).indexOf(st.ended) < 0) return;
+      if (e.if && !test(ctx, e.if)) return;
+      if (e.about) done[e.about] = true;
+      out.push(render(campaign, e.text));
+    });
+    var co = campaign.companies && campaign.companies.A, founders = st.founders || [];
+    var stayed = (co && co.roster || []).filter(function (e) {
+      return founders.indexOf(e.rid) >= 0 || (e.honours || []).length;
+    }).map(function (e) {
+      return { rid: e.rid, name: e.name, first: founders.indexOf(e.rid) >= 0, honours: (e.honours || []).length };
+    });
+    return { lines: out, stayed: stayed };
+  }
+
   /* Broken Company: the force cannot field a Tier I army after its hub turn. */
   function broken(campaign) {
     var cc = C(), co = campaign.companies && campaign.companies.A;
@@ -882,7 +907,7 @@
     active: active, begin: begin, view: view, choose: choose, proceed: proceed,
     battleSpec: battleSpec, intel: intel, takeSide: takeSide, nodeAt: nodeAt, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
     test: test, apply: apply, roll: roll, pressure: pressure, finaleChapter: finaleChapter,
-    endingFor: endingFor, broken: broken, breakCompany: breakCompany,
+    endingFor: endingFor, epilogue: epilogue, broken: broken, breakCompany: breakCompany,
     checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf,
     GRADES: GRADES, COND_KEYS: COND_KEYS, CMP: CMP, EFFECT_KEYS: EFFECT_KEYS
   };

@@ -298,6 +298,14 @@
     /* ---- the story's own rules ---- */
     arr(def.everyChapter).forEach(function (e, i) { readEffects(e, 'everyChapter[' + i + ']', { half: 0, time: true }); });
     arr(def.everyBattle).forEach(function (e, i) { readEffects(e, 'everyBattle[' + i + ']', { half: 0, time: true }); });
+    /* ---- the epilogue: { about, ending, if, text }; its reads are text, and count for nothing ---- */
+    arr(def.epilogue).forEach(function (e, i) {
+      var at = 'epilogue[' + i + ']';
+      if (!e.text) err(at + ': an epilogue line with no text');
+      readCond(e.if, at, 'text');
+      textReads(e.text, at);
+      arr(e.ending).forEach(function (id) { if (!arr(def.endings).some(function (x) { return x.id === id; })) err(at + ': no ending ' + id); });
+    });
     /* ---- the side contracts, and HTX's bonus ---- */
     if (def.side) {
       var sideMaps = root.PMCStoryMaps && root.PMCStoryMaps[def.id];

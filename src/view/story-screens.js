@@ -315,12 +315,20 @@
       var h = '<h2>' + esc(d.name) + ' — ' + esc(en.title || en.id) + '</h2>';
       if (st.ironman) h += '<p class="story-badge">Ironman</p>';
       h += '<div class="story-card"><b>' + esc(en.title || en.id) + '</b>' + para(en.text || '') + '</div>';
+      // the epilogue: what became of the moon and its people, and who stayed with the company
+      var ep = S().epilogue(E.camp);
+      if (ep.lines.length) h += '<div class="story-epilogue">' + ep.lines.map(para).join('') + '</div>';
+      if (ep.stayed.length) {
+        h += '<h3>Who stayed</h3><ul class="story-stayed">' + ep.stayed.map(function (x) {
+          return '<li><b>' + esc(x.name) + '</b> ' + esc([x.first ? 'on Kessler\u2019s Reach from the first day' : '', x.honours ? x.honours + (x.honours === 1 ? ' honour' : ' honours') : ''].filter(Boolean).join(', ')) + '</li>';
+        }).join('') + '</ul>';
+      }
       // every meter, hidden or not, now the story is over
       h += '<div class="story-hist">' + Object.keys(d._meters).map(function (k) {
         return '<div><b>' + esc(d._meters[k].name) + '</b> ' + (st.history[k] || []).map(function (x) { return x.v; }).join(' → ') + '</div>';
       }).join('') + '</div>';
       var rec = co.record || {};
-      h += '<p>' + esc(co.name) + ': ' + (rec.battles || 0) + ' battles, ' + (rec.wins || 0) + ' won, ' + (rec.losses || 0) + ' lost.</p>';
+      h += '<p>' + esc(co.name) + ': ' + (rec.battles || 0) + ((rec.battles || 0) === 1 ? ' battle, ' : ' battles, ') + (rec.wins || 0) + ' won, ' + (rec.losses || 0) + ' lost.</p>';
       if ((co.memorial || []).length) h += '<h3>Roll of honour</h3>' + E.memorialList(co);
       h += foot();
       return h;

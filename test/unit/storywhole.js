@@ -19,7 +19,7 @@ function ok(name, cond, note) {
 }
 const FOUNDING = ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'];
 const dc = S.get('deep-contract');
-const N = +process.env.STORY_WALKS || 30, t = { endings: {}, tierEnd: {}, finaleTier: [], battles: [], sides: 0, errors: [], kUC: [] };
+const N = +process.env.STORY_WALKS || 30, t = { epilogues: [], endings: {}, tierEnd: {}, finaleTier: [], battles: [], sides: 0, errors: [], kUC: [] };
 
 for (let w = 0; w < N; w++) {
   const c = C.newCampaign({ mode: 'solo' });
@@ -57,6 +57,7 @@ for (let w = 0; w < N; w++) {
     }
   } catch (e) { t.errors.push(e.message); }
   const co = c.companies.A;
+  if (c.story.ended) t.epilogues.push({ ending: c.story.ended, ep: S.epilogue(c) });
   t.endings[c.story.ended || '(none)'] = (t.endings[c.story.ended || '(none)'] || 0) + 1;
   t.tierEnd[co.tier] = (t.tierEnd[co.tier] || 0) + 1;
   t.battles.push(battles); t.kUC.push(co.kUC);
@@ -72,6 +73,12 @@ ok('Scorched Earth comes to a quarter or fewer', (t.endings.scorched || 0) <= N 
 ok('more than one way it ends: four endings or more', Object.keys(t.endings).filter((k) => k !== 'broken').length >= 4, Object.keys(t.endings).join(', '));
 ok('the growth curve: Company Tier III by the end, in half the walks or more', (t.tierEnd[3] || 0) + (t.tierEnd[4] || 0) >= N * 0.5, JSON.stringify(t.tierEnd));
 ok('the finale is fought at Tier II or higher, nearly always', t.finaleTier.filter((x) => x >= 2).length >= t.finaleTier.length * 0.85, t.finaleTier.join(''));
+const eps = t.epilogues.filter((x) => x.ending !== 'broken');
+ok('every ending has its epilogue: the moon, Varga, the company, and more', eps.every((x) => x.ep.lines.length >= 3),
+  eps.map((x) => x.ep.lines.length).join(''));
+ok('...written out in full, nothing left in braces', t.epilogues.every((x) => x.ep.lines.every((l) => !/[{}]/.test(l))));
+ok('...and who stayed: units that came down on the first day, or were honoured', eps.some((x) => x.ep.stayed.some((u) => u.first)));
+console.log('  (an epilogue: ' + (eps[0] ? eps[0].ending + ': ' + eps[0].ep.lines.join(' ') : '') + ')');
 console.log('  (battles ' + avg(t.battles) + ' a walk, side contracts ' + (t.sides / N).toFixed(1) + ', kUC at the end ' + avg(t.kUC) + ')');
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');

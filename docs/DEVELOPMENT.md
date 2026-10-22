@@ -318,7 +318,7 @@ allyorders.js      the allies' orders in a story battle: Move, Attack and Hold h
                    a turn, and the allies' AI answering each (only the allies act)
 storyside.js       HTX's bonus by HTX Standing, and the side contracts: offered at an interlude, taken
                    (a battle of its own, then back) or passed up, catching up, and cut off from HTX
-storywhole.js      Deep Contract from Landfall to an ending, 30 times with made-up results: endings,
+storywhole.js      Deep Contract from Landfall to an ending, 30 times with made-up results: endings and epilogues,
                    Broken Company, Scorched Earth and the growth curve (STORY_WALKS for more)
 storyfirsthalf.js  Deep Contract's first half: every battle under every choice set up and started (not
                    played), and the first half walked with made-up reports through the real aftermath
