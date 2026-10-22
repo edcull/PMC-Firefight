@@ -35,7 +35,7 @@ top of the campaign dossier, plus a few hooks into battle setup.
 | Fighting inside a compound | Close Encounters | `compound.js`, `ce_*` scenarios |
 | Planet conditions | Other Worlds, `cfg.planet`, `cfg.world` | `rules.js` `rollWorld` |
 | The result of a battle | `E.state.report` (winner, routed, casualties, units, stats) | `endphase.js` `battleReport` |
-| Battles played out without a board (for testing and balancing) | `offtable.playNow` | `src/engine/offtable.js` |
+| What the company can field | `fieldableTier(co, pl)`, `canFieldArmy`, `fullTier` | `camp-contract.js`, `campaign.js` |
 
 What the story layer adds:
 
@@ -46,8 +46,22 @@ What the story layer adds:
 5. **Outcome grading:** a report turned into a grade (decisive, victory, draw, defeat, rout).
 6. **Screens:** the chapter card, the briefing with its choices, the debrief, the journal.
 
-A story campaign is an ordinary dossier with `mode: 'story'` and a `story` field.
-The roster, the aftermath, saving, export and the hub keep working without change.
+A story campaign is an ordinary solo dossier (`mode: 'solo'`, as now) with a
+`story` field. It does not get a new `mode`: `campaign.mode === 'solo'` is
+already checked in about 15 places (the hub's Contract button in
+`dossier-hub.js`, `dossier-after.js`, offer generation in `camp-rivals.js`), and
+a new value would quietly turn all of them off. Instead, a `PMCStory.active(campaign)`
+check goes in only where the story behaves differently, and phase 2 audits
+every `mode` check to decide which those are (section 5, *Fitting into the
+dossier*). The roster, the aftermath, saving and export keep working without
+change.
+
+**No battle is ever played in the background.** The only battles in story mode
+are the ones the player fights. Everything else, such as a job passed up, the
+garrison you left behind, or Black Lantern's war in the next valley, is settled
+by rolls, meters, flags and events. The same goes for the tests (section 6):
+they feed the story made-up battle results, and they never play the AI against
+itself.
 
 ---
 
@@ -107,8 +121,8 @@ flowchart TD
   C2a --> C3[3. The Hunt for Varga<br/>vs the Front]
   C2b --> C3
   C3 --> C4[4. Pit Nine<br/>vs the Front]
-  C3 -.->|extreme: chase her into the deep workings| S[Into the Sump<br/>one-off vs bugs]
-  C3 -.->|extreme: HTX Standing at the floor| L[The Relief<br/>one-off vs Black Lantern]
+  C3 -.->|extreme: blast the sealed door and follow her down| S[Into the Sump<br/>one-off vs bugs]
+  C3 -.->|extreme: betray HTX, or HTX Standing −3 or lower| L[The Relief<br/>one-off vs Black Lantern]
   S -.-> H((second half))
   L -.-> H
   C4 --> H
@@ -129,23 +143,34 @@ The rebellion as HTX describes it.
   off the table, with whatever effect is written for it (section 4). A lost
   refinery puts *Retake the Refinery* in the second half's pool. A depot left
   alone raises Rebel Strength.
-- **3. The Hunt.** Decapitation, or Protecting the VIP turned around so the
-  player snatches Varga. Killing her ends the hunt quickly, but she becomes a
-  martyr. Capturing her is harder and opens the way to a truce. Failing leaves
-  her free.
+- **3. The Hunt.** Find and secure, to corner her, or Decapitation as a commando
+  with a **capture variant** (`variant: { capture: true }`). Decapitation is won
+  by killing the leader, so taking Varga alive needs that variant: her unit has
+  to be Broken and then reached in base contact, and killing her counts as a
+  kill, not a capture (section 5). Killing her ends the hunt quickly, but she
+  becomes a martyr. Capturing her is harder and opens the way to a truce.
+  Failing leaves her free, and she runs for the sealed workings.
 - **4. Pit Nine.** A mining town rises. The choices here are about civilians:
   Evacuation (they are protected), Crushing the Resistance (they are not), or
   talking your way in (it needs Sentiment, or Varga held). HTX's site office is
   in the town, and the Deep Contract data core can be found in it.
 
 **The two one-offs.** Each takes the place of chapter 4, so the first half is
-always four chapters. Each happens only after an extreme choice, and each
-leaves a mark on the second half:
+always four chapters. Each happens only after an **extreme choice**: an option
+written with `extreme: true` on it, so the validator can check that nothing
+else leads there. A `branch` node at the end of chapter 3 reads the flags they
+set. Each one-off leaves a mark on the second half:
 
-| One-off | Comes from | The battle | What it leaves |
+| One-off | The extreme choice that leads to it | The battle | What it leaves |
 |---|---|---|---|
-| **Into the Sump** (the bugs) | Chasing Varga, or the Front's remnants, into the sealed deep workings, against HTX's orders, or blasting your way down | Clearing out, in Close Encounters, against bugs | The hive is awake early (Hive Growth +3, revealed), and the data core is in your hands. The bug thread is open from chapter 5. |
-| **The Relief** (an enemy PMC) | HTX Standing at the floor, or an extreme betrayal: selling the ledger to the Front, or letting Varga go | HTX sends Black Lantern to "relieve" you, and they open fire. Meeting engagement or Hostile takeover. | HTX has cut you off (`htx_cut_off`). The Black Lantern thread is open from chapter 5, and the Front may see you as a useful enemy of their enemy. |
+| **Into the Sump** (the bugs) | *The sealed door* (after a failed hunt): Varga has escaped into the sealed deep workings. **Blast the door and follow her down**, against HTX's orders (`extreme`, flag `sump_entered`, Hive Growth +2). | Clearing out, in Close Encounters, against bugs | The hive is awake early (Hive Growth +3, revealed), and the data core is in your hands. The bug thread is open from chapter 5. |
+| **The Relief** (an enemy PMC) | A betrayal of HTX: in *The cell*, **let Varga go** (`extreme`, flag `varga_released`); or in *The ledger*, **sell it back to the Front** (`extreme`, flag `ledger_sold`) while HTX Standing is −1 or lower. Or HTX Standing has fallen to −3 or lower by the end of chapter 3, the point where HTX turns on you (section 4). | HTX sends Black Lantern to "relieve" you, and they open fire. Meeting engagement or Hostile takeover. | HTX has cut you off (`htx_cut_off`). The Black Lantern thread is open from chapter 5, and the Front may see you as a useful enemy of their enemy. You never reach Pit Nine, so you don't have the data core: the HTX thread's chapters must not need it. |
+
+If both are triggered, **Into the Sump** wins: it was chosen last, at the
+sealed door. The Relief's trigger then sets `htx_suspects` instead, which
+raises the Black Lantern thread's pressure in the second half. The one-offs
+should be uncommon but reachable. The Monte Carlo walk reports how often each
+comes up (section 6), and the target is roughly 5 to 15% of walks each.
 
 ### The second half: Fault Lines (chapters 5 to 8)
 
@@ -164,11 +189,21 @@ How the chapters are chosen:
 - **Chapters 5 to 7:** the briefing offers the eligible chapters from the two
   threads under the most pressure, as jobs. The player picks one. The one not
   taken is a job passed up (section 4), so a thread you ignore gets worse.
-- **Chapter 8, the finale,** belongs to the thread under the most pressure:
-  *The Last Redoubt*, *Hive Heart* or *The Showdown*. Who fights beside you
-  depends on the flags (rebels after a truce, Black Lantern if they are still
-  your partner). If Hive Growth has reached 8, the finale is a Breakout,
-  whatever else is going on.
+- **Chapter 8, the finale,** belongs to the enemy thread under the most
+  pressure: *The Last Redoubt*, *Hive Heart* or *The Showdown*. A thread can
+  only take the finale once at least one of its arc chapters has been played,
+  so a finale never comes without its setup. If no thread qualifies, it goes to
+  the thread under the most pressure anyway, and its briefing's `{if}` text
+  covers the missing setup. Who fights beside you depends on the flags (rebels
+  after a truce, Black Lantern if they are still your partner). If Hive Growth
+  is 8 or more when the finale begins, the finale is a Breakout, whatever else
+  is going on.
+- **The truce has no finale of its own.** It is a thread of allies, not of
+  enemies. Its pressure counts when the pool offers chapters 5 to 7, but not
+  when the finale is chosen. Instead, a truce changes the other finales. With
+  `truce` set, *The Last Redoubt* is fought against the hardliners who refused
+  the truce, with Varga's people beside you. *Hive Heart* and *The Showdown*
+  bring rebel allies.
 - **Each pool chapter is played at most once.** Every thread has a fallback
   chapter, so there is always something to offer. The validator checks this
   (section 6).
@@ -185,22 +220,25 @@ flags: `truce` (from *The Ceasefire*), `leaked` (from *The Leak*), and
 `htx_cut_off` (from *The Relief*, or HTX finding out about a cover-up). Staying
 with HTX is simply never setting any of them.
 
-**Endings**, chosen by meters and flags once the last battle is over:
+**Endings** are chosen by meters and flags once the last battle is over. They
+are checked in this order, and the first that fits is the one you get. The
+last ending has no conditions, so every path has an ending:
 
 | Ending | Roughly |
 |---|---|
-| **Company Man** | Stayed with HTX (no `truce`, `leaked` or `htx_cut_off`), hive contained, HTX Standing high. The company is rich and the moon is broken. |
-| **Liberators** | `truce` or `leaked`, the finale won, hive contained. The Front holds the moon. The company is poor, and loyal to its own. |
-| **Scorched Earth** | Hive Growth gets away from everyone. HTX orders the moon sterilised from orbit, and the last battle is an evacuation. |
-| **Contract Terminated** | Black Lantern wins the showdown, or HTX turns on you and you lose the finale. The company is betrayed and runs. |
 | **Broken Company** | Any time the company cannot field a Tier I army after its hub turn. |
+| **Scorched Earth** | Hive Growth gets away from everyone (the Breakout finale). HTX orders the moon sterilised from orbit, and the last battle is an evacuation. |
+| **Contract Terminated** | Black Lantern wins the showdown, or HTX turns on you and you lose the finale. The company is betrayed and runs. |
+| **Liberators** | `truce` or `leaked`, the finale won, hive contained. The Front holds the moon. The company is poor, and loyal to its own. |
+| **Company Man** | Stayed with HTX (no `truce`, `leaked` or `htx_cut_off`), hive contained, HTX Standing 2 or more. The company is rich and the moon is broken. |
+| **Paid Off** | Anything else: the war ends without you deciding it. HTX pays what it owes, or doesn't, and the company ships out. The epilogue is written from the meters, so it still tells the story you made. |
 
 Each ending has a short epilogue: what happened to the moon, to Varga, and to
 each named unit that survived.
 
 ---
 
-## 3. Decisions
+## 3. Events and choices
 
 ### Every decision is a story event
 
@@ -227,8 +265,13 @@ deployment.
 
 The rules for writing them:
 - **No event is used twice.** Each one has its own id, and the validator refuses
-  an id it has seen before. Within an act, no two events may offer the same set
-  of levers (section 6).
+  an id it has seen before. Within a half, no two events may offer the same set
+  of **battle** levers. State levers alone don't count, because nearly every
+  event moves a meter and sets a flag. A repeated set of state levers is only a
+  warning (section 6).
+- **Extreme choices are marked.** An option that can take the first half off
+  its fixed run (section 2) carries `extreme: true`, and its text says plainly
+  that it crosses a line.
 - **Every event shows a trade-off** you can see in the writing: what it costs
   and who it hurts, even when the numbers are hidden.
 - **Long-term choices come back.** A flag set by an event is read by a later one
@@ -250,7 +293,7 @@ a long-term mark. The first half, for example:
 | 1. Landfall | *The port master's offer.* The port's own security chief offers his men, if HTX pays them. | Take them (allies, kUC −). Send them home (nothing). Ask what they know (show the enemy list; the port master remembers you were rude: Sentiment −1). |
 | 2. Refinery Siege | *The night shift.* Refinery workers are still inside, and the Front has offered them safe passage out. | Let them go (the enemy gets +1 Readiness, Sentiment +1, flag `nightshift_freed`). Keep them as a human shield (you choose the deployment, Sentiment −2, Loyalty −1). Get them to sabotage the Front's guns (roll on Intel: success is strikes before turn 1, failure is `nightshift_shot`). |
 | 2. Depot Raid | *Truck 14.* A driver will sell you the depot's guard rota. | Pay (kUC −, show the list). Grab him and question him (Intel +1, Loyalty −1, flag `driver_taken`). Go in blind but now, before the rota changes (you attack, enemy Readiness 0). |
-| 3. The Hunt | *Kill or capture.* HTX wants Varga dead. Your sergeant thinks she is worth more alive. | The HTX gunship (strikes before turn 1, HTX +1, `aim_kill`). A snatch team (swap to Decapitation, a commando only, `aim_capture`). Wait for her to move (Hive Growth +1, you pick the role). |
+| 3. The Hunt | *Kill or capture.* HTX wants Varga dead. Your sergeant thinks she is worth more alive. | The HTX gunship (strikes before turn 1, HTX +1, `aim_kill`). A snatch team (swap to Decapitation with the capture variant, a commando only, `aim_capture`). Wait for her to move (Hive Growth +1, you pick the role). |
 | 4. Pit Nine | *The schoolhouse.* The Front has fortified the town school, with children still in it. | Clear it room by room (Close Encounters, no strikes, Sentiment +2 if you win). Shell it (strikes, Sentiment −4, flag `pit9_shelled`, Loyalty −1). Talk to the teacher (needs `nightshift_freed` or `varga_held`: skip the battle, or face an ambush). |
 | Into the Sump (one-off) | *The miners' map.* A captured miner offers a route through the old workings. | Trust him (the role is yours, but roll for a trap). Use HTX's surveys (the role is set, and HTX knows exactly where you are, flag `htx_tracking`). Blast a new way in (strikes, Hive Growth +2). |
 | The Relief (one-off) | *The handover.* Black Lantern's commander arrives with a letter from HTX and a smile. | Hand over the sector and leave (no battle; the second half opens with `htx_cut_off` and nothing to fight for but side contracts). Refuse (you choose the role). Fire first (strikes before turn 1, and the Front hears about it: Sentiment +1). |
@@ -263,9 +306,10 @@ decide what the fight meant. The first half, for example:
 | After | The event | Options |
 |---|---|---|
 | 1. Landfall | *The dead at the gate.* Rebel dead, and civilians among them. | Bury them openly (Sentiment +1, HTX −1). Let HTX "process" them (HTX +1, flag `gate_cleared`: the town remembers). |
-| 2. Refinery, won | *The ledger.* A rebel quartermaster's ledger shows where the Front gets its money. | Give it to HTX (HTX +1, Rebel Strength −2). Read it first (Intel +2, the first hint of the Deep Contract, flag `ledger_read`). Burn it, for a price the Front will pay (kUC +, Sentiment +1, `ledger_sold`). |
+| 2. Refinery, won | *The ledger.* A rebel quartermaster's ledger shows where the Front gets its money. | Give it to HTX (HTX +1, Rebel Strength −2). Read it first (Intel +2, the first hint of the Deep Contract, flag `ledger_read`). Sell it back to the Front (**extreme**: kUC +, Sentiment +1, HTX −1, `ledger_sold`). |
 | 2. Refinery, lost | *The survivors.* HTX blames you for the refinery. | Take the blame (HTX −1, Loyalty +1). Blame the garrison (HTX +0, Loyalty −1, the garrison commander is now hostile). |
-| 3. The Hunt, Varga held | *The cell.* Varga asks to talk to you, and only you. | Listen (Intel +1, flag `varga_talked`: opens the truce). Hand her straight to HTX (HTX +2, `varga_handed`, she may vanish). Hold her yourself as leverage (HTX −1, Rebel Strength −2, `varga_held`). |
+| 3. The Hunt, Varga captured | *The cell.* Varga asks to talk to you, and only you. | Listen (Intel +1, flags `varga_talked` and `varga_held`: opens the truce). Hand her straight to HTX (HTX +2, `varga_handed`, she may vanish). Hold her yourself as leverage (HTX −1, Rebel Strength −2, `varga_held`). Let her go (**extreme**: HTX −2, Sentiment +2, `varga_released`). |
+| 3. The Hunt, failed | *The sealed door.* Varga's people fall back into the old workings and weld the blast door behind them. HTX says the lower levels are off limits. | Let her go for now (`varga_free`). Blast the door and follow her down (**extreme**: Hive Growth +2, HTX −1, `sump_entered`). |
 | 4. Pit Nine | *Payroll.* The town's payroll safe survived the fight. | Keep it (kUC ++, Loyalty +1, Sentiment −2). Return it to the miners (Sentiment +2). Return it to HTX (HTX +1). |
 | Pit Nine, or Into the Sump | *The data core.* {soldier:tech} has it, and HTX asks for it on an open channel. | Hand it over (HTX +2). "Lost in the fighting" (`core_recovered`, `coverup`). Copy it, then hand it over (`core_recovered`, and a roll: HTX may notice). |
 
@@ -305,7 +349,7 @@ shown and some are hidden.** Each meter's entry in the story data says which:
   "HTX is uneasy"): HTX Standing, Loyalty and Intel. These are the company's own
   business, so the player knows them.
 - **Hidden:** Sentiment, Rebel Strength, Hive Growth and Black Lantern
-  Readiness. The player reads them only from the writing: the briefing's
+  Strength. The player reads them only from the writing: the briefing's
   description of the enemy, what the locals say, how many tunnel mouths there
   are. An event can **reveal** a hidden meter for the rest of the story with
   `{ reveal: 'hive' }`. Examples: an informant in the Front shows Rebel
@@ -322,8 +366,13 @@ Flags are never shown as flags. The journal tells them as prose.
 | **Loyalty** (your troops) | Death benefits, winning, resting units | High: once a battle, a unit may re-roll a failed Morale or Rally. Low: units leave between chapters, and new Trauma comes more easily. |
 | **Intel** (0 to 6) | Recon, interrogation, the data core | Spent on recon rolls, and on unlocking hidden options in briefings. |
 | **Rebel Strength** (0 to 10) | Depots left alone, prisoners released, low Sentiment | How many of the optional units in a Front force turn up, and its Readiness. At 0 the Front is broken and its chapters change or drop out. |
-| **Hive Growth** (0 to 10) | Every chapter that passes, blasting, time spent waiting | How big the bug forces are, and the number of waves in the Hive Heart. At 8 it forces Scorched Earth. |
-| **Black Lantern Readiness** (0 to 10) | HTX trusting them over you, time | How many optional units Black Lantern brings, and their honours and upgrades. |
+| **Hive Growth** (0 to 10) | Each chapter from chapter 4 on, blasting, time spent waiting, side contracts taken (except catch-up ones, below) | How big the bug forces are, and the number of waves in the Hive Heart. At 8 or more when the finale begins, it forces the Breakout and Scorched Earth. |
+| **Black Lantern Strength** (0 to 10) | HTX trusting them over you, time | How many optional units Black Lantern brings, and their honours and upgrades. (Not to be confused with a battle's Readiness, section 3.) |
+
+Time alone adds at most +4 Hive Growth by the finale, so Scorched Earth comes
+from the player's choices (blasting, waiting, the Sump), not just from the
+clock. The Monte Carlo walk reports how often it happens. The target is under
+15% of walks with random choices.
 
 ### Enemy forces
 
@@ -405,7 +454,9 @@ How the story keeps a company on that curve:
 - **Catching up, quietly.** Each interlude works out how far the company is from
   the curve, in kUC towards the next Tier and in what it can field. When it is
   behind, the interlude offers more side contracts, and better-paid ones. When it
-  is ahead, it offers fewer. Nothing is ever taken away.
+  is ahead, it offers fewer. Nothing is ever taken away. A side contract offered
+  to catch up is marked `catchUp` and costs no time (no Hive Growth), so a
+  struggling company is not pushed towards Scorched Earth for taking the help.
 - **Cut off from HTX.** Once HTX has stopped paying, side contracts pay more,
   so the curve can still be reached.
 - **No guarantee.** A company that keeps losing can fall behind. Scaling (below)
@@ -413,7 +464,11 @@ How the story keeps a company on that curve:
 
 **Scaling battles to the company.** A battle node never gives a fixed Battle
 Tier or Priority Level. It gives them relative to what the company can field
-when the battle comes (`fieldableTier` and `levelsFor`, in `camp-contract.js`):
+when the battle comes. `fieldableTier(co, pl)` in `camp-contract.js` already
+takes one company. `levelsFor` and `maxBattleTier` take the player and a rival
+company. A story has no rival company, since the enemy is written to fit, so
+the story uses one-company forms of them (`levelsFor` is just `canFieldArmy`
+for the player at each PL):
 - **Tier:** `tier: 'max'` or `'max-1'`, with `min` and `max` where a chapter
   must keep its character. Landfall is always Tier I. A raid by a commando can
   stay small.
@@ -480,6 +535,14 @@ Each side contract is a small job: a scenario (standard, solitaire or Close
 Encounters), an enemy force written or put together from that side's templates
 and scaled by its meter, and its pay and EXP.
 
+Side contracts do **not** come from `rollOffers`. That draws rival companies,
+and a solo campaign offers only the six standard scenarios (`SC.ORDER`).
+Solitaire and Close Encounters jobs only come up in online co-op contracts
+(`camp-world.js`). A story dossier has no rival companies. Its side contracts
+are a pool in the story file, each with a scenario id, a side, a force template
+and its pay. The story engine builds them, and they are shown on the existing
+offer screen (`dossier-contract.js`).
+
 **Taking one and passing it up can both cost something,** written for each
 contract in the same way as the jobs passed up above:
 - **Taking it** usually costs time (Hive Growth +1, or the meter it names),
@@ -501,23 +564,40 @@ the main money, and interludes offer them more often.
 **The first half uses only the scenarios already in the game.** Every first-half mission is a
 standard, solitaire or Close Encounters scenario, picked by id and given story
 text. They are already tested and the AI already knows how to play them, so the
-first playable slice (phase 4) needs no new rules.
+first playable slice (phase 4) needs no new scenarios. It needs one variant,
+the capture variant of Decapitation, so variants are built in phase 2.
 
 | Chapter | Scenario | Source |
 |---|---|---|
 | 1. Landfall | Secure and control | `secure` |
 | 2. Refinery Siege, or Depot Raid | Invasion as the defender; Demolish, or Sabotage as a commando | `invasion`, `demolish`, `s_sabotage` |
-| 3. The Hunt | Decapitation, or Find and secure | `s_decap`, `find` |
+| 3. The Hunt | Find and secure, or Decapitation with the capture variant | `find`, `s_decap` + `variant: { capture: true }` |
 | 4. Pit Nine | Evacuation, Crushing the Resistance, or Ambush! if negotiation fails | `s_evac`, `s_crush`, `s_ambush` |
 | Into the Sump (one-off) | Clearing out, with bugs | `ce_clear` |
 | The Relief (one-off) | Meeting engagement or Hostile takeover, against Black Lantern | `meeting`, `takeover` |
-| Side contracts | Whatever `rollOffers` rolls | All of them |
+| Side contracts | From the story's own pool (section 4) | Any of the above |
+
+**Solitaire scenarios are a different kind of battle,** and the story has to
+allow for that. With `cfg.solo` set, the engine always uses a 48″ × 48″ table
+and turns Rebel Tactics off (`engine.js`, where it reads `cfg.solo`). The
+player fields a commando, checked by `checkCommando`, not an army, and the
+enemy comes from `rollOpFor`. So in a solitaire story battle:
+- the story's enemy force replaces the `rollOpFor` roll (a hook, below);
+- `pl: 'max'` doesn't change the table size, and a forced Rebel Tactic is
+  ignored (the validator warns about both);
+- swapping a standard scenario for a solitaire one is a change of mode, not
+  only of scenario. The engine refuses a solitaire scenario without `cfg.solo`,
+  and a standard one with it. The swap lever sets `cfg.solo` and turns the
+  muster into a commando muster.
 
 A battle node can also adjust an existing scenario without a new one: its name
 and blurb, the turn limit, the number of objectives, which side attacks, and the
 compound's layout. This goes on the node as `variant: { turns: 12, name: 'Hold the Pass' }`,
 and `scenarios.js` reads it from `cfg.story.variant` wherever it reads those
-fields today.
+fields today. A variant can also change the victory check, as the capture
+variant does: the target leader has to be Broken and then reached, not killed.
+A change like that needs its own test, and AI support if the AI's goal changes
+(the AI defending Varga already protects its leader).
 
 **The second half needs custom scenarios.** These are new entries in `SCENARIOS`,
 in the same shape as the existing ones (`deploy`, `reserves`, `zoneFor`,
@@ -576,17 +656,25 @@ PMCStory.register({
         { id: 'wait', text: 'Wait for her to move.',
           battle: { role: 'choose' }, effects: [{ meter: 'hive', add: 1 }] }
       ], next: 'c3.battle' },
-      { id: 'c3.battle', type: 'battle', enemy: { side: 'front', core: [/* … */] }, scenario: 'secure', tier: 'max', pl: 1,
+      { id: 'c3.battle', type: 'battle', enemy: { side: 'front', core: [/* … */] }, scenario: 'find', tier: 'max', pl: 1,
         planet: 'industrial', tactics: 'guerillas',
         on: {
-          success: [{ if: { flag: 'aim_capture' }, effects: [{ flag: 'varga_held', set: true }], next: 'c3.held' },
+          success: [{ if: { flag: 'aim_capture' }, effects: [{ flag: 'varga_captured', set: true }], next: 'c3.captured' },
                     { effects: [{ flag: 'varga_dead', set: true }, { meter: 'rebels', add: -2 }], next: 'c3.dead' }],
-          failure: [{ effects: [{ flag: 'varga_free', set: true }, { meter: 'htx', add: -1 }], next: 'c3.free' }]
+          failure: [{ effects: [{ meter: 'htx', add: -1 }], next: 'c3.escaped' }]
         } },
-      { id: 'c3.held', type: 'debrief', text: '…', events: ['c3.thecell'], next: 'c4' }
+      { id: 'c3.captured', type: 'debrief', text: '…', events: ['c3.thecell'], next: 'c3.end' },
+      { id: 'c3.escaped', type: 'debrief', text: '…', events: ['c3.sealeddoor'], next: 'c3.end' },
+      { id: 'c3.end', type: 'branch', when: [
+          { if: { flag: 'sump_entered' }, next: 'sump' },
+          { if: { any: [{ flag: 'varga_released' }, { meter: 'htx', lte: -3 },
+                        { all: [{ flag: 'ledger_sold' }, { meter: 'htx', lte: -1 }] }] }, next: 'relief' },
+          { next: 'c4' } ] }
     ] }
   ],
-  endings: [ { id: 'liberators', if: { all: [{ flag: 'truce' }, { meter: 'hive', lt: 8 }] }, text: '…' } ]
+  endings: [   // checked in order; the last has no condition
+    { id: 'liberators', if: { all: [{ flag: 'truce' }, { meter: 'hive', lt: 8 }] }, text: '…' },
+    { id: 'paidoff', text: '…' } ]
 });
 ```
 
@@ -657,17 +745,34 @@ read where the setting already lives:
 | Hook | Where | Notes |
 |---|---|---|
 | Enemy list shown before mustering | `muster.js` | The view only. It shows B's picks. |
-| Role and edge chosen by the player | `scenarios.js` `rollRoles` | Return the preset role instead of the roll. `cfg.attacker` exists already. |
-| Rebel Tactic forced | `cfg.tactics` | Exists already |
-| The story's enemy force | Where the AI's list is picked | Build the list from the battle's `enemy` (core, optional units, changes) instead of picking one. Readiness can add units from the force's optional list. |
+| Role and edge chosen by the player | `scenarios.js` `rollRoles` | `rollRoles(id, docs, forced, …)` already takes a forced attacker. Pass the preset role. |
+| Rebel Tactic forced | `cfg.tactics` | Exists already. Ignored in solitaire battles. |
+| The story's enemy force | Where the AI's list is picked | Build the list from the battle's `enemy` (core, optional units, changes) instead of picking one. In a solitaire battle, it replaces the `rollOpFor` roll. Readiness can add units from the force's optional list. |
+| Scenario swap, standard ↔ solitaire | `cfg.solo`, the muster | The engine only accepts a solitaire scenario with `cfg.solo` set, so the lever sets it and the muster becomes a commando muster (`checkCommando`). |
+| Scenario variant | `scenarios.js`, `solitaire.js` | Reads `cfg.story.variant`. Built in phase 2, since the capture variant is needed in chapter 3. |
 | Barricades (Readiness) | Terrain setup | Reuse Last Stand's barricade placement. |
 | Prelude strikes (air strike) | A new step after deployment, before turn 1 | Uses `shoot.js` to roll a hit and adds Suppression. The battle log shows it, so a replay replays it. |
 | Starting Suppression on own units (failed recon) | The same prelude step | |
-| Allies | Co-op machinery, side C | Some scenarios have **AI-run allies**: rebel units in the truce, the HTX garrison or port security in the first half, Black Lantern in *The Partner*. They are written per battle, like an enemy force, and are not in the player's roster. A third, AI-run side already exists for co-op and Besieged; use it if it fits, or else run some of side A's units by the AI. Needs a spike (phase 2). How allies fare can move meters (rebel allies lost: Sentiment −1). |
+| Allies | Co-op's owners on side A | Some scenarios have **AI-run allies**: rebel units in the truce, the HTX garrison or port security in the first half, Black Lantern in *The Partner*. They are written per battle, like an enemy force, and are not in the player's roster. **There is no third side in the engine.** Paint `'C'` is only the colour for the co-op partner's units (owner 2) on side A. So allies are side-A units with their own owner, and the AI plays that owner's activations. Co-op already splits side A between owners (`ownersA`, `activeOwner`). The report already records each unit's `owner`, so the aftermath can leave allies off the roster. Needs a spike (phase 2). How allies fare can move meters (rebel allies lost: Sentiment −1). |
 | Loyalty re-roll | Rally and Morale | One use per battle, shown on the command unit. |
 
 Everything the battle does differently is stored in `cfg`, so saves, replays and
-the AI (which plays copies of the battle) all see the same battle.
+the AI (which plays copies of the battle) all see the same battle. Rolls made
+before the battle, such as prelude strikes and a trap, are made by the engine
+and written to the battle log, not made outside it, so a replay shows the same
+result.
+
+### Fitting into the dossier
+
+A story dossier keeps `mode: 'solo'` (section 1). Phase 2 goes through every
+`campaign.mode` check and decides, for each one, whether a story behaves as a
+solo campaign or differently. The known differences:
+- **The hub's Contract button** (`dossier-hub.js`) goes to the story's next
+  node, or to the interlude's side contracts. It doesn't go to rival offers.
+- **No rival companies.** A story dossier draws none, and the parts of the hub
+  that show rivals, and offer generation in `camp-rivals.js`, skip it.
+- **The aftermath** (`dossier-after.js`) runs as for a solo campaign, then
+  hands on to the story's debrief.
 
 ### Screens
 
@@ -736,21 +841,33 @@ game keeps it from being broken by accident.
   - every node can be reached, and every `next` leads somewhere real;
   - every battle has a failure branch;
   - no state reachable by a walk leaves an event with zero options;
-  - no event id is used twice, and no two events in the same half offer the same set of levers;
+  - no event id is used twice, and no two events in the same half offer the same set of battle levers (the same set of state levers is a warning);
   - every flag an event sets is read by something later (a later event, a branch, an ending);
-  - every path ends at an ending, and every ending can be reached;
+  - every path ends at an ending, every ending can be reached, and the last ending has no condition;
   - in every reachable state, every thread the pool can offer has an eligible chapter (its fallback, if nothing else);
-  - in the first half, the one-offs are reached only through the choices marked extreme;
-  - every scenario, faction, archetype, unit key and effect named exists.
+  - in the first half, the one-offs are reached only through options marked `extreme: true`, or the HTX Standing floor;
+  - the truce thread has no finale, and every other thread has one;
+  - a solitaire battle doesn't set `pl: 'max'` or force a Rebel Tactic (a warning);
+  - every scenario, variant, faction, archetype, unit key and effect named exists.
 - **A Monte Carlo walk** (`npm run story:sim`): ten thousand walks with random
   choices and random grades. It plays no battles. It reports how often each
   ending is reached, the range of each meter, and the chapters nobody reaches.
-  This is the balance tool for the writing.
-- **One full playthrough in `test:all`:** every battle played as a paper battle
-  (`offtable.playNow`), through the real aftermath. It checks that the company
-  stays legal from start to finish, and that every enemy force can be set up and played.
+  It also reports how often each one-off comes up (target 5 to 15% each), how
+  often Scorched Earth happens (target under 15%), and how often a finale comes
+  with its thread's arc played. This is the balance tool for the writing.
+- **No test plays a battle.** The story's tests never run the AI against itself.
+  A battle is stood in for by a **made-up report**: a grade is drawn, and a
+  report in `battleReport`'s shape is written to match it. Casualties, kills and
+  units broken are spread across the fielded units, more of them for a worse
+  grade. The real aftermath then takes that report, as it would a real one.
+- **One full playthrough in `test:all`:** every battle stood in for by a made-up
+  report, through the real aftermath. It checks that the company stays legal
+  from start to finish. It also checks that every enemy force can be built and
+  set up: the engine is started on the battle's `cfg` up to deployment, and no
+  turn is played.
 - **The growth curve** (`npm run story:curve`): the full playthrough over many
-  seeds. Between chapters, the company is run by the rivals' spending logic
+  seeds, with grades drawn from a set spread (for example, 60% success).
+  Between chapters, the company is run by the rivals' spending logic
   (`developRival`), so it recruits and promotes as a sensible player would. It
   reports the Company Tier, and the best Tier and PL the company can field, at
   each chapter. The target is a median company at Tier III, able to field PL 2,
@@ -765,7 +882,9 @@ game keeps it from being broken by accident.
 Write the first half's four chapters and two one-offs,
 and every chapter in the second half's pool with its thread and conditions: each
 event's situation and options in a line, each battle's scenario, enemy and Tier,
-and the meters and flags each one moves.
+and the meters and flags each one moves. That includes the extreme choices and
+the branch at the end of chapter 3 that reads them, the catch-all ending, and
+which finale each truce flag changes.
 Write no prose yet. Run it through the validator as soon as phase 1 exists.
 
 ### Phase 1: the story engine (Node only)
@@ -775,10 +894,20 @@ exercises every node type.
 
 ### Phase 2: the battle hooks
 `levers.js`: every battle lever (enemy list shown, role, strikes, starting
-Suppression, scenario swap, commando, allies, skip) as a change to `cfg`. Battle
-Tier and PL relative to what the company can field. Readiness. The prelude step. Building
-enemy forces from the battle's core, optional units and changes. A spike on allies through side C. Tests for each
-hook, through the engine.
+Suppression, scenario swap, commando, allies, skip) as a change to `cfg`.
+- Battle Tier and PL relative to what the company can field, with one-company
+  forms of `levelsFor` and `maxBattleTier`.
+- Readiness, and the prelude step, with its rolls in the battle log.
+- Building enemy forces from the battle's core, optional units and changes, and
+  using a written force in place of `rollOpFor` in solitaire battles.
+- The standard ↔ solitaire swap: `cfg.solo` and the commando muster.
+- Scenario variants (`cfg.story.variant`), and the capture variant of
+  Decapitation.
+- The `campaign.mode` audit and `PMCStory.active` checks: the hub's Contract
+  button, no rival companies, the aftermath handing on to the debrief.
+- A spike on allies as an AI-run owner on side A.
+
+Tests for each hook, through the engine.
 
 ### Phase 3: the screens
 The story screens, the journal, the menu entry. Wired to the existing muster,
@@ -789,8 +918,7 @@ The first half (chapters 1 to 4, and the two one-offs), written in full and play
 the events' choices matter, and difficulty.
 
 ### Phase 5: custom scenarios
-Story scenario variants (`cfg.story.variant`). Then waves and the orbital
-countdown as End-phase events, then Hive Heart, Convoy, Breakout, Hold the Line
+Waves and the orbital countdown as End-phase events, then Hive Heart, Convoy, Breakout, Hold the Line
 and Parley, each with the AI support and tests it needs. Phase 5 can start while
 phase 4 is still being play-tested.
 
@@ -799,7 +927,7 @@ The pool of chapters for every thread, threads' pressure and how chapters are
 offered, the finales, the endings and their epilogues: 8 chapters a playthrough
 in all. Tune pay, rewards and the catch-up against the growth curve, and the
 enemy allowance against play-testing. Balance with the Monte Carlo
-walk and the paper-battle playthrough.
+walk and the made-up-report playthrough.
 
 ### Phase 7: polish
 Portraits or emblems for the people in the story (in the iso style or as plain
@@ -837,3 +965,9 @@ All settled. They are kept here for the record.
    (section 5).
 10. ~~**The Xenotripods.**~~ *Decided:* left out for now. The story graph leaves
    room for a Xenotripod thread in the pool, or a second story, that brings them in.
+11. ~~**Battles off the table.**~~ *Decided:* no AI-against-AI battle is played
+   in the background, in play or in the story's tests. Jobs passed up and
+   everything else off the table are settled by rolls, meters, flags and events.
+   The story's tests use made-up reports (section 6). A new custom scenario's
+   own unit test still plays one AI battle, because it is testing whether the
+   AI can play that scenario, not the story (section 5).
