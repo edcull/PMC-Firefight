@@ -433,7 +433,8 @@
          the rout the scenario counts — the objective of p. 49 where it has one, or a
          side wiped out — so only a check that ended the battle on it marks a side.
          A battle conceded never gets here with one marked (surrender, above). */
-      var res = SC.check(E.state), rs = (res && res.routed) || [];
+      // a story's target, killed or taken, ends it first (storybattle.js)
+      var res = E.targetCheck(E.state) || SC.check(E.state), rs = (res && res.routed) || [];
       E.state.routed.A = rs.indexOf('A') >= 0;
       E.state.routed.B = rs.indexOf('B') >= 0;
       if (res) {
@@ -506,6 +507,7 @@
           fled: !!u.fled,
           aboardDowned: !!u.lostAboard,
           weakened: !!u.weakened,
+          ally: !!u.ally,                     // a story's allies: on side A, but on nobody's dossier
           owner: u.owner || null,             // co-op: whose unit it was (a campaign's co-op contract splits by it)             // Other Worlds: an unexplained weakness (+1 TP in a campaign)
           lostAboard: u.lostAboard || null,
           drugged: !!u.drugged,            // Drug Dealer: the comedown comes after
@@ -539,7 +541,8 @@
         // turn by turn, where the campaign was raised with Debug tracking (battletrack.js)
         track: trackEnd(),
         units: Object.keys(lines).map(function (k) { return lines[k]; }),
-        casualties: casualtyList()
+        casualties: casualtyList(),
+        story: E.state.storyOutcome || null    // a story battle's target: killed or captured
       };
     }
 

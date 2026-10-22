@@ -140,29 +140,36 @@
   }
   function lastStandBarricades(state) {
     ['A', 'B'].forEach(function (side) {
+      // a story battle's Readiness: barricades for a side whatever its tactic
+      var story = state.cfg.story && state.cfg.story.barricades && state.cfg.story.barricades[side];
+      if (story && !(state.tactics && state.tactics[side] === 'laststand')) return placeBarricades(state, side, story);
       if (!state.tactics || state.tactics[side] !== 'laststand') return;
       if (state.manualLaststand && state.manualLaststand[side]) return;   // a player puts theirs down by hand
-      var foe = side === 'A' ? 'B' : 'A', n = 4 * (state.cfg.pl || 1);
-      // the rebels' own ground, sampled every 2"
-      var home = [];
-      for (var gx = 1; gx < R.BOARD.w; gx += 2) for (var gy = 1; gy < R.BOARD.h; gy += 2) if (inZone(state, side, gx, gy)) home.push([gx, gy]);
-      var nearHome = function (x, y) { return home.some(function (q) { return dist(q[0], q[1], x, y) <= 12; }); };
-      for (var i = 0; i < n; i++) {
-        var len = 3 + Math.floor(Math.random() * 4);   // no section over 6"
-        for (var tries = 0; tries < 300; tries++) {
-          var horiz = Math.random() < 0.5;
-          var x = 2 + Math.random() * (R.BOARD.w - 4 - (horiz ? len : 1)), y = 2 + Math.random() * (R.BOARD.h - 4 - (horiz ? 1 : len));
-          var pc = { kind: 'barricade', x: x, y: y, w: horiz ? len : 1, h: horiz ? 1 : len, lastStand: side };
-          var pts = [[pc.x, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x + pc.w / 2, pc.y + pc.h / 2]];
-          if (pts.some(function (q) { return inZone(state, foe, q[0], q[1]); })) continue;
-          // on open ground, clear of other pieces and of any unit already standing there
-          if (pts.some(function (q) { return R.terrainAt(state, q[0], q[1]) !== 'open' || R.unitNear(state, q[0], q[1], null, 1.5); })) continue;
-          if (tries < 200 && home.length && !nearHome(pc.x + pc.w / 2, pc.y + pc.h / 2)) continue;
-          state.terrain.push(pc);
-          break;
-        }
-      }
+      placeBarricades(state, side, 4 * (state.cfg.pl || 1));
     });
+  }
+  /* n barricade sections on open ground near a side's own zone, clear of the foe's. */
+  function placeBarricades(state, side, n) {
+    var foe = side === 'A' ? 'B' : 'A';
+    // the rebels' own ground, sampled every 2"
+    var home = [];
+    for (var gx = 1; gx < R.BOARD.w; gx += 2) for (var gy = 1; gy < R.BOARD.h; gy += 2) if (inZone(state, side, gx, gy)) home.push([gx, gy]);
+    var nearHome = function (x, y) { return home.some(function (q) { return dist(q[0], q[1], x, y) <= 12; }); };
+    for (var i = 0; i < n; i++) {
+      var len = 3 + Math.floor(Math.random() * 4);   // no section over 6"
+      for (var tries = 0; tries < 300; tries++) {
+        var horiz = Math.random() < 0.5;
+        var x = 2 + Math.random() * (R.BOARD.w - 4 - (horiz ? len : 1)), y = 2 + Math.random() * (R.BOARD.h - 4 - (horiz ? 1 : len));
+        var pc = { kind: 'barricade', x: x, y: y, w: horiz ? len : 1, h: horiz ? 1 : len, lastStand: side };
+        var pts = [[pc.x, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x + pc.w / 2, pc.y + pc.h / 2]];
+        if (pts.some(function (q) { return inZone(state, foe, q[0], q[1]); })) continue;
+        // on open ground, clear of other pieces and of any unit already standing there
+        if (pts.some(function (q) { return R.terrainAt(state, q[0], q[1]) !== 'open' || R.unitNear(state, q[0], q[1], null, 1.5); })) continue;
+        if (tries < 200 && home.length && !nearHome(pc.x + pc.w / 2, pc.y + pc.h / 2)) continue;
+        state.terrain.push(pc);
+        break;
+      }
+    }
   }
 
   /* No two terrain pieces share ground. The scenario's own pieces — the

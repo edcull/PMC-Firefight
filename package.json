@@ -10,7 +10,8 @@
     "test:browser": "node scripts/test.js browser",
     "test:quick": "node scripts/test.js quick",
     "test:slow": "node scripts/test.js slow",
-    "test:all": "node scripts/test.js all"
+    "test:all": "node scripts/test.js all",
+    "story:sim": "node scripts/story-sim.js"
   },
   "devDependencies": {
     "playwright": "1.56.1",

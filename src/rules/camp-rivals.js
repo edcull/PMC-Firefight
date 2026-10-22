@@ -118,6 +118,8 @@
       var A = campaign.companies.A;
       var SC = root.PMCScen;
       if (campaign.offers && campaign.offersTurn === campaign.turn) return campaign.offers;
+      // a story's jobs are its own (its side contracts), never the rivals'
+      if (campaign.story) return (campaign.offers = []);
       var rivals = campaign.rivals && campaign.rivals.length
         ? campaign.rivals : [campaign.companies.B];
 

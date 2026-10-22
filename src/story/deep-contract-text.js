@@ -1,0 +1,154 @@
+/* PMC 2670 — Firefight : Deep Contract's words (docs/story-mode-plan.md, phase 4)
+
+   The story's prose, kept apart from its working (deep-contract.js), so that
+   it can be written and rewritten without touching the graph. Keyed by what
+   it belongs to:
+     a chapter's id           its intro, on the chapter's card
+     a node's id              its text (a brief, an event, a debrief, an interlude)
+     'node/option'            an option's text
+     'node/option.why'        why an option is closed
+   Anything not here keeps the one-liner in deep-contract.js. Text can name
+   the company's own units ({unit:…}, {soldier:…}), the company ({name}), and
+   say one thing or another by what has happened ({if flag}…{/if}; `success`
+   and `failure` are the last battle's).
+
+   The first half is written in full. The second half is still the bible's
+   one-liners, to be written once the first half has been played. */
+(function (root) {
+  'use strict';
+  root.PMCStoryText = root.PMCStoryText || {};
+  root.PMCStoryText['deep-contract'] = {
+
+    /* ================= 1. Landfall ================= */
+    c1: 'Kessler’s Reach is a grey moon on a long lease. The Halvorsen-Tey Extraction Consortium has worked it for forty years, and for forty years the miners have done what they were told. Six weeks ago they stopped. The Free Miners’ Front holds half the shafts and most of the roads, and HTX wants it put right, quickly and quietly. That is what it is paying {name} for.',
+    'c1.brief': 'The shuttle comes down on the starport’s last working pad. Smoke from the town beyond the fence, and a port that has been shot at for a week. HTX’s orders are short: hold the port, so the rest of the contract can land.',
+    'c1.portmaster': 'Port Master Okonkwo meets you at the ramp with a clipboard and a sidearm. His security team has held the gates for six days without relief and without pay. He will put them under your command, if HTX makes good what it owes them. He also looks like a man who knows more than he is saying.',
+    'c1.portmaster/take': 'Take his people. HTX can settle the bill, and you can carry it until then.',
+    'c1.portmaster/send': 'Send them home. They’ve done enough, and they aren’t yours.',
+    'c1.portmaster/ask': 'Ask what he knows about the Front, and don’t ask nicely.',
+    'c1.debrief': '{if success}The Front pulls back from the fence, leaving its dead in the road. The port is HTX’s again, and yours to keep.{/if}{if failure}The Front gets through the outer fence and no further. The port holds, but it was closer than it should have been, and the company knows it.{/if}',
+    'c1.gate': 'When the smoke clears there are bodies at the main gate. Most of them carried rifles. Some of them didn’t: a woman in a canteen apron, two boys who can’t have been sixteen. HTX’s site security wants them bagged and taken away before the town wakes up.',
+    'c1.gate/bury': 'Bury them in the town cemetery, openly, and let people come.',
+    'c1.gate/process': 'Let HTX “process” them. It isn’t your town.',
+    'c1.interlude': 'The port is quiet for the first time in a week. The company sleeps in shifts, cleans its weapons and counts what the landing cost.',
+
+    /* ================= 2. First Move ================= */
+    c2: 'HTX’s field office sends two jobs on one sheet, and makes it plain it can only afford one of them. The Front has the Number Three refinery under siege, with the night shift still inside. And a deserter has sold HTX the location of the Front’s supply depot in the old ore yards.',
+    'c2.brief': 'The refinery is three hours north. The depot is two hours east. Whichever you don’t take will happen without you.',
+    'c2.firstmove': 'You look at the map for a long time. The refinery is HTX’s property and HTX’s problem. The depot is where the Front’s guns come from.',
+    'c2.firstmove/relieve': 'Relieve the refinery. Get the night shift out.',
+    'c2.firstmove/strike': 'Raid the depot. Take the Front’s guns away before they’re used.',
+    'c2r.nightshift': 'The refinery’s foreman gets a message out: forty workers are sheltering in the cracking tower. The Front has offered them safe passage through its lines if they walk out unarmed, now, before the shooting starts. HTX’s site manager wants them kept inside. “They’re HTX employees on HTX property.”',
+    'c2r.nightshift/free': 'Let them go. The Front gets ready for you while they do.',
+    'c2r.nightshift/shield': 'Keep them inside. The Front won’t shell a tower full of miners.',
+    'c2r.nightshift/sabotage': 'Ask the foreman to have his people jam the Front’s guns on their way out.',
+    'c2r.debrief': '{if success}The siege lines break up and fall back into the hills. The refinery’s flare stack is still burning.{/if}{if failure}You pull out under fire. By nightfall the Front’s flag is on the cracking tower.{/if}',
+    'c2r.ledger': 'In a quartermaster’s dugout behind the Front’s lines, {soldier:veteran} finds a ledger. It is a careful record of where the Front’s money comes from, and some of the names in it are HTX’s own.',
+    'c2r.ledger/give': 'Hand it to HTX, unread.',
+    'c2r.ledger/read': 'Read it first. All of it.',
+    'c2r.ledger/sell': 'The Front will want this back, and will pay for it.',
+    'c2r.survivors': 'HTX’s regional manager calls you to the field office. Somebody is going to answer for the refinery, and it is not going to be HTX.',
+    'c2r.survivors/blame': 'Take the blame. It was your job.',
+    'c2r.survivors/garrison': 'Point out that the garrison broke before you got there.',
+    'c2d.truck': 'Truck Fourteen runs ore to the depot and food back out. Its driver, a nervous man called Petrak, will sell you the guard rota for the price of a ticket off the moon.',
+    'c2d.truck/pay': 'Pay him, and put him on the next shuttle.',
+    'c2d.truck/grab': 'Grab him and get the rota the quick way.',
+    'c2d.truck/blind': 'Go in now, before the rota changes, and before he can sell you out too.',
+    'c2d.truck/night': 'Send a small team in by night, and keep the rest back.',
+    'c2d.debrief': '{if success}The depot’s doors are open and the guards are gone.{/if}{if failure}The depot was waiting for you, and you leave it standing.{/if}',
+    'c2d.armoury': 'Inside: crates of rifles, mortar tubes still in grease, and two light guns on trailers. More than the company can carry, and more than the Front can spare.',
+    'c2d.armoury/blow': 'Wire it and blow it.',
+    'c2d.armoury/take': 'Take the best of it for the company.',
+    'c2d.armoury/leave': 'Leave it for HTX to inventory.',
+    'c2d.rota': 'The guards were doubled and the gates were shut. Somebody told the Front you were coming, and Petrak was not the only person who knew.',
+    'c2d.rota/hunt': 'Find out who talked. Quietly.',
+    'c2d.rota/letgo': 'Let it go. Asking questions would do more damage.',
+    'c2.interlude': 'The company comes back to the port with the dust of the north road on it. HTX has paid, on time, and without a word of thanks.',
+
+    /* ================= 3. The Hunt ================= */
+    c3: 'Ada Varga was a shift boss in Pit Four for nineteen years. Now she is the Front, as far as anyone on Kessler’s Reach is concerned, and HTX has found her: a pumping station in the old workings, with her people around her.',
+    'c3.brief': 'The pumping station sits above the oldest shafts on the moon. The sealed levels are below it. HTX’s map marks them in red and says nothing else.{if depot_raided} Whatever guns she had went up with the depot.{/if}',
+    'c3.killorcapture': 'HTX’s orders are explicit: Varga dead, and quickly. {soldier:veteran} reads them twice and says what the company is thinking. “Dead, she’s a martyr. Alive, she’s worth something to somebody. Possibly us.”',
+    'c3.killorcapture/gunship': 'Call in HTX’s gunship and finish it from the air.',
+    'c3.killorcapture/snatch': 'Send a snatch team. Take her alive.',
+    'c3.killorcapture/wait': 'Wait for her to move, and pick the ground.',
+    'c3.debrief': '{if success}The pumping station is quiet.{/if}{if failure}The pumping station is empty by the time you reach it. There is a blast door at the bottom of the stairs, and it is still warm.{/if}',
+    'c3.cell': 'They put Varga in a storeroom at the port, with a guard on the door. Within the hour she asks to speak to the commander of {name}, and only to the commander.',
+    'c3.cell/listen': 'Go in and listen to her.',
+    'c3.cell/hand': 'Hand her to HTX without a word.',
+    'c3.cell/hold': 'Keep her, as leverage, and tell HTX she stays with you for now.',
+    'c3.cell/release': 'Open the door, and let her walk.',
+    'c3.martyr': 'Varga is dead. By morning every pit on the moon knows it, and HTX wants her body.',
+    'c3.martyr/home': 'Send her home to Pit Four, to be buried by her own people.',
+    'c3.martyr/display': 'Let HTX put her on display at the port gates.',
+    'c3.martyr/bury': 'Bury her where nobody will ever find her.',
+    'c3.door': 'Varga’s people fell back down the stairs and through a blast door marked with HTX’s red. They welded it shut behind them. HTX’s instructions arrive within minutes: the lower levels are off limits, and the door stays shut.',
+    'c3.door/letgo': 'Leave the door shut. She’ll come back up.',
+    'c3.door/follow': 'Cut the door and go down after her, orders or not.',
+    'c3.interlude': 'HTX calls the hunt a success, whatever happened at the pumping station. The company has learned to read the gaps in HTX’s messages.',
+
+    /* ================= 4. Pit Nine ================= */
+    c4: 'Pit Nine is a mining town of six thousand people, and it rose in a single night. The Front has the streets, HTX has a site office in the middle of them, and HTX’s manager there has stopped answering the radio.',
+    'c4.brief': 'HTX wants the town back and its office secured. The office holds the Deep Contract’s records, a phrase that appears in your orders exactly once.',
+    'c4.school': 'The Front has fortified the town school. It is the strongest building in Pit Nine, and there are children inside who did not get out in time. {if nightshift_freed}One of the teachers was on the refinery’s night shift. She remembers who let them go.{/if}',
+    'c4.school/clear': 'Clear it room by room. Nobody fires blind.',
+    'c4.school/shell': 'Shell it first, then go in.',
+    'c4.school/talk': 'Talk to the teacher, and see if the doors can be opened without a fight.',
+    'c4.debrief': '{if success}Pit Nine is quiet. HTX’s site office is intact, and its safe is open.{/if}{if failure}The Front still holds half of Pit Nine, but you hold HTX’s office, and that is what HTX asked for.{/if}',
+    'c4.payroll': 'The town’s payroll safe survived the fighting: six weeks of wages that nobody has been paid.',
+    'c4.payroll/keep': 'The company has earned it.',
+    'c4.payroll/miners': 'Give it to the miners it belongs to.',
+    'c4.payroll/htx': 'Return it to HTX.',
+    'c4.interlude': 'The first half of the contract is done, more or less as HTX wrote it. Nothing on Kessler’s Reach is the same as when you landed.',
+
+    /* ================= the one-offs ================= */
+    sump: 'Below the blast door, the old workings go down further than any map shows. The air is warm and wet, and something has been living down here for a long time.',
+    'sump.brief': 'The company goes down in single file, lights low. The deeper levels have been dug out recently, and not by miners.',
+    'sump.map': 'One of Varga’s people, cut off from the rest, offers to show you the way through. He is shaking, and it isn’t because of you.',
+    'sump.map/trust': 'Follow him.',
+    'sump.map/surveys': 'Use HTX’s survey maps, and tell HTX where you are.',
+    'sump.map/blast': 'Blast a way through and let the noise be someone else’s problem.',
+    'sump.debrief': '{if success}The chamber is quiet. What lies on the floor in it is not human.{/if}{if failure}You come back up with fewer people than went down, and a story nobody at the port will believe.{/if}',
+    'sump.below': 'There is a hive under Kessler’s Reach, and it is waking up. HTX’s survey crates are stacked at the edge of the chamber, labelled DEEP CONTRACT.',
+    'sump.below/report': 'Report it to HTX, exactly as you found it.',
+    'sump.below/miners': 'Tell the miners what is under their feet.',
+    'sump.below/keep': 'Keep it to yourselves, for now.',
+    'sump.interlude': 'The company does not talk much on the way back to the port.',
+    relief: 'HTX has decided {name} is no longer the right company for Kessler’s Reach. It has hired another.',
+    'relief.brief': 'Black Lantern Security lands at the port at dawn: forty years in the business, armour you can’t afford, and a reputation for doing what clients ask.',
+    'relief.handover': 'Black Lantern’s commander walks over alone, with HTX’s letter and a smile. “You’re relieved. Pack up, and nobody has to get hurt.” Black Lantern’s guns are already pointed at your lines.',
+    'relief.handover/leave': 'Hand over the sector, and walk away.',
+    'relief.handover/refuse': 'Refuse, and see if they mean it.',
+    'relief.handover/fire': 'Fire first.',
+    'relief.debrief': '{if success}Black Lantern pulls back to the landing pads and stays there.{/if}{if failure}You give up the port, but not the company. Black Lantern lets you go.{/if}',
+    'relief.wounded': 'Black Lantern’s commander calls on an open channel for a pause to recover the wounded.',
+    'relief.wounded/let': 'Let them recover their wounded.',
+    'relief.wounded/finish': 'Finish it while you can.',
+    'relief.wounded/prisoners': 'Take their wounded as prisoners.',
+    'relief.interlude': 'HTX has stopped paying, and stopped answering. Whatever comes next, you are on your own.',
+
+    /* ================= between chapters ================= */
+    'i.wake': 'The company buries its own, in the port’s small cemetery, with the names read out.',
+    'i.wake/pay': 'Pay the families what the contract says they are owed.',
+    'i.wake/dont': 'The money is needed for the living.',
+    'i.standdown': 'The company is tired, and is starting to say so. {soldier:veteran} asks, on behalf of the others, for a week off the line.',
+    'i.standdown/rest': 'Give them the week.',
+    'i.standdown/push': 'Not yet. Push on.',
+    'i.audit': 'HTX’s auditors arrive at the port with a court order, asking for the company’s logs.',
+    'i.audit/doctor': 'Doctor the logs before you hand them over.',
+    'i.audit/hand': 'Hand them over as they are.',
+    'i.offer': 'Black Lantern’s recruiter comes to the port with an offer for {unit:veteran}: double the pay, and a ride off this moon.',
+    'i.offer/sell': 'Sell the contract.',
+    'i.offer/refuse': 'Tell them no.',
+    'i.tunnels': 'At night, the sentries hear digging under the camp, and the floor of the motor pool has started to crack.',
+    'i.tunnels/collapse': 'Pay a demolition crew to collapse the shaft.',
+    'i.tunnels/leave': 'Move the trucks, and leave it.',
+    'i.word': 'A miner from the town comes to the gate with news, and asks for nothing in return.',
+    'i.word/listen': 'Listen.',
+    'i.word/send': 'Send them away.',
+    'h1.core': 'In the ruins of HTX’s site office {soldier:tech} finds the Deep Contract’s data core, intact. Within the hour HTX is asking for it on an open channel.',
+    'h1.core/hand': 'Hand it over, unread.',
+    'h1.core/lost': 'Tell HTX it was lost in the fighting.',
+    'h1.core/copy': 'Copy it, then hand it over.'
+  };
+})(typeof window !== 'undefined' ? window : global);

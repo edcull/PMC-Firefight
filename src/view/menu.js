@@ -143,7 +143,7 @@
       var fought = battles.some(function (b) { return b.campaign && b.campLid === c.lid; });
       var onTable = !!liveCamp && (liveCamp === c.lid || liveCamp === '?' && c.lid === (root.PMC_CAMPAIGN.lid && root.PMC_CAMPAIGN.lid()));
       var kept = root.PMC_CAMPAIGN.synced && root.PMC_CAMPAIGN.synced(c.lid);
-      out.push({ key: 'c:' + c.lid, where: kept ? 'both' : 'local', kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : 'Campaign'), name: c.name, live: onTable,
+      out.push({ key: 'c:' + c.lid, where: kept ? 'both' : 'local', kind: (c.mode === 'hotseat' ? 'Hotseat campaign' : c.mode === 'story' ? 'Story' : 'Campaign'), name: c.name, live: onTable,
         sub: [onTable ? 'Its battle on the table now' : '', c.over ? 'over' : 'campaign turn ' + (c.turn || 0), fought && !onTable ? 'a battle under way' : '', ago(c.at)].filter(Boolean).join(' \u00b7 '),
         at: onTable ? Infinity : c.at || 0, del: !onTable });
     });
