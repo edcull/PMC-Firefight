@@ -8,8 +8,10 @@ an air strike. In the long term they shift standing, loyalty and the strength of
 each enemy, and those decide which chapters come next and how the war ends.
 
 It opens against an enemy you already know: the company is hired to put down a
-rebellion. Later it fights the bugs the war wakes up, and then a rival PMC sent to
-clean up after it. The Xenotripods are left out for now.
+rebellion, and the first half is almost all against the rebels. The second half
+is free-form: depending on what the player has done, it carries on against the
+rebels, turns to the bugs the war wakes up, or to a rival PMC sent to clean up
+after it. The Xenotripods are left out for now.
 
 This is a plan, not a spec. The decisions it needed are settled, and section 8
 records them.
@@ -71,103 +73,119 @@ blasting it brings wake the hive.
 |---|---|---|
 | The player's company | PMC | Hired guns, and the one force whose loyalty is not settled |
 | Free Miners' Front | Rebels | The opening enemy: dug in, popular, outgunned |
-| The Sump Hive | Space Bugs | Woken in Act I, the rising threat in Acts II and III |
-| Black Lantern Security | PMC | HTX's second contractor: a rival in Act II, and possibly the last enemy |
+| The Sump Hive | Space Bugs | Asleep in the first half, unless an extreme choice wakes it. A thread in the second half. |
+| Black Lantern Security | PMC | HTX's second contractor. Met in the first half only after an extreme choice. A partner or an enemy in the second half. |
 | HTX | none on the table | The employer: pays, gives orders, and lies |
 
 **Enemy forces are written for each battle.** They are not campaign rosters
 kept from one battle to the next. Each battle has its own enemy force, and the
 story's events, flags and meters change what is in it (section 4).
 
-### Acts and chapters
+### The shape: a fixed first half, a free second half
 
-There are three acts. **The first release has 8 chapters on any one path:**
-five in Act I, two in Act II and one finale in Act III. Chapters that come from a
-branch (*Retake the Refinery*, *Varga's Revenge*) take the place of a path
-chapter rather than adding one, so a playthrough is 8 to 10 battles, counting a
-pursuit or two, plus any side contracts the player takes. A later release can
-grow it to about 12 chapters: more of Act II, and both set pieces in Act III.
+**The first release has 8 chapters**, in two halves. A pursuit or two can add a
+battle, so a playthrough is 8 to 10 battles, plus any side contracts the player
+takes. A later release can grow it to about 12 chapters by adding to the second
+half's pool.
+
+- **The first half (chapters 1 to 4)** is a fixed run of chapters, and **almost
+  all of it is against the Front**. The choices change how each chapter plays
+  and what it leaves behind, but not which chapter comes next. There are only
+  two exceptions, and each comes only from an **extreme choice**: one battle
+  against an enemy PMC, or one encounter with the bugs.
+- **The second half (chapters 5 to 8)** is **free-form**. There are no fixed
+  paths. Each chapter is drawn from a pool of written chapters, according to
+  what the events of the story have left behind. The enemy, the allies and the
+  finale all come out of that. A playthrough where the Front stays strong and
+  nobody blasts too deep can stay a war against the rebels to the end.
 
 ```mermaid
 flowchart TD
-  P[Prologue: Landfall<br/>secure the starport] --> C2{Ch2: First move}
-  C2 -->|relieve| C2a[Refinery Siege<br/>Invasion, defend]
-  C2 -->|strike| C2b[Depot Raid<br/>Demolish / Sabotage]
-  C2a --> C3[Ch3: The Hunt for Varga]
+  C1[1. Landfall<br/>vs the Front] --> C2{2. First move}
+  C2 -->|relieve| C2a[Refinery Siege<br/>vs the Front]
+  C2 -->|strike| C2b[Depot Raid<br/>vs the Front]
+  C2a --> C3[3. The Hunt for Varga<br/>vs the Front]
   C2b --> C3
-  C3 -->|kill| F1((flag: varga_dead))
-  C3 -->|capture| F2((flag: varga_held))
-  C3 -->|fail| F3((flag: varga_free))
-  F1 --> C4[Ch4: Pit Nine<br/>the town rises]
-  F2 --> C4
-  F3 --> C4
-  C4 --> C5[Ch5: Into the Sump<br/>the bugs wake]
-  C5 --> X{Act II: Fault Lines<br/>where do you stand?}
-  X -->|Company Line| A1[Contain the hive<br/>crush the Front<br/>Black Lantern as partner]
-  X -->|Uneasy Truce| B1[Ceasefire with the Front<br/>fight the hive together]
-  X -->|Whistleblower| W1[Leak the Deep Contract<br/>HTX cancels you<br/>Black Lantern hunts you]
-  A1 --> III{Act III: Burn Rate}
-  B1 --> III
-  W1 --> III
-  III --> E1[Company Man]
-  III --> E2[Liberators]
-  III --> E3[Scorched Earth]
-  III --> E4[Contract Terminated]
-  III --> E5[Broken Company]
+  C3 --> C4[4. Pit Nine<br/>vs the Front]
+  C3 -.->|extreme: chase her into the deep workings| S[Into the Sump<br/>one-off vs bugs]
+  C3 -.->|extreme: HTX Standing at the floor| L[The Relief<br/>one-off vs Black Lantern]
+  S -.-> H((second half))
+  L -.-> H
+  C4 --> H
+  H --> P[Chapters 5 to 7<br/>drawn from the pool<br/>by threads and events]
+  P --> F[Chapter 8: the finale<br/>the strongest thread]
+  F --> E[Ending]
 ```
 
-**Act I: The Contract (chapters 1 to 5).** The rebellion as HTX describes it.
+### The first half: The Contract (chapters 1 to 4)
+
+The rebellion as HTX describes it.
 - **1. Landfall.** Secure the starport against a Front strike. It is a scripted
   Secure and control at Tier I and teaches the story screens. It cannot be lost
   outright: a defeat means "the port is held, at a cost", with Loyalty −1.
 - **2. First move.** The briefing offers two jobs and the player picks one:
   relieve the besieged refinery (Invasion, defending), or raid the Front's supply
   depot (Demolish, or Sabotage as a commando). The job not taken happens anyway,
-  off the table, with whatever effect is written for it (section 4). A lost refinery adds
-  *Retake the Refinery* to Act II. A depot left alone raises Rebel Strength.
+  off the table, with whatever effect is written for it (section 4). A lost
+  refinery puts *Retake the Refinery* in the second half's pool. A depot left
+  alone raises Rebel Strength.
 - **3. The Hunt.** Decapitation, or Protecting the VIP turned around so the
   player snatches Varga. Killing her ends the hunt quickly, but she becomes a
-  martyr. Capturing her is harder and opens the truce. Failing leaves her free.
+  martyr. Capturing her is harder and opens the way to a truce. Failing leaves
+  her free.
 - **4. Pit Nine.** A mining town rises. The choices here are about civilians:
   Evacuation (they are protected), Crushing the Resistance (they are not), or
-  talking your way in (it needs Sentiment, or Varga held).
-- **5. Into the Sump.** The Front falls back into the deep levels. The player
-  follows, in Close Encounters, and meets bugs. A Deep Contract data core can be
-  recovered here. It is the evidence the Whistleblower path needs, and HTX wants
-  it back.
+  talking your way in (it needs Sentiment, or Varga held). HTX's site office is
+  in the town, and the Deep Contract data core can be found in it.
 
-**Act II: Fault Lines (chapters 6 and 7).** The branch point opens at the start of
-chapter 6. The paths on offer depend on what came before:
+**The two one-offs.** Each takes the place of chapter 4, so the first half is
+always four chapters. Each happens only after an extreme choice, and each
+leaves a mark on the second half:
 
-| Path | Open when | How it plays |
+| One-off | Comes from | The battle | What it leaves |
+|---|---|---|---|
+| **Into the Sump** (the bugs) | Chasing Varga, or the Front's remnants, into the sealed deep workings, against HTX's orders, or blasting your way down | Clearing out, in Close Encounters, against bugs | The hive is awake early (Hive Growth +3, revealed), and the data core is in your hands. The bug thread is open from chapter 5. |
+| **The Relief** (an enemy PMC) | HTX Standing at the floor, or an extreme betrayal: selling the ledger to the Front, or letting Varga go | HTX sends Black Lantern to "relieve" you, and they open fire. Meeting engagement or Hostile takeover. | HTX has cut you off (`htx_cut_off`). The Black Lantern thread is open from chapter 5, and the Front may see you as a useful enemy of their enemy. |
+
+### The second half: Fault Lines (chapters 5 to 8)
+
+There is no single branch screen. The second half is built from **threads**,
+and each thread is a set of written chapters with conditions:
+
+| Thread | Rises with | Chapters in its pool (first release) |
 |---|---|---|
-| **Company Line** | Always | Stay with HTX. Fight the bugs and the remaining Front. Black Lantern arrives as a "partner" whose orders come first. Pay is best and Sentiment falls. |
-| **Uneasy Truce** | Varga held or free, and Sentiment ≥ 0 | A ceasefire with the Front against the hive. Some battles have rebel units fighting beside you, run by the AI (section 5). HTX Standing drains every chapter. |
-| **Whistleblower** | The data core recovered | Leak the Deep Contract. HTX cancels the contract, pay stops, and side contracts become the only income. Black Lantern is now the enemy. |
+| **The Front** (rebels) | Rebel Strength, Varga free or martyred, low Sentiment | *Retake the Refinery*, *Varga's Revenge*, *The Splinter Cell*, *The Last Redoubt* |
+| **The truce** (rebels as allies) | Varga held and talked to, high Sentiment, a common enemy | *The Ceasefire*, *Hold the Line* (with rebel allies) |
+| **The hive** (bugs) | Hive Growth, the Sump entered, blasting | *Outbreak at Pit Nine*, *The Shafts*, *Hive Heart* |
+| **HTX and Black Lantern** (PMC) | Low HTX Standing, the data core, a cover-up found out | *The Partner* (Black Lantern alongside you, with orders of its own), *Convoy*, *The Leak*, *The Showdown* |
 
-Each path has two chapters of its own in the first release. Which two depends
-on how Act I went: *Retake the Refinery* if it was lost, *Varga's Revenge* if she
-was killed, a rebel splinter cell if she was held.
+How the chapters are chosen:
+- **Each thread has a pressure,** worked out from its meters and flags.
+- **Chapters 5 to 7:** the briefing offers the eligible chapters from the two
+  threads under the most pressure, as jobs. The player picks one. The one not
+  taken is a job passed up (section 4), so a thread you ignore gets worse.
+- **Chapter 8, the finale,** belongs to the thread under the most pressure:
+  *The Last Redoubt*, *Hive Heart* or *The Showdown*. Who fights beside you
+  depends on the flags (rebels after a truce, Black Lantern if they are still
+  your partner). If Hive Growth has reached 8, the finale is a Breakout,
+  whatever else is going on.
+- **Each pool chapter is played at most once.** Every thread has a fallback
+  chapter, so there is always something to offer. The validator checks this
+  (section 6).
 
-**Act III: Burn Rate (chapter 8).** In the first release, each path ends in one
-finale, and the path decides which one and who fights beside you: the Hive Heart
-on the Company Line (Black Lantern alongside) and the Truce (rebels alongside),
-and the showdown on the Whistleblower path. If Hive Growth reaches 8, any path's
-finale becomes a Breakout instead. The 12-chapter version plays both set pieces:
-- **The Hive Heart:** a Close Encounters assault on the hive's core. Hive Growth
-  sets the Tier and the number of bug waves.
-- **The Black Lantern showdown:** PMC against PMC. Black Lantern's force is
-  written for the battle, and changed by everything that has happened to them
-  so far: sabotage, defections, and whether HTX trusts them over you.
+Where the company stands is not one choice either. It comes from events, as
+flags: `truce` (from *The Ceasefire*), `leaked` (from *The Leak*), and
+`htx_cut_off` (from *The Relief*, or HTX finding out about a cover-up). Staying
+with HTX is simply never setting any of them.
 
 **Endings**, chosen by meters and flags once the last battle is over:
 
 | Ending | Roughly |
 |---|---|
-| **Company Man** | Company Line, hive contained, HTX Standing high. The company is rich and the moon is broken. |
-| **Liberators** | Truce or Whistleblower, hive contained, Black Lantern beaten. The Front holds the moon. The company is poor, and loyal to its own. |
+| **Company Man** | Stayed with HTX (no `truce`, `leaked` or `htx_cut_off`), hive contained, HTX Standing high. The company is rich and the moon is broken. |
+| **Liberators** | `truce` or `leaked`, the finale won, hive contained. The Front holds the moon. The company is poor, and loyal to its own. |
 | **Scorched Earth** | Hive Growth gets away from everyone. HTX orders the moon sterilised from orbit, and the last battle is an evacuation. |
-| **Contract Terminated** | Black Lantern wins the showdown, or HTX Standing hits the floor on the Company Line. The company is betrayed and runs. |
+| **Contract Terminated** | Black Lantern wins the showdown, or HTX turns on you and you lose the finale. The company is betrayed and runs. |
 | **Broken Company** | Any time the company cannot field a Tier I army after its hub turn. |
 
 Each ending has a short epilogue: what happened to the moon, to Varga, and to
@@ -218,7 +236,7 @@ The rules for writing them:
 ### Before the battle (mostly short term)
 
 One event before each battle. It shapes how the fight starts. It can also leave
-a long-term mark. Act I, for example:
+a long-term mark. The first half, for example:
 
 | Chapter | The event | Options (and the levers under them) |
 |---|---|---|
@@ -227,12 +245,13 @@ a long-term mark. Act I, for example:
 | 2. Depot Raid | *Truck 14.* A driver will sell you the depot's guard rota. | Pay (kUC −, show the list). Grab him and question him (Intel +1, Loyalty −1, flag `driver_taken`). Go in blind but now, before the rota changes (you attack, enemy Readiness 0). |
 | 3. The Hunt | *Kill or capture.* HTX wants Varga dead. Your sergeant thinks she is worth more alive. | The HTX gunship (strikes before turn 1, HTX +1, `aim_kill`). A snatch team (swap to Decapitation, a commando only, `aim_capture`). Wait for her to move (Hive Growth +1, you pick the role). |
 | 4. Pit Nine | *The schoolhouse.* The Front has fortified the town school, with children still in it. | Clear it room by room (Close Encounters, no strikes, Sentiment +2 if you win). Shell it (strikes, Sentiment −4, flag `pit9_shelled`, Loyalty −1). Talk to the teacher (needs `nightshift_freed` or `varga_held`: skip the battle, or face an ambush). |
-| 5. Into the Sump | *The miners' map.* A captured miner offers a route through the old workings. | Trust him (the role is yours, but roll for a trap). Use HTX's surveys (the role is set, and HTX knows exactly where you are, flag `htx_tracking`). Blast a new way in (strikes, Hive Growth +2). |
+| Into the Sump (one-off) | *The miners' map.* A captured miner offers a route through the old workings. | Trust him (the role is yours, but roll for a trap). Use HTX's surveys (the role is set, and HTX knows exactly where you are, flag `htx_tracking`). Blast a new way in (strikes, Hive Growth +2). |
+| The Relief (one-off) | *The handover.* Black Lantern's commander arrives with a letter from HTX and a smile. | Hand over the sector and leave (no battle; the second half opens with `htx_cut_off` and nothing to fight for but side contracts). Refuse (you choose the role). Fire first (strikes before turn 1, and the Front hears about it: Sentiment +1). |
 
 ### After the battle (mostly long term)
 
 One or two events after each battle, chosen by the grade and the flags. They
-decide what the fight meant. Act I, for example:
+decide what the fight meant. The first half, for example:
 
 | After | The event | Options |
 |---|---|---|
@@ -241,10 +260,10 @@ decide what the fight meant. Act I, for example:
 | 2. Refinery, lost | *The survivors.* HTX blames you for the refinery. | Take the blame (HTX −1, Loyalty +1). Blame the garrison (HTX +0, Loyalty −1, the garrison commander is now hostile). |
 | 3. The Hunt, Varga held | *The cell.* Varga asks to talk to you, and only you. | Listen (Intel +1, flag `varga_talked`: opens the truce). Hand her straight to HTX (HTX +2, `varga_handed`, she may vanish). Hold her yourself as leverage (HTX −1, Rebel Strength −2, `varga_held`). |
 | 4. Pit Nine | *Payroll.* The town's payroll safe survived the fight. | Keep it (kUC ++, Loyalty +1, Sentiment −2). Return it to the miners (Sentiment +2). Return it to HTX (HTX +1). |
-| 5. Into the Sump | *The data core.* Your tech has it, and HTX asks for it on an open channel. | Hand it over (HTX +2). "Lost in the fighting" (`core_recovered`, `coverup`). Copy it, then hand it over (`core_recovered`, and a roll: HTX may notice). |
+| Pit Nine, or Into the Sump | *The data core.* {soldier:tech} has it, and HTX asks for it on an open channel. | Hand it over (HTX +2). "Lost in the fighting" (`core_recovered`, `coverup`). Copy it, then hand it over (`core_recovered`, and a roll: HTX may notice). |
 
-The Act II branch itself is an event too, at the start of chapter 6. Which
-options it shows depends on the flags left by these Act I events.
+There is no branch screen at the end of the first half. The flags these events
+leave behind decide which threads the second half's pool offers (section 2).
 
 ### Success and failure
 
@@ -360,7 +379,7 @@ everything else. There are three kinds:
 |---|---|---|
 | **No effect** | Nothing. The job is gone, and the story doesn't mention it again. | Most side contracts. A minor escort job in chapter 2. |
 | **Short term** | It changes only what comes next: the next battle's enemy force, its scenario or role, Readiness, or which options the next event offers. | The depot left alone: the Front has its mortars in chapter 3, and the hunt's briefing offers no air strike because the guns are still there. |
-| **Long term** | It sets flags or moves meters, which can change later events, enemy forces, the scenarios later chapters use, which chapters appear at all, or the ending. | The refinery not relieved: `refinery_lost`, Rebel Strength +1, and *Retake the Refinery* (an Invasion as the attacker) is added to Act II. |
+| **Long term** | It sets flags or moves meters, which can change later events, enemy forces, the scenarios later chapters use, which chapters appear at all, or the ending. | The refinery not relieved: `refinery_lost`, Rebel Strength +1, and *Retake the Refinery* (an Invasion as the attacker) joins the second half's pool. |
 
 A job can have both short- and long-term effects. Its outcome can be fixed
 ("the garrison holds"), or rolled with modifiers from meters and flags ("the
@@ -390,7 +409,7 @@ Between chapters the player is on the hub as now: recruiting, promotions,
 honours, upgrades, doctrines.
 
 **Side contracts are sometimes on offer.** An interlude node says whether there
-are any, which ones and how many. That can depend on the path, the meters and
+are any, which ones and how many. That can depend on the threads, the meters and
 the flags. Some interludes have none, because the story is moving too fast.
 Each side contract is a small job: a scenario (standard, solitaire or Close
 Encounters), an enemy force written or put together from that side's templates
@@ -405,8 +424,8 @@ contract in the same way as the jobs passed up above:
   escort is lost (HTX −1), or the village you didn't help stops talking to you
   (Sentiment −1).
 
-Side contracts are the main money on the Whistleblower path, where HTX has
-stopped paying, so that path's interludes offer them more often.
+Once HTX has stopped paying (`htx_cut_off` or `leaked`), side contracts are
+the main money, and interludes offer them more often.
 
 ---
 
@@ -414,7 +433,7 @@ stopped paying, so that path's interludes offer them more often.
 
 ### Scenarios: existing ones first, then custom ones
 
-**Act I uses only the scenarios already in the game.** Every Act I mission is a
+**The first half uses only the scenarios already in the game.** Every first-half mission is a
 standard, solitaire or Close Encounters scenario, picked by id and given story
 text. They are already tested and the AI already knows how to play them, so the
 first playable slice (phase 4) needs no new rules.
@@ -425,7 +444,8 @@ first playable slice (phase 4) needs no new rules.
 | 2. Refinery Siege, or Depot Raid | Invasion as the defender; Demolish, or Sabotage as a commando | `invasion`, `demolish`, `s_sabotage` |
 | 3. The Hunt | Decapitation, or Find and secure | `s_decap`, `find` |
 | 4. Pit Nine | Evacuation, Crushing the Resistance, or Ambush! if negotiation fails | `s_evac`, `s_crush`, `s_ambush` |
-| 5. Into the Sump | Clearing out, with bugs | `ce_clear` |
+| Into the Sump (one-off) | Clearing out, with bugs | `ce_clear` |
+| The Relief (one-off) | Meeting engagement or Hostile takeover, against Black Lantern | `meeting`, `takeover` |
 | Side contracts | Whatever `rollOffers` rolls | All of them |
 
 A battle node can also adjust an existing scenario without a new one: its name
@@ -434,7 +454,7 @@ compound's layout. This goes on the node as `variant: { turns: 12, name: 'Hold t
 and `scenarios.js` reads it from `cfg.story.variant` wherever it reads those
 fields today.
 
-**Acts II and III need custom scenarios.** These are new entries in `SCENARIOS`,
+**The second half needs custom scenarios.** These are new entries in `SCENARIOS`,
 in the same shape as the existing ones (`deploy`, `reserves`, `zoneFor`,
 `objectives`, `check`, `turns`, `hint`). They live in `src/story/scenarios-story.js`
 and carry `story: true`, so the skirmish and campaign lists don't offer them. The
@@ -442,12 +462,12 @@ likely set:
 
 | Scenario | Used for | What is new |
 |---|---|---|
-| **Hive Heart** | The Act III bug assault (Close Encounters) | Bugs come in waves from tunnel mouths each End phase; how many is set by Hive Growth. Brood chambers are objectives to destroy. You win when every chamber is gone. |
-| **Convoy** | Act II on every path: moving HTX ore, rebel refugees or the data core | A vehicle group crosses the table from one edge to the other. The other side wins by stopping enough of it. |
-| **Breakout / Extraction** | Scorched Earth's last battle, and the Whistleblower path's escape | An orbital countdown: from turn N, D3 table areas are destroyed each turn. Units leave by a landing zone. You score by what gets out. |
+| **Hive Heart** | The hive thread's finale (Close Encounters) | Bugs come in waves from tunnel mouths each End phase; how many is set by Hive Growth. Brood chambers are objectives to destroy. You win when every chamber is gone. |
+| **Convoy** | Second-half chapters in more than one thread: moving HTX ore, rebel refugees or the data core | A vehicle group crosses the table from one edge to the other. The other side wins by stopping enough of it. |
+| **Breakout / Extraction** | The finale when Hive Growth reaches 8, and escaping HTX once you are cut off | An orbital countdown: from turn N, D3 table areas are destroyed each turn. Units leave by a landing zone. You score by what gets out. |
 | **Hold the Line** | Truce chapters, where you hold a pass while rebel allies fall back | A defence against bug waves, with a timer. You win if you hold until turn N. |
 | **Parley** | Negotiations that go wrong | Both sides start close together around a meeting point. Shooting is not allowed until a trigger: a roll, or the first shot. |
-| **The Showdown** | Black Lantern, in Act III | Probably Hostile takeover or Secure and control with a variant. A custom scenario only if play-testing asks for one. |
+| **The Showdown** | The Black Lantern thread's finale | Probably Hostile takeover or Secure and control with a variant. A custom scenario only if play-testing asks for one. |
 
 Each custom scenario needs four things the existing ones already have:
 - **AI support.** The planner and `ai.js` have to understand the scenario's goal.
@@ -481,7 +501,7 @@ PMCStory.register({
     lantern: { faction: 'pmc',   name: 'Black Lantern Security' }
   },
   chapters: [
-    { id: 'c3', act: 1, title: 'The Hunt', intro: '…', nodes: [
+    { id: 'c3', half: 1, title: 'The Hunt', intro: '…', nodes: [
       { id: 'c3.brief', type: 'brief', text: '…', next: 'c3.killorcapture' },
       { id: 'c3.killorcapture', type: 'event', title: 'Kill or capture', text: '…', options: [
         { id: 'gunship', text: 'Call in the HTX gunship.', if: { meter: 'htx', gte: 1 },
@@ -509,7 +529,13 @@ PMCStory.register({
 options; an option's `battle` holds its battle levers and `effects` its state
 levers), `battle`, `debrief` (text, then its events, picked by grade and flags),
 `happening` (effects applied at once, with no choice; a roll is allowed), `interlude` (to the hub, with side contracts open),
-`branch` (goes to the first `when` that holds), `ending`.
+`branch` (goes to the first `when` that holds), `pool` (offers chapters from the
+threads under the most pressure, as jobs), `ending`.
+
+A second-half chapter carries `thread`, `when` (the conditions under which it can
+be offered), `fallback: true` on one chapter in each thread, and `finale: true`
+on the finales. Each thread's `pressure` is a sum of meters and flags with
+weights, so the story file decides what drives each thread.
 
 **Conditions:** `{ flag }`, `{ meter, gte|lte|lt|gt|eq }`, `{ grade }`,
 `{ roster: 'size'|'tier', gte }`, `{ kUC, gte }`, `{ chance: 0.5 }`, and
@@ -540,7 +566,7 @@ src/story/
   story.js          the engine: state, conditions, effects, walking the graph, grading (pure; runs in Node)
   levers.js         the battle levers: what each one does to cfg, and the rolls before the battle
   validate.js       checks a story's graph (also used by the tests)
-  scenarios-story.js  the custom scenarios for Acts II and III (from phase 5)
+  scenarios-story.js  the custom scenarios for the second half (from phase 5)
   deep-contract.js  the campaign's content
 src/view/
   story-screens.js  the chapter card, briefing, events, debrief, journal, ending
@@ -572,7 +598,7 @@ read where the setting already lives:
 | Barricades (Readiness) | Terrain setup | Reuse Last Stand's barricade placement. |
 | Prelude strikes (air strike) | A new step after deployment, before turn 1 | Uses `shoot.js` to roll a hit and adds Suppression. The battle log shows it, so a replay replays it. |
 | Starting Suppression on own units (failed recon) | The same prelude step | |
-| Allies | Co-op machinery, side C | Some scenarios have **AI-run allies**: rebel units in the truce, the HTX garrison or port security in Act I, Black Lantern as a partner on the Company Line. They are written per battle, like an enemy force, and are not in the player's roster. A third, AI-run side already exists for co-op and Besieged; use it if it fits, or else run some of side A's units by the AI. Needs a spike (phase 2). How allies fare can move meters (rebel allies lost: Sentiment −1). |
+| Allies | Co-op machinery, side C | Some scenarios have **AI-run allies**: rebel units in the truce, the HTX garrison or port security in the first half, Black Lantern in *The Partner*. They are written per battle, like an enemy force, and are not in the player's roster. A third, AI-run side already exists for co-op and Besieged; use it if it fits, or else run some of side A's units by the AI. Needs a spike (phase 2). How allies fare can move meters (rebel allies lost: Sentiment −1). |
 | Loyalty re-roll | Rally and Morale | One use per battle, shown on the command unit. |
 
 Everything the battle does differently is stored in `cfg`, so saves, replays and
@@ -645,9 +671,11 @@ game keeps it from being broken by accident.
   - every node can be reached, and every `next` leads somewhere real;
   - every battle has a failure branch;
   - no state reachable by a walk leaves an event with zero options;
-  - no event id is used twice, and no two events in an act offer the same set of levers;
+  - no event id is used twice, and no two events in the same half offer the same set of levers;
   - every flag an event sets is read by something later (a later event, a branch, an ending);
   - every path ends at an ending, and every ending can be reached;
+  - in every reachable state, every thread the pool can offer has an eligible chapter (its fallback, if nothing else);
+  - in the first half, the one-offs are reached only through the choices marked extreme;
   - every scenario, faction, archetype, unit key and effect named exists.
 - **A Monte Carlo walk** (`npm run story:sim`): ten thousand walks with random
   choices and random grades. It plays no battles. It reports how often each
@@ -663,7 +691,8 @@ game keeps it from being broken by accident.
 ## 7. Plan
 
 ### Phase 0: the story bible
-Write the chapter list for every path: each
+Write the first half's four chapters and two one-offs,
+and every chapter in the second half's pool with its thread and conditions: each
 event's situation and options in a line, each battle's scenario, enemy and Tier,
 and the meters and flags each one moves.
 Write no prose yet. Run it through the validator as soon as phase 1 exists.
@@ -683,8 +712,8 @@ hook, through the engine.
 The story screens, the journal, the menu entry. Wired to the existing muster,
 battle and aftermath. A browser test.
 
-### Phase 4: Act I as a vertical slice
-Act I (chapters 1 to 5), written in full and playable. Play-test for pacing, how much
+### Phase 4: the first half as a vertical slice
+The first half (chapters 1 to 4, and the two one-offs), written in full and playable. Play-test for pacing, how much
 the events' choices matter, and difficulty.
 
 ### Phase 5: custom scenarios
@@ -693,9 +722,10 @@ countdown as End-phase events, then Hive Heart, Convoy, Breakout, Hold the Line
 and Parley, each with the AI support and tests it needs. Phase 5 can start while
 phase 4 is still being play-tested.
 
-### Phase 6: Acts II and III and the endings
-The three paths, two chapters each, the finales, the endings and their
-epilogues: 8 chapters a path in all. Balance with the Monte Carlo
+### Phase 6: the second half and the endings
+The pool of chapters for every thread, threads' pressure and how chapters are
+offered, the finales, the endings and their epilogues: 8 chapters a playthrough
+in all. Balance with the Monte Carlo
 walk and the paper-battle playthrough.
 
 ### Phase 7: polish
@@ -723,7 +753,7 @@ All settled. They are kept here for the record.
    hidden, set for each meter, and events can reveal a hidden one (section 4).
 4. ~~**Ironman.**~~ *Decided:* reloading is allowed, with checkpoints to rewind
    to. An ironman mode, chosen when the story starts, restricts it (section 5).
-5. ~~**Length.**~~ *Decided:* 8 chapters a path for the first release, with
+5. ~~**Length.**~~ *Decided:* 8 chapters a playthrough for the first release, with
    room to grow to about 12 (section 2).
 6. ~~**Side contracts.**~~ *Decided:* sometimes on offer, as each interlude says,
    and both taking and passing them up can cost something (section 4).
@@ -733,4 +763,4 @@ All settled. They are kept here for the record.
 9. ~~**Custom scenarios outside the story.**~~ *Decided:* story only, for now
    (section 5).
 10. ~~**The Xenotripods.**~~ *Decided:* left out for now. The story graph leaves
-   room for an Act IV, or a second story, that brings them in.
+   room for a bug-and-Xenotripod thread in the pool, or a second story, that brings them in.
