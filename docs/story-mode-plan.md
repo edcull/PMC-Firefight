@@ -905,10 +905,12 @@ hotseat). The `'solo'` ones, and what a story does at each:
 | `camp-rivals.js` `rollOffers` | Draws the rivals' offers, breaks up rivals that cannot regroup | No offers: a story's jobs are its own side contracts | Phase 2 |
 | `camp-aftermath.js` `elsewherePairs` | The rivals not facing you fight each other, off the table | None: no rivals, and no battle is ever fought out of sight | Phase 2 |
 | `dossier-after.js` (line 69) | Develops the rival just fought and draws the next | Skipped: the next battle is the story's | Phase 2 |
-| `dossier-hub.js` Contract button (line 213) | Opens the rival offers | Goes to the story's next node, or the interlude's side contracts | Phase 3 |
-| `dossier-hub.js` rivals panel and actions (lines 116, 218, 513) | Shows the rivals and what you can do about them | Hidden | Phase 3 |
-| `dossier-hub.js` / `dossier.js` star system (lines 123, 1792) | Offers to chart a star system | Not offered | Phase 3 |
-| `menu.js` Continue list (lines 146, 154) | "Campaign" | "Story", with the chapter | Phase 3 |
+| `dossier-hub.js` "Take a contract" panel (line 116) | Opens the rival offers | Back to the story (or its ending), with the chapter | Phase 3 |
+| `dossier-hub.js` rivals panel and actions (lines 218, 513) | Shows the rivals and what you can do about them | Not shown: the panel is the one above | Phase 3 |
+| `dossier-hub.js` / `dossier.js` star system (lines 123, 1792) | Offers to chart a star system | Not offered (it sits in the panel replaced) | Phase 3 |
+| `menu.js` Continue list (lines 146, 154) | "Campaign" | "Story" | Phase 3 |
+| `campaign.js` `evenWorld` | Adds a rival to make the forces pair off | Nothing: a story has no rivals | Phase 3 |
+| `dossier.js` a battle abandoned (`enter`, `took`) | The battle is dropped | In ironman, a rout (`forfeit`); otherwise the battle is there to fight again | Phase 3 |
 
 ### Screens
 

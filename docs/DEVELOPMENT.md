@@ -95,6 +95,9 @@ src/
     muster.js        mustering a force for a skirmish, solitaire or co-op
     dossier.js       the campaign screens: storage, rendering, the clicks; the screens
                      themselves in dossier-hub/found/roster/contract/after.js
+    story-screens.js story mode's screens: a new story, the chapter card, briefs, events, a battle's
+                     briefing and muster, the debrief, interludes, the second half's jobs, the
+                     journal (and going back), the ending
     viewer.js        the unit viewer
 
   net/               playing somebody else
@@ -393,6 +396,9 @@ bundle.js          the published site: one bundle, no test hooks, and a battle p
 **The campaign**
 
 ```
+storyflow.js       story mode from the menu's Story card to the end of chapter 1: founding, the
+                   chapter card, an event, the briefing and muster, the battle (conceded, not played),
+                   the aftermath and debrief, the journal, and the Continue list
 founding.js        founding a force: its name, colours, roster and charter
 hotseatfound.js    a hotseat campaign founding both players' forces
 hotseatpick.js     a hotseat contract: each player picks their own force, then the battle starts

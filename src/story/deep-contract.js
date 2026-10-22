@@ -80,6 +80,21 @@
 
   S.register({
     id: 'deep-contract', name: 'Deep Contract', version: 1, length: 8,
+    blurb: 'Kessler\'s Reach is a mining moon, and its miners have risen. HTX hires your company to restore order, quickly and quietly. HTX is hiding why they rose.',
+    // the locals talk: with their trust, you know what you face before a battle
+    showEnemyIf: { meter: 'sentiment', gte: 3 },
+    // what the journal says the flags mean, as prose (a flag is never shown as a flag)
+    flagText: {
+      refinery_lost: 'The Front holds the refinery.', depot_raided: 'The Front\'s depot went up.',
+      varga_dead: 'Ada Varga is dead.', varga_held: 'Varga is in your hands.', varga_handed: 'Varga is in an HTX cell.',
+      varga_free: 'Varga is free.', varga_released: 'You let Varga go.', varga_talked: 'Varga told you why the miners rose.',
+      core_recovered: 'You have the Deep Contract\'s data core.', coverup: 'You are hiding the data core from HTX.',
+      sump_entered: 'You have been down in the Sump.', hive_known: 'The miners know about the hive.',
+      htx_cut_off: 'HTX has cut you off.', htx_suspects: 'HTX suspects you.', truce: 'There is a truce with the Front.',
+      leaked: 'The world knows what HTX did.', pit9_shelled: 'You shelled Pit Nine.', pit9_spared: 'Pit Nine was spared.',
+      miners_sealed: 'You sealed the miners in.', sample_taken: 'HTX has a live sample of the hive.',
+      lantern_mercy: 'Black Lantern owes you for its wounded.', lantern_crossed: 'Black Lantern will not forget the prisoners.'
+    },
     start: { faction: 'pmc', found: 'standard' },
     meters: {
       htx: { start: 1, shown: true, name: 'HTX Standing', uses: ['pay', 'strikes', 'supply'], thresholds: [{ gte: 2 }, { lte: -3 }] },
@@ -565,13 +580,13 @@
     ],
 
     endings: [
-      { id: 'broken', broken: true, title: 'Broken Company' },
-      { id: 'scorched', title: 'Scorched Earth', if: { flag: 'scorched' } },
-      { id: 'terminated', title: 'Contract Terminated', if: { any: [{ flag: 'showdown_lost' }, { all: [{ flag: 'htx_cut_off' }, { flag: 'finale_lost' }] }] } },
-      { id: 'liberators', title: 'Liberators', if: { all: [{ any: [{ flag: 'truce' }, { flag: 'leaked' }] }, { flag: 'finale_won' }, { meter: 'hive', lt: 8 }, { not: { flag: 'miners_sealed' } }] } },
-      { id: 'companyman', title: 'Company Man', if: { all: [{ not: { any: [{ flag: 'truce' }, { flag: 'leaked' }, { flag: 'htx_cut_off' }] } }, { meter: 'hive', lt: 8 },
+      { id: 'broken', broken: true, title: 'Broken Company', text: 'The company cannot field an army any more. It is finished, and Kessler\'s Reach goes on without it.' },
+      { id: 'scorched', title: 'Scorched Earth', text: 'The hive got away from everyone. HTX sterilised the moon from orbit, and you were lucky to be on the last shuttle out.', if: { flag: 'scorched' } },
+      { id: 'terminated', title: 'Contract Terminated', text: 'HTX turned on you, and Black Lantern finished the job. The company is betrayed, and runs.', if: { any: [{ flag: 'showdown_lost' }, { all: [{ flag: 'htx_cut_off' }, { flag: 'finale_lost' }] }] } },
+      { id: 'liberators', title: 'Liberators', text: 'The Front holds Kessler\'s Reach. The company is poor, and loyal to its own.', if: { all: [{ any: [{ flag: 'truce' }, { flag: 'leaked' }] }, { flag: 'finale_won' }, { meter: 'hive', lt: 8 }, { not: { flag: 'miners_sealed' } }] } },
+      { id: 'companyman', title: 'Company Man', text: 'The company is rich, and the moon is broken.', if: { all: [{ not: { any: [{ flag: 'truce' }, { flag: 'leaked' }, { flag: 'htx_cut_off' }] } }, { meter: 'hive', lt: 8 },
         { any: [{ meter: 'htx', gte: 2 }, { all: [{ flag: 'core_sold' }, { meter: 'htx', gte: 1 }] }] }] } },
-      { id: 'paidoff', title: 'Paid Off' }
+      { id: 'paidoff', title: 'Paid Off', text: 'The war ends without you deciding it. HTX pays what it owes, or doesn\'t, and the company ships out.' }
     ]
   });
 
