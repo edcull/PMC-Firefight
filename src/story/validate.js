@@ -221,6 +221,10 @@
           scenario(at, n.scenario);
           if (n.solo) err(at + ': story battles never set solo');
           force(at, n.enemy, ch.id);
+          if (n.waves && n.waves.meter) {
+            if (!mdefs[n.waves.meter]) err(at + ': no meter ' + n.waves.meter + ' for its waves');
+            M(n.waves.meter).read.push({ at: at, kind: 'table' });
+          }
           force(at, n.allies, ch.id);
           arr(n.adjust).forEach(function (a) { readCond(a.if, at, 'table', ch.id); levers(at, a.levers, where); });
           var on = n.on || {};

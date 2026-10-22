@@ -307,12 +307,14 @@
        its units are worth (a unit costs its Tier), so the same units are in the
        tally as below, a free or spawned one included. */
     var book = R.opt(state, 'bookkeeper');
-    var started = 0, left = 0;
+    var started = 0, left = 0, out = 0;
     state.units.forEach(function (u) {
       if (u.side !== side) return;
       /* A Rapid insertion platform "does not count towards victory conditions"
          (p. 79), so it is in neither the tally nor the losses. */
       if (!R.countsForVictory(u)) return;
+      // a unit lifted out from a story battle's landing zone is safe, not lost
+      if (u.extracted) { out++; return; }
       /* Expendable troops, "when destroyed ... do not count as a casualty for
          the purposes of victory conditions" (p. 57) — however they went. */
       if (!u.alive && (u.expended || R.has(u, 'Expendable'))) return;
@@ -320,6 +322,8 @@
       started += worth;
       if (u.alive) left += worth;
     });
+    // (a force that has all gone out by the landing zone is not routed: it got away)
+    if (!started && out) return false;
     return (started - left) >= Math.ceil(started / 2);
   }
 
@@ -1389,6 +1393,12 @@
       if (state.scen && state.scen.boxes) return state.scen.boxes(state, side, u);
       return (state.sc && state.sc.boxes && state.sc.boxes[side]) || null;
     },
-    FORT_SECTIONS: FORT_SECTIONS, FORT_KINDS: FORT_KINDS, fortRect: fortRect, fortWhy: fortWhy, takeoverForts: takeoverForts
+    FORT_SECTIONS: FORT_SECTIONS, FORT_KINDS: FORT_KINDS, fortRect: fortRect, fortWhy: fortWhy, takeoverForts: takeoverForts,
+    // what the story's own scenarios are built from (src/story/scenarios-story.js)
+    kit: {
+      ENTRY_TEXT: ENTRY_TEXT, CE_ENTRY_TEXT: CE_ENTRY_TEXT, entryEdges: entryEdges, entering: entering, strip: strip,
+      compoundEntries: compoundEntries, compoundEntering: compoundEntering, routCheck: routCheck, controlRooms: controlRooms,
+      rectOf: rectOf, mine: mine, halve: halve, noteSplit: noteSplit, spread3: spread3
+    }
   };
 })(typeof window !== 'undefined' ? window : global);

@@ -304,6 +304,8 @@
       K.aiStands(state.activeSide);
       var list = eligible(state.activeSide);
       if (!list.length) { endActivation(); return true; }
+      // a story's parley: while the talks hold, the enemy and the allies stand where they are (storybattle.js)
+      if (K.parleyHolds(list[0])) { list[0].activated = true; logLine('note', list[0].label + ' holds its fire.'); endActivation(list[0]); return true; }
       if (state.solo && state.activeSide === 'B') {
         // the OpFor phase starts with the unit furthest from the players (p. 147)
         list.sort(function (a, b) { return K.gapToFoes(b) - K.gapToFoes(a); });

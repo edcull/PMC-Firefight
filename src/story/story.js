@@ -459,7 +459,7 @@
     var spec = {
       node: node.id, scenario: node.scenario, variant: clone(node.variant) || null,
       tier: node.tier || 'max', pl: node.pl || 1, planet: node.planet || null, tactics: node.tactics || null, role: node.role || null,
-      enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, levers: clone(st.pending) || {}
+      enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, waves: clone(node.waves) || null, levers: clone(st.pending) || {}
     };
     st.next.forEach(function (n) {
       if (n.battle !== node.id) return;

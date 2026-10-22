@@ -224,6 +224,8 @@
         showEnemy: !!lv.showEnemy,
         edge: lv.edge || null,
         turns: lv.turns || (variant && variant.turns) || null,
+        // the story scenarios' waves: so many a turn, by a meter (a battle's `waves`: base + 1 for each `per` points)
+        waves: spec.waves ? { per: (spec.waves.base || 1) + Math.floor(Math.max(0, campaign.story.meters[spec.waves.meter] || 0) / (spec.waves.per || 3)) } : null,
         allyFrom: allyFrom,
         units: units
       }

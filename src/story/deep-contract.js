@@ -5,9 +5,9 @@
    meters and flags each one moves. No prose yet: the text is the plan's own
    one-liners, to be written properly once the slice has been played.
 
-   Scenarios the second half will have of its own (phase 5: Hive Heart,
-   Convoy, Breakout, Hold the Line, Strike, Parley) stand in here as the
-   nearest existing scenario with a variant naming them. Enemy forces name
+   The second half fights the story's own scenarios (src/story/scenarios-story.js:
+   Hive Heart, Convoy, Breakout, Hold the Line, Strike, Parley), their waves
+   as many as Hive Growth calls for (a battle's `waves`). Enemy forces name
    their troops; the battle hooks (levers.js) add the leader for the Battle
    Tier, scale the optional units by their meter and fill to fit the company. */
 (function (root) {
@@ -419,7 +419,7 @@
       poolChapter({ id: 'revenge', thread: 'front', title: "Varga's Revenge", when: { any: [{ flag: 'varga_dead' }, { flag: 'varga_free' }] },
         brief: '{if varga_dead}Her brother leads them now.{/if}{if varga_free}She is back, and she wants you.{/if}',
         before: { id: 'revenge.challenge', title: 'The challenge', text: 'Her people ask to meet you.', options: [
-          { id: 'meet', text: 'Meet them.', battle: { scenario: 'meeting', variant: { name: 'Parley' } }, effects: [{ meter: 'sentiment', add: 1 }] },
+          { id: 'meet', text: 'Meet them.', battle: { scenario: 'parley' }, effects: [{ meter: 'sentiment', add: 1 }] },
           { id: 'ambush', text: 'Ambush the meeting.', battle: { variant: { ambush: 'player' } }, effects: [{ meter: 'sentiment', add: -2 }, { meter: 'loyalty', add: -1 }, { flag: 'parley_betrayed' }] }
         ] },
         battle: { scenario: 'meeting', enemy: front({ tactics: 'wave' }), adjust: [{ if: { flag: 'martyr_displayed' }, levers: { readiness: 2 } }],
@@ -463,7 +463,7 @@
             fail: [{ next: { battle: 'ceasefire.battle', levers: { readiness: 1 } } }] }] },
           { id: 'officer', text: 'Hand over {soldier:command}.', if: { flag: 'nightshift_shot' }, effects: [{ leave: 1 }, { meter: 'loyalty', add: -2 }, { meter: 'sentiment', add: 2 }] }
         ] },
-        battle: { scenario: 'meeting', variant: { name: 'Parley' }, enemy: front({ tactics: 'guerillas', core: ['rminers', 'rmilitia'] }),
+        battle: { scenario: 'parley', enemy: front({ tactics: 'guerillas', core: ['rminers', 'rmilitia'] }),
           adjust: [
             { if: { flag: 'gate_cleared' }, levers: { readiness: 1 } }, { if: { flag: 'pit9_shelled' }, levers: { readiness: 1 } },
             { if: { flag: 'parley_betrayed' }, levers: { readiness: 1 } }, { if: { flag: 'miners_sealed' }, levers: { readiness: 2 } }
@@ -481,7 +481,7 @@
           { id: 'ours', text: 'Your units hold it.', battle: { role: 'defender' }, effects: [{ meter: 'sentiment', add: 1 }] },
           { id: 'theirs', text: 'The rebels hold it.', battle: { allies: { side: 'front', faction: 'rebel', core: ['rminers', 'rmilitia', 'rmilitia'] } }, effects: [{ meter: 'loyalty', add: 1 }, { meter: 'sentiment', add: -1 }] }
         ] },
-        battle: { scenario: 'secure', variant: { name: 'Hold the Line', turns: 8 }, enemy: hive(), adjust: [{ if: { flag: 'hive_known' }, levers: { allies: { side: 'front', faction: 'rebel', core: ['rminers'] } } }],
+        battle: { scenario: 'holdline', waves: { meter: 'hive', base: 1, per: 3 }, enemy: hive(), adjust: [{ if: { flag: 'hive_known' }, levers: { allies: { side: 'front', faction: 'rebel', core: ['rminers'] } } }],
           on: { success: [{ effects: [{ meter: 'hive', add: -1 }] }], failure: [{ effects: [{ meter: 'hive', add: 1 }] }] } },
         after: { id: 'holdline.dead', title: 'The rebel dead', text: 'They held, and they died.', options: [
           { id: 'honour', text: 'Honour them with your own.', effects: [{ meter: 'sentiment', add: 2 }, { meter: 'loyalty', add: -1 }] },
@@ -522,7 +522,7 @@
           { id: 'burn', text: 'Burn the way down.', battle: { strikes: 'D3+PL', edge: 'choose' }, effects: [{ meter: 'loyalty', add: -1 }] },
           { id: 'push', text: 'Push straight through.', battle: { role: 'attacker', tier: 'max' } }
         ] },
-        battle: { scenario: 'ce_clear', variant: { name: 'Hive Heart' }, tier: 'max', pl: 'max', enemy: hive({ fill: { to: 1.0, from: ['bsmall', 'battack', 'boversized'], meter: 'hive', step: 0.05 } }),
+        battle: { scenario: 'hive_heart', waves: { meter: 'hive', base: 1, per: 3 }, tier: 'max', pl: 'max', enemy: hive({ fill: { to: 1.0, from: ['bsmall', 'battack', 'boversized'], meter: 'hive', step: 0.05 } }),
           adjust: [{ if: { flag: 'shafts_collapsed' }, levers: { readiness: -1 } }, { if: { flag: 'sample_taken' }, levers: { readiness: 1 } },
             { if: { flag: 'truce' }, levers: { allies: { side: 'front', faction: 'rebel', core: ['rminers', 'rmilitia'] } } }],
           on: FINALE_ON } }),
@@ -546,11 +546,11 @@
       poolChapter({ id: 'leak', thread: 'htx', title: 'The Leak', when: { any: [{ flag: 'core_recovered' }, { flag: 'ledger_read' }, { flag: 'sample_taken' }] },
         brief: 'What HTX did under Kessler\'s Reach could be broadcast from its own uplink.',
         before: { id: 'leak.uplink', title: 'The uplink', text: 'The uplink is behind HTX\'s own guards.', options: [
-          { id: 'night', text: 'Hit it by night.', battle: { tier: 'max-1', variant: { name: 'Strike' } } },
+          { id: 'night', text: 'Hit it by night.', battle: { tier: 'max-1', role: 'attacker' } },
           { id: 'talk', text: 'Talk your way into the HTX office.', cost: { intel: 2 }, why: 'You don\'t know enough to bluff.',
             effects: [{ roll: { d6: 4, meter: 'intel' }, pass: [{ next: { battle: 'leak.battle', levers: { skip: true } } }] }] }
         ] },
-        battle: { scenario: 'demolish', role: 'attacker', enemy: lantern({ core: ['regular', 'lmgteam'] }),
+        battle: { scenario: 'strike', enemy: lantern({ core: ['regular', 'lmgteam'] }),
           on: { success: [{ effects: [{ meter: 'lantern', add: -1 }] }], failure: [{ effects: [{ meter: 'lantern', add: 1 }] }], skip: [{}] } },
         after: { id: 'leak.publish', title: 'Publish', text: 'The files are yours to use.', options: [
           { id: 'broadcast', text: 'Broadcast them.', effects: [{ flag: 'leaked' }, { flag: 'htx_cut_off' }, { meter: 'htx', add: -5 }, { meter: 'sentiment', add: 3 }, { meter: 'lantern', add: 2 },
@@ -564,7 +564,7 @@
           { id: 'fast', text: 'The fast road.', battle: { role: 'attacker' } },
           { id: 'mine', text: 'The mine road.', battle: { readiness: 0 }, effects: [{ meter: 'hive', add: 1 }, { meter: 'loyalty', add: -1 }] }
         ] },
-        battle: { scenario: 'meeting', variant: { name: 'Convoy' }, enemy: lantern(), adjust: [{ if: { flag: 'driver_taken' }, levers: { readiness: 1 } }],
+        battle: { scenario: 'convoy', enemy: lantern(), adjust: [{ if: { flag: 'driver_taken' }, levers: { readiness: 1 } }],
           on: { success: [{ effects: [{ meter: 'lantern', add: -1 }] }], failure: [{ effects: [{ meter: 'htx', add: -1 }] }] } },
         after: { id: 'convoy.cargo', title: 'The cargo', text: 'It got through.', if: { grade: 'success' }, options: [
           { id: 'deliver', text: 'Deliver it as ordered.', effects: [{ meter: 'htx', add: 1 }] },
@@ -574,7 +574,7 @@
       poolChapter({ id: 'showdown', thread: 'htx', finale: true, title: 'The Showdown',
         brief: 'Black Lantern comes for you.',
         before: { id: 'showdown.terms', title: 'Last words', text: 'Black Lantern\'s commander comes forward under a white flag.', options: [
-          { id: 'parley', text: 'Hear the terms.', if: { flag: 'lantern_mercy' }, why: 'They owe you nothing.', battle: { variant: { name: 'Parley' }, scenario: 'meeting' } },
+          { id: 'parley', text: 'Hear the terms.', if: { flag: 'lantern_mercy' }, why: 'They owe you nothing.', battle: { scenario: 'parley' } },
           { id: 'fight', text: 'Shoot the flag down.', battle: { role: 'attacker' }, effects: [{ meter: 'loyalty', add: 1 }, { meter: 'sentiment', add: -1 }] }
         ] },
         battle: { scenario: 'takeover', tier: 'max', pl: 'max', variant: { target: 'Lantern Actual' }, enemy: lantern({ fill: { to: 1.0, from: ['regular', 'veterans', 'lmgteam'], meter: 'lantern', step: 0.05 } }),
@@ -593,7 +593,7 @@
           { id: 'civilians', text: 'Take civilians.', battle: { tier: 'max-1', turns: 8 }, effects: [{ meter: 'sentiment', add: 2 }] },
           { id: 'company', text: 'Take only the company.', battle: { edge: 'choose', turns: 6 }, effects: [{ meter: 'loyalty', add: 1 }] }
         ], next: 'breakout.battle' },
-        { id: 'breakout.battle', type: 'battle', scenario: 'takeover', variant: { name: 'Breakout' }, tier: 'max', pl: 'max', enemy: hive(),
+        { id: 'breakout.battle', type: 'battle', scenario: 'breakout', waves: { meter: 'hive', base: 1, per: 3 }, tier: 'max', pl: 'max', enemy: hive(),
           on: FINALE_ON, next: 'end' }
       ] },
 

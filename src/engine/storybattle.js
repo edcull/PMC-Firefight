@@ -160,7 +160,136 @@
       return null;
     }
 
-    return { storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck };
+    /* ================= the End phase: the story scenarios' own events =================
+       Set up by a scenario's deploy (src/story/scenarios-story.js) on state.sc,
+       and run here, once an End phase, before the battle is checked. */
+
+    /* Waves: from turn `from`, every End phase, `per` units come out of the
+       tunnel mouths for `side`, ready to act from the next turn. */
+    function waves(state, lines) {
+      var w = state.sc && state.sc.waves;
+      if (!w || state.turn < (w.from || 1) || (w.until && state.turn > w.until) || !(w.mouths || []).length) return;
+      w.n = w.n || 0;
+      for (var i = 0; i < w.per; i++) {
+        var key = w.keys[(w.n + i) % w.keys.length], p = R.profile(key);
+        if (!p) continue;
+        var m = w.mouths[(w.n + i) % w.mouths.length];
+        var u = E.makeUnit(p, w.side, 'w' + (w.n + i), null, false, null, false);
+        u.code = (u.code || 'W') + (w.n + i + 1);
+        u.label = u.name + ' [' + w.side + ']';
+        u.startSize = u.models;
+        u.spawned = true;
+        var spot = R.nearestFree ? R.nearestFree(state, m.x, m.y, u) : null;
+        u.x = spot ? spot.x : m.x; u.y = spot ? spot.y : m.y;
+        u.facing = Math.atan2(R.BOARD.h / 2 - u.y, R.BOARD.w / 2 - u.x);
+        R.musterMen(u, null, state.namesTaken || (state.namesTaken = {}));
+        state.units.push(u);
+        lines.push({ side: w.side, text: u.label + ' comes out of the ' + (m.name || 'tunnel mouth') + '.' });
+      }
+      w.n += w.per;
+    }
+
+    /* The orbital countdown: from turn `from`, D3 of the table's areas are hit
+       each End phase, and an area hit once burns on. A unit in a burning area
+       takes the strike: two hits on a squad, a damage roll on a machine. The
+       landing zone is never hit. */
+    function countdown(state, lines) {
+      var cd = state.sc && state.sc.countdown;
+      if (!cd || state.turn < cd.from) return;
+      var left = cd.areas.filter(function (a) { return !a.struck && !a.safe; });
+      for (var n = R.d3(); n > 0 && left.length; n--) {
+        var a = left.splice(Math.floor(Math.random() * left.length), 1)[0];
+        a.struck = state.turn;
+        lines.push({ side: null, text: 'The orbital strike hits ' + a.name + '.' });
+      }
+      var log = [];
+      state.units.forEach(function (u) {
+        if (!u.alive || u.reserve || u.aboard || u.x < 0) return;
+        var a = cd.areas.filter(function (r) { return r.struck && R.inRect(u.x, u.y, r); })[0];
+        if (!a) return;
+        if (R.isMachine(u)) {
+          var dmg = R.resolveDamage(u, 1, false, 0);
+          if (dmg.damage) R.applyDamage(state, u, dmg.damage, log, null);
+        } else R.applyResult(state, u, R.resolveShootingHits(state, u, 2, 0, null), log, null);
+        lines.push({ side: u.side, text: u.label + ' is caught in the burning ' + a.name + '.' });
+      });
+      log.forEach(function (l) { lines.push({ side: null, text: l.text }); });
+    }
+
+    /* Extraction: a unit of `side` standing in the landing zone (a circle, or
+       everything past `rectX`: the far edge) at the End phase leaves the table,
+       safe. It is out of the battle, and no loss. `only`: the units that may. */
+    function extraction(state, lines) {
+      var ex = state.sc && state.sc.extract;
+      if (!ex || state.turn < (ex.from || 1)) return;
+      state.units.forEach(function (u) {
+        if (u.side !== ex.side || !u.alive || u.reserve || u.aboard || u.x < 0 || u.ally) return;
+        if (ex.only && ex.only.indexOf(u.id) < 0) return;
+        if (ex.rectX != null ? u.x < ex.rectX : R.inches(u.x, u.y, ex.x, ex.y) > ex.r) return;
+        u.alive = false; u.extracted = true; u.activated = true;
+        (u.cargo || []).forEach(function (cid) {
+          var c = state.units.filter(function (x) { return x.id === cid; })[0];
+          if (c) { c.alive = false; c.extracted = true; }
+        });
+        ex.out = (ex.out || 0) + (u.tier || 1);
+        lines.push({ side: u.side, text: u.label + ' is lifted out.' });
+      });
+    }
+
+    /* A parley: while it holds, the enemy (and the allies) hold their fire.
+       It breaks when side A hurts side B, or on a 6 at an End phase. */
+    function parley(state, lines) {
+      var pa = state.sc && state.sc.parley;
+      if (!pa || pa.broken) return;
+      var hurt = state.units.some(function (u) {
+        if (u.side !== 'B') return false;
+        var was = pa.seen && pa.seen[u.id];
+        return !u.alive || (was && (u.sp > was.sp || u.models < was.models || (u.damage || 0) > was.damage));
+      });
+      if (hurt) { pa.broken = state.turn; pa.by = 'A'; lines.push({ side: 'A', text: 'Shots are fired. The talks are over.' }); }
+      else if (R.d6() === 6) { pa.broken = state.turn; pa.by = 'roll'; lines.push({ side: null, text: 'Somebody panics. The talks are over.' }); }
+      pa.seen = {};
+      state.units.forEach(function (u) { if (u.side === 'B') pa.seen[u.id] = { sp: u.sp, models: u.models, damage: u.damage || 0 }; });
+    }
+    /* Whether this unit holds its fire: the enemy, and the allies, while the talks hold. */
+    function parleyHolds(u) {
+      var pa = E.state && E.state.sc && E.state.sc.parley;
+      if (!pa || pa.broken) return false;
+      return !u || u.side === 'B' || u.ally;
+    }
+
+    function storyEndPhase() {
+      var state = E.state;
+      if (!state || !state.sc) return;
+      var lines = [];
+      parley(state, lines);
+      countdown(state, lines);
+      extraction(state, lines);
+      waves(state, lines);
+      if (!lines.length) return;
+      lines.forEach(function (l) { E.logLine('note', l.text); });
+      E.pushRes({ kind: 'End phase', title: state.scen.name, list: lines });
+    }
+
+    /* What a story asks of the check, before the scenario's own: its target, and
+       its own turn limit (the scenario judged as at the end of its time). Null
+       where the story asks nothing, and the scenario is checked as usual. */
+    function storyCheck(state) {
+      var t = targetCheck(state);
+      if (t) return t;
+      var sty = state.cfg && state.cfg.story;
+      if (!sty || !sty.turns || state.turn < sty.turns) return null;
+      var real = state.turn;
+      state.turn = Math.max(real, (state.scen && state.scen.turns) || 20);
+      var res = E.SC.check(state);
+      state.turn = real;
+      return res || { winner: null, text: 'Time runs out, and nothing is settled — a draw.', timeout: true };
+    }
+
+    return {
+      storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck,
+      storyEndPhase: storyEndPhase, storyCheck: storyCheck, parleyHolds: parleyHolds
+    };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineStory;
 })(typeof window !== 'undefined' ? window : global);

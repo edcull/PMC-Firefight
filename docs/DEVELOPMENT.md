@@ -55,7 +55,8 @@ src/
     solo.js          the solitaire turn: whose unit goes next, and the OpFor's phase
     save.js          saving and loading a battle: the snapshot of everything
     storybattle.js   a story battle's own changes: named units, allies and their activations, the
-                     prelude (strikes, Suppression, an ambush), the target variant
+                     prelude (strikes, Suppression, an ambush), the target variant, and the story
+                     scenarios' End phase (waves, the orbital countdown, extraction, a parley)
     ai.js            the AI: its behaviour, moves, targets, honours
     offtable.js      the other forces' battles, fought AI against AI on a table nobody sees
     protocol.js      message names and legal settings, shared by browser and server
@@ -67,6 +68,8 @@ src/
     levers.js        a story battle set up: its Tier and PL for the company, the enemy force built from
                      what the story wrote, the allies, Readiness, and the engine's cfg
     deep-contract.js Deep Contract, the first story, as data
+    scenarios-story.js  the story's own scenarios (Hive Heart, Convoy, Breakout, Hold the Line,
+                     Strike, Parley), loaded with the engine; never offered outside a story
     deep-contract-text.js  its words, keyed by chapter, node and option
 
   view/              the browser
@@ -305,6 +308,8 @@ story.js           story mode's engine: conditions, effects, grading, the pool a
                    saving, checkpoints and ironman, on a small test story (test/story-fixture.js)
 storygraph.js      the story validator catches each way of writing a story wrong, and the walk;
                    Deep Contract validates, and its one-offs and Scorched Earth stay in range
+storyscenarios.js  the story's own scenarios: set up, their victory checks, every second-half battle
+                   set up, and one battle of each played AI against AI (the scenario's own test)
 storyfirsthalf.js  Deep Contract's first half: every battle under every choice set up and started (not
                    played), and the first half walked with made-up reports through the real aftermath
 storylevers.js     a story battle set up: Tier and PL, the enemy force, the cfg, and in the engine the
