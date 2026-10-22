@@ -66,7 +66,8 @@
       /* Kept on the campaign, battle by battle as each is settled, so a reload
          part way through goes on from the next one rather than starting over. */
       if (E.after.pairs && E.after.pairs.length) E.camp.fronts = { pairs: E.after.pairs, done: [], planet: post.report.planet || null };
-      if (E.camp.mode === 'solo') {
+      // (a story has no rivals to develop or draw: its next battle is the story's)
+      if (E.camp.mode === 'solo' && !E.camp.story) {
         E.after.rival = C.developRival(E.camp.companies.B);
         // and the next opponent is drawn now, so the hub can say who is coming
         E.after.next = C.drawRival(E.camp);

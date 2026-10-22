@@ -15,29 +15,36 @@
   var S = root.PMCStory || require('./story.js');
 
   /* ---------- the forces ---------- */
+  /* A side's usual force, with what a battle writes laid over it: its own
+     changes come after the side's usual ones, not in place of them. */
+  function over(base, extra) {
+    var out = Object.assign({}, base, extra || {});
+    if (extra && extra.changes) out.changes = (base.changes || []).concat(extra.changes);
+    return out;
+  }
   function front(extra) {
-    return Object.assign({
+    return over({
       side: 'front', faction: 'rebel', tactics: 'guerillas',
       core: ['rminers', 'rmilitia', 'rmilitia'],
       optional: { meter: 'rebels', per: 2, units: ['rmilitia', 'rtechnical', 'rlightart', 'rinsurgents', 'rat'] },
-      fill: { to: 0.9, from: ['rmilitia', 'rminers', 'rinsurgents'], meter: 'rebels', step: 0.05 },
-      byTier: { 3: ['rfaceminers', 'rinsurgents', 'rhardened'] },
+      fill: { to: 0.9, from: ['rmilitia', 'rtechnical', 'rminers', 'rinsurgents'], meter: 'rebels', step: 0.05 },
+      byTier: { 1: ['rciv', 'rridergang', 'rdesconscript'], 3: ['rfaceminers', 'rinsurgents', 'rhardened'] },
       changes: [
         { if: { flag: 'varga_dead' }, add: { key: 'rfanatics', name: 'The Avengers', rules: ['Determined'] } },
         { if: { meter: 'sentiment', lte: -3 }, readiness: 1 }
       ]
-    }, extra || {});
+    }, extra);
   }
   function hive(extra) {
-    return Object.assign({
+    return over({
       side: 'hive', faction: 'bugs',
       core: ['bsmall', 'btiny', 'bspitlarva'],
       optional: { meter: 'hive', per: 1, units: ['bsmall', 'battack', 'bunderground', 'bspitters', 'boversized', 'bhugeunder'] },
       fill: { to: 0.9, from: ['btiny', 'bsmall', 'battack'], meter: 'hive', step: 0.05 }
-    }, extra || {});
+    }, extra);
   }
   function lantern(extra) {
-    return Object.assign({
+    return over({
       side: 'lantern', faction: 'pmc',
       core: ['regular', 'regular', 'lmgteam', { key: 'veterans', name: 'Lantern Actual', honours: [3] }],
       optional: { meter: 'lantern', per: 2, units: ['lapc', 'sharpshooters', 'atteam', 'lcv', 'gunboat'] },
@@ -46,7 +53,7 @@
         { if: { flag: 'lantern_crossed' }, honour: { unit: 'Lantern Actual', rules: ['Determined'] } },
         { if: { flag: 'htx_tracking' }, readiness: 1 }
       ]
-    }, extra || {});
+    }, extra);
   }
 
   /* ---------- the interludes: one event each, the first that fits ---------- */
@@ -119,7 +126,7 @@
       { id: 'c1', half: 1, title: 'Landfall', intro: 'HTX hires the company to restore order on Kessler\'s Reach.', nodes: [
         { id: 'c1.brief', type: 'brief', text: 'Secure the starport against a Front strike.', next: 'c1.portmaster' },
         { id: 'c1.portmaster', type: 'event', title: "The port master's offer", text: 'The port\'s security chief offers his men, if HTX pays them.', options: [
-          { id: 'take', text: 'Take them.', cost: { kUC: 1 }, why: 'You can\'t pay them.', battle: { allies: { side: 'port', faction: 'pmc', core: ['enforcers', 'enforcers'] } } },
+          { id: 'take', text: 'Take them.', battle: { allies: { side: 'port', faction: 'pmc', core: ['enforcers', 'enforcers'] } }, effects: [{ kUC: -1 }] },
           { id: 'send', text: 'Send them home.' },
           { id: 'ask', text: 'Ask what they know, and not nicely.', battle: { showEnemy: true }, effects: [{ meter: 'sentiment', add: -1 }] }
         ], next: 'c1.battle' },
@@ -141,14 +148,15 @@
       { id: 'c2', half: 1, title: 'First Move', nodes: [
         { id: 'c2.brief', type: 'brief', text: 'Two jobs, and only time for one.', next: 'c2.firstmove' },
         { id: 'c2.firstmove', type: 'event', title: 'First move', text: 'The refinery is besieged. The Front\'s supply depot is open to a raid.', options: [
+          /* (an option's `passed` is what comes of its job when the other is taken) */
           { id: 'relieve', text: 'Relieve the refinery.', effects: [{ flag: 'job_refinery', local: true }],
-            // the depot left alone: the Front keeps its guns for the hunt
-            passed: [{ meter: 'rebels', add: 1 }, { next: { battle: 'c3.battle', enemy: { add: 'rlightart' } } }] },
-          { id: 'strike', text: 'Raid the depot.',
             // the refinery without you: the garrison holds on a 4+, +1 with HTX behind it
             passed: [{ roll: { d6: 4, mods: [{ if: { meter: 'htx', gte: 2 }, add: 1 }] },
               pass: [{ journal: 'The garrison held the refinery without you.' }],
-              fail: [{ flag: 'refinery_lost' }, { meter: 'rebels', add: 1 }, { next: { battle: 'c3.battle', enemy: { add: 'rtechnical' } } }] }] }
+              fail: [{ flag: 'refinery_lost' }, { meter: 'rebels', add: 1 }, { next: { battle: 'c3.battle', enemy: { add: 'rtechnical' } } }] }] },
+          { id: 'strike', text: 'Raid the depot.',
+            // the depot left alone: the Front keeps its guns for the hunt
+            passed: [{ meter: 'rebels', add: 1 }, { next: { battle: 'c3.battle', enemy: { add: 'rlightart' } } }] }
         ], next: 'c2.which' },
         { id: 'c2.which', type: 'branch', when: [{ if: { flag: 'job_refinery' }, next: 'c2r.nightshift' }, { next: 'c2d.truck' }] },
 
@@ -214,7 +222,8 @@
           enemy: front({ core: ['rminers', 'rmilitia', { key: 'rhardened', name: "Varga's Own", honours: [3] }],
             changes: [{ if: { flag: 'depot_raided' }, remove: 'rlightart' }, { if: { flag: 'driver_taken' }, remove: 'rtechnical' }] }),
           on: {
-            success: [{ if: { flag: 'aim_capture' }, effects: [{ flag: 'varga_captured' }] },
+            // (a capture that ended with her dead is a kill: the target variant says which)
+            success: [{ if: { all: [{ flag: 'aim_capture' }, { not: { target: 'killed' } }] }, effects: [{ flag: 'varga_captured' }] },
                       { effects: [{ flag: 'varga_dead' }, { meter: 'rebels', add: -2 }] }],
             failure: [{ effects: [{ meter: 'htx', add: -1 }, { flag: 'varga_free' }] }]
           }, next: 'c3.debrief' },

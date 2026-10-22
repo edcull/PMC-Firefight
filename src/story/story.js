@@ -113,7 +113,7 @@
 
   /* ================= conditions ================= */
 
-  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped'];
+  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped', 'target'];
   var CMP = ['gte', 'lte', 'gt', 'lt', 'eq'];
 
   function cmp(v, c) {
@@ -144,6 +144,8 @@
       return arr(c.grade).indexOf(g) >= 0;
     }
     if (c.wiped) return cmp(st.lastWiped || 0, c.wiped);
+    // a battle's target (the target variant): 'killed' or 'captured', or nothing known
+    if (c.target) return st.lastTarget === c.target;
     if (c.chapter != null) return cmp(st.chapterNo, typeof c.chapter === 'number' ? { eq: c.chapter } : c.chapter);
     if (c.played) return !!st.played[c.played];
     if (c.revealed) return !!st.revealed[c.revealed];
@@ -491,7 +493,7 @@
   function lost(report, side) {
     var pts = 0;
     (report.units || []).forEach(function (u) {
-      if (u.side !== side || u.free) return;
+      if (u.side !== side || u.free || u.ally) return;
       var share = u.destroyed || u.wiped ? 1 : u.startSize ? Math.max(0, u.startSize - (u.endSize || 0)) / u.startSize : 0;
       pts += (u.tier || 1) * share;
     });
@@ -507,8 +509,9 @@
     if (GRADES.indexOf(g) < 0) throw new Error('No grade ' + g);
     if (result && typeof result === 'object') {
       st.fielded = (result.units || []).filter(function (u) { return u.side === 'A' && u.rid; }).map(function (u) { return u.rid; });
-      st.lastWiped = (result.units || []).filter(function (u) { return u.side === 'A' && !u.free && (u.wiped || u.destroyed); }).length;
-    } else st.lastWiped = 0;
+      st.lastWiped = (result.units || []).filter(function (u) { return u.side === 'A' && !u.free && !u.ally && (u.wiped || u.destroyed); }).length;
+      st.lastTarget = result.story && result.story.target || null;
+    } else st.lastWiped = 0, st.lastTarget = null;
     st.lastGrade = g;
     var ctx = ctxOf(campaign, { grade: g });
     var on = node.on || {};

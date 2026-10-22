@@ -284,7 +284,8 @@
          or surrender, hold it as well — with nothing left to act, a step taken
          then would end the turn again and run the whole Rally phase once more. */
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
-        !state.martyrAsk && !state.oppAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk && isAI(state.activeSide);
+        !state.martyrAsk && !state.oppAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk &&
+        (isAI(state.activeSide) || K.allyActs());
     }
     function maybeAI() {
       if (sim || draining || !canAI()) return;
@@ -299,7 +300,7 @@
       } finally { draining = false; }
     }
     function aiStep() {
-      if (!state || state.over || !isAI(state.activeSide) || state.martyrAsk || state.oppAsk) return false;
+      if (!state || state.over || !(isAI(state.activeSide) || K.allyActs()) || state.martyrAsk || state.oppAsk) return false;
       K.aiStands(state.activeSide);
       var list = eligible(state.activeSide);
       if (!list.length) { endActivation(); return true; }
@@ -545,6 +546,7 @@
         state.units.push(u);
       });
     }
+    K.storyUnits();                // story mode: named units, the target, the allies (storybattle.js)
     dedupeCodes();
     /* Every soldier gets a name and a rank. A campaign unit brings its own
        survivors from the dossier; the gaps, and every other unit, are filled
@@ -559,8 +561,8 @@
     state.cfg.colourA = ca; state.cfg.colourB = cb;
     V.colour('A', ca);
     V.colour('B', cb);
-    // the second player in a cooperative game wears a third colour
-    if (state.solo && state.solo.coop) {
+    // the second player in a cooperative game wears a third colour, and so do a story's allies
+    if ((state.solo && state.solo.coop) || state.allies) {
       var cc = cfg.colourC && COLOURS.indexOf(cfg.colourC) >= 0 && cfg.colourC !== ca && cfg.colourC !== cb
         ? cfg.colourC : foeColour([ca, cb]);
       state.cfg.colourC = cc;
@@ -982,6 +984,7 @@
      function would not survive a copy of the state. */
   function afterEntry(then) {
     ui.entryThen = then;
+    K.storyPrelude(true);          // story mode: a prelude waiting on forces that enter in turn 1 (storybattle.js)
     state.relocDone = state.relocDone || {};
     var order = state.initiative === 'B' ? ['B', 'A'] : ['A', 'B'];
     state.relocs = {};
@@ -1126,10 +1129,13 @@
     var a, b;
     do { a = R.d10(); b = R.d10(); } while (a === b);
     state.initiative = a > b ? 'A' : 'B';
+    // an ambush in a story battle: the side that sprang it goes first
+    var ambush = K.storyFirstTurn();
+    if (ambush) state.initiative = ambush;
     state.activeSide = state.initiative;
     state.phaseCount = null;
     state.streak = streakFor(state.activeSide);
-    logLine('turn', 'Turn ' + state.turn + ' — initiative to ' + sideName(state.initiative) + ' (D10 ' + a + ' vs ' + b + ').');
+    logLine('turn', 'Turn ' + state.turn + ' — initiative to ' + sideName(state.initiative) + (ambush ? ' (the ambush).' : ' (D10 ' + a + ' vs ' + b + ').'));
     // a compound's fires burn out, or burn on (Close Encounters, p. 159)
     if (state.compound) K.hazardsBeginning();
     pushRes({
@@ -1323,6 +1329,8 @@
       // a cooperative game's players take their turns with their own commandos
       if (state.solo && state.solo.coop && side === 'A' && state.activeSide === 'A' &&
         state.activeOwner && (u.owner || 1) !== state.activeOwner && !ui.soloAll) return false;
+      // a story's allies take their share of side A's activations; the player has the rest
+      if (state.allies && side === 'A' && !!u.ally !== K.allyActs()) return false;
       if (state.chain && state.chain.side === side) {
         // the turrets activate as one: while they go, nothing else does (p. 130)
         if (state.chain.kind === 'turrets') return R.has(u, 'Turret');
@@ -1682,7 +1690,8 @@
     ['PMCEngineCombat', './combat.js'],
     ['PMCEngineCounters', './counters.js'],
     ['PMCEngineMarks', './marks.js'],
-    ['PMCEngineSave', './save.js']
+    ['PMCEngineSave', './save.js'],
+    ['PMCEngineStory', './storybattle.js']
   ];
   /* A copy of the battle for the AI to look ahead in (ai.js lookahead): both sides the
      AI's, nothing drawn or heard, and nothing played but what it is asked (api.sim). */

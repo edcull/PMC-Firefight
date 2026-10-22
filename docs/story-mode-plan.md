@@ -880,9 +880,12 @@ read where the setting already lives:
 | Scenario swap | `cfg.scenario` | Among the standard, Close Encounters and story scenarios only. A swap into or out of Close Encounters changes the table (a compound), so the muster is shown again. |
 | Scenario variant | `scenarios.js` | Reads `cfg.story.variant`: name, turns, objectives, roles, the target and the ambush. Built in phase 2, since chapters 3 and 4 need it. |
 | Barricades (Readiness) | Terrain setup | Reuse Last Stand's barricade placement. |
-| Prelude strikes (air strike) | A new step after deployment, before turn 1 | Uses `shoot.js` to roll a hit and adds Suppression. The battle log shows it, so a replay replays it. |
-| Starting Suppression on own units (failed recon) | The same prelude step | |
-| Allies | Co-op's owners on side A | Some scenarios have **AI-run allies**: rebel units in the truce, the HTX garrison or port security in the first half, Black Lantern in *The Partner*. They are written per battle, like an enemy force, and are not in the player's roster. **There is no third side in the engine.** Paint `'C'` is only the colour for the co-op partner's units (owner 2) on side A. So allies are side-A units with their own owner, and the AI plays that owner's activations. Co-op already splits side A between owners (`ownersA`, `activeOwner`). The report already records each unit's `owner`, so the aftermath can leave allies off the roster. Needs a spike (phase 2). How allies fare can move meters (rebel allies lost: Sentiment −1). |
+| Prelude strikes (air strike) | `storybattle.js` `storyPrelude`, called when the battle starts (`deploy.js`) and again after turn 1's Reserve phase (`afterEntry`) | Each strike falls on an enemy unit on the table, as a shot would: two hits on a squad (`resolveShootingHits`), a damage roll on a machine. A part that falls on a side still to enter waits for it. Rolled once, and written to the battle log. |
+| Starting Suppression on own units (failed recon) | The same prelude step | 1 SP on that many of your squads |
+| The ambush variant | The same prelude step, and the initiative roll (`beginTurn`) | Phase 2's version: the side that sprang it has turn 1's initiative, and every squad of the side caught out starts with 1 SP. Deploying the ambushers anywhere outside 12″ is phase 5's. |
+| The target variant | `storybattle.js` `targetCheck`, asked before the scenario's own check (`endphase.js`) | The target killed, or with `capture` Broken and reached in base contact, wins for side A. The report says which (`report.story.target`), and the story reads it (`{ target: 'killed' }`). |
+| Readiness | `levers.js` `buildForce`; `scenarios.js` `lastStandBarricades` | 1: barricades for the enemy; 2: one unit more on top of the filler; 3: a rebel Last Stand. Below 0: fewer optional units, and a smaller filler share. |
+| Allies | `storybattle.js` `allyActs`; `eligible`, `canAI` and `aiStep` in `engine.js` | Some scenarios have **AI-run allies**: rebel units in the truce, the HTX garrison or port security in the first half, Black Lantern in *The Partner*. They are written per battle, like an enemy force, and are not in the player's roster. **There is no third side in the engine.** Paint `'C'` is only the colour for the co-op partner's units (owner 2) on side A. So allies are side-A units with their own owner, and the AI plays that owner's activations. Co-op's own owner switching (`activeOwner`) turned out to be solitaire-only machinery, so allies have their own: they are flagged `ally`, wear the third colour, and take their share of side A's activations in turn with the player's units, worked out from what has gone this turn (so a save in the middle needs nothing kept). The AI plays an activation whenever it is the allies'. The report marks them `ally`, and the grade leaves their losses out. How allies fare can move meters (rebel allies lost: Sentiment −1). |
 | Loyalty re-roll | Rally and Morale | One use per battle, shown on the command unit. |
 
 Everything the battle does differently is stored in `cfg`, so saves, replays and
@@ -893,15 +896,19 @@ result.
 
 ### Fitting into the dossier
 
-A story dossier keeps `mode: 'solo'` (section 1). Phase 2 goes through every
-`campaign.mode` check and decides, for each one, whether a story behaves as a
-solo campaign or differently. The known differences:
-- **The hub's Contract button** (`dossier-hub.js`) goes to the story's next
-  node, or to the interlude's side contracts. It doesn't go to rival offers.
-- **No rival companies.** A story dossier draws none, and the parts of the hub
-  that show rivals, and offer generation in `camp-rivals.js`, skip it.
-- **The aftermath** (`dossier-after.js`) runs as for a solo campaign, then
-  hands on to the story's debrief.
+A story dossier keeps `mode: 'solo'` (section 1). Phase 2 went through every
+`campaign.mode` check. The `'hotseat'` ones never apply (a story is never
+hotseat). The `'solo'` ones, and what a story does at each:
+
+| Where | What it does for a solo campaign | In a story | Done |
+|---|---|---|---|
+| `camp-rivals.js` `rollOffers` | Draws the rivals' offers, breaks up rivals that cannot regroup | No offers: a story's jobs are its own side contracts | Phase 2 |
+| `camp-aftermath.js` `elsewherePairs` | The rivals not facing you fight each other, off the table | None: no rivals, and no battle is ever fought out of sight | Phase 2 |
+| `dossier-after.js` (line 69) | Develops the rival just fought and draws the next | Skipped: the next battle is the story's | Phase 2 |
+| `dossier-hub.js` Contract button (line 213) | Opens the rival offers | Goes to the story's next node, or the interlude's side contracts | Phase 3 |
+| `dossier-hub.js` rivals panel and actions (lines 116, 218, 513) | Shows the rivals and what you can do about them | Hidden | Phase 3 |
+| `dossier-hub.js` / `dossier.js` star system (lines 123, 1792) | Offers to chart a star system | Not offered | Phase 3 |
+| `menu.js` Continue list (lines 146, 154) | "Campaign" | "Story", with the chapter | Phase 3 |
 
 ### Screens
 

@@ -54,6 +54,8 @@ src/
                      carry on or surrender
     solo.js          the solitaire turn: whose unit goes next, and the OpFor's phase
     save.js          saving and loading a battle: the snapshot of everything
+    storybattle.js   a story battle's own changes: named units, allies and their activations, the
+                     prelude (strikes, Suppression, an ambush), the target variant
     ai.js            the AI: its behaviour, moves, targets, honours
     offtable.js      the other forces' battles, fought AI against AI on a table nobody sees
     protocol.js      message names and legal settings, shared by browser and server
@@ -62,6 +64,9 @@ src/
     story.js         the engine: a story's graph, its meters and flags on the dossier, events and
                      their effects, battles graded, the second half's pool, endings, checkpoints, ironman
     validate.js      a story checked before anyone plays it, and the Monte Carlo walk over it
+    levers.js        a story battle set up: its Tier and PL for the company, the enemy force built from
+                     what the story wrote, the allies, Readiness, and the engine's cfg
+    deep-contract.js Deep Contract, the first story, as data
 
   view/              the browser
     game.js          the board: its state, and the modules below wired together
@@ -294,7 +299,10 @@ xenocamp.js        the Xenotripod campaign
 lowcamp.js         campaign fixes: income dice, Surrounded but Steady, the Rite of Rage
 story.js           story mode's engine: conditions, effects, grading, the pool and the finale,
                    saving, checkpoints and ironman, on a small test story (test/story-fixture.js)
-storygraph.js      the story validator catches each way of writing a story wrong, and the walk
+storygraph.js      the story validator catches each way of writing a story wrong, and the walk;
+                   Deep Contract validates, and its one-offs and Scorched Earth stay in range
+storylevers.js     a story battle set up: Tier and PL, the enemy force, the cfg, and in the engine the
+                   allies, named units, prelude, ambush and target (set up and started, never played)
 ```
 
 **The code itself**
