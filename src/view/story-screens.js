@@ -202,6 +202,12 @@
           return '<button class="lnk' + (muster.role === r[0] ? ' on' : '') + '" data-go="storyrole" data-r="' + r[0] + '">' + r[1] + '</button>';
         }).join('') + '</div>';
       }
+      // where the battle lets you choose it: the edge you come in from (the map laid the other way about)
+      if (spec.levers.edge === 'choose' && spec.map) {
+        h += '<p class="hint">Come in from:</p><div class="segs story-edge">' + [['west', 'The west edge'], ['east', 'The east edge']].map(function (r) {
+          return '<button class="lnk' + ((muster.edge || 'west') === r[0] ? ' on' : '') + '" data-go="storyedge" data-e="' + r[0] + '">' + r[1] + '</button>';
+        }).join('') + '</div>';
+      }
       var res = legal();
       h += '<div class="story-roster">' + co.roster.map(function (e) {
         var p = R.profile(e.key), on = muster.rids.indexOf(e.rid) >= 0, resting = e.restUntil > 0;
@@ -220,7 +226,7 @@
        campaign's own. */
     function fight() {
       var co = E.camp.companies.A, picks = picked();
-      var cfg = L().toCfg(E.camp, { picks: picks, role: muster.role, tier: muster.tier, pl: muster.pl, options: E.camp.options || {} });
+      var cfg = L().toCfg(E.camp, { picks: picks, role: muster.role, edge: muster.edge || 'west', tier: muster.tier, pl: muster.pl, options: E.camp.options || {} });
       cfg.colourA = E.colourOf(co);
       cfg.campLid = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.lid ? root.PMC_CAMPAIGN.lid() : null;
       cfg.track = !!E.camp.debugTrack;
@@ -319,6 +325,7 @@
         }
         case 'storyauto': beginMuster(); E.render(); return true;
         case 'storyrole': muster.role = t.getAttribute('data-r') === 'B' ? 'B' : 'A'; E.render(); return true;
+        case 'storyedge': muster.edge = t.getAttribute('data-e') === 'east' ? 'east' : 'west'; E.render(); return true;
         case 'storyfight': if (legal().ok) fight(); return true;
         case 'storyjournal': E.view = 'storyjournal'; E.render(); return true;
         case 'storyrewind':

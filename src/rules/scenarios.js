@@ -1212,12 +1212,34 @@
      rule of it, with the mission's name and blurb laid over it. */
   function scenFor(state, id) {
     var s = SCENARIOS[id] || SCENARIOS.secure, sty = state && state.cfg && state.cfg.story;
-    if (!sty || !sty.name) return s;
+    if (!sty || !(sty.name || sty.ambush)) return s;
     var named = Object.create(s);
-    named.name = sty.name;
-    named.bookName = s.name;
+    if (sty.name) { named.name = sty.name; named.bookName = s.name; }
     if (sty.blurb) named.blurb = sty.blurb;
+    if (sty.ambush) ambushed(named, s, sty.ambush);
     return named;
+  }
+  /* The ambush variant (story mode): nobody marches on. The side caught out sets
+     up first, on its own edge as the scenario has it; the side that sprang the
+     ambush then sets up anywhere more than 12" from every unit of it. (It has the
+     first turn, and the side caught out starts pinned: storybattle.js.) An AI
+     side that sprang it waits to set up until the other side is down (engine.js,
+     deploy.js startBattle). */
+  var AMBUSH_GAP = 12;
+  function ambushed(named, s, by) {
+    named.entersTurn1 = false;
+    named.attackerEnters = false;
+    named.ambushBy = by;
+    named.boxes = function (state, side, u) {
+      if (side === by) return [{ x: R.UNIT_R, y: R.UNIT_R, w: R.BOARD.w - 2 * R.UNIT_R, h: R.BOARD.h - 2 * R.UNIT_R }];
+      return s.boxes ? s.boxes.call(this, state, side, u) : (state.sc && state.sc.boxes && state.sc.boxes[side]) || null;
+    };
+    named.deployOK = function (state, side, x, y, u) {
+      if (side !== by) return s.deployOK ? s.deployOK.call(this, state, side, x, y, u) : null;
+      return state.units.every(function (e) {
+        return e.side === side || !e.alive || e.x < 0 || e.aboard || dist(x, y, e.x, e.y) > AMBUSH_GAP;
+      });
+    };
   }
   function begin(state, id, opts) {
     opts = opts || {};

@@ -116,6 +116,14 @@
       E.pushRes({ kind: 'Prelude', title: 'Before the first turn', note: 'What the story brought to this battle.', list: lines });
     }
 
+    /* An ambush an AI side springs: it sets up last, once the side it caught is
+       down (scenarios.js `ambushed`; deploy.js startBattle). */
+    function ambushWaits(side) {
+      var sty = story(), state = E.state;
+      return !!(sty && sty.ambush === side && state.phase !== 'battle' && E.isAI(side) &&
+        state.units.some(function (u) { return u.side === side && u.alive && u.x < 0 && !u.reserve && !u.aboard; }));
+    }
+
     /* Turn 1's initiative, where an ambush has settled it. */
     function storyFirstTurn() {
       var sty = story();
@@ -373,7 +381,7 @@
     }
 
     return {
-      allyOrder: allyOrder, orderReach: orderReach, orderLocked: orderLocked, giveAllyOrder: giveAllyOrder, orderActed: orderActed,
+      ambushWaits: ambushWaits, allyOrder: allyOrder, orderReach: orderReach, orderLocked: orderLocked, giveAllyOrder: giveAllyOrder, orderActed: orderActed,
       orderWord: function (k) { return ORDER_KINDS[k] || ''; },
       storySeeded: storySeeded, storyTerrain: storyTerrain, storyFixed: storyFixed,
       storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck,

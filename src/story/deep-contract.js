@@ -532,7 +532,7 @@
       poolChapter({ id: 'hiveheart', thread: 'hive', finale: true, title: 'Hive Heart',
         brief: 'The brood chambers, at the bottom of everything.',
         before: { id: 'hiveheart.descent', title: 'The descent', text: 'There is one way down, and it is long.', options: [
-          { id: 'burn', text: 'Burn the way down.', battle: { strikes: 'D3+PL', edge: 'choose' }, effects: [{ meter: 'loyalty', add: -1 }] },
+          { id: 'burn', text: 'Burn the way down.', battle: { strikes: 'D3+PL', readiness: -1 }, effects: [{ meter: 'loyalty', add: -1 }] },
           { id: 'push', text: 'Push straight through.', battle: { role: 'attacker', tier: 'max' } }
         ] },
         battle: { scenario: 'hive_heart', waves: { meter: 'hive', base: 1, per: 3 }, tier: 'max', pl: 'max', enemy: hive({ fill: { to: 1.0, from: ['bsmall', 'battack', 'boversized'], meter: 'hive', step: 0.05 } }),

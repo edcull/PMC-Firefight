@@ -256,9 +256,17 @@
     var maps = (root.PMCStoryMaps && root.PMCStoryMaps[def.id]) || {}, map = spec.map ? maps[spec.map] : null;
     var compound = root.PMCScen && root.PMCScen.SCENARIOS[spec.scenario] && root.PMCScen.SCENARIOS[spec.scenario].compound;
     var board = R().boardFor(pl), sx = board.w / 48, sy = board.h / 48;
-    var fitPiece = function (p) { var q = JSON.parse(JSON.stringify(p)); q.x *= sx; q.w *= sx; q.y *= sy; q.h *= sy; return q; };
+    /* The edge the player chose to come in from (`edge: 'choose'`, on the muster):
+       from the east, the map is laid the other way about, so side A's own edge is
+       the one it chose. A compound has no edges to choose. */
+    var east = !!map && !compound && (lv.edge === 'east' || (lv.edge === 'choose' && opts.edge === 'east'));
+    var fitPiece = function (p) {
+      var q = JSON.parse(JSON.stringify(p));
+      if (east) q.x = 48 - q.x - q.w;
+      q.x *= sx; q.w *= sx; q.y *= sy; q.h *= sy; return q;
+    };
     var terrainPlan = map && !compound ? map.pieces.map(fitPiece) : null;
-    var mapObjectives = map && !compound && map.objectives ? map.objectives.map(function (o) { return { x: o.x * sx, y: o.y * sy, name: o.name }; }) : null;
+    var mapObjectives = map && !compound && map.objectives ? map.objectives.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) : null;
     var role = lv.role || spec.role;
     var attacker = role === 'choose' ? opts.role || 'A' : ROLE[role] || null;
     var ambush = variant && variant.ambush ? (variant.ambush === 'player' ? 'A' : 'B') : null;
@@ -282,7 +290,7 @@
         // the mission: its name over the book's scenario, its ground, and the seed that lays it the same each time
         name: spec.name || null, blurb: spec.text ? S.render(campaign, spec.text) : null,
         mapName: map ? map.name : null, objectives: mapObjectives,
-        seed: spec.node + ':' + spec.scenario,
+        seed: spec.node + ':' + spec.scenario + (east ? ':east' : ''),
         variant: variant,
         strikes: lv.strikes || null,
         suppressOwn: lv.suppressOwn || null,
@@ -290,7 +298,7 @@
         readiness: rd,
         barricades: rd >= 1 ? { B: 2 * pl } : null,
         intel: S.intel(campaign, spec),
-        edge: lv.edge || null,
+        edge: east ? 'east' : lv.edge === 'choose' ? 'west' : null,
         turns: lv.turns || (variant && variant.turns) || null,
         // the story scenarios' waves: so many a turn, by a meter (a battle's `waves`: base + 1 for each `per` points)
         waves: spec.waves ? { per: (spec.waves.base || 1) + Math.floor(Math.max(0, campaign.story.meters[spec.waves.meter] || 0) / (spec.waves.per || 3)) } : null,
