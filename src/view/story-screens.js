@@ -108,10 +108,33 @@
         h += para(v.text) + '<div class="story-go"><button class="start" data-go="storyon">Go on</button></div>';
       } else if (v.type === 'interlude') {
         h += para(v.text);
+        h += sideView(v);
         h += '<p class="hint">Between chapters: recruit, promote and spend at the company before you go on.</p>';
         h += '<div class="story-go"><button class="lnk" data-go="hub">To the company</button><button class="start" data-go="storyon">Go on</button></div>';
       } else if (v.type === 'pool') h += poolView(v);
       return h + foot();
+    }
+
+    /* An interlude's side contracts: each a small job, its pay, what taking it
+       costs and what passing it up does; one can be taken. */
+    function sideView(v) {
+      if (!v.side || !v.side.length) return '';
+      var d = def(), words = function (list) {
+        return (list || []).filter(function (e) { return e.meter && !e.if; }).map(function (e) {
+          var m = d._meters[e.meter];
+          return (m ? m.name : e.meter) + ' ' + (e.add > 0 ? '+' : '') + e.add;
+        }).concat((list || []).some(function (e) { return e.if && e.meter === 'hive'; }) && E.camp.story.chapterNo >= 5 ? ['time: Hive Growth +1'] : []).join(', ');
+      };
+      var h = '<div class="story-side"><h3>Side contracts</h3><p class="hint">' + (v.side.length > 1 ? 'Work on offer between chapters. You can take one.' : 'Work on offer between chapters.') + '</p>';
+      v.side.forEach(function (o) {
+        var cost = words(o.cost), passed = words(o.passed), sides = def().sides || {};
+        h += '<div class="story-job"><b>' + esc(o.title) + '</b><small>' + esc(o.pay + ' kUC') +
+          (o.against && sides[o.against] ? ' \u00b7 against ' + esc(sides[o.against].name) : '') + '</small>' + para(o.text) +
+          (o.catchUp ? '<small class="good">Offered to help the company catch up: it costs no time.</small>' : cost ? '<small>Taking it: ' + esc(cost) + '</small>' : '') +
+          (passed ? '<small class="warn">Passed up: ' + esc(passed) + '</small>' : '') +
+          '<button class="lnk" data-go="storyside" data-j="' + esc(o.id) + '">Take the job</button></div>';
+      });
+      return h + '</div>';
     }
 
     function eventView(v) {
@@ -265,6 +288,9 @@
           var label = o ? o.text : d._chapters[j.choice] ? d._chapters[j.choice].title : j.choice;
           lines.push('<p>' + esc(n.title || 'The next job') + ': <i>' + esc(words(label)) + '</i></p>');
         }
+        // a side contract: taken, and how it went
+        var sj = j.side ? (d.side.jobs || []).filter(function (x) { return x.id === j.side; })[0] : null;
+        if (sj) lines.push('<p>Side contract: <i>' + esc(sj.title) + '</i></p>');
         if (j.grade) lines.push('<p>' + esc(GRADE[j.grade]) + '.</p>');
         if (j.skipped) lines.push('<p>No battle.</p>');
         (j.effects || []).forEach(function (e) { if (e.journal) lines.push('<p class="hint">' + esc(e.journal) + '</p>'); });
@@ -317,6 +343,7 @@
         case 'story': E.view = 'story'; E.render(); return true;
         case 'storyon': S().proceed(E.camp); after(); return true;
         case 'storyopt': S().choose(E.camp, t.getAttribute('data-o')); after(); return true;
+        case 'storyside': S().takeSide(E.camp, t.getAttribute('data-j')); after(); return true;
         case 'storymuster': muster = null; E.view = 'storymuster'; E.render(); return true;
         case 'storypick': {
           var rid = t.getAttribute('data-rid'), i = muster.rids.indexOf(rid);

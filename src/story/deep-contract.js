@@ -94,6 +94,9 @@
     return { id: id, half: 2, thread: o.thread, title: o.title, when: o.when, fallback: !!o.fallback, finale: !!o.finale, passed: o.passed, onStart: o.onStart, nodes: nodes };
   }
 
+  // a side contract's cost in time: in the second half, the hive grows while you are away
+  var LATE_TIME = { if: { chapter: { gte: 5 } }, meter: 'hive', add: 1 };
+
   var FINALE_ON = {
     success: [{ effects: [{ flag: 'finale_won' }] }],
     failure: [{ effects: [{ flag: 'finale_lost' }] }]
@@ -128,6 +131,58 @@
       lantern_mercy: 'Black Lantern owes you for its wounded.', lantern_crossed: 'Black Lantern will not forget the prisoners.'
     },
     start: { faction: 'pmc', found: 'standard' },
+
+    /* HTX's bonus for a story battle won (story.js bonusFor): the battle's `pay`,
+       else 2 kUC, a quarter more or less for each point of HTX Standing; half for
+       a draw; nothing once HTX has stopped paying. */
+    pay: { base: 2, meter: 'htx', step: 0.25, draw: 0.5, cutOff: ['htx_cut_off'] },
+
+    /* Side contracts (story.js makeOffers): small jobs offered at an interlude,
+       one taken at most, each a battle of its own and paid in kUC. Taking one
+       costs time (Hive Growth +1) unless it was offered to catch the company
+       up with the curve (the Company Tier wanted by each chapter); behind it,
+       or cut off from HTX, there are two on offer, and cut off they pay half
+       as much again. Passing one up can cost something too. */
+    side: {
+      offers: { base: 1, behind: 2, cutOff: 2 }, cutOffPay: 1.5, cutOff: ['htx_cut_off'],
+      curve: { 1: 1, 2: 1, 3: 2, 4: 2, 5: 2, 6: 3, 7: 3, 8: 3 },
+      jobs: [
+        { id: 'orerun', title: 'The Ore Run', pay: 3, if: { not: { flag: 'htx_cut_off' } },
+          text: 'HTX wants an escort for an ore train down the haul road. The Front has been hitting the trains at the cuttings, and the drivers have stopped volunteering.',
+          scenario: 'meeting', map: 'haulroad', tier: 'max-1', enemy: front({ fill: { to: 0.7, from: ['rmilitia', 'rtechnical', 'rminers'] } }),
+          cost: [LATE_TIME], passed: [{ meter: 'htx', add: -1 }],
+          on: { success: [{ effects: [{ meter: 'htx', add: 1 }] }], failure: [{ effects: [{ meter: 'rebels', add: 1 }] }] } },
+        { id: 'bounty', title: 'Bounty on the Ridges', pay: 3, if: { all: [{ not: { flag: 'htx_cut_off' } }, { meter: 'rebels', gte: 2 }] },
+          text: 'A Front raiding party has been shooting up the survey camps on the slag ridges. HTX has put a price on it, payable on proof.',
+          scenario: 'meeting', map: 'ridges', tier: 'max-1', enemy: front({ fill: { to: 0.7, from: ['rmilitia', 'rminers', 'rinsurgents'] } }),
+          cost: [LATE_TIME],
+          on: { success: [{ effects: [{ meter: 'rebels', add: -1 }] }], failure: [{}] } },
+        { id: 'salvage', title: 'Salvage Rights', pay: 4,
+          text: 'A lifter came down in the old ore yards with its hold full. Whoever reaches it first owns what is in it, and the scavengers are already on their way.',
+          scenario: 'find', map: 'oreyards', tier: 'max-1', enemy: front({ tactics: 'guerillas', fill: { to: 0.7, from: ['rciv', 'rmilitia', 'rminers'] } }),
+          cost: [LATE_TIME], on: { success: [{}], failure: [{}] } },
+        { id: 'pithead', title: 'The Guild\u2019s Pithead', pay: 3, if: { any: [{ flag: 'sump_entered' }, { flag: 'hive_known' }, { chapter: { gte: 5 } }] },
+          text: 'The miners\u2019 guild will pay you to hold a pithead for a night. Something has been coming up the shafts, and the guild\u2019s own men will not go near it.',
+          scenario: 'secure', map: 'pumping', tier: 'max-1', enemy: hive({ fill: { to: 0.7, from: ['btiny', 'bsmall'] } }),
+          cost: [LATE_TIME, { meter: 'htx', add: -1 }], passed: [{ meter: 'sentiment', add: -1 }],
+          on: { success: [{ effects: [{ meter: 'sentiment', add: 1 }, { meter: 'hive', add: -1 }] }], failure: [{ effects: [{ meter: 'sentiment', add: -1 }] }] } },
+        { id: 'nest', title: 'The Nest by the Road', pay: 3, if: { any: [{ meter: 'hive', gte: 3 }, { chapter: { gte: 6 } }] },
+          text: 'Bugs have nested in a pump house by the haul road. Burn it out before it spreads.',
+          scenario: 'ce_clear', tier: 'max-1', enemy: hive({ fill: { to: 0.7, from: ['btiny', 'bsmall', 'battack'] } }),
+          cost: [LATE_TIME],
+          on: { success: [{ effects: [{ meter: 'hive', add: -1 }] }], failure: [{ effects: [{ meter: 'hive', add: 1 }] }] } },
+        { id: 'refugees', title: 'The Refugee Column', pay: 2, if: { all: [{ meter: 'sentiment', gte: 1 }, { chapter: { gte: 3 } }] },
+          text: 'A column of miners\u2019 families is walking out of the Pits, and there are guns between them and the coast. They can pay a little. They are asking anyway.',
+          scenario: 'meeting', map: 'hills', tier: 'max-1', enemy: front({ fill: { to: 0.6, from: ['rciv', 'rmilitia'] } }),
+          cost: [LATE_TIME], passed: [{ meter: 'sentiment', add: -1 }],
+          on: { success: [{ effects: [{ meter: 'sentiment', add: 2 }] }], failure: [{ effects: [{ meter: 'sentiment', add: -1 }] }] } },
+        { id: 'frontmoney', title: 'Front Money', pay: 4, if: { flag: 'htx_cut_off' },
+          text: 'With HTX gone quiet, the Front\u2019s money spends as well as anyone\u2019s. They want a Black Lantern post on the hill road taken off the map.',
+          scenario: 'demolish', map: 'hills', tier: 'max-1', role: 'attacker', enemy: lantern({ core: ['regular', 'regular', 'lmgteam'], fill: { to: 0.7, from: ['regular', 'rookie'] } }),
+          cost: [LATE_TIME],
+          on: { success: [{ effects: [{ meter: 'lantern', add: -1 }, { meter: 'sentiment', add: 1 }] }], failure: [{ effects: [{ meter: 'lantern', add: 1 }] }] } }
+      ]
+    },
     meters: {
       htx: { start: 1, shown: true, name: 'HTX Standing', uses: ['pay', 'strikes', 'supply'], thresholds: [{ gte: 2 }, { lte: -3 }] },
       sentiment: { start: 0, name: 'Sentiment', uses: ['intel', 'readiness'], thresholds: [{ gte: 3 }, { lte: -2 }, { lte: -3 }] },

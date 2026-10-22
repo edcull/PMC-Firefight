@@ -2474,6 +2474,13 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .story-event h3, .story-battle h3 { font-family: var(--display); margin: 0 0 8px; }
 .story-opts { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; }
 .story-opt { text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); color: var(--ink); font: inherit; cursor: pointer; }
+.story-side { margin: 14px 0; }
+.story-side h3 { margin: 0 0 4px; }
+.story-job { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; margin: 8px 0; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+.story-job small { color: var(--ink-dim); }
+.story-job small.good { color: var(--good); }
+.story-job small.warn { color: var(--warn); }
+.story-job .lnk { align-self: flex-start; }
 .story-opt:hover:not([disabled]) { border-color: var(--alpha); }
 .story-opt[disabled] { opacity: .55; cursor: default; }
 .story-opt b { display: block; font-weight: 600; }

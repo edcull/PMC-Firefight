@@ -1096,6 +1096,8 @@ in all. Tune pay, rewards and the catch-up against the growth curve, and the
 enemy allowance against play-testing. Balance with the Monte Carlo
 walk and the made-up-report playthrough.
 
+**Where it stands (pay and side contracts).** HTX's bonus is in `story.js` (`bonusFor`, the story's `pay`): 2 kUC for a story battle won, a quarter more or less for each point of HTX Standing, half for a draw, none once HTX has cut you off. Side contracts are the story's `side`: seven small jobs (*The Ore Run*, *Bounty on the Ridges*, *Salvage Rights*, *The Guild's Pithead*, *The Nest by the Road*, *The Refugee Column*, *Front Money*), each a battle a Tier down on its own map, offered at an interlude (one; two when the company is behind the curve or cut off, cut off paying half as much again), taken (`takeSide`: the battle, then back to the interlude) or passed up (`passed`). In the second half one costs time (Hive Growth +1), unless it was offered to catch up. `test/unit/storywhole.js` plays the whole story through with made-up results: over 300 walks winning six battles in ten, about 11 battles and 3 side contracts a walk; Company Tier III by the end in 89%; no Broken Company; Scorched Earth 18%; every ending but Broken reached. Winning four in ten: Tier III in 72%, still no Broken Company. Measuring this found that Broken Company was asked whether the company could field a *Tier I* army, which a company grown past Tier I often can't (its units promoted out of it): it is now any Battle Tier up to its own.
+
 ### Phase 7: polish
 Portraits or emblems for the people in the story (in the iso style or as plain
 emblems). Sound for the chapter cards. A second difficulty setting. Notes in the

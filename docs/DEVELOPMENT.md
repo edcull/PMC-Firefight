@@ -316,6 +316,10 @@ storyscenarios.js  the story's own scenarios: set up, their victory checks, ever
                    set up, and one battle of each played AI against AI (the scenario's own test)
 allyorders.js      the allies' orders in a story battle: Move, Attack and Hold here, given and kept once
                    a turn, and the allies' AI answering each (only the allies act)
+storyside.js       HTX's bonus by HTX Standing, and the side contracts: offered at an interlude, taken
+                   (a battle of its own, then back) or passed up, catching up, and cut off from HTX
+storywhole.js      Deep Contract from Landfall to an ending, 30 times with made-up results: endings,
+                   Broken Company, Scorched Earth and the growth curve (STORY_WALKS for more)
 storyfirsthalf.js  Deep Contract's first half: every battle under every choice set up and started (not
                    played), and the first half walked with made-up reports through the real aftermath
 storylevers.js     a story battle set up: Tier and PL, the enemy force, the cfg, and in the engine the

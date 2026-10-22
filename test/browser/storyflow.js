@@ -120,6 +120,8 @@ async function cards(p) {
   await go(p, '[data-go="storyopt"][data-o="bury"]');
   txt = await body(p);
   check('...and on to the interlude, with the way to the company', /company/i.test(txt) && await p.evaluate(() => !!document.querySelector('#camp-body [data-go="hub"]')));
+  check('...and a side contract on offer, with its pay', /Side contracts/i.test(txt) && /kUC/.test(txt) && await p.evaluate(() => !!document.querySelector('#camp-body [data-go="storyside"]')), txt.slice(0, 200));
+  await p.screenshot({ path: path.join(SHOTS, 'story-side.png'), fullPage: true });
 
   console.log('\nThe journal, and coming back');
   await go(p, '[data-go="storyjournal"]');

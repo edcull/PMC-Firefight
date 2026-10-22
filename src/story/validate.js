@@ -298,6 +298,29 @@
     /* ---- the story's own rules ---- */
     arr(def.everyChapter).forEach(function (e, i) { readEffects(e, 'everyChapter[' + i + ']', { half: 0, time: true }); });
     arr(def.everyBattle).forEach(function (e, i) { readEffects(e, 'everyBattle[' + i + ']', { half: 0, time: true }); });
+    /* ---- the side contracts, and HTX's bonus ---- */
+    if (def.side) {
+      var sideMaps = root.PMCStoryMaps && root.PMCStoryMaps[def.id];
+      arr(def.side.jobs).forEach(function (j) {
+        var at = 'side ' + j.id, where = { half: 'both' };
+        if (!j.id || !j.title) err(at + ': a side contract needs an id and a title');
+        if (!(j.pay > 0)) err(at + ': a side contract that pays nothing');
+        scenario(at, j.scenario);
+        if (j.map && sideMaps && !sideMaps[j.map]) err(at + ': no map "' + j.map + '"');
+        force(at, j.enemy, null);
+        readCond(j.if, at, 'choice');
+        readEffects(j.cost, at, where);
+        readEffects(j.passed, at, where);
+        Object.keys(j.on || {}).forEach(function (k) {
+          arr(j.on[k]).forEach(function (b) { readCond(b.if, at, 'route'); readEffects(b.effects, at, where); });
+        });
+      });
+      arr(def.side.cutOff).forEach(function (f) { F(f).read.push({ at: 'side contracts', kind: 'choice' }); });
+    }
+    if (def.pay) {
+      if (def.pay.meter) { if (!mdefs[def.pay.meter]) err('pay: no meter ' + def.pay.meter); else M(def.pay.meter).read.push({ at: 'pay', kind: 'table' }); }
+      arr(def.pay.cutOff).forEach(function (f) { F(f).read.push({ at: 'pay', kind: 'table' }); });
+    }
     // what the company knows of the enemy before a battle: { if, add, side }
     arr(def.intel).forEach(function (r, i) {
       readCond(r.if, 'intel[' + i + ']', 'table');
@@ -400,6 +423,8 @@
           S.resolveBattle(campaign, pickGrade());
         } else if (v.type === 'ending') {
           break;
+        } else if (v.type === 'interlude' && v.side && v.side.length && Math.random() < 0.5) {
+          S.takeSide(campaign, v.side[Math.floor(Math.random() * v.side.length)].id);
         } else {
           S.proceed(campaign);
         }
