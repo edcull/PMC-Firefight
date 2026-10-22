@@ -535,7 +535,8 @@ the AI (which plays copies of the battle) all see the same battle.
 1. **Main menu → Single player → Story**: new story, or continue. A new story
    founds the company with the campaign's existing founding screens
    (`dossier-found.js`): the name, colour, doctrine and starting units. The story
-   sets the limits (a PMC company at Company Tier I).
+   sets the limits (a PMC company at Company Tier I). Ironman is switched on
+   or off here, and can't be changed afterwards.
 2. **Chapter card:** act, chapter title, a short intro, the date on the moon.
 3. **Briefing:** the story text, the enemy dossier (what you know of them), and
    the shown meters this chapter touches. Hidden meters come through only in
@@ -551,11 +552,45 @@ the AI (which plays copies of the battle) all see the same battle.
    revealed meters with their history, and the flags written as prose ("Varga is in an HTX cell.").
 8. **Ending:** the epilogue, the company's record and its roll of honour.
 
+### Saving, and ironman
+
+**Normal mode lets the player go back.** The story saves itself at every
+node, as campaigns do now (in the browser, and on the server when signed in).
+It also keeps **checkpoints** the player can rewind to from the journal:
+- the start of every chapter;
+- just before each event and each battle in the last two chapters.
+
+A checkpoint is a copy of the dossier and its story state, so rewinding puts
+the company back as well as the story. That includes the dead, the kUC and
+the EXP. Older checkpoints inside a chapter are dropped to keep the save small.
+Exporting to a file and reading it back works as for a campaign.
+
+**Ironman mode does not.** It is chosen when the story starts, and it can't
+be switched off later:
+- **One save, written as you go.** A choice is saved as soon as it is made, and
+  any roll it asks for is made and saved at the same moment. Reloading the page
+  brings back the result, not the choice.
+- **No checkpoints and no rewind.**
+- **A battle can't be thrown away.** The battle in progress saves as now.
+  Discarding it from Continue, or conceding, counts as a rout, and the story
+  moves on down its failure branch.
+- **The flag travels with the save.** An exported ironman story is still ironman
+  when it is read back, and signed in, the copy on the server is the one that
+  counts.
+- **The ending says so.** An ironman badge on the ending and on the roll of
+  honour.
+
+None of this stops a determined player copying their browser's storage, and
+it doesn't try to. Ironman is a promise the player makes to themselves, and the
+game keeps it from being broken by accident.
+
 ---
 
 ## 6. Testing
 
-- **`test/unit/story.js`:** conditions, effects, grading, save and load round trip.
+- **`test/unit/story.js`:** conditions, effects, grading, save and load round trip,
+  rewinding to a checkpoint, and ironman (a reload brings back a roll's result, and a
+  discarded battle counts as a rout).
 - **`test/unit/storygraph.js`** (the validator, run on every story):
   - every node can be reached, and every `next` leads somewhere real;
   - every battle has a failure branch;
@@ -585,7 +620,7 @@ Write no prose yet. Run it through the validator as soon as phase 1 exists.
 
 ### Phase 1: the story engine (Node only)
 `story.js`, `validate.js`, the conditions and effects, grading, the story state
-on the dossier, saving and loading. Tests. A tiny three-chapter test story
+on the dossier, saving and loading, checkpoints and ironman. Tests. A tiny three-chapter test story
 exercises every node type.
 
 ### Phase 2: the battle hooks
@@ -631,9 +666,8 @@ before writing the rest.
    refers to the player's own units through text tokens (below).
 3. ~~**How much to show.**~~ *Decided:* some meters are shown and some are
    hidden, set for each meter, and events can reveal a hidden one (section 4).
-4. **Ironman.** One save, so choices and results can't be undone, or free
-   reloads? The recommendation is an option at the start, ironman off by
-   default.
+4. ~~**Ironman.**~~ *Decided:* reloading is allowed, with checkpoints to rewind
+   to. An ironman mode, chosen when the story starts, restricts it (section 5).
 5. **Length.** About 12 chapters a path, 12 to 16 battles. Shorter (8) for a
    first release?
 6. **Side contracts.** Allowed throughout, as the money tap, at a time cost? Or
