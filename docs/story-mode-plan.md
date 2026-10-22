@@ -187,7 +187,7 @@ The kit is mechanical and reused. The events are not:
 | Kit | Effects | Used by events such as |
 |---|---|---|
 | **Battle levers** (this battle only) | Show the enemy's list or tactic before mustering. Set the player's role or deployment edge. Strikes before turn 1 (Suppression, with a chance of a hit). Starting Suppression on your own units. Enemy Readiness. Swap the scenario. Shrink the force to a commando. Add allies. Turn limit, terrain, planet, world. Skip the battle. | Scouting, bribes, bombardments, sabotage, a guide who knows the tunnels, a traitor in the convoy |
-| **State levers** (long term) | Meters, flags, kUC, EXP or Trauma for some or all units, recruit or lose a unit, a free upgrade, wake an enemy, an offscreen battle, a journal line | Prisoners, salvage, the fallen, reports to HTX, promises made to people |
+| **State levers** (long term) | Meters, flags, kUC, EXP or Trauma for some or all units, recruit or lose a unit, a free upgrade, a flag that changes a later enemy force, a job settled off the table, a journal line | Prisoners, salvage, the fallen, reports to HTX, promises made to people |
 | **Rolls** | A roll against a meter, Intel or a flag, with an effect on each result | A bluff, an interrogation, a plan that might not work |
 
 **Readiness** is how prepared the enemy is for one battle. It starts at 0. Each
@@ -299,6 +299,7 @@ Each battle's enemy force is written for that battle, in three parts:
   avengers.
 
 ```js
+// unit keys are illustrative; the real ones are in data.js
 enemy: {
   side: 'front', faction: 'rebel', tactics: 'laststand',
   core: ['reb_cmd', 'reb_militia', 'reb_militia', { key: 'reb_veterans', name: "Varga's Own", honours: [3] }],
@@ -402,7 +403,7 @@ It registers a plain object, like the scenarios and archetypes do:
 ```js
 PMCStory.register({
   id: 'deep-contract', name: 'Deep Contract', version: 1,
-  start: { faction: 'pmc', tier: 1, kUC: 6, roster: ['pmc_cmd', 'pmc_line', 'pmc_line', 'pmc_recon'] },
+  start: { faction: 'pmc', tier: 1, kUC: 6, roster: ['pmc_cmd', 'pmc_line', 'pmc_line', 'pmc_recon'] },   // illustrative keys
   meters: { htx: 1, sentiment: 0, loyalty: 1, intel: 1, rebels: 6, hive: 0, lantern: 2 },
   sides: {   // names and colours only; each battle writes its own force (section 4)
     front:   { faction: 'rebel', name: "Free Miners' Front" },
@@ -446,7 +447,7 @@ levers), `battle`, `debrief` (text, then its events, picked by grade and flags),
 
 **Effects:** `{ meter, add|set }`, `{ flag, set }`, `{ kUC }`, `{ exp, to: 'all'|'fielded' }`,
 `{ tp }`, `{ recruit: key, free }`, `{ upgrade: 'random' }`, `{ leave: n }`
-(desertion), `{ enemy, kUC }`, `{ wake: enemyId }`, `{ offscreen: {...} }`,
+(desertion), `{ offscreen: {...} }`,
 `{ journal: 'text' }`. Each effect is one small function in the story engine, and
 the validator knows every name.
 
