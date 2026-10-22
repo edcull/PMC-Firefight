@@ -29,7 +29,7 @@ top of the campaign dossier, plus a few hooks into battle setup.
 | Spending between battles (recruiting, promotions, upgrades, doctrines) | The hub and roster screens | `dossier-hub.js`, `dossier-roster.js` |
 | Enemy forces the AI can field and play | Unit profiles, army presets, the composition check | `data.js`, `rules.js` `checkArmy` |
 | A battle set up from a contract (scenario, tier, PL, planet, world, roles) | The offer, which becomes `cfg` | `camp-rivals.js` `rollOffers`, `dossier-contract.js` |
-| Small, asymmetric missions (raids, decapitation, VIP escort, evacuation, ambush) | The six solitaire scenarios, with the OpFor table running the enemy | `solitaire.js` |
+| Ideas for small, asymmetric missions (raids, decapitation, VIP escort, evacuation, ambush) | The solitaire scenarios, **as inspiration only**. Story mode never runs a solitaire battle (no `cfg.solo`, no commando, no OpFor table). Their ideas come back as variants and custom scenarios (section 5). | `solitaire.js` |
 | Rebel posture (Last Stand, Human Wave, Guerillas) | Rebel Tactics | `rules.js` `TACTICS`, `cfg.tactics` |
 | Who attacks and who defends | Scenario roles and `cfg.attacker` | `scenarios.js` `rollRoles` |
 | Fighting inside a compound | Close Encounters | `compound.js`, `ce_*` scenarios |
@@ -139,19 +139,21 @@ The rebellion as HTX describes it.
   outright: a defeat means "the port is held, at a cost", with Loyalty −1.
 - **2. First move.** The briefing offers two jobs and the player picks one:
   relieve the besieged refinery (Invasion, defending), or raid the Front's supply
-  depot (Demolish, or Sabotage as a commando). The job not taken happens anyway,
+  depot (Demolish, or a smaller night raid: Demolish one Battle Tier down). The job not taken happens anyway,
   off the table, with whatever effect is written for it (section 4). A lost
   refinery puts *Retake the Refinery* in the second half's pool. A depot left
   alone raises Rebel Strength.
-- **3. The Hunt.** Find and secure, to corner her, or Decapitation as a commando
-  with a **capture variant** (`variant: { capture: true }`). Decapitation is won
-  by killing the leader, so taking Varga alive needs that variant: her unit has
-  to be Broken and then reached in base contact, and killing her counts as a
-  kill, not a capture (section 5). Killing her ends the hunt quickly, but she
-  becomes a martyr. Capturing her is harder and opens the way to a truce.
-  Failing leaves her free, and she runs for the sealed workings.
+- **3. The Hunt.** Find and secure, with a **target variant** (an idea taken
+  from the solitaire Decapitation): Varga's unit is named as the target, and
+  dealing with her wins the battle as well as the objectives do
+  (`variant: { target: "Varga's Own" }`). With `capture: true`, her unit has to
+  be Broken and then reached in base contact, and killing her counts as a kill,
+  not a capture (section 5). Killing her ends the hunt quickly, but she becomes
+  a martyr. Capturing her is harder and opens the way to a truce. Failing
+  leaves her free, and she runs for the sealed workings.
 - **4. Pit Nine.** A mining town rises. The choices here are about civilians:
-  Evacuation (they are protected), Crushing the Resistance (they are not), or
+  clearing the town house by house in Close Encounters (they are protected),
+  storming it after a bombardment (they are not), or
   talking your way in (it needs Sentiment, or Varga held). HTX's site office is
   in the town, and the Deep Contract data core can be found in it.
 
@@ -254,7 +256,7 @@ The kit is mechanical and reused. The events are not:
 
 | Kit | Effects | Used by events such as |
 |---|---|---|
-| **Battle levers** (this battle only) | Show the enemy's list or tactic before mustering. Set the player's role or deployment edge. Strikes before turn 1 (Suppression, with a chance of a hit). Starting Suppression on your own units. Enemy Readiness. Swap the scenario. Shrink the force to a commando. Add allies. Turn limit, terrain, planet, world. Skip the battle. | Scouting, bribes, bombardments, sabotage, a guide who knows the tunnels, a traitor in the convoy |
+| **Battle levers** (this battle only) | Show the enemy's list or tactic before mustering. Set the player's role or deployment edge. Strikes before turn 1 (Suppression, with a chance of a hit). Starting Suppression on your own units. Enemy Readiness. Swap the scenario (among the standard, Close Encounters and story scenarios) or apply a variant. Shrink the battle (a lower Battle Tier, for a raid by a small team). Add allies. Turn limit, terrain, planet, world. Skip the battle. | Scouting, bribes, bombardments, sabotage, a guide who knows the tunnels, a traitor in the convoy |
 | **State levers** (long term) | Meters, flags, kUC, EXP or Trauma for some or all units, recruit or lose a unit, a free upgrade, a flag that changes a later enemy force, a job settled off the table, a journal line | Prisoners, salvage, the fallen, reports to HTX, promises made to people |
 | **Rolls** | A roll against a meter, Intel or a flag, with an effect on each result | A bluff, an interrogation, a plan that might not work |
 
@@ -293,8 +295,8 @@ a long-term mark. The first half, for example:
 | 1. Landfall | *The port master's offer.* The port's own security chief offers his men, if HTX pays them. | Take them (allies, kUC −). Send them home (nothing). Ask what they know (show the enemy list; the port master remembers you were rude: Sentiment −1). |
 | 2. Refinery Siege | *The night shift.* Refinery workers are still inside, and the Front has offered them safe passage out. | Let them go (the enemy gets +1 Readiness, Sentiment +1, flag `nightshift_freed`). Keep them as a human shield (you choose the deployment, Sentiment −2, Loyalty −1). Get them to sabotage the Front's guns (roll on Intel: success is strikes before turn 1, failure is `nightshift_shot`). |
 | 2. Depot Raid | *Truck 14.* A driver will sell you the depot's guard rota. | Pay (kUC −, show the list). Grab him and question him (Intel +1, Loyalty −1, flag `driver_taken`). Go in blind but now, before the rota changes (you attack, enemy Readiness 0). |
-| 3. The Hunt | *Kill or capture.* HTX wants Varga dead. Your sergeant thinks she is worth more alive. | The HTX gunship (strikes before turn 1, HTX +1, `aim_kill`). A snatch team (swap to Decapitation with the capture variant, a commando only, `aim_capture`). Wait for her to move (Hive Growth +1, you pick the role). |
-| 4. Pit Nine | *The schoolhouse.* The Front has fortified the town school, with children still in it. | Clear it room by room (Close Encounters, no strikes, Sentiment +2 if you win). Shell it (strikes, Sentiment −4, flag `pit9_shelled`, Loyalty −1). Talk to the teacher (needs `nightshift_freed` or `varga_held`: skip the battle, or face an ambush). |
+| 3. The Hunt | *Kill or capture.* HTX wants Varga dead. Your sergeant thinks she is worth more alive. | The HTX gunship (strikes before turn 1, HTX +1, `aim_kill`). A snatch team (the target variant with `capture: true`, one Battle Tier down, `aim_capture`). Wait for her to move (Hive Growth +1, you pick the role). |
+| 4. Pit Nine | *The schoolhouse.* The Front has fortified the town school, with children still in it. | Clear it room by room (Close Encounters, Critical control, no strikes, Sentiment +2 if you win). Shell it, then storm the town (Secure and control, strikes, Sentiment −4, flag `pit9_shelled`, Loyalty −1). Talk to the teacher (needs `nightshift_freed` or `varga_held`: skip the battle, or, if the talks fail, a Meeting engagement with the ambush variant). |
 | Into the Sump (one-off) | *The miners' map.* A captured miner offers a route through the old workings. | Trust him (the role is yours, but roll for a trap). Use HTX's surveys (the role is set, and HTX knows exactly where you are, flag `htx_tracking`). Blast a new way in (strikes, Hive Growth +2). |
 | The Relief (one-off) | *The handover.* Black Lantern's commander arrives with a letter from HTX and a smile. | Hand over the sector and leave (no battle; the second half opens with `htx_cut_off` and nothing to fight for but side contracts). Refuse (you choose the role). Fire first (strikes before turn 1, and the Front hears about it: Sentiment +1). |
 
@@ -470,8 +472,8 @@ company. A story has no rival company, since the enemy is written to fit, so
 the story uses one-company forms of them (`levelsFor` is just `canFieldArmy`
 for the player at each PL):
 - **Tier:** `tier: 'max'` or `'max-1'`, with `min` and `max` where a chapter
-  must keep its character. Landfall is always Tier I. A raid by a commando can
-  stay small.
+  must keep its character. Landfall is always Tier I. A raid by a small team
+  can stay a Tier down.
 - **Priority Level:** `pl: 1` or `pl: 'max'`. The finale is `tier: 'max', pl: 'max'`,
   so a company that can field PL 2 fights its finale at PL 2.
 - **The scenario** reads the Tier and PL: the table (PL 3's 6′ × 4′), how many
@@ -531,14 +533,12 @@ honours, upgrades, doctrines.
 **Side contracts are sometimes on offer.** An interlude node says whether there
 are any, which ones and how many. That can depend on the threads, the meters and
 the flags. Some interludes have none, because the story is moving too fast.
-Each side contract is a small job: a scenario (standard, solitaire or Close
-Encounters), an enemy force written or put together from that side's templates
+Each side contract is a small job: a scenario (standard, Close Encounters, or
+a story scenario once they exist), an enemy force written or put together from that side's templates
 and scaled by its meter, and its pay and EXP.
 
 Side contracts do **not** come from `rollOffers`. That draws rival companies,
-and a solo campaign offers only the six standard scenarios (`SC.ORDER`).
-Solitaire and Close Encounters jobs only come up in online co-op contracts
-(`camp-world.js`). A story dossier has no rival companies. Its side contracts
+and a solo campaign offers only the six standard scenarios (`SC.ORDER`). A story dossier has no rival companies. Its side contracts
 are a pool in the story file, each with a scenario id, a side, a force template
 and its pay. The story engine builds them, and they are shown on the existing
 offer screen (`dossier-contract.js`).
@@ -561,58 +561,68 @@ the main money, and interludes offer them more often.
 
 ### Scenarios: existing ones first, then custom ones
 
-**The first half uses only the scenarios already in the game.** Every first-half mission is a
-standard, solitaire or Close Encounters scenario, picked by id and given story
-text. They are already tested and the AI already knows how to play them, so the
-first playable slice (phase 4) needs no new scenarios. It needs one variant,
-the capture variant of Decapitation, so variants are built in phase 2.
+**Story battles are standard, Close Encounters or custom story scenarios.
+Never solitaire ones.** Every story battle is an ordinary two-sided battle:
+the player's army against an AI side fielding the battle's written force. The
+solitaire scenarios (`solitaire.js`) run a different kind of battle, with a
+commando against an OpFor table, a fixed 48″ × 48″ table and no Rebel Tactics,
+and none of that fits a story built on the player's own company. Story mode
+doesn't set `cfg.solo`. The solitaire scenarios are used only as
+**inspiration**: their best ideas (a target leader, an ambush, an evacuation,
+a convoy to protect) come back as variants of standard scenarios, or as custom
+scenarios (below).
+
+**The first half uses only the scenarios already in the game,** standard and
+Close Encounters, picked by id and given story text. They are already tested
+and the AI already knows how to play them, so the first playable slice
+(phase 4) needs no new scenarios. It needs two variants, the target and the
+ambush, so variants are built in phase 2.
 
 | Chapter | Scenario | Source |
 |---|---|---|
 | 1. Landfall | Secure and control | `secure` |
-| 2. Refinery Siege, or Depot Raid | Invasion as the defender; Demolish, or Sabotage as a commando | `invasion`, `demolish`, `s_sabotage` |
-| 3. The Hunt | Find and secure, or Decapitation with the capture variant | `find`, `s_decap` + `variant: { capture: true }` |
-| 4. Pit Nine | Evacuation, Crushing the Resistance, or Ambush! if negotiation fails | `s_evac`, `s_crush`, `s_ambush` |
+| 2. Refinery Siege, or Depot Raid | Invasion as the defender; Demolish, or Demolish one Tier down as a night raid | `invasion`, `demolish` |
+| 3. The Hunt | Find and secure with the target variant (Varga killed or, with `capture`, taken) | `find` + `variant: { target, capture }` |
+| 4. Pit Nine | Critical control (clearing the town), Secure and control after a bombardment, or a Meeting engagement with the ambush variant if the talks fail | `ce_control`, `secure`, `meeting` + `variant: { ambush: true }` |
 | Into the Sump (one-off) | Clearing out, with bugs | `ce_clear` |
 | The Relief (one-off) | Meeting engagement or Hostile takeover, against Black Lantern | `meeting`, `takeover` |
-| Side contracts | From the story's own pool (section 4) | Any of the above |
-
-**Solitaire scenarios are a different kind of battle,** and the story has to
-allow for that. With `cfg.solo` set, the engine always uses a 48″ × 48″ table
-and turns Rebel Tactics off (`engine.js`, where it reads `cfg.solo`). The
-player fields a commando, checked by `checkCommando`, not an army, and the
-enemy comes from `rollOpFor`. So in a solitaire story battle:
-- the story's enemy force replaces the `rollOpFor` roll (a hook, below);
-- `pl: 'max'` doesn't change the table size, and a forced Rebel Tactic is
-  ignored (the validator warns about both);
-- swapping a standard scenario for a solitaire one is a change of mode, not
-  only of scenario. The engine refuses a solitaire scenario without `cfg.solo`,
-  and a standard one with it. The swap lever sets `cfg.solo` and turns the
-  muster into a commando muster.
+| Side contracts | From the story's own pool (section 4) | Any standard or Close Encounters scenario, and the story scenarios once they exist |
 
 A battle node can also adjust an existing scenario without a new one: its name
 and blurb, the turn limit, the number of objectives, which side attacks, and the
 compound's layout. This goes on the node as `variant: { turns: 12, name: 'Hold the Pass' }`,
 and `scenarios.js` reads it from `cfg.story.variant` wherever it reads those
-fields today. A variant can also change the victory check, as the capture
-variant does: the target leader has to be Broken and then reached, not killed.
-A change like that needs its own test, and AI support if the AI's goal changes
-(the AI defending Varga already protects its leader).
+fields today. Two variants take their ideas from the solitaire scenarios, and
+change more than the setup:
+- **Target** (from Decapitation): one named enemy unit is the target, and
+  destroying it wins the battle as well as the scenario's own victory does.
+  With `capture: true`, the unit has to be Broken and then reached in base
+  contact, and killing it counts as a kill, not a capture.
+- **Ambush** (from Ambush!): the enemy deploys first, anywhere outside 12″ of
+  the player's zone, and takes the first turn. Its units start in cover.
+
+A change like that needs its own test, and AI support if the AI's goal changes.
+The AI defending Varga already protects its leader, and the ambush changes only
+the setup.
 
 **The second half needs custom scenarios.** These are new entries in `SCENARIOS`,
 in the same shape as the existing ones (`deploy`, `reserves`, `zoneFor`,
 `objectives`, `check`, `turns`, `hint`). They live in `src/story/scenarios-story.js`
-and carry `story: true`, so the skirmish and campaign lists don't offer them. The
-likely set:
+and carry `story: true`, so the skirmish and campaign lists don't offer them.
+Like every story battle, they are two-sided battles between armies, built on
+the standard scenarios' machinery, not on `cfg.solo`. Where a solitaire
+scenario has the right idea, the custom scenario borrows the idea, not the
+code. The likely set:
 
-| Scenario | Used for | What is new |
-|---|---|---|
-| **Hive Heart** | The hive thread's finale (Close Encounters) | Bugs come in waves from tunnel mouths each End phase; how many is set by Hive Growth. Brood chambers are objectives to destroy. You win when every chamber is gone. |
-| **Convoy** | Second-half chapters in more than one thread: moving HTX ore, rebel refugees or the data core | A vehicle group crosses the table from one edge to the other. The other side wins by stopping enough of it. |
-| **Breakout / Extraction** | The finale when Hive Growth reaches 8, and escaping HTX once you are cut off | An orbital countdown: from turn N, D3 table areas are destroyed each turn. Units leave by a landing zone. You score by what gets out. |
-| **Hold the Line** | Truce chapters, where you hold a pass while rebel allies fall back | A defence against bug waves, with a timer. You win if you hold until turn N. |
-| **Parley** | Negotiations that go wrong | Both sides start close together around a meeting point. Shooting is not allowed until a trigger: a roll, or the first shot. |
-| **The Showdown** | The Black Lantern thread's finale | Probably Hostile takeover or Secure and control with a variant. A custom scenario only if play-testing asks for one. |
+| Scenario | Used for | What is new | Inspired by |
+|---|---|---|---|
+| **Hive Heart** | The hive thread's finale (Close Encounters) | Bugs come in waves from tunnel mouths each End phase; how many is set by Hive Growth. Brood chambers are objectives to destroy, some of them hidden until found. You win when every chamber is gone. | Besieged (hidden counters, an enemy that keeps coming) |
+| **Convoy** | Second-half chapters in more than one thread: moving HTX ore, rebel refugees or the data core | A vehicle group crosses the table from one edge to the other. The other side wins by stopping enough of it. | Protecting the VIP, Ambush! |
+| **Breakout / Extraction** | The finale when Hive Growth reaches 8, and escaping HTX once you are cut off | An orbital countdown: from turn N, D3 table areas are destroyed each turn. Units, and civilians as objective tokens, leave by a landing zone. You score by what gets out. | Evacuation |
+| **Hold the Line** | Truce chapters, where you hold a pass while rebel allies fall back | A defence against bug waves, with a timer. You win if you hold until turn N. | Besieged |
+| **Strike** | Raids in the second half: the Black Lantern depot, the HTX uplink in *The Leak* | Several targets to wreck, some of them decoys revealed when reached. A small force, a Tier down, against a garrison that wakes up as the alarm spreads. | Sabotage, Crushing the Resistance |
+| **Parley** | Negotiations that go wrong | Both sides start close together around a meeting point. Shooting is not allowed until a trigger: a roll, or the first shot. | none |
+| **The Showdown** | The Black Lantern thread's finale | Probably Hostile takeover or Secure and control with the target variant (Black Lantern's commander). A custom scenario only if play-testing asks for one. | Decapitation, through the target variant |
 
 Each custom scenario needs four things the existing ones already have:
 - **AI support.** The planner and `ai.js` have to understand the scenario's goal.
@@ -652,7 +662,7 @@ PMCStory.register({
         { id: 'gunship', text: 'Call in the HTX gunship.', if: { meter: 'htx', gte: 1 },
           battle: { strikes: 'D3+PL' }, effects: [{ meter: 'htx', add: 1 }, { flag: 'aim_kill', set: true }] },
         { id: 'snatch', text: 'Send the snatch team. Take her alive.',
-          battle: { scenario: 's_decap', commando: true }, effects: [{ flag: 'aim_capture', set: true }] },
+          battle: { variant: { target: "Varga's Own", capture: true }, tier: 'max-1' }, effects: [{ flag: 'aim_capture', set: true }] },
         { id: 'wait', text: 'Wait for her to move.',
           battle: { role: 'choose' }, effects: [{ meter: 'hive', add: 1 }] }
       ], next: 'c3.battle' },
@@ -746,10 +756,10 @@ read where the setting already lives:
 |---|---|---|
 | Enemy list shown before mustering | `muster.js` | The view only. It shows B's picks. |
 | Role and edge chosen by the player | `scenarios.js` `rollRoles` | `rollRoles(id, docs, forced, …)` already takes a forced attacker. Pass the preset role. |
-| Rebel Tactic forced | `cfg.tactics` | Exists already. Ignored in solitaire battles. |
-| The story's enemy force | Where the AI's list is picked | Build the list from the battle's `enemy` (core, optional units, changes) instead of picking one. In a solitaire battle, it replaces the `rollOpFor` roll. Readiness can add units from the force's optional list. |
-| Scenario swap, standard ↔ solitaire | `cfg.solo`, the muster | The engine only accepts a solitaire scenario with `cfg.solo` set, so the lever sets it and the muster becomes a commando muster (`checkCommando`). |
-| Scenario variant | `scenarios.js`, `solitaire.js` | Reads `cfg.story.variant`. Built in phase 2, since the capture variant is needed in chapter 3. |
+| Rebel Tactic forced | `cfg.tactics` | Exists already |
+| The story's enemy force | Where the AI's list is picked | Build the list from the battle's `enemy` (core, optional units, changes) instead of picking one. Readiness can add units from the force's optional list. |
+| Scenario swap | `cfg.scenario` | Among the standard, Close Encounters and story scenarios only. A swap into or out of Close Encounters changes the table (a compound), so the muster is shown again. |
+| Scenario variant | `scenarios.js` | Reads `cfg.story.variant`: name, turns, objectives, roles, the target and the ambush. Built in phase 2, since chapters 3 and 4 need it. |
 | Barricades (Readiness) | Terrain setup | Reuse Last Stand's barricade placement. |
 | Prelude strikes (air strike) | A new step after deployment, before turn 1 | Uses `shoot.js` to roll a hit and adds Suppression. The battle log shows it, so a replay replays it. |
 | Starting Suppression on own units (failed recon) | The same prelude step | |
@@ -847,7 +857,7 @@ game keeps it from being broken by accident.
   - in every reachable state, every thread the pool can offer has an eligible chapter (its fallback, if nothing else);
   - in the first half, the one-offs are reached only through options marked `extreme: true`, or the HTX Standing floor;
   - the truce thread has no finale, and every other thread has one;
-  - a solitaire battle doesn't set `pl: 'max'` or force a Rebel Tactic (a warning);
+  - no battle names a solitaire scenario (`s_*`) or sets `cfg.solo`;
   - every scenario, variant, faction, archetype, unit key and effect named exists.
 - **A Monte Carlo walk** (`npm run story:sim`): ten thousand walks with random
   choices and random grades. It plays no battles. It reports how often each
@@ -894,15 +904,13 @@ exercises every node type.
 
 ### Phase 2: the battle hooks
 `levers.js`: every battle lever (enemy list shown, role, strikes, starting
-Suppression, scenario swap, commando, allies, skip) as a change to `cfg`.
+Suppression, scenario swap, a smaller battle, allies, skip) as a change to `cfg`.
 - Battle Tier and PL relative to what the company can field, with one-company
   forms of `levelsFor` and `maxBattleTier`.
 - Readiness, and the prelude step, with its rolls in the battle log.
-- Building enemy forces from the battle's core, optional units and changes, and
-  using a written force in place of `rollOpFor` in solitaire battles.
-- The standard ↔ solitaire swap: `cfg.solo` and the commando muster.
-- Scenario variants (`cfg.story.variant`), and the capture variant of
-  Decapitation.
+- Building enemy forces from the battle's core, optional units and changes.
+- Scenario variants (`cfg.story.variant`), with the target variant (and
+  capture) and the ambush variant.
 - The `campaign.mode` audit and `PMCStory.active` checks: the hub's Contract
   button, no rival companies, the aftermath handing on to the debrief.
 - A spike on allies as an AI-run owner on side A.
@@ -918,7 +926,7 @@ The first half (chapters 1 to 4, and the two one-offs), written in full and play
 the events' choices matter, and difficulty.
 
 ### Phase 5: custom scenarios
-Waves and the orbital countdown as End-phase events, then Hive Heart, Convoy, Breakout, Hold the Line
+Waves and the orbital countdown as End-phase events, then Hive Heart, Convoy, Breakout, Hold the Line, Strike
 and Parley, each with the AI support and tests it needs. Phase 5 can start while
 phase 4 is still being play-tested.
 
@@ -971,3 +979,7 @@ All settled. They are kept here for the record.
    The story's tests use made-up reports (section 6). A new custom scenario's
    own unit test still plays one AI battle, because it is testing whether the
    AI can play that scenario, not the story (section 5).
+12. ~~**Solitaire scenarios.**~~ *Decided:* not used. Story battles are
+   standard, Close Encounters or custom story scenarios, always the player's
+   army against an AI side. The solitaire scenarios are inspiration for
+   variants (target, ambush) and custom scenarios (section 5).
