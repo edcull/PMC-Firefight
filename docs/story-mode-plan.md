@@ -25,7 +25,7 @@ top of the campaign dossier, plus a few hooks into battle setup.
 |---|---|---|
 | A company that carries over between battles (roster, EXP, trauma, honours, deaths by name, kUC) | The campaign dossier and its aftermath | `campaign.js`, `camp-aftermath.js`, `camp-company.js` |
 | Spending between battles (recruiting, promotions, upgrades, doctrines) | The hub and roster screens | `dossier-hub.js`, `dossier-roster.js` |
-| Enemies that remember their losses and grow | Rival forces with archetypes, `catchUp` and `developRival` | `camp-rivals.js` |
+| Enemy forces the AI can field and play | Unit profiles, army presets, the composition check | `data.js`, `rules.js` `checkArmy` |
 | A battle set up from a contract (scenario, tier, PL, planet, world, roles) | The offer, which becomes `cfg` | `camp-rivals.js` `rollOffers`, `dossier-contract.js` |
 | Small, asymmetric missions (raids, decapitation, VIP escort, evacuation, ambush) | The six solitaire scenarios, with the OpFor table running the enemy | `solitaire.js` |
 | Rebel posture (Last Stand, Human Wave, Guerillas) | Rebel Tactics | `rules.js` `TACTICS`, `cfg.tactics` |
@@ -51,8 +51,9 @@ The roster, the aftermath, saving, export and the hub keep working without chang
 
 ## 2. The story: *Deep Contract*
 
-Every name below is a placeholder, and should be checked against the PMC 2670
-setting before it is final (see section 8).
+The setting is our own. It does not need to fit the PMC 2670 book's
+background, only its tone and feel: corporate wars fought for profit, hired
+guns, the frontier, rebels and bugs. Every name below is a placeholder.
 
 ### The setting
 
@@ -74,10 +75,9 @@ blasting it brings wake the hive.
 | Black Lantern Security | PMC | HTX's second contractor: a rival in Act II, and possibly the last enemy |
 | HTX | none on the table | The employer: pays, gives orders, and lies |
 
-Each enemy is a **persistent company** built with the rival machinery
-(`foundRivals`, archetypes), so its roster carries its losses from one battle to
-the next. "Enemy strength" is partly what is left of that roster and partly a
-meter that feeds it (section 4).
+**Enemy forces are written for each battle.** They are not campaign rosters
+kept from one battle to the next. Each battle has its own enemy force, and the
+story's events, flags and meters change what is in it (section 4).
 
 ### Acts and chapters
 
@@ -120,7 +120,7 @@ flowchart TD
 - **2. First move.** The briefing offers two jobs and the player picks one:
   relieve the besieged refinery (Invasion, defending), or raid the Front's supply
   depot (Demolish, or Sabotage as a commando). The job not taken happens anyway,
-  off the table, through a paper battle (section 4). A lost refinery adds
+  off the table, and its result is rolled (section 4). A lost refinery adds
   *Retake the Refinery* to Act II. A depot left alone raises Rebel Strength.
 - **3. The Hunt.** Decapitation, or Protecting the VIP turned around so the
   player snatches Varga. Killing her ends the hunt quickly, but she becomes a
@@ -151,8 +151,9 @@ two set pieces. Their order, and which side is fighting beside you, depend on
 the path:
 - **The Hive Heart:** a Close Encounters assault on the hive's core. Hive Growth
   sets the Tier and the number of bug waves.
-- **The Black Lantern showdown:** PMC against PMC. Black Lantern's roster is
-  whatever survived its earlier battles.
+- **The Black Lantern showdown:** PMC against PMC. Black Lantern's force is
+  written for the battle, and changed by everything that has happened to them
+  so far: sabotage, defections, and whether HTX trusts them over you.
 
 **Endings**, chosen by meters and flags once the last battle is over:
 
@@ -275,15 +276,46 @@ in the journal (see section 8 on how much to show).
 | **Sentiment** (the locals) | Protecting civilians, releasing prisoners, sharing salvage | Bonus to recon rolls (the locals talk). Opens the truce and negotiations. Low Sentiment adds ambush events and Rebel Strength each chapter. |
 | **Loyalty** (your troops) | Death benefits, winning, resting units | High: once a battle, a unit may re-roll a failed Morale or Rally. Low: units leave between chapters, and new Trauma comes more easily. |
 | **Intel** (0 to 6) | Recon, interrogation, the data core | Spent on recon rolls, and on unlocking hidden options in briefings. |
-| **Rebel Strength** (0 to 10) | Depots left alone, prisoners released, low Sentiment | The Front's kUC each chapter, its Battle Tier and its Readiness. At 0 the Front is broken and its chapters change or drop out. |
-| **Hive Growth** (0 to 10) | Every chapter that passes, blasting, time spent waiting | The bugs' kUC and Tier, the number of waves in the Hive Heart. At 8 it forces Scorched Earth. |
-| **Black Lantern Readiness** (0 to 10) | HTX trusting them over you, time | Black Lantern's kUC and Tier, and its archetype's upgrades. |
+| **Rebel Strength** (0 to 10) | Depots left alone, prisoners released, low Sentiment | How many of the optional units in a Front force turn up, and its Readiness. At 0 the Front is broken and its chapters change or drop out. |
+| **Hive Growth** (0 to 10) | Every chapter that passes, blasting, time spent waiting | How big the bug forces are, and the number of waves in the Hive Heart. At 8 it forces Scorched Earth. |
+| **Black Lantern Readiness** (0 to 10) | HTX trusting them over you, time | How many optional units Black Lantern brings, and their honours and upgrades. |
 
-The enemy meters do not set an army directly. They are **income** into the
-persistent enemy company, spent by the rivals' existing `developRival`. Losses
-on the table therefore stay lost, and a meter only decides how quickly an enemy
-rebuilds. When the story needs the enemy at a certain size, the battle node
-asks for a Battle Tier, and `catchUp` fills the enemy roster to that Tier.
+### Enemy forces
+
+Each battle's enemy force is written for that battle, in three parts:
+
+- **The core:** the units that are always there, as unit keys. Named enemies
+  (Varga's bodyguard, Black Lantern's commander) are units in a core, with set
+  names, honours and upgrades. They come back in later battles only because a
+  later force names them again, and a flag decides whether they are alive to.
+- **Optional units:** an ordered list. The battle's meter decides how many
+  turn up. With Rebel Strength at 4 and a scale of 1 unit for each 2 points,
+  the first two come.
+- **Changes:** what events and flags do to the force. Add or remove a unit,
+  swap one unit for another, give a unit an honour or an upgrade, Suppression
+  at the start, a forced Rebel Tactic, Readiness. For example: *Truck 14*'s
+  driver taken means one fewer transport; the depot raided in chapter 2 means
+  no heavy weapons in chapter 3; Varga killed adds a Determined unit of
+  avengers.
+
+```js
+enemy: {
+  side: 'front', faction: 'rebel', tactics: 'laststand',
+  core: ['reb_cmd', 'reb_militia', 'reb_militia', { key: 'reb_veterans', name: "Varga's Own", honours: [3] }],
+  optional: { meter: 'rebels', per: 2, units: ['reb_militia', 'reb_technical', 'reb_mortar', 'reb_rpg'] },
+  changes: [
+    { if: { flag: 'depot_raided' }, remove: 'reb_mortar' },
+    { if: { flag: 'varga_dead' },   add: { key: 'reb_militia', name: 'The Avengers', rules: ['Determined'] } },
+    { if: { flag: 'driver_taken' }, remove: 'reb_technical' }
+  ]
+}
+```
+
+The briefing describes the force from what you know, and an event can show it
+in full. A story force does not have to pass the composition check, because the
+writer sets its size. The validator checks that every unit key exists. The
+Monte Carlo walk reports the smallest and largest version of each force, so the
+range can be balanced.
 
 ### Flags
 
@@ -293,16 +325,17 @@ them. The ending table is mostly flags.
 
 ### Offscreen events
 
-A job the player passes on is not lost. Like the battles elsewhere today, it is
-played as a **paper battle** between the enemy company and an off-table force:
-the HTX garrison, or Black Lantern. The result sets a flag and moves a meter. The
-world moves on whatever the player chooses.
+A job the player passes on is not lost. It happens anyway, off the table. Its
+result is a roll changed by the meters and flags (Rebel Strength, what HTX sent
+instead), and it sets a flag and moves a meter. The world moves on whatever the
+player chooses.
 
 ### Interludes and side contracts
 
 Between chapters the player is on the hub as now: recruiting, promotions,
-honours, upgrades, doctrines. Story mode adds **side contracts**, the ordinary
-`rollOffers` against the story's enemy companies. Taking one earns kUC and EXP
+honours, upgrades, doctrines. Story mode adds **side contracts**: a scenario from
+`rollScenario`, against a force put together for the job from that enemy's
+templates and scaled by its meter. Taking one earns kUC and EXP
 but costs time: Hive Growth +1, and the meter the authored chapter names.
 This is the money tap, and the only one on the Whistleblower path.
 
@@ -369,12 +402,12 @@ It registers a plain object, like the scenarios and archetypes do:
 ```js
 PMCStory.register({
   id: 'deep-contract', name: 'Deep Contract', version: 1,
-  start: { faction: 'pmc', tier: 1, kUC: 6, roster: 'archetype:pmc-line' },
+  start: { faction: 'pmc', tier: 1, kUC: 6, roster: ['pmc_cmd', 'pmc_line', 'pmc_line', 'pmc_recon'] },
   meters: { htx: 1, sentiment: 0, loyalty: 1, intel: 1, rebels: 6, hive: 0, lantern: 2 },
-  enemies: {
-    front:   { faction: 'rebel', archetype: 'rebel-miners', name: "Free Miners' Front" },
-    hive:    { faction: 'bugs',  archetype: 'bugs-sump',    name: 'The Sump Hive', dormant: true },
-    lantern: { faction: 'pmc',   archetype: 'pmc-elite',    name: 'Black Lantern Security', dormant: true }
+  sides: {   // names and colours only; each battle writes its own force (section 4)
+    front:   { faction: 'rebel', name: "Free Miners' Front" },
+    hive:    { faction: 'bugs',  name: 'The Sump Hive' },
+    lantern: { faction: 'pmc',   name: 'Black Lantern Security' }
   },
   chapters: [
     { id: 'c3', act: 1, title: 'The Hunt', intro: '…', nodes: [
@@ -387,7 +420,7 @@ PMCStory.register({
         { id: 'wait', text: 'Wait for her to move.',
           battle: { role: 'choose' }, effects: [{ meter: 'hive', add: 1 }] }
       ], next: 'c3.battle' },
-      { id: 'c3.battle', type: 'battle', enemy: 'front', scenario: 'secure', tier: '+0', pl: 1,
+      { id: 'c3.battle', type: 'battle', enemy: { side: 'front', core: [/* … */] }, scenario: 'secure', tier: '+0', pl: 1,
         planet: 'industrial', tactics: 'guerillas',
         on: {
           success: [{ if: { flag: 'aim_capture' }, effects: [{ flag: 'varga_held', set: true }], next: 'c3.held' },
@@ -456,7 +489,7 @@ read where the setting already lives:
 | Enemy list shown before mustering | `muster.js` | The view only. It shows B's picks. |
 | Role and edge chosen by the player | `scenarios.js` `rollRoles` | Return the preset role instead of the roll. `cfg.attacker` exists already. |
 | Rebel Tactic forced | `cfg.tactics` | Exists already |
-| Extra enemy units (Readiness) | Where the AI's list is picked | Add N entries of the battle's Tier from the enemy roster, or free ones. |
+| The story's enemy force | Where the AI's list is picked | Build the list from the battle's `enemy` (core, optional units, changes) instead of picking one. Readiness can add units from the force's optional list. |
 | Barricades (Readiness) | Terrain setup | Reuse Last Stand's barricade placement. |
 | Prelude strikes (air strike) | A new step after deployment, before turn 1 | Uses `shoot.js` to roll a hit and adds Suppression. The battle log shows it, so a replay replays it. |
 | Starting Suppression on own units (failed recon) | The same prelude step | |
@@ -504,7 +537,7 @@ the AI (which plays copies of the battle) all see the same battle.
   This is the balance tool for the writing.
 - **One full playthrough in `test:all`:** every battle played as a paper battle
   (`offtable.playNow`), through the real aftermath. It checks that the company
-  and the enemies stay legal from start to finish.
+  stays legal from start to finish, and that every enemy force can be set up and played.
 - **A browser test:** the screens from a new story to the end of chapter 1.
 
 ---
@@ -524,8 +557,8 @@ exercises every node type.
 
 ### Phase 2: the battle hooks
 `levers.js`: every battle lever (enemy list shown, role, strikes, starting
-Suppression, scenario swap, commando, allies, skip) as a change to `cfg`. Readiness. The prelude step. Persistent enemy
-companies driven by meters. A spike on allies through side C. Tests for each
+Suppression, scenario swap, commando, allies, skip) as a change to `cfg`. Readiness. The prelude step. Building
+enemy forces from the battle's core, optional units and changes. A spike on allies through side C. Tests for each
 hook, through the engine.
 
 ### Phase 3: the screens
@@ -558,9 +591,8 @@ before writing the rest.
 
 ## 8. Decisions for the owner
 
-1. **Setting and names.** The story invents a moon, a corporation and a rebel
-   leader. Should it be tied to the PMC 2670 book's setting more closely, and
-   is anything in the book's background it must not contradict?
+1. ~~**Setting and names.**~~ *Decided:* our own setting, matching the book
+   only in tone and feel.
 2. **The starting company.** A fixed starting roster, so the story can be
    tuned, or the player founds their own company within limits? The
    recommendation is a fixed roster with one free choice of doctrine.
