@@ -427,7 +427,7 @@ It registers a plain object, like the scenarios and archetypes do:
 ```js
 PMCStory.register({
   id: 'deep-contract', name: 'Deep Contract', version: 1,
-  start: { faction: 'pmc', tier: 1, found: true },   // the player founds their own PMC company, as in a campaign
+  start: { faction: 'pmc', found: 'standard' },   // a standard campaign founding (pp. 83-84), unchanged
   meters: { htx: 1, sentiment: 0, loyalty: 1, intel: 1, rebels: 6, hive: 0, lantern: 2 },
   sides: {   // names and colours only; each battle writes its own force (section 4)
     front:   { faction: 'rebel', name: "Free Miners' Front" },
@@ -536,9 +536,11 @@ the AI (which plays copies of the battle) all see the same battle.
 
 1. **Main menu → Single player → Story**: new story, or continue. A new story
    founds the company with the campaign's existing founding screens
-   (`dossier-found.js`): the name, colour, doctrine and starting units. The story
-   sets the limits (a PMC company at Company Tier I). Ironman is switched on
-   or off here, and can't be changed afterwards.
+   (`dossier-found.js`): the name, colour, doctrine and starting units. It is
+   a **standard campaign roster**, founded under the campaign's own rules with
+   nothing changed for the story. The only limit is the army: a PMC company. A
+   campaign start force saved in the force builder can be loaded on the same
+   sheet. Ironman is switched on or off here, and can't be changed afterwards.
 2. **Chapter card:** act, chapter title, a short intro, the date on the moon.
 3. **Briefing:** the story text, the enemy dossier (what you know of them), and
    the shown meters this chapter touches. Hidden meters come through only in
@@ -663,7 +665,9 @@ before writing the rest.
 
 1. ~~**Setting and names.**~~ *Decided:* our own setting, matching the book
    only in tone and feel.
-2. ~~**The starting company.**~~ *Decided:* the player founds their own.
+2. ~~**The starting company.**~~ *Decided:* the player founds their own: a
+   standard campaign roster under the campaign's founding rules, or a start
+   force saved in the force builder.
    Enemy forces are topped up to fit the company (section 4), and the writing
    refers to the player's own units through text tokens (below).
 3. ~~**How much to show.**~~ *Decided:* some meters are shown and some are
