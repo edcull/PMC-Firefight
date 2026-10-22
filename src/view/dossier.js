@@ -70,7 +70,8 @@
     var list = (readJSON(IDX) || []).filter(function (e) { return e.lid !== lid; });
     var A = c && c.companies && c.companies.A, B = c && c.mode === 'hotseat' && (c.companies.B || (c.rivals || [])[c.facing || 0]);
     list.unshift({ lid: lid, name: c && c.title ? c.title : A ? (A.name || 'A new force') + (B && B.name ? ' v ' + B.name : '') : 'A new campaign',
-      mode: c && c.mode === 'hotseat' ? 'hotseat' : 'solo', turn: (c && c.turn) || 0, at: Date.now(), over: !!(c && c.over) });
+      mode: c && c.mode === 'hotseat' ? 'hotseat' : c && c.story ? 'story' : 'solo', turn: (c && c.turn) || 0, at: Date.now(),
+      over: !!(c && (c.over || (c.story && c.story.ended))) });
     ls(IDX, JSON.stringify(list));
   }
   function indexDrop(lid) { ls(IDX, JSON.stringify((readJSON(IDX) || []).filter(function (e) { return e.lid !== lid; }))); }
@@ -915,6 +916,26 @@
       get online() { return online; }
     }));
   }
+  /* ---- story mode's screens: in view/story-screens.js ---- */
+  var KIT_STORY = null;
+  function kitStory() {
+    return KIT_STORY || (KIT_STORY = root.PMCStoryScreens({
+      C: C, R: R, ROMAN: ROMAN, esc: esc, ask: ask, note: note, colourOf: colourOf, save: save, close: close,
+      memorialList: memorialList, beginStory: beginStory,
+      get camp() { return camp; }, get view() { return view; }, set view(v) { view = v; },
+      render: function () { render(); }
+    }));
+  }
+  /* A new story: the campaign's own founding screen, with the story to begin
+     once the company is founded (dofound). */
+  function beginStory(id, ironman) {
+    beginFounding('', 'solo', 'pmc');
+    draft.story = { id: id, ironman: !!ironman };
+    draft.name = defaultForceName('pmc', 'A');
+    if (wantColours.A) { draft.colour = wantColours.A; draft.colourChosen = true; }
+    camp.options = {};
+    render();
+  }
   /* ---- online campaigns: in view/dossier-online.js ---- */
   var KIT_ONLINE = null;
   function kitOnline() {
@@ -944,7 +965,10 @@
       if (online && KIT_ONLINE) KIT_ONLINE.leave();
       Store.use(cfg.campLid); camp = Store.peek(cfg.campLid); view = 'hub'; after = null; draft = null; hubSide = 'A';
     }
-    contract = null; if (camp) camp.savedContract = null; return (KIT_AFTER || kitAfter()).onFinish(report); }
+    contract = null; if (camp) camp.savedContract = null;
+    // a story battle: the story moves on, then the aftermath as for any battle
+    if (camp && camp.story) kitStory().onFinish(report);
+    return (KIT_AFTER || kitAfter()).onFinish(report); }
   /* A hotseat contract is kept with the campaign while it is being drawn up (hotseat
      review HC-6): a reload finds it as it was — the terms, the roles, both players'
      picks — and going back to the hub and in again does not roll it afresh. The
@@ -1009,6 +1033,10 @@
     else if (view === 'ocoop' && online) h = kitOnline().coopView();
     else if (view === 'post' && online) h = kitOnline().postView();
     else if (view === 'found') h = foundView();
+    else if (view === 'story' && camp && camp.story) h = kitStory().storyView();
+    else if (view === 'storymuster' && camp && camp.story) h = kitStory().musterView();
+    else if (view === 'storyjournal' && camp && camp.story) h = kitStory().journalView();
+    else if (!camp && wantMode === 'story') h = kitStory().newView();
     else if (view === 'offers') h = offersView();
     else if (view === 'contract') { h = passOwed() ? passCard() : contractView(); keepContract(); }
     else if (view === 'aftermath') h = aftermathView();
@@ -1050,7 +1078,7 @@
     paintPortraits(body);
     var ms2 = body.querySelector('.cmodal:not([hidden]) .cmodal-scroll');
     if (ms2 && mKind === openModal) ms2.scrollTop = mTop;
-    var way = body.querySelector('.camp-foot [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"], .camp-foot [data-go="pastback"], .camp-foot [data-go="seatback"], .camp-foot [data-go="omulti"], .camp-foot [data-go="campmenu"], .camp-foot [data-go="sysback"]'), bk = el('camp-back');
+    var way = body.querySelector('.camp-foot:not(.story-foot) [data-go="hub"], .camp-foot [data-go="menu"], .camp-foot [data-go="story"], .camp-foot [data-go="foundback"], .camp-foot [data-go="roster"], .camp-foot [data-go="pastback"], .camp-foot [data-go="seatback"], .camp-foot [data-go="omulti"], .camp-foot [data-go="campmenu"], .camp-foot [data-go="sysback"]'), bk = el('camp-back');
     bk.hidden = !way;
     if (way) bk.setAttribute('data-go', way.getAttribute('data-go'));
     if (way && root.PMC_BACK_LABEL) root.PMC_BACK_LABEL(bk, way.getAttribute('data-go') === 'menu');
@@ -1211,6 +1239,8 @@
     var go = t.getAttribute('data-go');
     // an online campaign: whatever would change it is sent to the server (dossier-online.js)
     if (online && kitOnline().click(t, go)) return;
+    // story mode's own screens (story-screens.js)
+    if (go && /^story/.test(go) && kitStory().act(go, t)) return;
 
     if (t.hasAttribute('data-add')) {
       draft.keys.push(t.getAttribute('data-add')); render(); return;
@@ -1595,6 +1625,12 @@
             draft.name = defaultForceName(camp.companies.B.faction, 'B');
             render(); return;
           }
+          // a story: no rivals, and the story begins (story.js)
+          if (draft.story) {
+            root.PMCStory.begin(camp, draft.story.id, { ironman: draft.story.ironman });
+            camp.title = root.PMCStory.get(draft.story.id).name;
+            save(); view = 'story'; render(); return;
+          }
           foundRival(draft.archs, draft.rivals);
         } else ensureColours();
         save(); view = 'hub'; render(); return;
@@ -1616,7 +1652,7 @@
       // from the aftermath: the hub, on the company (in hotseat, that of the player who just read it)
       case 'afterhub':
         if (camp.mode === 'hotseat') hubSide = (KIT_AFTER || kitAfter()).afterSide;
-        hubPane = 'tier'; view = 'hub'; render(); return;
+        hubPane = 'tier'; view = camp.story ? 'story' : 'hub'; render(); return;
       case 'intel': view = 'intel'; render(); return;
       case 'offers': if (camp.over) return; view = 'offers'; offerList = false; if (KIT_SYSTEM) KIT_SYSTEM.reset(); render(); return;
       // in a star-system campaign: the plain list of offers, and back to the system
@@ -1943,8 +1979,8 @@
         return;
       }
       if (camp && camp.pending && resumeItsBattle()) return;
-      if (camp && camp.pending) { camp.pending = null; delete camp.battle; save(); }   // a battle abandoned mid-flight
-      open(view === 'aftermath' ? 'aftermath' : 'hub');
+      if (camp && camp.pending) { if (camp.story) kitStory().abandoned(); camp.pending = null; delete camp.battle; save(); }   // a battle abandoned mid-flight
+      open(view === 'aftermath' ? 'aftermath' : camp && camp.story ? 'story' : 'hub');
     }
     /* The campaign's battle, kept in this browser while something else was played:
        gone back to (game.js plays it back up). */
@@ -1958,7 +1994,7 @@
       if (online) kitOnline().leave();
       var setup = el('setup');
       if (setup) setup.hidden = true;
-      wantMode = mode === 'hotseat' ? 'hotseat' : 'solo';
+      wantMode = mode === 'hotseat' ? 'hotseat' : mode === 'story' ? 'story' : 'solo';
       wantName = ''; wantOptions = {}; wantTrack = false; rollColours();
       Store.use(null);
       camp = null; reset();
@@ -2002,7 +2038,7 @@
         if (b.campaign && b.campLid === Store.lid()) root.PMCNet.forgetBattle(b.id);
       });
       // a battle abandoned mid-flight — unless it was kept, and is waiting to be gone back to
-      if (camp && camp.pending && !keptBattle()) camp.pending = null;
+      if (camp && camp.pending && !keptBattle()) { if (camp.story) kitStory().abandoned(); camp.pending = null; }
       if (camp && camp.companies && C.evenWorld(camp)) save();   // a campaign from before the forces paired off
       if (camp && camp.mode === 'hotseat' && camp.savedContract && !camp.pending) contract = contractIn(camp.savedContract);
       ensureColours();

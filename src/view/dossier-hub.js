@@ -113,7 +113,12 @@
       }
       /* Taking a contract is what the screen is for (alone, or on a world): at the top,
          where a contract or a battle under way says so instead */
-      if (!done && !finished && (E.online || E.camp.mode === 'solo') && !/data-go="(obattle|ocontract)"/.test(onote)) {
+      // a story: back to the story, where its next job is
+      if (!done && !finished && E.camp.story && root.PMCStory) {
+        var sd = root.PMCStory.get(E.camp.story.id), sch = sd && sd._chapters[E.camp.story.chapter];
+        h += '<div class="cpan onote hubtake"><button class="start" data-go="story">' + (E.camp.story.ended ? 'The ending' : 'Back to the story') + '</button>' +
+          (sch && !E.camp.story.ended ? '<small> ' + esc(sch.title) + '</small>' : '') + '</div>';
+      } else if (!done && !finished && (E.online || E.camp.mode === 'solo') && !/data-go="(obattle|ocontract)"/.test(onote)) {
         // fought across a star system (camp-system.js): the system, with the contracts on its planets
         // with the other forces beside it: their figures and dossiers (the contracts are the system's)
         h += '<div class="cpan onote hubtake">' + (E.camp.system ? '<div class="cacts"><button class="lnk cdrop" data-go="fmodal" data-kind="rivals">Other forces</button>' +

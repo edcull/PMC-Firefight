@@ -2114,6 +2114,7 @@
     /* A hotseat world is the two players and nobody else: Player 2's company is kept
        in `rivals` (the alias the save uses), but it is no rival (hotseat review HC-3) */
     if (campaign.mode === 'hotseat') return null;
+    if (campaign.story) return null;            // a story has no rivals (docs/story-mode-plan.md)
     var players = 1;
     campaign.rivals = campaign.rivals || [];
     if ((players + campaign.rivals.length) % 2 === 0) return null;

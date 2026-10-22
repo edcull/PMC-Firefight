@@ -429,6 +429,8 @@
     // the forces that sat this battle out, two by two (and the odd one out alone), as indices into the rivals
     function elsewherePairs(campaign, coB) {
       if (campaign.mode === 'hotseat') return [];          // the two players are the whole world (HC-3)
+      // a story has no rival companies, and no battle is fought out of sight (docs/story-mode-plan.md)
+      if (campaign.story) return [];
       var idle = shuffle((campaign.rivals || []).map(function (co, i) { return i; })
         .filter(function (i) { return campaign.rivals[i] !== coB && i !== campaign.facing; }));
       var pairs = [];

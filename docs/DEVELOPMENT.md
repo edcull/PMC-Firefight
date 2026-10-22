@@ -54,9 +54,20 @@ src/
                      carry on or surrender
     solo.js          the solitaire turn: whose unit goes next, and the OpFor's phase
     save.js          saving and loading a battle: the snapshot of everything
+    storybattle.js   a story battle's own changes: named units, allies and their activations, the
+                     prelude (strikes, Suppression, an ambush), the target variant
     ai.js            the AI: its behaviour, moves, targets, honours
     offtable.js      the other forces' battles, fought AI against AI on a table nobody sees
     protocol.js      message names and legal settings, shared by browser and server
+
+  story/             story mode (docs/story-mode-plan.md): runs in Node as well as a browser
+    story.js         the engine: a story's graph, its meters and flags on the dossier, events and
+                     their effects, battles graded, the second half's pool, endings, checkpoints, ironman
+    validate.js      a story checked before anyone plays it, and the Monte Carlo walk over it
+    levers.js        a story battle set up: its Tier and PL for the company, the enemy force built from
+                     what the story wrote, the allies, Readiness, and the engine's cfg
+    deep-contract.js Deep Contract, the first story, as data
+    deep-contract-text.js  its words, keyed by chapter, node and option
 
   view/              the browser
     game.js          the board: its state, and the modules below wired together
@@ -85,6 +96,9 @@ src/
     muster.js        mustering a force for a skirmish, solitaire or co-op
     dossier.js       the campaign screens: storage, rendering, the clicks; the screens
                      themselves in dossier-hub/found/roster/contract/after.js
+    story-screens.js story mode's screens: a new story, the chapter card, briefs, events, a battle's
+                     briefing and muster, the debrief, interludes, the second half's jobs, the
+                     journal (and going back), the ending
     viewer.js        the unit viewer
 
   net/               playing somebody else
@@ -149,6 +163,7 @@ npm run test:all              # everything
 node scripts/test.js camp     # any test whose name contains "camp"
 node scripts/test.js -j 2 -v  # two at a time, printing every test's output
 node scripts/test.js --speed 1 quick   # the browser tests at the real pace
+npm run story:sim             # every story checked, then walked 10,000 times (no battles)
 ```
 
 To keep a run short (on four cores: the quick set about 7½ minutes, everything
@@ -286,6 +301,14 @@ rebelcamp.js       the Rebel campaign
 bugcamp.js         the Space Bug campaign
 xenocamp.js        the Xenotripod campaign
 lowcamp.js         campaign fixes: income dice, Surrounded but Steady, the Rite of Rage
+story.js           story mode's engine: conditions, effects, grading, the pool and the finale,
+                   saving, checkpoints and ironman, on a small test story (test/story-fixture.js)
+storygraph.js      the story validator catches each way of writing a story wrong, and the walk;
+                   Deep Contract validates, and its one-offs and Scorched Earth stay in range
+storyfirsthalf.js  Deep Contract's first half: every battle under every choice set up and started (not
+                   played), and the first half walked with made-up reports through the real aftermath
+storylevers.js     a story battle set up: Tier and PL, the enemy force, the cfg, and in the engine the
+                   allies, named units, prelude, ambush and target (set up and started, never played)
 ```
 
 **The code itself**
@@ -376,6 +399,9 @@ bundle.js          the published site: one bundle, no test hooks, and a battle p
 **The campaign**
 
 ```
+storyflow.js       story mode from the menu's Story card to the end of chapter 1: founding, the
+                   chapter card, an event, the briefing and muster, the battle (conceded, not played),
+                   the aftermath and debrief, the journal, and the Continue list
 founding.js        founding a force: its name, colours, roster and charter
 hotseatfound.js    a hotseat campaign founding both players' forces
 hotseatpick.js     a hotseat contract: each player picks their own force, then the battle starts

@@ -802,6 +802,7 @@
         moved.forEach(function (l) { logLine('note', l.text); });
         if (moved.length) pushRes({ kind: 'Deployment', title: 'Taking cover', note: E.state.scen.name + ': each unit rolls a D6 as it finds its hiding place.', list: moved });
       }
+      E.storyPrelude();            // story mode: strikes and Suppression before turn 1 (storybattle.js)
       beginTurn(); revealBoard();
     }
 
