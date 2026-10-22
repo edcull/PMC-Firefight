@@ -11,8 +11,8 @@ It opens against an enemy you already know: the company is hired to put down a
 rebellion. Later it fights the bugs the war wakes up, and then a rival PMC sent to
 clean up after it. The Xenotripods are left out for now.
 
-This is a plan, not a spec. Section 8 lists the decisions the owner needs to make
-before work starts.
+This is a plan, not a spec. The decisions it needed are settled, and section 8
+records them.
 
 ---
 
@@ -81,9 +81,12 @@ story's events, flags and meters change what is in it (section 4).
 
 ### Acts and chapters
 
-There are three acts and about 12 chapters on any one path. Some chapters exist
-only on one branch, so a single playthrough is 12 to 16 battles, plus any side
-contracts the player takes.
+There are three acts. **The first release has 8 chapters on any one path:**
+five in Act I, two in Act II and one finale in Act III. Chapters that come from a
+branch (*Retake the Refinery*, *Varga's Revenge*) take the place of a path
+chapter rather than adding one, so a playthrough is 8 to 10 battles, counting a
+pursuit or two, plus any side contracts the player takes. A later release can
+grow it to about 12 chapters: more of Act II, and both set pieces in Act III.
 
 ```mermaid
 flowchart TD
@@ -133,22 +136,24 @@ flowchart TD
   recovered here. It is the evidence the Whistleblower path needs, and HTX wants
   it back.
 
-**Act II: Fault Lines (chapters 6 to 9).** The branch point opens at the start of
+**Act II: Fault Lines (chapters 6 and 7).** The branch point opens at the start of
 chapter 6. The paths on offer depend on what came before:
 
 | Path | Open when | How it plays |
 |---|---|---|
 | **Company Line** | Always | Stay with HTX. Fight the bugs and the remaining Front. Black Lantern arrives as a "partner" whose orders come first. Pay is best and Sentiment falls. |
-| **Uneasy Truce** | Varga held or free, and Sentiment ≥ 0 | A ceasefire with the Front against the hive. Some battles have rebel allies, as co-op allies run by the AI. HTX Standing drains every chapter. |
+| **Uneasy Truce** | Varga held or free, and Sentiment ≥ 0 | A ceasefire with the Front against the hive. Some battles have rebel units fighting beside you, run by the AI (section 5). HTX Standing drains every chapter. |
 | **Whistleblower** | The data core recovered | Leak the Deep Contract. HTX cancels the contract, pay stops, and side contracts become the only income. Black Lantern is now the enemy. |
 
-Each path has three or four chapters of its own, and Act II changes depending on
-how the hunt went (*Retake the Refinery*, *Varga's Revenge* if she was killed, a
-rebel splinter cell if she was held).
+Each path has two chapters of its own in the first release. Which two depends
+on how Act I went: *Retake the Refinery* if it was lost, *Varga's Revenge* if she
+was killed, a rebel splinter cell if she was held.
 
-**Act III: Burn Rate (chapters 10 to 12).** The paths come back together around
-two set pieces. Their order, and which side is fighting beside you, depend on
-the path:
+**Act III: Burn Rate (chapter 8).** In the first release, each path ends in one
+finale, and the path decides which one and who fights beside you: the Hive Heart
+on the Company Line (Black Lantern alongside) and the Truce (rebels alongside),
+and the showdown on the Whistleblower path. If Hive Growth reaches 8, any path's
+finale becomes a Breakout instead. The 12-chapter version plays both set pieces:
 - **The Hive Heart:** a Close Encounters assault on the hive's core. Hive Growth
   sets the Tier and the number of bug waves.
 - **The Black Lantern showdown:** PMC against PMC. Black Lantern's force is
@@ -382,11 +387,26 @@ read somewhere (section 6).
 ### Interludes and side contracts
 
 Between chapters the player is on the hub as now: recruiting, promotions,
-honours, upgrades, doctrines. Story mode adds **side contracts**: a scenario from
-`rollScenario`, against a force put together for the job from that enemy's
-templates and scaled by its meter. Taking one earns kUC and EXP
-but costs time: Hive Growth +1, and the meter the authored chapter names.
-This is the money tap, and the only one on the Whistleblower path.
+honours, upgrades, doctrines.
+
+**Side contracts are sometimes on offer.** An interlude node says whether there
+are any, which ones and how many. That can depend on the path, the meters and
+the flags. Some interludes have none, because the story is moving too fast.
+Each side contract is a small job: a scenario (standard, solitaire or Close
+Encounters), an enemy force written or put together from that side's templates
+and scaled by its meter, and its pay and EXP.
+
+**Taking one and passing it up can both cost something,** written for each
+contract in the same way as the jobs passed up above:
+- **Taking it** usually costs time (Hive Growth +1, or the meter it names),
+  and can cost more: HTX doesn't like you working for the mining guilds, or
+  the units that fight it aren't rested for the next chapter.
+- **Passing it up** can cost nothing, or something: the HTX convoy you didn't
+  escort is lost (HTX −1), or the village you didn't help stops talking to you
+  (Sentiment −1).
+
+Side contracts are the main money on the Whistleblower path, where HTX has
+stopped paying, so that path's interludes offer them more often.
 
 ---
 
@@ -552,7 +572,7 @@ read where the setting already lives:
 | Barricades (Readiness) | Terrain setup | Reuse Last Stand's barricade placement. |
 | Prelude strikes (air strike) | A new step after deployment, before turn 1 | Uses `shoot.js` to roll a hit and adds Suppression. The battle log shows it, so a replay replays it. |
 | Starting Suppression on own units (failed recon) | The same prelude step | |
-| Allies (truce) | Co-op machinery, side C | A third, AI-run side already exists for co-op and Besieged. Use it if it fits, or give the player rebel units under AI control. Needs a spike (phase 2). |
+| Allies | Co-op machinery, side C | Some scenarios have **AI-run allies**: rebel units in the truce, the HTX garrison or port security in Act I, Black Lantern as a partner on the Company Line. They are written per battle, like an enemy force, and are not in the player's roster. A third, AI-run side already exists for co-op and Besieged; use it if it fits, or else run some of side A's units by the AI. Needs a spike (phase 2). How allies fare can move meters (rebel allies lost: Sentiment −1). |
 | Loyalty re-roll | Rally and Morale | One use per battle, shown on the command unit. |
 
 Everything the battle does differently is stored in `cfg`, so saves, replays and
@@ -643,7 +663,7 @@ game keeps it from being broken by accident.
 ## 7. Plan
 
 ### Phase 0: the story bible
-Settle the decisions in section 8. Write the chapter list for every path: each
+Write the chapter list for every path: each
 event's situation and options in a line, each battle's scenario, enemy and Tier,
 and the meters and flags each one moves.
 Write no prose yet. Run it through the validator as soon as phase 1 exists.
@@ -664,7 +684,7 @@ The story screens, the journal, the menu entry. Wired to the existing muster,
 battle and aftermath. A browser test.
 
 ### Phase 4: Act I as a vertical slice
-Chapters 1 to 5, written in full and playable. Play-test for pacing, how much
+Act I (chapters 1 to 5), written in full and playable. Play-test for pacing, how much
 the events' choices matter, and difficulty.
 
 ### Phase 5: custom scenarios
@@ -674,7 +694,8 @@ and Parley, each with the AI support and tests it needs. Phase 5 can start while
 phase 4 is still being play-tested.
 
 ### Phase 6: Acts II and III and the endings
-The three paths, the set pieces, the epilogues. Balance with the Monte Carlo
+The three paths, two chapters each, the finales, the endings and their
+epilogues: 8 chapters a path in all. Balance with the Monte Carlo
 walk and the paper-battle playthrough.
 
 ### Phase 7: polish
@@ -687,7 +708,9 @@ before writing the rest.
 
 ---
 
-## 8. Decisions for the owner
+## 8. Decisions
+
+All settled. They are kept here for the record.
 
 1. ~~**Setting and names.**~~ *Decided:* our own setting, matching the book
    only in tone and feel.
@@ -700,16 +723,14 @@ before writing the rest.
    hidden, set for each meter, and events can reveal a hidden one (section 4).
 4. ~~**Ironman.**~~ *Decided:* reloading is allowed, with checkpoints to rewind
    to. An ironman mode, chosen when the story starts, restricts it (section 5).
-5. **Length.** About 12 chapters a path, 12 to 16 battles. Shorter (8) for a
-   first release?
-6. **Side contracts.** Allowed throughout, as the money tap, at a time cost? Or
-   only on the Whistleblower path?
-7. **Allies on the table** (the truce path). Is a third, AI-run side worth
-   building for, or should a truce change the briefings and battles without
-   putting rebels on the table?
-8. **Online.** Story mode is single player only. A co-op story (two companies,
-   one story) is possible later, but it is not planned here.
+5. ~~**Length.**~~ *Decided:* 8 chapters a path for the first release, with
+   room to grow to about 12 (section 2).
+6. ~~**Side contracts.**~~ *Decided:* sometimes on offer, as each interlude says,
+   and both taking and passing them up can cost something (section 4).
+7. ~~**Allies on the table.**~~ *Decided:* some scenarios have AI-run allies
+   (section 5).
+8. ~~**Online.**~~ *Decided:* single player only, for now.
 9. ~~**Custom scenarios outside the story.**~~ *Decided:* story only, for now
    (section 5).
-10. **The Xenotripods.** Left out, as asked. The story graph leaves room for an
-   Act IV, or a second story, that brings them in.
+10. ~~**The Xenotripods.**~~ *Decided:* left out for now. The story graph leaves
+   room for an Act IV, or a second story, that brings them in.
