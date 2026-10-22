@@ -143,6 +143,22 @@ const hiveWord = (() => { const c = campaign(); c.story.chapter = 'sump'; c.stor
   const f = L.buildForce(spec.enemy, { campaign: c, tier: 1, pl: 1, allowance: 0 }); return L.describeForce(f, S.intel(c, spec), 'bugs'); })();
 ok('the hive is a swarm, not a force: ' + hiveWord.word, hiveWord.level === 0 && /swarm/.test(hiveWord.word));
 
+console.log('\nThe commander');
+{
+  const c = C.newCampaign({ mode: 'solo' });
+  C.found(c.companies.A, FOUNDING, 'S2');
+  S.begin(c, 'deep-contract', { commander: '  Mara Okafor ' });
+  const co = c.companies.A, officer = C.byRid(co, co.cmdRid).men[0];
+  ok('named as asked: the officer at the head of the command squad', officer.name === 'Mara Okafor' && c.story.commander === 'Mara Okafor' && co.commander === 'Mara Okafor', JSON.stringify(officer));
+  ok('{commander} is the name, {commander:rank} the rank and surname', S.render(c, '{commander}|{commander:rank}') === 'Mara Okafor|' + officer.rank + ' Okafor', S.render(c, '{commander}|{commander:rank}'));
+  ok('...and the story says it: the port master meets the commander', /meets .* Okafor at the ramp/.test(S.render(c, dc._nodes['c1.portmaster'].text)));
+  const d = C.newCampaign({ mode: 'solo' });
+  C.found(d.companies.A, FOUNDING, 'S2');
+  S.begin(d, 'deep-contract');
+  const off2 = C.byRid(d.companies.A, d.companies.A.cmdRid).men[0];
+  ok('with no name given, the officer the roster already has', d.story.commander === off2.name && S.render(d, '{commander}') === off2.name);
+}
+
 console.log('\nThe first half, played through with made-up results');
 const N = 40, tally = { done: 0, broken: 0, sump: 0, relief: 0, tierAt4: {}, kUC: [], battles: [], units: [] };
 for (let w = 0; w < N; w++) {

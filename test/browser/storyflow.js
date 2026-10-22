@@ -56,7 +56,9 @@ async function cards(p) {
   check('...with ironman to choose, for good', /Ironman/.test(txt));
   await go(p, '[data-go="storynew"]');
   check('the campaign’s own founding screen comes up', await p.evaluate(() => !!document.getElementById('found-name')));
-  await p.evaluate(() => { document.getElementById('found-name').value = 'Kessler Rifles'; });
+  const cmd0 = await p.evaluate(() => { const b = document.getElementById('found-commander'); return b ? b.value : null; });
+  check('...with a box for the commander\u2019s name under the company\u2019s, already filled in', !!cmd0 && cmd0.trim().length > 3, cmd0);
+  await p.evaluate(() => { document.getElementById('found-name').value = 'Kessler Rifles'; document.getElementById('found-commander').value = 'Mara Okafor'; });
   for (const k of ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng']) await go(p, `#camp-body button[data-add="${k}"]`);
   await go(p, '#camp-body button[data-doc="S2"]');
   check('the charter is signed', await clickText(p, 'Sign the charter'));
@@ -65,6 +67,9 @@ async function cards(p) {
   txt = await body(p);
   check('the story begins: Deep Contract, Landfall', /Deep Contract/.test(txt) && /Landfall/.test(txt), txt.slice(0, 160));
   check('...on the chapter’s card', await p.evaluate(() => !!document.querySelector('#camp-body .story-card')));
+  check('the commander is named in the story: Second Lieutenant Okafor', /Mara Okafor is on the first shuttle/.test(txt) && /addressed to Second Lieutenant Okafor/.test(txt), txt.slice(0, 600));
+  const officer = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(), co = c.companies.A, e = co.roster.find((x) => x.rid === co.cmdRid); return e && e.men && e.men[0]; });
+  check('...and is the officer at the head of the command squad', officer && officer.name === 'Mara Okafor', JSON.stringify(officer));
   check('...with the meters the company can see (and not the hidden ones)', /HTX Standing/.test(txt) && /Loyalty/.test(txt) && !/Hive Growth/.test(txt));
   const camp0 = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return { mode: c.mode, rivals: (c.rivals || []).length, story: c.story && c.story.id }; });
   check('a solo dossier with the story on it, and no rivals raised', camp0.mode === 'solo' && camp0.story === 'deep-contract' && camp0.rivals <= 1, JSON.stringify(camp0));

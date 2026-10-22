@@ -8,7 +8,8 @@
      'node/option'            an option's text
      'node/option.why'        why an option is closed
    Anything not here keeps the one-liner in deep-contract.js. Text can name
-   the company's own units ({unit:…}, {soldier:…}), the company ({name}), and
+   the company's own units ({unit:…}, {soldier:…}), the company ({name}), its
+   commander ({commander}, and {commander:rank}: rank and surname), and
    say one thing or another by what has happened ({if flag}…{/if}; `success`
    and `failure` are the last battle's).
 
@@ -20,9 +21,9 @@
   root.PMCStoryText['deep-contract'] = {
 
     /* ================= 1. Landfall ================= */
-    c1: 'Kessler’s Reach is a grey moon on a long lease. The Halvorsen-Tey Extraction Consortium has worked it for forty years, and for forty years the miners have done what they were told. Six weeks ago they stopped. The Free Miners’ Front holds half the shafts and most of the roads, and HTX wants it put right, quickly and quietly. That is what it is paying {name} for.',
-    'c1.brief': 'The shuttle comes down on the starport’s last working pad. Smoke from the town beyond the fence, and a port that has been shot at for a week. HTX’s orders are short: hold the port, so the rest of the contract can land.',
-    'c1.portmaster': 'Port Master Okonkwo meets you at the ramp with a clipboard and a sidearm. His security team has held the gates for six days without relief and without pay. He will put them under your command, if HTX makes good what it owes them. He also looks like a man who knows more than he is saying.',
+    c1: 'Kessler’s Reach is a grey moon on a long lease. The Halvorsen-Tey Extraction Consortium has worked it for forty years, and for forty years the miners have done what they were told. Six weeks ago they stopped. The Free Miners’ Front holds half the shafts and most of the roads, and HTX wants it put right, quickly and quietly. That is what it is paying {name} for, and why {commander} is on the first shuttle down.',
+    'c1.brief': 'The shuttle comes down on the starport’s last working pad. Smoke from the town beyond the fence, and a port that has been shot at for a week. HTX’s orders, addressed to {commander:rank}, are short: hold the port, so the rest of the contract can land.',
+    'c1.portmaster': 'Port Master Okonkwo meets {commander:rank} at the ramp with a clipboard and a sidearm. His security team has held the gates for six days without relief and without pay. He will put them under your command, if HTX makes good what it owes them. He also looks like a man who knows more than he is saying.',
     'c1.portmaster/take': 'Take his people. HTX can settle the bill, and you can carry it until then.',
     'c1.portmaster/send': 'Send them home. They’ve done enough, and they aren’t yours.',
     'c1.portmaster/ask': 'Ask what he knows about the Front, and don’t ask nicely.',
@@ -35,7 +36,7 @@
     /* ================= 2. First Move ================= */
     c2: 'HTX’s field office sends two jobs on one sheet, and makes it plain it can only afford one of them. The Front has the Number Three refinery under siege, with the night shift still inside. And a deserter has sold HTX the location of the Front’s supply depot in the old ore yards.',
     'c2.brief': 'The refinery is three hours north. The depot is two hours east. Whichever you don’t take will happen without you.',
-    'c2.firstmove': 'You look at the map for a long time. The refinery is HTX’s property and HTX’s problem. The depot is where the Front’s guns come from.',
+    'c2.firstmove': '{commander} looks at the map for a long time. The refinery is HTX’s property and HTX’s problem. The depot is where the Front’s guns come from.',
     'c2.firstmove/relieve': 'Relieve the refinery. Get the night shift out.',
     'c2.firstmove/strike': 'Raid the depot. Take the Front’s guns away before they’re used.',
     'c2r.nightshift': 'The refinery’s foreman gets a message out: forty workers are sheltering in the cracking tower. The Front has offered them safe passage through its lines if they walk out unarmed, now, before the shooting starts. HTX’s site manager wants them kept inside. “They’re HTX employees on HTX property.”',
@@ -68,12 +69,12 @@
     /* ================= 3. The Hunt ================= */
     c3: 'Ada Varga was a shift boss in Pit Four for nineteen years. Now she is the Front, as far as anyone on Kessler’s Reach is concerned, and HTX has found her: a pumping station in the old workings, with her people around her.',
     'c3.brief': 'The pumping station sits above the oldest shafts on the moon. The sealed levels are below it. HTX’s map marks them in red and says nothing else.{if depot_raided} Whatever guns she had went up with the depot.{/if}',
-    'c3.killorcapture': 'HTX’s orders are explicit: Varga dead, and quickly. {soldier:veteran} reads them twice and says what the company is thinking. “Dead, she’s a martyr. Alive, she’s worth something to somebody. Possibly us.”',
+    'c3.killorcapture': 'HTX’s orders are explicit: Varga dead, and quickly. {soldier:veteran} reads them twice and says what the company is thinking. “Dead, she’s a martyr. Alive, she’s worth something to somebody. Possibly us, {commander:rank}.”',
     'c3.killorcapture/gunship': 'Call in HTX’s gunship and finish it from the air.',
     'c3.killorcapture/snatch': 'Send a snatch team. Take her alive.',
     'c3.killorcapture/wait': 'Wait for her to move, and pick the ground.',
     'c3.debrief': '{if success}The pumping station is quiet.{/if}{if failure}The pumping station is empty by the time you reach it. There is a blast door at the bottom of the stairs, and it is still warm.{/if}',
-    'c3.cell': 'They put Varga in a storeroom at the port, with a guard on the door. Within the hour she asks to speak to the commander of {name}, and only to the commander.',
+    'c3.cell': 'They put Varga in a storeroom at the port, with a guard on the door. Within the hour she asks for {commander:rank} by name, and will speak to nobody else.',
     'c3.cell/listen': 'Go in and listen to her.',
     'c3.cell/hand': 'Hand her to HTX without a word.',
     'c3.cell/hold': 'Keep her, as leverage, and tell HTX she stays with you for now.',
@@ -116,7 +117,7 @@
     'sump.interlude': 'The company does not talk much on the way back to the port.',
     relief: 'HTX has decided {name} is no longer the right company for Kessler’s Reach. It has hired another.',
     'relief.brief': 'Black Lantern Security lands at the port at dawn: forty years in the business, armour you can’t afford, and a reputation for doing what clients ask.',
-    'relief.handover': 'Black Lantern’s commander walks over alone, with HTX’s letter and a smile. “You’re relieved. Pack up, and nobody has to get hurt.” Black Lantern’s guns are already pointed at your lines.',
+    'relief.handover': 'Black Lantern’s commander walks over alone, with HTX’s letter and a smile. “{commander:rank}? You’re relieved. Pack up, and nobody has to get hurt.” Black Lantern’s guns are already pointed at your lines.',
     'relief.handover/leave': 'Hand over the sector, and walk away.',
     'relief.handover/refuse': 'Refuse, and see if they mean it.',
     'relief.handover/fire': 'Fire first.',
@@ -145,7 +146,7 @@
     'retake.interlude': 'The refinery burns down to its frame over the next two days. The company watches the glow from the port.',
     revenge: 'The Front has not forgotten what happened at the pumping station.',
     'revenge.brief': '{if varga_dead}Tomas Varga was a schoolteacher until his sister was killed. Now he leads what is left of her people, and he wants the company that did it.{/if}{if varga_free}Ada Varga is back with her people, and she has sent word that she wants to see you. All of you.{/if}',
-    'revenge.challenge': 'A boy comes to the port gate with a white rag on a stick and a message: the Front’s leaders will meet {name}’s commander on the slag ridges, at noon, alone. Nobody believes the “alone”.',
+    'revenge.challenge': 'A boy comes to the port gate with a white rag on a stick and a message: the Front’s leaders will meet {commander:rank} on the slag ridges, at noon, alone. Nobody believes the “alone”.',
     'revenge.challenge/meet': 'Go to the meeting, with the company close behind.',
     'revenge.challenge/ambush': 'Get there first, and be waiting for them.',
     'revenge.debrief': '{if success}The Front’s people fall back across the ridges and do not come again. Whatever they wanted from this, they did not get it.{/if}{if failure}You pull back to the port with the Front’s fire following you down the slope. They got what they came for.{/if}',
@@ -233,7 +234,7 @@
     // HTX and Black Lantern
     partner: 'HTX has sent you a partner.',
     'partner.brief': 'Black Lantern Security arrives at the port with HTX’s blessing and orders to work beside you. Nobody has told you what else their orders say.',
-    'partner.orders': 'Black Lantern’s liaison officer is polite and very thorough. She would like to see your plans, all of them.',
+    'partner.orders': 'Black Lantern’s liaison officer is polite and very thorough. She would like to see {commander:rank}’s plans, all of them.',
     'partner.orders/share': 'Share your plans. You are on the same side, for now.',
     'partner.orders/dark': 'Keep them in the dark.',
     'partner.orders/tracker': 'Plant a tracker on their command vehicle.',
@@ -268,8 +269,8 @@
     'convoy.cargo/miners': 'Give it to the miners.',
     'convoy.interlude': 'The haul road is quiet. The company counts its trucks.',
     showdown: 'Black Lantern has stopped pretending.',
-    'showdown.brief': 'HTX’s headquarters compound, and Black Lantern dug in around it. Their commander has orders to finish {name}, and has never yet failed to carry out an order.',
-    'showdown.terms': 'Black Lantern’s commander walks out into the yard under a white flag, alone.',
+    'showdown.brief': 'HTX’s headquarters compound, and Black Lantern dug in around it. Their commander has orders to finish {name}, and {commander} with it, and has never yet failed to carry out an order.',
+    'showdown.terms': 'Black Lantern’s commander walks out into the yard under a white flag, alone, and asks for {commander:rank}.',
     'showdown.terms/parley': 'Hear the terms. They owe you, and they know it.',
     'showdown.terms/parley.why': 'They owe you nothing.',
     'showdown.terms/fight': 'Shoot the flag down.',

@@ -173,6 +173,10 @@
         '<input class="tin" id="found-name" maxlength="28" autocomplete="off"' +
         ' placeholder="' + say('e.g. Task Force Ironhold', 'e.g. The Free Colonies', 'e.g. The Hive', 'e.g. The Ghadon Third') + '"' +
         ' value="' + esc(E.draft.name || '') + '"></div></div>' +
+        // a story: who commands the company, the officer of its command squad (and \u201cyou\u201d in the story)
+        (E.draft.story ? '<div class="field found-commander"><label for="found-commander">Commander</label>' +
+          '<input class="tin" id="found-commander" maxlength="28" autocomplete="off" placeholder="Your commander\u2019s name"' +
+          ' value="' + esc(E.draft.commander || '') + '"></div>' : '') +
         // the colours a square each, as the unit viewer has them, dropped down under the chip
         (E.colourOpen && !E.online ? '<div class="found-pop"><label>' + say('Company colours', 'Colours of the revolt', 'Colour of the swarm\u2019s shells', 'The light in the tribe\u2019s armour') +
           ' \u2014 ' + esc(colourName(E.draft.colour)) + '</label>' + squares(E.draft.colour) + '</div>' : '') +

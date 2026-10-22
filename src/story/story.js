@@ -107,9 +107,11 @@
       tokens: {},                  // {unit:…} picks, kept for the chapter
       checkpoints: [],
       founders: (campaign.companies && campaign.companies.A && campaign.companies.A.roster || []).map(function (e) { return e.rid; }),
+      commander: null,             // the company's commander: the officer of its command squad, and the player
       ended: null
     };
     Object.keys(meters).forEach(function (k) { campaign.story.history[k] = [{ ch: 0, v: meters[k] }]; });
+    nameCommander(campaign, opts.commander);
     enter(campaign, resolve(def, def.start && def.start.node || (def.chapters[0] && def.chapters[0].id)));
     return campaign.story;
   }
@@ -837,9 +839,37 @@
     return view(campaign);
   }
 
+  /* The commander: the officer at the head of the command squad, named as the
+     player asked when the story began (else as the roster already has them).
+     The name is kept on the story and the company, whatever becomes of the
+     squad's other men. */
+  function nameCommander(campaign, name) {
+    var co = campaign.companies && campaign.companies.A, cc = C();
+    var cmd = co && cc && co.cmdRid ? cc.byRid(co, co.cmdRid) : null;
+    if (cmd && cc.menOf) cc.menOf(cmd, co);
+    var officer = cmd && cmd.men && cmd.men[0];
+    name = String(name || '').trim().slice(0, 28);
+    if (officer && name) officer.name = name;
+    campaign.story.commander = name || (officer ? officer.name : null);
+    if (co && campaign.story.commander) co.commander = campaign.story.commander;
+  }
+  /* {commander}: the name; {commander:rank}: the rank and surname, as the men
+     call them (the command squad's officer's rank, as it is now). */
+  function commanderWords(campaign, form) {
+    var st = campaign.story, co = campaign.companies && campaign.companies.A, cc = C();
+    var name = st.commander || (co && co.commander);
+    if (!name) return 'the commander';
+    if (form !== 'rank') return name;
+    var cmd = co && cc && co.cmdRid ? cc.byRid(co, co.cmdRid) : null;
+    var officer = cmd && cmd.men && cmd.men[0];
+    var rank = officer && officer.name === name && officer.rank ? officer.rank : 'Commander';
+    var parts = name.split(/\s+/);
+    return rank + ' ' + parts[parts.length - 1];
+  }
+
   /* ================= text ================= */
 
-  /* {name}, {if flag}…{/if}, {if not flag}…{/if} (and {if success}, {if failure}: the last battle's), {meter:htx},
+  /* {name}, {commander} and {commander:rank}, {if flag}…{/if}, {if not flag}…{/if} (and {if success}, {if failure}: the last battle's), {meter:htx},
      {unit:command|recon|veteran|wounded}, {soldier:…}. A unit token keeps the
      same unit for the rest of the chapter, and has a fallback if none fits. */
   function render(campaign, text) {
@@ -854,8 +884,9 @@
     var s = text.replace(/\{if (not )?([a-z0-9_]+)\}([\s\S]*?)\{\/if\}/g, function (m, not, f, body) {
       return holds(f) !== !!not ? body : '';
     });
-    return s.replace(/\{(name|meter:[a-z0-9_]+|unit:[a-z]+|soldier:[a-z]+)\}/g, function (m, k) {
+    return s.replace(/\{(name|commander(?::rank)?|meter:[a-z0-9_]+|unit:[a-z]+|soldier:[a-z]+)\}/g, function (m, k) {
       if (k === 'name') return co ? co.name : 'the company';
+      if (k === 'commander' || k === 'commander:rank') return commanderWords(campaign, k === 'commander:rank' ? 'rank' : 'name');
       if (k.indexOf('meter:') === 0) return String(st.meters[k.slice(6)]);
       var u = tokenUnit(campaign, k.split(':')[1]);
       if (k.indexOf('soldier:') === 0) {

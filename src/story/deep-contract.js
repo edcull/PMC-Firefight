@@ -692,10 +692,10 @@
       { about: 'varga', if: { all: [{ flag: 'varga_dead' }, { flag: 'martyr_displayed' }] }, text: 'Ada Varga’s body hung at the port gates for a week. Every pit on the moon has her picture on a wall now.' },
       { about: 'varga', if: { flag: 'varga_dead' }, text: 'Ada Varga is buried in Pit Four, under a stone her people cut themselves. Her brother still visits it.' },
       { about: 'varga', if: { all: [{ flag: 'varga_handed' }, { not: { flag: 'varga_free' } }] }, text: 'Ada Varga was taken off the moon in an HTX prison ship. Nobody has heard from her since.' },
-      { about: 'varga', if: { flag: 'varga_spared' }, text: 'Ada Varga lived. She told anyone who asked that a mercenary had let her go, and that she never understood why.' },
+      { about: 'varga', if: { flag: 'varga_spared' }, text: 'Ada Varga lived. She told anyone who asked that a mercenary called {commander} had let her go, and that she never understood why.' },
       { about: 'varga', if: { flag: 'varga_free' }, text: 'Ada Varga is still on Kessler’s Reach, still in charge of whatever the Front has become.' },
       { about: 'varga', if: { flag: 'varga_held' }, text: 'Ada Varga left Kessler’s Reach in {name}’s custody, and was handed over at the next port, as the contract said.' },
-      { about: 'varga', if: { flag: 'varga_talked' }, text: 'Ada Varga told you why the miners rose. You have not forgotten it.' },
+      { about: 'varga', if: { flag: 'varga_talked' }, text: 'Ada Varga told {commander} why the miners rose. It has not been forgotten.' },
       { about: 'varga', text: 'Nobody is sure what became of Ada Varga. In the pits, they say she is still down there.' },
       // the hive
       { about: 'hive', ending: 'scorched', text: 'Whatever was under the moon burned with it, or so HTX says.' },
@@ -715,9 +715,9 @@
       { about: 'lantern', if: { flag: 'lantern_mercy' }, text: 'Black Lantern’s commander sent a case of something expensive to the company’s next posting, with no note.' },
       { about: 'lantern', if: { flag: 'lantern_crossed' }, text: 'Black Lantern has not forgotten the prisoners. Neither has {name}.' },
       // the company
-      { about: 'company', if: { meter: 'loyalty', gte: 2 }, text: 'The company that came off Kessler’s Reach was smaller than the one that landed, and closer.' },
-      { about: 'company', if: { meter: 'loyalty', lte: -1 }, text: 'Half the company signed on elsewhere before the next contract. The ones who stayed don’t talk about the moon.' },
-      { about: 'company', text: '{name} took the next contract, as companies do.' }
+      { about: 'company', if: { meter: 'loyalty', gte: 2 }, text: 'The company that came off Kessler’s Reach with {commander} was smaller than the one that landed, and closer.' },
+      { about: 'company', if: { meter: 'loyalty', lte: -1 }, text: 'Half the company signed on elsewhere before the next contract. The ones who stayed with {commander} don’t talk about the moon.' },
+      { about: 'company', text: '{commander} took {name} on to the next contract, as commanders do.' }
     ]
   }));
 
