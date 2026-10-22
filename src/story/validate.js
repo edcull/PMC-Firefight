@@ -262,7 +262,10 @@
     });
 
     function textReads(text, at, chapter) {
-      String(text || '').replace(/\{if (?:not )?([a-z0-9_]+)\}/g, function (m, f) { F(f).read.push({ at: at, kind: 'text', chapter: chapter }); return m; });
+      String(text || '').replace(/\{if (?:not )?([a-z0-9_]+)\}/g, function (m, f) {
+        if (f !== 'success' && f !== 'failure') F(f).read.push({ at: at, kind: 'text', chapter: chapter });
+        return m;
+      });
     }
 
     /* ---- every node can be reached from the start ---- */

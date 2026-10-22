@@ -116,7 +116,7 @@ async function cards(p) {
   console.log('\nThe journal, and coming back');
   await go(p, '[data-go="storyjournal"]');
   txt = await body(p);
-  check('the journal tells chapter 1: the choices and the battle', /Landfall/i.test(txt) && /Ask what they know/i.test(txt) && /Victory|Decisive/i.test(txt), txt.slice(0, 300));
+  check('the journal tells chapter 1: the choices and the battle', /Landfall/i.test(txt) && /Ask what he knows/i.test(txt) && /Victory|Decisive/i.test(txt), txt.slice(0, 300));
   check('...and offers the chapter’s start to go back to', await p.evaluate(() => document.querySelectorAll('#camp-body [data-go="storyrewind"]').length >= 1));
   await go(p, '.camp-foot [data-go="story"]');
   await go(p, '#camp-body [data-go="hub"]');

@@ -13,6 +13,25 @@
 (function (root) {
   'use strict';
   var S = root.PMCStory || require('./story.js');
+  // the story's words, kept in a file of their own (deep-contract-text.js)
+  if (!(root.PMCStoryText && root.PMCStoryText['deep-contract']) && typeof require === 'function') require('./deep-contract-text.js');
+  var TEXT = (root.PMCStoryText && root.PMCStoryText['deep-contract']) || {};
+
+  /* The words laid over the working: a chapter's intro, a node's text, an
+     option's text and why it is closed, where the words file has them. */
+  function withProse(def) {
+    (def.chapters || []).forEach(function (ch) {
+      if (TEXT[ch.id]) ch.intro = TEXT[ch.id];
+      (ch.nodes || []).forEach(function (n) {
+        if (TEXT[n.id]) n.text = TEXT[n.id];
+        (n.options || []).forEach(function (o) {
+          if (TEXT[n.id + '/' + o.id]) o.text = TEXT[n.id + '/' + o.id];
+          if (TEXT[n.id + '/' + o.id + '.why']) o.why = TEXT[n.id + '/' + o.id + '.why'];
+        });
+      });
+    });
+    return def;
+  }
 
   /* ---------- the forces ---------- */
   /* A side's usual force, with what a battle writes laid over it: its own
@@ -27,7 +46,7 @@
       side: 'front', faction: 'rebel', tactics: 'guerillas',
       core: ['rminers', 'rmilitia', 'rmilitia'],
       optional: { meter: 'rebels', per: 2, units: ['rmilitia', 'rtechnical', 'rlightart', 'rinsurgents', 'rat'] },
-      fill: { to: 0.9, from: ['rmilitia', 'rtechnical', 'rminers', 'rinsurgents'], meter: 'rebels', step: 0.05 },
+      fill: { to: 0.8, from: ['rmilitia', 'rtechnical', 'rminers', 'rinsurgents'], meter: 'rebels', step: 0.05 },
       byTier: { 1: ['rciv', 'rridergang', 'rdesconscript'], 3: ['rfaceminers', 'rinsurgents', 'rhardened'] },
       changes: [
         { if: { flag: 'varga_dead' }, add: { key: 'rfanatics', name: 'The Avengers', rules: ['Determined'] } },
@@ -78,7 +97,7 @@
     failure: [{ effects: [{ flag: 'finale_lost' }] }]
   };
 
-  S.register({
+  S.register(withProse({
     id: 'deep-contract', name: 'Deep Contract', version: 1, length: 8,
     blurb: 'Kessler\'s Reach is a mining moon, and its miners have risen. HTX hires your company to restore order, quickly and quietly. HTX is hiding why they rose.',
     // the locals talk: with their trust, you know what you face before a battle
@@ -146,7 +165,9 @@
           { id: 'ask', text: 'Ask what they know, and not nicely.', battle: { showEnemy: true }, effects: [{ meter: 'sentiment', add: -1 }] }
         ], next: 'c1.battle' },
         { id: 'c1.battle', type: 'battle', scenario: 'secure', tier: 1, pl: 1, planet: 'industrial',
-          enemy: front({ core: ['rminers', 'rmilitia'], optional: { meter: 'rebels', per: 3, units: ['rmilitia', 'rtechnical'] } }),
+          // the first battle, lighter than most: the Front's strike on the port, not its army
+          enemy: front({ core: ['rminers', 'rmilitia'], optional: { meter: 'rebels', per: 3, units: ['rmilitia', 'rtechnical'] },
+            fill: { to: 0.6, from: ['rmilitia', 'rminers'], meter: 'rebels', step: 0.05 } }),
           on: {
             success: [{ next: 'c1.debrief' }],
             // it cannot be lost outright: the port is held, at a cost
@@ -588,7 +609,7 @@
         { any: [{ meter: 'htx', gte: 2 }, { all: [{ flag: 'core_sold' }, { meter: 'htx', gte: 1 }] }] }] } },
       { id: 'paidoff', title: 'Paid Off', text: 'The war ends without you deciding it. HTX pays what it owes, or doesn\'t, and the company ships out.' }
     ]
-  });
+  }));
 
   if (typeof module !== 'undefined' && module.exports) module.exports = S.get('deep-contract');
 })(typeof window !== 'undefined' ? window : global);

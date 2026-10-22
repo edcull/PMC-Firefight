@@ -67,6 +67,7 @@ src/
     levers.js        a story battle set up: its Tier and PL for the company, the enemy force built from
                      what the story wrote, the allies, Readiness, and the engine's cfg
     deep-contract.js Deep Contract, the first story, as data
+    deep-contract-text.js  its words, keyed by chapter, node and option
 
   view/              the browser
     game.js          the board: its state, and the modules below wired together
@@ -304,6 +305,8 @@ story.js           story mode's engine: conditions, effects, grading, the pool a
                    saving, checkpoints and ironman, on a small test story (test/story-fixture.js)
 storygraph.js      the story validator catches each way of writing a story wrong, and the walk;
                    Deep Contract validates, and its one-offs and Scorched Earth stay in range
+storyfirsthalf.js  Deep Contract's first half: every battle under every choice set up and started (not
+                   played), and the first half walked with made-up reports through the real aftermath
 storylevers.js     a story battle set up: Tier and PL, the enemy force, the cfg, and in the engine the
                    allies, named units, prelude, ambush and target (set up and started, never played)
 ```

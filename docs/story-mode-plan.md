@@ -1062,6 +1062,22 @@ battle and aftermath. A browser test.
 The first half (chapters 1 to 4, and the two one-offs), written in full and playable. Play-test for pacing, how much
 the events' choices matter, and difficulty.
 
+**Where it stands.** The first half's words are in `src/story/deep-contract-text.js`, kept apart from the graph so they can be rewritten without touching it. Every first-half battle, under each choice that changes it (21 of them), is set up and started in the engine by `test/unit/storyfirsthalf.js`; none is played. The same test plays the first half through 40 times with made-up results and the campaign's real aftermath. What it measured:
+
+| | |
+|---|---|
+| Battles in a first half | 3 to 5, about 3.9 on average |
+| A new company's points against the enemy's, at Tier I | Landfall 6 v 5; most battles 6 v 6; the hunt 6 v 7 with the snatch team, 6 v 8 waiting for her once Varga's death has brought the Avengers; the Relief 6 v 7 |
+| Company Tier at the end of the first half | II in every walk (the curve's target) |
+| Broken Company | none in 40 |
+| The one-offs | the Sump and the Relief, a few walks in 40 each (the 10,000-walk sim: about 11% and 8%) |
+
+**What to look at when you play it.**
+- **Pacing:** is a chapter one evening, and does the interlude come at the right time to spend?
+- **Whether the choices matter:** does a choice before a battle change how that battle feels on the table (the strikes, the ambush, the allies, Readiness)? Does a choice after a battle come back later, where you would notice it?
+- **Difficulty:** the enemy's share (the `fill` in each force) and the experience allowance are the levers. The first half is tuned to be even for a new company; Landfall a little lighter.
+- **The words:** they are a first draft. The second half is still the bible's one-liners.
+
 ### Phase 5: custom scenarios
 Waves and the orbital countdown as End-phase events, then Hive Heart, Convoy, Breakout, Hold the Line, Strike
 and Parley, each with the AI support and tests it needs. Phase 5 can start while

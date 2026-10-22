@@ -23,9 +23,10 @@ for (let i = 0; i < args.length; i++) {
   else files.push(path.resolve(args[i]));
 }
 const ENGINE = ['story.js', 'validate.js', 'levers.js', 'scenarios-story.js'];
+const WORDS = /-text\.js$/;            // a story's words, loaded by the story itself
 if (!files.length) {
   const dir = path.join(__dirname, '..', 'src', 'story');
-  fs.readdirSync(dir).filter((f) => f.endsWith('.js') && ENGINE.indexOf(f) < 0).forEach((f) => files.push(path.join(dir, f)));
+  fs.readdirSync(dir).filter((f) => f.endsWith('.js') && ENGINE.indexOf(f) < 0 && !WORDS.test(f)).forEach((f) => files.push(path.join(dir, f)));
 }
 files.forEach((f) => require(f));
 const stories = S.list();

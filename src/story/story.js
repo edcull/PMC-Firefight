@@ -693,14 +693,20 @@
 
   /* ================= text ================= */
 
-  /* {name}, {if flag}…{/if}, {if not flag}…{/if}, {meter:htx},
+  /* {name}, {if flag}…{/if}, {if not flag}…{/if} (and {if success}, {if failure}: the last battle's), {meter:htx},
      {unit:command|recon|veteran|wounded}, {soldier:…}. A unit token keeps the
      same unit for the rest of the chapter, and has a fallback if none fits. */
   function render(campaign, text) {
     if (!text) return '';
     var st = campaign.story, co = campaign.companies && campaign.companies.A;
+    // (`success` and `failure` are the last battle's, not flags)
+    var holds = function (f) {
+      if (f === 'success') return st.lastGrade === 'decisive' || st.lastGrade === 'victory';
+      if (f === 'failure') return !!st.lastGrade && st.lastGrade !== 'decisive' && st.lastGrade !== 'victory';
+      return !!st.flags[f];
+    };
     var s = text.replace(/\{if (not )?([a-z0-9_]+)\}([\s\S]*?)\{\/if\}/g, function (m, not, f, body) {
-      return (!!st.flags[f]) !== !!not ? body : '';
+      return holds(f) !== !!not ? body : '';
     });
     return s.replace(/\{(name|meter:[a-z0-9_]+|unit:[a-z]+|soldier:[a-z]+)\}/g, function (m, k) {
       if (k === 'name') return co ? co.name : 'the company';
