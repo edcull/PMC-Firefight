@@ -763,4 +763,4 @@ All settled. They are kept here for the record.
 9. ~~**Custom scenarios outside the story.**~~ *Decided:* story only, for now
    (section 5).
 10. ~~**The Xenotripods.**~~ *Decided:* left out for now. The story graph leaves
-   room for a bug-and-Xenotripod thread in the pool, or a second story, that brings them in.
+   room for a Xenotripod thread in the pool, or a second story, that brings them in.
