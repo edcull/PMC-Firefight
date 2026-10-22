@@ -346,8 +346,6 @@ Named true or false facts: `varga_dead`, `varga_held`, `refinery_lost`,
 `core_recovered`, `coverup`, `civilians_evacuated`, and so on. Conditions read
 them. The ending table is mostly flags.
 
-### Offscreen events
-
 ### Jobs passed up
 
 What happens to a job the player passes up is written for that job, like
