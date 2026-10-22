@@ -345,9 +345,19 @@
 
       // one piece's floor (the plateau of a hill is painted after the slopes)
       var floorsDone = false;
-      function floorOf1(r, ri) {
+      function floorOf1(r, ri, rows) {
         if (r.kind === 'hill') return;
-        if (FLOOR[r.kind]) paintFloor(d, r, roomTheme(r) || floorOf(r.kind), seed + ri * 131, lat, fN, fD);
+        if (FLOOR[r.kind]) paintFloor(d, r, roomTheme(r) || floorOf(r.kind), seed + ri * 131, lat, fN, fD, 0, null, null, rows);
+      }
+      // the rows a piece's floor can paint, in bands of a few dozen: a step of a sliced bake each
+      function floorBands(r) {
+        var P = Math.ceil(K * 0.9) + 3, lo = B.PIXH, hi = 0, out = [], memo = {};
+        [toScreen(r.x, r.y), toScreen(r.x + r.w, r.y), toScreen(r.x + r.w, r.y + r.h), toScreen(r.x, r.y + r.h)].forEach(function (c) {
+          lo = Math.min(lo, Math.floor(c.y) - P); hi = Math.max(hi, Math.ceil(c.y) + P + 1);
+        });
+        lo = Math.max(0, lo); hi = Math.min(B.PIXH, hi);
+        for (var y = lo; y < hi; y += 24) out.push({ y0: y, y1: Math.min(hi, y + 24), memo: memo });
+        return out;
       }
 
       if (!sliced) { latRows(gy0, gy1); soilRows(cy0, cy1); return finish(); }
@@ -355,7 +365,10 @@
       var steps = [];
       for (var ly = gy0; ly < gy1; ly += 24) steps.push(latRows.bind(null, ly, Math.min(gy1, ly + 24)));
       for (var sy = cy0; sy < cy1; sy += 48) steps.push(soilRows.bind(null, sy, Math.min(cy1, sy + 48)));
-      terrain.forEach(function (r, ri) { steps.push(function () { floorOf1(r, ri); }); });
+      terrain.forEach(function (r, ri) {
+        if (r.kind === 'hill' || !FLOOR[r.kind]) return;
+        floorBands(r).forEach(function (rows) { steps.push(function () { floorOf1(r, ri, rows); }); });
+      });
       steps.push(function () { floorsDone = true; });
       (function next() {
         mine();
@@ -369,35 +382,65 @@
       })();
       return null;
 
-      /* The plate finished: the floors, the board's edge, the tracks and the hills,
-         then the craters, then the scatter and the copy handed back. In one go; or,
-         for a sliced bake, `then(plate)` once the last is done, each of the three a
-         task of its own (they run in the same order on the same dice, so the same
-         pixels come of it). */
+      /* The plate finished: the floors, the board's edge and the tracks, the hills
+         (their slopes, each plateau and what stands on it a few rows at a time, the
+         crests), the craters, then the scatter and the copy handed back. In one go;
+         or, for a sliced bake, `then(plate)` once the last is done, the steps a few
+         tens of milliseconds a task (they run in the same order on the same dice, so
+         the same pixels come of it). */
       function finish(then) {
       /* --- every terrain rectangle, painted as the rectangle it is --- */
-      if (!floorsDone) terrain.forEach(floorOf1);
+      if (!floorsDone) terrain.forEach(function (r, ri) { floorOf1(r, ri); });
 
+      var rand, hills, onHillFloors, hb, top, td;
+      var work = [base, slopes];
+      hills = terrain.filter(function (r) { return r.kind === 'hill'; });
+      if (hills.length) {
+        onHillFloors = terrain.filter(function (r) { return r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker'; });
+        hb = rowsOf(hills.concat(onHillFloors), ELEV);
+        work.push(function () { top = g.getImageData(0, hb.y0, B.PIXW, hb.y1 - hb.y0); td = top.data; });
+        // each plateau, and whatever stands on one, a few rows a step (paintFloor `rows`)
+        hills.forEach(function (r, ri) {
+          var memo = {};
+          bandsOf(r).forEach(function (rows) { rows.memo = memo; work.push(function () { paintFloor(td, r, HILLC.floor, seed + ri * 419, lat, fN, fD, ELEV, null, hb, rows); }); });
+        });
+        terrain.forEach(function (r, ri) {
+          if (!(r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker')) return;
+          var memo = {};
+          bandsOf(r).forEach(function (rows) { rows.memo = memo; work.push(function () { paintFloor(td, r, floorOf(r.kind), seed + ri * 131, lat, fN, fD, ELEV, onAHill, hb, rows); }); });
+        });
+        work.push(crowns);
+      }
+      work.push(craters);
+      if (!then) { work.forEach(function (f) { f(); }); return scatter(); }
+      (function next() {
+        mine();
+        try {
+          var t0 = performance.now();
+          while (work.length && performance.now() - t0 < 30) work.shift()();
+        } finally { CLIP = null; }
+        if (work.length) { setTimeout(next, 0); return; }
+        setTimeout(function () {
+          mine();
+          var out;
+          try { out = scatter(); } finally { CLIP = null; }
+          then(out);
+        }, 0);
+      })();
+      return null;
+
+      function base() {
       g.putImageData(img, 0, 0);
       // lava lies at the bottom of cracks: the rock walls go in over the melt
       terrain.forEach(function (r, ri) { if (r.kind === 'lava' || r.kind === 'ravine') lavaWalls(g, r, seed + ri * 131, r.kind); });
 
       // the board itself: a slab with a lit top edge and a shadowed lip
-      var n0 = toScreen(0, 0), nE = toScreen(B.W, 0), nS = toScreen(B.W, B.H), nWt = toScreen(0, B.H);
+      var nE = toScreen(B.W, 0), nS = toScreen(B.W, B.H), nWt = toScreen(0, B.H);
       poly(g, [[nWt.x, nWt.y], [nS.x, nS.y], [nS.x, nS.y + LIP], [nWt.x, nWt.y + LIP]], '#221b13');
       // (the far edges are hidden behind the table's own surface, so only the two near faces are drawn)
       poly(g, [[nE.x, nE.y], [nS.x, nS.y], [nS.x, nS.y + LIP], [nE.x, nE.y + LIP]], '#181309');
 
-      var rand = rng(seed + 11);
-
-      // which rectangle owns a point, so scatter and tracks keep off the wet and the woods
-      function busy(x, y) {
-        for (var i = 0; i < terrain.length; i++) {
-          var r = terrain[i];
-          if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h && (!r.poly || depthIn(r, x, y) >= 0)) return true;
-        }
-        return false;
-      }
+      rand = rng(seed + 11);
 
       // tracks worn across the open ground
       for (var t2 = 0; t2 < 7; t2++) {
@@ -412,10 +455,19 @@
           dot(g, p.x + a(2), p.y + a(1), GP.track[0], 1);
         }
       }
+      }
+
+      // which rectangle owns a point, so scatter and tracks keep off the wet and the woods
+      function busy(x, y) {
+        for (var i = 0; i < terrain.length; i++) {
+          var r = terrain[i];
+          if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h && (!r.poly || depthIn(r, x, y) >= 0)) return true;
+        }
+        return false;
+      }
 
       // hills: the rectangle, extruded, so the plateau is exactly the ground that counts
-      var hills = terrain.filter(function (r) { return r.kind === 'hill'; });
-      hills.forEach(function (r) { hillSlopes(g, r, seed); });
+      function slopes() { hills.forEach(function (r) { hillSlopes(g, r, seed); }); }
       /* The plate's rows a set of pieces can paint, raised by `lift`: the hill
          floors are painted into a read-back of just those rows, not the plate. */
       function rowsOf(rs, lift2) {
@@ -428,21 +480,18 @@
         lo = Math.max(0, lo); hi = Math.min(B.PIXH, hi + 1);
         return hi > lo ? { y0: lo, y1: hi } : null;
       }
-      if (hills.length) {
-        var onHillFloors = terrain.filter(function (r) { return r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker'; });
-        var hb = rowsOf(hills.concat(onHillFloors), ELEV);
-        var top = g.getImageData(0, hb.y0, B.PIXW, hb.y1 - hb.y0), td = top.data;
-        hills.forEach(function (r, ri) {
-          paintFloor(td, r, HILLC.floor, seed + ri * 419, lat, fN, fD, ELEV, null, hb);
-        });
-        // a wood (or rubble, or a ruin) standing on a hill lies on the plateau, not under it
-        function onAHill(x, y) {
-          for (var hq = 0; hq < hills.length; hq++) if (depthIn(hills[hq], x, y) > 0) return true;
-          return false;
-        }
-        terrain.forEach(function (r, ri) {
-          if (r.onHill && FLOOR[r.kind] && r.kind !== 'building' && r.kind !== 'bunker') paintFloor(td, r, floorOf(r.kind), seed + ri * 131, lat, fN, fD, ELEV, onAHill, hb);
-        });
+      // a piece on the plateau's rows, in bands of a few dozen
+      function bandsOf(r) {
+        var rr = rowsOf([r], ELEV), out = [];
+        if (rr) for (var y = rr.y0; y < rr.y1; y += 24) out.push({ y0: y, y1: Math.min(rr.y1, y + 24) });
+        return out;
+      }
+      // a wood (or rubble, or a ruin) standing on a hill lies on the plateau, not under it
+      function onAHill(x, y) {
+        for (var hq = 0; hq < hills.length; hq++) if (depthIn(hills[hq], x, y) > 0) return true;
+        return false;
+      }
+      function crowns() {
         g.putImageData(top, 0, hb.y0);
         hills.forEach(function (r) { hillCrest(g, r, seed); });
         // the upper step of a two-step hill, raised again off the first
@@ -456,19 +505,6 @@
           steps.forEach(function (u2) { hillCrest(g, u2, seed + 7, ELEV); });
         }
       }
-
-      if (!then) { craters(); return scatter(); }
-      setTimeout(function () {
-        mine();
-        try { craters(); } finally { CLIP = null; }
-        setTimeout(function () {
-          mine();
-          var out;
-          try { out = scatter(); } finally { CLIP = null; }
-          then(out);
-        }, 0);
-      }, 0);
-      return null;
 
       function craters() {
       // craters pitting the churned ground
@@ -634,8 +670,11 @@
 
     // `mask(x, y)`: paint only where it says yes — a wood's floor on the part of it that is up on a hill
     /* `band`, when given, says `d` holds only the plate's rows band.y0 to band.y1
-       (the hills are painted into a read-back of just their own rows). */
-    function paintFloor(d, r, spec, seed, lat, fN, fD, lift, mask, band) {
+       (the hills are painted into a read-back of just their own rows). `rows`, when
+       given, paints only rows.y0 to rows.y1 of the piece (a sliced bake paints a
+       big piece a few rows a step: each pixel is its own, so the same pixels come
+       of it), and keeps what it works out once for the piece in rows.memo. */
+    function paintFloor(d, r, spec, seed, lat, fN, fD, lift, mask, band, rows) {
       lift = lift || 0;
       var bandY = band ? band.y0 : 0;
       var ramp = spec.ramp.map(hex3), rim = hex3(spec.rim);
@@ -649,6 +688,7 @@
       var y0 = Math.max(0, Math.floor(Math.min(c1.y, c2.y, c3.y, c4.y)) - pad - lift);
       var y1 = Math.min(B.PIXH - 1, Math.ceil(Math.max(c1.y, c2.y, c3.y, c4.y)) + pad - lift);
       if (band) { y0 = Math.max(y0, band.y0); y1 = Math.min(y1, band.y1 - 1); }
+      if (rows) { y0 = Math.max(y0, rows.y0); y1 = Math.min(y1, rows.y1 - 1); }
       // a clipped bake paints nothing it was not asked for
       if (CLIP) { x0 = Math.max(x0, CLIP.x0); x1 = Math.min(x1, CLIP.x1 - 1); y0 = Math.max(y0, CLIP.y0); y1 = Math.min(y1, CLIP.y1 - 1); }
       var INV_K = 1 / K, INV_HK = 2 / K;
@@ -663,8 +703,12 @@
       var coarse = shaped && !spec.wet && !spec.hot, gx0 = r.x - 1, gy0 = r.y - 1, gnx = 0, gny = 0, grid = null;
       if (coarse) {
         gnx = Math.ceil((r.w + 2) / GS) + 1; gny = Math.ceil((r.h + 2) / GS) + 1;
-        grid = new Float64Array(gnx * gny);
-        for (var gj = 0; gj < gny; gj++) for (var gi = 0; gi < gnx; gi++) grid[gj * gnx + gi] = depthIn(r, gx0 + gi * GS, gy0 + gj * GS);
+        grid = rows && rows.memo && rows.memo.grid;
+        if (!grid) {
+          grid = new Float64Array(gnx * gny);
+          for (var gj = 0; gj < gny; gj++) for (var gi = 0; gi < gnx; gi++) grid[gj * gnx + gi] = depthIn(r, gx0 + gi * GS, gy0 + gj * GS);
+          if (rows && rows.memo) rows.memo.grid = grid;
+        }
       }
       var sure = Math.max(WOB, 0.08);                // deeper than this, nothing about the edge applies
 
