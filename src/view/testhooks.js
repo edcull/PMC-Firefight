@@ -324,6 +324,15 @@
         return (performance.now() - t0) / n;
       },
       paint: function () { var t0 = performance.now(); B.paintStructures(); return performance.now() - t0; },
+      // the structures repainted as when something comes down (in slices, onto a plate of its own): ms until it is in place
+      collapse: function () {
+        var was = B.vc.structs, piece = B.state.terrain.filter(function (r) { return r.kind === 'building'; })[0] || B.state.terrain[0];
+        var t0 = performance.now();
+        B.repaintTerrain([{ piece: piece }]);
+        return new Promise(function (res) {
+          (function wait() { if (B.vc.structs !== was) res(performance.now() - t0); else setTimeout(wait, 5); })();
+        });
+      },
       bake: function () {
         var c = B.vc; c.scene = null; c.ground = null; c.structs = null; c.opened = null; c.baking = false;
         B.drawBoard();                                  // starts the bake (it runs off this frame)

@@ -251,27 +251,40 @@
     // the pieces that can stand between the camera and a squad, and hide it (see drawBoard)
     var OPENS = { building: 1, bunker: 1, highwall: 1, bulkhead: 1, machinery: 1 };
     /* `then`: painted a slice at a time, a few tens of milliseconds a task, and
-       then() once it is done — for a table being built, which nothing is showing
-       yet. The same pieces drawn in the same order: the same plate. A paint begun
-       meanwhile (a barricade put down, an objective moved) paints it all itself,
-       and the slices still to come are let go of. */
-    function paintStructures(then) {
+       then(true) once it is done — for a table being built, which nothing is
+       showing yet. The same pieces drawn in the same order: the same plate. A
+       paint begun meanwhile (a barricade put down, an objective moved) paints it
+       all itself, and the slices still to come are let go of (then(false)).
+       `fresh`: painted onto a plate of its own, the pieces and the buildings'
+       patches kept to one side with it, and all three put in place together once
+       it is done — for a table on show, which goes on showing the plate as it was
+       until then (something come down: under its dust, repaintTerrain). */
+    function paintStructures(then, fresh) {
       var gen = B.vc.paintGen = (B.vc.paintGen || 0) + 1;
-      B.vc.props = ISO.buildProps(B.state.terrain, B.state.objectives, B.state.seed, B.state.cfg.planet);
-      var sg = B.vc.structs.getContext('2d');
-      sg.clearRect(0, 0, B.vc.structs.width, B.vc.structs.height);
-      var steps = B.vc.props.map(function (p) { return function () { ISO.drawProp(sg, p, liftOf(p.x, p.y)); }; });
-      B.vc.opened = [];
-      B.vc.props.filter(function (p) { return OPENS[p.kind]; }).forEach(function (p) { steps.push(function () { paintOpened(p); }); });
+      var plate = B.vc.structs;
+      if (fresh) { plate = document.createElement('canvas'); plate.width = B.vc.structs.width; plate.height = B.vc.structs.height; }
+      var props = ISO.buildProps(B.state.terrain, B.state.objectives, B.state.seed, B.state.cfg.planet), opened = [];
+      if (!fresh) { B.vc.props = props; B.vc.opened = opened; }
+      var sg = plate.getContext('2d');
+      if (!fresh) sg.clearRect(0, 0, plate.width, plate.height);
+      var steps = props.map(function (p) { return function () { ISO.drawProp(sg, p, liftOf(p.x, p.y)); }; });
+      props.filter(function (p) { return OPENS[p.kind]; }).forEach(function (p) { steps.push(function () { paintOpened(p, plate, opened); }); });
       if (!then) { steps.forEach(function (f) { f(); }); return; }
       (function next() {
-        if (B.vc.paintGen !== gen || !B.state) { then(); return; }
+        if (B.vc.paintGen !== gen || !B.state) { then(false); return; }
         var t0 = performance.now();
         while (steps.length && performance.now() - t0 < 30) steps.shift()();
-        if (steps.length) setTimeout(next, 0); else then();
+        if (steps.length) { setTimeout(next, 0); return; }
+        if (fresh) {
+          var old = B.vc.structs;
+          B.vc.structs = plate; B.vc.props = props; B.vc.opened = opened;
+          if (old && old !== plate) old.width = old.height = 0;      // (the plate it stands in for let go of at once: 22 MB)
+        }
+        then(true);
       })();
     }
-    function paintOpened(p) {
+    // a building's patch, cut from `plate` (the structures as they are painted), kept in `opened`
+    function paintOpened(p, plate, opened) {
       /* Each building that can stand in front of a squad also keeps its own
          patch (propBox), which drawBoard puts back over the units the depth
          sort has behind it or inside it. The patch is the building's own
@@ -295,15 +308,18 @@
       for (var i = 3; i < d.length; i += 4) if (d[i]) d[i] = 255;
       og.putImageData(im, 0, 0);
       og.globalCompositeOperation = 'source-in';
-      og.drawImage(B.vc.structs, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+      og.drawImage(plate, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
       p._solid = { cv: cv, box: b };
-      B.vc.opened.push(p._solid);
+      opened.push(p._solid);
     }
 
-    /* Something has come down: repaint the structures and let the player see it. */
+    /* Something has come down: repaint the structures and let the player see it.
+       Painted a slice at a time onto a plate of its own and put in place when it is
+       done (paintStructures), so the page does not stand still for it: the table
+       shows the plate as it was for that moment, under the dust of the collapse. */
     function repaintTerrain(wrecks) {
       if (!wrecks || !wrecks.length || !B.vc.structs) return;
-      paintStructures();
+      paintStructures(function (done) { if (done) render(); }, true);
       ui.vis = null; ui.visKey = '';
       wrecks.forEach(function (w) {
         var r = w.piece;
