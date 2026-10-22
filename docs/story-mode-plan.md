@@ -267,8 +267,22 @@ give every battle a failure branch, and the validator checks that they have
 
 ### Meters
 
-Each meter is an integer from −5 to +5, unless noted. The player can see them
-in the journal (see section 8 on how much to show).
+Each meter is an integer from −5 to +5, unless noted. **Some meters are
+shown and some are hidden.** Each meter's entry in the story data says which:
+
+- **Shown** (as a number in the journal, and as words in briefings, such as
+  "HTX is uneasy"): HTX Standing, Loyalty and Intel. These are the company's own
+  business, so the player knows them.
+- **Hidden:** Sentiment, Rebel Strength, Hive Growth and Black Lantern
+  Readiness. The player reads them only from the writing: the briefing's
+  description of the enemy, what the locals say, how many tunnel mouths there
+  are. An event can **reveal** a hidden meter for the rest of the story with
+  `{ reveal: 'hive' }`. Examples: an informant in the Front shows Rebel
+  Strength, and the data core shows Hive Growth.
+- **The ending shows every meter**, with its history, so the player can see
+  what their choices did.
+
+Flags are never shown as flags. The journal tells them as prose.
 
 | Meter | Goes up when | What it does |
 |---|---|---|
@@ -291,6 +305,13 @@ Each battle's enemy force is written for that battle, in three parts:
 - **Optional units:** an ordered list. The battle's meter decides how many
   turn up. With Rebel Strength at 4 and a scale of 1 unit for each 2 points,
   the first two come.
+- **Filler, to fit the player's company:** the player founds their own
+  company, so the story can't know in advance how big it is. The battle node
+  sets the Battle Tier and PL relative to the company (`tier: '+0'`). After the
+  core, optional units and changes, the force is topped up from a `fill` list
+  until it reaches a share of that battle's composition points (`to: 1.0` is an
+  even fight). A meter can move the share. This is what keeps a written force
+  fair against a company built in any way.
 - **Changes:** what events and flags do to the force. Add or remove a unit,
   swap one unit for another, give a unit an honour or an upgrade, Suppression
   at the start, a forced Rebel Tactic, Readiness. For example: *Truck 14*'s
@@ -304,6 +325,7 @@ enemy: {
   side: 'front', faction: 'rebel', tactics: 'laststand',
   core: ['reb_cmd', 'reb_militia', 'reb_militia', { key: 'reb_veterans', name: "Varga's Own", honours: [3] }],
   optional: { meter: 'rebels', per: 2, units: ['reb_militia', 'reb_technical', 'reb_mortar', 'reb_rpg'] },
+  fill: { to: 0.9, from: ['reb_militia', 'reb_rpg'], meter: 'rebels', step: 0.05 },   // +5% a point of Rebel Strength
   changes: [
     { if: { flag: 'depot_raided' }, remove: 'reb_mortar' },
     { if: { flag: 'varga_dead' },   add: { key: 'reb_militia', name: 'The Avengers', rules: ['Determined'] } },
@@ -403,7 +425,7 @@ It registers a plain object, like the scenarios and archetypes do:
 ```js
 PMCStory.register({
   id: 'deep-contract', name: 'Deep Contract', version: 1,
-  start: { faction: 'pmc', tier: 1, kUC: 6, roster: ['pmc_cmd', 'pmc_line', 'pmc_line', 'pmc_recon'] },   // illustrative keys
+  start: { faction: 'pmc', tier: 1, found: true },   // the player founds their own PMC company, as in a campaign
   meters: { htx: 1, sentiment: 0, loyalty: 1, intel: 1, rebels: 6, hive: 0, lantern: 2 },
   sides: {   // names and colours only; each battle writes its own force (section 4)
     front:   { faction: 'rebel', name: "Free Miners' Front" },
@@ -455,6 +477,14 @@ Text can show state, for example `{name}`, `{enemy.front}` or
 `{if varga_held}…{/if}`, so a briefing can mention what has happened without
 being written twice.
 
+Because the player founds their own company, the writing can't name its units
+in advance. Tokens pick them from the roster: `{unit:command}` (the command
+unit), `{unit:recon}`, `{unit:veteran}` (the unit with the most EXP),
+`{unit:wounded}`, `{soldier:veteran}` (a named soldier from that unit). Each
+token has a fallback if no unit fits, and once picked, a token keeps the same
+unit for the rest of the chapter. "Your sergeant thinks she is worth more
+alive" becomes "{soldier:veteran} thinks she is worth more alive".
+
 ### New modules
 
 ```
@@ -502,12 +532,14 @@ the AI (which plays copies of the battle) all see the same battle.
 
 ### Screens
 
-1. **Main menu → Single player → Story**: new story, or continue. The new-story
-   screen names the company and picks a colour. It uses the story's starting
-   roster, or lets the player found a company within the story's limits (section 8).
+1. **Main menu → Single player → Story**: new story, or continue. A new story
+   founds the company with the campaign's existing founding screens
+   (`dossier-found.js`): the name, colour, doctrine and starting units. The story
+   sets the limits (a PMC company at Company Tier I).
 2. **Chapter card:** act, chapter title, a short intro, the date on the moon.
 3. **Briefing:** the story text, the enemy dossier (what you know of them), and
-   the meters this chapter touches.
+   the shown meters this chapter touches. Hidden meters come through only in
+   the writing.
 4. **The event before the battle:** the situation, then two to four options
    written as things to do. Each option says plainly what it risks. An option you
    can't take shows why ("You'd need the miners' trust").
@@ -515,8 +547,8 @@ the AI (which plays copies of the battle) all see the same battle.
 5. **Battle:** unchanged, apart from the prelude.
 6. **Debrief:** the grade, then the existing aftermath (pay, EXP, trauma,
    casualties by name), then the decisions.
-7. **Journal:** the chapters so far, each choice and its result, the meters with
-   their history, and the flags written as prose ("Varga is in an HTX cell.").
+7. **Journal:** the chapters so far, each choice and its result, the shown and
+   revealed meters with their history, and the flags written as prose ("Varga is in an HTX cell.").
 8. **Ending:** the epilogue, the company's record and its roll of honour.
 
 ---
@@ -594,12 +626,11 @@ before writing the rest.
 
 1. ~~**Setting and names.**~~ *Decided:* our own setting, matching the book
    only in tone and feel.
-2. **The starting company.** A fixed starting roster, so the story can be
-   tuned, or the player founds their own company within limits? The
-   recommendation is a fixed roster with one free choice of doctrine.
-3. **How much to show.** Show the meters as numbers, as words ("HTX is
-   uneasy"), or hide them? The recommendation is words in the briefing, and
-   numbers in the journal.
+2. ~~**The starting company.**~~ *Decided:* the player founds their own.
+   Enemy forces are topped up to fit the company (section 4), and the writing
+   refers to the player's own units through text tokens (below).
+3. ~~**How much to show.**~~ *Decided:* some meters are shown and some are
+   hidden, set for each meter, and events can reveal a hidden one (section 4).
 4. **Ironman.** One save, so choices and results can't be undone, or free
    reloads? The recommendation is an option at the start, ironman off by
    default.
