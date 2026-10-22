@@ -136,9 +136,16 @@
       var tier = L().tierFor(co, { tier: spec.tier, minTier: spec.minTier, maxTier: spec.maxTier });
       var pl = L().plFor(co, tier, spec.levers.pl || spec.pl);
       var side = spec.enemy && d.sides && d.sides[spec.enemy.side] || {};
-      var name = spec.variant && spec.variant.name ? spec.variant.name + ' (' + scenName(spec.scenario) + ')' : scenName(spec.scenario);
-      var h = '<div class="story-battle"><h3>' + esc(name) + '</h3>';
-      h += '<p>Battle Tier ' + ROMAN[tier] + ', Priority Level ' + pl + (side.name ? ', against ' + esc(side.name) : '') + '.</p>';
+      /* The mission first, as a story tells it: its name, where it is, the briefing.
+         Then what it is under the rules: the book's scenario, how big, against whom. */
+      var maps = (root.PMCStoryMaps && root.PMCStoryMaps[d.id]) || {}, map = spec.map && maps[spec.map];
+      var compound = SC() && SC().SCENARIOS[spec.scenario] && SC().SCENARIOS[spec.scenario].compound;
+      var h = '<div class="story-battle"><h3>' + esc(spec.name || scenName(spec.scenario)) + '</h3>';
+      if (map && !compound) h += '<p class="story-where">' + esc(map.name) + '</p>';
+      if (spec.text) h += para(spec.text);
+      var win = SC() && SC().SCENARIOS[spec.scenario] && SC().SCENARIOS[spec.scenario].win;
+      h += '<div class="story-rules"><small>' + esc(scenName(spec.scenario)) + ' \u00b7 Battle Tier ' + ROMAN[tier] + ', Priority Level ' + pl +
+        (side.name ? ' \u00b7 against ' + esc(side.name) : '') + '</small>' + (win ? '<small class="win">' + esc(win) + '</small>' : '') + '</div>';
       var notes = [];
       if (spec.levers.strikes) notes.push('Strikes before the first turn (' + spec.levers.strikes + ').');
       if (spec.levers.suppressOwn) notes.push('Some of your squads start the battle pinned.');

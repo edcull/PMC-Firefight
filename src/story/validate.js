@@ -22,7 +22,7 @@
   var EFFECT_PARAMS = { add: 1, set: 1, local: 1, to: 1, free: 1, name: 1, pass: 1, fail: 1, else: 1, is: 1 };
   var FAILURE_GRADES = ['draw', 'defeat', 'rout'];
   var LEVERS = ['showEnemy', 'role', 'edge', 'strikes', 'suppressOwn', 'readiness', 'scenario', 'variant', 'tier', 'pl',
-    'allies', 'turns', 'terrain', 'planet', 'world', 'skip', 'tactics'];
+    'allies', 'turns', 'terrain', 'planet', 'world', 'skip', 'tactics', 'name', 'map'];
 
   function check(def, opts) {
     opts = opts || {};
@@ -219,6 +219,9 @@
         }
         if (n.type === 'battle') {
           scenario(at, n.scenario);
+          var maps = root.PMCStoryMaps && root.PMCStoryMaps[def.id];
+          if (n.map && maps && !maps[n.map]) err(at + ': no map "' + n.map + '"');
+          if (opts.scenarios && opts.scenarios[n.scenario] && !opts.scenarios[n.scenario].compound && !n.map && def.chapters.some(function (c) { return c.id === ch.id && !c.test; }) && maps) warn(at + ': no map of its own: its ground is rolled');
           if (n.solo) err(at + ': story battles never set solo');
           force(at, n.enemy, ch.id);
           if (n.waves && n.waves.meter) {

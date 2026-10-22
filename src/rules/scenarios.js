@@ -1207,9 +1207,21 @@
     return roles;
   }
 
+  /* The scenario a battle is fought under. A story mission fights a book's
+     scenario under a name of its own (cfg.story.name): the same scenario, every
+     rule of it, with the mission's name and blurb laid over it. */
+  function scenFor(state, id) {
+    var s = SCENARIOS[id] || SCENARIOS.secure, sty = state && state.cfg && state.cfg.story;
+    if (!sty || !sty.name) return s;
+    var named = Object.create(s);
+    named.name = sty.name;
+    named.bookName = s.name;
+    if (sty.blurb) named.blurb = sty.blurb;
+    return named;
+  }
   function begin(state, id, opts) {
     opts = opts || {};
-    var s = SCENARIOS[id] || SCENARIOS.secure;
+    var s = scenFor(state, id);
     state.scen = s;
     state.sc = { id: s.id, hold: {}, streak: {}, lastEndRoll: null };
     if (s.attacker) {
@@ -1220,7 +1232,11 @@
       if (roles.bestDefence) state.sc.bestDefence = roles.bestDefence;
     }
     var pts = s.objectives(state) || [];
-    state.objectives = pts.map(function (p) { return { x: p.x, y: p.y, owner: null }; });
+    /* A story mission's map puts its objectives where the story wants them (the
+       landing pads, the pass), as many as the scenario has. */
+    var fixed = state.cfg && state.cfg.story && state.cfg.story.objectives;
+    if (fixed && fixed.length === pts.length) pts = pts.map(function (p, i) { return Object.assign({}, p, { x: fixed[i].x, y: fixed[i].y, name: fixed[i].name }); });
+    state.objectives = pts.map(function (p) { return { x: p.x, y: p.y, owner: null, name: p.name || undefined }; });
     if (s.setupTerrain) s.setupTerrain(state);
     // a compound's walls and floors are laid edge to edge on purpose
     if (!state.compound) separateTerrain(state);
@@ -1387,7 +1403,7 @@
     begin: begin, deploy: deploy, lastStandBarricades: lastStandBarricades, lzOK: lzOK, lzSpots: lzSpots, autoLZs: autoLZs, setLZs: setLZs, zoneFor: zoneFor, deployOK: deployOK,
     reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
     gunRule: gunRule, freeToHold: freeToHold, holderOf: holderOf, holdClock: holdClock, areaOf: areaOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
-    rollRoles: rollRoles, bestDefence: bestDefence,
+    rollRoles: rollRoles, bestDefence: bestDefence, scenFor: scenFor,
     searchSpots: searchSpots, checkArea: checkArea,
     boxesFor: function (state, side, u) {
       if (state.scen && state.scen.boxes) return state.scen.boxes(state, side, u);

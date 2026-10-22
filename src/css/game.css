@@ -2481,6 +2481,10 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .story-go { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin: 8px 0 12px; }
 .story-go .start { margin: 0; }
 .story-grade { font-family: var(--display); font-size: 18px; margin: 0 0 8px; }
+.story-where { margin: -4px 0 8px; color: var(--ink-dim); font-size: 13px; letter-spacing: .04em; }
+.story-rules { border-left: 2px solid var(--line); padding: 2px 0 2px 10px; margin: 0 0 10px; }
+.story-rules small { display: block; color: var(--ink-dim); }
+.story-rules small.win { color: var(--ink-faint); margin-top: 2px; }
 .story-grade.good { color: var(--good); }
 .story-grade.bad { color: var(--bad); }
 .story-notes { margin: 0 0 10px; padding-left: 18px; color: var(--ink-dim); }

@@ -286,7 +286,50 @@
       return res || { winner: null, text: 'Time runs out, and nothing is settled — a draw.', timeout: true };
     }
 
+    /* ================= a mission's own map =================
+       A seeded random: the same numbers every time from the same seed (a string
+       or a number), so a mission's map, and its compound, look the same each
+       time it is fought. */
+    function storySeeded(seed) {
+      var h = 2166136261 >>> 0, str = String(seed);
+      for (var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619) >>> 0;
+      return function () {
+        h = (h + 0x6D2B79F5) >>> 0;
+        var t = h;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    /* A story mission's setup, done the same way every time: what the scenario
+       lays of its own at random (Find and secure's search sites, Demolish's
+       target, Hostile takeover's fortifications, Last Stand's barricades, the
+       landing zones, the story scenarios' tunnel mouths and decoys) is laid from
+       the mission's seed. Only the setup: the battle's dice are its own. */
+    function storyFixed(label, fn) {
+      var sty = story();
+      if (!sty || !sty.seed) return fn();
+      var was = Math.random;
+      Math.random = storySeeded(sty.seed + ':' + label);
+      try { return fn(); } finally { Math.random = was; }
+    }
+
+    /* The map as the story wrote it (cfg.terrainPlan, already fitted to the table
+       by levers.js): each piece given its outline, a wood its lobes, a building
+       its wings, by the mission's seed, so it is drawn the same each time. */
+    function storyTerrain(cfg) {
+      var rand = storySeeded((cfg.story && cfg.story.seed) || 'map');
+      var terrain = cfg.terrainPlan.map(function (p) {
+        var t = JSON.parse(JSON.stringify(p)), fam = t.shape || t.plan || null;
+        delete t.shape;
+        if (R.shapePiece) R.shapePiece(t, rand, fam);
+        return t;
+      });
+      return { terrain: terrain, rolls: [], generator: (cfg.story && cfg.story.mapName) || 'The mission\u2019s own ground' };
+    }
+
     return {
+      storySeeded: storySeeded, storyTerrain: storyTerrain, storyFixed: storyFixed,
       storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck,
       storyEndPhase: storyEndPhase, storyCheck: storyCheck, parleyHolds: parleyHolds
     };

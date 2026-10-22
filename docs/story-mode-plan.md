@@ -1072,6 +1072,8 @@ the events' choices matter, and difficulty.
 | Broken Company | none in 40 |
 | The one-offs | the Sump and the Relief, a few walks in 40 each (the 10,000-walk sim: about 11% and 8%) |
 
+**Each battle's own ground, name and briefing** (after the first play-test). Every battle has a mission name of its own (Hold the Port, Burn the Depot, Pit Nine Rising...), shown on the briefing, the board and the report, with the book scenario it is fought under named beneath it. Before the force is chosen, the briefing reads as a narrative of what is at stake and where. Each open-table battle is fought on a map laid by hand for it (`src/story/deep-contract-maps.js`: the starport's three pads, Pit Nine's main street, the pass...), the same every time it is fought; where the scenario has the same number of objectives as the map, they stand where the map puts them and carry its names. Whatever the scenario itself lays at random (its own pieces, the deployment, landing zones) is drawn from the mission's own seed, so a refight is the same battle. A battle in a compound (Close Encounters) has no hand-laid map: its compound is generated from the mission's seed instead, the same each time. A choice that swaps a battle's scenario can give it a new name (Room by Room, Ambush on the Square, Under a White Flag, Last Words); the briefing stays the battle's own.
+
 **What to look at when you play it.**
 - **Pacing:** is a chapter one evening, and does the interlude come at the right time to spend?
 - **Whether the choices matter:** does a choice before a battle change how that battle feels on the table (the strikes, the ambush, the allies, Readiness)? Does a choice after a battle come back later, where you would notice it?

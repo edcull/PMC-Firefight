@@ -457,7 +457,8 @@
     var st = campaign.story, def = storyOf(campaign), node = def._nodes[st.node];
     if (!node || node.type !== 'battle') return null;
     var spec = {
-      node: node.id, scenario: node.scenario, variant: clone(node.variant) || null,
+      node: node.id, scenario: node.scenario, variant: clone(node.variant) || null, name: node.name || null, map: node.map || null,
+      text: node.text || null,
       tier: node.tier || 'max', pl: node.pl || 1, planet: node.planet || null, tactics: node.tactics || null, role: node.role || null,
       enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, waves: clone(node.waves) || null, levers: clone(st.pending) || {}
     };
@@ -473,6 +474,8 @@
     if (spec.levers.variant) spec.variant = mergeLevers(spec.variant, spec.levers.variant);
     if (spec.levers.tier) spec.tier = spec.levers.tier;
     if (spec.levers.role) spec.role = spec.levers.role;
+    if (spec.levers.name) spec.name = spec.levers.name;
+    if (spec.levers.map) spec.map = spec.levers.map;
     return spec;
   }
 

@@ -196,6 +196,15 @@
     if (allies) allies.picks.forEach(function (p, i) { if (p.name || p.rules) units.A[allyFrom + i] = { name: p.name, rules: p.rules }; });
 
     var side = def.sides && spec.enemy && def.sides[spec.enemy.side] || {};
+    /* The mission's own ground (deep-contract-maps.js): its pieces and objectives,
+       stretched east to west onto a bigger table. A compound mission has none:
+       its compound comes from its seed. */
+    var maps = (root.PMCStoryMaps && root.PMCStoryMaps[def.id]) || {}, map = spec.map ? maps[spec.map] : null;
+    var compound = root.PMCScen && root.PMCScen.SCENARIOS[spec.scenario] && root.PMCScen.SCENARIOS[spec.scenario].compound;
+    var board = R().boardFor(pl), sx = board.w / 48, sy = board.h / 48;
+    var fitPiece = function (p) { var q = JSON.parse(JSON.stringify(p)); q.x *= sx; q.w *= sx; q.y *= sy; q.h *= sy; return q; };
+    var terrainPlan = map && !compound ? map.pieces.map(fitPiece) : null;
+    var mapObjectives = map && !compound && map.objectives ? map.objectives.map(function (o) { return { x: o.x * sx, y: o.y * sy, name: o.name }; }) : null;
     var role = lv.role || spec.role;
     var attacker = role === 'choose' ? opts.role || 'A' : ROLE[role] || null;
     var ambush = variant && variant.ambush ? (variant.ambush === 'player' ? 'A' : 'B') : null;
@@ -210,11 +219,16 @@
       doctrines: { A: (co.doctrines || []).slice(), B: [] },
       tactics: { A: null, B: (spec.enemy && spec.enemy.faction === 'rebel') ? (spec.tactics || enemy.tactics) : null },
       campaign: true, mode: 'ai',
-      planet: lv.planet || spec.planet || 'random',
+      planet: lv.planet || (terrainPlan && map.planet) || spec.planet || 'random',
+      terrainPlan: terrainPlan,
       world: lv.world || null,
       options: opts.options || campaign.options || {},
       story: {
         id: def.id, node: spec.node,
+        // the mission: its name over the book's scenario, its ground, and the seed that lays it the same each time
+        name: spec.name || null, blurb: spec.text ? S.render(campaign, spec.text) : null,
+        mapName: map ? map.name : null, objectives: mapObjectives,
+        seed: spec.node + ':' + spec.scenario,
         variant: variant,
         strikes: lv.strikes || null,
         suppressOwn: lv.suppressOwn || null,

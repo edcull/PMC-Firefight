@@ -13,8 +13,9 @@
 (function (root) {
   'use strict';
   var S = root.PMCStory || require('./story.js');
-  // the story's words, kept in a file of their own (deep-contract-text.js)
+  // the story's words, and its maps, kept in files of their own (deep-contract-text.js, deep-contract-maps.js)
   if (!(root.PMCStoryText && root.PMCStoryText['deep-contract']) && typeof require === 'function') require('./deep-contract-text.js');
+  if (!(root.PMCStoryMaps && root.PMCStoryMaps['deep-contract']) && typeof require === 'function') require('./deep-contract-maps.js');
   var TEXT = (root.PMCStoryText && root.PMCStoryText['deep-contract']) || {};
 
   /* The words laid over the working: a chapter's intro, a node's text, an
@@ -24,6 +25,7 @@
       if (TEXT[ch.id]) ch.intro = TEXT[ch.id];
       (ch.nodes || []).forEach(function (n) {
         if (TEXT[n.id]) n.text = TEXT[n.id];
+        if (TEXT[n.id + '#name']) n.name = TEXT[n.id + '#name'];       // a battle's mission name
         (n.options || []).forEach(function (o) {
           if (TEXT[n.id + '/' + o.id]) o.text = TEXT[n.id + '/' + o.id];
           if (TEXT[n.id + '/' + o.id + '.why']) o.why = TEXT[n.id + '/' + o.id + '.why'];
@@ -164,7 +166,7 @@
           { id: 'send', text: 'Send them home.' },
           { id: 'ask', text: 'Ask what they know, and not nicely.', battle: { showEnemy: true }, effects: [{ meter: 'sentiment', add: -1 }] }
         ], next: 'c1.battle' },
-        { id: 'c1.battle', type: 'battle', scenario: 'secure', tier: 1, pl: 1, planet: 'industrial',
+        { id: 'c1.battle', type: 'battle', map: 'starport', scenario: 'secure', tier: 1, pl: 1, planet: 'industrial',
           // the first battle, lighter than most: the Front's strike on the port, not its army
           enemy: front({ core: ['rminers', 'rmilitia'], optional: { meter: 'rebels', per: 3, units: ['rmilitia', 'rtechnical'] },
             fill: { to: 0.6, from: ['rmilitia', 'rminers'], meter: 'rebels', step: 0.05 } }),
@@ -202,7 +204,7 @@
           { id: 'sabotage', text: 'Get them to sabotage the Front\'s guns.', cost: { intel: 1 }, why: 'You don\'t know enough about the guns.',
             effects: [{ roll: { d6: 4, meter: 'intel' }, pass: [{ next: { battle: 'c2r.battle', levers: { strikes: 'D3' } } }], fail: [{ flag: 'nightshift_shot' }] }] }
         ], next: 'c2r.battle' },
-        { id: 'c2r.battle', type: 'battle', scenario: 'invasion', role: 'defender', tier: 'max', pl: 1, planet: 'industrial',
+        { id: 'c2r.battle', type: 'battle', map: 'refinery', scenario: 'invasion', role: 'defender', tier: 'max', pl: 1, planet: 'industrial',
           enemy: front({ tactics: 'wave' }),
           on: {
             success: [{ next: 'c2r.debrief' }],
@@ -225,7 +227,7 @@
           { id: 'blind', text: 'Go in blind, now, before the rota changes.', battle: { role: 'attacker', readiness: 0 } },
           { id: 'night', text: 'A small team, by night.', battle: { tier: 'max-1' } }
         ], next: 'c2d.battle' },
-        { id: 'c2d.battle', type: 'battle', scenario: 'demolish', role: 'attacker', tier: 'max', pl: 1, planet: 'industrial',
+        { id: 'c2d.battle', type: 'battle', map: 'oreyards', scenario: 'demolish', role: 'attacker', tier: 'max', pl: 1, planet: 'industrial',
           enemy: front({ tactics: 'laststand' }),
           on: {
             success: [{ effects: [{ flag: 'depot_raided' }], next: 'c2d.debrief' }],
@@ -253,7 +255,7 @@
             battle: { variant: { target: "Varga's Own", capture: true }, tier: 'max-1' }, effects: [{ flag: 'aim_capture', local: true }] },
           { id: 'wait', text: 'Wait for her to move.', battle: { role: 'choose' }, effects: [{ meter: 'hive', add: 1 }] }
         ], next: 'c3.battle' },
-        { id: 'c3.battle', type: 'battle', scenario: 'find', tier: 'max', pl: 1, planet: 'mountain',
+        { id: 'c3.battle', type: 'battle', map: 'pumping', scenario: 'find', tier: 'max', pl: 1, planet: 'mountain',
           variant: { target: "Varga's Own" },
           enemy: front({ core: ['rminers', 'rmilitia', { key: 'rhardened', name: "Varga's Own", honours: [3] }],
             changes: [{ if: { flag: 'depot_raided' }, remove: 'rlightart' }, { if: { flag: 'driver_taken' }, remove: 'rtechnical' }] }),
@@ -295,15 +297,15 @@
       { id: 'c4', half: 1, title: 'Pit Nine', nodes: [
         { id: 'c4.brief', type: 'brief', text: 'A mining town rises. HTX\'s site office is in it.', next: 'c4.school' },
         { id: 'c4.school', type: 'event', title: 'The schoolhouse', text: 'The Front has fortified the town school, with children still in it.', options: [
-          { id: 'clear', text: 'Clear it room by room.', battle: { scenario: 'ce_control' }, effects: [{ flag: 'pit9_clearing', local: true }] },
+          { id: 'clear', text: 'Clear it room by room.', battle: { scenario: 'ce_control', name: 'Room by Room' }, effects: [{ flag: 'pit9_clearing', local: true }] },
           { id: 'shell', text: 'Shell it, then storm the town.', battle: { strikes: 'D6' },
             effects: [{ meter: 'sentiment', add: -4 }, { meter: 'hive', add: 1 }, { meter: 'loyalty', add: -1 }, { flag: 'pit9_shelled' }] },
           { id: 'talk', text: 'Talk to the teacher.', if: { any: [{ flag: 'nightshift_freed' }, { flag: 'varga_held' }] }, why: 'You\'d need the miners\' trust, or Varga.',
             effects: [{ roll: { d6: 4, meter: 'sentiment', mods: [{ if: { flag: 'gate_cleared' }, add: -1 }] },
               pass: [{ meter: 'sentiment', add: 2 }, { flag: 'pit9_spared' }, { next: { battle: 'c4.battle', levers: { skip: true } } }],
-              fail: [{ next: { battle: 'c4.battle', levers: { scenario: 'meeting', variant: { ambush: true } } } }] }] }
+              fail: [{ next: { battle: 'c4.battle', levers: { scenario: 'meeting', variant: { ambush: true }, name: 'Ambush on the Square' } } }] }] }
         ], next: 'c4.battle' },
-        { id: 'c4.battle', type: 'battle', scenario: 'secure', tier: 'max', pl: 1, planet: 'industrial', enemy: front({ tactics: 'laststand' }),
+        { id: 'c4.battle', type: 'battle', map: 'pitnine', scenario: 'secure', tier: 'max', pl: 1, planet: 'industrial', enemy: front({ tactics: 'laststand' }),
           on: {
             success: [{ if: { flag: 'pit9_clearing' }, effects: [{ meter: 'sentiment', add: 2 }, { flag: 'pit9_spared' }] }, {}],
             failure: [{ effects: [{ meter: 'rebels', add: 1 }] }],
@@ -345,7 +347,7 @@
           { id: 'refuse', text: 'Refuse.', battle: { role: 'choose' } },
           { id: 'fire', text: 'Fire first.', battle: { strikes: 'D3', role: 'attacker' }, effects: [{ meter: 'sentiment', add: 1 }] }
         ], next: 'relief.battle' },
-        { id: 'relief.battle', type: 'battle', scenario: 'meeting', tier: 'max', pl: 1, planet: 'industrial', enemy: lantern(),
+        { id: 'relief.battle', type: 'battle', map: 'starport', scenario: 'meeting', tier: 'max', pl: 1, planet: 'industrial', enemy: lantern(),
           on: {
             success: [{ effects: [{ meter: 'lantern', add: -1 }], next: 'relief.debrief' }],
             failure: [{ effects: [{ meter: 'lantern', add: 1 }], next: 'relief.debrief' }],
@@ -409,7 +411,7 @@
             battle: { allies: { side: 'garrison', faction: 'pmc', core: ['enforcers', 'regular'] } } },
           { id: 'alone', text: '"This is our fight."', effects: [{ meter: 'loyalty', add: 1 }] }
         ] },
-        battle: { scenario: 'invasion', role: 'attacker', enemy: front({ tactics: 'laststand' }), adjust: [{ if: { flag: 'nightshift_freed' }, levers: { edge: 'choose' } }],
+        battle: { map: 'refinery', scenario: 'invasion', role: 'attacker', enemy: front({ tactics: 'laststand' }), adjust: [{ if: { flag: 'nightshift_freed' }, levers: { edge: 'choose' } }],
           on: { success: [{ effects: [{ meter: 'rebels', add: -1 }] }], failure: [{ effects: [{ meter: 'htx', add: -1 }] }] } },
         after: { id: 'retake.holdouts', title: 'The holdouts', text: 'The last of them surrender.', if: { grade: 'success' }, options: [
           { id: 'hand', text: 'Hand them to HTX.', effects: [{ meter: 'htx', add: 1 }, { meter: 'sentiment', add: -2 }, { meter: 'rebels', add: -1 }] },
@@ -419,10 +421,10 @@
       poolChapter({ id: 'revenge', thread: 'front', title: "Varga's Revenge", when: { any: [{ flag: 'varga_dead' }, { flag: 'varga_free' }] },
         brief: '{if varga_dead}Her brother leads them now.{/if}{if varga_free}She is back, and she wants you.{/if}',
         before: { id: 'revenge.challenge', title: 'The challenge', text: 'Her people ask to meet you.', options: [
-          { id: 'meet', text: 'Meet them.', battle: { scenario: 'parley' }, effects: [{ meter: 'sentiment', add: 1 }] },
+          { id: 'meet', text: 'Meet them.', battle: { scenario: 'parley', name: 'Under a White Flag' }, effects: [{ meter: 'sentiment', add: 1 }] },
           { id: 'ambush', text: 'Ambush the meeting.', battle: { variant: { ambush: 'player' } }, effects: [{ meter: 'sentiment', add: -2 }, { meter: 'loyalty', add: -1 }, { flag: 'parley_betrayed' }] }
         ] },
-        battle: { scenario: 'meeting', enemy: front({ tactics: 'wave' }), adjust: [{ if: { flag: 'martyr_displayed' }, levers: { readiness: 2 } }],
+        battle: { map: 'ridges', scenario: 'meeting', enemy: front({ tactics: 'wave' }), adjust: [{ if: { flag: 'martyr_displayed' }, levers: { readiness: 2 } }],
           on: { success: [{ effects: [{ meter: 'rebels', add: -2 }] }], failure: [{ effects: [{ meter: 'rebels', add: 1 }] }] } },
         after: { id: 'revenge.chance', title: 'The second chance', text: 'She is in your sights again.', if: { all: [{ grade: 'success' }, { flag: 'varga_free' }] }, options: [
           { id: 'take', text: 'Take her.', effects: [{ flag: 'varga_free', set: false }, { flag: 'varga_held' }, { meter: 'htx', add: 1 }] },
@@ -435,7 +437,7 @@
           { id: 'pay', text: 'Pay him.', cost: { kUC: 1 }, why: 'You can\'t pay him.', battle: { showEnemy: true }, effects: [{ reveal: 'rebels' }] },
           { id: 'lean', text: 'Lean on him.', effects: [{ meter: 'intel', add: 1 }, { meter: 'sentiment', add: -1 }] }
         ] },
-        battle: { scenario: 'find', enemy: front({ tactics: 'guerillas' }),
+        battle: { map: 'hills', scenario: 'find', enemy: front({ tactics: 'guerillas' }),
           on: { success: [{ effects: [{ meter: 'rebels', add: -1 }] }], failure: [{}] } },
         after: { id: 'splinter.bomber', title: 'The bomb-maker', text: 'You have the cell\'s bomb-maker.', if: { grade: 'success' }, options: [
           { id: 'hand', text: 'Hand him to HTX.', effects: [{ meter: 'htx', add: 1 }, { meter: 'rebels', add: -1 }] },
@@ -447,7 +449,7 @@
           { id: 'siege', text: 'Starve them for a week.', battle: { readiness: -1 }, effects: [{ meter: 'hive', add: 1 }] },
           { id: 'storm', text: 'Bombard and storm it.', if: { meter: 'htx', gte: 1 }, why: 'HTX won\'t lend the guns.', battle: { strikes: 'D6' }, effects: [{ meter: 'sentiment', add: -1 }] }
         ] },
-        battle: { scenario: 'takeover', role: 'attacker', tier: 'max', pl: 'max', enemy: front({ tactics: 'laststand', fill: { to: 1.0, from: ['rinsurgents', 'rhardened', 'rmilitia'], meter: 'rebels', step: 0.05 } }),
+        battle: { map: 'redoubt', scenario: 'takeover', role: 'attacker', tier: 'max', pl: 'max', enemy: front({ tactics: 'laststand', fill: { to: 1.0, from: ['rinsurgents', 'rhardened', 'rmilitia'], meter: 'rebels', step: 0.05 } }),
           adjust: [{ if: { flag: 'informant' }, levers: { showEnemy: true } }, { if: { flag: 'truce' }, levers: { allies: { side: 'front', faction: 'rebel', core: ['rminers', 'rmilitia'] } } }],
           on: FINALE_ON } }),
 
@@ -463,7 +465,7 @@
             fail: [{ next: { battle: 'ceasefire.battle', levers: { readiness: 1 } } }] }] },
           { id: 'officer', text: 'Hand over {soldier:command}.', if: { flag: 'nightshift_shot' }, effects: [{ leave: 1 }, { meter: 'loyalty', add: -2 }, { meter: 'sentiment', add: 2 }] }
         ] },
-        battle: { scenario: 'parley', enemy: front({ tactics: 'guerillas', core: ['rminers', 'rmilitia'] }),
+        battle: { map: 'waystation', scenario: 'parley', enemy: front({ tactics: 'guerillas', core: ['rminers', 'rmilitia'] }),
           adjust: [
             { if: { flag: 'gate_cleared' }, levers: { readiness: 1 } }, { if: { flag: 'pit9_shelled' }, levers: { readiness: 1 } },
             { if: { flag: 'parley_betrayed' }, levers: { readiness: 1 } }, { if: { flag: 'miners_sealed' }, levers: { readiness: 2 } }
@@ -481,7 +483,7 @@
           { id: 'ours', text: 'Your units hold it.', battle: { role: 'defender' }, effects: [{ meter: 'sentiment', add: 1 }] },
           { id: 'theirs', text: 'The rebels hold it.', battle: { allies: { side: 'front', faction: 'rebel', core: ['rminers', 'rmilitia', 'rmilitia'] } }, effects: [{ meter: 'loyalty', add: 1 }, { meter: 'sentiment', add: -1 }] }
         ] },
-        battle: { scenario: 'holdline', waves: { meter: 'hive', base: 1, per: 3 }, enemy: hive(), adjust: [{ if: { flag: 'hive_known' }, levers: { allies: { side: 'front', faction: 'rebel', core: ['rminers'] } } }],
+        battle: { map: 'pass', scenario: 'holdline', waves: { meter: 'hive', base: 1, per: 3 }, enemy: hive(), adjust: [{ if: { flag: 'hive_known' }, levers: { allies: { side: 'front', faction: 'rebel', core: ['rminers'] } } }],
           on: { success: [{ effects: [{ meter: 'hive', add: -1 }] }], failure: [{ effects: [{ meter: 'hive', add: 1 }] }] } },
         after: { id: 'holdline.dead', title: 'The rebel dead', text: 'They held, and they died.', options: [
           { id: 'honour', text: 'Honour them with your own.', effects: [{ meter: 'sentiment', add: 2 }, { meter: 'loyalty', add: -1 }] },
@@ -536,7 +538,7 @@
           { id: 'tracker', text: 'Plant a tracker on them.', cost: { intel: 1 }, why: 'You don\'t know enough about them.',
             effects: [{ meter: 'intel', add: 1 }, { roll: { d6: 4, meter: 'intel' }, fail: [{ flag: 'htx_cut_off' }] }] }
         ] },
-        battle: { scenario: 'find', enemy: front({ tactics: 'guerillas' }),
+        battle: { map: 'hills', scenario: 'find', enemy: front({ tactics: 'guerillas' }),
           on: { success: [{ effects: [{ meter: 'rebels', add: -1 }] }], failure: [{ effects: [{ meter: 'htx', add: -1 }] }] } },
         after: { id: 'partner.prisoners', title: "Black Lantern's prisoners", text: 'Black Lantern has taken prisoners, and means to question them its own way.', options: [
           { id: 'let', text: 'Let them handle it.', effects: [{ meter: 'htx', add: 1 }, { meter: 'sentiment', add: -2 }, { meter: 'lantern', add: 1 }] },
@@ -550,7 +552,7 @@
           { id: 'talk', text: 'Talk your way into the HTX office.', cost: { intel: 2 }, why: 'You don\'t know enough to bluff.',
             effects: [{ roll: { d6: 4, meter: 'intel' }, pass: [{ next: { battle: 'leak.battle', levers: { skip: true } } }] }] }
         ] },
-        battle: { scenario: 'strike', enemy: lantern({ core: ['regular', 'lmgteam'] }),
+        battle: { map: 'uplink', scenario: 'strike', enemy: lantern({ core: ['regular', 'lmgteam'] }),
           on: { success: [{ effects: [{ meter: 'lantern', add: -1 }] }], failure: [{ effects: [{ meter: 'lantern', add: 1 }] }], skip: [{}] } },
         after: { id: 'leak.publish', title: 'Publish', text: 'The files are yours to use.', options: [
           { id: 'broadcast', text: 'Broadcast them.', effects: [{ flag: 'leaked' }, { flag: 'htx_cut_off' }, { meter: 'htx', add: -5 }, { meter: 'sentiment', add: 3 }, { meter: 'lantern', add: 2 },
@@ -564,7 +566,7 @@
           { id: 'fast', text: 'The fast road.', battle: { role: 'attacker' } },
           { id: 'mine', text: 'The mine road.', battle: { readiness: 0 }, effects: [{ meter: 'hive', add: 1 }, { meter: 'loyalty', add: -1 }] }
         ] },
-        battle: { scenario: 'convoy', enemy: lantern(), adjust: [{ if: { flag: 'driver_taken' }, levers: { readiness: 1 } }],
+        battle: { map: 'haulroad', scenario: 'convoy', enemy: lantern(), adjust: [{ if: { flag: 'driver_taken' }, levers: { readiness: 1 } }],
           on: { success: [{ effects: [{ meter: 'lantern', add: -1 }] }], failure: [{ effects: [{ meter: 'htx', add: -1 }] }] } },
         after: { id: 'convoy.cargo', title: 'The cargo', text: 'It got through.', if: { grade: 'success' }, options: [
           { id: 'deliver', text: 'Deliver it as ordered.', effects: [{ meter: 'htx', add: 1 }] },
@@ -574,10 +576,10 @@
       poolChapter({ id: 'showdown', thread: 'htx', finale: true, title: 'The Showdown',
         brief: 'Black Lantern comes for you.',
         before: { id: 'showdown.terms', title: 'Last words', text: 'Black Lantern\'s commander comes forward under a white flag.', options: [
-          { id: 'parley', text: 'Hear the terms.', if: { flag: 'lantern_mercy' }, why: 'They owe you nothing.', battle: { scenario: 'parley' } },
+          { id: 'parley', text: 'Hear the terms.', if: { flag: 'lantern_mercy' }, why: 'They owe you nothing.', battle: { scenario: 'parley', name: 'Last Words' } },
           { id: 'fight', text: 'Shoot the flag down.', battle: { role: 'attacker' }, effects: [{ meter: 'loyalty', add: 1 }, { meter: 'sentiment', add: -1 }] }
         ] },
-        battle: { scenario: 'takeover', tier: 'max', pl: 'max', variant: { target: 'Lantern Actual' }, enemy: lantern({ fill: { to: 1.0, from: ['regular', 'veterans', 'lmgteam'], meter: 'lantern', step: 0.05 } }),
+        battle: { map: 'htxyard', scenario: 'takeover', tier: 'max', pl: 'max', variant: { target: 'Lantern Actual' }, enemy: lantern({ fill: { to: 1.0, from: ['regular', 'veterans', 'lmgteam'], meter: 'lantern', step: 0.05 } }),
           adjust: [{ if: { flag: 'truce' }, levers: { allies: { side: 'front', faction: 'rebel', core: ['rminers', 'rmilitia'] } } }],
           on: {
             success: [{ effects: [{ flag: 'finale_won' }] }],
@@ -593,7 +595,7 @@
           { id: 'civilians', text: 'Take civilians.', battle: { tier: 'max-1', turns: 8 }, effects: [{ meter: 'sentiment', add: 2 }] },
           { id: 'company', text: 'Take only the company.', battle: { edge: 'choose', turns: 6 }, effects: [{ meter: 'loyalty', add: 1 }] }
         ], next: 'breakout.battle' },
-        { id: 'breakout.battle', type: 'battle', scenario: 'breakout', waves: { meter: 'hive', base: 1, per: 3 }, tier: 'max', pl: 'max', enemy: hive(),
+        { id: 'breakout.battle', type: 'battle', map: 'slagfields', scenario: 'breakout', waves: { meter: 'hive', base: 1, per: 3 }, tier: 'max', pl: 'max', enemy: hive(),
           on: FINALE_ON, next: 'end' }
       ] },
 

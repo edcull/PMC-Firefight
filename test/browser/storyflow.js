@@ -75,7 +75,7 @@ async function cards(p) {
   await go(p, '[data-go="storyopt"][data-o="ask"]');
   await p.screenshot({ path: path.join(SHOTS, 'story-briefing.png') });
   txt = await body(p);
-  check('asking what they know: the battle’s briefing, with the enemy shown', /Secure and control/i.test(txt) && /Battle Tier I/.test(txt) && /The enemy, as you know them/i.test(txt), txt.slice(0, 300));
+  check('asking what they know: the mission’s briefing: its name, its ground, the story of it, then the rules and the enemy', /Hold the Port/i.test(txt) && /starport/i.test(txt) && /Front is coming through the terminal/.test(txt) && /Secure and control/i.test(txt) && /Battle Tier I/.test(txt) && /The enemy, as you know them/i.test(txt), txt.slice(0, 300));
   await go(p, '[data-go="storymuster"]');
   txt = await body(p);
   check('the muster picks a legal force for the battle', /A legal army/.test(txt) && await p.evaluate(() => !document.querySelector('[data-go="storyfight"]').disabled), txt.slice(0, 200));
@@ -83,6 +83,13 @@ async function cards(p) {
   await p.waitForTimeout(1200);
   const st = await p.evaluate(() => { const s = window.PMC_STATE && window.PMC_STATE(); return s ? { node: s.cfg.story && s.cfg.story.node, scen: s.cfg.scenario, b: s.units.filter(u => u.side === 'B').length } : null; });
   check('the battle starts with the story’s cfg', st && st.node === 'c1.battle' && st.scen === 'secure' && st.b > 0, JSON.stringify(st));
+  const ground = await p.evaluate(() => { const s = window.PMC_STATE(); return { name: s.scen.name, book: s.scen.bookName, pads: s.terrain.filter((t) => t.kind === 'road').length, header: (document.getElementById('hdr-init') || {}).textContent }; });
+  check('...on the starport, under the mission\u2019s own name', ground.name === 'Hold the Port' && ground.book === 'Secure and control' && ground.pads === 3, JSON.stringify(ground));
+  await cards(p);
+  // the mission's card (its name, its briefing, the pads by name) put away, to see the ground
+  await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^done$/i.test(x.textContent.trim()) && x.offsetParent); if (b) b.click(); });
+  await p.waitForTimeout(800);
+  await p.screenshot({ path: path.join(SHOTS, 'story-board.png') });
 
   // the enemy concedes: a result without a battle played
   await cards(p);

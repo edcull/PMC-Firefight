@@ -5,7 +5,7 @@
    campaign's real aftermath taking each one, to see that the company stays
    able to fight and how it grows. */
 'use strict';
-const { R, C, Engine } = require('../../server/rules.js');
+const { R, C, SC, Engine } = require('../../server/rules.js');
 const S = require('../../src/story/story.js');
 const L = require('../../src/story/levers.js');
 const { makeReport } = require('../story-report.js');
@@ -81,6 +81,35 @@ PATHS.forEach(([node, opt, flags, meters]) => {
 });
 console.log('\n  (how even each one is, for a new company: its points against the enemy’s)');
 fair.forEach((f) => console.log('    ' + f));
+
+console.log('\nEvery battle on its own ground, the same each time');
+/* Each battle of the story, set up twice: its map laid as written (or its
+   compound from its seed), its objectives where the map puts them, its name
+   over the book's scenario. */
+function ground(st) { return JSON.stringify(st.terrain.map((t) => [t.kind, +t.x.toFixed(2), +t.y.toFixed(2), +t.w.toFixed(2), +t.h.toFixed(2)])); }
+const dc = S.get('deep-contract'), MAPS = global.PMCStoryMaps['deep-contract'];
+dc.chapters.forEach((ch) => (ch.nodes || []).filter((n) => n.type === 'battle').forEach((n) => {
+  const runs = [0, 1].map(() => {
+    const c = campaign();
+    c.story.chapter = ch.id; c.story.node = n.id;
+    const picks = C.pickForce(c.companies.A, 1, 1, null, { scenario: n.scenario });
+    const cfg = L.toCfg(c, { picks, role: 'A' });
+    cfg.mode = 'ai';
+    return { cfg, st: started(cfg).state() };
+  });
+  const [a, b] = runs, map = n.map && MAPS[n.map];
+  const same = ground(a.st) === ground(b.st);
+  const named = a.st.scen.name === n.name && a.st.scen.bookName === (SC.SCENARIOS[n.scenario] || {}).name;
+  let laid = true, note = '';
+  if (map && !SC.SCENARIOS[n.scenario].compound) {
+    // every piece of the map is on the table (a scenario's own pieces besides)
+    laid = map.pieces.every((p) => a.st.terrain.some((t) => t.kind === p.kind && Math.abs(t.x - p.x) < 0.01 && Math.abs(t.y - p.y) < 0.01));
+    const objs = map.objectives && map.objectives.length === a.st.objectives.length;
+    if (objs) laid = laid && map.objectives.every((o, i) => Math.abs(a.st.objectives[i].x - o.x) < 0.01 && Math.abs(a.st.objectives[i].y - o.y) < 0.01);
+    note = map.name + (objs ? ', its objectives' : '');
+  } else note = 'a compound from its seed';
+  ok(n.id + ' \u2014 ' + n.name + ': ' + note, same && named && laid, (same ? '' : 'not the same twice; ') + (named ? '' : 'named ' + a.st.scen.name + '; ') + (laid ? '' : 'the map not laid as written'));
+}));
 
 console.log('\nThe first half, played through with made-up results');
 const N = 40, tally = { done: 0, broken: 0, sump: 0, relief: 0, tierAt4: {}, kUC: [], battles: [], units: [] };

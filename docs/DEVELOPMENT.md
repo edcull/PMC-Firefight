@@ -70,7 +70,10 @@ src/
     deep-contract.js Deep Contract, the first story, as data
     scenarios-story.js  the story's own scenarios (Hive Heart, Convoy, Breakout, Hold the Line,
                      Strike, Parley), loaded with the engine; never offered outside a story
-    deep-contract-text.js  its words, keyed by chapter, node and option
+    deep-contract-text.js  its words, keyed by chapter, node and option; each battle's mission
+                     name (`node#name`) and the briefing read before the force is chosen
+    deep-contract-maps.js  its ground: each open-table battle's own map (pieces in inches on a
+                     48" table, stretched on a 6' x 4'), with named objectives where they fit
 
   view/              the browser
     game.js          the board: its state, and the modules below wired together
