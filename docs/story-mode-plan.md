@@ -120,7 +120,7 @@ flowchart TD
 - **2. First move.** The briefing offers two jobs and the player picks one:
   relieve the besieged refinery (Invasion, defending), or raid the Front's supply
   depot (Demolish, or Sabotage as a commando). The job not taken happens anyway,
-  off the table, and its result is rolled (section 4). A lost refinery adds
+  off the table, with whatever effect is written for it (section 4). A lost refinery adds
   *Retake the Refinery* to Act II. A depot left alone raises Rebel Strength.
 - **3. The Hunt.** Decapitation, or Protecting the VIP turned around so the
   player snatches Varga. Killing her ends the hunt quickly, but she becomes a
@@ -348,10 +348,38 @@ them. The ending table is mostly flags.
 
 ### Offscreen events
 
-A job the player passes on is not lost. It happens anyway, off the table. Its
-result is a roll changed by the meters and flags (Rebel Strength, what HTX sent
-instead), and it sets a flag and moves a meter. The world moves on whatever the
-player chooses.
+### Jobs passed up
+
+What happens to a job the player passes up is written for that job, like
+everything else. There are three kinds:
+
+| Kind | What happens | Example |
+|---|---|---|
+| **No effect** | Nothing. The job is gone, and the story doesn't mention it again. | Most side contracts. A minor escort job in chapter 2. |
+| **Short term** | It changes only what comes next: the next battle's enemy force, its scenario or role, Readiness, or which options the next event offers. | The depot left alone: the Front has its mortars in chapter 3, and the hunt's briefing offers no air strike because the guns are still there. |
+| **Long term** | It sets flags or moves meters, which can change later events, enemy forces, the scenarios later chapters use, which chapters appear at all, or the ending. | The refinery not relieved: `refinery_lost`, Rebel Strength +1, and *Retake the Refinery* (an Invasion as the attacker) is added to Act II. |
+
+A job can have both short- and long-term effects. Its outcome can be fixed
+("the garrison holds"), or rolled with modifiers from meters and flags ("the
+garrison holds on a 4+, +1 if HTX Standing is 2 or more"), with different
+effects for each result. Rolled outcomes are saved as soon as they are made, so
+ironman holds. Nothing is ever played as a hidden battle.
+
+```js
+passed: {                                   // on a job's option in an event
+  roll: { d6: 4, mods: [{ if: { meter: 'htx', gte: 2 }, add: 1 }] },
+  held: [{ journal: 'The garrison held the refinery without you.' }],
+  lost: [{ flag: 'refinery_lost', set: true }, { meter: 'rebels', add: 1 },
+         { next: { battle: 'c3.battle', enemy: { add: 'reb_technical' } } }]   // short term: the very next battle only
+}
+```
+
+**Short-term changes** go through a `next` effect, which holds battle levers or
+event changes for the next battle or event and is cleared once that has
+happened. **Long-term changes** are ordinary flags and meters, read wherever a
+later node or enemy force asks for them. The validator checks that a `next`
+names a node that really comes next on every path, and that a long-term flag is
+read somewhere (section 6).
 
 ### Interludes and side contracts
 
@@ -471,7 +499,7 @@ levers), `battle`, `debrief` (text, then its events, picked by grade and flags),
 
 **Effects:** `{ meter, add|set }`, `{ flag, set }`, `{ kUC }`, `{ exp, to: 'all'|'fielded' }`,
 `{ tp }`, `{ recruit: key, free }`, `{ upgrade: 'random' }`, `{ leave: n }`
-(desertion), `{ offscreen: {...} }`,
+(desertion), `{ next: {...} }` (a change to the next battle or event only),
 `{ journal: 'text' }`. Each effect is one small function in the story engine, and
 the validator knows every name.
 
