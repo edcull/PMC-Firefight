@@ -414,8 +414,10 @@ Each custom scenario needs four things the existing ones already have:
 - **A setup spike first.** Waves and the countdown are new kinds of event in the
   End phase. Build them first as plain options on an existing scenario, and only
   then put them in a named scenario.
-- **Optional use outside the story.** Once they are stable, the good ones can be
-  offered in skirmish and campaign as well (section 8).
+- **Story only, for now.** The `story: true` mark keeps them out of the
+  skirmish, campaign and online lists. Nothing in them should depend on the
+  story engine apart from `cfg.story`, so offering one elsewhere later means
+  removing the mark and giving it a default setup.
 
 ### The story as data
 
@@ -677,8 +679,7 @@ before writing the rest.
    putting rebels on the table?
 8. **Online.** Story mode is single player only. A co-op story (two companies,
    one story) is possible later, but it is not planned here.
-9. **Custom scenarios outside the story.** Should the story scenarios (Hive
-   Heart, Convoy and the rest) also be offered in skirmish and campaign once
-   they are stable, or kept for the story?
+9. ~~**Custom scenarios outside the story.**~~ *Decided:* story only, for now
+   (section 5).
 10. **The Xenotripods.** Left out, as asked. The story graph leaves room for an
    Act IV, or a second story, that brings them in.
