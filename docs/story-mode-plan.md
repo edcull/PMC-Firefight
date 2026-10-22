@@ -184,7 +184,7 @@ and each thread is a set of written chapters with conditions:
 | **The Front** (rebels) | Rebel Strength, Varga free or martyred, low Sentiment | *Retake the Refinery*, *Varga's Revenge*, *The Splinter Cell*, *The Last Redoubt* |
 | **The truce** (rebels as allies) | Varga held and talked to, high Sentiment, a common enemy | *The Ceasefire*, *Hold the Line* (with rebel allies) |
 | **The hive** (bugs) | Hive Growth, the Sump entered, blasting | *Outbreak at Pit Nine*, *The Shafts*, *Hive Heart* |
-| **HTX and Black Lantern** (PMC) | Low HTX Standing, the data core, a cover-up found out | *The Partner* (Black Lantern alongside you, with orders of its own), *Convoy*, *The Leak*, *The Showdown* |
+| **HTX and Black Lantern** (PMC) | Low HTX Standing, Black Lantern Strength, the data core, a cover-up found out | *The Partner* (Black Lantern alongside you, with orders of its own), *Convoy*, *The Leak*, *The Showdown* |
 
 How the chapters are chosen:
 - **Each thread has a pressure,** worked out from its meters and flags.
@@ -231,8 +231,8 @@ last ending has no conditions, so every path has an ending:
 | **Broken Company** | Any time the company cannot field a Tier I army after its hub turn. |
 | **Scorched Earth** | Hive Growth gets away from everyone (the Breakout finale). HTX orders the moon sterilised from orbit, and the last battle is an evacuation. |
 | **Contract Terminated** | Black Lantern wins the showdown, or HTX turns on you and you lose the finale. The company is betrayed and runs. |
-| **Liberators** | `truce` or `leaked`, the finale won, hive contained. The Front holds the moon. The company is poor, and loyal to its own. |
-| **Company Man** | Stayed with HTX (no `truce`, `leaked` or `htx_cut_off`), hive contained, HTX Standing 2 or more. The company is rich and the moon is broken. |
+| **Liberators** | `truce` or `leaked`, the finale won, hive contained, and not `miners_sealed`. The Front holds the moon. The company is poor, and loyal to its own. |
+| **Company Man** | Stayed with HTX (no `truce`, `leaked` or `htx_cut_off`), hive contained, HTX Standing 2 or more (1 or more with `core_sold`). The company is rich and the moon is broken. |
 | **Paid Off** | Anything else: the war ends without you deciding it. HTX pays what it owes, or doesn't, and the company ships out. The epilogue is written from the meters, so it still tells the story you made. |
 
 Each ending has a short epilogue: what happened to the moon, to Varga, and to
@@ -341,7 +341,7 @@ fills in the rest of the detail.
 | *The Partner* (HTX; when `htx_suspects`, `htx_tracking`, or Black Lantern Strength 4 or more) | *Orders of its own.* Share your plans (Black Lantern Strength +1, Black Lantern as allies). Keep them in the dark (Black Lantern Strength −1, no allies). Plant a tracker on them (Intel +1, a roll on Intel: on a failure `htx_cut_off`). | *Black Lantern's prisoners.* Let them handle it (HTX +1, Sentiment −2, Black Lantern Strength +1). Take the prisoners from them (Sentiment +1, Black Lantern Strength −1, flag `lantern_crossed`). |
 | *Convoy* (HTX; fallback) | *The route.* The fast road (you attack). The mine road (Hive Growth +1, enemy Readiness 0). If `driver_taken`, his crew is waiting on the fast road (enemy Readiness +1). | *The cargo* (the data core if `core_recovered`, otherwise HTX ore). Deliver it as ordered (HTX +1). Skim it (kUC +, Loyalty +1, a roll: HTX may notice, `htx_suspects`). Give it to the miners (Sentiment +2, HTX −2, Rebel Strength +1). |
 | *The Leak* (HTX; when `core_recovered`, `ledger_read` or `sample_taken`) | *The uplink.* Hit it by night (the Strike scenario a Tier down). Talk your way into the HTX office (a roll on Intel; success means no battle). | *Publish.* Broadcast the core (flag `leaked`, `htx_cut_off`, HTX −5, Sentiment +3, Black Lantern Strength +2). If `varga_handed`, her name is in the files too, and the broadcast frees her (`varga_free`). Sell it back to HTX (kUC +++, HTX +1, flag `core_sold`). Give it to Varga (needs `varga_held` or `varga_talked`: Sentiment +2, Rebel Strength +1). |
-| Finales | One event each, before the battle, written for its thread: *The Last Redoubt* (`informant` shows the list), *Hive Heart* (`shafts_collapsed` means fewer tunnel mouths), *The Showdown* (with `lantern_mercy`, their commander offers terms, and the battle can be a Parley; with `lantern_crossed`, their commander is Determined). | The ending (section 2). The epilogue reads `miners_sealed`, `pit9_spared`, `core_sold`, `sample_taken` and Varga's flags. |
+| Finales | One event each, before the battle, written for its thread: *The Last Redoubt* (`informant` shows the list), *Hive Heart* (`shafts_collapsed` means fewer tunnel mouths), *The Showdown* (with `lantern_mercy`, their commander offers terms, and the battle can be a Parley; with `lantern_crossed`, their commander is Determined). | The ending (section 2). The ending's conditions read `truce`, `leaked`, `htx_cut_off`, `miners_sealed`, `pit9_spared` and `core_sold`; the epilogue reads every flag in the journal, Varga's most of all. |
 
 ### Interlude events
 
@@ -364,6 +364,18 @@ Every meter has written events that move it **both ways** in each half, apart
 from Hive Growth's rise with time. Every flag has a setter and at least one
 reader, and the validator checks both (section 6).
 
+**Every reader has to change something.** A flag or meter counts as read only
+where it changes the game, in one of these ways:
+- **On the table:** an enemy force, allies, Readiness, a battle lever, the
+  scenario or its variant, or what the briefing shows of the enemy;
+- **In the choices:** whether an option is offered, what it costs, or a roll's
+  modifier;
+- **In the route:** a branch, a chapter's eligibility, a thread's pressure, the
+  finale, or the ending reached.
+
+Journal and epilogue text read flags too, but that alone doesn't count. In the
+tables below, every flag has at least one reader of the three kinds.
+
 | Meter | Raised by | Lowered by |
 |---|---|---|
 | HTX Standing | *The dead at the gate* (process), *The ledger* (give), *The armoury* (leave it), *The cell* (hand over), *The data core*, *Payroll* (to HTX), the gunship, *The holdouts*, *The bomb-maker*, *Samples*, *Convoy*, a Decisive win | *The dead at the gate* (bury), *The survivors*, a failed hunt, *The cell* (hold, release), *The sealed door*, *The ledger* (sell), *The armoury* (take), *Terms*, *Who keeps the peace*, *The collapse*, *The audit*, *Tunnel noises*, *Publish* |
@@ -376,7 +388,7 @@ reader, and the validator checks both (section 6).
 
 | Flag | Set by | Read by |
 |---|---|---|
-| `nightshift_freed` | *The night shift* | *The schoolhouse* (talk) |
+| `nightshift_freed` | *The night shift* | *The schoolhouse* (talk), *Retake the Refinery* (the workers open a gate: you choose the deployment) |
 | `nightshift_shot` | *The night shift* (a failed roll) | *Terms* |
 | `driver_taken` | *Truck 14* | The chapter 3 force (one fewer transport), *Convoy* |
 | `depot_raided` | Depot Raid won | The chapter 3 force (no mortar) |
@@ -395,24 +407,24 @@ reader, and the validator checks both (section 6).
 | `varga_free` | *The sealed door*, *Publish* | *Varga's Revenge*, the Front's pressure |
 | `martyr_displayed` | *The martyr* | *Varga's Revenge* |
 | `sump_entered` | *The sealed door* (extreme) | The end of chapter 3 (Into the Sump), the hive's pressure |
-| `hive_known` | *What's down there* | *The Ceasefire* |
-| `htx_tracking` | *The miners' map*, *What's down there* | *The Partner* |
+| `hive_known` | *What's down there* | *The Ceasefire* (offered without the Sentiment it would need), *Hold the Line* (the rebels arrive as allies) |
+| `htx_tracking` | *The miners' map*, *What's down there* | *The Partner*; and HTX passes your positions on, so Black Lantern battles have enemy Readiness +1 |
 | `htx_suspects` | The Relief's trigger when the Sump wins, *The data core* (copy, failed), *Convoy* (skim) | *The Partner*, *An offer from Black Lantern*, Black Lantern Strength over time |
 | `htx_cut_off` | *The Relief*, *The audit*, *Who keeps the peace*, *The Partner* (tracker found), *Publish* | Pay, side contracts, *An offer from Black Lantern*, the endings |
 | `lantern_mercy` | *Black Lantern's wounded* | *The Showdown* |
 | `lantern_crossed` | *Black Lantern's prisoners* | *The Showdown* |
 | `pit9_shelled` | *The schoolhouse* | *Outbreak at Pit Nine*, *Terms* |
-| `pit9_spared` | *The schoolhouse* (clear or talk) | *Outbreak at Pit Nine*, the epilogue |
+| `pit9_spared` | *The schoolhouse* (clear or talk) | *Outbreak at Pit Nine* (the townsfolk show the enemy list), *Terms* (Sentiment roll +1), *Liberators* (the town backs the Front's rule) |
 | `core_recovered` | *The data core* | *Terms*, *Convoy*, *The Leak* |
-| `coverup` | *The data core*, *Who keeps the peace* | *The audit* |
+| `coverup` | *The data core*, *Who keeps the peace* | *The audit*; if it is found out, `htx_cut_off` and HTX Standing −3 |
 | `parley_betrayed` | *The challenge* | *Terms* |
 | `informant` | *The bomb-maker* | *The Last Redoubt* |
-| `miners_sealed` | *Outbreak at Pit Nine* | The epilogue |
-| `sample_taken` | *Samples* | *The Leak*, the epilogue |
+| `miners_sealed` | *Outbreak at Pit Nine* | *Terms* (enemy Readiness +2, and *Promise nothing* fails), *Liberators* (can't be reached: the miners never forgive it) |
+| `sample_taken` | *Samples* | *The Leak*, *Hive Heart* (+1 wave: HTX's lab stock breaks out), the Breakout comes at Hive Growth 7 instead of 8 |
 | `shafts_collapsed` | *The collapse* | *Hive Heart* |
 | `truce` | *The Ceasefire* won | The finales (allies), the endings |
 | `leaked` | *Publish* | The endings, side contracts' pay |
-| `core_sold` | *Publish* | The epilogue |
+| `core_sold` | *Publish* | *Terms* (the files are no longer yours to offer), the HTX thread's pressure −2, *Company Man* (reached at HTX Standing 1 or more) |
 
 **Chapter-local flags**, such as `aim_kill` and `aim_capture`, carry
 `local: true`. They are cleared when the chapter ends, and they only have to
@@ -461,15 +473,19 @@ shown and some are hidden.** Each meter's entry in the story data says which:
 
 Flags are never shown as flags. The journal tells them as prose.
 
-| Meter | Goes up when | What it does |
-|---|---|---|
-| **HTX Standing** | Following orders, honest reports, decisive wins | Pay multiplier (×0.5 to ×1.5). Air strikes and supply drops (a free unit or upgrade each act). At −3 or lower, HTX starts to turn on you. |
-| **Sentiment** (the locals) | Protecting civilians, releasing prisoners, sharing salvage | Bonus to recon rolls (the locals talk). Opens the truce and negotiations. Low Sentiment adds ambush events and Rebel Strength each chapter. |
-| **Loyalty** (your troops) | Death benefits, winning, resting units | High: once a battle, a unit may re-roll a failed Morale or Rally. Low: units leave between chapters, and new Trauma comes more easily. |
-| **Intel** (0 to 6) | Recon, interrogation, the data core | Spent on recon rolls, and on unlocking hidden options in briefings. |
-| **Rebel Strength** (0 to 10) | Depots left alone, prisoners released, low Sentiment | How many of the optional units in a Front force turn up, and its Readiness. At 0 the Front is broken and its chapters change or drop out. |
-| **Hive Growth** (0 to 10) | Each chapter from chapter 4 on, blasting, time spent waiting, side contracts taken (except catch-up ones, below) | How big the bug forces are, and the number of waves in the Hive Heart. At 8 or more when the finale begins, it forces the Breakout and Scorched Earth. |
-| **Black Lantern Strength** (0 to 10) | HTX trusting them over you, time | How many optional units Black Lantern brings, and their honours and upgrades. (Not to be confused with a battle's Readiness, section 3.) |
+Every meter has to matter **on the table** (what the battles look like) and
+**in the story** (which chapters, options and endings you get). None of them
+is there only for the journal:
+
+| Meter | Goes up when | On the table | In the story |
+|---|---|---|---|
+| **HTX Standing** | Following orders, honest reports, decisive wins | Air strikes: the gunship and other strike options need HTX Standing 1 or more. A supply drop each half at 2 or more (a free unit or upgrade, chosen from what the company lacks). At −3 or lower, HTX's own forces stop appearing as allies. | Pay multiplier (×0.5 to ×1.5). At −3 or lower by the end of chapter 3, The Relief. Low Standing raises the HTX thread's pressure. *Company Man* needs 2 or more. Options such as *Offer HTX's money* need it. |
+| **Sentiment** (the locals) | Protecting civilians, releasing prisoners, sharing salvage | At 3 or more, the locals talk: before each Front or hive battle, the enemy's list is shown. At −3 or lower, the locals warn the Front: Front battles have enemy Readiness +1. | Rolls in talks (*The schoolhouse*, *Terms*). At 3 or more, *The Ceasefire* can be offered. At −2 or lower, Rebel Strength +1 at each chapter's start. *Word from the town* at 2 or more. |
+| **Loyalty** (your troops) | Death benefits, winning, resting units | At 2 or more, once a battle, a unit may re-roll a failed Morale or Rally. At −2 or lower, units start their first turn with Suppression, and new Trauma comes on one roll lower. | At 0 or lower, *Stand down*, and units can leave. At 0 or lower, harsh orders cost more: handing over an officer in *Terms*, or pushing on in *Stand down*, each roll for a second unit leaving. The epilogue of every ending names who stayed. |
+| **Intel** (0 to 6) | Recon, interrogation, the data core | Spent as option costs (`cost: { intel: 1 }`), usually to show the enemy's list, pick the role, or turn a roll. A point can be spent to add 1 to any roll on Intel. | At 4 or more, Rebel Strength is revealed; at 6, Black Lantern Strength is. Options that need Intel to be offered at all, such as talking your way into the HTX office in *The Leak*. |
+| **Rebel Strength** (0 to 10) | Depots left alone, prisoners released, low Sentiment | How many optional units a Front force fields, its filler share, and its Readiness. | The Front thread's pressure. At 0 the Front is broken: its chapters drop out, and *The Last Redoubt* can't be the finale. At 7 or more, rebel allies in a truce are stronger too. |
+| **Hive Growth** (0 to 10) | Each chapter from chapter 4 on, blasting, time spent waiting, side contracts taken (except catch-up ones, below) | How big the bug forces are, and the number of waves in *Hive Heart*. In the second half, at 5 or more, every battle has a tunnel mouth on the table that the enemy may bring its reserves in through, and the ground near it is dangerous terrain. | The hive thread's pressure. *Outbreak at Pit Nine* at 3 or more. *Tunnel noises* at 4 or more. At 8 or more when the finale begins, the Breakout and Scorched Earth. |
+| **Black Lantern Strength** (0 to 10) | HTX trusting them over you, time | How many optional units Black Lantern fields, and their honours and upgrades. As allies in *The Partner*, the same. | The HTX thread's pressure. *The Partner* at 4 or more. At 7 or more, *The Showdown* can't be avoided once the HTX thread is the strongest, and *Contract Terminated* comes on a draw as well as a loss. (Not to be confused with a battle's Readiness, section 3.) |
 
 Time alone adds at most +4 Hive Growth by the finale, so Scorched Earth comes
 from the player's choices (blasting, waiting, the Sump), not just from the
@@ -956,7 +972,8 @@ game keeps it from being broken by accident.
   - no state reachable by a walk leaves an event with zero options;
   - no event id is used twice, and no two events in the same half offer the same set of battle levers (the same set of state levers is a warning);
   - every flag an event sets is read by something later (a later event, a branch, a force, an ending), and every flag read is set somewhere; a `local` flag is read inside its own chapter;
-  - every meter can be raised and lowered by written events in each half (Hive Growth's rise with time aside), and every meter is read by something;
+  - every meter can be raised and lowered by written events in each half (Hive Growth's rise with time aside);
+  - every flag and every meter has at least one reader that changes something on the table, in the choices or in the route; journal and epilogue text don't count, and the validator knows each reader's kind from where it is (a force, a lever, an option's `if` or `cost`, a roll, a `when`, a pressure, an ending);
   - every path ends at an ending, every ending can be reached, and the last ending has no condition;
   - in every reachable state, every thread the pool can offer has an eligible chapter (its fallback, if nothing else);
   - in the first half, the one-offs are reached only through options marked `extreme: true`, or the HTX Standing floor;
@@ -969,8 +986,10 @@ game keeps it from being broken by accident.
   It also reports how often each one-off comes up (target 5 to 15% each), how
   often Scorched Earth happens (target under 15%), and how often a finale comes
   with its thread's arc played, and, for every meter, its spread at the end of
-  each half and the events that moved it most. A meter that hardly moves, or a
-  flag that is almost never set, needs more writing. This is the balance tool
+  each half and the events that moved it most, and how often each meter's
+  thresholds (such as Sentiment 3 or Loyalty −2) are crossed. A meter that
+  hardly moves, a threshold nobody reaches, or a flag that is almost never set,
+  needs more writing. This is the balance tool
   for the writing.
 - **No test plays a battle.** The story's tests never run the AI against itself.
   A battle is stood in for by a **made-up report**: a grade is drawn, and a
