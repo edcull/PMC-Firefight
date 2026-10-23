@@ -75,6 +75,10 @@ src/
                      name (`node#name`) and the briefing read before the force is chosen
     deep-contract-maps.js  its ground: each open-table battle's own map (pieces in inches on a
                      48" table, stretched on a 6' x 4'), with named objectives where they fit
+    deep-contract-talk.js  what is said in its battles: each enemy side's lines and each battle's
+                     own, by moment (start, first kill or loss, half gone, waves, talks broken),
+                     and the allies' words, reporting in and answering each order,
+                     and the voices heard only there (story.js talkFor; storybattle.js storyTalk)
 
   view/              the browser
     game.js          the board: its state, and the modules below wired together
@@ -323,6 +327,8 @@ commander.js       the company's commander (the officer at the head of its field
                    casualty or replaced, through the muster, a squad wiped out and the aftermath
 allyorders.js      the allies' orders in a story battle: Move, Attack and Hold here, given and kept once
                    a turn, and the allies' AI answering each (only the allies act)
+storytalk.js       what is said in a story battle: the lines handed to each battle, by what has happened,
+                   and each said once, on a card with the speaker's face, when its moment comes
 storyscenes.js     the story's places as pictures: each drawn the same every time, none alike, and
                    every chapter card, battle map and ending with one
 storyside.js       HTX's bonus by HTX Standing, and the side contracts: offered at an interlude, taken

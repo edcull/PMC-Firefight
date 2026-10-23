@@ -489,6 +489,45 @@
     return spec;
   }
 
+  /* What is said in a battle (a story's `talk`): for each moment, one line,
+     the battle's own first and the enemy side's otherwise, picked at random
+     among those whose `if` holds (one with an `if` before one without), written out, with who says it. Handed to the
+     battle (levers.js), which puts each up once, when it happens
+     (storybattle.js storyTalk). */
+  var TALK_MOMENTS = ['start', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target'];
+  function talkFor(campaign, spec) {
+    var def = storyOf(campaign), talk = def && def.talk;
+    if (!talk || !spec) return [];
+    var ctx = ctxOf(campaign), own = (talk.battles || {})[spec.node] || {};
+    var side = (talk.sides || {})[spec.enemy && spec.enemy.side] || {};
+    var people = def.people || {}, out = [];
+    TALK_MOMENTS.forEach(function (m) {
+      var open = function (ls) { return arr(ls).filter(function (l) { return !l.if || test(ctx, l.if); }); };
+      var ls = open(own[m]);
+      if (!ls.length) ls = open(side[m]);
+      if (!ls.length) return;
+      // a line that answers what has happened comes before one that could be said anywhere
+      var apt = ls.filter(function (l) { return l.if; });
+      if (apt.length) ls = apt;
+      var l = ls[Math.floor(Math.random() * ls.length)], who = people[l.who] || {};
+      out.push({ on: m, who: l.who, name: who.name || l.who, role: who.role || '', text: render(campaign, l.text) });
+    });
+    // the allies: they report in as it opens (`allies`), and answer each order (allyVoice)
+    var av = allyVoice(campaign, spec);
+    if (av && av.report.length) out.unshift({ on: 'allies', who: av.who, name: av.name, role: av.role, text: av.report[Math.floor(Math.random() * av.report.length)] });
+    return out;
+  }
+  /* What the allies say, if a battle has them: who they are, and their words
+     for reporting in and for each order, written out. */
+  function allyVoice(campaign, spec) {
+    var def = storyOf(campaign), talk = def && def.talk, al = spec && spec.levers && spec.levers.allies;
+    var v = al && talk && talk.allies && talk.allies[al.side];
+    if (!v) return null;
+    var who = (def.people || {})[v.who] || {}, out = { who: v.who, name: who.name || v.who, role: who.role || '' };
+    ['report', 'move', 'attack', 'hold', 'clear'].forEach(function (k) { out[k] = arr(v[k]).map(function (t) { return render(campaign, t); }); });
+    return out;
+  }
+
   /* A battle's report graded from side A's view (the plan, section 3):
      decisive, victory, draw, defeat or rout. Losses are counted in
      composition points: a unit's Tier, times the share of it lost. */
@@ -952,7 +991,7 @@
     battleSpec: battleSpec, intel: intel, difficultyOf: difficultyOf, takeSide: takeSide, nodeAt: nodeAt, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
     test: test, apply: apply, roll: roll, pressure: pressure, finaleChapter: finaleChapter,
     endingFor: endingFor, epilogue: epilogue, broken: broken, breakCompany: breakCompany,
-    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf,
+    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf, talkFor: talkFor, allyVoice: allyVoice,
     GRADES: GRADES, COND_KEYS: COND_KEYS, CMP: CMP, EFFECT_KEYS: EFFECT_KEYS
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCStory;

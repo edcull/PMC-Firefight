@@ -75,6 +75,7 @@
       if (!feedHosts().length) return false;
       if (res && res.kind === 'Result') return false;         // the battle is over: say so properly
       if (res && res.alertOnly) return false;                 // the line a card wants read, put up over the table (alertCard)
+      if (res && res.talk) return false;                      // a story's voice in the battle: said over the table, face and all
       return true;
     }
 
@@ -198,7 +199,7 @@
       if (res.kind === 'Result') return;     // how the battle ended is read, and Continue pressed, by a person
       var actor = res.side || B.state.activeSide;
       if (!isAI(actor) && B.state.cfg.aiSides.length < 2) return;
-      var wait = res.kind === 'Assault' ? 3200 : res.kind === 'Initiative' ? 1400 : 2200;
+      var wait = res.talk ? 4500 : res.kind === 'Assault' ? 3200 : res.kind === 'Initiative' ? 1400 : 2200;
       ui.resTimer = setTimeout(closeRes, wait / (+window.PMC_TIME_SCALE || 1));
     }
 
@@ -271,7 +272,21 @@
       return 'hitchip';
     }
 
+    /* What a story's voice says in the battle (storybattle.js storyTalk): the
+       speaker's face (story-portraits.js), their name and side, and the line. */
+    function talkHTML(res) {
+      var esc = root.PMC.esc, ST = root.PMCStory, PF = root.PMCStoryPortraits;
+      var def = ST && ST.get && ST.get(res.talk.story), who = def && def.people && def.people[res.talk.who];
+      var face = who && who.face && PF ? PF.svg(who.face, 72) : '';
+      return '<div class="res-talk">' + (face ? '<div class="talk-face">' + face + '</div>' : '') +
+        '<div class="talk-words"><div class="talk-who"><b>' + esc(res.title) + '</b>' + (res.talk.role ? '<small>' + esc(res.talk.role) + '</small>' : '') + '</div>' +
+        '<p class="talk-line">' + esc(res.note) + '</p></div></div>';
+    }
+
     function resHTML(res, feed) {
+      if (res.talk && !feed) {
+        return talkHTML(res) + '<div class="res-foot"><button class="start" id="res-continue">' + (res.cont || 'Continue') + '</button></div>';
+      }
       // a long tag ("Modifying the armies") takes a line of its own, with the title under it
       var h = '<div class="res-top' + (String(res.kind || '').length > 14 ? ' stacked' : '') + '"><span class="res-kind">' + res.kind + '</span><h3>' + res.title + '</h3></div><div class="res-body">';
       if (res.dice) {

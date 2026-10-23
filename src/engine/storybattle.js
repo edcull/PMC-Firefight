@@ -15,7 +15,9 @@
    - the allies' orders: one marker the player puts down, and may move once a
      turn, that the allies' AI answers (allyOrder; ai.js);
    - the target variant: the target killed, or with `capture` Broken and then
-     reached, ends the battle (targetCheck, asked by scenarios.js). */
+     reached, ends the battle (targetCheck, asked by scenarios.js);
+   - what is said: the story's lines, each put up on a card with the speaker's
+     face when its moment comes (storyTalk). */
 (function (root) {
   'use strict';
   root.PMCEngineStory = function (E) {
@@ -276,9 +278,60 @@
       countdown(state, lines);
       extraction(state, lines);
       waves(state, lines);
-      if (!lines.length) return;
-      lines.forEach(function (l) { E.logLine('note', l.text); });
-      E.pushRes({ kind: 'End phase', title: state.scen.name, list: lines });
+      if (lines.length) {
+        lines.forEach(function (l) { E.logLine('note', l.text); });
+        E.pushRes({ kind: 'End phase', title: state.scen.name, list: lines });
+      }
+      storyTalk();
+    }
+
+    /* ================= what is said =================
+       The story's lines for this battle (cfg.story.talk, from story.js talkFor),
+       each put up once, on a card with the speaker's face, when its moment comes:
+       asked at the start of every turn, after every activation and at the End
+       phase. What has been said is kept on the battle, so a save carries it. */
+    var TALK_VOICE = { ops: 'A' };
+    function lostOf(side, all) {
+      var units = E.state.units.filter(function (u) { return u.side === side && !u.ally && (all || !u.spawned); });
+      return { n: units.length, lost: units.filter(function (u) { return !u.alive && !u.extracted; }).length };
+    }
+    function talkMoment(on, state) {
+      if (on === 'start') return state.turn >= 1;
+      if (on === 'allies') return state.turn >= 1 && !!state.allies;
+      if (on === 'turn3') return state.turn >= 3;
+      if (on === 'kill') return lostOf('B', true).lost >= 1;
+      if (on === 'loss') return lostOf('A').lost >= 1;
+      if (on === 'bhalf' || on === 'ahalf') { var l = lostOf(on === 'bhalf' ? 'B' : 'A'); return l.n > 1 && l.lost * 2 >= l.n; }
+      if (on === 'wave') return !!(state.sc && state.sc.waves && state.sc.waves.n);
+      if (on === 'parley') return !!(state.sc && state.sc.parley && state.sc.parley.broken);
+      if (on === 'target') {
+        var t = state.units.filter(function (u) { return u.storyTarget; })[0];
+        return !!t && t.alive && ((t.sp || 0) > 0 || t.models < (t.startSize || t.models) || (t.damage || 0) > 0);
+      }
+      return false;
+    }
+    function storyTalk() {
+      var sty = story(), state = E.state;
+      if (!sty || !sty.talk || !sty.talk.length || state.phase !== 'battle' || state.over || !state.turn) return;
+      var said = state.talkSaid = state.talkSaid || {};
+      sty.talk.forEach(function (l) {
+        if (said[l.on] || !talkMoment(l.on, state)) return;
+        said[l.on] = state.turn;
+        say(l, TALK_VOICE[l.who] || null);
+      });
+    }
+    function say(l, side) {
+      E.logLine('note', l.name + ': \u201c' + l.text + '\u201d');
+      E.pushRes({ kind: 'Comms', title: l.name, side: side, note: l.text,
+        talk: { story: story().id, who: l.who, role: l.role } });
+    }
+    /* The allies answer an order (cfg.story.allyVoice): their words for it, in
+       turn, so the same order twice is not answered the same way. */
+    function allyAnswer(kind) {
+      var av = story() && story().allyVoice, ls = av && av[kind || 'clear'];
+      if (!ls || !ls.length) return;
+      var n = E.state.allyTalkN = (E.state.allyTalkN || 0) + 1;
+      say({ who: av.who, name: av.name, role: av.role, text: ls[(n - 1) % ls.length] }, 'A');
     }
 
     /* What a story asks of the check, before the scenario's own: its target, and
@@ -362,7 +415,7 @@
       if (state.phase !== 'battle' || state.over) return 'orders are given once the battle is under way';
       if (orderLocked()) return 'the allies are already acting on this turn’s orders';
       if (it.kind == null) {
-        if (state.allyOrder) E.logLine('note', 'The allies are left to their own judgement.');
+        if (state.allyOrder) { E.logLine('note', 'The allies are left to their own judgement.'); allyAnswer(null); }
         state.allyOrder = null;
         return null;
       }
@@ -371,6 +424,7 @@
       if (!isFinite(x) || !isFinite(y) || x < 0 || y < 0 || x > R.BOARD.w || y > R.BOARD.h) return 'that is off the table';
       state.allyOrder = { kind: it.kind, x: x, y: y, turn: state.turn, acted: false };
       E.logLine('note', 'The allies’ orders: ' + ORDER_KINDS[it.kind].toLowerCase() + '.');
+      allyAnswer(it.kind);
       return null;
     }
     // an ally acting on the order: from now, this turn's order stands
@@ -385,7 +439,7 @@
       orderWord: function (k) { return ORDER_KINDS[k] || ''; },
       storySeeded: storySeeded, storyTerrain: storyTerrain, storyFixed: storyFixed,
       storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck,
-      storyEndPhase: storyEndPhase, storyCheck: storyCheck, parleyHolds: parleyHolds
+      storyEndPhase: storyEndPhase, storyTalk: storyTalk, storyCheck: storyCheck, parleyHolds: parleyHolds
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineStory;

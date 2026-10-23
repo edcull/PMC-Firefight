@@ -279,7 +279,12 @@ Loyalty and Intel are shown; the rest come to light as you learn of them) and se
   choices before the battle. The force is picked with the campaign's own muster.
   Where a battle lets you, you choose your role or the edge you come in from.
   Allies fighting beside you take one order a turn from a marker you put on the
-  table: move here, attack here or hold here.
+  table: move here, attack here or hold here. In the fighting, the people of the
+  story have their say, on a card with their face: the Front's taunts and
+  demands, Black Lantern's offers, the hive's noises and your own radio, at the
+  start, at the first blood on either side, when a side is half gone, when the
+  waves come or the talks break. What they say answers what you have done.
+  Allies report in as the battle opens, and answer each order you give them.
 - **The two halves.** Chapters 1 to 4 are the contract as HTX wrote it, the same
   for everyone (with two one-off chapters some companies never see). From
   chapter 5 the jobs come from whatever is pressing hardest: the Front, a truce,

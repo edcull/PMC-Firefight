@@ -1164,6 +1164,7 @@
     whenIdle(function () {
       K.reservePhase(function () {
         function action() {
+          K.storyTalk();           // story mode: what is said as the turn opens (storybattle.js)
           // the automated defence system's guns, "at the beginning of each Action phase" (p. 160)
           if (state.compound) K.autoGuns();
           state.phaseCount = { A: unbroken('A'), B: unbroken('B') };
@@ -1391,6 +1392,7 @@
       if (sd) K.finish(sd.winner, sd.text.replace(/\bA\b/g, sideName('A')).replace(/\bB\b/g, sideName('B')));
     }
     if (state.over) { render(); return; }
+    K.storyTalk();                 // story mode: what is said, when it happens (storybattle.js)
 
     /* Command Vehicle (p. 57): "as soon as the Command Vehicle finishes its
        activation, the Command Unit on board MAY perform one of their special

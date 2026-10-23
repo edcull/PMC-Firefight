@@ -16,6 +16,7 @@
   // the story's words, and its maps, kept in files of their own (deep-contract-text.js, deep-contract-maps.js)
   if (!(root.PMCStoryText && root.PMCStoryText['deep-contract']) && typeof require === 'function') require('./deep-contract-text.js');
   if (!(root.PMCStoryMaps && root.PMCStoryMaps['deep-contract']) && typeof require === 'function') require('./deep-contract-maps.js');
+  if (!(root.PMCStoryTalk && root.PMCStoryTalk['deep-contract']) && typeof require === 'function') require('./deep-contract-talk.js');
   var TEXT = (root.PMCStoryText && root.PMCStoryText['deep-contract']) || {};
 
   /* The words laid over the working: a chapter's intro, a node's text, an
@@ -56,6 +57,14 @@
     outbreak: ['pitnine', 'fire'], shafts: 'sump', hiveheart: 'sump', partner: 'hills', leak: 'uplink', convoy: 'haulroad',
     showdown: 'htxyard', breakout: 'slagfields'
   };
+  /* What is said in its battles (deep-contract-talk.js), and the voices that say it among its people. */
+  function withTalk(def) {
+    var talk = root.PMCStoryTalk && root.PMCStoryTalk['deep-contract'];
+    if (!talk) return def;
+    def.talk = { sides: talk.sides || {}, battles: talk.battles || {}, allies: talk.allies || {} };
+    Object.keys(talk.people || {}).forEach(function (k) { if (!def.people[k]) def.people[k] = talk.people[k]; });
+    return def;
+  }
   function withWho(def) {
     (def.chapters || []).forEach(function (ch) {
       var sc = SCENE[ch.id];
@@ -132,7 +141,7 @@
     failure: [{ effects: [{ flag: 'finale_lost' }] }]
   };
 
-  S.register(withWho(withProse({
+  S.register(withTalk(withWho(withProse({
     id: 'deep-contract', name: 'Deep Contract', version: 1, length: 8,
     blurb: 'Kessler\'s Reach is a mining moon, and its miners have risen. HTX hires your company to restore order, quickly and quietly. HTX is hiding why they rose.',
     // the locals talk: with their trust, you know what you face before a battle
@@ -772,7 +781,7 @@
       { about: 'company', if: { meter: 'loyalty', lte: -1 }, text: 'Half the company signed on elsewhere before the next contract. The ones who stayed with {commander} don’t talk about the moon.' },
       { about: 'company', text: '{commander} took {name} on to the next contract, as commanders do.' }
     ]
-  })));;
+  }))));
 
   if (typeof module !== 'undefined' && module.exports) module.exports = S.get('deep-contract');
 })(typeof window !== 'undefined' ? window : global);
