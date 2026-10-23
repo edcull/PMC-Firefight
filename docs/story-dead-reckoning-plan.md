@@ -19,6 +19,214 @@ owner; only the story's length waits on the walk. Every name is a placeholder.
 
 ---
 
+## 0. The rework: a military first-contact campaign (proposed outline)
+
+**Status: proposed, for review.** Asked for by the owner after phase 4: the
+story should read as a **military campaign**, the Xenotripods should be
+**unknown**, the campaign is **first contact**, and **full Xenotripod battles
+come only in the second half**. Sections 2 to 4 below are the old bible, the
+treasure hunt. Where this section disagrees with them, this section wins once it
+is agreed. Nothing in the code changes until it is. Every name is still a
+placeholder.
+
+### What changes, in one paragraph
+
+The company is no longer racing other companies to a dead world for an
+antiquities dealer. It is on a **war contract with the Colonial Navy's Frontier
+Command**, sent into the Morrow Reach, where colonies have been going silent one
+after another. Command thinks it is an insurgency, backed by corporations
+selling it weapons. The first half is that campaign: insurgents, pirates,
+mercenaries and corporate security, fought for objectives Command sets. All the
+while there are signs of something else: dead without wounds, glass where
+streets were, weapons of nobody's make, a structure under a swamp. The enemy
+behind it has no name, no face and no voice until the end of the first half,
+when the Morrow log is read and Command declares **first contact**. The second
+half is the war that follows.
+
+### The setting
+
+- **The Morrow Reach.** A frontier of a dozen young colonies past the last
+  naval station. Over eight months, six have gone silent. The Navy is stretched
+  thin elsewhere, so Frontier Command hires PMCs.
+- **The Morrow log.** The Navy survey ship *Morrow* charted the Reach forty
+  years ago and was lost in it. Her last log was kept by dead reckoning, with no
+  star fixes: only headings, times, and what she saw. It has turned up in the
+  first silent colony. Read with the **fragments**, the palm-sized objects of
+  unknown make found at every contact site, it is the route the attackers came
+  by. (These are the old lodestones.)
+- **Frontier Command.** The company's employer, and its chain of command:
+  - **Commodore Rook** commands the Reach. A career officer: objectives and
+    casualties, no surprises.
+  - **Commander Ottilie Vane, Naval Intelligence,** is the company's handler.
+    She knows more than she says. Her own black-ops unit, **the Ninth Lance**,
+    is in the Reach, and the company does not know it.
+  - **Lieutenant Halloran**, the reader, is a navigator seconded to the company
+    to read the log. Halloran is the Escort's VIP in chapter 1.
+- **The human enemy, first half.** The old rivals keep their archetypes, but
+  they are now the war's other side:
+
+| Force | Archetype | Now |
+|---|---|---|
+| **The Free Reach** (insurgents) | rebels | The colonists' militia, blamed for the silences. Some of it is real insurgency; some of it is colonists shooting at anyone who lands. |
+| **Coin & Kettle** | Mercenary (`swarm`) | Hired by the Free Reach. Can be bought. |
+| **Wraith Section** | Special Ops (`marksmen`) | A combine's black-ops team, cleaning up the evidence of what the combine sold. |
+| **Sable Armour Group** | Bastion (`armour`) | The combine's security, holding the port the weapons come through. |
+| **The Red Reavers** | Shock (`shock`) | Pirates picking over the silent colonies. |
+| **Kestrel Air Cavalry** | Cavalry (`aircav`) | Another Navy contractor, on the company's side: a possible ally and a rival for Command's favour. |
+| **The Ninth Lance** | Elite (`elite`) | Vane's. Met only after an extreme choice in the first half, and a thread in the second. |
+
+- **The unknown enemy, first half.** Seen only as **unknown contacts**: no
+  name, no profile, no face and no voice, never a whole army. Section *Unknown
+  contacts* below says how. The player may guess; the story never says.
+- **The Xenotripods, second half.** Named at the reveal. The tribes are as
+  before (Sh'kar, Mithdu, Ulvar, Amt), and so are the Hashamer Esh-Aven as
+  possible allies. Every full Xenotripod battle is in the second half.
+
+### The shape
+
+```mermaid
+flowchart TD
+  C1[1. Lost Contact<br/>Vesk, a silent colony<br/>Escort: Halloran and the log<br/>vs the Free Reach / Coin & Kettle] --> C2{2. Two Leads}
+  C2 -->|the crash site| C2a[The Glass Flats<br/>Find: the first fragment<br/>vs Wraith Section]
+  C2 -->|the relay| C2b[Station Thule<br/>Close Encounters<br/>vs the Reavers]
+  C2a --> C3[3. The Drowned Beacon<br/>vs the Reavers<br/>then UNKNOWN CONTACTS]
+  C2b --> C3
+  C3 --> C4[4. The Supply Line<br/>Kerrigan: the weapons' port<br/>vs Sable Armour]
+  C3 -.->|extreme: through the gate| W[Beyond the Gate<br/>one-off: the Reavers who went first,<br/>and something in the walls]
+  C3 -.->|extreme: Vane's Trust −3| L[The Double-Cross<br/>one-off vs the Ninth Lance]
+  C4 --> R((THE REVEAL<br/>Contact))
+  W -.-> R
+  L -.-> R
+  R --> P[Chapters 5 to 7: The Long War<br/>full Xenotripod battles]
+  P --> F[Chapter 8: the finale at the Quiet]
+```
+
+### The first half: Silent Frontier (chapters 1 to 4)
+
+Every battle is a military operation with an objective Command sets, against a
+human enemy. The unknown appears twice, briefly, and gets worse each time.
+
+1. **Lost Contact.** Vesk, the first silent colony. The company lands to find
+   the town half empty, with glass where the streets were and dead without a
+   mark on them. The Free Reach militia holds the market square. Halloran has
+   the *Morrow* log from the colony office and must reach the landing field.
+   This is an *Escort* (already built: phase 4's Lot 47) against the militia and
+   Coin & Kettle. It cannot be lost outright: a defeat means the log is held at
+   a cost.
+   Events: how to go in (by the book, fast and loud, or with the militia talked
+   down: Command, Intel); what to do with the militia's prisoners.
+2. **Two Leads.** Command gives two leads, and the company can follow one:
+   - **The Glass Flats**: the crater where the *Morrow*'s lander came down,
+     fresh glass all round it. *Find and secure*, with the relic variant (built):
+     the first **fragment**. Wraith Section is there first, burning what it
+     can't carry.
+   - **Station Thule**: the Reach's silent relay, looted by the Reavers.
+     *Critical control* in Close Encounters (built). The station's last
+     recordings: shapes in the static, and a sound (Intel +1).
+3. **The Drowned Beacon.** Navy recon has the Reavers digging at a structure
+   under a jungle swamp on Tessaly IV, the next heading in the log. An assault:
+   *Find and secure* (relic) against the Reavers, **and then the unknown**. In
+   the End phase of turn 3, or when the fragment is lifted, the Reavers break
+   and run for their ships, and **unknown contacts** step out of the air (two or
+   three units, by Tier). The battle becomes: get the fragment out, or get out.
+   Before the battle the choices stay: storm it, watch it first, or hail it on
+   every band (no answer, only a tone back, and Understanding +1, a hidden
+   meter).
+4. **The Supply Line.** Kerrigan, the free port the Free Reach's guns come
+   through. Sable Armour holds the warehouse for the combine. *Hostile takeover*
+   (built). Inside, among the rifles, are crates of a material no human
+   factory makes. Buy the manifest (kUC), take the warehouse, or let Sable
+   ship it and follow it (Intel +2).
+
+**The two one-offs**, extreme choices as before:
+
+| One-off | The extreme choice | The battle | What it leaves |
+|---|---|---|---|
+| **Beyond the Gate** | At the beacon, the air where the contacts stepped out stays open. **Go through.** | *Clearing out* in Close Encounters on a world nobody has charted, in a dead outpost. The enemy is the Reavers who went through first; one or two unknown contacts come through the walls (tunnels). | The first look at where they live. Alarm +3, a fragment Command does not know about, and the Front thread is open from chapter 5. |
+| **The Double-Cross** | Vane's Trust −3 or lower by the end of chapter 3, or the log copied to the combine | Vane sends the Ninth Lance to take the log and the fragments. *Meeting engagement*. | Cut off from Naval Intelligence; the Patron thread is open from chapter 5. |
+
+### The reveal: Contact
+
+A short interlude between the halves, replacing *The Long Jump*'s opening.
+Halloran finishes reading the log with the fragments. The *Morrow* met them
+forty years ago and named them for what she saw: three-legged walkers that came
+out of the air. Command's xenologists give them the name **Xenotripods**, and
+the Commodore declares first contact and a war footing in the Reach. The
+battle reports, the faces and the talk can name them from here on. The fragments
+turn out to be pieces of their teleport network. The journal shows every
+"unknown contact" of the first half again, now named.
+
+### The second half: The Long War (chapters 5 to 8)
+
+The same thread machinery, with the threads reframed as a campaign:
+
+| Thread | Was | Now | Finale |
+|---|---|---|---|
+| **The Front** | The Tribes | The Xenotripod offensive across the Reach: the Ulvar shieldwall (*Strike*), the Sh'kar raiding the company's firebase (*Invasion*), the Mithdu under the silent colonies (*Clearing out*). Full Xenotripod battles. | **The Spire** (as before) |
+| **The Profiteers** | The Race | The combine and its mercenaries, still selling to whoever pays and now salvaging the war: Coin & Kettle, Wraith Section, Sable. | **The Landing**: the combine's forces dug in on the Quiet's only landing field |
+| **First Contact** | First Contact | The Hashamer Esh-Aven, abandoned by their masters, ask for help. *The Mimics*, *The Speaker* (the Parley, built), *Signal Fires*. Xenotripod allies. No finale; it changes the others. | none |
+| **The Cover-up** | The Patron | What Naval Intelligence knew of the *Morrow*, and for how long. *The Vault*, *The Escort*, *Debts*. | **The Collector** (the Ninth Lance) |
+
+The override stays: **Alarm 8 means Recall**, a *Breakout* as the Quiet wakes.
+
+### Unknown contacts (new engine work)
+
+- **On the table.** A unit marked `unknown` is drawn shrouded, as a heat-haze
+  silhouette with no colours or kit, until it is within 6" of one of the
+  company's units. In the unit list, the tooltip, the battle log and the
+  briefing intel it is "Unknown contact". Its statline reads "?" and its
+  weapons "unidentified". Shooting it and taking hits from it work as usual,
+  but the log says "unknown weapon".
+- **Arrival.** A battle's `contacts: { at: 'turn3' | 'found', units: [...] }`.
+  At that moment side B's human units withdraw off the table (they are counted
+  as fled, not as kills) and the contacts appear from the air as side B, by a
+  teleport point near the objective. The scenario's win conditions carry on
+  (the fragment still has to come out).
+- **Voices.** No speaker for them in the first half: their moment lines are
+  "[static]", a tone, or the company's own: "Contact! Unknown contact!", "What
+  *are* they?" No tripod faces before the reveal.
+- **Reveal.** A `revealed.xeno` flag set at the interlude lifts all of it. The
+  same unit types are shown normally from there.
+
+### What carries over, and what changes
+
+| Built | Fate |
+|---|---|
+| The Escort scenario and Lot 47's battle | Kept: chapter 1, Halloran instead of Vane |
+| The relic variant, the Glass Flats and the Mire maps | Kept: chapters 2 and 3 |
+| Station Thule, the docks, the docking ring | Kept |
+| The star chart | Kept: the route the attackers came, with contact sites marked, and the rivals as enemy positions |
+| The Parley chat | Kept: *The Speaker*, second half |
+| Esh-Aven figures, faces and scenes | Kept, second half only |
+| Tripod faces (Sh'kar, Mithdu) and bracketed voices in the first half | Removed from the first half; moved to the second |
+| The first half's words and talk (`dead-reckoning-text.js`, `-talk.js`) | **Rewritten**: Command's briefings, operations, military radio talk; no auction, no salvage race |
+| The meters | **Renamed**: Vane's Trust stays (the handler); a new **Command** meter (standing with Frontier Command, sets pay); Lead becomes **Initiative**; `stones` and `theirs` become fragments held by the company and by the combine; Alarm and Understanding are hidden until the reveal |
+| The endings | **Re-aimed**: *Claim Jumped* becomes the combine's victory, *Finder's Fee* becomes a Navy victory (the Reach held, the Quiet seized), *First Contact* stays as the peaceful ending, *Lost Signal* and *Broken Company* stay |
+
+### Plan, if agreed
+
+1. **The bible rewritten.** Sections 2 to 4 reworked to this outline, with
+   the meters, flags and endings renamed.
+2. **The engine: unknown contacts.** The `unknown` mark (drawing, names,
+   intel, log), the `contacts` arrival with the human side withdrawing, the
+   reveal flag. Tests and screenshots.
+3. **The first half re-written**: data, words and talk, with chapter 3's
+   contacts and Beyond the Gate.
+4. Then phase 5 (the second half) as planned, with the Xenotripods named.
+
+### Questions for the owner
+
+- Is the employer right: the Colonial Navy's Frontier Command, Vane as Naval
+  Intelligence, and Kestrel on the company's side?
+- The unknown on the table: shrouded silhouettes until 6" (proposed), or drawn
+  plainly but nameless?
+- In chapter 3, the human enemy withdrawing as the contacts arrive (proposed),
+  or a three-way battle (a much bigger engine change)?
+- Keep the title *Dead Reckoning*, or call it *First Contact* (in which case the
+  peaceful ending needs another name)?
+
+---
+
 ## 1. What it builds on
 
 Everything *Deep Contract* built is reused as it is:
