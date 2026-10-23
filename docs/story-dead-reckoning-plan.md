@@ -257,12 +257,21 @@ Allies are not only the Xenotripods. A rival can be **hired** to fight beside
 the company, and the rivals are mercenaries: they cost money, they cost more
 each time, they want a share, and they cannot be trusted with the prize.
 
-- **Who can be hired.** *Coin & Kettle* is always for sale. *Kestrel Air
-  Cavalry* fights for the pictures, not the money. *The Red Reavers* come cheap
-  and leave a mess. A rival the company has done a favour for (`sable_owed`,
-  after leaving Sable the warehouse at The Broker) offers once, for free.
-  Hiring is an option at the event before a battle, like the port master's
-  men in *Deep Contract*, with a `cost` of that company's **Price**.
+- **Nobody is for hire at first.** The opening battles (chapters 1 to 3) are
+  the company's alone. A rival becomes available only once a decision or an
+  event has opened the door, and each one's door is different:
+
+  | Company | What makes them available | Their terms |
+  |---|---|---|
+  | **Coin & Kettle** | Their agent, taken after *Lot 47*, is let go with a message, or paid (`kettle_contact`). From then on they are always for sale. | Money, and more of it each time. |
+  | **Kestrel Air Cavalry** | Kestrel scoops a site (`kestrel_scooped`) and the company lets their camera team film its next fight, or an interlude's newsfeed offer is taken (`kestrel_deal`). | Pictures, not money: first access to a site (Lead −1), and they want the story told their way. |
+  | **The Red Reavers** | Met as claim jumpers, their captain is spared or bought off instead of finished (`reavers_spared`). | Cheap, and they leave a mess (Alarm +1 at a Xenotripod battle, Loyalty −1 for what the company watches them do). |
+  | **Sable Armour Group** | Left the warehouse at *The Broker* (`sable_owed`). | Once, for free. After that, ordinary terms. |
+
+  The earliest hire is at *The Broker* (chapter 4), and only Coin & Kettle,
+  only with `kettle_contact`. Hiring is then an option at the event before a
+  battle, like the port master's men in *Deep Contract*, with a `cost` of that
+  company's **Price**, and an `if` on what opened their door.
 - **The Price rises.** Each hired company has a Price in kUC (section 4). It
   goes up by one each time they are hired, when they take losses, and when a
   demand is refused; a decisive win paid in full brings it down.
@@ -438,7 +447,9 @@ The same tests, run on both stories:
 - **`storygraph.js`** runs the validator on every registered story, with the new
   checks: every chapter has a `place`; every archetype named exists for its
   faction; every relic battle is a scenario with objectives; the Recall override
-  can be reached; First Contact has no finale.
+  can be reached; First Contact has no finale; no option hires a rival before
+  chapter 4, and every hire option asks for the flag that makes that rival
+  available.
 - **`storywhole.js`** walks each story (seeded, as now), with the same targets
   (Company Tier III by the end in half the walks or more, Broken Company rare),
   and new ones: each ending reached; *Lost Signal* (Recall) under 20%; the
@@ -450,7 +461,8 @@ The same tests, run on both stories:
   IV from its archetype, legal, and recognisably its archetype (the same checks
   the archetype editor's notes describe: Wraith fields snipers, Sable hulls, the
   Sh'kar a teleport turret).
-- **`storyhired.js`** (new): a hired company's Price rising and falling, a
+- **`storyhired.js`** (new): nobody for hire before chapter 4, and each hire
+  option behind the flag that opens it; a hired company's Price rising and falling, a
   demand paid and refused, an order refused and paid for, the allies walking at
   half strength, and the Turn set up with its ambush inside the company's half.
 - **`storytalk.js`, `storyfaces.js`, `storyscenes.js`** extended to the new story.
