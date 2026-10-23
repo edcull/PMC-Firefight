@@ -101,7 +101,10 @@ give the orders. They have kept the war going ever since by copying it. Some
 Esh-Aven wear an Alpha's crest and give the orders now; others carry a Gamma's
 guns. They project to one another the way their masters projected to them. That
 is why every unit they field is a Xenotripod unit, and every one of them is an
-Esh-Aven.
+Esh-Aven. What they don't have says the same thing: **no craft and no teleport
+turrets.** The Crocks flew their craft home when they left, and the teleport
+network answers only to a Crock's mind. The Hashamer fight on foot, behind a few
+defensive turrets they can still keep running.
 
 **Why they will work with a PMC.** Three reasons, and the story tells all three:
 
@@ -564,7 +567,7 @@ the briefings; hidden ones only in the writing until an event reveals them, as i
 | **Lead** | 0 | yes | At −3 or lower, the leading rival is already dug in wherever the company arrives: their Readiness +1. At 3 or more, the company chooses its role in every Race battle. | The Race's pressure (low Lead raises it). *The Landing*'s force (the rival's optional units by −Lead). |
 | **`stones`** (0 to 7) | 0 | yes, as a count | Each stone short of five: the finale's enemy Readiness +1. | *A warm stone*, *Send one ahead*; the endings. |
 | **`theirs`** (0 to 7) | 0 | as a count, from Intel 4 | The leading rival's optional units in *The Landing*. | The Race's pressure; *Claim Jumped* when it is more than `stones`. |
-| **Alarm** (0 to 10) | 0 | once a tribe is met | How many optional units a tribe fields and its Readiness; at 5 or more, a teleport turret in every Xenotripod force. | The Tribes' pressure; **Recall at 8**; *The village* and *Survey cover*. |
+| **Alarm** (0 to 10) | 0 | once a tribe is met | How many optional units a tribe fields and its Readiness; at 5 or more, a teleport turret in every Xenotripod force but the Hashamer's. | The Tribes' pressure; **Recall at 8**; *The village* and *Survey cover*. |
 | **Understanding** (0 to 6) | 0 | once a tribe is met | Signal rolls; Xenotripod allies' size (one unit more at 4 or more). | First Contact's pressure; *Voices* at 2; *The Speaker* offered at 3 (or `beacon_rubbing`); the *First Contact* ending. |
 | **Rival strength** (one per rival: `kettle`, `wraith`, `sable`, `kestrel`, `reavers`; 0 to 10) | 2 | no; from Intel 4 | Their optional units and filler, as Rebel Strength. | Which rivals the second half brings (the two strongest met, plus Kestrel). A rival at 0 is out of the race. |
 | **Lance strength** (0 to 10) | 2 | no; from `lance_known` | The Ninth Lance's optional units. | The Patron's pressure; at 7, *The Collector* comes on a draw as a loss. |
@@ -604,13 +607,16 @@ filler to fit the company, changes by flag. What is new:
   the force: the same numbers and the same rules, Mental Projection included,
   but every trooper drawn as an Esh-Aven, named as one ("Esh-Aven Alpha
   troopers"), and counted as one when losses are counted (the `eshaven` pool,
-  not `crocks`). Their turrets and craft are machines, as anyone's are. The same
-  skin is on them when they fight beside the company in *The Mimics* and the
-  finales.
+  not `crocks`). **No aviation and no teleport turrets**: their force draws only
+  on the trooper castes and defensive turrets (and at most one turret,
+  as the archetype already has it), and no change, filler or Alarm rule may add
+  a craft or a teleport turret to it. The defensive turrets are machines and keep
+  their own art. The same skin and the same limits hold when they fight beside
+  the company in *The Mimics* and the finales.
 
 ```js
 // the Hashamer: Xenotripod units, every one of them an Esh-Aven
-tribe('hashamer', { skin: 'eshaven' })
+tribe('hashamer', { skin: 'eshaven', without: ['Strike Aviation', 'Support Aviation', 'Teleport Turrets'] })
 
 // the shapes, not the final keys
 function rival(id, extra) {
@@ -631,7 +637,7 @@ function tribe(id, extra) {
     core: CORE[id],                                          // an Alpha for the Tier, and what makes the tribe itself
     optional: { meter: 'alarm', per: 2, archetype: true },
     fill: { to: 0.85, archetype: true, meter: 'alarm', step: 0.05 },
-    changes: [{ if: { meter: 'alarm', gte: 5 }, add: 'xtturret2' }]
+    changes: [{ if: { meter: 'alarm', gte: 5 }, add: 'xtturret2' }]   // (not where the force is `without` them)
   }, extra);
 }
 ```
@@ -672,6 +678,7 @@ up. Jumps cost kUC (a decision, section 8), which side contracts pay for.
 | **Forces by archetype** | `enemy.archetype` on a written force: the filler drawn from the archetype's weights, its doctrines on side B, its temper. | `levers.js` `buildForce`; `campaign.js` `archetype()` |
 | **Xenotripods in a story** | The leader for the Tier (an Alpha), turrets placed as the engine places them, doctrines on B, and the words for the dossier (`describeForce`: "a tribe, mostly Esh-Aven, with turrets"). | `levers.js` (`KINDS.troops`, `describeForce`), `campaign.js` `commandKey` |
 | **Xenotripod allies** | Allies of the `xeno` faction on side A. Mental Projection and Limited Senses follow the units, whichever side; allied turrets are placed in side A's zone. | `storybattle.js` `storyUnits`, `xeno.js` (a check, not a change) |
+| **Unit groups left out** | `without: [groups]` on a written force: no core, optional, filler or change may bring in a unit of those groups (a change that would is skipped, and the validator warns). | `levers.js` `buildForce` |
 | **A force reskinned: the Esh-Aven** | `skin: 'eshaven'` on a written force (enemy or allies) puts `u.skin` on each unit it makes. Nothing in the rules reads it but the loss count: a skinned unit's models go in the `eshaven` pool and are counted, not named, as Epsilons' already are. The view reads it: every trooper art key maps to an Esh-Aven figure in that caste's kit, and the unit's name says Esh-Aven. Machines keep their own art. | `storybattle.js` `storyUnits` (the skin onto the unit); `rules.js` `poolOf` / `campaign.js` (the count); `iso-troops.js` (the art map); `levers.js` (the dossier words: "a host of Esh-Aven") |
 | **Hired allies who answer back** | An ally order can be refused: with the hired company's Trust low, `giveAllyOrder` puts a demand (a kUC price) in place of the order, and the allies' card offers to pay it. Their answer is a line in their voice (`allyVoice`, a new `demand` set). | `storybattle.js` `giveAllyOrder`, `allyAnswer`; `panels.js` |
 | **Allies who walk** | At an End phase, hired allies that have lost half their units (or that came with Trust −2 or lower) leave the table: extraction for allies, which *Deep Contract*'s extraction already does for side A units, with the allies' line said. The report marks them `walked`, and the story reads it (`{ allies: 'walked' }`). | `storybattle.js` (a step in `storyEndPhase`), the report |
@@ -768,7 +775,8 @@ The same tests, run on both stories:
   the archetype editor's notes describe: Wraith fields snipers, Sable hulls, the
   Sh'kar a teleport turret); and every Hashamer trooper, enemy or ally, skinned
   as an Esh-Aven, with the same profile as the unskinned unit and its losses in
-  the `eshaven` pool.
+  the `eshaven` pool; and no Hashamer force, at any Tier or Alarm, with a craft
+  or a teleport turret in it.
 - **`storyhired.js`** (new): nobody for hire before chapter 4, and each hire
   option behind the flag that opens it; a hired company's Price rising and falling, a
   demand paid and refused, an order refused and paid for, the allies walking at
