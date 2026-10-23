@@ -371,6 +371,8 @@
     function parley(state, lines) {
       var pa = state.sc && state.sc.parley;
       if (!pa || pa.broken) return;
+      // (talked out, the conversation settled it: there are no talks left to break)
+      if (pa.talked) return;
       var hurt = state.units.some(function (u) {
         if (u.side !== 'B') return false;
         var was = pa.seen && pa.seen[u.id];
@@ -381,6 +383,97 @@
       pa.seen = {};
       state.units.forEach(function (u) { if (u.side === 'B') pa.seen[u.id] = { sp: u.sp, models: u.models, damage: u.damage || 0 }; });
     }
+    /* ================= the talks (a parley's conversation) =================
+       A Parley with a conversation (cfg.story.parley, story.js parleyFor) is
+       talked out before anyone moves: as turn 1's Action phase opens, the
+       talks are asked of side A (state.parleyAsk), a step at a time, the
+       other side's lines and the answers open to the commander. Each answer
+       moves Trust and Tension; Tension at the conversation's `breakAt` breaks
+       the talks. An agreement ends the battle, won by side A, with the terms
+       agreed in the report (story.terms); talks that break leave both sides
+       where they stand, and it is a fight. A side A the AI plays talks it
+       out at once, as reasonably as it can. */
+    function parleyOf(state) { var p = state && state.cfg && state.cfg.story && state.cfg.story.parley; return p && p.steps ? p : null; }
+    function parleyOptions(pr, ask) {
+      return ((pr.steps[ask.step] || {}).options || []).map(function (o, i) {
+        return { i: i, text: o.text, locked: o.need > ask.trust, need: o.need };
+      });
+    }
+    function parleyEnter(state, pr, ask, id) {
+      var s = pr.steps[id];
+      if (!s) return;
+      ask.step = id;
+      s.say.forEach(function (l) { ask.log.push(l); });
+      ask.options = s.end ? [] : parleyOptions(pr, ask);
+      if (s.end) ask.ended = s.end;
+    }
+    /* As turn 1's Action phase opens, before anyone moves: true while the talks
+       hold the phase (an answer owed, or the battle agreed over). Talks that
+       break go on into the phase as it stands (parleyEnd). */
+    function parleyOpen() {
+      var state = E.state, pr = parleyOf(state), pa = state && state.sc && state.sc.parley;
+      if (!pr || !pa || pa.talked) return false;
+      if (state.parleyAsk) return true;
+      var ask = state.parleyAsk = { side: 'A', step: null, trust: 0, tension: 0, terms: [], log: [], options: [], ended: null };
+      parleyEnter(state, pr, ask, pr.start);
+      E.logLine('note', 'Under the white flag, the talks begin.');
+      if (E.isAI('A')) {
+        ask.auto = true;
+        for (var n = 0; n < 40 && state.parleyAsk && !state.over; n++) parleySay('A', parleyPick(ask));
+        return !!state.over;
+      }
+      E.render();
+      return true;
+    }
+    // the AI's answer: the one that builds most trust for least tension, of those it may give
+    function parleyPick(ask) {
+      var pr = parleyOf(E.state), opts = (pr.steps[ask.step] || {}).options || [], best = 0, score = -Infinity;
+      opts.forEach(function (o, i) {
+        if (o.need > ask.trust) return;
+        var v = o.trust * 2 - o.tension * 1.5 + (o.terms.length ? 3 : 0) + Math.random() * 0.5;
+        if (v > score) { score = v; best = i; }
+      });
+      return best;
+    }
+    // an answer given: `i`, the answer's place among the step's
+    function parleySay(side, i) {
+      var state = E.state, ask = state && state.parleyAsk, pr = parleyOf(state);
+      if (!ask || !pr || side !== ask.side) return 'nothing to answer';
+      if (ask.ended) return parleyEnd(state, ask);
+      var o = (pr.steps[ask.step] || {}).options && pr.steps[ask.step].options[i];
+      if (!o) return 'no such answer';
+      if (o.need > ask.trust) return 'they do not trust you enough for that yet';
+      ask.log.push(o.line);
+      ask.trust += o.trust; ask.tension += o.tension;
+      o.terms.forEach(function (t) { if (ask.terms.indexOf(t) < 0) ask.terms.push(t); });
+      o.reply.forEach(function (l) { ask.log.push(l); });
+      parleyEnter(state, pr, ask, ask.tension >= pr.breakAt && pr.broke ? pr.broke : o.next);
+      if (!ask.ended) { E.render(); return null; }
+      return parleyEnd(state, ask);
+    }
+    function parleyEnd(state, ask) {
+      var pa = state.sc.parley;
+      state.parleyAsk = null;
+      pa.talked = { result: ask.ended, log: ask.log, trust: ask.trust, tension: ask.tension, terms: ask.terms };
+      if (ask.ended === 'agreed') {
+        pa.agreed = state.turn;
+        state.storyOutcome = { parley: 'agreed', terms: ask.terms.slice() };
+        E.logLine('note', 'An agreement is reached under the white flag.');
+        E.pushRes({ kind: 'Parley', title: 'An agreement', side: 'A', note: 'The talks end in an agreement. Nobody fires today.',
+          list: ask.log.slice(-2).map(function (l) { return { side: null, text: l.name + ': “' + l.text + '”' }; }) });
+        E.finish('A', 'The talks end in an agreement. Both sides walk away.');
+        E.render();
+        return null;
+      }
+      pa.broken = state.turn || 1; pa.by = 'talks';
+      state.storyOutcome = { parley: 'broke down' };
+      E.logLine('note', 'The talks break down. It is a fight.');
+      E.pushRes({ kind: 'Parley', title: 'The talks break down', side: 'B', note: 'Nobody is talking any more. Both sides stand where they are, and it is a fight.' });
+      // (the AI talking for side A: the phase it was opened from goes on by itself)
+      if (!ask.auto) { E.render(); E.maybeAI(); }
+      return null;
+    }
+
     /* Whether this unit holds its fire: the enemy, and the allies, while the talks hold. */
     function parleyHolds(u) {
       var pa = E.state && E.state.sc && E.state.sc.parley;
@@ -422,7 +515,8 @@
       if (on === 'loss') return lostOf('A').lost >= 1;
       if (on === 'bhalf' || on === 'ahalf') { var l = lostOf(on === 'bhalf' ? 'B' : 'A'); return l.n > 1 && l.lost * 2 >= l.n; }
       if (on === 'wave') return !!(state.sc && state.sc.waves && state.sc.waves.n);
-      if (on === 'parley') return !!(state.sc && state.sc.parley && state.sc.parley.broken);
+      // (talks that broke down in the conversation said so there; this is for talks broken by a shot)
+      if (on === 'parley') return !!(state.sc && state.sc.parley && state.sc.parley.broken && state.sc.parley.by !== 'talks');
       // Find and secure: a location searched and empty, and the one that holds the objective (`guard` its holders' answer)
       // the first of the enemy's hidden counters turned over (Close Encounters): what they are
       if (on === 'sighted') return state.units.some(function (u) { return u.side === 'B' && u.wasHidden && !u.hidden; });
@@ -571,7 +665,7 @@
       orderWord: function (k) { return ORDER_KINDS[k] || ''; },
       storySeeded: storySeeded, storyTerrain: storyTerrain, storyFixed: storyFixed,
       storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck,
-      storyEndPhase: storyEndPhase, storyTalk: storyTalk, relicFollow: relicFollow, relicGoal: relicGoal, relicCheck: relicCheck, storyCheck: storyCheck, parleyHolds: parleyHolds
+      storyEndPhase: storyEndPhase, storyTalk: storyTalk, parleyOpen: parleyOpen, parleySay: parleySay, relicFollow: relicFollow, relicGoal: relicGoal, relicCheck: relicCheck, storyCheck: storyCheck, parleyHolds: parleyHolds
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineStory;

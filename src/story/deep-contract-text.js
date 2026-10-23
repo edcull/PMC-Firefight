@@ -309,7 +309,7 @@
     'redoubt.battle#name': 'The Last Redoubt',
     'redoubt.battle': 'A bare hilltop above the old shafts, and everything the Front has left dug in on it: trenches, wire, a bunker. Take the hill.',
     'ceasefire.battle#name': 'The Ceasefire Talks',
-    'ceasefire.battle': 'A burned-out way station on the road between the lines. Both sides come up to the meeting point with their weapons and their reasons. Keep the talks going to the end, and there is a truce. Fire first, and there isn’t.',
+    'ceasefire.battle': 'A burned-out way station on the road between the lines. Both sides come up to the meeting point with their weapons and their reasons. Hear them out, find something both sides can live with, and there is a truce. Push too hard, and somebody on that ridge will fire.',
     'holdline.battle#name': 'Hold the Pass',
     'holdline.battle': 'The pass is the only way out of the hive’s country, a cut through the ridge between two walls of rock. Everyone who is falling back is coming through it, and the bugs are coming after them. Keep the bugs off the pass until everyone is through.',
     'outbreak.battle#name': 'Outbreak at Pit Nine',

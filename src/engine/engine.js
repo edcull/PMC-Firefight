@@ -284,7 +284,7 @@
          or surrender, hold it as well — with nothing left to act, a step taken
          then would end the turn again and run the whole Rally phase once more. */
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
-        !state.martyrAsk && !state.oppAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk &&
+        !state.martyrAsk && !state.oppAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk && !state.parleyAsk &&
         (isAI(state.activeSide) || K.allyActs());
     }
     function maybeAI() {
@@ -1181,6 +1181,8 @@
             state.activeSide = next;
           }
           state.streak = streakFor(state.activeSide);
+          // a Parley's talks, before anyone moves: they hold the phase until they end (storybattle.js)
+          if (K.parleyOpen()) return;
           render();
           maybeAI();
         }
@@ -1861,7 +1863,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.oppAsk || state.kyfAsk || state.nervousAsk || state.standAsk || state.faceAsk || state.endAsk) return false;   // an answer is owed first
+      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.oppAsk || state.kyfAsk || state.nervousAsk || state.standAsk || state.faceAsk || state.endAsk || state.parleyAsk) return false;   // an answer is owed first
       if (state.relocating || state.placeAsk) return false;      // turn 1's relocations and fortifications come before the Action phase
       return state.activeSide === side;
     }
@@ -2246,6 +2248,11 @@
       if (!state.kyfAsk || state.kyfAsk.side !== side || !ui.kyfThen) return no('nothing to answer');
       ui.kyfThen(it.k === 'kyf');
       return yes;
+    });
+    // a Parley's talks: the commander's answer, by its place among those offered (storybattle.js)
+    on('parley', null, function (side, it) {
+      var why = K.parleySay(side, +it.i);
+      return why ? no(why) : yes;
     });
     on('nervous nonervous', null, function (side, it) {
       var why = K.answerNervous(side, it.k === 'nervous');

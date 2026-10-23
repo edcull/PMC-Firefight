@@ -366,6 +366,8 @@
         intel: S.intel(campaign, spec),
         // what is said in it, and when (storybattle.js storyTalk)
         talk: S.talkFor(campaign, spec),
+        // a parley's conversation, with what has happened in the story written into it
+        parley: spec.scenario === 'parley' ? S.parleyFor(campaign, spec) : null,
         allyVoice: S.allyVoice(campaign, spec),
         edge: east ? 'east' : lv.edge === 'choose' ? 'west' : null,
         turns: lv.turns || (variant && variant.turns) || null,

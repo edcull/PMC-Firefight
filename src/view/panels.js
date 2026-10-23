@@ -620,7 +620,51 @@
     /* ---------- side panel ---------- */
     // What you act with lives under the board; the roster and log live in the panel
     // (a slide-out drawer on a narrow screen).
+    /* A Parley's talks (storybattle.js parleyOpen): a chat over the table, the
+       conversation so far with each speaker's face, the commander's own lines
+       on the right, how far each side trusts the other and how close it is to
+       breaking, and the answers open now. One that needs more trust than there
+       is yet is shown, shut. */
+    function drawParley() {
+      var ask = B.state && B.state.parleyAsk, box = document.getElementById('parley-chat');
+      var show = !!ask && !B.state.over && !isAI(ask.side) && atThisScreen(ask.side);
+      if (!show) { if (box) box.hidden = true; return; }
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'parley-chat'; box.className = 'parley-chat';
+        document.body.appendChild(box);
+        box.addEventListener('click', function (ev) {
+          var b = ev.target.closest('button[data-pi]');
+          if (b && !b.disabled) send({ k: 'parley', i: +b.getAttribute('data-pi') });
+        });
+      }
+      var esc = R.esc, ST = root.PMCStory, PF = root.PMCStoryPortraits, sty = B.state.cfg.story || {};
+      var def = ST && ST.get && ST.get(sty.id), people = (def && def.people) || {};
+      var key = ask.log.length + ':' + ask.step + ':' + ask.trust + ':' + ask.tension;
+      box.hidden = false;
+      if (box._key === key) return;
+      box._key = key;
+      var pr = sty.parley || {}, brk = pr.breakAt || 4;
+      var pips = function (n, of, cls) { var h = ''; for (var i = 0; i < of; i++) h += '<i class="' + (i < n ? cls : '') + '"></i>'; return h; };
+      var h = '<div class="pc-win"><div class="pc-head"><b>' + esc(sty.name || 'Parley') + '</b><small>Under the white flag</small>' +
+        '<div class="pc-meters"><span>Trust <em class="pc-pips">' + pips(Math.max(0, ask.trust), 5, 'on') + '</em></span>' +
+        '<span>Tension <em class="pc-pips">' + pips(Math.max(0, ask.tension), brk, 'hot') + '</em></span></div></div><div class="pc-log">';
+      ask.log.forEach(function (l) {
+        var p = people[l.who], face = p && p.face && PF ? PF.svg(p.face, 48) : '';
+        h += '<div class="story-line' + (l.who === 'commander' ? ' mine' : '') + '">' + (face ? '<div class="talk-face">' + face + '</div>' : '') +
+          '<div class="story-said"><b>' + esc(l.name) + '</b>' + (l.role ? '<small>' + esc(l.role) + '</small>' : '') + '<p>' + esc(l.text) + '</p></div></div>';
+      });
+      h += '</div><div class="pc-opts">';
+      ask.options.forEach(function (o) {
+        h += '<button class="pc-opt"' + (o.locked ? ' disabled' : '') + ' data-pi="' + o.i + '">' + esc(o.text) +
+          (o.locked ? '<small>They don\u2019t trust you enough for that yet.</small>' : '') + '</button>';
+      });
+      box.innerHTML = h + '</div></div>';
+      var log = box.querySelector('.pc-log');
+      if (log) log.scrollTop = log.scrollHeight;
+    }
     function drawPanel() {
+      drawParley();
       var ctxBox = el('context'), html = '';
       if (B.state.phase !== 'deploy') deployBox = false;   // it belongs to the deployment, and goes with it
       if (B.state.tacticAsk) html = tacticCard();

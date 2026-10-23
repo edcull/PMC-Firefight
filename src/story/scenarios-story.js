@@ -285,15 +285,18 @@
   };
 
   /* ------------------------------------------------ Parley */
-  /* Both sides close to a meeting point, talking. While the talks hold, the
-     enemy holds its fire; they break when side A hurts side B, or on a 6 at an
-     End phase (engine/storybattle.js). Held to the end of turn 6, A has what it
-     came for; broken, it is a Meeting engagement to the end. */
+  /* Both sides close to a meeting point, talking. A story's Parley is talked
+     out as turn 1 opens, a conversation the player answers (cfg.story.parley;
+     engine/storybattle.js parleyOpen): agreed, A has what it came for and the
+     battle is over; broken, it is a Meeting engagement to the end. Without a
+     conversation, the talks hold while nobody fires: they break when side A
+     hurts side B, or on a 6 at an End phase, and held to the end of turn 6, A
+     has what it came for. */
   SCENARIOS.parley = {
     story: true,
     id: 'parley', name: 'Parley', page: null,
     blurb: 'Two sides, a meeting point, and the hope that nobody shoots first.',
-    win: 'A wins if the talks hold to the end of turn 6. Once they break, it is a Meeting engagement: rout the enemy, or be routed; a draw at the end of turn 12.',
+    win: 'Talk it out under the white flag: an agreement ends the battle, and A has what it came for. If the talks break, it is a Meeting engagement: rout the enemy, or be routed; a draw at the end of turn 12.',
     turns: 12,
     /* The meeting point is no objective (nothing is held, and nobody is sent to
        it): a table under a white flag, in the middle, to talk across. */
@@ -309,9 +312,11 @@
     reserves: function () { return []; },
     deployText: function () { return 'Both sides set up close to the meeting point: within 12″ of the middle of the table, on their own side of it.'; },
     zoneFor: function (state, side) { return state.sc.zones[side]; },
-    hint: 'While the talks hold, the other side will not shoot. Any harm you do them breaks the talks, and so might nerves (a 6 at an End phase).',
+    hint: 'The talks come first. Hear the other side out, say your piece, and look for terms both can live with: every answer builds trust or raises tension, and too much tension breaks the talks.',
     check: function (state) {
       var pa = state.sc.parley || {};
+      // a conversation's agreement (storybattle.js parleyEnd): the battle is over, and A has what it came for
+      if (pa.agreed) return { winner: 'A', text: 'The talks end in an agreement. Both sides walk away.' };
       if (!pa.broken) {
         if (state.turn >= 6) { state.storyOutcome = { parley: 'held' }; return { winner: 'A', text: 'The talks held. Both sides walk away.' }; }
         return null;

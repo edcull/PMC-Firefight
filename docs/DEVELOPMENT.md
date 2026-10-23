@@ -340,6 +340,8 @@ storyscenes.js     the story's places as pictures: each drawn the same every tim
                    every chapter card, battle map and ending with one
 storydr.js         Dead Reckoning as data: the validator, its forces (archetypes; the Hashamer all Esh-Aven, no
                    craft or teleport turrets), the hired guns, and 6,000 seeded walks (endings, one-offs, finales)
+storyparley.js     a Parley's talks: the conversation written from what has happened, Trust and Tension, an agreement
+                   (the battle won, its terms in the story's flags) or a fight; the AI talking for side A; a plain one
 storyrelic.js      the relic variant: found, lifted at an End phase, carried (the objective follows), dropped, carried off
                    its own edge; the report, { relic: 'A' }, the Glass Flats and the Beacon paying on it; one AI battle
 storyforces.js     Dead Reckoning's battles in the engine: every one set up and started; its place (kind of world,

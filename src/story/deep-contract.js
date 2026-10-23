@@ -61,7 +61,7 @@
   function withTalk(def) {
     var talk = root.PMCStoryTalk && root.PMCStoryTalk['deep-contract'];
     if (!talk) return def;
-    def.talk = { sides: talk.sides || {}, battles: talk.battles || {}, allies: talk.allies || {} };
+    def.talk = { sides: talk.sides || {}, battles: talk.battles || {}, allies: talk.allies || {}, parleys: talk.parleys || {} };
     Object.keys(talk.people || {}).forEach(function (k) { if (!def.people[k]) def.people[k] = talk.people[k]; });
     // a conversation opens the page it is keyed to
     Object.keys(talk.conversations || {}).forEach(function (id) {
