@@ -31,7 +31,7 @@
        port, stands in the middle of the square, so the way across goes round
        it, and a fountain stands off its north-east corner, between the roads,
        too tall to see across. Houses, warehouses and the arcade crowd the four quarters, and
-       railings and planters line both sides of each road where it comes
+       railings and planters line one side of each road where it comes
        into the square. The landing field is beyond the east edge, where Vane's ship
        waits (Escort). Its skin is the market's (`skin`): the barricades are
        railings and planters, the craters market clutter, as the rules still
@@ -48,9 +48,8 @@
         B(30, 3, 9, 6, 'L'), B(40, 4, 4, 5, 'annex'), B(31, 11, 5, 5, 'block'), R('ruins', 38, 12, 4, 4),
         B(5, 30, 5, 4, 'block'), B(5, 36, 8, 7, 'T'), B(15, 40, 5, 5, 'annex'),
         B(33, 30, 4, 5, 'annex'), B(32, 37, 9, 6, 'block'), R('wall', 29, 38, 1, 6),
-        // the boulevards' railings and planters, along both edges of each road where it comes into the square
-        R('barricade', 10, 21, 6, 1), R('barricade', 10, 26, 6, 1), R('barricade', 32, 21, 6, 1), R('barricade', 32, 26, 6, 1),
-        R('barricade', 21, 10, 1, 6), R('barricade', 26, 10, 1, 6), R('barricade', 21, 32, 1, 6), R('barricade', 26, 32, 1, 6),
+        // the boulevards' railings and planters, along one edge of each road where it comes into the square
+        R('barricade', 10, 21, 6, 1), R('barricade', 32, 26, 6, 1), R('barricade', 26, 10, 1, 6), R('barricade', 21, 32, 1, 6),
         // the market's clutter: cargo cases, drums and vending terminals where the market overflows
         N('crater', 11, 12, 4, 4, 'blob'), N('crater', 11, 31, 4, 4, 'blob'), N('crater', 38, 31, 4, 4, 'blob')
       ]

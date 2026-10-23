@@ -186,7 +186,7 @@ ok('the Glass Flats and the Mire put their three places where the map says, for 
     roads.every((p) => !(p.x < fountain.x + fountain.w && fountain.x < p.x + p.w && p.y < fountain.y + fountain.h && fountain.y < p.y + p.h)) &&
     R.TERRAIN.fountain.blocks && R.TERRAIN.fountain.impassable);
 ok('...its skin the market’s: railings for barricades, the market’s clutter for craters, by name too', MAPS.vesk.skin === 'market' &&
-    MAPS.vesk.pieces.filter((p) => p.kind === 'barricade').length >= 6 && R.terrainName({ cfg: { story: { skin: 'market' } } }, 'barricade') === 'Railings and planters' &&
+    MAPS.vesk.pieces.filter((p) => p.kind === 'barricade').length >= 4 && R.terrainName({ cfg: { story: { skin: 'market' } } }, 'barricade') === 'Railings and planters' &&
     R.terrainName({ cfg: { story: { skin: 'market' } } }, 'crater') === 'Market clutter' && R.terrainName({ cfg: { story: {} } }, 'crater') === 'Rubble and craters');
 }
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
