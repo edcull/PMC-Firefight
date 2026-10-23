@@ -77,12 +77,17 @@
     /* --- rooms and halls, a cell clear of each other and of the entry columns --- */
     var rooms = [];
     var want = Math.max(6, Math.round(N / 24)), halls = rows > 18 ? 2 : 1;
+    // `dense`: a compound packed with rooms and the corridors between them, nothing left bare (the Hive Heart)
+    if (opts.dense) want = Math.max(want, Math.round(N * opts.dense / 24));
     var need = opts.rooms || 0;
     /* `nest`: a compound one side of which is not come into by corridors but
        lived in (the Hive Heart). No entry points on the right-hand edge; that
        many rooms laid first against it, one to each band of it, and the rest
        of the compound dug from the left as ever. */
     var nest = opts.nest || 0;
+    /* The rooms keep clear of the long edges, for the entry corridors: three
+       cells on the book's grid, and as near the same 9" on a wider one. */
+    var M = CELL === BOOK_CELL ? 3 : Math.max(2, Math.round(9 / CELL));
     for (var nb = 0; nb < nest; nb++) {
       var nbw = 2 + Math.floor(rand() * 2), nbh = 2 + Math.floor(rand() * 2), band0 = (rows - 2) / nest;
       var nj0 = 1 + Math.floor(nb * band0), nj1 = Math.max(nj0, Math.floor((nb + 1) * band0) - nbh);
@@ -91,15 +96,15 @@
       if (rooms.some(function (r) { return nri <= r.i + r.w && nri + nbw >= r.i && nrj <= r.j + r.h && nrj + nbh >= r.j; })) return null;
       rooms.push({ i: nri, j: nrj, w: nbw, h: nbh, kind: 'room', nest: true });
     }
-    for (var t = 0; t < 400 && rooms.length < want; t++) {
+    for (var t = 0; t < (opts.dense ? 1500 : 400) && rooms.length < want; t++) {
       var hall = rooms.filter(function (r) { return r.kind === 'hall'; }).length < halls;
       var rw = hall ? 4 + Math.floor(rand() * 2) : 2 + Math.floor(rand() * 2);
       var rh = hall ? 3 + Math.floor(rand() * 2) : 2 + Math.floor(rand() * 2);
       if (rand() < 0.5) { var sw = rw; rw = rh; rh = sw; }
-      var ri = 3 + Math.floor(rand() * (cols - 6 - rw + 1)), rj = 1 + Math.floor(rand() * (rows - 2 - rh + 1));
-      if (ri < 3 || rj < 1 || ri + rw > cols - 3 || rj + rh > rows - 1) continue;
+      var ri = M + Math.floor(rand() * (cols - 2 * M - rw + 1)), rj = 1 + Math.floor(rand() * (rows - 2 - rh + 1));
+      if (ri < M || rj < 1 || ri + rw > cols - M || rj + rh > rows - 1) continue;
       // a cell clear of the others; now and then two rooms side by side, wall to wall (a doorway between, below)
-      var touch = rand() < 0.35;
+      var touch = rand() < (opts.dense ? 0.6 : 0.35);
       var clash = rooms.some(function (r) {
         return touch ? ri < r.i + r.w && ri + rw > r.i && rj < r.j + r.h && rj + rh > r.j
           : ri <= r.i + r.w && ri + rw >= r.i && rj <= r.j + r.h && rj + rh >= r.j;
@@ -224,7 +229,7 @@
       linked.push(best.b); pairs.push([best.a, best.b]);
     }
     nodes.forEach(function (n, a) {
-      if (!n.room || rand() > 0.7) return;
+      if (!n.room || rand() > (opts.dense ? 0.95 : 0.7)) return;
       var far = nodes.map(function (m, b) { return { b: b, d: Math.abs(m.x - n.x) + Math.abs(m.y - n.y) }; })
         .filter(function (q) { return q.b !== a && nodes[q.b].room && !pairs.some(function (pr) { return (pr[0] === a && pr[1] === q.b) || (pr[1] === a && pr[0] === q.b); }); })
         .sort(function (p1, p2) { return p1.d - p2.d; })[0];

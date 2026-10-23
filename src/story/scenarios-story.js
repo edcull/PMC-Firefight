@@ -46,7 +46,8 @@
 
   /* ------------------------------------------------ Hive Heart */
   /* The hive's own tunnels are wider than a base's corridors (a 4" grid,
-     not the book's 3"), its chambers bigger. The three brood chambers are the
+     not the book's 3"), its chambers bigger, and the whole table is packed
+     with them (`dense`): room after room to fight through. The three brood chambers are the
      rooms furthest over on the hive's side (`hive`: drawn as the hive's,
      cleared of fittings). They stand in for the hive's entry corridors: side A
      comes in from the left edge as ever, and the hive comes on in its
@@ -54,7 +55,7 @@
      stands, and is not held by side A at that End phase, sends them out.
      Each one burned is one fewer. */
   SCENARIOS.hive_heart = {
-    story: true, compound: true, rooms: 3, cell: 4, nest: 3, danger: 0, hidden: function () { return true; },
+    story: true, compound: true, rooms: 3, cell: 4, nest: 3, dense: 2, danger: 0, hidden: function () { return true; },
     id: 'hive_heart', name: 'Hive Heart', page: null,
     blurb: 'The brood chambers, at the bottom of everything. Burn them out while the hive throws everything it has at you.',
     win: 'Destroy all three brood chambers: a chamber held by your units at the End phase is destroyed. The hive wins if you are routed, or if any chamber still stands at the end of turn 14.',
