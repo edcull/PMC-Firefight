@@ -105,7 +105,9 @@ src/
                      themselves in dossier-hub/found/roster/contract/after.js
     story-screens.js story mode's screens: a new story, the chapter card, briefs, events, a battle's
                      briefing and muster, the debrief, interludes, the second half's jobs, the
-                     journal (and going back), the ending
+                     journal (and going back), the ending; a battle's force picked with the
+                     contract's own muster (dossier-contract.js storyForce)
+    story-emblems.js the story's people as emblems: a round badge, a mark in their ink
     viewer.js        the unit viewer
 
   net/               playing somebody else
