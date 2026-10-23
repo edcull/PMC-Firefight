@@ -54,6 +54,10 @@ async function cards(p) {
   let txt = await body(p);
   check('it opens the new-story form, Deep Contract offered', /Story/.test(txt) && /Deep Contract/.test(await p.evaluate(() => document.getElementById('story-pick').innerHTML)), txt.slice(0, 120));
   check('...with ironman to choose, for good', /Ironman/.test(txt));
+  check('...and the difficulty: Story, Contract (chosen to start) and Hard', await p.evaluate(() => [...document.querySelectorAll('#camp-body [data-go="storydiff"]')].map((b) => b.textContent + (b.classList.contains('on') ? '*' : '')).join(',')) === 'Story,Contract*,Hard');
+  await go(p, '#camp-body [data-go="storydiff"][data-d="hard"]');
+  txt = await body(p);
+  check('...Hard picked, and what it means said', /Stronger enemy forces/.test(txt) && await p.evaluate(() => document.querySelector('#camp-body [data-go="storydiff"][data-d="hard"]').classList.contains('on')));
   await go(p, '[data-go="storynew"]');
   check('the campaign’s own founding screen comes up', await p.evaluate(() => !!document.getElementById('found-name')));
   const cmd0 = await p.evaluate(() => { const b = document.getElementById('found-commander'); return b ? b.value : null; });
@@ -76,6 +80,10 @@ async function cards(p) {
   await go(p, '[data-go="storyon"]');
   txt = await body(p);
   check('the brief leads to the event: the port master’s offer', /port master/i.test(txt) && await p.evaluate(() => document.querySelectorAll('#camp-body .story-opt').length === 3));
+  check('...with who it is about: Port Master Okonkwo\u2019s emblem', /Port Master Okonkwo/.test(txt) && /Kessler\u2019s Reach starport/.test(txt) && await p.evaluate(() => !!document.querySelector('#camp-body .story-who svg.story-emblem')));
+  const diffNow = await p.evaluate(() => window.PMC_CAMPAIGN.get().story.difficulty);
+  check('the story is played at Hard, and says so', diffNow === 'hard' && /Hard/i.test(txt), diffNow + ' | ' + txt.slice(0, 120));
+  await p.screenshot({ path: path.join(SHOTS, 'story-event.png') });
   await p.screenshot({ path: path.join(SHOTS, 'story-event.png') });
   await go(p, '[data-go="storyopt"][data-o="ask"]');
   await p.screenshot({ path: path.join(SHOTS, 'story-briefing.png') });
