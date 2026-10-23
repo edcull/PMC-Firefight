@@ -119,6 +119,25 @@ function ok(name, cond, note) {
   txt = await p.evaluate(() => document.getElementById('context').innerText);
   ok('once they are acting on it, it stands for the turn', /acting on it/.test(txt) && await p.evaluate(() => !document.querySelector('#context [data-act="allyorder"]')), txt.slice(0, 200));
 
+  console.log('\n  HIRED GUNS');
+  // the same allies as a hired company with no Trust left (Dead Reckoning's hired guns): every order is extra
+  await p.evaluate(() => { const s = window.PMC_STATE(); s.allyOrder = null; s.cfg.story.hired = { side: 'kettle', name: 'Brass Ledger', trust: -3 }; });
+  await p.evaluate(() => window.__clearSel());
+  await p.waitForTimeout(200);
+  await p.evaluate(() => document.querySelector('#context [data-act="allyorder"][data-kind="move"]').click());
+  await p.waitForTimeout(150);
+  await p.mouse.click(aim.x, aim.y);
+  await p.waitForTimeout(400);
+  await quiet();
+  txt = await p.evaluate(() => document.getElementById('context').innerText);
+  ok('a hired company with no Trust wants paying for the order: the card says how much, and offers to pay', /Brass Ledger want 1 kUC to move here/.test(txt) &&
+    await p.evaluate(() => !window.PMC_STATE().allyOrder && !!document.querySelector('#context [data-act="allyorderpay"]')), txt.slice(0, 200));
+  await p.screenshot({ path: path.join(SHOTS, 'story-allydemand.png') });
+  await p.evaluate(() => document.querySelector('#context [data-act="allyorderpay"]').click());
+  await p.waitForTimeout(400);
+  await quiet();
+  ok('...paid, and the order stands, the bill kept for after the battle', await p.evaluate(() => { const s = window.PMC_STATE(); return (s.allyOrder || {}).kind === 'move' && s.storyOutcome.allyPaid === 1 && !s.allyDemand; }));
+
   ok('no page errors', errs.length === 0, errs.join(' | '));
   await b.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

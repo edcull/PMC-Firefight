@@ -539,6 +539,7 @@
       extraction(state, lines);
       relicEndPhase(state, lines);
       contacts(state, lines);
+      hiredWalk(state, lines);
       waves(state, lines);
       if (lines.length) {
         lines.forEach(function (l) { E.logLine('note', l.text); });
@@ -685,6 +686,42 @@
       var o = E.state && E.state.allyOrder;
       return !!(o && o.turn === E.state.turn && o.acted);
     }
+    /* Hired guns (Dead Reckoning; docs/story-dead-reckoning-plan.md, Hired
+       guns). With their Trust low an order can be answered with a demand: at −1
+       or −2 it is refused on a D6 of 1 to 3 (rolled once a turn), at −3 or lower
+       always. A refused order stands only if the player pays on the spot, 1 kUC
+       (`pay`), billed to the company after the battle (storyOutcome.allyPaid).
+       With Trust −2 or lower from the start, or once they have lost half their
+       units, they walk: at the next End phase they leave the table. */
+    var HIRED_PAY = 1;
+    function hired() { var sty = story(); return sty && sty.hired || null; }
+    function demands(state) {
+      var h = hired();
+      if (!h || h.trust > -1) return false;
+      if (h.trust <= -3) return true;
+      var d = state.hiredRoll;
+      if (!d || d.turn !== state.turn) d = state.hiredRoll = { turn: state.turn, refused: R.d6() <= 3 };
+      return d.refused;
+    }
+    function hiredWalk(state, lines) {
+      var h = hired();
+      if (!h || state.hiredWalked) return;
+      var mine = state.units.filter(function (u) { return u.side === 'A' && u.ally; });
+      var gone = mine.filter(function (u) { return !u.alive && !u.extracted && !u.walked; }).length;
+      if (!(h.trust <= -2 || (mine.length && gone * 2 >= mine.length))) return;
+      state.hiredWalked = state.turn;
+      var left = 0;
+      mine.forEach(function (u) {
+        if (!u.alive || u.aboard) return;
+        // (gone, not lost and not got away: out of side A's tally, scenarios.js routed)
+        u.alive = false; u.walked = true; u.superseded = true; u.activated = true; left++;
+      });
+      if (!left) return;
+      if (state.allyOrder) state.allyOrder = null;
+      lines.push({ side: 'A', text: h.name + ' walk off the table.' });
+      state.storyOutcome = Object.assign({}, state.storyOutcome || {}, { allyWalked: true });
+      allyAnswer('walk');
+    }
     // { kind, x, y } (kind null: the order withdrawn); a reason it cannot be given, or null
     function giveAllyOrder(side, it) {
       var state = E.state;
@@ -693,12 +730,24 @@
       if (orderLocked()) return 'the allies are already acting on this turn’s orders';
       if (it.kind == null) {
         if (state.allyOrder) { E.logLine('note', 'The allies are left to their own judgement.'); allyAnswer(null); }
-        state.allyOrder = null;
+        state.allyOrder = null; state.allyDemand = null;
         return null;
       }
       if (!ORDER_KINDS[it.kind]) return 'no such order';
       var x = +it.x, y = +it.y;
       if (!isFinite(x) || !isFinite(y) || x < 0 || y < 0 || x > R.BOARD.w || y > R.BOARD.h) return 'that is off the table';
+      // hired guns with low Trust: that's extra (paid on the spot, or the order is refused)
+      if (demands(state)) {
+        if (!it.pay) {
+          state.allyDemand = { kind: it.kind, x: x, y: y, turn: state.turn, kUC: HIRED_PAY };
+          E.logLine('note', hired().name + ' want ' + HIRED_PAY + ' kUC for that order.');
+          allyAnswer('demand');
+          return null;
+        }
+        state.storyOutcome = Object.assign({}, state.storyOutcome || {}, { allyPaid: ((state.storyOutcome || {}).allyPaid || 0) + HIRED_PAY });
+        E.logLine('note', 'Paid ' + HIRED_PAY + ' kUC on the spot.');
+      }
+      state.allyDemand = null;
       state.allyOrder = { kind: it.kind, x: x, y: y, turn: state.turn, acted: false };
       E.logLine('note', 'The allies’ orders: ' + ORDER_KINDS[it.kind].toLowerCase() + '.');
       allyAnswer(it.kind);

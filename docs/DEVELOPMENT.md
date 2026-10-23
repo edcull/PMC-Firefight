@@ -346,6 +346,10 @@ storyparley.js     a Parley's talks: the conversation written from what has happ
                    (the battle won, its terms in the story's flags) or a fight; the AI talking for side A; a plain one
 storyescort.js     the Escort: Lot 47's Halloran on the table, side A's to move; through, killed, out of time, the enemy
                    routed; the enemy after him and nothing else; one battle AI against AI
+storydrwhole.js    Dead Reckoning played through 60 times with made-up results (and at each difficulty): every walk
+                   ends, every ending, finale, one-off and second-half chapter reached, the growth curve, epilogues
+storyhired.js      hired guns answering back: an order refused at low Trust unless paid on the spot (1 kUC, billed
+                   after), rolled once a turn at −1/−2 and always at −3; walking off the table at −2 or half lost
 storycontacts.js   unknown contacts: at the Drowned Beacon the Reavers run (fled, out of the tally) and nameless
                    Xenotripods step out of the air by the objective; the Warren's by turn 3; both AI against AI
 storyrelic.js      the relic variant: found, lifted at an End phase, carried (the objective follows), dropped, carried off

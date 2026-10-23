@@ -998,6 +998,16 @@
           '<div class="orderbtns"><button class="lnk" data-act="allyordercancel">Cancel</button></div>';
         return h + '</div>';
       }
+      // hired guns asking to be paid for the order just given (storybattle.js demands)
+      var dm = B.state.allyDemand;
+      if (dm && dm.turn === B.state.turn && ORDER_WORDS[dm.kind]) {
+        var hn = (B.state.cfg.story && B.state.cfg.story.hired && B.state.cfg.story.hired.name) || 'They';
+        h += '<p class="sub">' + esc(hn) + ' want <b>' + dm.kUC + ' kUC</b> to ' + esc(ORDER_WORDS[dm.kind][0].toLowerCase()) +
+          '. Pay on the spot, or they do as they see fit.</p>' +
+          '<div class="orderbtns"><button class="order" data-act="allyorderpay">Pay ' + dm.kUC + ' kUC</button>' +
+          '<button class="lnk" data-act="allyorderclear">Never mind</button></div>';
+        return h + '</div>';
+      }
       h += '<p class="sub">' + (o ? '<b>' + esc(ORDER_WORDS[o.kind][0]) + '</b> \u2014 ' + esc(ORDER_WORDS[o.kind][1])
         : 'No orders: they use their own judgement.') + '</p>';
       if (locked) h += '<p class="hint">They are acting on it. It can be changed next turn.</p>';
@@ -1550,6 +1560,7 @@
           else if (a === 'allyorder') { ui.allyOrderPick = b.getAttribute('data-kind'); render(); return; }
           else if (a === 'allyordercancel') { ui.allyOrderPick = null; render(); return; }
           else if (a === 'allyorderclear') { send({ k: 'allyorder', kind: null }); return; }
+          else if (a === 'allyorderpay') { var dm = B.state.allyDemand; if (dm) send({ k: 'allyorder', kind: dm.kind, x: dm.x, y: dm.y, pay: true }); return; }
           // whose list is being kept: in a hotseat's round of swaps the next player is up the moment it is
           else if (a === 'swapdone') { send({ k: a, who: b.getAttribute('data-who') }); return; }
           else if (a === 'placerot' || a === 'placedone') { send({ k: a }); return; }
