@@ -51,7 +51,7 @@
       'c1.lost': [
         { who: 'kettering', text: 'No hard feelings, {commander:rank}. Your employer’s log is in my hold, and my hold lifts in an hour. That’s how auctions go, sometimes.' },
         { who: 'vane', text: 'Kettering. Name a figure.' },
-        { who: 'kettering', text: 'Mr Vane! An honour. The figure is high, and it goes up every minute you think about it. Or your hired help can come and try the field. I’d rather they didn’t; it’s bad for the paintwork.' },
+        { who: 'kettering', text: 'Mr Vane! An honour. And no. Not after reading the first page of it, not for any figure you could name. Your hired help can come and try the field, if they like. I’d rather they didn’t; it’s bad for the paintwork.' },
         { who: 'reader', text: 'I have the first eleven pages, {commander:rank}. Photographed. If they run, they’ll run where the log points, and we can follow.' },
         { who: 'kettering', text: 'Or here’s a thought, {commander:rank}, between professionals. No money. A share, at the end of the road, and the log goes back in your reader’s bag tonight. Think it over. Quickly.' }
       ],

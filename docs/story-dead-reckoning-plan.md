@@ -75,7 +75,6 @@ mission, or, failing both, rebuild it:
 - **Hit their ship** before it lifts: *Taking It Back*, Find and secure with
   the relic on Vesk's landing field (`veskfield`), the log as the relic.
   Carried off, it is the company's again; otherwise it leaves with them.
-- **Have Vane buy it back**: Vane's Trust −2, and Brass Ledger the stronger.
 - **Cut Kettering in on the claim**: no money changes hands. Brass Ledger
   become partners (`kettle_partner`), which is paid for at the end of the
   road: they take their share in *Finder's Fee* and come to *The Landing*
@@ -90,11 +89,15 @@ and the readings already on sale). It comes back in one of two ways:
 - **Taken back at the beacon**: Kettering brings the log to Tessaly IV to
   sell it to the Reavers digging there (*The private sale*). The company can
   break up the sale (*The Private Sale*, Find and secure on a mud bank,
-  `mudbank`, the log as the relic), have Vane outbid them (Vane's Trust −1),
-  or let it go through and wait for Kerrigan.
-- **Taken back at the Broker**: on Kerrigan, Lot 47 itself is on the block
-  beside the heading, and whoever takes the heading takes the log
-  (`theirs` −1).
+  `mudbank`, the log as the relic), or let it go through and wait for
+  Kerrigan.
+- **Taken back at the Broker**: on Kerrigan, Lot 47 itself is shown beside
+  the heading, not for sale at any price. Only the warehouse taken by force
+  brings it back with the heading (`theirs` −1).
+
+The log is bigger than money. It cannot be bought back, not by the company
+and not by Vane: it comes back by force, by a share of the claim, or
+rebuilt.
 - **Never lost for good**: still theirs when the second half opens, Halloran
   rebuilds it from the lodestones themselves, which have begun to point. The
   rivals keep the lead it gave them.
@@ -104,7 +107,7 @@ and the readings already on sale). It comes back in one of two ways:
 
 Vesk itself is now a settlement at a crossroads, with a market square in
 the middle and a fountain at its heart that blocks the view across the
-square (`fountain`: impassable, blocks sight, cover). Its map's skin (`skin: 'market'`) draws barricades as market
+square (`fountain`: impassable, blocks sight, cover; a stone pillar with a lamp at each corner). Its map's skin (`skin: 'market'`) draws barricades as market
 stalls and crater fields as the market's clutter, and names them so.
 
 The rivals, the race, the Ninth Lance and the second half's threads stand as

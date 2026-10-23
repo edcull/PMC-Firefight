@@ -174,9 +174,10 @@
      two more than the battle's Tier. */
   var CONTACTS = ['xalpha1', 'xeps1', 'xbeta2', 'xeps1'];
   var CONTACTS_DEEP = ['xeps1', 'xeps1', 'xalpha1', 'xbeta2'];
-  /* Lot 47 lost and the log let go (c1.lost): Brass Ledger's broker puts it on
-     the block at Kerrigan with the heading, and whoever takes the heading takes
-     the log back with it. */
+  /* Lot 47 lost and the log let go (c1.lost): it is not to be had for money.
+     Brass Ledger's broker shows it at Kerrigan beside the heading, and only the
+     warehouse taken by force brings it back (or the sale at the beacon broken
+     up). */
   var LOG_BACK = [{ if: { flag: 'ledger_has_log' }, meter: 'theirs', add: -1 }, { if: { flag: 'ledger_has_log' }, flag: 'ledger_has_log', set: false }];
   /* ...or the log rebuilt without them, from what the company has found on the
      way: Wraith Section's stolen copy, or Morrow's own records at Thule, put
@@ -388,7 +389,6 @@
            follow it, with only the pages Halloran photographed. */
         { id: 'c1.lost', type: 'event', who: 'kettering', title: 'The log is gone', text: 'Brass Ledger have the log, and a ship on the landing field.', options: [
           { id: 'raid', text: 'Hit their ship before it lifts.', next: 'c1r.battle' },
-          { id: 'buy', text: 'Have Vane buy it back.', effects: [{ meter: 'vane', add: -2 }, { meter: 'kettle', add: 1 }, { meter: 'kettle_price', add: 1 }, { flag: 'log_lost', set: false }], next: 'c1.interlude' },
           // (no money changes hands: the price is paid at the end of the road, where Brass Ledger take their share of the claim)
           { id: 'cutin', text: 'Cut Kettering in on the claim.', effects: [{ flag: 'kettle_partner' }, { flag: 'kettle_contact' }, { meter: 'kettle_trust', add: 2 }, { meter: 'vane', add: -1 }, { flag: 'log_lost', set: false }], next: 'c1.interlude' },
           { id: 'follow', text: 'Let them run with it, and follow.', effects: [{ meter: 'theirs', add: 1 }, { meter: 'lead', add: -1 }, { flag: 'log_lost', set: false }, { flag: 'ledger_has_log' }], next: 'c1.interlude' }
@@ -473,8 +473,6 @@
         { id: 'c3.route0', type: 'branch', when: [{ if: { flag: 'ledger_has_log' }, next: 'c3.sale' }, { next: 'c3.contact' }] },
         { id: 'c3.sale', type: 'event', who: 'kettering', title: 'The private sale', text: 'Brass Ledger are selling the log to the Reavers, here.', options: [
           { id: 'raid', text: 'Break up the sale.', next: 'c3s.battle' },
-          { id: 'outbid', text: 'Have Vane outbid the Reavers.', if: { meter: 'vane', gte: 0 }, why: 'Vane will pay no more for the company’s losses.',
-            effects: [{ meter: 'vane', add: -1 }, { meter: 'kettle', add: 1 }].concat(LOG_BACK), next: 'c3.contact' },
           { id: 'wait', text: 'Let it go through, and wait for Kerrigan.', effects: [{ meter: 'reavers', add: 1 }], next: 'c3.contact' }
         ], next: 'c3.contact' },
         { id: 'c3s.battle', type: 'battle', scenario: 'find', map: 'mudbank', tier: 'max', pl: 1, planet: 'jungle', variant: { relic: true }, enemy: rival('kettle'),
@@ -523,7 +521,8 @@
         intro: 'The next heading is for sale again, to everyone, from inside Sable’s warehouse.', nodes: [
         { id: 'c4.brief', type: 'brief', text: 'Kerrigan. The broker’s auction.', next: 'c4.lot' },
         { id: 'c4.lot', type: 'event', who: 'agathe', title: 'Lot 47, again', text: 'Sable has bought the warehouse the heading sits in.', options: [
-          { id: 'buy', text: 'Buy it.', cost: { kUC: 3 }, why: 'You can’t afford it.', battle: { skip: true }, effects: [{ meter: 'vane', add: 1 }].concat(LOG_BACK) },
+          // (the heading can be bought; the log cannot: it comes back only with the warehouse taken)
+          { id: 'buy', text: 'Buy it.', cost: { kUC: 3 }, why: 'You can’t afford it.', battle: { skip: true }, effects: [{ meter: 'vane', add: 1 }] },
           { id: 'take', text: 'Take it.', battle: { role: 'attacker', tier: 'max' } },
           { id: 'follow', text: 'Let Sable have it, and follow Sable.', battle: { skip: true, intel: 2 }, effects: [{ meter: 'lead', add: -1 }, { meter: 'intel', add: 2 }, { meter: 'vane', add: -1 }, { meter: 'sable', add: 1 }, { flag: 'sable_owed' }, { reveal: 'client_sable', journal: 'Sable Armour Group belongs to the Halvorsen Mining Combine, bought and paid for.' }] },
           hireOption('kettle', 'Hire Brass Ledger for the takeover.')

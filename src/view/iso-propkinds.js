@@ -928,10 +928,24 @@
            rim, a column rising out of it and a figure on top, and water falling
            from a bowl half way up. Tall enough to block the view across the square. */
         case 'fountain': {
-          var fl = lift || 0, fcx = pr.x + pr.w / 2, fcy = pr.y + pr.h / 2, fR = Math.min(pr.w, pr.h) / 2 - 0.1;
+          var fl = lift || 0, fcx = pr.x + pr.w / 2, fcy = pr.y + pr.h / 2, fR = Math.min(pr.w, pr.h) / 2 - 0.55;
           function FQ(x, y, up) { var q = toScreen(x, y); return [q.x, q.y - fl - (up || 0)]; }
           function ring(rad, up) { var pts = []; for (var fi = 0; fi < 28; fi++) { var th = fi / 28 * Math.PI * 2; pts.push(FQ(fcx + Math.cos(th) * rad, fcy + Math.sin(th) * rad, up)); } return pts; }
           var rimH = a(2.2);
+          /* a stone pillar at each corner of the fountain's square, capped, with a
+             lamp on top: the three behind the basin drawn before it, the near one after */
+          function pillar(px, py) {
+            var pb = FQ(px, py), pw = a(1.1), ph = a(8.5);
+            shadowBlob(g, { x: pb[0] + a(1), y: pb[1] + a(0.4) }, a(1.8), a(0.7));
+            rect(g, pb[0] - pw, pb[1] - ph, pw * 2, ph, STONE[3]);
+            rect(g, pb[0] - pw, pb[1] - ph, pw * 0.7, ph, STONE[4]);
+            rect(g, pb[0] + pw * 0.5, pb[1] - ph, pw * 0.5, ph, STONE[2]);
+            rect(g, pb[0] - pw * 1.4, pb[1] - ph - a(0.8), pw * 2.8, a(0.8), STONE[4]);
+            ellipse(g, pb[0], pb[1] - ph - a(1.8), a(0.9), a(0.9), '#ffd27a');
+            ellipse(g, pb[0], pb[1] - ph - a(1.8), a(2.2), a(1.4), 'rgba(255,210,122,.18)');
+          }
+          var pin = 0.35;
+          pillar(pr.x + pin, pr.y + pin); pillar(pr.x + pr.w - pin, pr.y + pin); pillar(pr.x + pin, pr.y + pr.h - pin);
           shadowBlob(g, { x: FQ(fcx, fcy)[0] + a(2), y: FQ(fcx, fcy)[1] + a(1) }, a(fR * 6.2), a(fR * 3.1));
           // the basin's outer wall, then its rim, then the water inside
           var outer = ring(fR, 0), top = ring(fR, rimH);
@@ -962,6 +976,7 @@
           rect(g, cb[0] - a(1.7), sy - a(6.4), a(1.2), a(5.6), '#78947e');
           ellipse(g, cb[0], sy - a(7.3), a(1.2), a(1.2), '#6a866f');
           edgeLine(g, [cb[0] + a(1.4), sy - a(5.4)], [cb[0] + a(3.2), sy - a(9.2)], '#5f7a66', 3);
+          pillar(pr.x + pr.w - pin, pr.y + pr.h - pin);
           break;
         }
         case 'pumphouse': {

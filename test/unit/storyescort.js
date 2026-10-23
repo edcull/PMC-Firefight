@@ -108,7 +108,8 @@ console.log('\nLot 47 lost: Brass Ledger have the log');
   };
   let c = lost();
   ok('lost, the debrief says so: Brass Ledger have the log', /Brass Ledger have the log/.test(global.PMCStoryText['dead-reckoning']['c1.debrief']) && c.story.lastGrade === 'defeat');
-  ok('...and what comes next is about the log: hit their ship, have Vane buy it back, or follow it', S.view(c).id === 'c1.lost' && ['raid', 'buy', 'cutin', 'follow'].every((o) => S.view(c).options.some((x) => x.id === o && x.ok)),
+  ok('...and what comes next is about the log, and not about money: hit their ship, cut Kettering in on the claim, or follow it', S.view(c).id === 'c1.lost' &&
+    ['raid', 'cutin', 'follow'].every((o) => S.view(c).options.some((x) => x.id === o && x.ok)) && S.view(c).options.length === 3,
     S.view(c).id);
   S.choose(c, 'raid');
   ok('hitting their ship: a battle on Vesk’s landing field for the log, carried off or not', S.view(c).type === 'battle' && c.story.node === 'c1r.battle' && S.battleSpec(c).variant.relic && S.battleSpec(c).map === 'veskfield');
@@ -117,9 +118,6 @@ console.log('\nLot 47 lost: Brass Ledger have the log');
   c = lost(); S.choose(c, 'raid');
   S.resolveBattle(c, { winner: 'A', units: [], turns: 6, story: { relic: 'B' } });
   ok('...won, but the log still aboard when they lift: Brass Ledger keep it', c.story.flags.ledger_has_log === true && !c.story.flags.log_lost);
-  c = lost(); const v0 = c.story.meters.vane;
-  S.choose(c, 'buy');
-  ok('Vane buying it back: it costs his Trust, and Brass Ledger are the stronger for it', !c.story.flags.ledger_has_log && c.story.meters.vane === v0 - 2);
   c = lost();
   S.choose(c, 'cutin');
   ok('cutting Kettering in on the claim: the log back now, paid for at the end of the road (Brass Ledger are partners)', !c.story.flags.ledger_has_log && !c.story.flags.log_lost &&
@@ -141,7 +139,7 @@ console.log('\nLot 47 lost: Brass Ledger have the log');
   // ...a second chance at the beacon: Kettering has brought it to sell to the Reavers
   const at3 = () => { const x = lost(); S.choose(x, 'follow'); x.story.chapter = 'c3'; x.story.node = 'c3.brief'; S.proceed(x); return x; };
   let s3 = at3();
-  ok('at the beacon, a second chance: the private sale, Brass Ledger selling the log to the Reavers', S.view(s3).id === 'c3.sale' && ['raid', 'outbid', 'wait'].every((o) => S.view(s3).options.some((x) => x.id === o)), S.view(s3).id);
+  ok('at the beacon, a second chance: the private sale, Brass Ledger selling the log to the Reavers', S.view(s3).id === 'c3.sale' && ['raid', 'wait'].every((o) => S.view(s3).options.some((x) => x.id === o)) && S.view(s3).options.length === 2, S.view(s3).id);
   S.choose(s3, 'raid');
   ok('...broken up: a battle on the mud bank for the case', S.view(s3).type === 'battle' && s3.story.node === 'c3s.battle' && S.battleSpec(s3).variant.relic && S.battleSpec(s3).map === 'mudbank');
   S.resolveBattle(s3, { winner: 'A', units: [], turns: 6, story: { relic: 'A' } });
@@ -158,8 +156,12 @@ console.log('\nLot 47 lost: Brass Ledger have the log');
   c.story.chapter = 'c4'; c.story.node = 'c4.lot'; c.companies.A.kUC = 10;
   ok('...until Kerrigan, where Lot 47 itself is back on the block', /Lot 47 itself/.test(S.render(c, global.PMCStoryText['dead-reckoning']['c4.lot'])));
   const t1 = c.story.meters.theirs;
-  S.choose(c, 'buy');
-  ok('...and whoever takes the heading there takes the log back with it', !c.story.flags.ledger_has_log && c.story.meters.theirs === t1 - 1);
+  const k = JSON.parse(JSON.stringify(c));
+  S.choose(k, 'buy');
+  ok('...not for any money: buying the heading there leaves the log with them', k.story.flags.ledger_has_log === true);
+  S.choose(c, 'take');
+  S.resolveBattle(c, 'victory');
+  ok('...only the warehouse taken by force brings it back with the heading', !c.story.flags.ledger_has_log && c.story.meters.theirs === t1 - 1);
 }
 
 console.log('\nOne battle, AI against AI');
