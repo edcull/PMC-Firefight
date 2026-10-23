@@ -65,6 +65,10 @@
     var PAVING = { ramp: ['#4a4640', '#57524a', '#635e55', '#706a60', '#7d776c'], fleck: ['#3a3631', '#8c857a', '#2e2b27'], rim: '#2a2723' };
     var COBBLE = { ramp: ['#3e3b37', '#48443f', '#524e48', '#5c5751', '#66615a'], fleck: ['#2c2a27', '#7a746b', '#34312d'], rim: '#24221f' };
     FLOOR.fountain = PAVING;
+    /* Open space, round a station: near black, a faint nebula through it, and
+       stars, mostly white, a few blue or gold. No lip at its edge: the hull
+       stands there. */
+    var STARS = { ramp: ['#03040a', '#05070f', '#070a16', '#0a0e1d', '#0d1226'], fleck: ['#ffffff', '#dfe8ff', '#9ab8ff', '#ffe2a8', '#c8d4ff'], rim: '#05070f', stars: true };
     // a landing pad: poured ferrocrete, pale and scorched
     var PADC = { ramp: ['#55595a', '#5f6364', '#6a6e6f', '#75797a', '#808485'], fleck: ['#3c3f40', '#2a2c2d', '#8e9293'], rim: '#2e3132' };
     function skinFloor(r) {
@@ -368,6 +372,8 @@
       var paved = terrain.filter(function (q) { return q.kind === 'road' && q.paved; });
       function floorOf1(r, ri, rows) {
         if (r.kind === 'hill') return;
+        // a station's solid is open space: a star field (rules.js reads it as solid all the same)
+        if (r.kind === 'bulkhead' && r.space) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         var spec = roomTheme(r) || skinFloor(r) || floorOf(r.kind);
         if (r.kind === 'road' && r.paved && paved.length > 1) spec = Object.assign({}, spec, { joins: paved.filter(function (q) { return q !== r; }) });
         if (FLOOR[r.kind]) paintFloor(d, r, spec, seed + ri * 131, lat, fN, fD, 0, null, null, rows);
@@ -389,7 +395,7 @@
       for (var ly = gy0; ly < gy1; ly += 24) steps.push(latRows.bind(null, ly, Math.min(gy1, ly + 24)));
       for (var sy = cy0; sy < cy1; sy += 48) steps.push(soilRows.bind(null, sy, Math.min(cy1, sy + 48)));
       terrain.forEach(function (r, ri) {
-        if (r.kind === 'hill' || !FLOOR[r.kind]) return;
+        if (r.kind === 'hill' || (!FLOOR[r.kind] && !(r.kind === 'bulkhead' && r.space))) return;
         floorBands(r).forEach(function (rows) { steps.push(function () { floorOf1(r, ri, rows); }); });
       });
       steps.push(function () { floorsDone = true; });
@@ -773,7 +779,7 @@
             }
             if (joined && din < 0) continue;
           }
-          if (WOB && din < WOB && !joined) {                    // only the boundary pays for noise
+          if (WOB && din < WOB && !joined && !spec.stars) {                    // only the boundary pays for noise
             if (din + (vnoise(wx * 6.5, wy * 6.5, seed) - 0.5) * 2 * WOB < 0) continue;
           }
           var n = lat(fN, bx, by + lift), dry = lat(fD, bx, by + lift);
@@ -787,8 +793,8 @@
           if (idx < 0) idx = 0;
           var c = ramp[idx];
           var j = hash(bx, by, seed & 1023);
-          if (din < 0.08 && !joined) c = rim;        // a darker lip marks the exact edge
-          else if (j > 0.955) c = fleck[(j * 977) % fleck.length | 0];
+          if (din < 0.08 && !joined && !spec.stars) c = rim;        // a darker lip marks the exact edge
+          else if (spec.stars ? j > 0.988 : j > 0.955) c = fleck[(j * 977) % fleck.length | 0];
           var o = row + bx * 4;
           d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
         }

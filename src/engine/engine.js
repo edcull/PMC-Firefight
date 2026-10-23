@@ -390,6 +390,10 @@
         width: R.BOARD.w, height: R.BOARD.h, planet: cfg.planet,
         objectives: genObjectives(scenId)   // keeps the generator's clearings roughly central (and a scenario's ground bare)
       });
+    /* A compound in orbit (a story map's 'station' skin): its solid is open
+       space, drawn as a star field, the floors walled by the station's hull.
+       The rules read it as the solid it always was. */
+    if (scenDef.compound && cfg.story && cfg.story.skin === 'station') built.terrain.forEach(function (t) { if (t.kind === 'bulkhead' && !t.thin) t.space = true; });
     state = {
       cfg: cfg,
       terrain: built.terrain,

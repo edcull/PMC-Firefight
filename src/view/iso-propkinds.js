@@ -500,6 +500,42 @@
           dot(g, LP(lx + 0.85, ly + 1.2, a(12.6))[0], LP(lx + 0.85, ly + 1.2, a(12.6))[1], '#ffb02e', 4);   // the beacon on the cage
           break;
         }
+        /* A station's solar array, out in open space: a truss along its middle
+           running in towards the station, and two wings of cells either side
+           of it, deep blue in a pale frame, lit along their near edges. */
+        case 'solar': {
+          var sz = a(9), sl3 = lift || 0;
+          function SO(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sl3 - (z == null ? sz : z)]; }
+          var ym = pr.y + pr.h / 2, tx0 = pr.x, tx1 = pr.x + pr.w;
+          // the truss: two rails and their cross-bracing, on in towards the station
+          var tin = pr.toward.x > 0 ? tx1 + pr.w * 0.12 : tx0 - pr.w * 0.12;
+          var t0 = Math.min(tx0, tin), t1 = Math.max(tx1, tin);
+          edgeLine(g, SO(t0, ym - 0.35), SO(t1, ym - 0.35), '#8a96a0', 2);
+          edgeLine(g, SO(t0, ym + 0.35), SO(t1, ym + 0.35), '#b4c0c8', 2);
+          for (var tb2 = 0; tb2 <= (t1 - t0) / 0.9; tb2++) {
+            var bx2 = t0 + tb2 * 0.9;
+            edgeLine(g, SO(bx2, ym - 0.35), SO(bx2 + 0.45, ym + 0.35), '#6a7680', 1);
+          }
+          // the two wings
+          [[pr.y + 0.2, ym - 0.7], [ym + 0.7, pr.y + pr.h - 0.2]].forEach(function (Wg) {
+            var nc = Math.max(3, Math.round(pr.w / 1.6)), nr = 2;
+            for (var ci3 = 0; ci3 < nc; ci3++) {
+              for (var rj = 0; rj < nr; rj++) {
+                var x0c = pr.x + 0.2 + (pr.w - 0.4) * ci3 / nc, x1c = pr.x + 0.2 + (pr.w - 0.4) * (ci3 + 1) / nc - 0.12;
+                var y0c = Wg[0] + (Wg[1] - Wg[0]) * rj / nr, y1c = Wg[0] + (Wg[1] - Wg[0]) * (rj + 1) / nr - 0.1;
+                var Q = [SO(x0c, y0c), SO(x1c, y0c), SO(x1c, y1c), SO(x0c, y1c)];
+                poly(g, Q, (ci3 + rj) % 2 ? '#1c3d78' : '#20468a');
+                edgeLine(g, Q[0], Q[1], 'rgba(150,190,255,.35)', 1);
+                edgeLine(g, Q[3], Q[2], '#b4c0c8', 1);
+              }
+            }
+            var F = [SO(pr.x + 0.15, Wg[0] - 0.05), SO(pr.x + pr.w - 0.15, Wg[0] - 0.05), SO(pr.x + pr.w - 0.15, Wg[1] + 0.05), SO(pr.x + 0.15, Wg[1] + 0.05)];
+            edgeLine(g, F[0], F[1], '#d4dde4', 1); edgeLine(g, F[3], F[2], '#d4dde4', 1);
+            edgeLine(g, F[0], F[3], '#d4dde4', 1); edgeLine(g, F[1], F[2], '#d4dde4', 1);
+          });
+          dot(g, SO(tin, ym)[0], SO(tin, ym)[1], '#ff4a3a', 3);
+          break;
+        }
         case 'sacks': {
           // grain sacks, heaped: round-shouldered bags, a tie at the neck
           var skr = rng(pr.seed), skl = lift || 0;

@@ -90,6 +90,40 @@
       ] }
     },
 
+    /* Station Thule, the relay Morrow stopped at, in orbit over Okoro II: a
+       compound laid by hand, not by its seed, the same about both its axes. A
+       hub in the middle, a ring corridor round it with spokes in, a module to
+       the north and one to the south (the hub and the two modules are the
+       control rooms Critical control asks for), a lab on each flank, and two
+       docking arms out to each edge. Its skin is the station's (`skin`): the
+       solid round it is open space, a star field, the floors walled in by the
+       station's hull where they meet it, and solar arrays out in the dark. */
+    thule: {
+      name: 'Station Thule, in orbit over Okoro II', skin: 'station',
+      compound: {
+        cols: 16, rows: 16, walls: [], danger: [],
+        cells: [
+          '................',
+          '......rrrr......',
+          '......rrrr......',
+          '......c..c......',
+          '....cccccccc....',
+          'ccccc.c..c.ccccc',
+          '....ccrrrrcc....',
+          '.rrrc.rrrr.crrr.',
+          '.rrrc.rrrr.crrr.',
+          '....ccrrrrcc....',
+          'ccccc.c..c.ccccc',
+          '....cccccccc....',
+          '......c..c......',
+          '......rrrr......',
+          '......rrrr......',
+          '................'
+        ].join(''),
+        doors: ['86|102',  '89|105',  '150|166',  '153|169',  '101|102',  '105|106',  '149|150',  '153|154',  '38|54',  '41|57',  '198|214',  '201|217',  '115|116',  '123|124',  '131|132',  '139|140']
+      }
+    },
+
     /* A mud bank on Tessaly IV, a mile from the beacon: Brass Ledger's ship down
        in the reeds, the Reavers' boats come to buy, and three places the log
        could be as the sale is made (Find and secure, the relic). */

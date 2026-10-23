@@ -148,11 +148,23 @@ const compound = (n) => SC.SCENARIOS[n.scenario] && SC.SCENARIOS[n.scenario].com
 const allBattles = Object.keys(dr._nodes).map((id) => dr._nodes[id]).filter((n) => n.type === 'battle' && !n.side);
 const open = allBattles.filter((n) => !compound(n));
 ok('every open-table battle of the story has its own ground, both halves', open.every((n) => n.map && MAPS[n.map]), open.map((n) => n.id + ':' + n.map).join(', '));
-ok('...and the compounds none: their seed lays them', allBattles.filter(compound).every((n) => !n.map), allBattles.filter(compound).map((n) => n.id).join(', '));
+ok('...and the compounds none, their seed lays them, unless the map lays the compound by hand', allBattles.filter(compound).every((n) => !n.map || (MAPS[n.map] && MAPS[n.map].compound)), allBattles.filter(compound).map((n) => n.id).join(', '));
+{
+  // Station Thule: laid by hand, the same about both its axes, in open space
+  const CMP = require('../../src/rules/compound.js');
+  const th = MAPS.thule, pl = th && th.compound, chk = pl && CMP.checkPlan(pl, 48, 48);
+  const at = (i, j) => pl.cells.charAt(j * pl.cols + i);
+  let mirrored = !!pl;
+  for (let j = 0; pl && j < pl.rows; j++) for (let i = 0; i < pl.cols; i++) if (at(i, j) !== at(pl.cols - 1 - i, j) || at(i, j) !== at(i, pl.rows - 1 - j)) mirrored = false;
+  ok('Station Thule is laid by hand, a plan that can be fought in, with an entry on each edge', dr._nodes['c2t.battle'].map === 'thule' && chk && chk.ok && chk.entries.L > 0 && chk.entries.R > 0, JSON.stringify(chk));
+  ok('...the same about both its axes', mirrored);
+  ok('...and in orbit: its skin the station’s, the solid round it open space', th.skin === 'station');
+}
 ok('...so nothing waits on maps to come', !dr.mapsPending);
 const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 Object.keys(MAPS).forEach((k) => {
   const m = MAPS[k], ps = m.pieces;
+  if (!ps) return;                          // (a compound laid by hand: its plan is checked above)
   const bad = [];
   ps.forEach((p, i) => {
     if (!R.TERRAIN[p.kind]) bad.push(p.kind + ' is no terrain');
