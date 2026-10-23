@@ -33,6 +33,10 @@ options switched on for a battle or a campaign.
   - online "world" campaigns: a lobby with player and AI slots, contracts
     against the AI, duels between players and co-operative contracts;
   - Close Encounters battles in a campaign, at a frequency set when it is raised.
+- **Story mode:** *Deep Contract*, a campaign written as a story for one
+  company: eight chapters on a mining moon, events and choices that move its
+  meters and flags, battles on hand-laid maps with briefings and their own
+  scenarios, side contracts, and six endings with their epilogues.
 - **Accounts on a game server:** sign-in or guest play, email activation and
   password resets, campaigns kept on the server, and "your move" badges and
   emails.
@@ -254,6 +258,50 @@ other forces, as a challenge is: once they accept, a Battle Tier, a solitaire
 scenario and the OpFor's army are rolled, each of you picks a commando from your
 own dossier, and you fight side by side against the OpFor. Pay and experience
 are halved afterwards, each company's from its own units.
+
+### Story mode
+
+**Story** on the menu starts one. Choose the story (*Deep Contract*), the
+difficulty and whether to play it ironman, then found the company as for any
+campaign, naming its commander under the company's name. The commander is the
+officer at the head of the command squad: the story calls them by name, and they
+are never a casualty.
+
+The story runs in chapters. Each opens with its card, then events: a situation
+and a few choices, some closed until you have the money, the Intel or the
+history for them. What you choose moves the story's **meters** (HTX Standing,
+Loyalty and Intel are shown; the rest come to light as you learn of them) and sets
+**flags** that later chapters, battles and the ending read.
+
+- **Battles.** Each has a name, its own map, laid the same way every time, and a
+  briefing read before you choose your force. How much of the enemy you know (a
+  rough word, an outline, or every unit) comes from Intel, the locals and the
+  choices before the battle. The force is picked with the campaign's own muster.
+  Where a battle lets you, you choose your role or the edge you come in from.
+  Allies fighting beside you take one order a turn from a marker you put on the
+  table: move here, attack here or hold here.
+- **The two halves.** Chapters 1 to 4 are the contract as HTX wrote it, the same
+  for everyone (with two one-off chapters some companies never see). From
+  chapter 5 the jobs come from whatever is pressing hardest: the Front, a truce,
+  the hive or HTX and Black Lantern. A job passed up goes on without you, usually
+  for the worse. The last chapter is the finale of the thread under the most
+  pressure.
+- **Between chapters** the company is on its hub as in any campaign: recruit,
+  promote, spend. Side contracts are on offer too, small paid battles, more of
+  them when the company has fallen behind or HTX has stopped paying. HTX pays a
+  bonus for each story battle won, by your standing with it.
+- **The ending** is chosen by what you did: *Liberators*, *Company Man*,
+  *Contract Terminated*, *Scorched Earth*, *Paid Off*, or *Broken Company* if the
+  company can no longer field an army. Its epilogue says what became of the moon
+  and its people, and who stayed with the company.
+
+**Difficulty.** *Story* gives lighter enemy forces and better pay, *Contract* is
+the story as tuned, *Hard* gives stronger enemies that grow faster with you and
+less money. It is chosen at the start, for the whole story.
+
+**Ironman** keeps one save, written as you go. Otherwise each chapter's start is
+a checkpoint, and the journal can take the story and the company back to one.
+The journal also tells the story so far, chapter by chapter.
 
 ### The unit viewer
 

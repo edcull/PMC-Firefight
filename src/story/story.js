@@ -94,6 +94,7 @@
     campaign.story = {
       id: def.id, version: def.version || 1, node: null,
       ironman: !!opts.ironman,
+      difficulty: opts.difficulty && def.difficulty && def.difficulty[opts.difficulty] ? opts.difficulty : null,
       meters: meters, flags: {}, revealed: {},
       history: {},                 // each meter's values, chapter by chapter
       journal: [],
@@ -597,7 +598,19 @@
     var share = SUCCESS[g] ? 1 : g === 'draw' ? (P.draw || 0) : 0;
     if (!share) return 0;
     var m = P.meter ? ctx.st.meters[P.meter] || 0 : 0;
-    return Math.max(0, Math.round((node.pay != null ? node.pay : P.base || 0) * share * (1 + (P.step || 0) * m)));
+    return Math.max(0, Math.round((node.pay != null ? node.pay : P.base || 0) * share * (1 + (P.step || 0) * m) * (difficultyOf(ctx.campaign).pay || 1)));
+  }
+  /* The difficulty the story was begun at (chosen once, at the start, like
+     ironman): the story's `difficulty` entry for it, else its default (the
+     first marked `default`), else nothing changed. Its numbers: `fill`, added
+     to every enemy force's share of the battle's points; `allowance`, what the
+     company's experience adds to them, multiplied; `pay`, HTX's bonus and the
+     side contracts' pay, multiplied. */
+  function difficultyOf(campaign) {
+    var def = storyOf(campaign), D = def && def.difficulty;
+    if (!D) return {};
+    var id = campaign.story.difficulty || Object.keys(D).filter(function (k) { return D[k].default; })[0];
+    return (id && D[id]) || {};
   }
   // a side contract's pay: all of it for a win, half for a draw
   function jobPay(d, g) { return !d ? 0 : SUCCESS[g] ? d.pay : g === 'draw' ? Math.floor(d.pay / 2) : 0; }
@@ -626,7 +639,7 @@
     var open = arr(side.jobs).filter(function (j) { return test(ctx, j.if) && st.lastJob !== j.id; }), offers = [];
     while (offers.length < n && open.length) {
       var j = open.splice(Math.floor(Math.random() * open.length), 1)[0];
-      offers.push({ job: j.id, pay: Math.round(j.pay * (cut ? side.cutOffPay || 1 : 1)), catchUp: late });
+      offers.push({ job: j.id, pay: Math.max(1, Math.round(j.pay * (cut ? side.cutOffPay || 1 : 1) * (difficultyOf(campaign).pay || 1))), catchUp: late });
     }
     return { node: node.id, offers: offers, taken: null };
   }
@@ -936,7 +949,7 @@
   root.PMCStory = {
     register: register, get: get, list: list, resolve: resolve,
     active: active, begin: begin, view: view, choose: choose, proceed: proceed,
-    battleSpec: battleSpec, intel: intel, takeSide: takeSide, nodeAt: nodeAt, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
+    battleSpec: battleSpec, intel: intel, difficultyOf: difficultyOf, takeSide: takeSide, nodeAt: nodeAt, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
     test: test, apply: apply, roll: roll, pressure: pressure, finaleChapter: finaleChapter,
     endingFor: endingFor, epilogue: epilogue, broken: broken, breakCompany: breakCompany,
     checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf,

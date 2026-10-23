@@ -1105,6 +1105,22 @@ Portraits or emblems for the people in the story (in the iso style or as plain
 emblems). Sound for the chapter cards. A second difficulty setting. Notes in the
 README and the user guide.
 
+**Where it stands.** Pixel-art faces: the story's `people` (Varga, the Front,
+Port Master Okonkwo, Petrak, HTX, Black Lantern, the teacher, the miners' guild,
+the hive) each carry a `face` (skin, hair, headgear, clothes, details such as a
+scar, glasses or a bandana), drawn by `view/story-portraits.js` as a head and
+shoulders on a 32 x 32 grid with a bold black edge, beside every event that names
+them (`who`); the hive has a bug's face. Sounds, made
+by `view/sfx.js` like the rest: a chapter's card, the second half's first, a
+battle lost and the ending, each once for its page. Three difficulties, chosen
+when the story begins (`difficulty` in the story, `story.js` `difficultyOf`):
+*Story* (the enemy's share −0.15, its growth with your experience halved, pay
+×1.5), *Contract* (the story as tuned) and *Hard* (+0.15, ×1.5, pay ×0.75);
+`storyside.js` checks each moves the enemy and the pay the right way, and
+`storywhole.js` walks the story at each. The README's user guide has a Story
+mode section. Also done here: a story battle's force is picked with the
+campaign's own muster.
+
 Phases 1 and 2 can run side by side. Phase 4 is the point to stop and play it
 before writing the rest.
 

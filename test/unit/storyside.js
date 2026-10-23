@@ -105,6 +105,45 @@ ok('in the second half a side contract taken costs time: Hive Growth +1', (() =>
   const h = k.story.meters.hive; S.takeSide(k, off.id); return k.story.meters.hive === h + 1;
 })());
 
+console.log('\nDifficulty');
+/* Chosen when the story begins: the enemy's share of the points, what the
+   company's experience adds, and the pay. Contract is the story as tuned. */
+const atDiff = (d) => {
+  const k = C.newCampaign({ mode: 'solo' });
+  C.found(k.companies.A, ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
+  k.companies.A.roster.forEach((e) => { e.exp = 12; });        // a company with some experience, so the allowance counts
+  S.begin(k, 'deep-contract', d ? { difficulty: d } : {});
+  k.story.chapter = 'c2d'; k.story.node = 'c2d.battle';
+  const spec = S.battleSpec(k), co = k.companies.A;
+  const f = L.buildForce(spec.enemy, { campaign: k, tier: 2, pl: 1, allowance: L.allowance(co) });
+  const pts = f.picks.reduce((n, p) => n + R.profile(p.key).tier, 0);
+  k.story.meters.htx = 2;
+  const bonus = (() => { k.story.node = 'c1.battle'; k.story.chapter = 'c1'; const b0 = co.kUC; S.resolveBattle(k, 'victory'); return co.kUC - b0; })();
+  return { pts, bonus, d: k.story.difficulty, def: S.difficultyOf(k) };
+};
+const easy = atDiff('story'), norm = atDiff('contract'), none = atDiff(null), hard = atDiff('hard');
+ok('three settings, Contract the default when none is chosen', !!dc.difficulty.story && !!dc.difficulty.hard && none.def === dc.difficulty.contract && none.d === null);
+ok('the enemy is smaller on Story, larger on Hard', easy.pts < norm.pts && norm.pts < hard.pts, easy.pts + ' / ' + norm.pts + ' / ' + hard.pts + ' points');
+ok('...and HTX pays more on Story, less on Hard', easy.bonus > norm.bonus && norm.bonus > hard.bonus, easy.bonus + ' / ' + norm.bonus + ' / ' + hard.bonus + ' kUC');
+ok('an unknown setting is not taken', atDiff('nightmare').d === null);
+
+console.log('\nSaved and loaded');
+/* A story has no rival forces: its side B is its own, and a save keeps it, so a
+   battle after a reload still has its aftermath (the income roll reads side B). */
+{
+  const k = campaign();
+  const back = C.rehydrate(JSON.parse(JSON.stringify(C.forSave(k))));
+  ok('a story’s side B comes back from a save', !!back.companies.B && Array.isArray(back.companies.B.doctrines));
+  const lost = JSON.parse(JSON.stringify(C.forSave(k)));
+  delete lost.companies.B;
+  const mended = C.rehydrate(lost);
+  ok('...and a save that lost it has it made again', !!mended.companies.B && Array.isArray(mended.companies.B.doctrines) && (mended.rivals || []).length === 0);
+  const rep = { winner: 'A', routed: { A: false, B: true }, battleTier: 1, pl: 1, scenario: 'meeting', turns: 6, units: [], casualties: [], story: null };
+  let threw = null;
+  try { C.rollIncome(1, 1, mended.companies.A, mended.companies.B, 'A', ['A']); C.aftermath(mended, rep, {}); } catch (e) { threw = e.message; }
+  ok('...so a battle after a reload has its aftermath', !threw, threw);
+}
+
 console.log('\nThe story checks out with them');
 const r = V.check(dc, { scenarios: SC.SCENARIOS });
 ok('Deep Contract validates with its side contracts', r.errors.length === 0, r.errors.slice(0, 3).join(' | '));

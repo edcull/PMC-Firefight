@@ -617,10 +617,29 @@
           cg.translate(-x0, -y0);
           paintReach(cg, quads);
           reachCache.cv = cv; reachCache.x = x0; reachCache.y = y0;
-        } else reachCache.quads = quads;
+        }
+        reachCache.quads = quads;
       }
       if (reachCache.cv) g.drawImage(reachCache.cv, reachCache.x, reachCache.y);
       else if (reachCache.quads) paintReach(g, reachCache.quads);
+    }
+    /* ...and once the buildings are drawn, the area again over them, faint, its
+       edge dashed: the ground behind a building is still ground the unit can
+       reach, and a tap on the wall in front of it lands there. */
+    function drawReachOver(g) {
+      var quads = reachCache.quads;
+      if (!quads || !quads.length) return;
+      g.save();
+      g.beginPath();
+      quads.forEach(function (o) { g.moveTo(o.q[0][0], o.q[0][1]); for (var i = 1; i < 4; i++) g.lineTo(o.q[i][0], o.q[i][1]); g.closePath(); });
+      g.fillStyle = 'rgba(110,205,150,.12)'; g.fill();
+      g.beginPath();
+      quads.forEach(function (o) { o.segs.forEach(function (sg) { g.moveTo(sg[0][0], sg[0][1]); g.lineTo(sg[1][0], sg[1][1]); }); });
+      g.lineJoin = 'round'; g.lineCap = 'round';
+      g.setLineDash([5, 4]);
+      g.strokeStyle = 'rgba(8,14,10,.4)'; g.lineWidth = 2.6; g.stroke();
+      g.strokeStyle = 'rgba(150,235,185,.85)'; g.lineWidth = 1.4; g.stroke();
+      g.restore();
     }
     /* The area as strips: each row of squares side by side on the same level one
        quad, and its edges joined into runs — a few hundred shapes to fill and
@@ -1289,6 +1308,8 @@
           if (u.hidden) B.pctx.restore();
         });
       seeThrough(order, blockers);
+      // the reachable ground the buildings hide, shown through them
+      if (ui.moves.length && !aiSel && blockers.length) drawReachOver(B.pctx);
 
       /* The ghost: where the unit would stand if the move went ahead. Drawn over
          everything at half weight, with the path it would walk. */

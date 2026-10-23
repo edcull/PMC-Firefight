@@ -19,49 +19,54 @@ function ok(name, cond, note) {
 }
 const FOUNDING = ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'];
 const dc = S.get('deep-contract');
-const N = +process.env.STORY_WALKS || 30, t = { epilogues: [], endings: {}, tierEnd: {}, finaleTier: [], battles: [], sides: 0, errors: [], kUC: [] };
-
-for (let w = 0; w < N; w++) {
-  const c = C.newCampaign({ mode: 'solo' });
-  C.found(c.companies.A, FOUNDING, 'S2');
-  S.begin(c, 'deep-contract');
-  let battles = 0, guard = 0;
-  try {
-    while (guard++ < 600) {
-      const v = S.view(c);
-      if (!v || c.story.ended) break;
-      if (v.type === 'event' || v.type === 'pool') {
-        const open = v.options.filter((o) => o.ok);
-        if (!open.length) throw new Error('nothing open at ' + v.id);
-        S.choose(c, open[Math.floor(Math.random() * open.length)].id);
-      } else if (v.type === 'battle') {
-        const co = c.companies.A, b = v.battle;
-        const tier = L.tierFor(co, { tier: b.tier, minTier: b.minTier, maxTier: b.maxTier }), pl = L.plFor(co, tier, b.levers.pl || b.pl);
-        const picks = C.pickForce(co, tier, pl, null, { scenario: b.scenario });
-        const cfg = L.toCfg(c, { picks, role: 'A', tier, pl });
-        const ch = dc._chapters[c.story.chapter];
-        if (ch && (ch.finale || ch.id === 'breakout') && !v.sideJob) t.finaleTier.push(tier);
-        const grade = Math.random() < 0.6 ? (Math.random() < 0.3 ? 'decisive' : 'victory') : ['draw', 'defeat', 'defeat', 'rout'][Math.floor(Math.random() * 4)];
-        const report = makeReport(picks, cfg.armyB, grade, cfg);
-        S.resolveBattle(c, report);
-        C.aftermath(c, report, {});
-        battles++;
-      } else if (v.type === 'interlude' && v.side && v.side.length && Math.random() < 0.5) {
-        t.sides++;
-        S.takeSide(c, v.side[Math.floor(Math.random() * v.side.length)].id);
-      } else if (v.type === 'interlude') {
-        C.developRival(c.companies.A);
-        if (S.broken(c)) { S.breakCompany(c); break; }
-        S.proceed(c);
-      } else S.proceed(c);
-    }
-  } catch (e) { t.errors.push(e.message); }
-  const co = c.companies.A;
-  if (c.story.ended) t.epilogues.push({ ending: c.story.ended, ep: S.epilogue(c) });
-  t.endings[c.story.ended || '(none)'] = (t.endings[c.story.ended || '(none)'] || 0) + 1;
-  t.tierEnd[co.tier] = (t.tierEnd[co.tier] || 0) + 1;
-  t.battles.push(battles); t.kUC.push(co.kUC);
+const N = +process.env.STORY_WALKS || 30;
+// the walks at one difficulty (null: the story's default), tallied
+function walks(n, difficulty) {
+  const t = { epilogues: [], endings: {}, tierEnd: {}, finaleTier: [], battles: [], sides: 0, errors: [], kUC: [] };
+  for (let w = 0; w < n; w++) {
+    const c = C.newCampaign({ mode: 'solo' });
+    C.found(c.companies.A, FOUNDING, 'S2');
+    S.begin(c, 'deep-contract', difficulty ? { difficulty } : {});
+    let battles = 0, guard = 0;
+    try {
+      while (guard++ < 600) {
+        const v = S.view(c);
+        if (!v || c.story.ended) break;
+        if (v.type === 'event' || v.type === 'pool') {
+          const open = v.options.filter((o) => o.ok);
+          if (!open.length) throw new Error('nothing open at ' + v.id);
+          S.choose(c, open[Math.floor(Math.random() * open.length)].id);
+        } else if (v.type === 'battle') {
+          const co = c.companies.A, b = v.battle;
+          const tier = L.tierFor(co, { tier: b.tier, minTier: b.minTier, maxTier: b.maxTier }), pl = L.plFor(co, tier, b.levers.pl || b.pl);
+          const picks = C.pickForce(co, tier, pl, null, { scenario: b.scenario });
+          const cfg = L.toCfg(c, { picks, role: 'A', tier, pl });
+          const ch = dc._chapters[c.story.chapter];
+          if (ch && (ch.finale || ch.id === 'breakout') && !v.sideJob) t.finaleTier.push(tier);
+          const grade = Math.random() < 0.6 ? (Math.random() < 0.3 ? 'decisive' : 'victory') : ['draw', 'defeat', 'defeat', 'rout'][Math.floor(Math.random() * 4)];
+          const report = makeReport(picks, cfg.armyB, grade, cfg);
+          S.resolveBattle(c, report);
+          C.aftermath(c, report, {});
+          battles++;
+        } else if (v.type === 'interlude' && v.side && v.side.length && Math.random() < 0.5) {
+          t.sides++;
+          S.takeSide(c, v.side[Math.floor(Math.random() * v.side.length)].id);
+        } else if (v.type === 'interlude') {
+          C.developRival(c.companies.A);
+          if (S.broken(c)) { S.breakCompany(c); break; }
+          S.proceed(c);
+        } else S.proceed(c);
+      }
+    } catch (e) { t.errors.push(e.message); }
+    const co = c.companies.A;
+    if (c.story.ended) t.epilogues.push({ ending: c.story.ended, ep: S.epilogue(c) });
+    t.endings[c.story.ended || '(none)'] = (t.endings[c.story.ended || '(none)'] || 0) + 1;
+    t.tierEnd[co.tier] = (t.tierEnd[co.tier] || 0) + 1;
+    t.battles.push(battles); t.kUC.push(co.kUC);
+  }
+  return t;
 }
+const t = walks(N, null);
 const avg = (xs) => (xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length)).toFixed(1);
 const share = (n) => Math.round(100 * n / N) + '%';
 
@@ -80,6 +85,13 @@ ok('...written out in full, nothing left in braces', t.epilogues.every((x) => x.
 ok('...and who stayed: units that came down on the first day, or were honoured', eps.some((x) => x.ep.stayed.some((u) => u.first)));
 console.log('  (an epilogue: ' + (eps[0] ? eps[0].ending + ': ' + eps[0].ep.lines.join(' ') : '') + ')');
 console.log('  (battles ' + avg(t.battles) + ' a walk, side contracts ' + (t.sides / N).toFixed(1) + ', kUC at the end ' + avg(t.kUC) + ')');
+
+console.log('\nAt the other difficulties');
+['story', 'hard'].forEach((d) => {
+  const td = walks(Math.ceil(N / 2), d), n = Math.ceil(N / 2);
+  ok(dc.difficulty[d].name + ': every walk reaches an ending, nothing going wrong', !td.errors.length && !td.endings['(none)'], JSON.stringify(td.endings));
+  ok('...and Broken Company stays rare', (td.endings.broken || 0) <= n * 0.15, (td.endings.broken || 0) + ' of ' + n);
+});
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

@@ -922,15 +922,18 @@
     return KIT_STORY || (KIT_STORY = root.PMCStoryScreens({
       C: C, R: R, ROMAN: ROMAN, esc: esc, ask: ask, note: note, colourOf: colourOf, save: save, close: close,
       memorialList: memorialList, beginStory: beginStory,
+      // a story battle's force is picked with the contract's own muster (dossier-contract.js)
+      get contract() { return contract; }, set contract(v) { contract = v; },
+      storyForce: function () { return (KIT_CONTRACT || kitContract()).storyForce(); },
       get camp() { return camp; }, get view() { return view; }, set view(v) { view = v; },
       render: function () { render(); }
     }));
   }
   /* A new story: the campaign's own founding screen, with the story to begin
      once the company is founded (dofound). */
-  function beginStory(id, ironman) {
+  function beginStory(id, ironman, difficulty) {
     beginFounding('', 'solo', 'pmc');
-    draft.story = { id: id, ironman: !!ironman };
+    draft.story = { id: id, ironman: !!ironman, difficulty: difficulty || null };
     draft.name = defaultForceName('pmc', 'A');
     draft.commander = R.soldierName({ faction: 'pmc' });
     if (wantColours.A) { draft.colour = wantColours.A; draft.colourChosen = true; }
@@ -1630,7 +1633,7 @@
           // a story: no rivals, and the story begins (story.js)
           if (draft.story) {
             var cmdName = (el('found-commander') ? el('found-commander').value : draft.commander || '').trim();
-            root.PMCStory.begin(camp, draft.story.id, { ironman: draft.story.ironman, commander: cmdName || draft.commander || null });
+            root.PMCStory.begin(camp, draft.story.id, { ironman: draft.story.ironman, difficulty: draft.story.difficulty, commander: cmdName || draft.commander || null });
             camp.title = root.PMCStory.get(draft.story.id).name;
             save(); view = 'story'; render(); return;
           }

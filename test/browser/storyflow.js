@@ -54,6 +54,10 @@ async function cards(p) {
   let txt = await body(p);
   check('it opens the new-story form, Deep Contract offered', /Story/.test(txt) && /Deep Contract/.test(await p.evaluate(() => document.getElementById('story-pick').innerHTML)), txt.slice(0, 120));
   check('...with ironman to choose, for good', /Ironman/.test(txt));
+  check('...and the difficulty: Story, Contract (chosen to start) and Hard', await p.evaluate(() => [...document.querySelectorAll('#camp-body [data-go="storydiff"]')].map((b) => b.textContent + (b.classList.contains('on') ? '*' : '')).join(',')) === 'Story,Contract*,Hard');
+  await go(p, '#camp-body [data-go="storydiff"][data-d="hard"]');
+  txt = await body(p);
+  check('...Hard picked, and what it means said', /Stronger enemy forces/.test(txt) && await p.evaluate(() => document.querySelector('#camp-body [data-go="storydiff"][data-d="hard"]').classList.contains('on')));
   await go(p, '[data-go="storynew"]');
   check('the campaign’s own founding screen comes up', await p.evaluate(() => !!document.getElementById('found-name')));
   const cmd0 = await p.evaluate(() => { const b = document.getElementById('found-commander'); return b ? b.value : null; });
@@ -76,6 +80,10 @@ async function cards(p) {
   await go(p, '[data-go="storyon"]');
   txt = await body(p);
   check('the brief leads to the event: the port master’s offer', /port master/i.test(txt) && await p.evaluate(() => document.querySelectorAll('#camp-body .story-opt').length === 3));
+  check('...with who it is about: Port Master Okonkwo\u2019s face', /Port Master Okonkwo/.test(txt) && /Kessler\u2019s Reach starport/.test(txt) && await p.evaluate(() => !!document.querySelector('#camp-body .story-who svg.story-portrait')));
+  const diffNow = await p.evaluate(() => window.PMC_CAMPAIGN.get().story.difficulty);
+  check('the story is played at Hard, and says so', diffNow === 'hard' && /Hard/i.test(txt), diffNow + ' | ' + txt.slice(0, 120));
+  await p.screenshot({ path: path.join(SHOTS, 'story-event.png') });
   await p.screenshot({ path: path.join(SHOTS, 'story-event.png') });
   await go(p, '[data-go="storyopt"][data-o="ask"]');
   await p.screenshot({ path: path.join(SHOTS, 'story-briefing.png') });
@@ -84,7 +92,19 @@ async function cards(p) {
   check('...and, having asked, an outline of the enemy (not every unit)', /You have their outline/.test(txt) && /bands of fighters/.test(txt) && !/Word is:/.test(txt), txt.slice(txt.indexOf('The enemy'), txt.indexOf('The enemy') + 200));
   await go(p, '[data-go="storymuster"]');
   txt = await body(p);
-  check('the muster picks a legal force for the battle', /A legal army/.test(txt) && await p.evaluate(() => !document.querySelector('[data-go="storyfight"]').disabled), txt.slice(0, 200));
+  check('the muster is the campaign\u2019s own: the force line, a legal force picked to start', /units · \d+\/\d+ points/.test(txt) && await p.evaluate(() => !!document.querySelector('#camp-body .cforce [data-kind="cpick"]') && !!document.querySelector('#camp-body .cmodal[data-kind="cadd"], #camp-body .cmodal') && document.querySelector('[data-go="storyfight"]').getAttribute('aria-disabled') !== 'true'), txt.slice(0, 300));
+  // the campaign's muster opened, as a player opens it: its cards and its add list
+  await go(p, '#camp-body .cforce [data-kind="cpick"]');
+  const mus = await p.evaluate(() => { const m = [...document.querySelectorAll('.cmodal')].find((x) => !x.hidden); return m ? { cards: m.querySelectorAll('.fcard').length, legal: /legal force/i.test(m.innerText) } : null; });
+  check('...its muster lists the force as cards, legal at this Tier', mus && mus.cards > 0 && mus.legal, JSON.stringify(mus));
+  await p.screenshot({ path: path.join(SHOTS, 'story-muster.png') });
+  await go(p, '[data-go="fmodal"][data-kind="cadd"]');
+  const add = await p.evaluate(() => { const m = [...document.querySelectorAll('.cmodal')].find((x) => !x.hidden); return m ? m.querySelectorAll('[data-pick]').length : -1; });
+  check('...and its add list, the units not yet in it', add >= 0, String(add));
+  await p.evaluate(() => { const b = [...document.querySelectorAll('.cmodal:not([hidden]) button.start')].find((x) => /done/i.test(x.textContent)); if (b) b.click(); });
+  await p.waitForTimeout(200);
+  await p.evaluate(() => { const b = [...document.querySelectorAll('.cmodal:not([hidden]) button.start')].find((x) => /done/i.test(x.textContent)); if (b) b.click(); });
+  await p.waitForTimeout(200);
   await go(p, '[data-go="storyfight"]');
   await p.waitForTimeout(1200);
   const st = await p.evaluate(() => { const s = window.PMC_STATE && window.PMC_STATE(); return s ? { node: s.cfg.story && s.cfg.story.node, scen: s.cfg.scenario, b: s.units.filter(u => u.side === 'B').length } : null; });

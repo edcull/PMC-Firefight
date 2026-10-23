@@ -105,7 +105,10 @@ src/
                      themselves in dossier-hub/found/roster/contract/after.js
     story-screens.js story mode's screens: a new story, the chapter card, briefs, events, a battle's
                      briefing and muster, the debrief, interludes, the second half's jobs, the
-                     journal (and going back), the ending
+                     journal (and going back), the ending; a battle's force picked with the
+                     contract's own muster (dossier-contract.js storyForce)
+    story-portraits.js  the story's people as pixel-art faces: head and shoulders on a 32 x 32
+                     grid, drawn from each person's `face`, as an SVG of square pixels
     viewer.js        the unit viewer
 
   net/               playing somebody else
@@ -421,6 +424,8 @@ storyflow.js       story mode from the menu's Story card to the end of chapter 1
                    the aftermath and debrief, the journal, and the Continue list
 allyorders.js      the allies' orders card beside the board: an order picked, put down with a tap, the
                    marker drawn, and kept once the allies act on it
+storyside.js       a side contract taken at the break between chapters, left and come back to, fought
+                   (conceded), its aftermath, and back to the break with its pay
 founding.js        founding a force: its name, colours, roster and charter
 hotseatfound.js    a hotseat campaign founding both players' forces
 hotseatpick.js     a hotseat contract: each player picks their own force, then the battle starts

@@ -24,7 +24,7 @@
     function SC() { return root.PMCScen; }
 
     // the new-story form's choices, and the muster's picks
-    var want = { id: null, ironman: false };
+    var want = { id: null, ironman: false, difficulty: null };
     var muster = null;     // { node, tier, pl, rids: [], role }
 
     function def() { return E.camp && E.camp.story ? S().get(E.camp.story.id) : null; }
@@ -45,6 +45,15 @@
       var d = S().get(want.id);
       if (d && d.blurb) h += para(d.blurb);
       h += '<p class="hint">You found your own company, under the campaign’s own rules. The story finds work for it.</p>';
+      // the difficulty, where the story has more than one: chosen now, for the whole story
+      var D = d && d.difficulty;
+      if (D) {
+        var ids = Object.keys(D), cur = want.difficulty && D[want.difficulty] ? want.difficulty : ids.filter(function (k) { return D[k].default; })[0] || ids[0];
+        want.difficulty = cur;
+        h += '<div class="field story-diff"><label>Difficulty</label><div class="segs">' + ids.map(function (k) {
+          return '<button type="button" class="lnk' + (k === cur ? ' on' : '') + '" data-go="storydiff" data-d="' + esc(k) + '">' + esc(D[k].name) + '</button>';
+        }).join('') + '</div><p class="hint small">' + esc(D[cur].blurb || '') + ' Chosen now, for the whole story.</p></div>';
+      }
       h += '<div class="field"><div class="opt-list"><label class="opt-row"><input type="checkbox" id="story-ironman"' + (want.ironman ? ' checked' : '') + '>' +
         '<span class="opt-name">Ironman</span></label></div>' +
         '<p class="hint small">One save, written as you go: no going back to a checkpoint, and a battle thrown away counts as a rout. Chosen now, for good.</p></div>';
@@ -56,6 +65,13 @@
       var p = document.getElementById('story-pick'), im = document.getElementById('story-ironman');
       if (p) want.id = p.value;
       if (im) want.ironman = !!im.checked;
+    }
+
+    function badgeLine(st) { var b = badges(st); return b ? '<p class="story-badges">' + b + '</p>' : ''; }
+    // how the story is being played: ironman, and the difficulty where it is not the story's own
+    function badges(st) {
+      var D = def().difficulty, d = st.difficulty && D && D[st.difficulty];
+      return (st.ironman ? '<span class="story-badge">Ironman</span>' : '') + (d && !d.default ? '<span class="story-badge">' + esc(d.name) + '</span>' : '');
     }
 
     /* ================= the story, where it is ================= */
@@ -86,6 +102,15 @@
         '<button class="lnk" data-go="menu">Menu</button></p>';
     }
 
+    /* The story's sounds (sfx.js), each played once for the page it belongs to:
+       a chapter's card, the second half's first, a battle lost, the ending. */
+    var heard = {};
+    function cue(key, name) {
+      if (heard[key]) return;
+      heard[key] = true;
+      if (root.SFX && root.SFX[name]) root.SFX[name]();
+    }
+
     function storyView() {
       var d = def(), st = E.camp.story;
       if (!d) return '<h2>Story</h2><p>This story is not in this version of the game.</p>' + foot();
@@ -93,10 +118,11 @@
       var v = S().view(E.camp), ch = chapterOf();
       if (!v) return '<h2>' + esc(d.name) + '</h2><p>The story has lost its place.</p>' + foot();
       var h = '<h2>' + esc(d.name) + (ch && ch.counts !== false ? ' — ' + esc(ch.title) : '') + '</h2>';
-      h += meterBar();
+      h += badgeLine(st) + meterBar();
       // a chapter's card, on its first page
       var node = d._nodes[v.id];
       if (node && node._first && ch && !ch.shared) {
+        cue('card:' + st.chapterNo + ':' + v.id, ch.half === 2 && ch.counts === false ? 'storyFault' : 'storyChapter');
         h += '<div class="story-card"><small>' + (ch.counts === false ? '' : 'Chapter ' + st.chapterNo + (ch.half === 2 ? ' · Fault Lines' : ' · The Contract')) + '</small>' +
           '<b>' + esc(ch.title) + '</b>' + (ch.intro ? para(ch.intro) : '') + '</div>';
       }
@@ -104,6 +130,7 @@
       else if (v.type === 'event') h += eventView(v);
       else if (v.type === 'battle') h += battleView(v);
       else if (v.type === 'debrief') {
+        if (!(st.lastGrade === 'decisive' || st.lastGrade === 'victory')) cue('lost:' + st.chapterNo + ':' + v.id, 'storyGrim');
         h += '<div class="story-grade ' + (st.lastGrade === 'decisive' || st.lastGrade === 'victory' ? 'good' : 'bad') + '">' + esc(GRADE[st.lastGrade] || '') + '</div>';
         h += para(v.text) + '<div class="story-go"><button class="start" data-go="storyon">Go on</button></div>';
       } else if (v.type === 'interlude') {
@@ -137,8 +164,15 @@
       return h + '</div>';
     }
 
+    // who an event is about: their face, name and what they are (story-portraits.js)
+    function whoView(id) {
+      var n = def()._nodes[id], who = n && n.who && (def().people || {})[n.who], PF = root.PMCStoryPortraits;
+      if (!who || !PF) return '';
+      return '<div class="story-who">' + PF.svg(who.face, 64) + '<span><b>' + esc(who.name) + '</b><small>' + esc(who.role || '') + '</small></span></div>';
+    }
+
     function eventView(v) {
-      var h = '<div class="story-event">' + (v.title ? '<h3>' + esc(v.title) + '</h3>' : '') + para(v.text) + '<div class="story-opts">';
+      var h = '<div class="story-event">' + whoView(v.id) + (v.title ? '<h3>' + esc(v.title) + '</h3>' : '') + para(v.text) + '<div class="story-opts">';
       v.options.forEach(function (o) {
         var cost = o.cost ? Object.keys(o.cost).map(function (k) {
           var m = def()._meters[k];
@@ -199,26 +233,28 @@
 
     /* ================= the muster ================= */
 
+    /* The force for a story battle is picked as a contract's is, with the
+       campaign's own muster and add list (dossier-contract.js storyForce): the
+       story's muster sets up E.contract for it, its Battle Tier and Priority
+       Level the story's, and keeps what is the story's own (the role, the edge). */
     function beginMuster() {
       var spec = S().battleSpec(E.camp), co = E.camp.companies.A;
       var tier = L().tierFor(co, { tier: spec.tier, minTier: spec.minTier, maxTier: spec.maxTier });
       var pl = L().plFor(co, tier, spec.levers.pl || spec.pl);
-      var picks = C.pickForce(co, tier, pl, null, { scenario: spec.scenario });
-      muster = { node: spec.node, tier: tier, pl: pl, rids: picks.map(function (e) { return e.rid; }), role: 'A' };
+      muster = { node: spec.node, tier: tier, pl: pl, role: 'A' };
+      E.contract = { side: 'A', tier: tier, pl: pl, tactic: null, scenario: { id: spec.scenario }, story: spec.node,
+        picks: C.pickForce(co, tier, pl, null, { scenario: spec.scenario }) };
     }
-    function picked() {
-      var co = E.camp.companies.A;
-      return muster.rids.map(function (r) { return C.byRid(co, r); }).filter(Boolean);
-    }
+    function picked() { return E.contract ? E.contract.picks : []; }
     function legal() {
       var co = E.camp.companies.A;
       return R.checkArmy(picked().map(function (e) { return R.entryPick(e); }), muster.tier, muster.pl, co.doctrines || [], null);
     }
     function musterView() {
-      if (!muster || muster.node !== E.camp.story.node) beginMuster();
-      var co = E.camp.companies.A, spec = S().battleSpec(E.camp);
-      var h = '<h2>Your force — ' + esc(scenName(spec.scenario)) + '</h2>';
-      h += '<p>Battle Tier ' + ROMAN[muster.tier] + ', Priority Level ' + muster.pl + ': ' + (R.COMPOSITION[muster.tier].points * muster.pl) + ' composition points.</p>';
+      if (!muster || muster.node !== E.camp.story.node || !E.contract || E.contract.story !== muster.node) beginMuster();
+      var spec = S().battleSpec(E.camp);
+      var h = '<h2>Your force — ' + esc(spec.name || scenName(spec.scenario)) + '</h2>';
+      h += '<p class="hint">' + esc(scenName(spec.scenario)) + ' \u00b7 Battle Tier ' + ROMAN[muster.tier] + ', Priority Level ' + muster.pl + ': ' + (R.COMPOSITION[muster.tier].points * muster.pl) + ' composition points.</p>';
       var role = spec.levers.role || spec.role;
       if (role === 'choose') {
         h += '<div class="segs story-role">' + [['A', 'Attack'], ['B', 'Defend']].map(function (r) {
@@ -231,16 +267,11 @@
           return '<button class="lnk' + ((muster.edge || 'west') === r[0] ? ' on' : '') + '" data-go="storyedge" data-e="' + r[0] + '">' + r[1] + '</button>';
         }).join('') + '</div>';
       }
-      var res = legal();
-      h += '<div class="story-roster">' + co.roster.map(function (e) {
-        var p = R.profile(e.key), on = muster.rids.indexOf(e.rid) >= 0, resting = e.restUntil > 0;
-        return '<button class="story-unit' + (on ? ' on' : '') + '"' + (resting ? ' disabled' : ' data-go="storypick" data-rid="' + esc(e.rid) + '"') + '>' +
-          '<span class="ct">' + ROMAN[p ? p.tier : 1] + '</span> ' + esc(e.name) + (resting ? ' <small>resting</small>' : '') + '</button>';
-      }).join('') + '</div>';
-      h += res.ok ? '<p class="hint">A legal army.</p>' : '<p class="warn">' + esc((res.faults || res.errors || ['Not a legal army.']).join(' ')) + '</p>';
-      h += '<div class="story-go"><button class="lnk" data-go="storyauto">Pick for me</button>' +
-        '<button class="start" data-go="storyfight"' + (res.ok ? '' : ' disabled') + '>To battle</button></div>';
-      h += '<p class="camp-foot"><button class="lnk" data-go="story">← Back</button></p>';
+      // the campaign's own force line and muster (its add list, pick for me and clear)
+      var force = E.storyForce(), res = legal();
+      h += force.html;
+      h += '<div class="cacts"><button class="start" data-go="storyfight"' + (res.ok ? '' : ' aria-disabled="true" data-tip="' + esc((res.faults || ['Not a legal army.'])[0]) + '" data-tip-title="Not yet"') + '>To battle</button></div>';
+      h += '<p class="camp-foot"><button class="lnk" data-go="story">\u2190 Back</button></p>';
       return h;
     }
 
@@ -259,6 +290,7 @@
       };
       E.save();
       muster = null;
+      E.contract = null;
       E.close();
       root.PMC_NEWGAME(cfg);
     }
@@ -268,7 +300,7 @@
     function journalView() {
       var d = def(), st = E.camp.story;
       var h = '<h2>Journal — ' + esc(d.name) + '</h2>';
-      if (st.ironman) h += '<p class="story-badge">Ironman</p>';
+      h += badgeLine(st);
       // the meters the company can see, with how they went
       var shown = Object.keys(d._meters).filter(function (k) { return d._meters[k].shown || st.revealed[k] || st.ended; });
       h += '<div class="story-hist">' + shown.map(function (k) {
@@ -312,8 +344,9 @@
     function endingView() {
       var d = def(), st = E.camp.story, co = E.camp.companies.A;
       var en = (d.endings || []).filter(function (x) { return x.id === st.ended; })[0] || { title: 'The end' };
+      cue('end:' + st.ended, 'storyEnding');
       var h = '<h2>' + esc(d.name) + ' — ' + esc(en.title || en.id) + '</h2>';
-      if (st.ironman) h += '<p class="story-badge">Ironman</p>';
+      h += badgeLine(st);
       h += '<div class="story-card"><b>' + esc(en.title || en.id) + '</b>' + para(en.text || '') + '</div>';
       // the epilogue: what became of the moon and its people, and who stayed with the company
       var ep = S().epilogue(E.camp);
@@ -346,22 +379,17 @@
       switch (go) {
         case 'storynew':
           readNew();
-          E.beginStory(want.id, want.ironman);
+          E.beginStory(want.id, want.ironman, want.difficulty);
           return true;
         case 'story': E.view = 'story'; E.render(); return true;
         case 'storyon': S().proceed(E.camp); after(); return true;
         case 'storyopt': S().choose(E.camp, t.getAttribute('data-o')); after(); return true;
         case 'storyside': S().takeSide(E.camp, t.getAttribute('data-j')); after(); return true;
-        case 'storymuster': muster = null; E.view = 'storymuster'; E.render(); return true;
-        case 'storypick': {
-          var rid = t.getAttribute('data-rid'), i = muster.rids.indexOf(rid);
-          if (i >= 0) muster.rids.splice(i, 1); else muster.rids.push(rid);
-          E.render(); return true;
-        }
-        case 'storyauto': beginMuster(); E.render(); return true;
+        case 'storydiff': readNew(); want.difficulty = t.getAttribute('data-d'); E.render(); return true;
+        case 'storymuster': muster = null; E.contract = null; E.view = 'storymuster'; E.render(); return true;
         case 'storyrole': muster.role = t.getAttribute('data-r') === 'B' ? 'B' : 'A'; E.render(); return true;
         case 'storyedge': muster.edge = t.getAttribute('data-e') === 'east' ? 'east' : 'west'; E.render(); return true;
-        case 'storyfight': if (legal().ok) fight(); return true;
+        case 'storyfight': if (muster && legal().ok) fight(); return true;
         case 'storyjournal': E.view = 'storyjournal'; E.render(); return true;
         case 'storyrewind':
           E.ask({ kind: 'confirm', title: 'Go back?', text: 'The story and the company go back to how they were then: the dead, the kUC and the EXP with them.',

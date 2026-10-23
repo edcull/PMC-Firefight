@@ -65,6 +65,19 @@
     o.start(t); o.stop(t + dur + 0.05);
   }
 
+  // a held note that swells in and dies away slowly: the story's cues are made of these
+  function pad(t, dur, gain, type, f, rise) {
+    var o = ctx.createOscillator();
+    o.type = type || 'triangle';
+    o.frequency.setValueAtTime(f, t);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + (rise || 0.4));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+
   var SFX = {
     enabled: function () { return on; },
     setEnabled: function (v) {
@@ -453,6 +466,39 @@
       var t = now();
       tone(t, 0.5, 0.12, 'sine', 523, 523);
       tone(t + 0.07, 0.5, 0.1, 'sine', 784, 784);
+    },
+    /* Story mode (story-screens.js): a new chapter's card, a low open fifth
+       swelling in under a wash of wind; the second half's first card, the same
+       with a minor second rubbing against it; a battle lost, a slow fall; and
+       the ending, a chord that resolves. */
+    storyChapter: function () {
+      if (!ensure()) return;
+      var t = now();
+      burstOfNoise(t, 1.6, 0.05, 'lowpass', 500, 0.5, 160);
+      pad(t, 2.2, 0.09, 'triangle', 98, 0.6);
+      pad(t + 0.05, 2.1, 0.06, 'triangle', 147, 0.7);
+      pad(t + 0.4, 1.6, 0.035, 'sine', 196, 0.5);
+    },
+    storyFault: function () {
+      if (!ensure()) return;
+      var t = now();
+      burstOfNoise(t, 1.8, 0.06, 'lowpass', 420, 0.6, 120);
+      pad(t, 2.4, 0.09, 'triangle', 98, 0.5);
+      pad(t + 0.05, 2.3, 0.06, 'triangle', 147, 0.6);
+      pad(t + 0.35, 1.9, 0.04, 'sawtooth', 156, 0.8);
+      tone(t + 0.02, 0.5, 0.08, 'sine', 49, 49);
+    },
+    storyGrim: function () {
+      if (!ensure()) return;
+      var t = now();
+      [220, 196, 175, 147].forEach(function (f, i) { pad(t + i * 0.32, 0.9, 0.06, 'triangle', f, 0.12); });
+      pad(t, 1.8, 0.04, 'sine', 73, 0.5);
+    },
+    storyEnding: function () {
+      if (!ensure()) return;
+      var t = now();
+      [131, 196, 247, 330].forEach(function (f, i) { pad(t + i * 0.18, 2.6 - i * 0.2, 0.06, 'triangle', f, 0.5); });
+      pad(t + 0.9, 2.2, 0.05, 'sine', 392, 0.6);
     },
     victory: function () {
       if (!ensure()) return;

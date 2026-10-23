@@ -379,6 +379,60 @@
        Player 2 picks theirs, on the terms Player 1 has already settled. */
     function seat() { return E.contract && E.contract.side === 'B' ? 'B' : 'A'; }
     function hotseat() { return E.camp && E.camp.mode === 'hotseat'; }
+    /* The add list and the limits line for the force being picked (E.contract):
+       the company's units not in it yet, as the dossier sorts them, each greyed
+       out where it would break the list; what is fielded for this battle only;
+       and who is in the workshop. Shared with a story battle's muster
+       (story-screens.js, by storyForce). */
+    function pickParts(A, fkey, keys) {
+      var chk = R.checkArmy(keys, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null);
+      var list = '';
+      /* What each Tier asks for at this Battle Tier and Priority Level, and how
+         many of each are in the list — the line the skirmish muster sheet shows. */
+      var limits = '<p class="limits">' + U.limitsLine(R.compFor(A.faction || 'pmc', E.contract.tier).limits, chk.counts || {}, E.contract.pl) + '</p>';
+      var notIn = contractPicks(A).filter(function (e) { return E.contract.picks.indexOf(e) < 0; });
+      var avail = pickOrder(notIn, fkey);
+      if (!avail.length) list += '<p class="dnote">' + (notIn.length ? 'No unit matches the filter.' : 'Every unit on the books is already in the list.') + '</p>';
+      var at = {};
+      avail.forEach(function (e) {
+        list += E.groupHead(e, at);
+        var trial = keys.concat([R.entryPick(e)]);
+        var bad = blocking(R.checkArmy(trial, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
+        list += rosterRow('data-pick="' + e.rid + '"', e, bad);
+      });
+      /* A tribe's turrets and a company's rapid insertion platforms are not bought
+         (pp. 86, 140): they are put in the force for the battle, as many as the
+         composition allows, and are gone again after it. */
+      /* Above the Battle Tier only at Priority Level 2 and up: "On Priority Level 1, you
+         cannot use Turrets … of Tiers higher than the Battle Tier" (p. 126; rules review
+         a119ac2 XEN-12). The list's own limits decide the rest (checkArmy, below). */
+      var fieldable = R.listFor(A.faction || 'pmc').filter(function (p) {
+        return (C.isTurretP(p) || p.noSlot) && (p.tier <= E.contract.tier || E.contract.pl > 1);
+      });
+      if (fieldable.length) {
+        list += '<h4>Fielded for this battle</h4>';
+        fieldable.forEach(function (p) {
+          var bad = blocking(R.checkArmy(keys.concat([p.key]), E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
+          list += fieldRow('data-field="' + p.key + '"', p, bad, true);
+        });
+      }
+      var resting = A.roster.filter(function (e) { return e.restUntil > 0; });
+      if (resting.length) {
+        list += '<h4>In the workshop — sitting this one out</h4>';
+        resting.forEach(function (e) {
+          list += U.unitRow('class="cu" disabled', profile(e.key).tier, '<b>' + esc(e.name) + '</b>', 'salvaged from the last battle', null);
+        });
+      }
+      return { chk: chk, limits: limits, list: list };
+    }
+    /* A story battle's force, picked as a contract's is: the same muster and add
+       list, over E.contract set up by the story's muster. */
+    function storyForce() {
+      var A = E.camp.companies.A, keys = E.contract.picks.map(function (e) { return R.entryPick(e); });
+      var parts = pickParts(A, 'A', keys);
+      return { chk: parts.chk, html: forceBox({ co: A, fkey: 'A', chk: parts.chk, units: E.contract.picks, limits: parts.limits, drop: 'data-unpick', list: parts.list, auto: 'autopick', clear: 'cclear' }) };
+    }
+
     function contractView() {
       var second = seat() === 'B';
       var A = E.camp.companies[seat()], B = E.camp.companies[second ? 'A' : 'B'];
@@ -501,43 +555,7 @@
         }).join('') + '</select></div></div>';   // the world was rolled with the job, and shown on the offer
       if (!second) h += compoundBox(E.contract.scenario, E.contract.pl, true);
 
-      var list = '';
-      /* What each Tier asks for at this Battle Tier and Priority Level, and how
-         many of each are in the list — the line the skirmish muster sheet shows. */
-      var limits = '<p class="limits">' + U.limitsLine(R.compFor(A.faction || 'pmc', E.contract.tier).limits, chk.counts || {}, E.contract.pl) + '</p>';
-      var notIn = contractPicks(A).filter(function (e) { return E.contract.picks.indexOf(e) < 0; });
-      var avail = pickOrder(notIn, seat());
-      if (!avail.length) list += '<p class="dnote">' + (notIn.length ? 'No unit matches the filter.' : 'Every unit on the books is already in the list.') + '</p>';
-      var at = {};
-      avail.forEach(function (e) {
-        list += E.groupHead(e, at);
-        var trial = keys.concat([R.entryPick(e)]);
-        var bad = blocking(R.checkArmy(trial, E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
-        list += rosterRow('data-pick="' + e.rid + '"', e, bad);
-      });
-      /* A tribe's turrets and a company's rapid insertion platforms are not bought
-         (pp. 86, 140): they are put in the force for the battle, as many as the
-         composition allows, and are gone again after it. */
-      /* Above the Battle Tier only at Priority Level 2 and up: "On Priority Level 1, you
-         cannot use Turrets … of Tiers higher than the Battle Tier" (p. 126; rules review
-         a119ac2 XEN-12). The list's own limits decide the rest (checkArmy, below). */
-      var fieldable = R.listFor(A.faction || 'pmc').filter(function (p) {
-        return (C.isTurretP(p) || p.noSlot) && (p.tier <= E.contract.tier || E.contract.pl > 1);
-      });
-      if (fieldable.length) {
-        list += '<h4>Fielded for this battle</h4>';
-        fieldable.forEach(function (p) {
-          var bad = blocking(R.checkArmy(keys.concat([p.key]), E.contract.tier, E.contract.pl, A.doctrines, E.contract.tactic || null).faults);
-          list += fieldRow('data-field="' + p.key + '"', p, bad, true);
-        });
-      }
-      var resting = A.roster.filter(function (e) { return e.restUntil > 0; });
-      if (resting.length) {
-        list += '<h4>In the workshop — sitting this one out</h4>';
-        resting.forEach(function (e) {
-          list += U.unitRow('class="cu" disabled', profile(e.key).tier, '<b>' + esc(e.name) + '</b>', 'salvaged from the last battle', null);
-        });
-      }
+      var parts = pickParts(A, seat(), keys), limits = parts.limits, list = parts.list;
       h = scrollTop(h + ordersPanel(A));
       h += forceBox({ co: A, fkey: seat(), chk: chk, units: E.contract.picks, limits: limits, drop: 'data-unpick', list: list, auto: 'autopick', clear: 'cclear' });
       if (!chk.ok) {
@@ -688,7 +706,7 @@
     return {
       offersView: offersView, offerPanel: offerPanel, beginContract: beginContract, takeOffer: takeOffer, takeRival: takeRival, jobCard: jobCard, compoundBox: compoundBox, wear: wear, tpBadge: tpBadge, contractView: contractView,
       forceBox: forceBox, scrollTop: scrollTop, byMark: byMark, pickOrder: pickOrder, groupHead: E.groupHead, rosterRow: rosterRow, fieldRow: fieldRow, fightBar: fightBar,
-      autoPick: autoPick, fight: fight, seatBack: seatBack
+      autoPick: autoPick, fight: fight, seatBack: seatBack, storyForce: storyForce
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCDossierContract;

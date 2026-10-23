@@ -2519,3 +2519,9 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .story-stayed li { color: var(--ink-dim); }
 .story-stayed b { color: var(--ink); }
 .story-epilogue { margin: 10px 0; }
+.story-badge + .story-badge { margin-left: 6px; }
+.story-who { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+.story-who span { display: flex; flex-direction: column; line-height: 1.2; }
+.story-who small { color: var(--ink-dim); }
+.story-portrait { flex: none; border-radius: 4px; box-shadow: 0 0 0 1px var(--line); image-rendering: pixelated; }
+.story-badges { margin: 0 0 8px; }

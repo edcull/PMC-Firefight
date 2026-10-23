@@ -141,7 +141,10 @@
     }
     // the filler: up to a share of the battle's points, the meter and the company's allowance on top
     if (f.fill) {
-      var share = (f.fill.to || 1) + (f.fill.meter ? (st.meters[f.fill.meter] || 0) * (f.fill.step || 0) : 0) + (ctx.allowance || 0) +
+      // the difficulty the story was begun at: more or less of a share, and more or less for the company's experience
+      var D = S.difficultyOf ? S.difficultyOf(ctx.campaign) : {};
+      var share = (f.fill.to || 1) + (f.fill.meter ? (st.meters[f.fill.meter] || 0) * (f.fill.step || 0) : 0) +
+        (ctx.allowance || 0) * (D.allowance != null ? D.allowance : 1) + (D.fill || 0) +
         (rd < 0 ? rd * 0.1 : 0);
       var want = budget(tier, pl) * share, have = picks.reduce(function (s, p) { return s + tierOf(p.key); }, 0);
       var from = arr(f.fill.from).map(function (k) { return fit(k, tier, faction); }).filter(Boolean);

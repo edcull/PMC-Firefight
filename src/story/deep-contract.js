@@ -35,6 +35,25 @@
     return def;
   }
 
+  /* ---------- who each event is about: their face beside it (view/story-portraits.js) ---------- */
+  var WHO = {
+    'c1.portmaster': 'okonkwo', 'c1.gate': 'htx', 'c2.firstmove': 'htx', 'c2r.nightshift': 'front', 'c2r.ledger': 'front',
+    'c2r.survivors': 'htx', 'c2d.truck': 'petrak', 'c2d.armoury': 'front', 'c2d.rota': 'petrak', 'c3.killorcapture': 'htx',
+    'c3.cell': 'varga', 'c3.martyr': 'varga', 'c3.door': 'htx', 'c4.school': 'teacher', 'c4.payroll': 'guild',
+    'sump.map': 'front', 'sump.below': 'hive', 'relief.handover': 'lantern', 'relief.wounded': 'lantern',
+    'retake.survivors': 'htx', 'retake.holdouts': 'front', 'revenge.challenge': 'front', 'revenge.chance': 'varga',
+    'splinter.informant': 'front', 'splinter.bomber': 'front', 'redoubt.approach': 'front', 'ceasefire.terms': 'varga',
+    'ceasefire.peace': 'htx', 'holdline.gap': 'front', 'holdline.dead': 'front', 'outbreak.miners': 'guild',
+    'outbreak.samples': 'hive', 'shafts.charges': 'hive', 'shafts.collapse': 'htx', 'hiveheart.descent': 'hive',
+    'partner.orders': 'lantern', 'partner.prisoners': 'lantern', 'leak.uplink': 'htx', 'leak.publish': 'htx',
+    'convoy.route': 'lantern', 'convoy.cargo': 'htx', 'showdown.terms': 'lantern', 'breakout.order': 'htx',
+    'i.audit': 'htx', 'i.offer': 'lantern', 'i.tunnels': 'hive', 'i.word': 'guild', 'h1.core': 'htx'
+  };
+  function withWho(def) {
+    (def.chapters || []).forEach(function (ch) { (ch.nodes || []).forEach(function (n) { if (WHO[n.id]) n.who = WHO[n.id]; }); });
+    return def;
+  }
+
   /* ---------- the forces ---------- */
   /* A side's usual force, with what a battle writes laid over it: its own
      changes come after the side's usual ones, not in place of them. */
@@ -102,7 +121,7 @@
     failure: [{ effects: [{ flag: 'finale_lost' }] }]
   };
 
-  S.register(withProse({
+  S.register(withWho(withProse({
     id: 'deep-contract', name: 'Deep Contract', version: 1, length: 8,
     blurb: 'Kessler\'s Reach is a mining moon, and its miners have risen. HTX hires your company to restore order, quickly and quietly. HTX is hiding why they rose.',
     // the locals talk: with their trust, you know what you face before a battle
@@ -136,6 +155,16 @@
        else 2 kUC, a quarter more or less for each point of HTX Standing; half for
        a draw; nothing once HTX has stopped paying. */
     pay: { base: 2, meter: 'htx', step: 0.25, draw: 0.5, cutOff: ['htx_cut_off'] },
+
+    /* The difficulty, chosen when the story begins (story.js difficultyOf): the
+       enemy's share of each battle's points (`fill`), what the company's own
+       experience adds to it (`allowance`, multiplied), and the pay (HTX's bonus
+       and the side contracts, multiplied). Contract is the story as tuned. */
+    difficulty: {
+      story: { name: 'Story', blurb: 'Lighter enemy forces, slower to grow with you, and better pay. For following the story.', fill: -0.15, allowance: 0.5, pay: 1.5 },
+      contract: { name: 'Contract', default: true, blurb: 'The story as it is tuned: an even fight for a company that keeps up.', fill: 0, allowance: 1, pay: 1 },
+      hard: { name: 'Hard', blurb: 'Stronger enemy forces that grow faster with you, and less money.', fill: 0.15, allowance: 1.5, pay: 0.75 }
+    },
 
     /* Side contracts (story.js makeOffers): small jobs offered at an interlude,
        one taken at most, each a battle of its own and paid in kUC. Taking one
@@ -191,6 +220,19 @@
       rebels: { start: 5, min: 0, max: 10, name: 'Rebel Strength', uses: ['force'], thresholds: [{ lte: 0 }, { gte: 7 }] },
       hive: { start: 0, min: 0, max: 10, name: 'Hive Growth', uses: ['force', 'tunnel'], twoWay: [2], thresholds: [{ gte: 3 }, { gte: 5 }, { gte: 8 }] },
       lantern: { start: 2, min: 0, max: 10, name: 'Black Lantern Strength', uses: ['force'], thresholds: [{ gte: 4 }, { gte: 7 }] }
+    },
+    /* The people and sides the story's events are about, each with the face
+       drawn for them beside their events (view/story-portraits.js). */
+    people: {
+      varga: { name: 'Ada Varga', role: 'The Free Miners\u2019 Front', face: { bg: '#d9733f', skin: '#c48a64', hair: '#2b2622', hairStyle: 'long', hat: 'helmet', hatColour: '#c8a040', clothes: '#6e3b2a', clothesStyle: 'jacket', accent: '#e0b070', extras: ['scar'] } },
+      front: { name: 'The Free Miners\u2019 Front', role: 'The miners in arms', face: { bg: '#c45f34', skin: '#a8754f', hair: '#3a2a20', hat: 'beanie', hatColour: '#4f5f3a', clothes: '#5a4a3a', extras: ['bandana'], bandana: '#b03a2e' } },
+      okonkwo: { name: 'Port Master Okonkwo', role: 'Kessler\u2019s Reach starport', face: { bg: '#8fb3c9', skin: '#6b4630', hair: '#1d1612', hairStyle: 'short', hat: 'cap', hatColour: '#2f3e5a', clothes: '#2f3e5a', clothesStyle: 'uniform', accent: '#e8c25a', extras: ['moustache'] } },
+      petrak: { name: 'Petrak', role: 'Driver, Truck Fourteen', face: { bg: '#b9a77a', skin: '#e2b48f', hair: '#7a5a3a', hat: 'beanie', hatColour: '#3a6a7a', clothes: '#6a6a5a', extras: ['stubble'], eyes: '#4a6a8a' } },
+      htx: { name: 'HTX', role: 'Halvorsen-Tey Extraction Consortium', face: { bg: '#6fc4e2', skin: '#e8c0a0', hair: '#bdbdbd', hairStyle: 'short', clothes: '#22262e', clothesStyle: 'suit', accent: '#3a8fb0', extras: ['glasses'], eyes: '#5a7a9a' } },
+      lantern: { name: 'Black Lantern', role: 'Black Lantern Security', face: { bg: '#e0c25a', skin: '#c99a76', hair: '#222', hairStyle: 'bald', hat: 'visor', hatColour: '#2c2c32', clothes: '#34343c', clothesStyle: 'armour', accent: '#e0c25a' } },
+      teacher: { name: 'The teacher', role: 'Pit Nine school', face: { bg: '#a8c98a', skin: '#d8a07a', hair: '#4a2a1a', hairStyle: 'bun', clothes: '#7a6a8a', clothesStyle: 'cardigan', accent: '#e8c25a', extras: ['glasses', 'earring'], lips: '#b0505a' } },
+      guild: { name: 'The miners\u2019 guild', role: 'Pit Nine and the shafts', face: { bg: '#c9b68f', skin: '#b07a55', hair: '#5a4030', hat: 'hardhat', hatColour: '#e0a020', clothes: '#4a5a6a', clothesStyle: 'overalls', accent: '#c87a2a', extras: ['beard'] } },
+      hive: { name: 'The hive', role: 'Below Kessler\u2019s Reach', face: { bug: true, bg: '#2a1a34', shell: '#5a3d6e', glow: '#e46cff' } }
     },
     sides: {
       front: { faction: 'rebel', name: "Free Miners' Front" },
@@ -719,7 +761,7 @@
       { about: 'company', if: { meter: 'loyalty', lte: -1 }, text: 'Half the company signed on elsewhere before the next contract. The ones who stayed with {commander} don’t talk about the moon.' },
       { about: 'company', text: '{commander} took {name} on to the next contract, as commanders do.' }
     ]
-  }));
+  })));;
 
   if (typeof module !== 'undefined' && module.exports) module.exports = S.get('deep-contract');
 })(typeof window !== 'undefined' ? window : global);
