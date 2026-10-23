@@ -10,7 +10,8 @@ const { R } = require('../server/rules.js');
 const LOSS = { decisive: 0.1, victory: 0.25, draw: 0.35, defeat: 0.5, rout: 0.7 };
 
 function line(side, rid, key, share) {
-  const p = R.profile(key), machine = p.cls !== 'infantry';
+  // (a unit rolled with a variant of its kit, 'lhunter:wheeled', is the profile before the colon)
+  const p = R.profile(String(key).split(':')[0]), machine = p.cls !== 'infantry';
   const size = machine ? 1 : p.size || 1;
   if (machine) {
     const down = Math.random() < share * 0.5;

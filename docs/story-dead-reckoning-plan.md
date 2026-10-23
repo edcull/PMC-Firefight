@@ -1155,7 +1155,7 @@ In parts, each tested and pushed as it is done:
   reachable, the threads reaching their finales, the finales' forces and the
   pay tuned to its targets.
 
-**Where it stands (5a to 5d).** Done:
+**Where it stands (5a to 5e).** Phase 5 is done:
 
 - **5a.** *The Long Jump* opens on the name: Halloran reads it out of Morrow's
   last pages, Vane reprices everything on the line, and the newsfeeds have
@@ -1208,6 +1208,20 @@ In parts, each tested and pushed as it is done:
   - Being sold out stays as written: the `<company>_turned` flags make *The
     Landing* readier.
   - Tested by `storyhired.js`.
+- **5e.** The whole walk (`storydrwhole.js`): *Dead Reckoning* played through
+  60 times with made-up results, and 30 times more at each other difficulty.
+  - Every walk reaches an ending, and Broken Company is rare.
+  - All six other endings come up, none in more than half the walks.
+  - All three finales and Recall come up, each finale in a twentieth to two
+    thirds of the walks; both one-offs and every second-half chapter are
+    reached.
+  - The company reaches Tier III in two walks of three, and the finale is
+    fought at Tier II or higher.
+  - Tuning: the Patron thread was offered in one walk in twenty, so it was
+    given a base pressure (a content patron still has designs on the Quiet).
+    *The Collector* now comes in about a quarter of walks.
+  - Found on the way: the made-up reports could not read a unit rolled with a
+    variant of its kit (`lhunter:wheeled`). Fixed in `test/story-report.js`.
 
 ### Phase 6: polish
 Sounds for the Xenotripod battles (Mental Projection lines, the beacon), the
