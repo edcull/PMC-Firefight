@@ -49,8 +49,19 @@
     'convoy.route': 'lantern', 'convoy.cargo': 'htx', 'showdown.terms': 'lantern', 'breakout.order': 'htx',
     'i.audit': 'htx', 'i.offer': 'lantern', 'i.tunnels': 'hive', 'i.word': 'guild', 'h1.core': 'htx'
   };
+  /* ---------- where each chapter happens: the scene on its card (view/story-scenes.js) ---------- */
+  var SCENE = {
+    c1: 'starport', c2: 'refinery', c3: 'pumping', c4: 'pitnine', sump: 'sump', relief: ['starport', 'dawn'], fault: ['ridges', 'night'],
+    retake: 'refinery', revenge: 'ridges', splinter: 'hills', redoubt: 'redoubt', ceasefire: 'waystation', holdline: 'pass',
+    outbreak: ['pitnine', 'fire'], shafts: 'sump', hiveheart: 'sump', partner: 'hills', leak: 'uplink', convoy: 'haulroad',
+    showdown: 'htxyard', breakout: 'slagfields'
+  };
   function withWho(def) {
-    (def.chapters || []).forEach(function (ch) { (ch.nodes || []).forEach(function (n) { if (WHO[n.id]) n.who = WHO[n.id]; }); });
+    (def.chapters || []).forEach(function (ch) {
+      var sc = SCENE[ch.id];
+      if (sc) ch.scene = typeof sc === 'string' ? { place: sc } : { place: sc[0], time: sc[1] };
+      (ch.nodes || []).forEach(function (n) { if (WHO[n.id]) n.who = WHO[n.id]; });
+    });
     return def;
   }
 
@@ -711,13 +722,13 @@
     ],
 
     endings: [
-      { id: 'broken', broken: true, title: 'Broken Company', text: 'There is not enough of {name} left to field an army. The last of it ships out on an ore freighter, in the hold, and Kessler’s Reach goes on without it.' },
-      { id: 'scorched', title: 'Scorched Earth', text: 'The hive got away from everyone. HTX ordered Kessler’s Reach sterilised from orbit, and {name} watched it burn from the last shuttle out.', if: { flag: 'scorched' } },
-      { id: 'terminated', title: 'Contract Terminated', text: 'HTX turned on {name}, and Black Lantern finished the job. The company is betrayed, unpaid and running, and its name is on a list it will not get off.', if: { any: [{ flag: 'showdown_lost' }, { all: [{ flag: 'htx_cut_off' }, { flag: 'finale_lost' }] }] } },
-      { id: 'liberators', title: 'Liberators', text: 'The Front holds Kessler’s Reach, and {name} helped it get there. The company leaves poorer than it came, and every one of its people knows why.', if: { all: [{ any: [{ flag: 'truce' }, { flag: 'leaked' }] }, { flag: 'finale_won' }, { meter: 'hive', lt: 8 }, { not: { flag: 'miners_sealed' } }] } },
-      { id: 'companyman', title: 'Company Man', text: 'HTX is satisfied. The ore trains run, the contract is paid in full with a bonus on top, and {name} leaves Kessler’s Reach rich. The moon it leaves behind is broken.', if: { all: [{ not: { any: [{ flag: 'truce' }, { flag: 'leaked' }, { flag: 'htx_cut_off' }] } }, { meter: 'hive', lt: 8 },
+      { id: 'broken', scene: { place: 'starport', time: 'night' }, broken: true, title: 'Broken Company', text: 'There is not enough of {name} left to field an army. The last of it ships out on an ore freighter, in the hold, and Kessler’s Reach goes on without it.' },
+      { id: 'scorched', scene: { place: 'slagfields' }, title: 'Scorched Earth', text: 'The hive got away from everyone. HTX ordered Kessler’s Reach sterilised from orbit, and {name} watched it burn from the last shuttle out.', if: { flag: 'scorched' } },
+      { id: 'terminated', scene: { place: 'htxyard' }, title: 'Contract Terminated', text: 'HTX turned on {name}, and Black Lantern finished the job. The company is betrayed, unpaid and running, and its name is on a list it will not get off.', if: { any: [{ flag: 'showdown_lost' }, { all: [{ flag: 'htx_cut_off' }, { flag: 'finale_lost' }] }] } },
+      { id: 'liberators', scene: { place: 'pitnine', time: 'dawn' }, title: 'Liberators', text: 'The Front holds Kessler’s Reach, and {name} helped it get there. The company leaves poorer than it came, and every one of its people knows why.', if: { all: [{ any: [{ flag: 'truce' }, { flag: 'leaked' }] }, { flag: 'finale_won' }, { meter: 'hive', lt: 8 }, { not: { flag: 'miners_sealed' } }] } },
+      { id: 'companyman', scene: { place: 'htxyard', time: 'day' }, title: 'Company Man', text: 'HTX is satisfied. The ore trains run, the contract is paid in full with a bonus on top, and {name} leaves Kessler’s Reach rich. The moon it leaves behind is broken.', if: { all: [{ not: { any: [{ flag: 'truce' }, { flag: 'leaked' }, { flag: 'htx_cut_off' }] } }, { meter: 'hive', lt: 8 },
         { any: [{ meter: 'htx', gte: 2 }, { all: [{ flag: 'core_sold' }, { meter: 'htx', gte: 1 }] }] }] } },
-      { id: 'paidoff', title: 'Paid Off', text: 'The war on Kessler’s Reach ends without {name} deciding it. HTX pays what it owes, or most of it, and the company ships out with its dead and its debts.' }
+      { id: 'paidoff', scene: { place: 'starport' }, title: 'Paid Off', text: 'The war on Kessler’s Reach ends without {name} deciding it. HTX pays what it owes, or most of it, and the company ships out with its dead and its debts.' }
     ],
 
     /* The epilogue (story.js epilogue): for each thing it is about, the first
