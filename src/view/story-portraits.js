@@ -15,7 +15,10 @@
    ceramic carapace and a wedge of a helmet with three eyes in its slit; an
    Esh-Aven { eshaven: true, bg, skin, eyes, crest, plate }: a low lizard's
    head, a horn, a snout and five compound eyes (with `crest`, an Alpha's gold
-   crest worn over it, as the Hashamer's leaders wear their masters'). */
+   crest worn over it, as the Hashamer's leaders wear their masters').
+   Any of them with `shadow`: half the face in shadow (true: a man who would
+   rather not be seen), or all of it but what glows ('full': nobody knows what
+   it is). */
 (function (root) {
   'use strict';
 
@@ -225,6 +228,13 @@
     var bg = f.bg || '#3a4250';
     var drawn = f.bug ? bug(Object.assign({}, f, { bg: bg })) : f.tripod ? tripod(Object.assign({}, f, { bg: bg })) : f.eshaven ? eshaven(Object.assign({}, f, { bg: bg }))
       : person(Object.assign({ skin: '#d6a27c' }, f, { bg: bg }));
+    if (f.shadow) {
+      for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+        var c = drawn[y][x];
+        if (c === bg || c === f.glow) continue;
+        if (f.shadow === 'full' || x < 15 + (y - 16) * 0.35) drawn[y][x] = shade(c, -0.68);
+      }
+    }
     return outline(drawn, bg);
   }
 

@@ -56,7 +56,7 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   await p.evaluate(() => { const s = document.getElementById('story-pick'); s.value = 'dead-reckoning'; s.dispatchEvent(new Event('change', { bubbles: true })); });
   await p.waitForTimeout(250);
   let txt = await body(p);
-  check('...picked: its own blurb, Morrow’s log and Ottilie Vane', /surveyor/.test(txt) && /Ottilie Vane/.test(txt), txt.slice(0, 200));
+  check('...picked: its own blurb, Morrow’s log and Lucan Vane, whom nobody sees', /surveyor/.test(txt) && /Lucan Vane/.test(txt) && /seen by almost nobody/.test(txt), txt.slice(0, 200));
   await go(p, '[data-go="storynew"]');
   await p.evaluate(() => { document.getElementById('found-name').value = 'Morrow’s Own'; document.getElementById('found-commander').value = 'Ines Okoro'; });
   for (const k of ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng']) await go(p, `#camp-body button[data-add="${k}"]`);
@@ -68,9 +68,9 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   check('the story begins: Dead Reckoning, Lot 47, the first half The Chart', /Dead Reckoning/.test(txt) && /Lot 47/.test(txt) && /Chapter 1 · The Chart/i.test(txt), txt.slice(0, 200));
   check('...the chapter’s prose: Morrow, the auction, Vesk', /Elias Morrow/.test(txt) && /Vesk Free Port/.test(txt));
   const talk = await talkOf(p);
-  check('...and Vane’s conversation: Vane, her reader and the commander, each with a face', talk.length >= 6 && talk.every((l) => l.face) && /Vane/.test(talk[0].who) &&
+  check('...and Vane’s conversation: Vane on the line, his reader and the commander, each with a face', talk.length >= 6 && talk.every((l) => l.face) && /Vane/.test(talk[0].who) &&
     talk.some((l) => /Halloran/.test(l.who)) && talk.some((l) => l.mine), JSON.stringify(talk.map((l) => l.who)));
-  check('...the commander named in it', /You’ll be Second Lieutenant Okoro/.test(txt), txt.slice(txt.indexOf('Ottilie Vane.') - 60, txt.indexOf('Ottilie Vane.') + 40));
+  check('...the commander named in it', /Second Lieutenant Okoro\. This is Lucan Vane/.test(txt), txt.slice(txt.indexOf('Lucan Vane.') - 60, txt.indexOf('Lucan Vane.') + 40));
   check('...and the meters the company can see: Vane’s Trust, Lead, Lodestones (not Alarm)', /Vane’s Trust/.test(txt) && /Lead/.test(txt) && /Lodestones/.test(txt) && !/Alarm/.test(txt));
   await p.screenshot({ path: path.join(SHOTS, 'dr-chapter.png') });
   await go(p, '[data-go="storyon"]');
@@ -79,13 +79,13 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
     await p.evaluate(() => document.querySelectorAll('#camp-body .story-opt').length === 3 && !!document.querySelector('#camp-body .story-who svg.story-portrait')), txt.slice(0, 200));
   await go(p, '[data-go="storyopt"][data-o="watch"]');
   txt = await body(p);
-  check('watching the room: the mission’s briefing, Lot 47 in the market square, an Escort: Vane to the landing field', /Lot 47/.test(txt) && /market square/.test(txt) && /landing field/.test(txt) && /Escort/.test(txt), txt.slice(0, 300));
+  check('watching the room: the mission’s briefing, Lot 47 in the market square, an Escort: Halloran to the landing field', /Lot 47/.test(txt) && /market square/.test(txt) && /landing field/.test(txt) && /Escort/.test(txt), txt.slice(0, 300));
   await go(p, '[data-go="storymuster"]');
   await go(p, '[data-go="storyfight"]');
   await p.waitForTimeout(1200);
   const st = await p.evaluate(() => { const s = window.PMC_STATE && window.PMC_STATE(); return s ? { node: s.cfg.story && s.cfg.story.node, scen: s.cfg.scenario, planet: s.cfg.planet, vane: (s.units.find((u) => u.escort) || {}).name, map: s.cfg.story.mapName, kettle: s.units.filter((u) => u.side === 'B').length } : null; });
   check('the battle starts with the story’s cfg: c1.battle, an Escort, Coin & Kettle', st && st.node === 'c1.battle' && st.scen === 'escort' && st.kettle > 0, JSON.stringify(st));
-  check('...on Vesk’s market square, with Ottilie Vane on the table, the company’s to get across', st && /Vesk/.test(st.map) && st.vane === 'Ottilie Vane', JSON.stringify(st));
+  check('...on Vesk’s market square, with Halloran on the table, the company’s to get across', st && /Vesk/.test(st.map) && st.vane === 'Halloran', JSON.stringify(st));
   await cards(p);
   await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^done$/i.test(x.textContent.trim()) && x.offsetParent); if (b) b.click(); });
   await p.waitForTimeout(800);

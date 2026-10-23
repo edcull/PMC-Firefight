@@ -4,10 +4,11 @@
    the story's pages, keyed by the node they open; what is said in its
    battles, by the battle's own lines first and the enemy side's otherwise
    (story.js talkFor), at the moments the battle names (start, turn3, kill,
-   loss, bhalf, ahalf, wave, parley, target, sighted, searched, found, guard);
-   and the hired companies' voices when they fight beside the company. The
-   Xenotripods speak through Mental Projection: their lines are in brackets,
-   in every head at once.
+   loss, bhalf, ahalf, wave, parley, target, sighted, searched, found, guard,
+   contact); and the hired companies' voices when they fight beside the
+   company. The Xenotripods speak through Mental Projection: their lines are in
+   brackets, in every head at once. In the first half nobody knows what they
+   are: they are `unknown`, a shape with lights in it, and have no name.
 
    Written in full for the first half (chapters 1 to 4, both one-offs). The
    second half's voices come in phase 5. */
@@ -31,13 +32,13 @@
     conversations: {
       // ---- 1. Lot 47 ----
       'c1.brief': [
-        { who: 'vane', text: 'You’ll be {commander:rank}. Ottilie Vane. I’ve read your company’s file, and I don’t mind it. That’s rarer than you’d think.' },
+        { who: 'vane', text: '{commander:rank}. This is Lucan Vane. No, you won’t see me; nobody does, and I find that keeps things simple. I’ve read your company’s file, and I don’t mind it. That’s rarer than you’d think.' },
         { who: 'commander', text: 'Your agent said an auction. He didn’t say why an auction needs a company.' },
         { who: 'vane', text: 'Because everyone else in that room has brought one. Lot 47 is a dead man’s log, {commander:rank}, and the dead man found something nobody else ever has.' },
         { who: 'reader', text: 'Elias Morrow. Surveyor. He wrote in dead reckoning: headings and burn times, no fixes. Without his stones it’s gibberish. With them, it’s a road.' },
-        { who: 'vane', text: 'A road to a world he called the Quiet. Halloran thinks it’s a Xenotripod home world. I think Halloran is being modest.' },
-        { who: 'commander', text: 'And the companies in that room?' },
-        { who: 'vane', text: 'Want the road. I want you to see that I leave with it. After that, we follow it together, and whoever files the first claim at the end owns everything there. Shall we go in?' }
+        { who: 'commander', text: 'And the stones? Whose are they?' },
+        { who: 'reader', text: 'Nobody’s that we know of. That’s rather the point.' },
+        { who: 'vane', text: 'A road to a world he called the Quiet. I want Halloran out of that room with the log, and alive. After that you follow the road, and whoever files the first claim at the end owns everything there. Shall we begin?' }
       ],
       'c1.agent': [
         { who: 'kettering', text: 'You have one of mine, I hear. Young lad, nervous. Don’t hurt him, there’s a good soldier. He’s only staff.' },
@@ -48,10 +49,10 @@
       // ---- 2. The First Lodestone ----
       'c2.brief': [
         { who: 'reader', text: 'Two readings, {commander:rank}. Both fit the burn times. One puts him on Vantor III, on the Glass Flats. The other at Station Thule.' },
-        { who: 'vane', text: 'Somebody will be at whichever one we don’t choose. Somebody may be at both.' },
+        { who: 'vane', text: 'Somebody will be at whichever one you don’t choose. Somebody may be at both. I pay for results, {commander:rank}, not for reasons.' },
         { who: 'commander', text: 'What’s at Thule?' },
         { who: 'reader', text: 'A survey relay. Morrow stopped there for three days. Nobody stops at a relay for three days unless something is wrong, or something is right.' },
-        { who: 'vane', text: 'And the Flats is where he dug. Your choice, {commander:rank}. You’re the one who has to dig.' }
+        { who: 'reader', text: 'And the Flats is where he dug. Mr Vane leaves it to you, {commander:rank}. You’re the one who has to dig.' }
       ],
       'c2f.dig': [
         { who: 'ops', text: 'Tents by the dig. A mast. No sentries I can see, which means they’re there and I can’t see them.' },
@@ -68,16 +69,16 @@
 
       // ---- 3. The Drowned Beacon ----
       'c3.brief': [
-        { who: 'ops', text: 'Fog’s too thick for the drones. Motion everywhere, then nothing. They stopped when we landed.' },
-        { who: 'commander', text: 'Stopped, or stopped where we can see them?' },
-        { who: 'ops', text: 'Stopped. All of them. At once. Like somebody told them to.' },
-        { who: 'reader', text: 'Morrow’s entry for this world is one line: “They let me in. I don’t know why. I took the stone and they watched me take it.”' },
-        { who: 'shkar', text: '[a pressure behind the eyes, like a hand on the back of the neck: you are seen]' }
+        { who: 'ops', text: 'Fog’s too thick for the drones. The Reavers’ dig is lit up like a fairground. And there’s motion out past it, a lot of it. It stopped when we landed.' },
+        { who: 'commander', text: 'Reavers?' },
+        { who: 'ops', text: 'Not Reavers. Reavers don’t stop all at once, like somebody told them to.' },
+        { who: 'reader', text: 'Morrow’s entry for this world is one line: “They let me in. I don’t know why. I took the stone and they watched me take it.” He never says who they were.' },
+        { who: 'unknown', text: '[a pressure behind the eyes, like a hand on the back of the neck: you are seen]' }
       ],
       'c3.contact': [
-        { who: 'ops', text: 'Contact. Three of them, in the water by the spire. Big. Not moving.' },
-        { who: 'shkar', text: '[the fog thins around them, as if to let you look. It is not a welcome]' },
-        { who: 'commander', text: 'Nobody fires. Nobody so much as raises a muzzle until I say.' }
+        { who: 'hal', text: 'Evening, company! First come, first served, and we came first. The beacon’s ours. Go and find your own pile of rocks.' },
+        { who: 'commander', text: 'You’re cutting into something you don’t understand, Hal.' },
+        { who: 'hal', text: 'Don’t need to understand it to sell it. Push off, or come and try.' }
       ],
 
       // ---- 4. The Broker ----
@@ -92,15 +93,15 @@
       'warren.brief': [
         { who: 'ops', text: 'Rad counters are ticking. Not bad. Not good. Air’s breathable, if you like the taste of pennies.' },
         { who: 'commander', text: 'Where are we?' },
-        { who: 'ops', text: 'Navigation says nowhere. No stars to fix on through the rock. We are, technically, lost.' },
-        { who: 'mithdu', text: '[something old turns its attention to you, slowly, the way a sleeper turns over]' }
+        { who: 'ops', text: 'Navigation says nowhere. No stars to fix on through the rock. We are, technically, lost. And the Reavers are down here somewhere, shooting at the walls.' },
+        { who: 'unknown', text: '[something old turns its attention to you, slowly, the way a sleeper turns over]' }
       ],
 
       // ---- The Double-Cross ----
       'dx.brief': [
-        { who: 'daw', text: 'Commander Iselin Daw, the Ninth Lance. You’ll have heard of us. You won’t have heard that we work for Ottilie Vane, because she doesn’t tell people.' },
-        { who: 'commander', text: 'She didn’t tell me.' },
-        { who: 'daw', text: 'No. She thought you’d stay bought. You haven’t, or she thinks you haven’t, which comes to the same thing on a court order.' },
+        { who: 'daw', text: 'Commander Iselin Daw, the Ninth Lance. You’ll have heard of us. You won’t have heard that we work for Lucan Vane, because he doesn’t tell people anything.' },
+        { who: 'commander', text: 'He didn’t tell me.' },
+        { who: 'daw', text: 'No. He thought you’d stay bought. You haven’t, or he thinks you haven’t, which comes to the same thing on a court order.' },
         { who: 'commander', text: 'And if I hand you the log?' },
         { who: 'daw', text: 'Then you go home with your pay to date, and nobody on either deck gets hurt. I’d take it, {commander:rank}. I’m very good at what happens otherwise.' }
       ]
@@ -170,11 +171,17 @@
         loss: [{ who: 'ops', text: 'Man down! It came out of a wall that wasn’t there a second ago!' }],
         sighted: [{ who: 'ops', text: 'Contact! Xenotripods, small ones, dozens. They live down here.' }]
       },
+      reavers: {
+        start: [{ who: 'hal', text: 'Reavers! Nobody touches our dig! Boarders away!' }],
+        kill: [{ who: 'hal', text: 'They got one of mine! Right. Right!' }],
+        loss: [{ who: 'hal', text: 'Ha! Who’s next?' }],
+        bhalf: [{ who: 'hal', text: 'Not worth it! Grab what you’ve got and run for the boats!' }]
+      },
       lance: {
         start: [{ who: 'daw', text: 'Lance, take the log. Nobody needs to die over a court order.' }],
         kill: [{ who: 'daw', text: 'That was one of mine. Now it’s personal, {commander:rank}.' }],
         loss: [{ who: 'lancer', text: 'Contact down. They’re not as good as their file.' }],
-        bhalf: [{ who: 'daw', text: 'Lance, disengage. Vane can pay for a second try.' }]
+        bhalf: [{ who: 'daw', text: 'Lance, disengage. Mr Vane can pay for a second try.' }]
       }
     },
 
@@ -186,7 +193,8 @@
           { who: 'kettering', text: 'Nothing personal, {commander:rank}. The slate, and everyone goes home.' },
           { who: 'kettering', if: { flag: 'kettle_marked' }, text: 'You had my lad followed? Clever. Not clever enough.' }
         ],
-        turn3: [{ who: 'vane', text: 'I’m in the arcade, {commander:rank}. I would very much like to reach the end of it.' }]
+        turn3: [{ who: 'reader', text: 'I’m in the arcade, {commander:rank}. Mr Vane is asking, rather calmly, whether I mean to reach the end of it.' }],
+        loss: [{ who: 'vane', text: 'You’re losing people, {commander:rank}. Don’t lose Halloran. He reads, and I don’t.' }]
       },
       'c2f.battle': {
         start: [{ who: 'nine', text: 'Wraith to company on the flats. Take your time digging. We have all day.' }],
@@ -200,20 +208,22 @@
       },
       'c3.battle': {
         start: [
-          { who: 'shkar', if: { flag: 'signal_failed' }, text: '[the signal comes back, louder, wrong, and every one of them turns towards you at once]' },
-          { who: 'shkar', text: '[the beacon’s hum rises, and the fog moves against the wind]' }
+          { who: 'unknown', if: { flag: 'signal_failed' }, text: '[the signal comes back, louder, wrong, from everywhere in the fog at once]' },
+          { who: 'hal', text: 'Reavers! They want the dig, they can come and get it!' }
         ],
         searched: [{ who: 'ops', text: 'Nothing in the shrine. Next one. Watch the water.' }],
         found: [{ who: 'ops', text: 'The stone, it’s in the socket! It’s glowing. Pull it and run!' }],
-        guard: [{ who: 'shkar', text: '[a howl inside the skull: put it back. PUT IT BACK]' }]
+        contact: [{ who: 'ops', text: 'Contact! Contact by the spire! Big, three legs, they just stepped out of the air! What the hell are they?' }],
+        guard: [{ who: 'unknown', text: '[a howl inside the skull: put it back. PUT IT BACK]' }]
       },
       'c4.battle': {
         start: [{ who: 'agathe', text: 'Sable holds. If you want my warehouse, {commander:rank}, come and knock.' }],
         bhalf: [{ who: 'agathe', text: 'Pull back to the strongroom. They will have to dig us out.' }]
       },
       'warren.battle': {
-        start: [{ who: 'ops', text: 'Lights on. Stay together. We find a way out, or we make one.' }],
-        turn3: [{ who: 'mithdu', text: '[the tunnels breathe out, and the turrets turn with them]' }]
+        start: [{ who: 'ops', text: 'Lights on. Stay together. Reavers ahead, dug in. We find a way out, or we make one.' }],
+        contact: [{ who: 'ops', text: 'Movement in the walls! It came out of the rock! Small ones, lots of them, and the Reavers are running!' }],
+        turn3: [{ who: 'unknown', text: '[the tunnels breathe out, and something in them wakes]' }]
       },
       'dx.battle': {
         start: [

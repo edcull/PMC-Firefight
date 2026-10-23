@@ -1,6 +1,7 @@
 /* The Escort (src/story/scenarios-story.js): someone who matters crosses the
    table with side A, and the other side wants them. Dead Reckoning's Lot 47 is
-   one: Ottilie Vane, with the log, across Vesk's market square to her ship.
+   one: Halloran, Lucan Vane's reader, with the log, across Vesk's market
+   square to Vane's ship.
    She comes on as a unit of side A's own to move, a Command Unit's statline of
    the Tier and no special rules; through to the far edge she is out and A has
    won; killed, B has; the enemy goes for her and nothing else. */
@@ -40,11 +41,11 @@ function started(mode) {
 
 console.log('\nLot 47: an Escort');
 const { cfg, st } = started();
-ok('Lot 47 is fought as an Escort, Vane the one to be got across', cfg.scenario === 'escort' && cfg.story.variant.escort === 'Ottilie Vane' && /across/.test(SC.SCENARIOS.escort.win + ' ' + dr._nodes['c1.battle'].text));
+ok('Lot 47 is fought as an Escort, Halloran the one to be got across', cfg.scenario === 'escort' && cfg.story.variant.escort === 'Halloran' && /across/.test(SC.SCENARIOS.escort.win + ' ' + dr._nodes['c1.battle'].text));
 const vane = st.units.find((u) => u.escort);
-ok('...she is on the table with side A, its own to move: named, a Command Unit’s statline, no special rules', vane && vane.side === 'A' && vane.name === 'Ottilie Vane' && !vane.ally &&
+ok('...he is on the table with side A, its own to move: named, a Command Unit’s statline, no special rules', vane && vane.side === 'A' && vane.name === 'Halloran' && !vane.ally &&
   vane.rules.length === 0 && vane.models >= 1, vane && JSON.stringify({ name: vane.name, side: vane.side, models: vane.models, rules: vane.rules }));
-ok('...and she comes on in turn 1 with the rest of side A', vane.x >= 0 && !vane.reserve, vane.x + ',' + vane.y);
+ok('...and he comes on in turn 1 with the rest of side A', vane.x >= 0 && !vane.reserve, vane.x + ',' + vane.y);
 ok('the bidding’s first answer no longer asks the company for money it has not got', !dr._nodes['c1.bidding'].options[0].cost);
 {
   const s = st, g = SC.SCENARIOS.escort.goals;

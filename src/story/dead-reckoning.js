@@ -164,6 +164,12 @@
       passed: o.passed, onStart: o.onStart, place: o.place, rival: o.rival, nodes: nodes };
   }
   // a side contract's cost in time: in the second half the rivals gain while you are away
+  /* The first half's unknown contacts (storybattle.js contacts): what steps out
+     of the air at the beacon, and what comes out of the walls past its gate.
+     Xenotripods, though nobody in the first half has the word: a unit a key,
+     two more than the battle's Tier. */
+  var CONTACTS = ['xalpha1', 'xeps1', 'xbeta2', 'xeps1'];
+  var CONTACTS_DEEP = ['xeps1', 'xeps1', 'xalpha1', 'xbeta2'];
   var LATE_TIME = { if: { chapter: { gte: 5 } }, meter: 'lead', add: -1 };
   var FINALE_ON = {
     success: [{ effects: [{ flag: 'finale_won' }] }],
@@ -184,7 +190,7 @@
     chart: true,
     // the two halves, as the chapter cards name them, and those who were there from the start
     halves: ['The Chart', 'The Long Jump'], firstDay: 'on the trail from Vesk',
-    blurb: 'A dead surveyor’s log, and the Xenotripod lodestones he left behind, lead across the stars to a world nobody has charted. Ottilie Vane hires your company to follow them. Every other company on the trail was hired to get there first.',
+    blurb: 'A dead surveyor’s log, and the strange stones he left behind, lead across the stars to a world nobody has charted. Lucan Vane, who owns more than most governments and is seen by almost nobody, hires your company to follow them. Every other company on the trail was hired to get there first. Nobody has asked who made the stones.',
     start: { faction: 'pmc', found: 'standard' },
 
     // what the company knows of the enemy before a battle (story.js `intel`)
@@ -198,14 +204,14 @@
     flagText: {
       kettle_contact: 'Coin & Kettle will deal with you.', kettle_burned: 'Coin & Kettle won’t forget the port police.',
       wraith_robbed: 'Wraith Section wants its copy of the log back.', thule_records: 'You heard Morrow’s own voice.',
-      beacon_rubbing: 'The Sh’kar let you take a rubbing of the beacon.', relics_returned: 'You gave the tribes back what was theirs.',
-      warren_entered: 'You stepped through a Xenotripod gate.', chart_sold: 'You sold a copy of the chart.',
+      beacon_rubbing: 'The beacon answered your signal.', relics_returned: 'You gave back what was taken from the beacon.',
+      warren_entered: 'You stepped through the gate at the beacon.', chart_sold: 'You sold a copy of the chart.',
       vane_suspects: 'Vane suspects you.', vane_cut_off: 'Vane has cut you off.', eshaven_freed: 'The Hashamer guide you.',
       eshaven_promise: 'You promised the Hashamer the Quiet would stay asleep.', promise_broken: 'You broke your promise to the Hashamer.',
       contact: 'You have spoken with the Amt.', morrow_found: 'You found Morrow.'
     },
 
-    /* Vane's bonus for a story battle won, by her Trust; none once she has cut you off. */
+    /* Vane's bonus for a story battle won, by his Trust; none once he has cut you off. */
     pay: { base: 2, meter: 'vane', step: 0.25, draw: 0.5, cutOff: ['vane_cut_off'] },
     difficulty: {
       story: { name: 'Story', blurb: 'Lighter forces, better pay.', fill: -0.15, allowance: 0.5, pay: 1.5 },
@@ -241,7 +247,10 @@
     },
 
     people: {
-      vane: { name: 'Ottilie Vane', role: 'Vane Antiquities', face: { bg: '#b9a7d9', skin: '#e8c0a0', hair: '#d9d9d9', hairStyle: 'bun', clothes: '#2a2238', clothesStyle: 'suit', accent: '#c8a040', extras: ['glasses', 'earring'] } },
+      // the patron: never in the room, only on the line, and half his face in shadow when he is
+      vane: { name: 'Lucan Vane', role: 'The patron', face: { bg: '#2a2238', skin: '#e2b48f', hair: '#c8c8c8', hairStyle: 'short', clothes: '#141218', clothesStyle: 'suit', accent: '#c8a040', extras: ['beard'], shadow: true } },
+      // what stepped out of the air at the beacon: nothing in anybody's files (the first half's unknown contacts)
+      unknown: { name: 'Unknown', role: 'No match on any file', face: { tripod: true, bg: '#0e1214', shell: '#5a6a66', glow: '#7ae0c8', shadow: 'full' } },
       kettering: { name: 'Moss Kettering', role: 'Coin & Kettle', face: { bg: '#c9a65a', skin: '#c99a76', hair: '#8a8a8a', hairStyle: 'short', clothes: '#5a4a3a', clothesStyle: 'jacket', accent: '#e0b070', extras: ['stubble', 'earring'] } },
       nine: { name: 'Nine', role: 'Wraith Section', face: { bg: '#3a4a5a', skin: '#b88a66', hair: '#222', hairStyle: 'short', hat: 'visor', hatColour: '#1e1e24', clothes: '#2c3440', clothesStyle: 'armour', accent: '#6a8aa0' } },
       agathe: { name: 'Colonel Agathe Sable', role: 'Sable Armour Group', face: { bg: '#8a9a7a', skin: '#e2b48f', hair: '#4a3a2a', hairStyle: 'short', hat: 'helmet', hatColour: '#55604a', clothes: '#4a5240', clothesStyle: 'armour', accent: '#c8a040', extras: ['scar'] } },
@@ -316,7 +325,7 @@
           scenario: 'meeting', tier: 'max-1', enemy: rival('kettle', { fill: { to: 0.6, from: ['recruits', 'irregulars'] } }),
           cost: [LATE_TIME], passed: [{ meter: 'understanding', add: -1 }],
           on: { success: [{ effects: [{ meter: 'understanding', add: 1 }] }], failure: [{ effects: [{ meter: 'understanding', add: -1 }] }] } },
-        { id: 'survey', title: 'Survey Cover', pay: 3, if: { chapter: { gte: 3 } }, text: 'A survey team on a quiet world, and the ground moving under them.',
+        { id: 'survey', title: 'Survey Cover', pay: 3, if: { chapter: { gte: 5 } }, text: 'A survey team on a quiet world, and the ground moving under them.',
           scenario: 'ce_clear', tier: 'max-1', enemy: tribe('mithdu', { fill: { to: 0.6, from: ['xeps1'] } }),
           cost: [LATE_TIME, { meter: 'alarm', add: 1 }], on: { success: [{}], failure: [{ effects: [{ meter: 'alarm', add: 1 }] }] } },
         { id: 'errand', title: 'Vane’s Errand', pay: 4, if: { all: [{ meter: 'vane', gte: 1 }, { not: { flag: 'vane_cut_off' } }] },
@@ -324,7 +333,7 @@
           scenario: 'find', tier: 'max-1', enemy: rival('wraith', { fill: { to: 0.7, from: ['irregulars', 'observers'] } }),
           cost: [LATE_TIME], on: { success: [{ effects: [{ meter: 'vane', add: 1 }] }], failure: [{ effects: [{ meter: 'vane', add: -1 }] }] } },
         { id: 'creditor', title: 'Any Port in a Storm', pay: 4, if: { flag: 'vane_cut_off' },
-          text: 'One of Vane’s creditors wants her company hurt, and pays well for it.',
+          text: 'One of Vane’s creditors wants his company hurt, and pays well for it.',
           scenario: 'demolish', tier: 'max-1', role: 'attacker', enemy: rival('lance', { fill: { to: 0.7, from: ['recruits', 'rookie'] } }),
           cost: [LATE_TIME], on: { success: [{ effects: [{ meter: 'lance', add: -1 }] }], failure: [{ effects: [{ meter: 'lance', add: 1 }] }] } }
       ]
@@ -333,7 +342,7 @@
     chapters: [
       /* ================= the first half: The Chart ================= */
       { id: 'c1', half: 1, title: 'Lot 47', place: { system: 'Hadley', planet: 'Vesk', kind: 'dense', site: 'Vesk Free Port' },
-        intro: 'A dead surveyor’s log comes up for auction, and Ottilie Vane hires the company to make sure she leaves with it.', nodes: [
+        intro: 'A dead surveyor’s log comes up for auction, and Lucan Vane hires the company to make sure his reader leaves with it.', nodes: [
         { id: 'c1.brief', type: 'brief', text: 'Vesk Free Port. Lot 47 is on the block tonight.', next: 'c1.bidding' },
         { id: 'c1.bidding', type: 'event', who: 'vane', title: 'The bidding', text: 'Half the room is bidding for somebody else.', options: [
           // (Vane's money, not the company's: the company has none yet)
@@ -341,8 +350,8 @@
           { id: 'watch', text: 'Let Vane bid while the company watches the room.', battle: { intel: 1 }, effects: [{ meter: 'intel', add: 1 }] },
           { id: 'follow', text: 'Have Coin & Kettle’s agent followed out of the room.', battle: { role: 'choose' }, effects: [{ flag: 'kettle_marked', local: true }] }
         ], next: 'c1.battle' },
-        // Vane across the market square to the landing field, with the log, and Coin & Kettle in the way
-        { id: 'c1.battle', type: 'battle', scenario: 'escort', variant: { escort: 'Ottilie Vane' }, map: 'vesk', tier: 1, pl: 1, planet: 'dense',
+        // Vane's reader across the market square to the landing field, with the log, and Coin & Kettle in the way
+        { id: 'c1.battle', type: 'battle', scenario: 'escort', variant: { escort: 'Halloran' }, map: 'vesk', tier: 1, pl: 1, planet: 'dense',
           enemy: rival('kettle', { core: [{ key: 'recruits', name: 'Kettering’s Own' }], optional: { meter: 'kettle', per: 3, units: ['irregulars', 'recruits'] }, fill: { to: 0.6, from: ['recruits', 'irregulars'], meter: 'kettle', step: 0.05 },
             changes: [{ if: { flag: 'kettle_marked' }, readiness: -1 }] }),
           on: { success: [{ effects: [{ meter: 'kettle', add: -1 }, { meter: 'lead', add: 1 }] }], failure: [{ effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: -1 }] }] }, next: 'c1.debrief' },
@@ -412,26 +421,28 @@
       ] },
 
       { id: 'c3', half: 1, title: 'The Drowned Beacon', place: { system: 'Tessaly', planet: 'Tessaly IV', kind: 'jungle', world: { atmosphere: 'foggy' }, site: 'the Mire' },
-        intro: 'Morrow’s beacon is a Xenotripod structure, half under water, and it is not abandoned.', nodes: [
+        intro: 'Morrow’s beacon is a structure nobody built, half under water, and the Red Reavers are digging at it.', nodes: [
         { id: 'c3.brief', type: 'brief', text: 'The beacon, in the flooded forest.', next: 'c3.contact' },
-        { id: 'c3.contact', type: 'event', title: 'First contact', text: 'The beacon has guards.', options: [
+        { id: 'c3.contact', type: 'event', who: 'hal', title: 'Claim jumpers', text: 'The Reavers are digging at the beacon.', options: [
           { id: 'storm', text: 'Storm it.', battle: { scenario: 'strike', name: 'Storm the Beacon' }, effects: [{ meter: 'alarm', add: 1 }, { flag: 'beacon_stormed' }] },
           { id: 'watch', text: 'Watch first.', battle: { tier: 'max-1' }, effects: [{ meter: 'understanding', add: 1 }, { meter: 'intel', add: 1 }, { meter: 'lead', add: -1 }] },
           { id: 'signal', text: 'Try a signal.', effects: [{ roll: { d6: 4, meter: 'understanding', mods: [{ if: { flag: 'thule_records' }, add: 1 }] },
             pass: [{ flag: 'beacon_rubbing' }, { meter: 'alarm', add: -1 }, { meter: 'stones', add: 1 }, { next: { battle: 'c3.battle', levers: { skip: true } } }],
-            fail: [{ flag: 'signal_failed', local: true }, { next: { battle: 'c3.battle', levers: { variant: { ambush: true }, name: 'The Beacon Answers' } } }] }] }
+            fail: [{ flag: 'signal_failed', local: true }, { next: { battle: 'c3.battle', levers: { variant: { contacts: { turn: 2, found: true, keys: CONTACTS } }, name: 'The Beacon Answers' } } }] }] }
         ], next: 'c3.battle' },
-        // (the relic variant: the beacon's lodestone, prised out of its socket and carried off, or not)
-        { id: 'c3.battle', type: 'battle', scenario: 'find', map: 'mire', tier: 'max', pl: 1, planet: 'jungle', variant: { relic: true }, enemy: tribe('shkar'),
+        /* (the relic variant: the beacon's lodestone, prised out of its socket and carried off, or not;
+           and once it is found, or by turn 4, the Reavers run and the beacon's keepers step out of the air: unknown contacts) */
+        { id: 'c3.battle', type: 'battle', scenario: 'find', map: 'mire', tier: 'max', pl: 1, planet: 'jungle', variant: { relic: true, contacts: { turn: 4, found: true, keys: CONTACTS } },
+          enemy: rival('reavers', { fill: { to: 0.7, from: ['irregulars', 'enforcers'] } }),
           on: { success: [{ if: { relic: 'A' }, effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 1 }] }, {}],
                 failure: [{ if: { relic: 'A' }, effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 2 }] }, { effects: [{ meter: 'alarm', add: 1 }] }] }, next: 'c3.debrief' },
-        { id: 'c3.debrief', type: 'debrief', pick: 2, text: '{if success}The beacon is quiet.{/if}{if failure}The Sh’kar drove you off.{/if}', events: ['c3.left', 'c3.copy'], next: 'c3.end' },
-        { id: 'c3.left', type: 'event', if: { all: [{ not: { flag: 'beacon_rubbing' } }, { not: { relic: 'A' } }] }, title: 'What the Sh’kar left', text: 'A wounded Alpha, and the lodestone still in its socket.', options: [
+        { id: 'c3.debrief', type: 'debrief', pick: 2, text: '{if success}The beacon is quiet.{/if}{if failure}Whatever they were, they drove you off.{/if}', events: ['c3.left', 'c3.copy'], next: 'c3.end' },
+        { id: 'c3.left', type: 'event', if: { all: [{ not: { flag: 'beacon_rubbing' } }, { not: { relic: 'A' } }] }, title: 'What they left', text: 'One of them, hurt, and the lodestone still in its socket.', options: [
           { id: 'stone', text: 'Take the lodestone.', effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 1 }] },
-          { id: 'leave', text: 'Leave it, and the Alpha, where they are.', effects: [{ meter: 'understanding', add: 2 }, { meter: 'lead', add: -1 }, { meter: 'vane', add: -1 }, { flag: 'relics_returned' }] },
+          { id: 'leave', text: 'Leave the stone, and the hurt one, where they are.', effects: [{ meter: 'understanding', add: 2 }, { meter: 'lead', add: -1 }, { meter: 'vane', add: -1 }, { flag: 'relics_returned' }] },
           { id: 'both', text: 'Take both, for Vane.', effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 2 }, { meter: 'vane', add: 1 }, { meter: 'understanding', add: -1 }, { flag: 'alpha_taken' }] },
           { id: 'gate', text: 'The gate is still open. Step through after them.', extreme: true, if: { any: [{ flag: 'beacon_stormed' }, { flag: 'signal_failed' }] },
-            why: 'The gate closed behind them.', effects: [{ flag: 'warren_entered' }, { meter: 'alarm', add: 2 }] }
+            why: 'The air closed behind them.', effects: [{ flag: 'warren_entered' }, { meter: 'alarm', add: 2 }] }
         ] },
         { id: 'c3.copy', type: 'event', who: 'kettering', title: 'A buyer for a copy', text: 'Someone wants a copy of the chart, and names a price.', options: [
           { id: 'sell', text: 'Sell them a copy.', extreme: true, if: { meter: 'vane', lte: -1 }, why: 'You still work for Vane.', effects: [{ kUC: 4 }, { meter: 'theirs', add: 1 }, { flag: 'chart_sold' }] },
@@ -472,17 +483,19 @@
 
       { id: 'warren', half: 1, oneOff: true, title: 'Into the Warren', place: { system: '(no fix)', planet: 'the Warren', kind: 'unstable', world: { anomaly: 'radiation' } },
         intro: 'The company is through the gate, on a world nobody has charted, underground.', nodes: [
-        { id: 'warren.brief', type: 'brief', text: 'The tunnels of the Mithdu.', next: 'warren.other' },
+        { id: 'warren.brief', type: 'brief', text: 'Tunnels, on the far side of the gate.', next: 'warren.other' },
         { id: 'warren.other', type: 'event', title: 'The other side', text: 'The turret is closing behind the company.', options: [
           { id: 'hold', text: 'Hold the gate open with charges.', battle: { strikes: 'D3' }, effects: [{ meter: 'alarm', add: 1 }] },
           { id: 'close', text: 'Let it close.', battle: { suppressOwn: 'D3' }, effects: [{ meter: 'understanding', add: 1 }] },
           { id: 'voices', text: 'Follow the voices.', effects: [{ roll: { d6: 4, meter: 'understanding' },
             pass: [{ next: { battle: 'warren.battle', levers: { tier: 'max-1' } } }], fail: [{ next: { battle: 'warren.battle', levers: { variant: { ambush: true } } } }] }] }
         ], next: 'warren.battle' },
-        { id: 'warren.battle', type: 'battle', scenario: 'ce_clear', tier: 'max', pl: 1, planet: 'unstable', enemy: tribe('mithdu'),
+        // (the Reavers went through first, after the hoard; by turn 3 the tunnels' keepers come out of the walls: unknown contacts)
+        { id: 'warren.battle', type: 'battle', scenario: 'ce_clear', tier: 'max', pl: 1, planet: 'unstable', variant: { contacts: { turn: 3, keys: CONTACTS_DEEP } },
+          enemy: rival('reavers', { fill: { to: 0.7, from: ['irregulars', 'enforcers'] } }),
           on: { success: [{}], failure: [{ effects: [{ meter: 'alarm', add: 2 }] }] }, next: 'warren.debrief' },
         { id: 'warren.debrief', type: 'debrief', text: 'The company is out, the long way round.', events: ['warren.hoard'], next: 'warren.interlude' },
-        { id: 'warren.hoard', type: 'event', title: 'The Mithdu’s hoard', text: 'A chamber of relics, and a lodestone no rival will ever know about.', options: [
+        { id: 'warren.hoard', type: 'event', title: 'The hoard', text: 'A chamber of relics, and a lodestone no rival will ever know about.', options: [
           { id: 'stone', text: 'Take the lodestone only.', effects: [{ meter: 'stones', add: 1 }, { meter: 'lead', add: 1 }] },
           { id: 'all', text: 'Take everything you can carry.', effects: [{ kUC: 4 }, { meter: 'stones', add: 1 }, { meter: 'alarm', add: 2 }, { flag: 'hoard_taken' }] },
           { id: 'mark', text: 'Take nothing, and mark the way.', effects: [{ meter: 'understanding', add: 2 }, { meter: 'alarm', add: -1 }, { flag: 'mithdu_marked' }] }
@@ -501,10 +514,10 @@
         { id: 'dx.battle', type: 'battle', scenario: 'meeting', map: 'dockring', tier: 'max', pl: 1, planet: 'industrial', enemy: rival('lance'),
           on: { success: [{ effects: [{ meter: 'lance', add: -1 }] }], skip: [{}], failure: [{ effects: [{ meter: 'lance', add: 1 }, { meter: 'stones', add: -1 }] }] }, next: 'dx.debrief' },
         { id: 'dx.debrief', type: 'debrief', text: 'The Lance pulls back.', events: ['dx.terms'], next: 'dx.interlude' },
-        { id: 'dx.terms', type: 'event', who: 'vane', title: 'Vane’s terms', text: 'Her lawyer calls before the smoke clears.', options: [
-          { id: 'pay', text: 'Pay her for the log.', cost: { kUC: 4 }, why: 'You can’t pay her.', effects: [{ meter: 'vane', set: 0 }, { flag: 'vane_cut_off', set: false }, { flag: 'vane_suspects' }] },
-          { id: 'tell', text: 'Tell her where to put it.', effects: [{ flag: 'vane_cut_off' }] },
-          { id: 'offer', text: 'Offer her the next lodestone.', effects: [{ flag: 'vane_suspects' }, { meter: 'vane', add: -1 }, { flag: 'owed_vane' }] }
+        { id: 'dx.terms', type: 'event', who: 'vane', title: 'Vane’s terms', text: 'His lawyer calls before the smoke clears.', options: [
+          { id: 'pay', text: 'Pay him for the log.', cost: { kUC: 4 }, why: 'You can’t pay him.', effects: [{ meter: 'vane', set: 0 }, { flag: 'vane_cut_off', set: false }, { flag: 'vane_suspects' }] },
+          { id: 'tell', text: 'Tell him where to put it.', effects: [{ flag: 'vane_cut_off' }] },
+          { id: 'offer', text: 'Offer him the next lodestone.', effects: [{ flag: 'vane_suspects' }, { meter: 'vane', add: -1 }, { flag: 'owed_vane' }] }
         ] },
         interlude('dx.interlude', 'fault')
       ] },
@@ -516,7 +529,7 @@
           { id: 'dont', text: 'Don’t.', effects: [{ meter: 'loyalty', add: -1 }] }
         ] },
         { id: 'i.sendahead', type: 'event', once: true, who: 'vane', if: { all: [{ not: { flag: 'vane_cut_off' } }, { meter: 'stones', gte: 2 }, { any: [{ meter: 'vane', gte: 1 }, { flag: 'owed_vane' }] }] },
-          title: 'Send one ahead', text: 'Vane wants a lodestone sent to her now.', options: [
+          title: 'Send one ahead', text: 'Vane wants a lodestone sent to him now.', options: [
           { id: 'send', text: 'Send it.', effects: [{ meter: 'stones', add: -1 }, { meter: 'vane', add: 1 }, { flag: 'owed_vane', set: false }, breaks()] },
           { id: 'refuse', text: 'Refuse.', effects: [{ meter: 'vane', add: -1 }, { if: { flag: 'owed_vane' }, flag: 'vane_cut_off' }, { if: { flag: 'vane_suspects' }, flag: 'vane_suspects' }] }
         ] },
@@ -571,7 +584,7 @@
       ] },
 
       /* ================= the second half: The Long Jump ================= */
-      { id: 'fault', half: 2, counts: false, title: 'The Long Jump', intro: 'The log runs out of easy headings. From here the company chooses where to go, and what it leaves behind goes on without it.', nodes: [
+      { id: 'fault', half: 2, counts: false, title: 'The Long Jump', intro: 'Halloran reads the last pages of the log, and Morrow names them at last: Xenotripods, the three-legged ones, who step out of the air. Every newsfeed in the sector has the word by the next jump. From here the company chooses where to go, and what it leaves behind goes on without it.', nodes: [
         { id: 'fault.brief', type: 'brief', text: 'The trail splits.{if vane_cut_off} Vane has stopped paying.{/if}', next: 'pool' },
         { id: 'pool', type: 'pool', picks: 3, then: 'end' }
       ] },
@@ -734,7 +747,7 @@
         passed: [{ meter: 'vane', add: -1 }, { meter: 'lance', add: 1 }],
         place: { system: 'Halcyon', planet: 'Halcyon', kind: 'dense' },
         brief: 'Vane’s store of relics.',
-        before: { id: 'vault.door', who: 'vane', title: 'Vane’s vault', text: 'Her relics, and receipts for what she has sold.', options: [
+        before: { id: 'vault.door', who: 'vane', title: 'Vane’s vault', text: 'His relics, and receipts for what he has sold.', options: [
           { id: 'night', text: 'Break in by night.', battle: { scenario: 'strike', tier: 'max-1' } },
           { id: 'ask', text: 'Ask to see it.', if: { not: { flag: 'vane_cut_off' } }, why: 'Vane won’t see you.', effects: [{ roll: { d6: 4, meter: 'vane' },
             pass: [{ flag: 'vault_seen' }, { next: { battle: 'vault.battle', levers: { skip: true } } }], fail: [{ meter: 'vane', add: -1 }] }] }
@@ -769,10 +782,10 @@
           on: { success: [{ effects: [{ meter: 'lance', add: -1 }] }], skip: [{}], failure: [{ effects: [{ meter: 'lance', add: 1 }] }] } } }),
       poolChapter({ id: 'collector', thread: 'patron', finale: true, title: 'The Collector', place: Object.assign({ site: 'the landing field' }, QUIET),
         brief: 'Vane comes in person, with the Ninth Lance.',
-        before: { id: 'collector.vane', who: 'vane', title: 'Vane comes in person', text: 'She has terms.', options: [
-          { id: 'terms', text: 'Hear her terms.', if: { flag: 'vane_owes' }, why: 'She owes you nothing.', battle: { scenario: 'parley', name: 'Last Terms' } },
+        before: { id: 'collector.vane', who: 'vane', title: 'Vane comes in person', text: 'For the first time, Vane is in the room. He has terms.', options: [
+          { id: 'terms', text: 'Hear his terms.', if: { flag: 'vane_owes' }, why: 'He owes you nothing.', battle: { scenario: 'parley', name: 'Last Terms' } },
           { id: 'fight', text: 'Shoot the flag down.', battle: { role: 'attacker' }, effects: [{ meter: 'loyalty', add: 1 }] },
-          hireOption('reavers', 'Hire the Reavers against her.')
+          hireOption('reavers', 'Hire the Reavers against him.')
         ] },
         battle: { scenario: 'takeover', role: 'attacker', tier: 'max', pl: 'max', planet: 'dense', variant: { target: 'Commander Daw' },
           enemy: rival('lance', { changes: [{ if: { flag: 'lance_burned' }, readiness: 1 }] }),
@@ -818,7 +831,7 @@
       { about: 'quiet', text: 'The Quiet is on every chart now.' },
       { about: 'eshaven', if: { flag: 'promise_broken' }, text: 'The Hashamer remember the company that broke its word.' },
       { about: 'eshaven', if: { flag: 'eshaven_promise' }, text: 'The Hashamer are still on their world, free, and they say the names of their dead.' },
-      { about: 'vane', if: { flag: 'vane_exposed' }, text: 'Ottilie Vane’s receipts are public, and so is she.' },
+      { about: 'vane', if: { flag: 'vane_exposed' }, text: 'Lucan Vane’s receipts are public, and so, at last, is his face.' },
       { about: 'vane', text: 'Ottilie Vane has another lot in the catalogue.' },
       { about: 'rivals', if: { flag: 'kettle_partner' }, text: 'Coin & Kettle are partners in the claim, and remind everyone of it.' },
       { about: 'rivals', text: 'The rivals went back to the work they had before the log.' },

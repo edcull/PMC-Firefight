@@ -580,7 +580,7 @@
      side, one after the other. `sighted` is the first of the enemy's hidden
      counters turned over; a line with `after` waits until that moment's line
      has been said. */
-  var TALK_MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard'];
+  var TALK_MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard', 'contact'];
   function talkFor(campaign, spec) {
     var def = storyOf(campaign), talk = def && def.talk;
     if (!talk || !spec) return [];

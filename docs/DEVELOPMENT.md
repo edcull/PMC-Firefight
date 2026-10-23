@@ -344,8 +344,10 @@ storydr.js         Dead Reckoning as data: the validator, its forces (archetypes
                    craft or teleport turrets), the hired guns, and 6,000 seeded walks (endings, one-offs, finales)
 storyparley.js     a Parley's talks: the conversation written from what has happened, Trust and Tension, an agreement
                    (the battle won, its terms in the story's flags) or a fight; the AI talking for side A; a plain one
-storyescort.js     the Escort: Lot 47's Vane on the table, side A's to move; through, killed, out of time, the enemy
-                   routed; the enemy after her and nothing else; one battle AI against AI
+storyescort.js     the Escort: Lot 47's Halloran on the table, side A's to move; through, killed, out of time, the enemy
+                   routed; the enemy after him and nothing else; one battle AI against AI
+storycontacts.js   unknown contacts: at the Drowned Beacon the Reavers run (fled, out of the tally) and nameless
+                   Xenotripods step out of the air by the objective; the Warren's by turn 3; both AI against AI
 storyrelic.js      the relic variant: found, lifted at an End phase, carried (the objective follows), dropped, carried off
                    its own edge; the report, { relic: 'A' }, the Glass Flats and the Beacon paying on it; one AI battle
 storyforces.js     Dead Reckoning's battles in the engine: every one set up and started; its place (kind of world,

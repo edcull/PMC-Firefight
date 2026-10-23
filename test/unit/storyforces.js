@@ -90,7 +90,7 @@ ok('a rival fills its force with its own kind: Wraith Section, observers and lig
   'Wraith ' + wraithKeys.join(' ') + ' / Sable ' + sableKeys.join(' '));
 ok('...the same force each time it is looked at', JSON.stringify(at3('bounty.battle').armyB) === JSON.stringify(wraith3.armyB));
 ok('...and a tribe its own: the Ulvar behind shield turrets', at3('watchers.battle').armyB.some((k) => /Shield Turrets|Defensive Turrets/.test(groupOf(k))));
-ok('a Xenotripod force is led by an Alpha for the Tier', ['c3.battle', 'spire.battle', 'cold.battle'].every((id) => runs[id].cfg.armyB.some((k) => /^xalpha/.test(k))));
+ok('a Xenotripod force is led by an Alpha for the Tier', ['storm.battle', 'spire.battle', 'cold.battle'].every((id) => runs[id].cfg.armyB.some((k) => /^xalpha/.test(k))));
 const shk = L.describeForce(L.buildForce(S.battleSpec(at('c3.battle')).enemy, { campaign: at('c3.battle'), tier: 2, pl: 1 }), 1, 'xeno');
 ok('...and the briefing tells it as Xenotripods', /Alpha leads them/.test(JSON.stringify(shk.items)), JSON.stringify(shk.items));
 
