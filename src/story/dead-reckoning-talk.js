@@ -24,6 +24,8 @@
       scav: { name: 'Mags', role: 'The Thule scavengers', face: { bg: '#7a9ab0', skin: '#d8a682', hair: '#c8c8c8', hairStyle: 'long', hat: 'beanie', hatColour: '#3a4a5a', clothes: '#4a4a52', clothesStyle: 'jacket', accent: '#e07a3a', extras: ['scar', 'earring'] } },
       shkar: { name: 'The Sh’kar', role: 'Xenotripods, the beacon’s keepers', face: { tripod: true, bg: '#1e3a3a', shell: '#9ab8a8', glow: '#7ae0c8' } },
       mithdu: { name: 'The Mithdu', role: 'Xenotripods, under the rock', face: { tripod: true, bg: '#2a2418', shell: '#a89870', glow: '#e0a040' } },
+      ulvar: { name: 'The Ulvar', role: 'Xenotripods, the shieldwall', face: { tripod: true, bg: '#2a2e3a', shell: '#a8b0c8', glow: '#8ab0ff' } },
+      amt: { name: 'The Amt', role: 'Xenotripods, the towers of the Quiet', face: { tripod: true, bg: '#2a2414', shell: '#d8c890', glow: '#ffe08a', gold: true } },
       lancer: { name: 'A Lance trooper', role: 'The Ninth Lance', face: { bg: '#5a4a7a', skin: '#c99a76', hair: '#222', hat: 'visor', hatColour: '#2a2238', clothes: '#2a2238', clothesStyle: 'armour', accent: '#c8a040' } }
     },
 
@@ -98,6 +100,96 @@
         { who: 'unknown', text: '[something old turns its attention to you, slowly, the way a sleeper turns over]' }
       ],
 
+      // ---- the second half: the Race ----
+      'claim.brief': [
+        { who: 'rook', text: 'Company, this is Rook Kestrel. You’re on my shelf, you’re in my shot, and you’re about to be in tonight’s feed. Smile.' },
+        { who: 'commander', text: 'That cache was Morrow’s, Kestrel. It isn’t yours to film or to fly off with.' },
+        { who: 'rook', if: { not: { flag: 'beat_kestrel' } }, text: 'It’s whoever’s who gets it to a ship first. That’s not a threat, it’s the rules of the race. My client wants pictures, and you on the wrong end of my guns makes great pictures.' },
+        { who: 'rook', if: { flag: 'beat_kestrel' }, text: 'Last time you made me look slow on a live feed. Do you know what that costs a cavalry outfit? Everything. So this time I’m not filming. This time I’m just winning.' }
+      ],
+      'wreck.brief': [
+        { who: 'ops', text: 'That’s her. Morrow’s ship. Sable has a ring of armour round the gully, and cutting gear on the main hatch.' },
+        { who: 'agathe', if: { not: { flag: 'beat_sable' } }, text: 'This wreck is my client’s salvage, {commander:rank}. Turn your ship round. If you land inside my perimeter, I will treat it as an assault on a contracted site.' },
+        { who: 'agathe', if: { flag: 'beat_sable' }, text: 'You. I wondered when you would come. I have a warehouse’s worth of reasons not to let you near this ship, {commander:rank}, and I intend to collect every one of them.' },
+        { who: 'reader', text: 'His last entry will be in there, {commander:rank}. Whatever he found at the end, he wrote it down. He always wrote it down.' }
+      ],
+      'bounty.brief': [
+        { who: 'ops', text: 'Depot’s clear. Fuel’s flowing. And the hills to the east just went very quiet.' },
+        { who: 'nine', if: { not: { flag: 'beat_wraith' } }, text: 'Company on Ilya. There’s a price on your head and Wraith took the contract. Nothing personal. You can leave the stones on the pad and walk away, or you can be the job.' },
+        { who: 'nine', if: { flag: 'beat_wraith' }, text: 'Company on Ilya. I asked for this contract. Do you understand? I asked. The flats were the only job Wraith ever walked away from.' },
+        { who: 'commander', text: 'Then come and get it, Nine.' }
+      ],
+      'landing.brief': [
+        { who: 'reader', text: 'That’s it, {commander:rank}. The end of the log. The Quiet. Morrow stood here forty years ago and turned round and went home.' },
+        { who: 'ops', text: 'One landing field, and somebody’s already on it. Dug in, end to end. They’ve been waiting for us.' },
+        { who: 'vane', if: { not: { flag: 'vane_cut_off' } }, text: 'Whoever holds that field files the claim, {commander:rank}. I have paid for a great many things to bring you here. Do not make me pay for losing.' },
+        { who: 'commander', text: 'All units: this is the one. Take the field.' }
+      ],
+      'watchers.brief': [
+        { who: 'ops', text: 'Shield domes across the whole pass, wall to wall. Turrets under every one. Nothing gets through that we can see.' },
+        { who: 'ulvar', text: '[a wall, in every head at once: smooth, cold, and without a door in it]' },
+        { who: 'commander', text: 'Then we make a door.' }
+      ],
+      'storm.brief': [
+        { who: 'ops', text: 'Sensors are screaming! The air round the camp is folding, everywhere at once. Something’s coming through!' },
+        { who: 'shkar', if: { flag: 'beacon_stormed' }, text: '[the beacon, the stone, the ones who took it: you, you, you]' },
+        { who: 'shkar', if: { not: { flag: 'beacon_stormed' } }, text: '[a hand reaching for something that was taken]' },
+        { who: 'commander', text: 'Stand to! Everybody up and on the line!' }
+      ],
+      'cold.brief': [
+        { who: 'ops', text: 'Ruins, half under the sand. And the sand’s moving when nothing is moving it.' },
+        { who: 'mithdu', text: '[a slow attention, from underneath everything]' },
+        { who: 'commander', text: 'Lights on, backs to the walls. If the floor moves, shoot the floor.' }
+      ],
+      'spire.brief': [
+        { who: 'reader', text: 'The tallest tower on the Quiet. The stones point straight at it, all of them. Whatever the Amt are, they are in there, and they are waking.' },
+        { who: 'seven', if: { flag: 'eshaven_promise' }, text: 'You promised. Remember the promise in there, other hands. If the towers wake, they call us all home.' },
+        { who: 'amt', text: '[something enormous, half asleep, turning towards you]' }
+      ],
+      // ---- the second half: First Contact ----
+      'mimics.brief': [
+        { who: 'seven', text: 'I am Seven-Holds-the-Staff. You are the other hands: the soldiers who choose whom they serve. We have never been asked. Our masters only told.' },
+        { who: 'commander', text: 'And now you’re asking.' },
+        { who: 'seven', text: 'Now I am asking. Those men on the ridge have cages. They have come for us, to sell us. Will you fight beside us, other hands? We will say the names of your dead with ours.' },
+        { who: 'kettering', if: { flag: 'beat_kettle' }, text: 'You again, {commander:rank}. Stay out of this one. It’s the best manifest Brass Ledger has had all year, and you owe me for Vesk.' }
+      ],
+      'speaker.brief': [
+        { who: 'ops', text: 'One of them, on the far shore. An Alpha, by the crest. Weapons grounded. It’s just… standing there.' },
+        { who: 'amt', text: '[a single word, very gently, in every head at once: come]' },
+        { who: 'reader', text: 'Morrow wrote that they let him in. Maybe this is how.' }
+      ],
+      'signal.brief': [
+        { who: 'reader', text: 'Lit, the beacon calls. Morrow thought it called them home. Seven says it calls them to talk. We are about to find out which.' },
+        { who: 'shkar', text: '[the fog thickens, and fills with movement]' },
+        { who: 'commander', text: 'Hold the beacon. Whatever comes, hold it until the signal is out.' }
+      ],
+      // ---- the second half: the Patron ----
+      'vault.brief': [
+        { who: 'reader', text: 'Under the bank. Everything Mr Vane has ever bought. And perhaps everything he has ever sold.' },
+        { who: 'daw', text: 'You’re a long way from your contract, {commander:rank}. The Lance holds this vault. Turn round and nobody has to explain anything to anyone.' },
+        { who: 'vane', if: { not: { flag: 'vane_cut_off' } }, text: 'I would rather you didn’t, {commander:rank}. I would very much rather you didn’t.' }
+      ],
+      'escort.brief': [
+        { who: 'vane', text: 'Three trucks, {commander:rank}, and a ship on the far side of Umber. Do not open the containers. Do not stop for anyone. Do not lose them.' },
+        { who: 'daw', text: 'Lance, the convoy is moving. Mr Vane has changed his mind about who should be carrying it. Take it.' },
+        { who: 'commander', text: 'He’s hedging his bets. Convoy, move out.' }
+      ],
+      'debts.brief': [
+        { who: 'daw', if: { not: { flag: 'beat_lance' } }, text: 'Commander Iselin Daw, the Ninth Lance, acting for Mr Vane’s creditors. Your company owes. I collect. Nothing more to it than that.' },
+        { who: 'daw', if: { flag: 'beat_lance' }, text: 'We have met before, {commander:rank}. Mr Vane says you owe him. I would have taken this one for free.' },
+        { who: 'commander', text: 'We owe Vane nothing.' }
+      ],
+      'collector.brief': [
+        { who: 'vane', text: '{commander:rank}. At last. I thought it was time we met.' },
+        { who: 'commander', text: 'You’re smaller than your voice.' },
+        { who: 'vane', text: 'Most men are. I have paid for every step of this road: every stone, every rival, every jump. The Quiet is mine, {commander:rank}. The only question left is whether you are.' }
+      ],
+      'recall.brief': [
+        { who: 'ops', text: 'Every turret on the planet just opened. Every one. The fog’s full of them!' },
+        { who: 'amt', text: '[HOME. HOME. HOME.]' },
+        { who: 'commander', text: 'Run for the ships! Everybody, run!' }
+      ],
+
       // ---- the second half: the name ----
       'fault.brief': [
         { who: 'reader', text: 'It’s here, {commander:rank}. The last pages. He names them. Once, underlined twice: Xenotripods. The three-legged ones, who step out of the air.' },
@@ -137,6 +229,12 @@
         attack: ['Boarders away!', 'About time.'],
         hold: ['Holding. Boring.', 'We’ll hold.'],
         clear: ['Our way, then.'] },
+      hashamer: { who: 'seven',
+        report: ['The Hashamer stand with the other hands. Say our names if we fall.', 'Seven-Holds-the-Staff, and all of us with it. Where do you want us?'],
+        move: ['We go.', 'As you say, other hands.'],
+        attack: ['For the names!', 'We go in.'],
+        hold: ['We hold. We have held for a very long time.', 'Holding.'],
+        clear: ['Our own way, then. Our masters’ way.'] },
       sable: { who: 'agathe',
         report: ['Sable Armour Group, as owed. We do not run. Plan accordingly.'],
         move: ['Advancing. Slowly.', 'Moving.'],
@@ -188,11 +286,181 @@
         loss: [{ who: 'hal', if: { flag: 'beat_reavers' }, text: 'That’s for the beacon!' }, { who: 'hal', text: 'Ha! One less to split it with! Who’s next?' }],
         bhalf: [{ who: 'hal', if: { flag: 'beat_reavers' }, text: 'Run for it! Again! I’ll remember your faces, company!' }, { who: 'hal', text: 'Not worth it! Grab what you’ve got and run for the boats!' }]
       },
+      kestrel: {
+        start: [{ who: 'rook', if: { flag: 'beat_kestrel' }, text: 'Kestrel, no cameras this time. Just put them down.' }, { who: 'rook', text: 'Kestrel, going in fast! Cameras rolling, guns hot!' }],
+        kill: [{ who: 'rook', if: { flag: 'beat_kestrel' }, text: 'Another bird down. That’s twice you’ve cost me, company.' }, { who: 'rook', text: 'Bird down! Somebody get me eyes on whoever did that!' }],
+        loss: [{ who: 'rook', text: 'Got one! Did we get that? Tell me we got that!' }],
+        bhalf: [{ who: 'rook', text: 'Kestrel, pull out! Pull out! We can still make the evening feed!' }]
+      },
+      ulvar: {
+        start: [{ who: 'ulvar', text: '[the wall holds. The wall has always held]' }],
+        kill: [{ who: 'ulvar', text: '[a crack in something smooth]' }],
+        loss: [{ who: 'ulvar', text: '[patience, endless and cold]' }],
+        bhalf: [{ who: 'ulvar', text: '[the wall draws back, and gathers itself, and waits]' }]
+      },
+      amt: {
+        start: [{ who: 'amt', text: '[something vast, opening one eye]' }],
+        kill: [{ who: 'amt', text: '[mild surprise, from very far away]' }],
+        loss: [{ who: 'amt', text: '[small, small, small]' }],
+        wave: [{ who: 'ops', text: 'More of them, out of the walls! They just keep coming!' }],
+        bhalf: [{ who: 'amt', text: '[the towers dim, one by one]' }]
+      },
       lance: {
         start: [{ who: 'daw', if: { flag: 'beat_lance' }, text: 'Lance. The company that embarrassed us on Kerrigan. No court order this time, {commander:rank}. Just us.' }, { who: 'daw', text: 'Lance, take the log. Minimum force, but take it.' }],
         kill: [{ who: 'daw', if: { flag: 'beat_lance' }, text: 'That makes two. I do not lose to the same company three times.' }, { who: 'daw', text: 'That was one of mine, {commander:rank}. It goes on your bill. Lance, stop being gentle.' }],
         loss: [{ who: 'lancer', if: { flag: 'beat_lance' }, text: 'Paid in part. For the docking ring.' }, { who: 'lancer', text: 'Contact down. They’re not as good as their file.' }],
         bhalf: [{ who: 'daw', if: { flag: 'beat_lance' }, text: 'Disengage. Tell Mr Vane it costs more next time. I’m not doing this one for his money.' }, { who: 'daw', text: 'Lance, disengage. Mr Vane can pay for a second try.' }]
+      }
+    },
+
+    /* The talks, where a battle is a Parley (story.js parleyFor; storybattle.js
+       parleyOpen), as Deep Contract's are: each side's view heard, a compromise
+       looked for, and an agreement or a fight. The Amt speak in brackets until
+       they have learned enough of the company to use its words. */
+    parleys: {
+      // The Speaker: an Amt Alpha on the shore of Orlo's lake
+      'speaker.battle': {
+        them: 'amt', breakAt: 5, start: 'open', broke: 'fight',
+        steps: {
+          open: {
+            say: [
+              { text: '[a question, in every head at once, without words: what are you?]' },
+              { if: { flag: 'beacon_rubbing' }, text: '[recognition: the ones who asked, at the beacon, and did not take]' },
+              { if: { flag: 'beacon_stormed' }, text: '[recognition, cold: the ones who came to the beacon with fire]' },
+              { if: { flag: 'alpha_taken' }, text: '[a name, and a loss: one of ours, in your hold]' }
+            ],
+            options: [
+              { text: 'We’re soldiers. We were hired to follow a dead man’s road. Now we want to know where it ends.', trust: 1, next: 'stones' },
+              { text: 'We came to talk. Nobody here fires unless you do.', trust: 1, next: 'stones' },
+              { text: 'The one we took at the beacon is alive. We can bring it home.', if: { flag: 'alpha_taken' }, trust: 2, tension: -1, next: 'stones',
+                reply: [{ text: '[a long silence, and then something like relief]' }] },
+              { text: 'We hold the stones. We’ll decide what happens next.', tension: 2, next: 'stones',
+                reply: [{ text: '[the lake goes very still]' }] }
+            ]
+          },
+          stones: {
+            say: [
+              { text: '[the stones, in every head: each one a piece of a road, each one a way home]' },
+              { text: 'The… stones. Your word. They are ours. They go home. Always, they go home.' },
+              { text: 'The one you call Morrow carried them. We let him. He was taking them home.' }
+            ],
+            options: [
+              { text: 'Then he was carrying them to you. And so are we, I think.', trust: 1, next: 'quiet' },
+              { text: 'What happens when they all get home?', next: 'quiet',
+                reply: [{ text: 'The Quiet wakes. And everything that is ours comes back to it.' }] },
+              { text: 'They’re worth a fortune where we come from. Why should we give them up?', tension: 2, next: 'quiet',
+                reply: [{ text: 'Because they are not yours. As the Esh-Aven are not ours, any more. We learn this. Slowly.' }] }
+            ]
+          },
+          quiet: {
+            say: [
+              { text: 'The Quiet sleeps. We do not want it woken. Not by you. Not by your rivals. Not by the man who pays you.' },
+              { if: { flag: 'eshaven_promise' }, text: 'You promised the Hashamer. We know. They told us, as they tell everything, in names.' }
+            ],
+            options: [
+              { text: 'Then we want the same thing. Let it sleep.', trust: 1, next: 'terms' },
+              { text: 'I made the Hashamer a promise. I mean to keep it.', if: { flag: 'eshaven_promise' }, trust: 2, next: 'terms' },
+              { text: 'That’s not my decision. I’m paid to get to the end of the road.', next: 'terms' }
+            ]
+          },
+          terms: {
+            say: [{ text: 'Give us the stones, and leave the Quiet asleep. In return: the road there is open to you, and nothing of ours will stand in it.' }],
+            options: [
+              { text: 'The stones go home. You have my word, and my company’s name under it.', need: 2, terms: ['relics_returned'], next: 'deal' },
+              { text: 'Some of them. The rest are what my company is owed.', need: 1, next: 'counter' },
+              { text: 'No. The stones stay with us.', tension: 3, next: 'counter' }
+            ]
+          },
+          counter: {
+            say: [{ text: 'Some is not home. Some is still a road someone else can walk.' }],
+            options: [
+              { text: 'Then all of them. And we keep the rivals off the Quiet as long as we can.', need: 3, terms: ['relics_returned'], next: 'deal' },
+              { text: 'That’s the offer.', tension: 2, next: 'last' },
+              { text: 'Then we’re done talking.', tension: 5, next: 'fight' }
+            ]
+          },
+          last: {
+            say: [{ text: '[weighing; patience, wearing thin]' }],
+            options: [
+              { text: 'We are not your enemy. Nobody else who comes here will say that.', need: 2, next: 'deal' },
+              { text: 'Take it or leave it.', tension: 3, next: 'fight' }
+            ]
+          },
+          deal: {
+            say: [
+              { text: 'Then we will remember the other hands.' },
+              { text: '[something like a bow, in every head at once]' }
+            ],
+            end: 'agreed'
+          },
+          fight: {
+            say: [
+              { text: '[the lake shivers, and the air beside the pylon opens]' },
+              { who: 'ops', text: 'They’re coming through! Weapons up!' }
+            ],
+            end: 'broken'
+          }
+        }
+      },
+
+      // Last Terms: Vane in person, on the Quiet's landing field, owing the company for his receipts
+      'collector.battle': {
+        them: 'vane', breakAt: 5, start: 'open', broke: 'fight',
+        steps: {
+          open: {
+            say: [
+              { text: 'You have something of mine, {commander:rank}. Receipts. I have something you want: a way off this field alive, and paid.' },
+              { if: { flag: 'beat_lance' }, text: 'You have also cost me the Lance’s good humour, which was more expensive than you know.' }
+            ],
+            options: [
+              { text: 'You sold stones to every company on the trail, and paid us to race them. Explain that.', trust: 1, next: 'why' },
+              { text: 'Name a price.', next: 'why' },
+              { text: 'You’re in no position to bargain. Your receipts are on my ship.', tension: 2, next: 'why',
+                reply: [{ text: 'And my company is on this field. Everybody here is in a position, {commander:rank}.' }] }
+            ]
+          },
+          why: {
+            say: [
+              { text: 'A race needs runners. I bought them all. Whoever reached the end, I would own what they found. It is not personal. It is how a market works.' },
+              { if: { flag: 'contact' }, text: 'And then you went and spoke to the things. That, I admit, I did not price in.' }
+            ],
+            options: [
+              { text: 'The Quiet isn’t a market. There are people here. Of a kind.', if: { any: [{ flag: 'contact' }, { flag: 'eshaven_freed' }] }, trust: 1, next: 'terms' },
+              { text: 'And what do you want now?', next: 'terms' },
+              { text: 'You used my company like a counter on a board.', tension: 1, next: 'terms',
+                reply: [{ text: 'I used every company. Yours is the one still standing. Consider it a compliment.' }] }
+            ]
+          },
+          terms: {
+            say: [{ text: 'My terms. You hand over the receipts. I file the claim. You take a fee that would make your company rich for a generation, and the Lance stands down.' }],
+            options: [
+              { text: 'No claim. The Quiet stays asleep and the stones go home, or the receipts go to every newsfeed in the sector.', need: 2, terms: ['relics_returned'], next: 'deal' },
+              { text: 'The claim is yours. The receipts are yours. We take the fee and go.', need: 1, next: 'deal' },
+              { text: 'The receipts go public either way.', tension: 3, next: 'last' }
+            ]
+          },
+          last: {
+            say: [{ text: 'That would be very foolish of you, {commander:rank}. I do not like foolish.' }],
+            options: [
+              { text: 'Then don’t make me be. No claim, and you keep your secrets.', need: 2, terms: ['relics_returned'], next: 'deal' },
+              { text: 'Daw! Your employer’s finished. Stand down.', tension: 3, next: 'fight' }
+            ]
+          },
+          deal: {
+            say: [
+              { text: 'Very well. It seems I have bought a great deal and own very little. That happens, in markets.' },
+              { who: 'daw', text: 'Lance, stand down. It’s over.' }
+            ],
+            end: 'agreed'
+          },
+          fight: {
+            say: [
+              { text: 'Commander Daw. Remove them.' },
+              { who: 'daw', text: 'Lance, weapons free.' }
+            ],
+            end: 'broken'
+          }
+        }
       }
     },
 
@@ -236,6 +504,83 @@
         start: [{ who: 'ops', text: 'Lights on. Stay together. Reavers ahead, dug in. We find a way out, or we make one.' }],
         contact: [{ who: 'ops', text: 'Movement in the walls! It came out of the rock! Small ones, lots of them, and the Reavers are running!' }],
         turn3: [{ who: 'unknown', text: '[the tunnels breathe out, and something in them wakes]' }]
+      },
+      // ---- the second half ----
+      'claim.battle': {
+        start: [{ who: 'rook', text: 'Convoy’s rolling! Kestrel, keep them off the trucks, and somebody keep a camera on their commander!' }],
+        turn3: [{ who: 'ops', text: 'Thin air up here. Everyone’s jumping further than they mean to. Watch your footing.' }],
+        bhalf: [{ who: 'rook', text: 'This isn’t worth the footage! Kestrel, dust off!' }]
+      },
+      'wreck.battle': {
+        start: [{ who: 'agathe', text: 'Sable holds the ship. Every bulkhead, every hold. Let them come in through the hull and find out.' }],
+        turn3: [{ who: 'ops', text: 'Seals holding, but the air in here’s bad. Keep your masks on.' }],
+        sighted: [{ who: 'ops', text: 'Contact! Sable armour, in the hold, dug in behind the cargo!' }]
+      },
+      'bounty.battle': {
+        start: [{ who: 'nine', text: 'Wraith, weapons free. Officers first. They don’t leave Ilya.' }],
+        loss: [{ who: 'ops', text: 'Sniper! Get down, get down, they’re in the hills!' }]
+      },
+      'landing.battle': {
+        start: [{ who: 'ops', text: 'The field, the Quiet. Their commander’s out there somewhere. Find them, and it’s over.' }],
+        turn3: [{ who: 'reader', text: 'The towers are lighting, {commander:rank}. All along the horizon. They know we’re here.' }],
+        target: [{ who: 'ops', text: 'Their commander’s hit! Keep the pressure on!' }]
+      },
+      'watchers.battle': {
+        start: [{ who: 'ops', text: 'Three turrets, three domes. Bring them down and the pass is open.' }],
+        kill: [{ who: 'ops', text: 'A dome’s flickering! Keep hitting it!' }]
+      },
+      'storm.battle': {
+        start: [{ who: 'shkar', text: '[they step out of the air, and the air is full of them]' }],
+        turn3: [{ who: 'ops', text: 'They keep coming! Where are they coming from?' }],
+        bhalf: [{ who: 'shkar', text: '[the air closes behind them like water]' }]
+      },
+      'cold.battle': {
+        start: [{ who: 'ops', text: 'Into the ruins. Room by room. Stay close, stay lit.' }],
+        sighted: [{ who: 'ops', text: 'Contact! Mithdu, out of the sand! Dozens of them!' }]
+      },
+      'spire.battle': {
+        start: [{ who: 'ops', text: 'Generators in chambers all the way up. Burn every one of them out.' }],
+        wave: [{ who: 'ops', text: 'More of them, out of the walls! The tower’s making them!' }],
+        bhalf: [{ who: 'amt', text: '[the hum falters, and the tower dreams of falling]' }]
+      },
+      'mimics.battle': {
+        start: [
+          { who: 'kettering', if: { flag: 'beat_kettle' }, text: 'Right, {commander:rank}. Vesk, and now this. When this is done, I’m sending you the bill for both.' },
+          { who: 'kettering', text: 'Brass Ledger! Fill the cages, lads, and anybody standing in the way is a write-off!' }
+        ],
+        loss: [{ who: 'seven', text: 'We have lost one. Say the name with us, other hands, when this is done.' }],
+        bhalf: [{ who: 'kettering', text: 'Back to the trucks! This manifest isn’t worth it!' }]
+      },
+      'speaker.battle': {
+        start: [{ who: 'ops', text: 'Weapons grounded, everyone. Nobody so much as twitches.' }],
+        parley: [{ who: 'ops', text: 'They’re coming through the air! The talks are over! Weapons up!' }],
+        bhalf: [{ who: 'amt', text: '[sorrow, and the lake goes still]' }]
+      },
+      'signal.battle': {
+        start: [{ who: 'reader', text: 'The beacon’s lit! Hold it, {commander:rank}, the signal needs time!' }],
+        wave: [{ who: 'shkar', text: '[more, out of the fog, and more]' }],
+        turn3: [{ who: 'reader', text: 'It’s calling. Can you hear it? Like a crowd, a long way off, all saying the same thing.' }]
+      },
+      'vault.battle': {
+        start: [{ who: 'daw', text: 'Lance holds the vault. Nobody reaches the strongrooms.' }],
+        turn3: [{ who: 'ops', text: 'Strongrooms ahead. There are stones in there, {commander:rank}. Dozens.' }]
+      },
+      'escort.battle': {
+        start: [{ who: 'daw', text: 'Lance, the trucks. Leave the escort if you can, go through them if you can’t.' }],
+        turn3: [{ who: 'vane', text: 'My cargo, {commander:rank}. I’m watching it, every metre of the way.' }]
+      },
+      'debts.battle': {
+        start: [{ who: 'daw', text: 'Lance, collect.' }]
+      },
+      'collector.battle': {
+        start: [{ who: 'vane', text: 'Commander Daw. Remove them from my field.' }],
+        target: [{ who: 'daw', text: 'I’m hit. Lance, hold. Hold!' }],
+        bhalf: [{ who: 'vane', text: 'Pay them whatever they want, Daw. Just win.' }]
+      },
+      'recall.battle': {
+        start: [{ who: 'ops', text: 'The ships are on the field! Run! Don’t stop for anything!' }],
+        wave: [{ who: 'amt', text: '[HOME]' }],
+        turn3: [{ who: 'ops', text: 'Halfway! Keep moving! Leave anything you can’t carry!' }]
       },
       'dx.battle': {
         start: [

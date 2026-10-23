@@ -1155,7 +1155,7 @@ In parts, each tested and pushed as it is done:
   reachable, the threads reaching their finales, the finales' forces and the
   pay tuned to its targets.
 
-**Where it stands (5a, 5b).** Done:
+**Where it stands (5a to 5c).** Done:
 
 - **5a.** *The Long Jump* opens on the name: Halloran reads it out of Morrow's
   last pages, Vane reprices everything on the line, and the newsfeeds have
@@ -1179,9 +1179,21 @@ In parts, each tested and pushed as it is done:
 
   Each keeps clear what its scenario lays itself. Each new map was played AI
   against AI to an end.
-- The second half's maps have no scenes of their own yet: a briefing on one
-  shows none. That goes with 5c.
-- Tested by `storydrwords.js` (61 checks).
+- **5c.** The second half's voices and scenes:
+  - Every second-half chapter opens on a conversation, and a rival beaten
+    before opens on it (Kestrel "made to look slow").
+  - Every battle has its own lines, and every side it fights has a voice:
+    Kestrel, the Ulvar and the Amt in brackets.
+  - The Hashamer fight beside the company with Seven-Holds-the-Staff's voice.
+  - Two parleys are written:
+    - *The Speaker*: the Amt, from brackets to words, with the stones going
+      home as the agreement.
+    - *Last Terms*: Vane in person, a market that bought everything and owns
+      very little.
+  - Fifteen scenes: each new map's, and the compounds' (the wreck, the cold
+    sites, the vault, the spire). Every chapter with a battle has its card's
+    picture.
+- Tested by `storydrwords.js` (69 checks) and `storyparley.js`.
 
 ### Phase 6: polish
 Sounds for the Xenotripod battles (Mental Projection lines, the beacon), the

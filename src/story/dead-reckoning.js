@@ -40,7 +40,10 @@
   }
   /* Where each chapter happens: the scene on its card (view/story-scenes.js),
      and a battle's own where its chapter's will not do (a compound inside it). */
-  var SCENE = { c1: 'vesk', c2: 'glassflats', c3: 'mire', c4: 'docks', warren: 'warren', doublecross: 'dockring' };
+  var SCENE = { c1: 'vesk', c2: 'glassflats', c3: 'mire', c4: 'docks', warren: 'warren', doublecross: 'dockring',
+    // the second half: a chapter's card shows its own ground, and a compound's briefing its chapter's
+    claim: 'hollin', wreck: 'wreck', bounty: 'ilya', landing: 'quietfield', watchers: 'brannock', storm: 'sedra', cold: 'coldsites', spire: 'spire',
+    mimics: 'hashamer', speaker: 'orlo', signal: 'beaconlit', vault: 'vault', escort: 'umber', debts: 'tarn', collector: 'quietfield', recall: 'quietfog' };
   var BATTLE_SCENE = { 'c2t.battle': 'thule', 'warren.battle': 'warren' };
   function withScenes(def) {
     (def.chapters || []).forEach(function (ch) {
