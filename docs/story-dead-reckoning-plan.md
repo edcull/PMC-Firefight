@@ -14,8 +14,8 @@ story battles that are ordinary two-sided battles, and no battle ever played in
 the background. Almost all of the engine carries over. This plan says what the
 story is, and what it needs that *Deep Contract* did not.
 
-This is a plan, not a spec. Section 8 lists the decisions still to make, each
-with a recommendation. Every name is a placeholder.
+This is a plan, not a spec. Section 8 records the decisions, settled with the
+owner; only the story's length waits on the walk. Every name is a placeholder.
 
 ---
 
@@ -164,7 +164,8 @@ world.
   the hands of Coin & Kettle's broker, who is auctioning it again, to everyone.
   Sable Armour Group has already bought the warehouse it sits in. Buy it (kUC),
   take it (*Hostile takeover* against Sable), or let Sable have it and follow
-  Sable (Lead −1, Intel +2: where Sable goes next is the clue).
+  Sable (Lead −1, Intel +2: where Sable goes next is the clue; and Sable owes
+  the company, `sable_owed`, which buys one hire for free later).
 
 **The two one-offs**, each in place of chapter 4, each only after an
 **extreme** choice (`extreme: true`, as in *Deep Contract*), each leaving a mark
@@ -250,6 +251,42 @@ What is particular to a treasure hunt:
   Lead in the second half, as Hive Growth was the cost of time in *Deep
   Contract*.
 
+### Hired guns: PMC allies
+
+Allies are not only the Xenotripods. A rival can be **hired** to fight beside
+the company, and the rivals are mercenaries: they cost money, they cost more
+each time, they want a share, and they cannot be trusted with the prize.
+
+- **Who can be hired.** *Coin & Kettle* is always for sale. *Kestrel Air
+  Cavalry* fights for the pictures, not the money. *The Red Reavers* come cheap
+  and leave a mess. A rival the company has done a favour for (`sable_owed`,
+  after leaving Sable the warehouse at The Broker) offers once, for free.
+  Hiring is an option at the event before a battle, like the port master's
+  men in *Deep Contract*, with a `cost` of that company's **Price**.
+- **The Price rises.** Each hired company has a Price in kUC (section 4). It
+  goes up by one each time they are hired, when they take losses, and when a
+  demand is refused; a decisive win paid in full brings it down.
+- **They make demands.** After a battle fought with them, an event: they want a
+  cut of the pay (kUC), first look at the next site (Lead −1), a lodestone, or
+  a share of the claim (`kettle_partner`: *Finder's Fee* is split, and the
+  epilogue says so). Paying keeps them sweet. Refusing costs their **Trust**.
+- **Untrustworthy in battle.** Hired allies take orders as allies do now, but
+  with their Trust low an order can be answered with a demand ("Attack here?
+  That's extra."): the order is refused for the turn unless the player pays on
+  the spot (kUC, from the allies' order card). Once they have lost half their
+  units, or with Trust at −2 or lower from the start, they **walk**: at the next
+  End phase they leave the table, and the battle goes on without them.
+- **They sell you out.** With Trust at −3 or lower and a rival bidding more,
+  the company they were working for becomes their next job. The next battle
+  against that rival has them in it (Readiness +1, the company's Intel −1:
+  they know how it fights), or, written for one or two chapters, **the Turn**:
+  the event before the battle finds their guns pointing the wrong way, and the
+  battle is fought with the *ambush* variant, sprung by them, from inside the
+  company's own half.
+- **Xenotripod allies are the other way about.** They never ask for money and
+  never walk for it. They leave if relics are taken by force in front of them,
+  and they do not come back while Alarm is rising.
+
 **Interlude events** (one each, the first that applies): a jump with the drive
 failing; Coin & Kettle offering to sell what it knows; a crewman who has started
 to hear voices since the beacon (Mental Projection; Understanding); Vane asking
@@ -277,6 +314,8 @@ Lead.
 | **Alarm** | 0 | once met | Force against the tribes, relics taken, the Warren | Watching, relics returned, the Speaker | The tribes' forces and readiness, the Tribes' pressure, **Recall at 8** |
 | **Understanding** | 0 | once met | Watching, signals, the Esh-Aven helped, a crewman's visions | Massacre, relics taken by force | Signal rolls, First Contact's pressure, the *First Contact* ending, Xenotripod allies |
 | **Rival strength** (one per thread rival) | 2 | no | Their finds, their wins | Their defeats, their lodestones lost | Their written forces (as Rebel Strength, Lantern) |
+| **Price** (one per company that can be hired) | 1 to 3 | yes, on the hiring option | Each hire, their losses, demands refused | A decisive win paid in full | The hiring option's `cost` |
+| **Trust** (one per company that can be hired) | 0 | no | Demands paid, their units brought home | Demands refused, orders they refused, their losses | Orders refused in battle, walking off, selling the company out |
 
 Every meter has a reader that changes something on the table, in the choices or
 in the route; the validator checks it, as it does for *Deep Contract*.
@@ -286,7 +325,8 @@ in the route; the validator checks it, as it does for *Deep Contract*.
 The rivals: `kettle_bought`, `kettle_burned`, `wraith_robbed`, `sable_followed`,
 `kestrel_scooped`, `reavers_hunted`. The tribes: `warren_entered`,
 `contact`, `relics_returned`, `speaker_met`, `eshaven_freed`. The patron:
-`chart_sold`, `vane_suspects`, `vane_cut_off`, `lance_known`. The trail:
+`chart_sold`, `vane_suspects`, `vane_cut_off`, `lance_known`. The hired guns:
+`kettle_hired`, `kettle_partner`, `kettle_turned`, `kestrel_filmed`, `reavers_paid`, `sable_owed`. The trail:
 `glassflats_dug`, `thule_records`, `beacon_rubbing`, `morrow_found` (his ship).
 
 ### Enemy forces
@@ -327,6 +367,9 @@ up. Jumps cost kUC (a decision, section 8), which side contracts pay for.
 | **Forces by archetype** | `enemy.archetype` on a written force: the filler drawn from the archetype's weights, its doctrines on side B, its temper. | `levers.js` `buildForce`; `campaign.js` `archetype()` |
 | **Xenotripods in a story** | The leader for the Tier (an Alpha), turrets placed as the engine places them, doctrines on B, and the words for the dossier (`describeForce`: "a tribe, mostly Esh-Aven, with turrets"). | `levers.js` (`KINDS.troops`, `describeForce`), `campaign.js` `commandKey` |
 | **Xenotripod allies** | Allies of the `xeno` faction on side A. Mental Projection and Limited Senses follow the units, whichever side; allied turrets are placed in side A's zone. | `storybattle.js` `storyUnits`, `xeno.js` (a check, not a change) |
+| **Hired allies who answer back** | An ally order can be refused: with the hired company's Trust low, `giveAllyOrder` puts a demand (a kUC price) in place of the order, and the allies' card offers to pay it. Their answer is a line in their voice (`allyVoice`, a new `demand` set). | `storybattle.js` `giveAllyOrder`, `allyAnswer`; `panels.js` |
+| **Allies who walk** | At an End phase, hired allies that have lost half their units (or that came with Trust −2 or lower) leave the table: extraction for allies, which *Deep Contract*'s extraction already does for side A units, with the allies' line said. The report marks them `walked`, and the story reads it (`{ allies: 'walked' }`). | `storybattle.js` (a step in `storyEndPhase`), the report |
+| **The Turn** | No side switches sides in the middle of a battle: the engine has no such thing, and it is not built. The betrayal comes before the battle, as the *ambush* variant sprung from inside the company's half (`variant: { ambush: 'inside' }`: side B sets up anywhere in side A's half, more than 6" from its units). | `scenarios.js` `ambushed` |
 | **A Xenotripod face** | `face: { tripod: true, … }`: a three-eyed head and a carapace, in the style of the bug face. Rival commanders are ordinary faces. | `story-portraits.js` |
 | **Voices for the tribes** | Their lines arrive through Mental Projection: written in brackets and italics, in every head at once ("*[you are carrying something that belongs to us]*"). | Writing only: `talk` lines, as the hive's |
 | **The trail's scenes** | New places for `story-scenes.js`: the auction house, the glass flats, Station Thule, the drowned beacon, the Warren, the broker's warehouse, the Ulvar shieldwall, the wreck of the Morrow, the Quiet's landing field, an Amt spire. | `story-scenes.js` |
@@ -407,6 +450,9 @@ The same tests, run on both stories:
   IV from its archetype, legal, and recognisably its archetype (the same checks
   the archetype editor's notes describe: Wraith fields snipers, Sable hulls, the
   Sh'kar a teleport turret).
+- **`storyhired.js`** (new): a hired company's Price rising and falling, a
+  demand paid and refused, an order refused and paid for, the allies walking at
+  half strength, and the Turn set up with its ambush inside the company's half.
 - **`storytalk.js`, `storyfaces.js`, `storyscenes.js`** extended to the new story.
 - **A browser test**: a new *Dead Reckoning* to the end of chapter 1, the star
   chart, and one Xenotripod battle's briefing.
@@ -441,7 +487,8 @@ phase 4.
 trail's scenes; the place on the chapter card and the briefing.
 
 ### Phase 5: the second half and the endings
-The four threads, the finales, Recall, Xenotripod allies, the endings and their
+The four threads, the finales, Recall, Xenotripod allies, hired allies (Price,
+Trust, demands, orders refused, walking, the Turn), the endings and their
 epilogues, the side contracts. `storywhole.js` tuned to its targets.
 
 ### Phase 6: polish
@@ -450,14 +497,21 @@ README's Story mode section, difficulty checked against both stories.
 
 ---
 
-## 8. Decisions to make
+## 8. Decisions
 
-| Decision | Options | Recommendation |
-|---|---|---|
-| **Rivals: written forces or real companies?** | (a) Each rival battle's force is written, scaled by the rival's meter, as *Deep Contract*'s enemies are. (b) Each rival is a real campaign company (`camp-rivals.js`) with a roster that grows and keeps its losses. | **(a)**. It keeps *no battle in the background* and the tests' made-up reports simple. A rival's commander and one veteran unit can still be named and carry wounds through flags, which gives most of (b)'s feel. |
-| **How many rivals in the second half?** | All five, or three that the first half has made matter | **Three per playthrough**: the two the first half met most, plus Kestrel (who always gets there first). The Race thread's chapters are written so any rival can take them, with that rival's archetype. |
-| **Do jumps cost money?** | Free; a flat kUC per jump; a cost by distance | **A flat 1 kUC per jump**, waived by Vane while her Trust is 1 or more. It makes side contracts matter once she is gone, and costs no new screen. |
-| **How many lodestones open the Quiet?** | A fixed number, or the finale playable with any number | **Five, but never a dead end**: with fewer the finale is fought anyway, harder, and *Lost Signal* and *Claim Jumped* are likelier. |
-| **The Xenotripods' voice** | Silent; bracketed Mental Projection; translated speech after *The Speaker* | **Bracketed until *The Speaker*, then words.** Understanding is what the player is building. |
-| **Can the Xenotripods be the player's allies?** | No; in First Contact chapters only; in the finales too | **In First Contact chapters and, with `contact`, the finales.** It is the payoff of the peaceful path, and allies already work. |
-| **Story length** | 8 chapters as *Deep Contract*; 10 | **8 first**, `picks: 3`, as before; the walk decides whether to raise it. |
+Settled with the owner:
+
+| Decision | Settled |
+|---|---|
+| **Rivals: written forces or real companies?** | **Written forces**, scaled by each rival's meter, as *Deep Contract*'s enemies are. No battle in the background, and the tests keep their made-up reports. A rival's commander and one veteran unit are named and carry wounds through flags. |
+| **How many rivals in the second half?** | **Three per playthrough**: the two the first half met most, plus Kestrel (who always gets there first). The Race's chapters are written so any rival can take them, with that rival's archetype. |
+| **Do jumps cost money?** | **A flat 1 kUC per jump**, waived by Vane while her Trust is 1 or more. |
+| **How many lodestones open the Quiet?** | **Five, but never a dead end**: with fewer the finale is fought anyway, harder, and *Lost Signal* and *Claim Jumped* are likelier. |
+| **The Xenotripods' voice** | **Bracketed Mental Projection until *The Speaker*, then words.** |
+| **Allies** | **Xenotripod allies** in First Contact chapters and, with `contact`, the finales. **PMC allies too, as hired guns** (section 3): they cost money, cost more each time, make demands, refuse orders when their Trust is low, walk off the table, and can sell the company out. |
+
+Still open, to be settled by the walk:
+
+| Decision | Proposed |
+|---|---|
+| **Story length** | **8 chapters first**, `picks: 3`, as *Deep Contract*; raised to 10 only if the walk shows threads rarely reach their finales. |
