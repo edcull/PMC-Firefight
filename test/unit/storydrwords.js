@@ -159,7 +159,8 @@ Object.keys(MAPS).forEach((k) => {
     // (a road may run to the edge: it is open ground, and the way on to the table)
     if ((p.x < 4 || p.x + p.w > 44) && p.kind !== 'road') bad.push(p.kind + ' in an entry strip');
     if (p.y < 0 || p.y + p.h > 48) bad.push(p.kind + ' off the table');
-    ps.forEach((q, j) => { if (j > i && overlap(p, q)) bad.push(p.kind + ' on ' + q.kind); });
+    // (a landing pad is a floor: what stands on it, stands on it)
+    ps.forEach((q, j) => { if (j > i && overlap(p, q) && !p.pad && !q.pad) bad.push(p.kind + ' on ' + q.kind); });
   });
   (m.objectives || []).forEach((o) => ps.forEach((p) => { if (o.x > p.x - 2 && o.x < p.x + p.w + 2 && o.y > p.y - 2 && o.y < p.y + p.h + 2) bad.push(o.name + ' under ' + p.kind); }));
   const sites = (m.sites && m.sites.at) || [];

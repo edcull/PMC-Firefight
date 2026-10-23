@@ -65,8 +65,11 @@
     var PAVING = { ramp: ['#4a4640', '#57524a', '#635e55', '#706a60', '#7d776c'], fleck: ['#3a3631', '#8c857a', '#2e2b27'], rim: '#2a2723' };
     var COBBLE = { ramp: ['#3e3b37', '#48443f', '#524e48', '#5c5751', '#66615a'], fleck: ['#2c2a27', '#7a746b', '#34312d'], rim: '#24221f' };
     FLOOR.fountain = PAVING;
+    // a landing pad: poured ferrocrete, pale and scorched
+    var PADC = { ramp: ['#55595a', '#5f6364', '#6a6e6f', '#75797a', '#808485'], fleck: ['#3c3f40', '#2a2c2d', '#8e9293'], rim: '#2e3132' };
     function skinFloor(r) {
       if (r.market) return PAVING;
+      if (r.kind === 'road' && r.pad) return PADC;
       if (r.kind === 'road' && r.paved) return COBBLE;
       return null;
     }

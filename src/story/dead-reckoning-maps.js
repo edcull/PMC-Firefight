@@ -56,19 +56,28 @@
       ]
     },
 
-    /* Vesk's landing field, after Lot 47 was lost: Brass Ledger's ship on its
-       pad, cargo stacks, the customs shed, and three places the log could be as
-       they load it (Find and secure, the relic: the log carried off, or not). */
+    /* Vesk's landing field, after Lot 47 was lost: Brass Ledger's shuttle on
+       its pad in the north-east corner, a fuel bowser hosed up to it and a
+       cargo lifter loading it, cargo stacked across the apron, an empty pad,
+       the customs shed, and three places the log could be as they load it
+       (Find and secure, the relic: the log carried off, or not). */
     veskfield: {
       name: 'The landing field, Vesk Free Port', planet: 'dense',
       pieces: [
-        P(6, 6, 8, 8), B(34, 5, 7, 5, 'block'), B(6, 36, 8, 6, 'annex'), R('bunker', 35, 36, 6, 5),
-        B(26, 38, 6, 3, 'block'), R('barricade', 27, 10, 4, 1), R('ruins', 8, 20, 4, 4), R('wall', 37, 24, 1, 6)
+        // Brass Ledger's pad: the shuttle down on it, the bowser fuelling it, the lifter loading it
+        Object.assign(P(30, 2, 14, 14), { pad: true }), R('shuttle', 32, 3, 10, 8),
+        Object.assign(R('fueltruck', 30.6, 12, 4.4, 2), { hose: { x: 37, y: 11 } }), R('cargolifter', 40.5, 12.2, 2.5, 2.5),
+        // an empty pad, the control block and the customs shed
+        Object.assign(P(6, 6, 8, 8), { pad: true }), B(5, 36, 8, 6, 'annex'), R('bunker', 35, 36, 6, 5),
+        B(28, 31, 6, 5, 'block'), B(26, 38, 6, 3, 'block'), R('ruins', 7, 20, 4, 4), R('wall', 38, 22, 1, 6),
+        // cargo, stacked across the apron
+        R('crates', 23, 4, 5, 1.5), R('crates', 23, 7, 1.5, 4), R('crates', 12, 18.5, 6, 1.5), R('crates', 21.5, 20, 1.5, 5),
+        R('crates', 11, 28.5, 5, 1.5), R('crates', 34, 26, 1.5, 5)
       ],
       sites: { kind: 'searchsite', at: [
-        { x: 17, y: 16, name: 'The ship’s ramp' },
-        { x: 31, y: 21, name: 'The cargo stacks' },
-        { x: 21, y: 31, name: 'The customs shed' }
+        { x: 27, y: 16, name: 'The ship’s ramp' },
+        { x: 16, y: 24, name: 'The cargo stacks' },
+        { x: 24, y: 34, name: 'The customs shed' }
       ] }
     },
 

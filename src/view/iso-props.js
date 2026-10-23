@@ -563,6 +563,16 @@
           props.push({ kind: 'parleyflag', x: r.x + r.w / 2, y: r.y + r.h / 2, seed: (rr2() * 9999) | 0 });
           return;
         }
+        /* A spaceport's apron: the pad's markings painted on it, a shuttle down on
+           it, a fuel bowser with its hoses run out to the shuttle, a cargo lifter. */
+        if (r.kind === 'road' && r.pad) { props.push({ kind: 'padmark', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
+        if (r.kind === 'shuttle') { props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), seed: (rr2() * 9999) | 0 }); return; }
+        if (r.kind === 'fueltruck') {
+          props.push({ kind: 'fueltruck', x: r.x, y: r.y, w: r.w, h: r.h, height: a(13), seed: (rr2() * 9999) | 0 });
+          if (r.hose) props.push({ kind: 'hose', x: r.x + r.w - 1.7, y: r.y + r.h + 0.05, to: r.hose, seed: (rr2() * 9999) | 0 });
+          return;
+        }
+        if (r.kind === 'cargolifter') { props.push({ kind: 'cargolifter', x: r.x, y: r.y, w: r.w, h: r.h, height: a(15), seed: (rr2() * 9999) | 0 }); return; }
         // a town square's fountain: its basin, column and statue, drawn as one block among the others
         if (r.kind === 'fountain') {
           props.push({ kind: 'fountain', x: r.x, y: r.y, w: r.w, h: r.h, height: a(22), seed: (rr2() * 9999) | 0 });
@@ -613,7 +623,7 @@
         if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz, relic: !!o.relic, carried: !!o.carried });
       });
       // what lies flat on the floor goes down before anything stands on it
-      var FLAT = { deckgrate: 1, cable: 1, litter: 1 };
+      var FLAT = { deckgrate: 1, cable: 1, litter: 1, padmark: 1, hose: 1 };
       props.forEach(function (p) {
         // the search-site hatch draws over its own scatter, so it stays readable; an objective's flag over the hatch it stands in
         p.depth = (p.w ? p.x + p.w / 2 + p.y + p.h / 2 : p.x + p.y) +
@@ -624,7 +634,7 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
