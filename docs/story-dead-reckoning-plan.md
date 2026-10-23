@@ -86,7 +86,7 @@ and the story reveals them in turn:
 |---|---|---|
 | **The Sh'kar** | Raiders (`shkar`) | Guard the drowned beacon; the first contact. They take relics back. |
 | **The Mithdu** | Tunnellers (`mithdu`) | Live under the old sites. Met by those who go down. |
-| **The Hashamer Esh-Aven** | Mimics (`hashamer`) | A servant people left behind, still keeping their masters' war in their masters' absence. They can be allies. |
+| **The Hashamer Esh-Aven** | Mimics (`hashamer`), **every unit an Esh-Aven** | A servant people left behind, still keeping their masters' war in their masters' absence: nine million Esh-Aven and not a Crock among them. Every unit they field is a Xenotripod unit with its own profile and rules, drawn, named and counted as Esh-Aven (section 5). They can be allies. |
 | **The Ulvar** | Fortress (`ulvar`) | The shieldwall around the Quiet. |
 | **The Amt** | Architects (`amt`) | The Quiet itself: the towers, asleep. The finale. |
 
@@ -527,8 +527,20 @@ filler to fit the company, changes by flag. What is new:
 - **Named units.** Each rival's commander's unit carries the commander's name,
   so a rival's leader can be a finale's target, and can survive one battle to
   come back in another (flags).
+- **The Esh-Aven field Xenotripod units, all of them Esh-Aven.** The Hashamer's
+  force is built from the ordinary Xenotripod profiles (their Alphas, Betas,
+  Gammas, Deltas and Epsilons, at the battle's Tier) with `skin: 'eshaven'` on
+  the force: the same numbers and the same rules, Mental Projection included,
+  but every trooper drawn as an Esh-Aven, named as one ("Esh-Aven Alpha
+  troopers"), and counted as one when losses are counted (the `eshaven` pool,
+  not `crocks`). Their turrets and craft are machines, as anyone's are. The same
+  skin is on them when they fight beside the company in *The Mimics* and the
+  finales.
 
 ```js
+// the Hashamer: Xenotripod units, every one of them an Esh-Aven
+tribe('hashamer', { skin: 'eshaven' })
+
 // the shapes, not the final keys
 function rival(id, extra) {
   return over({
@@ -589,6 +601,7 @@ up. Jumps cost kUC (a decision, section 8), which side contracts pay for.
 | **Forces by archetype** | `enemy.archetype` on a written force: the filler drawn from the archetype's weights, its doctrines on side B, its temper. | `levers.js` `buildForce`; `campaign.js` `archetype()` |
 | **Xenotripods in a story** | The leader for the Tier (an Alpha), turrets placed as the engine places them, doctrines on B, and the words for the dossier (`describeForce`: "a tribe, mostly Esh-Aven, with turrets"). | `levers.js` (`KINDS.troops`, `describeForce`), `campaign.js` `commandKey` |
 | **Xenotripod allies** | Allies of the `xeno` faction on side A. Mental Projection and Limited Senses follow the units, whichever side; allied turrets are placed in side A's zone. | `storybattle.js` `storyUnits`, `xeno.js` (a check, not a change) |
+| **A force reskinned: the Esh-Aven** | `skin: 'eshaven'` on a written force (enemy or allies) puts `u.skin` on each unit it makes. Nothing in the rules reads it but the loss count: a skinned unit's models go in the `eshaven` pool and are counted, not named, as Epsilons' already are. The view reads it: every trooper art key maps to an Esh-Aven figure in that caste's kit, and the unit's name says Esh-Aven. Machines keep their own art. | `storybattle.js` `storyUnits` (the skin onto the unit); `rules.js` `poolOf` / `campaign.js` (the count); `iso-troops.js` (the art map); `levers.js` (the dossier words: "a host of Esh-Aven") |
 | **Hired allies who answer back** | An ally order can be refused: with the hired company's Trust low, `giveAllyOrder` puts a demand (a kUC price) in place of the order, and the allies' card offers to pay it. Their answer is a line in their voice (`allyVoice`, a new `demand` set). | `storybattle.js` `giveAllyOrder`, `allyAnswer`; `panels.js` |
 | **Allies who walk** | At an End phase, hired allies that have lost half their units (or that came with Trust −2 or lower) leave the table: extraction for allies, which *Deep Contract*'s extraction already does for side A units, with the allies' line said. The report marks them `walked`, and the story reads it (`{ allies: 'walked' }`). | `storybattle.js` (a step in `storyEndPhase`), the report |
 | **The Turn** | No side switches sides in the middle of a battle: the engine has no such thing, and it is not built. The betrayal comes before the battle, as the *ambush* variant sprung from inside the company's half (`variant: { ambush: 'inside' }`: side B sets up anywhere in side A's half, more than 6" from its units). | `scenarios.js` `ambushed` |
@@ -682,7 +695,9 @@ The same tests, run on both stories:
 - **`storyforces.js`** (new): every rival's and tribe's force built at Tiers I to
   IV from its archetype, legal, and recognisably its archetype (the same checks
   the archetype editor's notes describe: Wraith fields snipers, Sable hulls, the
-  Sh'kar a teleport turret).
+  Sh'kar a teleport turret); and every Hashamer trooper, enemy or ally, skinned
+  as an Esh-Aven, with the same profile as the unskinned unit and its losses in
+  the `eshaven` pool.
 - **`storyhired.js`** (new): nobody for hire before chapter 4, and each hire
   option behind the flag that opens it; a hired company's Price rising and falling, a
   demand paid and refused, an order refused and paid for, the allies walking at
@@ -727,9 +742,13 @@ Chapters 1 to 4 and both one-offs written in full (text, maps, conversations,
 battle voices), playable end to end. Stop and play it, as with *Deep Contract*'s
 phase 4.
 
-### Phase 4: the star chart, faces and scenes
+### Phase 4: the star chart, faces, scenes and the Esh-Aven
 `story-chart.js`; the Xenotripod face and the rival commanders' faces; the
-trail's scenes; the place on the chapter card and the briefing.
+trail's scenes; the place on the chapter card and the briefing. The Esh-Aven
+skin: an Esh-Aven figure in each caste's kit for `iso-troops.js`, kept apart
+from the Epsilons' own figures so a skinned Alpha still reads as the tribe's
+leader (a crest and a staff of office) and a skinned Gamma still carries its
+heavy weapon; the Esh-Aven face for the conversations.
 
 ### Phase 5: the second half and the endings
 The four threads, the finales, Recall, Xenotripod allies, hired allies (Price,
