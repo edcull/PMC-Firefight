@@ -45,34 +45,65 @@
   }
 
   /* ------------------------------------------------ Hive Heart */
+  /* The hive's own tunnels are wider than a base's corridors (a 4" grid,
+     not the book's 3"), its chambers bigger. The three brood chambers are the
+     rooms furthest over on the hive's side (`hive`: drawn as the hive's,
+     cleared of fittings). They stand in for the hive's entry corridors: side A
+     comes in from the left edge as ever, and the hive comes on in its
+     chambers, and its waves come out of them too. A chamber that still
+     stands, and is not held by side A at that End phase, sends them out.
+     Each one burned is one fewer. */
   SCENARIOS.hive_heart = {
-    story: true, compound: true, rooms: 3, hidden: function () { return true; },
+    story: true, compound: true, rooms: 3, cell: 4, danger: 0, hidden: function () { return true; },
     id: 'hive_heart', name: 'Hive Heart', page: null,
     blurb: 'The brood chambers, at the bottom of everything. Burn them out while the hive throws everything it has at you.',
     win: 'Destroy all three brood chambers: a chamber held by your units at the End phase is destroyed. The hive wins if you are routed, or if any chamber still stands at the end of turn 14.',
     turns: 14,
     objectives: function (state) {
       if (!state) return [];
-      state.sc.rooms = K.controlRooms(state);
+      // the three furthest over towards the hive's (right-hand) edge, spread down it where they can be
+      var all = state.terrain.filter(function (r) { return r.kind === 'room' || r.kind === 'hall'; })
+        .sort(function (a, b) { return (b.x + b.w / 2) - (a.x + a.w / 2); });
+      var rooms = [];
+      all.forEach(function (r) {
+        if (rooms.length < 3 && r.x + r.w / 2 >= R.BOARD.w / 2 && rooms.every(function (q) { return Math.abs((q.y + q.h / 2) - (r.y + r.h / 2)) >= 6; })) rooms.push(r);
+      });
+      all.forEach(function (r) { if (rooms.length < 3 && rooms.indexOf(r) < 0) rooms.push(r); });
+      state.sc.rooms = rooms;
+      rooms.forEach(function (r, i) { r.hive = true; r.chamber = i + 1; r.dangerous = false; });
+      // nothing of the base is left in them: no crates, no machinery, no pillars
+      var inHive = function (t) {
+        var cx = t.x + t.w / 2, cy = t.y + t.h / 2;
+        return rooms.some(function (r) { return cx > r.x && cx < r.x + r.w && cy > r.y && cy < r.y + r.h; });
+      };
+      state.terrain = state.terrain.filter(function (t) { return !((t.kind === 'crates' || t.kind === 'machinery' || t.kind === 'pillar') && inHive(t)); });
       return [];
     },
     entersTurn1: true,
     deploy: function (state) {
-      K.compoundEntries(state);
+      // side A by the left-hand edge's entry points; the hive in its chambers
+      var ent = state.compound ? state.compound.entries : { L: [] };
+      var chambers = state.sc.rooms.map(function (r) { return K.rectOf(r); });
+      state.sc.entry = { A: ent.L.slice(), B: chambers };
+      state.sc.boxes = { A: state.sc.entry.A, B: chambers };
       state.objectives = state.sc.rooms.map(function (r, i) {
         return { x: r.x + r.w / 2, y: r.y + r.h / 2, rect: K.rectOf(r), inside: true, name: 'Brood chamber ' + (i + 1), owner: null };
       });
-      // the bugs come out of the entry points on their own side
-      waveSetup(state, (state.sc.entry.B || []).map(function (e) { return { x: e.x + e.w / 2, y: e.y + e.h / 2, name: 'tunnel' }; }), 2);
+      // the bugs come out of the brood chambers themselves (storybattle.js waves: `obj`, the chamber's objective)
+      waveSetup(state, state.sc.rooms.map(function (r, i) { return { x: r.x + r.w / 2, y: r.y + r.h / 2, name: 'brood chamber', obj: i }; }), 2);
     },
     reserves: function (state, side) { return K.entering(state, side); },
     deployText: function () { return K.CE_ENTRY_TEXT; },
-    hint: 'Three brood chambers. Stand in one at the End phase, with no bug inside, and it burns. The hive keeps coming out of the tunnels on its side.',
+    hint: 'Three brood chambers. Stand in one at the End phase, with no bug inside, and it burns. Every chamber still standing sends out more of the hive.',
     // the hive defends what it has left
     goals: function (state) { return state.objectives.filter(function (o) { return !o.destroyed; }); },
     groundTaking: true,
     check: function (state) {
-      state.objectives.forEach(function (o) { if (!o.destroyed && o.owner === 'A') o.destroyed = state.turn; });
+      state.objectives.forEach(function (o, i) {
+        if (o.destroyed || o.owner !== 'A') return;
+        o.destroyed = state.turn;
+        if (state.sc.rooms && state.sc.rooms[i]) state.sc.rooms[i].burnt = state.turn;   // (drawn burnt out)
+      });
       var left = state.objectives.filter(function (o) { return !o.destroyed; }).length;
       if (!left) return { winner: 'A', text: 'The last brood chamber burns. The hive is finished.' };
       if (SC.routed(state, 'A')) return { winner: 'B', text: 'A is broken in the dark, and the hive goes on.', routed: ['A'] };

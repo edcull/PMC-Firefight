@@ -326,6 +326,49 @@
         /* A plate of the hive's barrier (iso-props.js): a curved shell of
            carapace on edge, its back darker for its thickness, ribbed across,
            a sheen along its crown and a hooked spine at each end. */
+        /* The hive's growth (a brood chamber): a heap of resin, glossy, ribbed
+           with veins, heaped against a wall or spread on the floor; burnt, a
+           black crust. */
+        case 'hivegrowth': {
+          var hr = rng(pr.seed || 5), HR = a(pr.rad * 4.2), HU = a(pr.up * 9), hlf = lift || 0, py = p.y - hlf;
+          var hcol = pr.burnt ? ['#141110', '#211b18', '#2e2622', '#3a302a'] : pr.tone < 0.5 ? ['#2a1424', '#44203a', '#5e2e50', '#8a5476'] : ['#26201a', '#3e3426', '#584a32', '#82704a'];
+          var hpts = [];
+          for (var hk = 0; hk <= 12; hk++) {
+            var ang = Math.PI + Math.PI * hk / 12, wob = 0.8 + hr() * 0.35;
+            hpts.push([p.x + Math.cos(ang) * HR * wob, py + Math.sin(ang) * HU * wob]);
+          }
+          hpts.push([p.x + HR, py + a(0.6)]); hpts.push([p.x - HR, py + a(0.6)]);
+          ellipse(g, p.x, py + a(0.3), HR * 1.15, HR * 0.45, hcol[0]);
+          poly(g, hpts, hcol[1]);
+          ellipse(g, p.x - HR * 0.15, py - HU * 0.45, HR * 0.55, Math.max(1, HU * 0.35), hcol[2]);
+          // the veins over it, and a wet highlight
+          for (var hv = 0; hv < 3; hv++) {
+            var vx = p.x - HR * 0.7 + hr() * HR * 1.4;
+            edgeLine(g, [vx, py], [vx + (hr() - 0.5) * HR * 0.6, py - HU * (0.4 + hr() * 0.5)], hcol[0], 1);
+          }
+          if (!pr.burnt) dot(g, p.x - HR * 0.25, py - HU * 0.6, hcol[3], 2);
+          break;
+        }
+        /* A clutch of the hive's eggs: leathery ovals standing on end in a
+           pool of resin, veined, faintly lit from inside; burnt, split and black. */
+        case 'eggs': {
+          var er = rng(pr.seed || 9), elf = lift || 0;
+          ellipse(g, p.x, p.y - elf, a(3.4), a(1.6), pr.burnt ? '#120f0e' : '#2c1a28');
+          for (var ek = 0; ek < pr.n; ek++) {
+            var eang = ek / pr.n * Math.PI * 2 + er(), ed = ek === 0 ? 0 : a(1.2 + er() * 0.9);
+            var ex = p.x + Math.cos(eang) * ed, ey = p.y - elf + Math.sin(eang) * ed * 0.5, EH = a(2.2 + er() * 0.8), EW = a(1.1 + er() * 0.3);
+            if (pr.burnt) {
+              ellipse(g, ex, ey - EH * 0.35, EW, EH * 0.45, '#1e1915');
+              edgeLine(g, [ex - EW * 0.6, ey - EH * 0.7], [ex + EW * 0.5, ey - EH * 0.2], '#0c0a09', 1);
+              continue;
+            }
+            ellipse(g, ex, ey - EH * 0.5, EW, EH * 0.55, pr.tone < 0.5 ? '#8a8a5a' : '#7a8a6a');
+            ellipse(g, ex - EW * 0.25, ey - EH * 0.62, EW * 0.55, EH * 0.38, pr.tone < 0.5 ? '#b0ae78' : '#9eb08a');
+            edgeLine(g, [ex - EW * 0.3, ey - EH * 0.15], [ex + EW * 0.1, ey - EH * 0.9], 'rgba(90,40,70,.6)', 1);
+            dot(g, ex, ey - EH * 0.5, 'rgba(200,230,140,.45)', 2);
+          }
+          break;
+        }
         case 'carapace': {
           var cr = rng(pr.seed || 11), chl = pr.len / 2, cH = pr.height, clf = lift || 0;
           var cux = pr.horiz ? 1 : 0, cuy = pr.horiz ? 0 : 1, cvx = 1 - cux, cvy = 1 - cuy, CT = 0.12;

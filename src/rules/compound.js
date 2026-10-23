@@ -21,6 +21,7 @@
   'use strict';
 
   var CELL = 3;                 // a corridor is up to 3" wide (p. 157)
+  var BOOK_CELL = 3;            // (a story's compound may be laid wider: generate's `cell`)
   var RUN = 4;                  // ...and a section of it never longer than 12"
   var WALL = 0.4;               // a wall between two sections, drawn and ruled this thick
   var DOOR = 0.5;               // a door across its doorway
@@ -476,17 +477,22 @@
   function generate(w, h, rand, opts) {
     rand = rand || Math.random;
     opts = opts || {};
-    for (var t = 0; t < 200; t++) {
-      var g = attempt(w, h, rand, opts);
-      if (!g) continue;
-      furnish(g, rand, opts.danger || 0);
-      var laid = piecesOf(g, { w: w, h: h });
-      return {
-        terrain: laid.terrain,
-        compound: { cell: CELL, cols: g.cols, rows: g.rows, entries: laid.entries },
-        rolls: [], generator: 'Close Encounters compound'
-      };
-    }
+    /* `cell`: a story's compound laid on a wider grid than the book's 3" (the
+       Hive Heart's tunnels): wider corridors, and rooms as many cells across. */
+    CELL = opts.cell || BOOK_CELL;
+    try {
+      for (var t = 0; t < 200; t++) {
+        var g = attempt(w, h, rand, opts);
+        if (!g) continue;
+        furnish(g, rand, opts.danger || 0);
+        var laid = piecesOf(g, { w: w, h: h });
+        return {
+          terrain: laid.terrain,
+          compound: { cell: CELL, cols: g.cols, rows: g.rows, entries: laid.entries },
+          rolls: [], generator: 'Close Encounters compound'
+        };
+      }
+    } finally { CELL = BOOK_CELL; }
     throw new Error('no compound could be laid on a ' + w + '" x ' + h + '" table');
   }
 
@@ -772,11 +778,13 @@
   }
 
   /* What a room is fitted out as, for its colours (0 plain plate, 1 sick bay, 2
-     workshop, 3 hydroponics, 4 command, 5 reactor): set as the compound is laid
+     workshop, 3 hydroponics, 4 command, 5 reactor; 6 the hive's own): set as the compound is laid
      out, or for one laid out before that, drawn from where the room is. */
-  var THEMES = 6;
+  var THEMES = 6, HIVE = 6;
   function roomTheme(r) {
     if (!r || (r.kind !== 'room' && r.kind !== 'hall')) return null;
+    // a brood chamber (the Hive Heart): grown over, not fitted out
+    if (r.hive) return HIVE;
     if (r.theme != null) return ((r.theme | 0) % THEMES + THEMES) % THEMES;
     var h = Math.imul(Math.round(r.x * 37 + r.y * 101) ^ 0x5bd1e995, 2654435761) >>> 0;
     return (h >>> 7) % THEMES;

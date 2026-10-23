@@ -292,11 +292,18 @@
     function waves(state, lines) {
       var w = state.sc && state.sc.waves;
       if (!w || state.turn < (w.from || 1) || (w.until && state.turn > w.until) || !(w.mouths || []).length) return;
+      /* A mouth that is an objective (`obj`: a brood chamber) sends nothing once
+         it is destroyed, nor while side A holds it. */
+      var open = w.mouths.filter(function (m) {
+        var o = m.obj != null ? state.objectives[m.obj] : null;
+        return !o || (!o.destroyed && o.owner !== 'A');
+      });
+      if (!open.length) return;
       w.n = w.n || 0;
       for (var i = 0; i < w.per; i++) {
         var key = w.keys[(w.n + i) % w.keys.length], p = R.profile(key);
         if (!p) continue;
-        var m = w.mouths[(w.n + i) % w.mouths.length];
+        var m = open[(w.n + i) % open.length];
         var u = E.makeUnit(p, w.side, 'w' + (w.n + i), null, false, null, false);
         u.code = (u.code || 'W') + (w.n + i + 1);
         u.label = u.name + ' [' + w.side + ']';
