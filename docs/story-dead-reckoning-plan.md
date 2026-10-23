@@ -90,6 +90,37 @@ and the story reveals them in turn:
 | **The Ulvar** | Fortress (`ulvar`) | The shieldwall around the Quiet. |
 | **The Amt** | Architects (`amt`) | The Quiet itself: the towers, asleep. The finale. |
 
+**The Esh-Aven of Hashamer.** Every Xenotripod tribe is two peoples: the
+Crocks, who fill the castes from Alpha to Delta and give the orders, and the
+Esh-Aven, the servant race who fill the Epsilon squads and do as they are told,
+reached through the Crocks' Mental Projection. On Hashamer I the Crocks are
+gone. When the Quiet called its tribes home, a long time ago, the Crocks of
+Hashamer went, and left their Esh-Aven behind: nine million of them, with their
+masters' armour, their masters' weapons and their masters' war, and nobody to
+give the orders. They have kept the war going ever since by copying it. Some
+Esh-Aven wear an Alpha's crest and give the orders now; others carry a Gamma's
+guns. They project to one another the way their masters projected to them. That
+is why every unit they field is a Xenotripod unit, and every one of them is an
+Esh-Aven.
+
+**Why they will work with a PMC.** Three reasons, and the story tells all three:
+
+- **They know what the company is.** The Esh-Aven have only ever fought other
+  people's wars, and so has the company. To them a PMC is the one human thing
+  that makes sense: soldiers who serve, and who chose whom. They call the
+  company *the other hands*. It is the first time in their history they have
+  been asked to fight for someone rather than told.
+- **The other tribes want them back.** To the Sh'kar, the Ulvar and the rest,
+  the Hashamer are runaways, property to be returned to the Quiet. Coin & Kettle
+  have found a buyer for them too. Nobody else on the trail will fight beside
+  them.
+- **They remember the way, and they fear it.** The Hashamer carry the doctrine
+  of Enhanced Genetic Memory: what one generation knew, the next inherits. They
+  remember the road their masters took to the Quiet. They know that if the Quiet
+  wakes, it will call every Esh-Aven home to serve again. They will guide the
+  company there for one price: a promise that the Quiet stays asleep, or that
+  someone speaks for them when it wakes.
+
 | Force | Army | Role in the story |
 |---|---|---|
 | The player's company | PMC | Hired to follow the log |
@@ -213,7 +244,7 @@ Checked in order; the first that holds is the story's. The last has no condition
 | **Lost Signal** | Recall was the finale: the company escapes the Quiet with what it can carry, and nobody will ever find the route again. |
 | **Claim Jumped** | *The Landing* was lost, or the rivals hold more lodestones than the company at the end (`theirs` above `stones`). Another company's name is on the claim. |
 | **Repossessed** | *The Collector* was lost, or Vane cut you off and the finale was lost. Vane has the Quiet, and the company has nothing. |
-| **First Contact** | `contact` or `relics_returned`, the finale won, Alarm under 8, and no `child_taken`. The company is the first to speak with the Amt and walks away with no salvage at all, and every newsfeed in the sector wants the story. |
+| **First Contact** | `contact` or `relics_returned`, the finale won, Alarm under 8, and neither `child_taken` nor `promise_broken`. The company is the first to speak with the Amt and walks away with no salvage at all, and every newsfeed in the sector wants the story. |
 | **Finder's Fee** | Stayed with Vane (no `contact`, not cut off, not `vane_exposed`), the finale won, Vane's Trust 2 or more (shared with Coin & Kettle with `kettle_partner`). The claim is filed in Vane's name. The company is rich, and the Quiet will be stripped. |
 | **Dead Reckoning** | Anything else: the company reaches the end of the log, and what it does with it decides nothing. |
 
@@ -322,7 +353,7 @@ the systems in the order the company reaches them.
 | *Teleport Storm* (Tribes) | *The air goes wrong.* The camp's sensors scream. Dig in (barricades for you: the Invasion as defender). Move the stones away from the camp (`stones` held off the table: the Sh'kar's target is gone; enemy Readiness −1, Lead −1). | *What they came for.* Return a lodestone (`stones` −1, Alarm −2, `relics_returned`). Keep them all (Alarm +1). | Alarm +1, `theirs` +1 (the Sh'kar take one from a rival instead) |
 | *Cold Sites* (Tribes, fallback) | *The sand moves.* Clear the ruins (Clearing out). Seal them (no battle: Alarm +1, Lead +1). | *A Mithdu child.* Let it go (Understanding +1). Take it to Vane (Vane's Trust +2, Alarm +2, `child_taken`). | Alarm +1 |
 | **The Spire** (Tribes finale) | *The door.* With `contact`: the Esh-Aven open it, and the battle is against the Ulvar hardliners only. With `hoard_taken`: the Amt know the company, Readiness +2. | The ending. | — |
-| *The Mimics* (First Contact) | *A village asks.* Coin & Kettle are taking Esh-Aven for a buyer. Help them (Xenotripod allies; against Coin & Kettle). With `kettle_contact`: pay Coin & Kettle to leave (kUC −Price, no battle, Understanding +1). | *The Esh-Aven's thanks.* Accept their guide (`eshaven_freed`, Understanding +2). Ask for a lodestone (`stones` +1, Understanding −1). | Understanding −1, Coin & Kettle strength +1 |
+| *The Mimics* (First Contact) | *A village asks.* Coin & Kettle are taking Esh-Aven for a buyer. Help them (Xenotripod allies; against Coin & Kettle). With `kettle_contact`: pay Coin & Kettle to leave (kUC −Price, no battle, Understanding +1). | *The Esh-Aven's thanks.* Their crested leader offers a guide who remembers the road to the Quiet, and names the price. Make the promise (`eshaven_freed`, `eshaven_promise`, Understanding +2, Lead +1: the guide knows a shorter way). Take the guide and promise nothing (`eshaven_freed`, Understanding +1). Ask for a lodestone instead (`stones` +1, Understanding −1: they give it, and stop talking). | Understanding −1, Coin & Kettle strength +1 |
 | *The Speaker* (First Contact) | *The pylon.* An Alpha waits on the far shore. Meet it (the Parley scenario). Bring Vane's people (Vane's Trust +2, the Parley with enemy Readiness +1: the Alpha sees them). | Held: `contact`, `speaker_met`; Alarm −2. Broken: Alarm +2. | Understanding −1 |
 | *Signal Fires* (First Contact, fallback) | *The beacon again.* Light it (Hold the Line: the Sh'kar test the company, waves of them, nobody meaning to kill). | Held: Understanding +2. | nothing |
 | *The Vault* (Patron) | *Vane's vault.* Her store of relics, and receipts for what she has sold. Break in by night (the Strike scenario, a Tier down). Ask to see it (a roll on Vane's Trust: success, no battle, `vault_seen`). | *The receipts.* Vane has been selling stones to the rivals all along. Publish them (`vane_exposed`, Vane's Trust −5, `vane_cut_off`). Use them (`vane_owes`: Vane pays double from now). | Vane's Trust −1, Lance strength +1 |
@@ -330,6 +361,43 @@ the systems in the order the company reaches them.
 | *Debts* (Patron, fallback) | *The bailiffs.* Pay them (kUC −3, no battle). Fight them (the Meeting engagement, against the Ninth Lance). | Lance strength −1 on a win. | Lance strength +1 |
 | **The Collector** (Patron finale) | *Vane comes in person.* With `vane_owes`: she offers terms, and the battle can be a Parley. With `lance_burned`: the Lance's commander is Determined. | The ending. | — |
 | **Recall** (override) | *The towers wake.* Run for the field with the stones (the Breakout scenario). Run for the field and leave the stones (Breakout, Alarm −3: the tribes let more of you out). | The ending (*Lost Signal*). | — |
+
+### Telling the Esh-Aven's story
+
+The player learns who the Hashamer are a piece at a time, before they ever meet
+them, so that when the village asks for help the request makes sense:
+
+| Where | What the player learns | How |
+|---|---|---|
+| *Morrow's records* (Station Thule) | Morrow met them: "servants with no masters, playing at soldiers in their masters' armour". | His recorded voice, in the event's text (with `thule_records`, the whole entry). |
+| *What the Sh'kar left* (the beacon) | The Sh'kar wounded Alpha's projection names the company's kind: "*[hands without a master]*". The tribes think of servants and mercenaries as the same thing. | The bracketed voice, in the event's conversation. |
+| *Voices* (an interlude) | The soldier who hears them hears the Esh-Aven too: many small voices, all saying the same thing to each other, nobody answering from above. | The event's text. |
+| *The Mimics*, the card | Nine million Esh-Aven, and not a Crock among them. The masters left; the war stayed. | The chapter card. |
+| *The Mimics*, the conversation | Why they fight in their masters' castes; why Coin & Kettle is taking them; why they asked the company and not anyone else. | The opening conversation (below). |
+| *The Esh-Aven's thanks* | The road they remember, and what they fear at the end of it: the price is a promise. | The event, and its options. |
+| *The Speaker* | The Amt's Alpha calls them "*[our lost hands]*", and asks the company to return them. | The Parley's conversation; with `eshaven_promise`, the company's answer is written for it. |
+| *Recall* | If the Quiet wakes, the Esh-Aven allies stop, mid-battle, and turn towards the towers. | A battle voice (`wave`), and the allies walk (as hired allies do), unless `eshaven_promise` was kept. |
+| The epilogue | Whether the Hashamer were called home, or are still on their world, free. | An epilogue line, by `eshaven_promise`, `promise_broken` and the ending. |
+
+*The Mimics*' opening conversation, as it would be written (`talk` on
+`mimics.brief`):
+
+> **Company net:** Contact on the ridge. Xenotripods, a lot of them. They're… waving us down.
+>
+> **The crested one** *(an Esh-Aven in an Alpha's armour)*: *[You are the other hands. The ones who fight for pay.]*
+>
+> **The commander:** We're a company, yes. Who are you?
+>
+> **The crested one:** We are Hashamer. We are Esh-Aven. Our masters went home and did not take us. We kept their war, because no one told us to stop.
+>
+> **The crested one:** The hunters with the coin come for our young. They will sell them to the towers. No one else will fight beside us. You fight beside anyone. Fight beside us.
+>
+> **The commander:** And if we do?
+>
+> **The crested one:** We remember the road to the Quiet. Our blood remembers it. We will show you. There is a price, and it is not coin.
+
+Their words stay halting and a little formal throughout: they learned speech
+from their masters' projection, and then from the company.
 
 ### Hired guns: PMC allies
 
@@ -372,7 +440,8 @@ each time, they want a share, and they cannot be trusted with the prize.
   battle is fought with the *ambush* variant, sprung by them, from inside the
   company's own half.
 - **Xenotripod allies are the other way about.** They never ask for money and
-  never walk for it. They leave if relics are taken by force in front of them,
+  never walk for it. The Esh-Aven's price is the promise (*The Esh-Aven's
+  thanks*), and it is the one thing they hold the company to. They leave if relics are taken by force in front of them,
   and they do not come back while Alarm is rising.
 
 Their events (one each, after a battle they fought in):
@@ -467,6 +536,8 @@ validator checks both, as for *Deep Contract*.
 | `morrow_found` | *Morrow* (take it) | The epilogue; *The Spire* and *The Landing* briefings (his last heading: an outline of the enemy) |
 | `child_taken` | *Cold Sites* | *The Spire* (Readiness +2), the *First Contact* ending can't be reached |
 | `eshaven_freed` | *The Esh-Aven's thanks* (guide) | *The Spire* (Esh-Aven allies), *Recall* (the Esh-Aven show a way out: one area fewer burns) |
+| `eshaven_promise` | *The Esh-Aven's thanks* (make the promise) | *The Speaker* (the Esh-Aven translate: Readiness −1, and the Parley holds on a 6 only after a shot), *The Spire* (they open the door), *Recall* (the Esh-Aven allies do not walk), the epilogue |
+| `promise_broken` | With `eshaven_promise`: *Send one ahead* (send a stone to Vane), *The Watchers* (keep the cores), *Cold Sites* (take the child), Alarm reaching 8 | Esh-Aven allies no longer offered; *The Speaker* (the Alpha knows: Readiness +1); the *First Contact* ending can't be reached |
 | `contact`, `speaker_met` | *The Speaker* (held) | The finales (Xenotripod allies), the *First Contact* ending |
 | `vault_seen`, `vane_exposed`, `vane_owes` | *The Vault* | *The Collector* (terms), pay (`vane_owes`: double), the endings (`vane_exposed`: *Finder's Fee* can't be reached) |
 | `reavers_spared` | *Claim jumpers* (a side contract) | Hiring the Reavers |
