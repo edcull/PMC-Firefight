@@ -55,6 +55,144 @@
         { who: 'liaison', text: 'Pay disputes. Agitators. It\u2019s all in the briefing pack.' },
         { who: 'captain', text: 'Shuttle\u2019s on the rail, {commander:rank}. You drop in ten. After that, you\u2019re on your own until the next run.' },
         { who: 'okonkwo', text: 'Port Master to incoming shuttle\u2014pad three, the last one standing. Come in fast and low. They\u2019ve a launcher somewhere on the terminal roof.' }
+      ],
+
+      // ---- the contract ----
+      'c2.brief': [
+        { who: 'liaison', text: 'Two problems, {commander:rank}, and one budget. The Front has Number Three refinery under siege, and forty of our night shift are still inside.' },
+        { who: 'liaison', text: 'And a deserter has sold us their supply depot, in the old ore yards. Hit it, and the Front runs dry.' },
+        { who: 'commander', text: 'And the night shift?' },
+        { who: 'liaison', text: 'Is insured.' },
+        { who: 'guild', text: 'Guild to whoever’s listening. Forty men in Number Three, with families in the Pits. Don’t let HTX tell you they’re numbers.' },
+        { who: 'ops', text: 'Trucks are fuelled both ways, {commander:rank}. Your call.' }
+      ],
+      'c3.brief': [
+        { who: 'liaison', text: 'We’ve found her. Ada Varga, at the pumping station above the old workings. Take her, and this ends.' },
+        { who: 'commander', text: 'Your map has the levels under it marked in red.' },
+        { who: 'liaison', text: 'Sealed levels. Unsafe. You will not need to go down there.' },
+        { who: 'ops', text: 'Picking her up on an open channel, {commander:rank}. She’s talking to us.' },
+        { who: 'varga', text: 'So HTX sent its dogs. Come up the hill, {name}. But ask HTX what’s under it first.' }
+      ],
+      'c4.brief': [
+        { who: 'liaison', text: 'Pit Nine has gone over. Six thousand people. Our site manager stopped answering last night.' },
+        { who: 'liaison', text: 'The office holds records belonging to the Deep Contract. They are to be secured. Not read. Secured.' },
+        { who: 'commander', text: 'What is the Deep Contract?' },
+        { who: 'liaison', text: 'Above your pay grade, {commander:rank}.' },
+        { who: 'teacher', text: 'This is the Pit Nine school, on the town band. There are still children here. Whoever is coming—please, remember that.' },
+        { who: 'fighter', text: 'Pit Nine is free. Tell HTX to come and take it.' }
+      ],
+      'sump.brief': [
+        { who: 'ops', text: 'Lights low. We lose the surface net past the second level.' },
+        { who: 'commander', text: 'These tunnels aren’t mine workings. Look at the walls.' },
+        { who: 'ops', text: 'Something cut these. Recently.' },
+        { who: 'liaison', text: '{commander:rank}, you are in a restricted area. Return to the surface immedi—' },
+        { who: 'hive', text: '[far below, something answers the echo of your boots]' }
+      ],
+      'relief.brief': [
+        { who: 'liaison', text: 'HTX thanks {name} for its service. Your contract is terminated, effective at dawn. Black Lantern Security will take over.' },
+        { who: 'commander', text: 'Terminated. Because I asked questions.' },
+        { who: 'liaison', text: 'Because you were slow and expensive. Hand over your sector and you’ll be paid to date.' },
+        { who: 'actual', text: 'Lantern Actual, on the pad. I’d rather do this the easy way, {commander:rank}. Your call.' },
+        { who: 'okonkwo', text: 'My people won’t take orders from HTX’s new dogs. Whatever you decide, the port is with you.' }
+      ],
+
+      // ---- fault lines ----
+      'fault.brief': [
+        { who: 'ops', text: 'Every channel’s a mess, {commander:rank}. The Front’s split, the shafts howl every night, and HTX sends a new order every hour.' },
+        { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'HTX will go on paying for results. Only for results.' },
+        { who: 'ops', if: { flag: 'htx_cut_off' }, text: 'And HTX has stopped answering. Accounts says the last payment bounced.' },
+        { who: 'commander', text: 'Then we choose our own work. Every job we leave goes on without us.' },
+        { who: 'guild', text: 'The miners will talk to you now, if you’ll listen.' }
+      ],
+      'retake.brief': [
+        { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'Number Three. HTX wants its refinery back, and its tank farm in one piece.' },
+        { who: 'guild', text: 'Half the men in there used to work it. Don’t burn it down round them.' },
+        { who: 'fighter', text: 'Number Three belongs to the people who sweat in it. Come and take it, if you can.' },
+        { who: 'ops', text: 'They’ve got the cracking tower as a lookout. They’ll see us coming a mile off.' }
+      ],
+      'revenge.brief': [
+        { who: 'fighter', if: { flag: 'varga_dead' }, name: 'Tomas Varga', role: 'Her brother, and the Front now', text: 'You killed my sister. I was a schoolteacher, {commander:rank}. You made me this.' },
+        { who: 'varga', if: { flag: 'varga_free' }, text: 'I said I’d come back. The ridges, at dawn. Bring all of them.' },
+        { who: 'ops', text: 'Every Front cell on the ridges is moving. They’re coming for us, not for HTX.' },
+        { who: 'commander', text: 'Then we meet them on ground we choose.' }
+      ],
+      'splinter.brief': [
+        { who: 'fighter', name: 'The cell', role: 'The hill country', text: 'The Front talks. We don’t. Every camp, every convoy, until HTX leaves this moon.' },
+        { who: 'varga', if: { not: { flag: 'varga_dead' } }, text: 'They aren’t mine any more. They won’t listen to me, and they won’t stop.' },
+        { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'Their bomb-maker took out a survey camp yesterday. HTX wants him.' },
+        { who: 'ops', text: 'Woods round the old mine head. They’ll see us long before we see them.' },
+        { who: 'commander', text: 'Then we go in quiet, and we find the bomb-maker first.' }
+      ],
+      'redoubt.brief': [
+        { who: 'varga', if: { flag: 'truce' }, text: 'The hardliners won’t take the truce. They’ve gone up to the redoubt. Finish it, {commander:rank}, before they finish the peace.' },
+        { who: 'fighter', if: { not: { flag: 'truce' } }, text: 'This hill is the last free ground on Kessler’s Reach. We are not leaving it.' },
+        { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'End it. HTX will pay for the shells.' },
+        { who: 'commander', text: 'Trenches, wire, a bunker. They’ve nowhere left to fall back to.' },
+        { who: 'ops', text: 'Then they’ll fight like it.' }
+      ],
+      'ceasefire.brief': [
+        { who: 'varga', text: 'I’ll talk, {commander:rank}. At the way station. Not because I trust you. Because the shafts are getting louder.' },
+        { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'HTX has authorised no negotiation. Whatever you agree, we don’t.' },
+        { who: 'commander', text: 'Then I’ll agree it without you.' },
+        { who: 'guild', text: 'Nobody has stopped shooting long enough to sit down in two months. Make it happen, and the whole moon owes you.' }
+      ],
+      'holdline.brief': [
+        { who: 'guild', text: 'They’re coming through the pass: everyone who lived out past the shafts. Families. Front fighters. Everyone.' },
+        { who: 'ops', text: 'The trackers behind them are solid. The bugs are a mile back, and closing.' },
+        { who: 'varga', if: { flag: 'truce' }, text: 'My people will hold beside yours. For once we’re on the same side of something.' },
+        { who: 'commander', text: 'Nobody gets left on the wrong side of that pass.' }
+      ],
+      'outbreak.brief': [
+        { who: 'guild', text: 'Pit Nine’s lower levels went quiet last night. The lift cages keep coming up empty.' },
+        { who: 'teacher', if: { flag: 'pit9_spared' }, text: 'The school is full of families from the lower town. Please hurry.' },
+        { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: '{commander:rank}, HTX considers the galleries a total loss. Seal them, if you have to.' },
+        { who: 'ops', text: 'There’s something in the cage shaft. It’s climbing.' }
+      ],
+      'shafts.brief': [
+        { who: 'ops', text: 'The engineers count twelve breaches. Every one of them cleared, or sealed.' },
+        { who: 'guild', text: 'Those are our shafts. Seal them all and there’s no work left on this moon.' },
+        { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'Whatever you see down there is covered by your non-disclosure clause.' },
+        { who: 'hive', text: '[a draught from the shaft mouth: warm, and smelling of something alive]' }
+      ],
+      'hiveheart.brief': [
+        { who: 'ops', text: 'This is it. The brood chambers are under everything. Below the Sump.' },
+        { who: 'guild', text: 'Nobody who has gone that deep has come back. Bring them back, {commander:rank}.' },
+        { who: 'commander', text: 'We go down, we burn it, we come up. In that order.' },
+        { who: 'hive', text: '[the whole moon seems to draw a breath]' }
+      ],
+      'partner.brief': [
+        { who: 'liaison', text: 'HTX has engaged Black Lantern Security to work alongside you. A partnership.' },
+        { who: 'actual', text: 'Lantern Actual. Good to meet you, {commander:rank}. Stay out of my way and we’ll get on fine.' },
+        { who: 'commander', text: 'And your orders?' },
+        { who: 'actual', text: 'Are my orders.' },
+        { who: 'ops', text: 'Lantern’s running a second net, encrypted. They aren’t talking to us on it.' }
+      ],
+      'leak.brief': [
+        { who: 'ops', text: 'It’s all here. The Deep Contract. HTX knew what was down there before they opened the first shaft.' },
+        { who: 'commander', text: 'And sent the miners down anyway.' },
+        { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: '{commander:rank}, think very carefully. Your contract has a clause about confidential material. It is a long clause.' },
+        { who: 'actual', text: 'The uplink is ours. Anyone who touches the dish answers to Black Lantern.' },
+        { who: 'guild', text: 'Send it. Let every miner’s family in the sector read it.' }
+      ],
+      'convoy.brief': [
+        { who: 'ops', if: { flag: 'core_recovered' }, text: 'The core’s loaded. Far landing field, across the whole moon.' },
+        { who: 'liaison', if: { not: { flag: 'core_recovered' } }, text: 'Twenty ore trucks to the far landing field. Black Lantern will be… watching.' },
+        { who: 'actual', text: 'Lantern Actual to {name}. Long road. Lots of places for things to go wrong.' },
+        { who: 'petrak', text: 'I know that road. The cuttings, the bridge at kilometre forty. If I were them, I’d hit you at the bridge.' },
+        { who: 'commander', text: 'Then we’re over the bridge before they are.' }
+      ],
+      'showdown.brief': [
+        { who: 'actual', text: 'This is Lantern Actual. HTX has paid for you to disappear, {commander:rank}. I always deliver.' },
+        { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'This is regrettable, {commander:rank}. It could have been avoided.' },
+        { who: 'commander', text: 'Tell the board it was.' },
+        { who: 'ops', text: 'They’re dug in round the headquarters. Everything they’ve got.' }
+      ],
+      'breakout.brief': [
+        { who: 'liaison', text: 'Orbital sterilisation is authorised. The board has written Kessler’s Reach off. The strikes begin in four hours.' },
+        { who: 'commander', text: 'There are thousands of people down here.' },
+        { who: 'liaison', text: 'There were. Good luck, {commander:rank}.' },
+        { who: 'captain', text: 'Patient Margin, back in orbit. I’ve one shuttle coming down on the slag fields, {commander:rank}, and it won’t wait. Neither will I.' },
+        { who: 'ops', text: 'All units. Run.' }
       ]
     },
 

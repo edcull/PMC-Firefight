@@ -58,6 +58,23 @@ console.log('\nThe arrival: the story opens on a conversation');
   ok('a page with no conversation has none', !S.view(at('c1.portmaster')).talk);
 }
 
+console.log('\nEvery chapter opens on a conversation');
+{
+  const FLAGS = [{}, { htx_cut_off: true, varga_dead: true, core_recovered: true, pit9_spared: true }, { varga_free: true, truce: true }];
+  const chs = dc.chapters.filter((ch) => ch.nodes[0].type !== 'ending' && ch.id !== 'shared');
+  const views = [];
+  chs.forEach((ch) => FLAGS.forEach((f) => { const k = at(ch.nodes[0].id, f); k.story.chapter = ch.id; views.push({ ch: ch.id, f, v: S.view(k) }); }));
+  // (Varga's Revenge is only fought with Varga dead or free)
+  const thin = views.filter((x) => (!x.v.talk || x.v.talk.length < 3) && !(x.ch === 'revenge' && !x.f.varga_dead && !x.f.varga_free));
+  ok('every chapter’s first page has one, three lines or more, whatever has happened', !thin.length, thin.map((x) => x.ch + JSON.stringify(x.f)).join(' '));
+  ok('...written out, and the commander in each', views.every((x) => x.v.talk.every((l) => !/[{}]/.test(l.text) && l.name)) &&
+    chs.filter((ch) => views.find((x) => x.ch === ch.id).v.talk.some((l) => l.who === 'commander')).length >= chs.length * 0.6);
+  const rev = (f) => S.view(Object.assign(at('revenge.brief', f), {})).talk;
+  ok('...by what has happened: Varga dead, her brother speaks; Varga free, she does', rev({ varga_dead: true })[0].name === 'Tomas Varga' && rev({ varga_free: true })[0].who === 'varga');
+  ok('...and HTX says nothing once it has cut the company off', views.filter((x) => x.f.htx_cut_off && ['fault', 'retake', 'splinter', 'redoubt', 'ceasefire', 'outbreak', 'shafts', 'leak', 'showdown'].indexOf(x.ch) >= 0)
+    .every((x) => !x.v.talk.some((l) => l.who === 'liaison')));
+}
+
 console.log('\nSaid in the battle');
 function deployAndStart(e) {
   for (let i = 0; i < 8 && e.state().phase !== 'battle'; i++) {

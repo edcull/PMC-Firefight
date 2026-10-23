@@ -265,7 +265,11 @@
         if (n.type === 'pool') ref(at, n.then, 'then');
         if (['brief', 'event', 'battle', 'debrief', 'happening', 'interlude', 'branch', 'pool', 'ending'].indexOf(n.type) < 0) err(at + ': unknown node type "' + n.type + '"');
         if (n.who && !(def.people || {})[n.who]) err(at + ': no one called "' + n.who + '" among the story\u2019s people');
-        arr(n.talk).forEach(function (l) { if (!(def.people || {})[l.who]) err(at + ': no one called "' + l.who + '" among the story\u2019s people, to speak'); });
+        arr(n.talk).forEach(function (l, i) {
+          if (!(def.people || {})[l.who]) err(at + ': no one called "' + l.who + '" among the story\u2019s people, to speak');
+          if (l.if) readCond(l.if, at + '/talk' + i, 'text', ch.id);
+          textReads(l.text, at, ch.id);
+        });
         textReads(n.text, at, ch.id);
       });
     });

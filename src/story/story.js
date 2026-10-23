@@ -520,12 +520,13 @@
   }
   /* A conversation on a page (a node's `talk`): each line with who says it,
      their name and what they are, written out; `commander` is the company's
-     own, by rank and name. */
+     own, by rank and name. Lines whose `if` does not hold are left out. */
   function conversation(campaign, lines) {
-    var people = (storyOf(campaign) || {}).people || {}, co = campaign.companies && campaign.companies.A;
-    return arr(lines).map(function (l) {
+    var people = (storyOf(campaign) || {}).people || {}, co = campaign.companies && campaign.companies.A, ctx = ctxOf(campaign);
+    // (a line can ask what has happened, `if`, and be said by someone the story names only there, `name`)
+    return arr(lines).filter(function (l) { return !l.if || test(ctx, l.if); }).map(function (l) {
       var who = people[l.who] || {}, me = l.who === 'commander';
-      return { who: l.who, name: me ? commanderWords(campaign, 'rank') : (who.name || l.who), role: me ? (co ? co.name : '') : (who.role || ''), text: render(campaign, l.text) };
+      return { who: l.who, name: me ? commanderWords(campaign, 'rank') : (l.name || who.name || l.who), role: me ? (co ? co.name : '') : (l.role || who.role || ''), text: render(campaign, l.text) };
     });
   }
   /* What the allies say, if a battle has them: who they are, and their words

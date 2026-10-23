@@ -1139,7 +1139,9 @@ withdrawn (`allies` in the talk; `story.js` `allyVoice`; `storybattle.js`
 `allyAnswer`). The story opens on a conversation: Landfall's first page has the
 hauler's captain reporting the ship in orbit, HTX's director on the moon setting
 out the job, the commander answering by rank and name, and the port master
-talking the shuttle down, each line beside its speaker's face (a node's `talk`,
+talking the shuttle down, and every chapter after it opens on one of its own
+(a line can ask what has happened, `if`, so HTX goes quiet once it has cut the
+company off, and Varga's brother speaks for her if she is dead), each line beside its speaker's face (a node's `talk`,
 from the talk file's `conversations`; `story.js` `conversation`). `story.js`
 `talkFor` picks them as the battle is set
 up; `storybattle.js` `storyTalk` says each once, writes it to the log, and keeps

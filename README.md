@@ -268,8 +268,10 @@ officer at the head of the command squad: the story calls them by name, and they
 are never a casualty.
 
 The story runs in chapters. It opens in orbit, as the ship's captain, HTX's man on
-the moon and your commander talk over the job before the shuttle goes down. Each
-chapter opens with its card, then events: a situation
+the moon and your commander talk over the job before the shuttle goes down, and every chapter opens the
+same way, with the people of the moon talking it over: HTX's director, Varga,
+the miners' guild, Black Lantern and your own radio, by what has happened so far.
+Each chapter has its card, then events: a situation
 and a few choices, some closed until you have the money, the Intel or the
 history for them. What you choose moves the story's **meters** (HTX Standing,
 Loyalty and Intel are shown; the rest come to light as you learn of them) and sets
