@@ -17,9 +17,9 @@
 
   root.PMCStoryMaps['dead-reckoning'] = {
 
-    /* Vesk Free Port's market square: the auction house on its north side, the
-       arcade that runs to the landing field, stalls, a little park, and the
-       three places that matter (the clock, the fountain, the arcade's mouth). */
+    /* Vesk Free Port's market square, crossed west to east: the auction house's
+       side of it, stalls, a little park, the arcade, and the landing field
+       beyond the east edge, where Vane's ship waits (Escort). */
     vesk: {
       name: 'The market square, Vesk Free Port', planet: 'dense',
       pieces: [
@@ -27,8 +27,7 @@
         R('wall', 30, 30, 1, 7), R('wall', 38, 30, 1, 7),
         R('barricade', 18, 18, 4, 1), R('barricade', 27, 29, 4, 1), R('barricade', 10, 27, 1, 4),
         N('woods', 36, 15, 5, 6, 'lobed'), R('ruins', 8, 18, 4, 4)
-      ],
-      objectives: [{ x: 14, y: 13, name: 'The clock' }, { x: 24, y: 24, name: 'The fountain' }, { x: 34, y: 35, name: 'The arcade' }]
+      ]
     },
 
     /* The Glass Flats on Vantor III: a plain turned to glass by an old impact,

@@ -99,10 +99,36 @@ Object.keys(MAPS).forEach((k) => {
 });
 const used = (id) => battles.filter((n) => n.map === id);
 ok('the Glass Flats and the Mire put their three places where the map says, for the relic', ['glassflats', 'mire'].every((k) => MAPS[k].sites.at.length === 3 && used(k).every((n) => n.scenario === 'find' && n.variant.relic)));
-ok('Vesk’s square has its three objectives, named, for Secure and control', MAPS.vesk.objectives.length === 3 && used('vesk').every((n) => n.scenario === 'secure'));
+ok('Vesk’s square is crossed, for the Escort: Vane, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Ottilie Vane'));
 ok('the docks leave the middle clear, for the warehouse Sable holds (Hostile takeover)', MAPS.docks.pieces.every((p) => !overlap(p, { x: 18, y: 18, w: 12, h: 12 })) && used('docks').every((n) => n.scenario === 'takeover'));
 ok('each map’s world is its chapter’s', open.every((n) => { const ch = dr._chapters[n._chapter]; const place = n.place || ch.place; return !place || MAPS[n.map].planet === place.kind; }),
   open.map((n) => n.id + ' ' + MAPS[n.map].planet + '/' + ((n.place || dr._chapters[n._chapter].place) || {}).kind).join(', '));
+
+console.log('\nThe star chart');
+{
+  const c = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+  S.begin(c, 'dead-reckoning', {});
+  ok('a new story: nothing visited yet, the first stop where the company is, the next heading to come', (() => { const ch = S.chart(c); return ch && ch.stops.length === 1 && ch.here === ch.stops[0].key && ch.ahead && ch.theirs === null; })());
+  for (let i = 0; i < 60 && c.story.chapter !== 'c3'; i++) {
+    const v = S.view(c); if (!v) break;
+    if (v.type === 'event') { const o = v.options.filter((x) => x.ok); S.choose(c, (o.find((x) => x.id === 'flats') || o[0]).id); }
+    else if (v.type === 'battle') S.resolveBattle(c, 'victory'); else S.proceed(c);
+  }
+  const ch = S.chart(c);
+  ok('through chapter 2 by the Glass Flats: Vesk, Vantor III, Tessaly IV, in order, each with its kind of world', ch.stops.map((s) => s.planet).join() === 'Vesk,Vantor III,Tessaly IV' &&
+    ch.stops.map((s) => s.kind).join() === 'dense,desert,jungle', ch.stops.map((s) => s.planet + '/' + s.kind).join(', '));
+  ok('...the company at the last of them, and each rival where it was last met', ch.here === ch.stops[2].key &&
+    ch.rivals.find((r) => r.id === 'kettle').at === ch.stops[0].key && ch.rivals.find((r) => r.id === 'wraith').at === ch.stops[1].key && !ch.rivals.find((r) => r.id === 'sable').at);
+  c.story.revealed.theirs = true;
+  ok('...and the rivals’ lodestones counted once they are revealed', S.chart(c).theirs === (c.story.meters.theirs || 0));
+  require('../../src/view/story-chart.js');
+  const html = global.PMCStoryChart.html(S.chart(c), 'dead-reckoning');
+  ok('drawn: the map, the stops by name, who was met where, the lodestones', /<svg class="story-chart-map"/.test(html) && /Vantor III/.test(html) && /met Wraith Section/.test(html) && /Lodestones/.test(html));
+  require('../../src/story/deep-contract.js');
+  const dc = { companies: { A: { name: 'T', kUC: 0, tier: 1, roster: [] } } };
+  S.begin(dc, 'deep-contract', {});
+  ok('a story with no trail has no chart', S.chart(dc) === null);
+}
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

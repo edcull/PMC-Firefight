@@ -995,6 +995,44 @@ from the Epsilons' own figures so a skinned Alpha still reads as the tribe's
 leader (a crest and a staff of office) and a skinned Gamma still carries its
 heavy weapon; the Esh-Aven face for the conversations.
 
+**Where it stands.** Built:
+
+- **Faces** (`story-portraits.js`):
+  - a Xenotripod Crock (`tripod`): a faceted ceramic carapace and a wedged
+    helmet with three eyes in its slit, gold at the brow for an Alpha;
+  - an Esh-Aven (`eshaven`): a low lizard's head, a horn, five compound eyes,
+    and an Alpha's gold crest where it wears one.
+  - The Sh'kar, the Mithdu and Seven-Holds-the-Staff wear them.
+- **Scenes** (`story-scenes.js`): Vesk's auction night, the Glass Flats under two
+  suns, Station Thule under an airless sky, the Drowned Beacon in the fog, the
+  Warren, Kerrigan's docks, and the orbital's docking ring. Each is named for
+  its map, so a battle's briefing opens on it. A battle can name a scene of its
+  own (`scene`: Thule, the Warren), and a compound otherwise shows its chapter's.
+- **The star chart** (`story.js` `chart`, `view/story-chart.js`), for a story
+  with `chart`:
+  - the stops made, in order, each with its kind of world;
+  - where the company is, and the next heading as far as the log has given it;
+  - each rival where it was last met, and its strength;
+  - the lodestones held, and the rivals' once revealed.
+  - It shows between chapters and in the journal.
+- **The Esh-Aven on the table** (`iso-troops.js`, `iso-xenofig.js`): every caste
+  in its own Esh-Aven kit (`xesh_alpha` to `xesh_delta`), not the Epsilons'.
+  The Alpha carries a staff of office and a gold crest, the Gamma a heavy
+  launcher on the shoulder, the Beta a gauss rifle and plates, the Delta its
+  blades. The Hashamer's skin draws them so (`storybattle.js` `skin`).
+
+From playing the first half:
+
+- **Lot 47 is an Escort** (`scenarios-story.js` `escort`): Ottilie Vane, with
+  the log, across Vesk's market square to her ship. She comes on as side A's
+  own unit to move. Through to the far edge, the battle is won; killed, it is
+  lost; the enemy goes for her and nothing else.
+- **Outbid them in the open** is Vane's money, not the company's (it had none
+  to start with).
+
+Tested by `storydrwords.js` (the chart), `storyforces.js` (the castes' kits)
+and `storyescort.js`.
+
 ### Phase 5: the second half and the endings
 The four threads, the finales, Recall, Xenotripod allies, hired allies (Price,
 Trust, demands, orders refused, walking, the Turn), the endings and their

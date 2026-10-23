@@ -55,8 +55,9 @@
       if (x.skin !== 'eshaven' || R.isMachine(u)) return;
       u.named = true;
       if (x.men && x.men.length) u.storyMen = x.men.map(function (n) { return { name: n }; });
+      // every caste an Esh-Aven, in its own caste's kit (iso-troops.js `xesh_*`): the Alpha still the leader
       var m = CASTE.exec(u.art || '');
-      if (m) u.art = 'x_eps' + Math.max(1, Math.min(5, +m[2]));
+      if (m) u.art = 'xesh_' + m[1];
       if (!x.name) {
         u.name = 'Esh-Aven ' + u.name.charAt(0).toLowerCase() + u.name.slice(1);
         u.label = u.name + ' [' + u.side + ']';

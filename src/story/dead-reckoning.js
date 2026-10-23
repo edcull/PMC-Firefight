@@ -38,6 +38,17 @@
     });
     return def;
   }
+  /* Where each chapter happens: the scene on its card (view/story-scenes.js),
+     and a battle's own where its chapter's will not do (a compound inside it). */
+  var SCENE = { c1: 'vesk', c2: 'glassflats', c3: 'mire', c4: 'docks', warren: 'warren', doublecross: 'dockring' };
+  var BATTLE_SCENE = { 'c2t.battle': 'thule', 'warren.battle': 'warren' };
+  function withScenes(def) {
+    (def.chapters || []).forEach(function (ch) {
+      if (SCENE[ch.id]) ch.scene = { place: SCENE[ch.id] };
+      (ch.nodes || []).forEach(function (n) { if (BATTLE_SCENE[n.id]) n.scene = BATTLE_SCENE[n.id]; });
+    });
+    return def;
+  }
   /* What is said in its battles and on its pages (dead-reckoning-talk.js),
      and the voices that say it among its people. */
   function withTalk(def) {
@@ -165,10 +176,12 @@
   // the promise broken by an act, where it was made
   function breaks() { return { if: { flag: 'eshaven_promise' }, flag: 'promise_broken' }; }
 
-  S.register(withTalk(withProse({
+  S.register(withScenes(withTalk(withProse({
     id: 'dead-reckoning', name: 'Dead Reckoning', version: 1, length: 8,
     // (the second half's battles are fought on rolled ground until their maps are written, phase 5)
     mapsPending: [2],
+    // a star chart between chapters and in the journal (story.js chart, view/story-chart.js)
+    chart: true,
     // the two halves, as the chapter cards name them, and those who were there from the start
     halves: ['The Chart', 'The Long Jump'], firstDay: 'on the trail from Vesk',
     blurb: 'A dead surveyor’s log, and the Xenotripod lodestones he left behind, lead across the stars to a world nobody has charted. Ottilie Vane hires your company to follow them. Every other company on the trail was hired to get there first.',
@@ -235,7 +248,7 @@
       rook: { name: 'Rook Kestrel', role: 'Kestrel Air Cavalry', face: { bg: '#7fb3d9', skin: '#d8a682', hair: '#a0602a', hairStyle: 'short', hat: 'helmet', hatColour: '#3a6a8a', clothes: '#3a4a5a', clothesStyle: 'jacket', accent: '#e8c25a' } },
       hal: { name: 'Big Hal Reaver', role: 'The Red Reavers', face: { bg: '#b04a3a', skin: '#c48a64', hair: '#222', hairStyle: 'bald', clothes: '#4a2a2a', clothesStyle: 'jacket', accent: '#b03a2e', extras: ['beard', 'bandana'], bandana: '#b03a2e' } },
       daw: { name: 'Commander Iselin Daw', role: 'The Ninth Lance', face: { bg: '#5a4a7a', skin: '#e8c0a0', hair: '#2b2622', hairStyle: 'long', hat: 'visor', hatColour: '#2a2238', clothes: '#2a2238', clothesStyle: 'armour', accent: '#c8a040' } },
-      seven: { name: 'Seven-Holds-the-Staff', role: 'The Hashamer Esh-Aven', face: { bug: true, bg: '#3a2a1a', shell: '#8a6a3a', glow: '#e8c25a' } },
+      seven: { name: 'Seven-Holds-the-Staff', role: 'The Hashamer Esh-Aven', face: { eshaven: true, bg: '#3a2a1a', skin: '#8a8a5a', crest: true, plate: true } },
       ops: { name: 'Company net', role: 'Your radio operator', face: { bg: '#6a8a6a', skin: '#c99a76', hair: '#3a2a1a', hairStyle: 'short', hat: 'cap', hatColour: '#3d4a38', clothes: '#4a5a40', clothesStyle: 'uniform', accent: '#d8c070', extras: ['stubble'] } },
       commander: { name: 'The commander', role: 'Your company', face: { bg: '#8a7a5a', skin: '#c99a76', hair: '#2b2622', hairStyle: 'short', hat: 'cap', hatColour: '#3d4a38', clothes: '#4a5240', clothesStyle: 'uniform', accent: '#e0c25a', extras: ['stubble'] } }
     },
@@ -323,11 +336,13 @@
         intro: 'A dead surveyor’s log comes up for auction, and Ottilie Vane hires the company to make sure she leaves with it.', nodes: [
         { id: 'c1.brief', type: 'brief', text: 'Vesk Free Port. Lot 47 is on the block tonight.', next: 'c1.bidding' },
         { id: 'c1.bidding', type: 'event', who: 'vane', title: 'The bidding', text: 'Half the room is bidding for somebody else.', options: [
-          { id: 'outbid', text: 'Outbid them in the open.', cost: { kUC: 1 }, why: 'You can’t afford it.', battle: { readiness: 1 }, effects: [{ meter: 'vane', add: 1 }] },
+          // (Vane's money, not the company's: the company has none yet)
+          { id: 'outbid', text: 'Outbid them in the open.', battle: { readiness: 1 }, effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: 1 }] },
           { id: 'watch', text: 'Let Vane bid while the company watches the room.', battle: { intel: 1 }, effects: [{ meter: 'intel', add: 1 }] },
           { id: 'follow', text: 'Have Coin & Kettle’s agent followed out of the room.', battle: { role: 'choose' }, effects: [{ flag: 'kettle_marked', local: true }] }
         ], next: 'c1.battle' },
-        { id: 'c1.battle', type: 'battle', scenario: 'secure', map: 'vesk', tier: 1, pl: 1, planet: 'dense',
+        // Vane across the market square to the landing field, with the log, and Coin & Kettle in the way
+        { id: 'c1.battle', type: 'battle', scenario: 'escort', variant: { escort: 'Ottilie Vane' }, map: 'vesk', tier: 1, pl: 1, planet: 'dense',
           enemy: rival('kettle', { core: [{ key: 'recruits', name: 'Kettering’s Own' }], optional: { meter: 'kettle', per: 3, units: ['irregulars', 'recruits'] }, fill: { to: 0.6, from: ['recruits', 'irregulars'], meter: 'kettle', step: 0.05 },
             changes: [{ if: { flag: 'kettle_marked' }, readiness: -1 }] }),
           on: { success: [{ effects: [{ meter: 'kettle', add: -1 }, { meter: 'lead', add: 1 }] }], failure: [{ effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: -1 }] }] }, next: 'c1.debrief' },
@@ -809,7 +824,7 @@
       { about: 'rivals', text: 'The rivals went back to the work they had before the log.' },
       { about: 'company', text: '{name} came back with {commander}, and fewer than it took.' }
     ]
-  })));
+  }))));
 
   if (typeof module !== 'undefined' && module.exports) module.exports = S.get('dead-reckoning');
 })(typeof window !== 'undefined' ? window : global);

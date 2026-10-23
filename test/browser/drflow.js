@@ -79,13 +79,13 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
     await p.evaluate(() => document.querySelectorAll('#camp-body .story-opt').length === 3 && !!document.querySelector('#camp-body .story-who svg.story-portrait')), txt.slice(0, 200));
   await go(p, '[data-go="storyopt"][data-o="watch"]');
   txt = await body(p);
-  check('watching the room: the mission’s briefing, Lot 47 in the market square, Secure and control', /Lot 47/.test(txt) && /market square/.test(txt) && /fountain/.test(txt) && /Secure and control/i.test(txt), txt.slice(0, 300));
+  check('watching the room: the mission’s briefing, Lot 47 in the market square, an Escort: Vane to the landing field', /Lot 47/.test(txt) && /market square/.test(txt) && /landing field/.test(txt) && /Escort/.test(txt), txt.slice(0, 300));
   await go(p, '[data-go="storymuster"]');
   await go(p, '[data-go="storyfight"]');
   await p.waitForTimeout(1200);
-  const st = await p.evaluate(() => { const s = window.PMC_STATE && window.PMC_STATE(); return s ? { node: s.cfg.story && s.cfg.story.node, scen: s.cfg.scenario, planet: s.cfg.planet, objs: s.objectives.map((o) => o.name), map: s.cfg.story.mapName, kettle: s.units.filter((u) => u.side === 'B').length } : null; });
-  check('the battle starts with the story’s cfg: c1.battle, Secure and control, Coin & Kettle', st && st.node === 'c1.battle' && st.scen === 'secure' && st.kettle > 0, JSON.stringify(st));
-  check('...on Vesk’s market square: the clock, the fountain and the arcade', st && /Vesk/.test(st.map) && ['The clock', 'The fountain', 'The arcade'].every((n) => st.objs.indexOf(n) >= 0), JSON.stringify(st && st.objs));
+  const st = await p.evaluate(() => { const s = window.PMC_STATE && window.PMC_STATE(); return s ? { node: s.cfg.story && s.cfg.story.node, scen: s.cfg.scenario, planet: s.cfg.planet, vane: (s.units.find((u) => u.escort) || {}).name, map: s.cfg.story.mapName, kettle: s.units.filter((u) => u.side === 'B').length } : null; });
+  check('the battle starts with the story’s cfg: c1.battle, an Escort, Coin & Kettle', st && st.node === 'c1.battle' && st.scen === 'escort' && st.kettle > 0, JSON.stringify(st));
+  check('...on Vesk’s market square, with Ottilie Vane on the table, the company’s to get across', st && /Vesk/.test(st.map) && st.vane === 'Ottilie Vane', JSON.stringify(st));
   await cards(p);
   await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^done$/i.test(x.textContent.trim()) && x.offsetParent); if (b) b.click(); });
   await p.waitForTimeout(800);
@@ -114,7 +114,11 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   await go(p, '[data-go="storyopt"][data-o="message"]');
   txt = await body(p);
   check('...and on to the jump: Vane’s first heading on the board', /first heading/.test(txt), txt.slice(0, 200));
-  await p.screenshot({ path: path.join(SHOTS, 'dr-interlude.png'), fullPage: true });
+  const chart = await p.evaluate(() => { const c = document.querySelector('#camp-body .story-chart'); return c ? { map: !!c.querySelector('svg.story-chart-map rect'), text: c.innerText } : null; });
+  check('...with the star chart: Vesk the first stop, Coin & Kettle met there, the next heading still to come, the lodestones held',
+    chart && chart.map && /Vesk/.test(chart.text) && /met Coin & Kettle/.test(chart.text) && /next heading/.test(chart.text) && /0 held/.test(chart.text), chart && chart.text.slice(0, 200));
+  await p.evaluate(() => document.querySelector('#camp-body .story-chart').scrollIntoView());
+  await p.screenshot({ path: path.join(SHOTS, 'dr-interlude.png') });
 
   console.log('\nChapter 2: The First Lodestone');
   // the interlude's event answered (whichever it is), and on to the next chapter
@@ -125,6 +129,7 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   }
   txt = await body(p);
   check('the jump to chapter 2: two readings of Morrow’s first heading', /The First Lodestone/.test(txt) && /Glass under me/.test(txt), txt.slice(0, 200));
+  check('...on a picture of the Glass Flats', await p.evaluate(() => { const i = document.querySelector('#camp-body .story-card img.story-scene'); return !!i && /^data:image\/png/.test(i.src); }));
   check('...talked over with Vane’s reader', (await talkOf(p)).some((l) => /Halloran/.test(l.who)));
   await go(p, '[data-go="storyon"]');
   await go(p, '[data-go="storyopt"][data-o="flats"]');

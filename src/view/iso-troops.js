@@ -225,6 +225,11 @@
       // the Deltas' SMGs: the leader's alone at Low grade, two in the squad at Core
       x_delta1: ['xdelta'], x_delta2: ['xdeltasmg', 'xdelta'], x_delta3: ['xdeltasmg', 'xdeltasmg', 'xdelta'],
       x_eps1: ['esh1', 'esh1b'], x_eps2: ['esh2'], x_eps3: ['esh3'], x_eps4: ['esh4'], x_eps5: ['esh5'],
+      /* the Esh-Aven of Hashamer (a story's `eshaven` skin, storybattle.js): every caste
+         an Esh-Aven, in its masters' kit. The Alpha keeps the staff of office and a
+         gold crest, so the tribe's leader still reads as one; the Gamma its heavy
+         launcher; the Delta its blades; the Beta a gauss rifle and plates. */
+      xesh_alpha: ['eshalpha', 'eshbeta'], xesh_beta: ['eshbeta'], xesh_gamma: ['eshgamma'], xesh_delta: ['eshdelta', 'eshdelta', 'eshbeta'],
       // hardened insurgents: the guard's green field kit, with helmets in the side's colour
       insurgent: ['hardlead', 'hardsaw', 'hardrifle'],
       holy: ['zealot', 'flagellant', 'zealot2'],
@@ -446,6 +451,10 @@
       esh3: { xeno: 'esh', gun: 'slug', plates: true, big: 0.92, mz: [27, -37] },
       esh4: { xeno: 'esh', gun: 'gauss', plates: true, big: 0.92, mz: [30, -37] },
       esh5: { xeno: 'esh', gun: 'gaussflame', plates: true, big: 0.94, mz: [30, -37] },
+      eshalpha: { xeno: 'esh', gun: 'staff', plates: true, crest: true, big: 0.98, mz: [12, -58] },
+      eshbeta: { xeno: 'esh', gun: 'gauss', plates: true, big: 0.95, mz: [30, -37] },
+      eshgamma: { xeno: 'esh', gun: 'launcher', plates: true, big: 0.97, mz: [27, -41] },
+      eshdelta: { xeno: 'esh', gun: 'blade', plates: true, big: 0.95, mz: [22, -40] },
       // the infected: bare hands, greyed clothes, the army's colour growing out of them
       inf1: { helm: 'bare', gun: 'none', pack: 'none', ragged: true, fungus: 1, tint: INFECT_A },
       inf2: { helm: 'bare', gun: 'none', pack: 'none', ragged: true, fungus: 2, tint: INFECT_B },

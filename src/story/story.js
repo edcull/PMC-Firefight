@@ -532,7 +532,7 @@
     var st = campaign.story, def = storyOf(campaign), node = nodeAt(campaign);
     if (!node || node.type !== 'battle') return null;
     var spec = {
-      node: node.id, scenario: node.scenario, variant: clone(node.variant) || null, name: node.name || null, map: node.map || null,
+      node: node.id, scenario: node.scenario, variant: clone(node.variant) || null, name: node.name || null, map: node.map || null, scene: node.scene || null,
       text: node.text || null,
       tier: node.tier || 'max', pl: node.pl || 1, planet: node.planet || null, tactics: node.tactics || null, role: node.role || null,
       enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, waves: clone(node.waves) || null, levers: clone(st.pending) || {},
@@ -690,6 +690,48 @@
       deal: { say: [{ text: 'Then that is the agreement. Nobody fires today.' }], end: 'agreed' },
       fight: { say: [{ text: 'Then we are done. Back to your lines, and may ' + name + ' forgive us both.' }], end: 'broken' }
     } };
+  }
+
+  /* The star chart (a story with `chart`, as Dead Reckoning has; view/story-chart.js):
+     the stops the company has made, in order, each a place (a chapter's, or the
+     battle's own where it had one); where it is now; the next heading, if the
+     log has given it; each rival's strength and the stop where the company last
+     met it; and the lodestones on each side, the rivals' count shown only once
+     it has been revealed. Drawn from the story's state alone. */
+  function chart(campaign) {
+    var st = campaign.story, def = storyOf(campaign);
+    if (!def || !def.chart) return null;
+    var stops = [], at = {};
+    function stopFor(id, place) {
+      if (!place) return null;
+      var key = (place.system || '') + '/' + (place.planet || '');
+      if (at[key] == null) { at[key] = stops.length; stops.push({ key: key, system: place.system || null, planet: place.planet || null, site: place.site || null, kind: place.kind || null, chapter: id }); }
+      return stops[at[key]];
+    }
+    var seen = {};
+    st.journal.forEach(function (j) {
+      var ch = def._chapters[j.chapter], n = def._nodes[j.node];
+      if (!ch || ch.shared) return;
+      // where the company was: a battle's own place where it had one (the two readings), else the chapter's
+      var s = stopFor(ch.id, (n && n.place) || ch.place);
+      if (!s) return;
+      if (j.grade && n && n.enemy && n.enemy.side) {
+        var side = n.enemy.rival === 'leading' ? st.leading : n.enemy.side;
+        if (side) seen[side] = s.key;
+      }
+    });
+    var cur = def._chapters[st.chapter], here = cur ? stopFor(cur.id, cur.place) : null;
+    var rivals = ((def.leading && def.leading.from) || []).concat(def._meters.lance ? ['lance'] : []).map(function (id) {
+      var side = (def.sides || {})[id] || {};
+      return { id: id, name: side.name || id, strength: st.meters[id] || 0, at: seen[id] || null, leading: st.leading === id };
+    });
+    var shown = (def._meters.theirs && def._meters.theirs.shown) || st.revealed.theirs || st.ended;
+    return {
+      stops: stops, here: here ? here.key : null,
+      // past the first half, the log gives no more easy headings: the next is chosen, not read
+      ahead: cur && cur.half === 1 && !st.ended ? 'the next heading' : st.ended ? null : 'chosen, not read',
+      rivals: rivals, stones: st.meters.stones || 0, theirs: shown ? st.meters.theirs || 0 : null
+    };
   }
 
   /* A battle's report graded from side A's view (the plan, section 3):
@@ -1177,7 +1219,7 @@
     battleSpec: battleSpec, intel: intel, difficultyOf: difficultyOf, takeSide: takeSide, nodeAt: nodeAt, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
     test: test, apply: apply, roll: roll, pressure: pressure, finaleChapter: finaleChapter,
     endingFor: endingFor, epilogue: epilogue, broken: broken, breakCompany: breakCompany,
-    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf, leadingRival: leadingRival, talkFor: talkFor, allyVoice: allyVoice, parleyFor: parleyFor,
+    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf, leadingRival: leadingRival, talkFor: talkFor, allyVoice: allyVoice, parleyFor: parleyFor, chart: chart,
     GRADES: GRADES, COND_KEYS: COND_KEYS, CMP: CMP, EFFECT_KEYS: EFFECT_KEYS
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCStory;

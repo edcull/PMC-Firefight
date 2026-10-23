@@ -2566,3 +2566,16 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .pc-opt:hover:not([disabled]) { border-color: var(--ink-dim); background: var(--panel-3); }
 .pc-opt[disabled] { opacity: .5; cursor: not-allowed; }
 .pc-opt small { display: block; color: var(--ink-dim); font-size: 11px; margin-top: 2px; }
+
+/* a trail's star chart (view/story-chart.js), between chapters and in the journal */
+.story-chart { margin: 12px 0 16px; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.story-chart > small { display: block; color: var(--ink-dim); font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
+.story-chart-map { display: block; width: 100%; max-width: 480px; height: auto; image-rendering: pixelated; border-radius: 4px; }
+.chart-stops { margin: 8px 0 4px; padding-left: 20px; font-size: 13px; }
+.chart-stops li.here b { color: #e8c25a; }
+.chart-stops li.ahead { color: var(--ink-dim); }
+.chart-stops small { color: var(--ink-dim); }
+.chart-stops .met { margin-left: 6px; }
+.chart-stones, .chart-rivals { margin: 4px 0; font-size: 12px; color: var(--ink-dim); }
+.chart-rivals span { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; }
+.chart-rivals i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }

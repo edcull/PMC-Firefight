@@ -21,8 +21,8 @@
       reader: { name: 'Halloran', role: 'Vane’s chief reader', face: { bg: '#9a8ab9', skin: '#e2b48f', hair: '#bdbdbd', hairStyle: 'short', clothes: '#3a3248', clothesStyle: 'suit', accent: '#c8a040', extras: ['glasses', 'beard'] } },
       kettleman: { name: 'A Coin & Kettle hand', role: 'Coin & Kettle', face: { bg: '#c9a65a', skin: '#a8754f', hair: '#3a2a20', hat: 'beanie', hatColour: '#5a4a3a', clothes: '#5a4a3a', clothesStyle: 'jacket', accent: '#e0b070', extras: ['stubble'] } },
       scav: { name: 'Mags', role: 'The Thule scavengers', face: { bg: '#7a9ab0', skin: '#d8a682', hair: '#c8c8c8', hairStyle: 'long', hat: 'beanie', hatColour: '#3a4a5a', clothes: '#4a4a52', clothesStyle: 'jacket', accent: '#e07a3a', extras: ['scar', 'earring'] } },
-      shkar: { name: 'The Sh’kar', role: 'Xenotripods, the beacon’s keepers', face: { bug: true, bg: '#1e3a3a', shell: '#3a6a5a', glow: '#7ae0c8' } },
-      mithdu: { name: 'The Mithdu', role: 'Xenotripods, under the rock', face: { bug: true, bg: '#2a2418', shell: '#6a5a3a', glow: '#e0a040' } },
+      shkar: { name: 'The Sh’kar', role: 'Xenotripods, the beacon’s keepers', face: { tripod: true, bg: '#1e3a3a', shell: '#9ab8a8', glow: '#7ae0c8' } },
+      mithdu: { name: 'The Mithdu', role: 'Xenotripods, under the rock', face: { tripod: true, bg: '#2a2418', shell: '#a89870', glow: '#e0a040' } },
       lancer: { name: 'A Lance trooper', role: 'The Ninth Lance', face: { bg: '#5a4a7a', skin: '#c99a76', hair: '#222', hat: 'visor', hatColour: '#2a2238', clothes: '#2a2238', clothesStyle: 'armour', accent: '#c8a040' } }
     },
 

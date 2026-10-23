@@ -103,6 +103,13 @@
           F([[hx - 5, hy - 1], [hx - 10, hy - 6], [hx - 2, hy - 3]], SK.dk);            // the crest horn
           F([[hx + 2.5, hy + 1], [hx + 7.5, hy + 2.6], [hx + 2.4, hy + 3.6]], SK.dk);    // the snout
           if (kit.plates) { E(hx - 1.2, hy - 1.6, 3.8, 2.1, W0.md); E(hx - 2, hy - 2.2, 2.2, 1, W0.lt); }
+          if (kit.crest) {                                // an Alpha's crest, worn as its masters wore it: a gold fan
+            var CR = dead ? '#6a6458' : '#d8b04a', CRD = dead ? '#4a463e' : '#a8822a';
+            F([[hx - 5, hy - 2], [hx - 7, hy - 9], [hx - 3, hy - 3]], CRD);
+            F([[hx - 3, hy - 3], [hx - 2.5, hy - 10.5], [hx - 0.5, hy - 3]], CR);
+            F([[hx - 0.5, hy - 3], [hx + 2, hy - 9], [hx + 1.5, hy - 2.4]], CR);
+            if (!dead) E(hx - 1.6, hy - 3.2, 0.9, 0.9, GL.m);
+          }
           var eyeC = dead ? '#444' : '#e9f07a';
           [[hx + 2.2, hy - 0.4], [hx + 3.4, hy + 0.6], [hx + 1.4, hy + 0.9], [hx - 0.8, hy + 0.2], [hx + 3.3, hy - 1.2]].forEach(function (q, i) {
             E(q[0], q[1], i === 3 ? 0.8 : 0.65, i === 3 ? 0.8 : 0.6, eyeC);
@@ -146,6 +153,18 @@
             L([[11, gy + 1.6], [11.5, gy + 5]], 1.8, '#34332f');           // the grip
             E(17, gy + 0.6, 2.4, 1.3, '#6a5a3c');                           // the drum
             L([[24, gy - 0.4], [27, gy - 0.6]], 1.4, '#1e1d1b');
+          } else if (wpn === 'staff') {                     // an Alpha's staff of office, held upright before it
+            L([[10, gy + 15], [12.5, gy - 21]], 1.6, dead ? '#3a3027' : '#6a5232');
+            E(12.6, gy - 22.5, 2.2, 2.2, dead ? '#555' : '#d8b04a');
+            if (!dead) { E(12.6, gy - 22.5, 1.1, 1.1, GL.m); E(12.6, gy - 22.5, 3.4, 3.4, GL.h); }
+            grip = [10.8, gy + 5]; fore = [11.8, gy - 6];
+          } else if (wpn === 'launcher') {                  // a Gamma's heavy launcher, borne on the shoulder
+            L([[-5, gy - 1.6], [25, gy - 5.4]], 4.6, W0.dk);
+            L([[-5, gy - 2.4], [25, gy - 6.2]], 3, W0.md);
+            L([[-5, gy - 3.2], [24, gy - 6.8]], 1, W0.lt);
+            E(25.4, gy - 5.4, 1.8, 2.6, dead ? '#3a3a3a' : '#1e1d1b');
+            for (var lc = 0; lc < 2; lc++) E(8 + lc * 7, gy - 3.4 - lc * 0.9, 1.3, 1.5, dead ? '#555' : GL.m);
+            grip = [8, gy + 0.6]; fore = [17, gy - 1.6];
           } else if (wpn === 'gauss' || wpn === 'gaussflame') {
             L([[2, gy + 1.4], [29, gy - 0.8]], 3.2, W0.dk);
             L([[2, gy + 0.8], [29, gy - 1.4]], 2, W0.md);

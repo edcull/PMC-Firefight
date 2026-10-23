@@ -124,8 +124,18 @@ const withAllies = (id, set) => { const c = at(id, set); c.story.pending = JSON.
 const m = started(withAllies('mimics.battle'));
 const eshA = m.st.units.filter((u) => u.ally);
 ok('they fight beside the company in The Mimics', eshA.length >= 2 && eshA.every((u) => u.skin === 'eshaven'), eshA.map((u) => u.name).join(', '));
-ok('...each trooper drawn as an Esh-Aven and called one', eshA.filter((u) => !R.isMachine(u)).every((u) => /^x_eps\d$/.test(u.art) && /^Esh-Aven /.test(u.name)),
+ok('...each trooper drawn as an Esh-Aven and called one: an Epsilon as itself, every other caste in its own Esh-Aven kit', eshA.filter((u) => !R.isMachine(u)).every((u) => /^(x_eps\d|xesh_(alpha|beta|gamma|delta))$/.test(u.art) && /^Esh-Aven /.test(u.name)),
   eshA.map((u) => u.art + ' ' + u.name).join(', '));
+{
+  // a Hashamer force with every caste in it: an Alpha, a Beta, a Gamma and a Delta, all Esh-Aven
+  const c = at('mimics.battle'); c.story.pending = JSON.parse(JSON.stringify(allyLever));
+  c.story.pending.allies.core = ['xalpha2', 'xbeta2', 'xgamma3', 'xdelta1'];
+  const all = started(c).st.units.filter((u) => u.ally && !R.isMachine(u));
+  // (brought down to a new company's Tier, the castes are what the Tier allows: each still in its own kit)
+  const caste = (u) => (/^x(alpha|beta|gamma|delta|eps)/.exec(u.key) || [])[1];
+  ok('...every caste in its own Esh-Aven kit: the Alpha with its staff and crest still the leader',
+    all.some((u) => caste(u) === 'alpha') && all.every((u) => caste(u) === 'eps' ? /^x_eps\d$/.test(u.art) : u.art === 'xesh_' + caste(u)), all.map((u) => u.key + ':' + u.art).join(', '));
+}
 ok('...each one named, in their manner, and none only a count', eshA.filter((u) => !R.isMachine(u)).every((u) => !R.counted(u) && u.men.length === u.models && u.men.every((x) => ESH.test(x.name))),
   eshA.map((u) => u.men.map((x) => x.name).join('/')).join('; '));
 ok('...the same numbers as the unskinned unit: a reskin, nothing more', eshA.every((u) => { const p = R.profile(u.key); return u.models === p.size && u.move === p.move; }));

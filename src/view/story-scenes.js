@@ -315,6 +315,111 @@
     } }
   };
 
+  /* ---------- Dead Reckoning's trail ---------- */
+  // a field of stars over everything, for an airless sky or open space
+  P.starfield = function (n) { for (var k = 0; k < (n || 60); k++) this.put(this.r() * W, this.r() * H, this.r() < 0.15 ? '#ffffff' : this.r() < 0.5 ? '#9aa4c8' : '#5a6488'); return this; };
+  // a Xenotripod structure: a tapering spire of pale ceramic, faceted, lit in a band
+  P.spire = function (x, gy, h, w, glow) {
+    for (var y = 0; y < h; y++) {
+      var hw = Math.max(1, Math.round(w * (1 - y / h)));
+      this.rect(x - hw, gy - y, x + hw, gy - y, y % 6 < 3 ? '#b8b4a6' : '#a09c90');
+      this.put(x + hw, gy - y, '#6a675e'); this.put(x - hw, gy - y, '#d8d4c6');
+    }
+    this.rect(x - 1, gy - h * 0.55, x + 1, gy - h * 0.55 + 1, glow || '#7ae0c8');
+    this.glow(x, gy - h * 0.55, 6, glow || '#7ae0c8', 0.5);
+    return this;
+  };
+  // a crane: a mast, a jib and a hook
+  P.crane = function (x, gy, h, jib, c) {
+    this.rect(x, gy - h, x + 1, gy, c); this.rect(x - 3, gy - h, x + jib, gy - h + 1, c);
+    this.line(x + jib - 1, gy - h + 2, x + jib - 1, gy - h + 9, '#111'); this.rect(x + jib - 2, gy - h + 9, x + jib, gy - h + 10, '#5a4a38');
+    this.light(x, gy - h - 1);
+    return this;
+  };
+
+  var TRAIL = {
+    /* Vesk Free Port at night: the auction house lit on the square, market
+       stalls, ships on the landing field beyond, and a crowd at the door. */
+    vesk: { time: 'night', draw: function (p) {
+      p.sky(26).ridge(30, 4, p.t.far).ground(36);
+      p.shuttle(98, 20, false); p.shuttle(16, 16, true);
+      p.building(40, 40, 18, 36, '#2e2a3a', { lit: 0.7 }); p.rect(52, 26, 65, 36, '#e8c878'); p.rect(54, 28, 63, 36, '#3a2a1a');
+      p.rect(38, 17, 81, 18, '#4a4258'); p.rect(56, 14, 62, 17, '#4a4258'); p.light(59, 13, '#ffd27a');
+      p.building(4, 14, 10, 36, '#24222e', { lit: 0.5 }); p.building(90, 16, 9, 36, '#24222e', { roof: 'peak', lit: 0.5 });
+      for (var s = 0; s < 6; s++) { var sx = 8 + s * 19; p.rect(sx, 38, sx + 6, 38, ['#a8422a', '#2a6a8a', '#c8a040'][s % 3]); p.rect(sx, 39, sx, 41, '#1a1820'); p.rect(sx + 6, 39, sx + 6, 41, '#1a1820'); }
+      p.people(48, 40, 9, '#0c0a10', 3); for (var k = 6; k < 128; k += 16) p.light(k, 37, '#ffcf6a');
+    } },
+    /* The Glass Flats on Vantor III by day: a plain turned to glass, glinting,
+       two suns, the crater's rim, the marker posts and Wraith's tents. */
+    glassflats: { time: 'day', draw: function (p) {
+      p.sky(30); p.disc(98, 9, 4, '#fff6d0'); p.glow(98, 9, 9, '#fff6d0', 0.5); p.disc(112, 14, 2, '#ffe0a0');
+      p.ridge(31, 3, '#a89878').ground(33);
+      for (var y = 33; y < H; y++) for (var x = 0; x < W; x++) if (dith(x, y, 0.35)) p.put(x, y, (x + y) % 7 ? '#8fb0b0' : '#c8e0e0');
+      for (var i = 0; i < 18; i++) { var gx = p.r() * W, gy = 34 + p.r() * 12; p.line(gx, gy, gx + 3, gy - 1, '#e8fcff'); }
+      for (var c = 0; c < 26; c++) p.put(70 + c, 33 - Math.sin(c / 26 * Math.PI) * 3, '#7a6a52');
+      [[22, 40], [30, 37], [38, 41], [46, 38]].forEach(function (m) { p.rect(m[0], m[1] - 5, m[0], m[1], '#5a3a2a'); p.put(m[0], m[1] - 5, '#d84a2a'); });
+      [[96, 36], [104, 38], [112, 35]].forEach(function (t) { for (var k = 0; k < 4; k++) p.rect(t[0] - 4 + k, t[1] - k, t[0] + 4 - k, t[1] - k, '#4a4a40'); });
+      p.rect(118, 22, 118, 35, '#2a2a2a'); p.light(118, 21, '#ff4a3a');
+    } },
+    /* Station Thule: a dome on an airless moon under a black sky full of
+       stars, frost round its foot, a relay mast, and a ship on the pad. */
+    thule: { time: 'night', draw: function (p) {
+      p.rect(0, 0, W - 1, H - 1, '#03040a'); p.starfield(90);
+      p.disc(22, 12, 6, '#6a7a9a'); p.disc(20, 11, 6, '#03040a');
+      p.ridge(34, 5, '#3a4458').ground(38);
+      for (var y = 38; y < H; y++) for (var x = 0; x < W; x++) p.put(x, y, dith(x, y, 0.5) ? '#c8d4e4' : '#8a98b0');
+      for (var dy = 0; dy < 16; dy++) { var w = Math.round(Math.sqrt(256 - dy * dy) * 1.7); p.rect(64 - w, 38 - dy, 64 + w, 38 - dy, dy % 4 ? '#5a6478' : '#4a5468'); }
+      for (var k = 0; k < 7; k++) p.light(40 + k * 8, 33 - (k % 2), '#9cc4dc');
+      p.rect(98, 14, 99, 38, '#4a5468'); p.line(92, 16, 106, 16, '#4a5468'); p.light(98, 13);
+      p.shuttle(14, 34, false);
+    } },
+    /* The Drowned Beacon on Tessaly IV: a spire standing in black water in
+       the fog, drowned trees, and three tall shapes watching from the shallows. */
+    mire: { time: 'dawn', draw: function (p) {
+      p.sky(26).ridge(28, 5, '#4a5a5a').ground(34);
+      for (var y = 34; y < H; y++) for (var x = 0; x < W; x++) p.put(x, y, dith(x, y, 0.3) ? '#2a3a3e' : '#1a2a2e');
+      for (var i = 0; i < 16; i++) { var tx = p.r() * W, g = 30 + p.r() * 10; if (Math.abs(tx - 64) > 14) p.tree(tx, g, 8 + Math.floor(p.r() * 8), i % 2 ? '#1e3226' : '#26382c'); }
+      p.spire(64, 38, 32, 5, '#7ae0c8');
+      for (var r = 0; r < 20; r++) p.put(64 + (p.r() - 0.5) * 18, 39 + p.r() * 3, '#6a8a8a');
+      [[44, 38], [50, 39], [82, 38]].forEach(function (t) { p.rect(t[0], t[1] - 9, t[0] + 1, t[1] - 4, '#b8c4bc'); p.line(t[0], t[1] - 4, t[0] - 2, t[1], '#8a968e'); p.line(t[0] + 1, t[1] - 4, t[0] + 3, t[1], '#8a968e'); p.put(t[0], t[1] - 8, '#7ae0c8'); });
+      for (var f = 0; f < 3; f++) for (var x2 = 0; x2 < W; x2++) if (dith(x2, 24 + f * 5, 0.35)) p.rect(x2, 24 + f * 5, x2, 25 + f * 5, '#9aa8a8');
+    } },
+    /* Into the Warren: tunnels under a world nobody has charted, cut smooth,
+       turrets in the walls, and the company's lights going in. */
+    warren: { time: 'under', draw: function (p) {
+      p.sky(48);
+      for (var x = 0; x < W; x++) {
+        var top = 10 + 3 * Math.sin(x / 11), bot = 36 + 2 * Math.sin(x / 13 + 2);
+        for (var y = 0; y < top; y++) p.put(x, y, '#2a2418');
+        for (var y2 = Math.floor(bot); y2 < H; y2++) p.put(x, y2, dith(x, y2, (y2 - bot) / 10) ? '#14100a' : '#2a2418');
+        if (x % 16 === 0) for (var yy = Math.floor(top); yy < bot; yy++) if (dith(x, yy, 0.4)) p.put(x, yy, '#3a3020');
+      }
+      [[40, 22], [76, 18], [104, 26]].forEach(function (t) { p.disc(t[0], t[1], 2.5, '#6a5a3a'); p.glow(t[0], t[1], 6, '#e0a040', 0.6); p.put(t[0], t[1], '#ffe0a0'); });
+      for (var i = 0; i < 26; i++) for (var j = -Math.floor(i / 3); j <= Math.floor(i / 3); j++) if (dith(8 + i, 28 + j, 0.5 - i / 60)) p.put(8 + i, 28 + j, '#c8c0a0');
+      p.people(4, 34, 3, '#050407', 3); p.light(6, 28, '#fff2c0');
+    } },
+    /* Kerrigan's docks at dusk: cranes over the basin, warehouses, and Sable's
+       tanks drawn up in front of the one that matters. */
+    docks: { time: 'dusk', draw: function (p) {
+      p.sky(24).ridge(28, 4, p.t.far).ground(36);
+      for (var y = 28; y < 36; y++) for (var x = 0; x < W; x++) p.put(x, y, dith(x, y, 0.4) ? '#3a3448' : '#2a2638');
+      p.crane(20, 30, 22, 14, '#4a4048'); p.crane(102, 30, 20, 12, '#4a4048');
+      p.building(40, 30, 12, 36, '#3a3240', { lit: 0.2 }); p.rect(50, 30, 58, 36, '#1a1418'); p.building(76, 18, 8, 36, '#342c3a', { lit: 0.4 });
+      [[46, 41], [58, 42]].forEach(function (t) { p.rect(t[0], t[1] - 3, t[0] + 8, t[1] - 1, '#4a5040'); p.rect(t[0] + 2, t[1] - 5, t[0] + 5, t[1] - 4, '#5a6048'); p.rect(t[0] + 5, t[1] - 5, t[0] + 10, t[1] - 5, '#3a4032'); p.put(t[0] + 1, t[1], '#111'); p.put(t[0] + 7, t[1], '#111'); });
+      p.light(54, 29, '#ffd27a'); p.people(90, 41, 4, '#141016', 3);
+    } },
+    /* The docking ring of Kerrigan's orbital: the curve of the ring against
+       the stars, the planet below, a ship docked and another coming in. */
+    dockring: { time: 'night', draw: function (p) {
+      p.rect(0, 0, W - 1, H - 1, '#04050c'); p.starfield(70);
+      for (var y = 32; y < H; y++) for (var x = 0; x < W; x++) { var d = Math.hypot(x - 64, y - 120); if (d < 90) p.put(x, y, d > 87 ? '#7a9ac8' : dith(x, y, (90 - d) / 40) ? '#2a3a5a' : '#3a5a7a'); }
+      for (var x2 = 0; x2 < W; x2++) { var ry = 18 + Math.pow((x2 - 64) / 64, 2) * 6; p.rect(x2, ry, x2, ry + 4, x2 % 10 < 2 ? '#5a5a66' : '#4a4a56'); if (x2 % 12 === 6) p.light(x2, ry - 1, '#ffd27a'); }
+      p.shuttle(40, 12, false); p.shuttle(92, 8, true);
+      p.people(56, 22, 5, '#0a0a10', 3);
+    } }
+  };
+  Object.keys(TRAIL).forEach(function (k) { SCENES[k] = TRAIL[k]; });
+
   // a scene's grid, drawn
   function pixels(scene, time) {
     var s = SCENES[scene];
