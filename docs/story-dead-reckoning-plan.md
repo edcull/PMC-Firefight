@@ -106,6 +106,14 @@ turrets.** The Crocks flew their craft home when they left, and the teleport
 network answers only to a Crock's mind. The Hashamer fight on foot, behind a few
 defensive turrets they can still keep running.
 
+**They have names.** Everywhere else an Esh-Aven is one of a squad and nothing
+more: the game counts their dead and does not name them. The Hashamer named
+themselves when their masters left, in the masters' manner, as a thing done and
+a place held: *Seven-Holds-the-Staff*, *Keeps-the-Ridge*, *Last-Down-the-Road*.
+It is the first thing they will tell the company about themselves, and the
+reason they ask that their dead be counted by name. So every Hashamer Esh-Aven
+is named, and every one lost is remembered by name, in the battle and after it.
+
 **Why they will work with a PMC.** Three reasons, and the story tells all three:
 
 - **They know what the company is.** The Esh-Aven have only ever fought other
@@ -380,7 +388,8 @@ them, so that when the village asks for help the request makes sense:
 | *The Esh-Aven's thanks* | The road they remember, and what they fear at the end of it: the price is a promise. | The event, and its options. |
 | *The Speaker* | The Amt's Alpha calls them "*[our lost hands]*", and asks the company to return them. | The Parley's conversation; with `eshaven_promise`, the company's answer is written for it. |
 | *Recall* | If the Quiet wakes, the Esh-Aven allies stop, mid-battle, and turn towards the towers. | A battle voice (`wave`), and the allies walk (as hired allies do), unless `eshaven_promise` was kept. |
-| The epilogue | Whether the Hashamer were called home, or are still on their world, free. | An epilogue line, by `eshaven_promise`, `promise_broken` and the ending. |
+| After every battle they fight in | Who fell, by name. The crested one asks the company to say the names. | The ally losses on the report, by name; a line in the debrief (`{fallen:hashamer}`, the names of the Hashamer lost in the last battle). |
+| The epilogue | Whether the Hashamer were called home, or are still on their world, free; and the names of their dead who fell beside the company. | An epilogue line, by `eshaven_promise`, `promise_broken` and the ending, and the Hashamer's roll of the fallen. |
 
 *The Mimics*' opening conversation, as it would be written (`talk` on
 `mimics.brief`):
@@ -392,6 +401,8 @@ them, so that when the village asks for help the request makes sense:
 > **The commander:** We're a company, yes. Who are you?
 >
 > **The crested one:** We are Hashamer. We are Esh-Aven. Our masters went home and did not take us. We kept their war, because no one told us to stop.
+>
+> **The crested one:** I am Seven-Holds-the-Staff. Our masters had names, and when they went we took names too. If we fall beside you, say them.
 >
 > **The crested one:** The hunters with the coin come for our young. They will sell them to the towers. No one else will fight beside us. You fight beside anyone. Fight beside us.
 >
@@ -444,7 +455,9 @@ each time, they want a share, and they cannot be trusted with the prize.
   company's own half.
 - **Xenotripod allies are the other way about.** They never ask for money and
   never walk for it. The Esh-Aven's price is the promise (*The Esh-Aven's
-  thanks*), and it is the one thing they hold the company to. They leave if relics are taken by force in front of them,
+  thanks*), and it is the one thing they hold the company to. They are the same
+  people from battle to battle, by name, and they remember who the company let
+  die. They leave if relics are taken by force in front of them,
   and they do not come back while Alarm is rising.
 
 Their events (one each, after a battle they fought in):
@@ -606,8 +619,8 @@ filler to fit the company, changes by flag. What is new:
   Gammas, Deltas and Epsilons, at the battle's Tier) with `skin: 'eshaven'` on
   the force: the same numbers and the same rules, Mental Projection included,
   but every trooper drawn as an Esh-Aven, named as one ("Esh-Aven Alpha
-  troopers"), and counted as one when losses are counted (the `eshaven` pool,
-  not `crocks`). **No aviation and no teleport turrets**: their force draws only
+  troopers"), and in the `eshaven` pool (not `crocks`) when losses are counted.
+  **Unlike every other Esh-Aven, they are named, one by one** (below). **No aviation and no teleport turrets**: their force draws only
   on the trooper castes and defensive turrets (and at most one turret,
   as the archetype already has it), and no change, filler or Alarm rule may add
   a craft or a teleport turret to it. The defensive turrets are machines and keep
@@ -679,7 +692,9 @@ up. Jumps cost kUC (a decision, section 8), which side contracts pay for.
 | **Xenotripods in a story** | The leader for the Tier (an Alpha), turrets placed as the engine places them, doctrines on B, and the words for the dossier (`describeForce`: "a tribe, mostly Esh-Aven, with turrets"). | `levers.js` (`KINDS.troops`, `describeForce`), `campaign.js` `commandKey` |
 | **Xenotripod allies** | Allies of the `xeno` faction on side A. Mental Projection and Limited Senses follow the units, whichever side; allied turrets are placed in side A's zone. | `storybattle.js` `storyUnits`, `xeno.js` (a check, not a change) |
 | **Unit groups left out** | `without: [groups]` on a written force: no core, optional, filler or change may bring in a unit of those groups (a change that would is skipped, and the validator warns). | `levers.js` `buildForce` |
-| **A force reskinned: the Esh-Aven** | `skin: 'eshaven'` on a written force (enemy or allies) puts `u.skin` on each unit it makes. Nothing in the rules reads it but the loss count: a skinned unit's models go in the `eshaven` pool and are counted, not named, as Epsilons' already are. The view reads it: every trooper art key maps to an Esh-Aven figure in that caste's kit, and the unit's name says Esh-Aven. Machines keep their own art. | `storybattle.js` `storyUnits` (the skin onto the unit); `rules.js` `poolOf` / `campaign.js` (the count); `iso-troops.js` (the art map); `levers.js` (the dossier words: "a host of Esh-Aven") |
+| **A force reskinned: the Esh-Aven** | `skin: 'eshaven'` on a written force (enemy or allies) puts `u.skin` on each unit it makes. Nothing in the rules reads it but the losses: a skinned unit's models go in the `eshaven` pool, and are **named** (below), not counted as Epsilons' are. The view reads it: every trooper art key maps to an Esh-Aven figure in that caste's kit, and the unit's name says Esh-Aven. Machines keep their own art. | `storybattle.js` `storyUnits` (the skin onto the unit); `rules.js` `poolOf` / `campaign.js` (the count); `iso-troops.js` (the art map); `levers.js` (the dossier words: "a host of Esh-Aven") |
+| **Named Esh-Aven** | `R.counted(u)` makes the swarm and the Esh-Aven a count, not a roll of names; a unit with `u.named` (set by the Hashamer's skin) is left out of that, so the engine musters its men as it does a company's (`musterMen`) from an Esh-Aven name list (compound names: a deed and a place, *Keeps-the-Ridge*), and the report lists each one lost by name, the turn and how. | `rules.js` `counted`, `musterMen` and a name list; `endphase.js` `casualtyList` (no change: it already names any unit not counted) |
+| **The Hashamer's roll** | The Esh-Aven who fight beside the company are the same people each time. The story keeps them: `story.allies.hashamer`, each unit with its named men. The battle is given them (`cfg.story.units.A[i].men`: the names, and who is wounded) instead of fresh ones; after it, the report's ally losses take the dead off the roll, and new Esh-Aven, named, fill the ranks the next time (the Hashamer's Enhanced Genetic Memory: what the fallen knew, the new ones remember). | `story.js` (the roll, read from the report as `resolveBattle` reads grades), `levers.js` `toCfg`, `storybattle.js` `storyUnits` (the names onto the units) |
 | **Hired allies who answer back** | An ally order can be refused: with the hired company's Trust low, `giveAllyOrder` puts a demand (a kUC price) in place of the order, and the allies' card offers to pay it. Their answer is a line in their voice (`allyVoice`, a new `demand` set). | `storybattle.js` `giveAllyOrder`, `allyAnswer`; `panels.js` |
 | **Allies who walk** | At an End phase, hired allies that have lost half their units (or that came with Trust −2 or lower) leave the table: extraction for allies, which *Deep Contract*'s extraction already does for side A units, with the allies' line said. The report marks them `walked`, and the story reads it (`{ allies: 'walked' }`). | `storybattle.js` (a step in `storyEndPhase`), the report |
 | **The Turn** | No side switches sides in the middle of a battle: the engine has no such thing, and it is not built. The betrayal comes before the battle, as the *ambush* variant sprung from inside the company's half (`variant: { ambush: 'inside' }`: side B sets up anywhere in side A's half, more than 6" from its units). | `scenarios.js` `ambushed` |
@@ -776,7 +791,9 @@ The same tests, run on both stories:
   Sh'kar a teleport turret); and every Hashamer trooper, enemy or ally, skinned
   as an Esh-Aven, with the same profile as the unskinned unit and its losses in
   the `eshaven` pool; and no Hashamer force, at any Tier or Alarm, with a craft
-  or a teleport turret in it.
+  or a teleport turret in it. Every Hashamer Esh-Aven named, each one lost in a
+  battle on the report by name, and the roll carried to the next battle: the
+  dead gone from it, the living back with the same names, new ones named.
 - **`storyhired.js`** (new): nobody for hire before chapter 4, and each hire
   option behind the flag that opens it; a hired company's Price rising and falling, a
   demand paid and refused, an order refused and paid for, the allies walking at
