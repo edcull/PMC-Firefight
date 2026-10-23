@@ -416,6 +416,140 @@
       for (var x2 = 0; x2 < W; x2++) { var ry = 18 + Math.pow((x2 - 64) / 64, 2) * 6; p.rect(x2, ry, x2, ry + 4, x2 % 10 < 2 ? '#5a5a66' : '#4a4a56'); if (x2 % 12 === 6) p.light(x2, ry - 1, '#ffd27a'); }
       p.shuttle(40, 12, false); p.shuttle(92, 8, true);
       p.people(56, 22, 5, '#0a0a10', 3);
+    } },
+    /* ---------- the second half (phase 5c) ---------- */
+    /* The Hollin Shelf: a high plateau under a thin bright sky, peaks beyond,
+       Kestrel's dropships down and the convoy's cars crawling for them. */
+    hollin: { time: 'day', draw: function (p) {
+      p.sky(26).ridge(24, 10, '#8a92a8', 1.4).ridge(30, 4, '#6a7088').ground(34);
+      for (var k = 0; k < 9; k++) { var bx = 6 + p.r() * 116, by = 35 + p.r() * 10; p.disc(bx, by, 1.5 + p.r() * 2, '#5a5e6a'); }
+      p.shuttle(98, 26, false); p.shuttle(112, 14, true);
+      p.truck(30, 40, '#6a6a5a', true); p.truck(46, 41, '#6a6a5a', true); p.truck(62, 40, '#6a6a5a', true);
+      p.rect(14, 33, 22, 36, '#5a5048'); p.rect(15, 31, 21, 32, '#4a4038');
+    } },
+    /* The fuel depot on Ilya: scrub to the horizon, one building and its tanks,
+       and the hills to the east where nothing moves. */
+    ilya: { time: 'dusk', draw: function (p) {
+      p.sky(30).ridge(30, 5, p.t.far).ground(35);
+      p.building(48, 18, 8, 36, '#4a4238', { lit: 0.5 });
+      [70, 80].forEach(function (x) { for (var y = 0; y < 8; y++) p.rect(x, 36 - y, x + 7, 36 - y, y % 3 ? '#6a6458' : '#5a544a'); });
+      for (var i = 0; i < 30; i++) p.put(p.r() * W, 36 + p.r() * 11, '#5a6a3a');
+      p.light(57, 27, '#ffcf6a'); p.light(120, 25, '#ff4a3a');
+    } },
+    /* The Quiet's landing field: towers in the fog, faintly lit, and the field
+       between them dug in from end to end. */
+    quietfield: { time: 'dawn', draw: function (p) {
+      p.sky(28).ground(36);
+      [[12, 30], [30, 24], [96, 26], [116, 32]].forEach(function (t) { p.spire(t[0], 36, t[1], 3, '#ffe08a'); });
+      for (var f = 0; f < 4; f++) for (var x = 0; x < W; x++) if (dith(x, 18 + f * 5, 0.3)) p.rect(x, 18 + f * 5, x, 19 + f * 5, '#c8c4b0');
+      for (var b = 0; b < 7; b++) p.rect(40 + b * 7, 38, 44 + b * 7, 39, '#4a4438');
+      p.people(46, 37, 6, '#14120e', 4);
+    } },
+    /* The fog on the Quiet, waking: every tower bright, and the air full of
+       light where they come through. */
+    quietfog: { time: 'night', draw: function (p) {
+      p.sky(28).ground(36);
+      [[10, 32], [34, 26], [60, 34], [90, 28], [118, 30]].forEach(function (t) { p.spire(t[0], 36, t[1], 3, '#ffe08a'); p.glow(t[0], 36 - t[1] * 0.55, 10, '#ffe08a', 0.5); });
+      for (var k = 0; k < 8; k++) { var gx = 20 + p.r() * 90, gy = 22 + p.r() * 12; p.glow(gx, gy, 4, '#8ae0ff', 0.7); p.put(gx, gy, '#ffffff'); }
+      p.shuttle(108, 36, true); p.people(70, 41, 6, '#06060a', 3);
+    } },
+    /* The Brannock pass: rock walls, fog, and the Ulvar's shield domes across
+       it like soap bubbles of light. */
+    brannock: { time: 'day', draw: function (p) {
+      p.sky(30).ridge(16, 6, '#5a6070', 1.6).ground(36);
+      for (var x = 0; x < 30; x++) p.rect(x, 10 + Math.abs(Math.sin(x / 5)) * 4, x, 36, '#4a5060');
+      for (var x2 = 98; x2 < W; x2++) p.rect(x2, 12 + Math.abs(Math.sin(x2 / 4)) * 3, x2, 36, '#4a5060');
+      [[46, 36, 9], [64, 36, 11], [82, 36, 9]].forEach(function (d) {
+        for (var a = 0; a <= 64; a++) { var t = Math.PI * a / 64; p.put(d[0] + Math.cos(t) * d[2], d[1] - Math.sin(t) * d[2], '#a8c4ff'); }
+        p.glow(d[0], d[1] - d[2] * 0.4, d[2], '#8ab0ff', 0.35); p.rect(d[0] - 1, d[1] - 3, d[0] + 1, d[1], '#a8b0c8');
+      });
+      for (var f = 0; f < W; f++) if (dith(f, 26, 0.35)) p.rect(f, 26, f, 27, '#b8c0c8');
+    } },
+    /* The camp on Sedra II: tents and a mast on open plain, and the air round
+       it folding into light. */
+    sedra: { time: 'night', draw: function (p) {
+      p.sky(32).ridge(32, 3, p.t.far).ground(36);
+      [[40, 40], [52, 41], [64, 40], [76, 41]].forEach(function (t) { for (var k = 0; k < 4; k++) p.rect(t[0] - 4 + k, t[1] - k, t[0] + 4 - k, t[1] - k, '#4a4a3a'); });
+      p.rect(58, 26, 58, 38, '#3a3a3a'); p.light(58, 25, '#ff4a3a');
+      [[20, 30], [96, 28], [108, 36], [30, 40]].forEach(function (g) { p.glow(g[0], g[1], 6, '#7ae0c8', 0.7); p.disc(g[0], g[1], 2, '#c8fff0'); });
+      p.people(48, 42, 5, '#06060a', 3);
+    } },
+    /* A Hashamer village: low stone houses at the desert's edge, and on the
+       ridge above, Brass Ledger's trucks. */
+    hashamer: { time: 'day', draw: function (p) {
+      p.sky(28).ridge(26, 6, '#c8a878').ground(36);
+      [[30, 10, 6], [44, 9, 7], [58, 11, 5], [72, 8, 6]].forEach(function (b) { p.building(b[0], b[1], b[2], 36, '#a8906a', { lit: 0, roof: 'flat' }); });
+      p.truck(96, 22, '#5a4a3a', false); p.truck(110, 21, '#5a4a3a', false);
+      for (var k = 0; k < 5; k++) p.rect(97 + k * 3, 17, 97 + k * 3, 19, '#2a2a2a');
+      p.people(36, 38, 6, '#3a3a2a', 4);
+    } },
+    /* The lake on Orlo: still water, grass, and on the far shore an Alpha by
+       its pylon, waiting. */
+    orlo: { time: 'dawn', draw: function (p) {
+      p.sky(26).ridge(26, 3, p.t.far).ground(34);
+      for (var y = 28; y < 36; y++) for (var x = 10; x < 118; x++) if (Math.abs(x - 64) < 54 - (y - 28) * 2) p.put(x, y, dith(x, y, 0.25) ? '#8aa8c0' : '#6a8aa8');
+      p.rect(92, 16, 93, 27, '#c8c0a0'); p.glow(92, 18, 5, '#ffe08a', 0.6);
+      p.rect(86, 20, 87, 25, '#d8c890'); p.line(86, 25, 84, 28, '#b8a870'); p.line(87, 25, 89, 28, '#b8a870'); p.put(86, 21, '#ffe08a');
+      p.people(30, 40, 4, '#14181a', 3);
+    } },
+    /* The beacon on Tessaly IV, lit: the spire blazing in the fog, and the
+       company in the shallows round it. */
+    beaconlit: { time: 'night', draw: function (p) {
+      p.sky(26).ridge(28, 5, '#2a3a3a').ground(34);
+      for (var y = 34; y < H; y++) for (var x = 0; x < W; x++) p.put(x, y, dith(x, y, 0.3) ? '#1a2a2e' : '#10181c');
+      for (var i = 0; i < 14; i++) { var tx = p.r() * W, g = 30 + p.r() * 8; if (Math.abs(tx - 64) > 16) p.tree(tx, g, 8 + Math.floor(p.r() * 6), '#14241c'); }
+      p.spire(64, 38, 32, 5, '#7ae0c8'); p.glow(64, 20, 20, '#7ae0c8', 0.55);
+      p.people(44, 40, 5, '#06080a', 3);
+    } },
+    /* Umber's refinery belt under a toxic sky: stacks, pipe-runs, and three
+       trucks on the road through it. */
+    umber: { time: 'dusk', draw: function (p) {
+      p.sky(26).ridge(28, 4, '#4a4a2a').ground(36);
+      [[14, 20], [26, 26], [96, 22], [110, 18]].forEach(function (s2) { p.rect(s2[0], 36 - s2[1], s2[0] + 3, 36, '#3a3a32'); p.smoke(s2[0] + 1, 36 - s2[1] - 2, 5, 1, '#7a7a4a'); });
+      p.lattice(40, 36, 16, 14, '#4a4a40'); p.rect(56, 30, 92, 31, '#5a5a48');
+      p.truck(50, 42, '#4a5040', true); p.truck(66, 43, '#4a5040', true); p.truck(82, 42, '#4a5040', true);
+    } },
+    /* Tarn's refinery yard: sheds and a cracking tower, and the Ninth Lance
+       waiting by the gate with paperwork. */
+    tarn: { time: 'night', draw: function (p) {
+      p.sky(28).ridge(30, 4, p.t.far).ground(36);
+      p.building(10, 20, 10, 36, '#2e2a34', { lit: 0.3 }); p.building(96, 22, 9, 36, '#2e2a34', { lit: 0.3 });
+      p.lattice(56, 36, 10, 24, '#3a3640'); p.light(61, 11, '#ff4a3a');
+      p.rect(40, 34, 42, 36, '#4a4450'); p.rect(80, 34, 82, 36, '#4a4450'); p.rect(42, 34, 80, 34, '#3a3440');
+      p.people(66, 41, 5, '#2a2238', 3);
+    } },
+    /* The wreck of the Morrow on Pell: a survey ship on her side in a gully
+       under a yellow sky, and Sable's armour round her. */
+    wreck: { time: 'day', draw: function (p) {
+      p.sky(28).ridge(26, 6, '#7a7040').ground(36);
+      for (var x = 34; x < 96; x++) { var top = 26 + Math.pow((x - 64) / 30, 2) * 8; p.rect(x, top, x, 38, x % 9 < 1 ? '#4a4a48' : '#6a6a64'); }
+      p.crack(60, 28, 9, '#1a1a18'); p.rect(70, 30, 76, 34, '#2a2a28');
+      [[18, 40], [108, 41]].forEach(function (t) { p.rect(t[0], t[1] - 3, t[0] + 8, t[1] - 1, '#4a5040'); p.rect(t[0] + 2, t[1] - 5, t[0] + 5, t[1] - 4, '#5a6048'); });
+      for (var f = 0; f < W; f++) if (dith(f, 14, 0.3)) p.put(f, 14, '#c8b860');
+    } },
+    /* Cold Sites on Kasimir: ruins half buried in a desert that moves. */
+    coldsites: { time: 'dusk', draw: function (p) {
+      p.sky(28).ridge(28, 4, '#a88a5a').ground(34);
+      [[30, 8, 10], [50, 6, 14], [80, 10, 8], [98, 6, 12]].forEach(function (r) { p.rect(r[0], 36 - r[2], r[0] + r[1], 36, '#7a6a4a'); p.rect(r[0] + 2, 36 - r[2] + 3, r[0] + r[1] - 2, 36 - r[2] + 5, '#3a3020'); });
+      for (var y = 34; y < H; y++) for (var x = 0; x < W; x++) if (dith(x + y, y, 0.25)) p.put(x, y, '#c8a870');
+      for (var k = 0; k < 6; k++) p.put(40 + k * 9, 40 + (k % 2), '#e0a040');
+    } },
+    /* The Vault on Halcyon: a bank tower in a city of banks, lit at every
+       window, and the dark door at its foot. */
+    vault: { time: 'night', draw: function (p) {
+      p.sky(30).ground(38);
+      [[4, 14, 26], [20, 10, 18], [92, 12, 22], [108, 16, 28]].forEach(function (b) { p.building(b[0], b[1], b[2], 38, '#1e2230', { lit: 0.6 }); });
+      p.building(48, 30, 34, 38, '#2a2e40', { lit: 0.8 }); p.rect(58, 32, 69, 38, '#0a0a10'); p.light(63, 31, '#ffcf6a');
+      p.people(56, 41, 5, '#2a2238', 3);
+    } },
+    /* The Spire on the Quiet: the tallest tower, sealed and humming, with its
+       generators burning in bands all the way up. */
+    spire: { time: 'night', draw: function (p) {
+      p.sky(30).ground(38);
+      p.spire(64, 38, 38, 8, '#ffe08a');
+      for (var b = 0; b < 5; b++) p.glow(64, 34 - b * 6, 4, '#ffb04a', 0.6);
+      p.spire(26, 38, 20, 3, '#ffe08a'); p.spire(104, 38, 24, 3, '#ffe08a');
+      p.people(40, 42, 6, '#06060a', 3);
     } }
   };
   Object.keys(TRAIL).forEach(function (k) { SCENES[k] = TRAIL[k]; });

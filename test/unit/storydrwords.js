@@ -114,6 +114,30 @@ ok('the patron is a man nobody sees: Lucan Vane, on the line, half his face in s
   ok('...nor any side contract before the second half', sideJobs.every((j) => j.if && JSON.stringify(j.if).indexOf('"gte":5') >= 0 || JSON.stringify(j.if || {}).indexOf('played') >= 0), sideJobs.map((j) => j.id).join(', '));
   ok('the second half opens on the name: Morrow names them, and it is out', /Xenotripods/.test(dr._chapters.fault.intro));
 }
+{
+  // the second half's voices (phase 5c)
+  const second = Object.keys(dr._chapters).filter((id) => dr._chapters[id].half === 2 && dr._chapters[id].nodes.some((n) => n.type === 'battle'));
+  const sb = [].concat(...second.map((id) => dr._chapters[id].nodes.filter((n) => n.type === 'battle')));
+  ok('every chapter of the second half opens on a conversation', second.every((id) => (dr._nodes[id + '.brief'] || {}).talk && dr._nodes[id + '.brief'].talk.length >= 3),
+    second.filter((id) => !((dr._nodes[id + '.brief'] || {}).talk)).join(', '));
+  ok('...every battle of it has its own lines, and every side it fights its own', sb.every((n) => TALK.battles[n.id]) && sb.every((n) => !n.enemy.side || TALK.sides[n.enemy.side]),
+    sb.filter((n) => !TALK.battles[n.id] || (n.enemy.side && !TALK.sides[n.enemy.side])).map((n) => n.id).join(', '));
+  ok('...the tribes still in brackets, in every head at once', ['ulvar', 'amt', 'shkar', 'mithdu'].every((t) => [].concat(...Object.values(TALK.sides[t])).filter((l) => l.who === t).every((l) => /^\[.*\]$/.test(l.text))));
+  ok('...and the Hashamer fight beside the company with a voice of their own: Seven-Holds-the-Staff', TALK.allies.hashamer && TALK.allies.hashamer.who === 'seven' &&
+    ['report', 'move', 'attack', 'hold', 'clear'].every((o) => TALK.allies.hashamer[o].length));
+  const c = { companies: { A: { name: 'T', kUC: 0, tier: 1, roster: [] } } };
+  S.begin(c, 'dead-reckoning', {});
+  const sp = S.parleyFor(c, { node: 'speaker.battle', enemy: { side: 'amt' } }), cl = S.parleyFor(c, { node: 'collector.battle', enemy: { side: 'lance' } });
+  const reach = (pr) => { const seen = new Set(), go = (id) => { if (seen.has(id) || !pr.steps[id]) return; seen.add(id); pr.steps[id].options.forEach((o) => go(o.next)); }; go(pr.start); return seen; };
+  ok('the Speaker’s talks are written: the Amt, from brackets to words, to an agreement or a fight', sp && sp.them === 'amt' && /^\[/.test(sp.steps.open.say[0].text) &&
+    sp.steps.stones.say.some((l) => !/^\[/.test(l.text)) && reach(sp).has('deal') && reach(sp).has('fight') && sp.steps.deal.end === 'agreed');
+  ok('...and Vane’s last terms, in person: the stones home is one of them', cl && cl.them === 'vane' && reach(cl).has('deal') && reach(cl).has('fight') &&
+    Object.values(cl.steps).some((st) => st.options.some((o) => o.terms.indexOf('relics_returned') >= 0)));
+  c.story.flags.beat_kestrel = true;
+  c.story.chapter = 'claim'; c.story.node = 'claim.brief';
+  const claim = S.view(c).talk || [];
+  ok('...a rival beaten before opens on it: Kestrel, made to look slow', claim.some((l) => /look slow/.test(l.text)) && !claim.some((l) => /great pictures/.test(l.text)));
+}
 ok('the hired companies have their voices: reporting in, and an answer to each order', ['kettle', 'kestrel', 'reavers', 'sable'].every((k) => {
   const v = TALK.allies[k]; return v && people[v.who] && ['report', 'move', 'attack', 'hold', 'clear'].every((o) => v[o] && v[o].length);
 }));
@@ -157,6 +181,13 @@ ok('the second half keeps clear what its scenarios lay themselves: the takeovers
   used('quietfield').every((n) => n.scenario === 'takeover') && used('orlo').every((n) => n.scenario === 'parley') && used('quietfog').every((n) => n.scenario === 'breakout'));
 ok('...and the Strike’s three turrets and the Hold the Line’s beacon are where the map says', MAPS.brannock.objectives.length === 3 && MAPS.beaconlit.objectives.length === 1 &&
   used('brannock').every((n) => n.scenario === 'strike') && used('beaconlit').every((n) => n.scenario === 'holdline'));
+{
+  require('../../src/view/story-scenes.js');
+  const SCN = global.PMCStoryScenes.SCENES;
+  const chs = Object.keys(dr._chapters).filter((id) => dr._chapters[id].nodes.some((n) => n.type === 'battle'));
+  ok('every map has its scene, and every chapter with a battle its card’s picture', Object.keys(MAPS).every((k) => SCN[k]) && chs.every((id) => dr._chapters[id].scene && SCN[dr._chapters[id].scene.place]),
+    Object.keys(MAPS).filter((k) => !SCN[k]).concat(chs.filter((id) => !(dr._chapters[id].scene && SCN[dr._chapters[id].scene.place]))).join(', '));
+}
 ok('each map’s world is its chapter’s', open.every((n) => { const ch = dr._chapters[n._chapter]; const place = n.place || ch.place; return !place || MAPS[n.map].planet === place.kind; }),
   open.map((n) => n.id + ' ' + MAPS[n.map].planet + '/' + ((n.place || dr._chapters[n._chapter].place) || {}).kind).join(', '));
 
@@ -206,7 +237,7 @@ console.log('\nThe star chart');
     c3.story.chapter = 'c1'; c3.story.node = 'c1.battle';
     S.resolveBattle(c3, 'victory');
     ok('Brass Ledger beaten at Vesk: it bears a grudge', c3.story.flags.beat_kettle === true && !c3.story.flags.beat_wraith);
-    const later = { node: 'mimics.battle', enemy: { side: 'kettle' } };
+    const later = { node: 'debts.battle', enemy: { side: 'kettle' } };   // (a battle whose own start is a plain line)
     const said = S.talkFor(c3, later), st0 = said.find((l) => l.on === 'start');
     ok('...and says so next time: Vesk, and personal', st0 && /Vesk/.test(st0.text) && /mine/.test(st0.text), st0 && st0.text);
     ok('...over a battle’s own plain line', /Vesk/.test((S.talkFor(c3, { node: 'c4.battle', enemy: { side: 'kettle' } }).find((l) => l.on === 'start') || {}).text || ''));

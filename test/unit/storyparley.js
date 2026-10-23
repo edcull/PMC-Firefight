@@ -118,7 +118,8 @@ console.log('\nThe other two, and a parley with nothing written');
   c = at('deep-contract', 'showdown.battle', { lantern_mercy: true, truce: true });
   pr = S.parleyFor(c, S.battleSpec(c));
   ok('Last Words: Black Lantern remembers the refinery, and with a truce the miners can be asked after', pr.them === 'actual' && /refinery/.test(textOf(pr, 'open')) && answers(pr, 'offer').some((t) => /miners/.test(t)));
-  c = at('dead-reckoning', 'speaker.battle');
+  // (the Speaker's and Vane's are written now: Debts, talked out instead of fought, is not)
+  c = at('dead-reckoning', 'debts.battle');
   c.story.pending = { scenario: 'parley' };
   pr = S.parleyFor(c, S.battleSpec(c));
   ok('a parley with no conversation written has a plain one: a grievance, a view, an offer, an end', pr && pr.steps.open && pr.steps.offer && pr.steps.deal.end === 'agreed' && pr.steps.fight.end === 'broken');
