@@ -897,6 +897,8 @@
        from within 4" of their walls like any other location. */
     pumphouse: { name: 'Pump house', blocks: true, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
     // a story's Parley: the meeting point, a table under a white flag. Open ground, there to be seen
+    // a town square's fountain: a stone basin round a column and a statue, too tall to see past and no way through
+    fountain: { name: 'Fountain', blocks: true, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
     parleyflag: { name: 'The meeting point', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     // Ambush! (p. 156): the road the enemy column is on — open ground, and nothing stands on it
     road: { name: 'Road', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },

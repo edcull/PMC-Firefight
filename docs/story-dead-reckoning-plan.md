@@ -69,12 +69,17 @@ docking ring.
 **Lot 47 lost** (settled after the rework, from playing it). A defeat at Lot
 47 means Brass Ledger have the log (`log_lost`). The company sees their
 ship loading on Vesk's landing field and decides at once (*The log is
-gone*):
+gone*). It can get the log back now, at a cost, get it back at a later
+mission, or, failing both, rebuild it:
 
 - **Hit their ship** before it lifts: *Taking It Back*, Find and secure with
   the relic on Vesk's landing field (`veskfield`), the log as the relic.
   Carried off, it is the company's again; otherwise it leaves with them.
 - **Have Vane buy it back**: Vane's Trust −2, and Brass Ledger the stronger.
+- **Cut Kettering in on the claim**: no money changes hands. Brass Ledger
+  become partners (`kettle_partner`), which is paid for at the end of the
+  road: they take their share in *Finder's Fee* and come to *The Landing*
+  beside the company. Vane's Trust −1.
 - **Let them run with it, and follow** (`ledger_has_log`): the rivals' lead
   (`theirs` +1, Lead −1). Halloran has only the eleven pages he photographed
   in the arcade.
@@ -82,15 +87,24 @@ gone*):
 While Brass Ledger have it, they sell its pages (the Race's pressure +2,
 and the readings already on sale). It comes back in one of two ways:
 
+- **Taken back at the beacon**: Kettering brings the log to Tessaly IV to
+  sell it to the Reavers digging there (*The private sale*). The company can
+  break up the sale (*The Private Sale*, Find and secure on a mud bank,
+  `mudbank`, the log as the relic), have Vane outbid them (Vane's Trust −1),
+  or let it go through and wait for Kerrigan.
 - **Taken back at the Broker**: on Kerrigan, Lot 47 itself is on the block
   beside the heading, and whoever takes the heading takes the log
   (`theirs` −1).
+- **Never lost for good**: still theirs when the second half opens, Halloran
+  rebuilds it from the lodestones themselves, which have begun to point. The
+  rivals keep the lead it gave them.
 - **Rebuilt on the way**, from the company's own finds with Halloran's
   pages: Wraith Section's stolen copy in their dead drop on the Glass Flats,
   or Morrow's records at Station Thule (Lead +1, and a line in the journal).
 
 Vesk itself is now a settlement at a crossroads, with a market square in
-the middle. Its map's skin (`skin: 'market'`) draws barricades as market
+the middle and a fountain at its heart that blocks the view across the
+square (`fountain`: impassable, blocks sight, cover). Its map's skin (`skin: 'market'`) draws barricades as market
 stalls and crater fields as the market's clutter, and names them so.
 
 The rivals, the race, the Ninth Lance and the second half's threads stand as

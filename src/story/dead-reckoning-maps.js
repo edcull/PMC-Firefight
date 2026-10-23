@@ -27,7 +27,8 @@
 
     /* Vesk Free Port: a settlement at a crossroads, crossed west to east. Paved
        roads from the four quarters meet in the market square in the middle;
-       the auction house stands on its north-west corner, houses and the
+       a fountain stands in the middle of it, too tall to see across; the
+       auction house stands on its north-west corner, houses and the
        arcade round the rest, and market stalls line the square's corners. The
        landing field is beyond the east edge, where Vane's ship waits (Escort).
        Its skin is the market's (`skin`): the barricades are stalls, the craters
@@ -35,8 +36,10 @@
     vesk: {
       name: 'The market square, Vesk Free Port', planet: 'dense', skin: 'market',
       pieces: [
-        // the crossroads: four paved roads, and the square where they meet
-        P(4, 22, 14, 4), P(30, 22, 14, 4), P(22, 0, 4, 18), P(22, 30, 4, 18), P(18, 18, 12, 12),
+        // the crossroads: four paved roads, and the square where they meet, paved round the fountain in its middle
+        P(4, 22, 14, 4), P(30, 22, 14, 4), P(22, 0, 4, 18), P(22, 30, 4, 18),
+        P(18, 18, 12, 3.5), P(18, 26.5, 12, 3.5), P(18, 21.5, 3.5, 5), P(26.5, 21.5, 3.5, 5),
+        R('fountain', 21.5, 21.5, 5, 5),
         // the auction house, the houses and the arcade, a quarter each
         B(6, 4, 10, 7, 'U'), B(31, 3, 9, 6, 'L'), B(6, 37, 8, 7, 'T'), B(15, 40, 5, 5, 'annex'), B(32, 37, 9, 6, 'block'),
         R('wall', 29, 38, 1, 6), R('ruins', 38, 12, 4, 4),
@@ -61,6 +64,22 @@
         { x: 17, y: 16, name: 'The ship’s ramp' },
         { x: 31, y: 21, name: 'The cargo stacks' },
         { x: 21, y: 31, name: 'The customs shed' }
+      ] }
+    },
+
+    /* A mud bank on Tessaly IV, a mile from the beacon: Brass Ledger's ship down
+       in the reeds, the Reavers' boats come to buy, and three places the log
+       could be as the sale is made (Find and secure, the relic). */
+    mudbank: {
+      name: 'The mud bank, Tessaly IV', planet: 'jungle',
+      pieces: [
+        N('woods', 6, 4, 7, 7, 'lobed'), N('woods', 35, 4, 6, 6, 'blob'), N('woods', 6, 37, 6, 7, 'lobed'), N('woods', 35, 38, 6, 6, 'blob'),
+        N('water', 26, 6, 6, 4, 'kidney'), N('deep', 8, 24, 5, 4, 'long'), R('ruins', 38, 22, 4, 4), B(27, 38, 6, 4, 'block')
+      ],
+      sites: { kind: 'searchsite', at: [
+        { x: 17, y: 16, name: 'Kettering’s ship' },
+        { x: 31, y: 21, name: 'The Reavers’ boats' },
+        { x: 21, y: 31, name: 'The tent where they haggle' }
       ] }
     },
 

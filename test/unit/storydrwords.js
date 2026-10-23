@@ -173,12 +173,14 @@ Object.keys(MAPS).forEach((k) => {
 const used = (id) => allBattles.filter((n) => n.map === id);
 ok('the Glass Flats and the Mire put their three places where the map says, for the relic', ['glassflats', 'mire'].every((k) => MAPS[k].sites.at.length === 3 && used(k).every((n) => n.scenario === 'find' && n.variant.relic)));
 {
-  // Vesk as a settlement: paved roads from the four quarters meeting in a square in the middle, stalls round it
+  // Vesk as a settlement: paved roads from the four quarters meeting in a square in the middle, round a fountain
   const roads = MAPS.vesk.pieces.filter((p) => p.kind === 'road' && p.paved);
-  const mid = roads.find((p) => p.x <= 20 && p.x + p.w >= 28 && p.y <= 20 && p.y + p.h >= 28);
-  ok('Vesk is a crossroads: four paved roads and the market square where they meet, in the middle', roads.length === 5 && !!mid &&
-    ['w', 'e', 'n', 's'].every((d) => roads.some((p) => p !== mid && (d === 'w' ? p.x + p.w <= mid.x + 0.01 : d === 'e' ? p.x >= mid.x + mid.w - 0.01 : d === 'n' ? p.y + p.h <= mid.y + 0.01 : p.y >= mid.y + mid.h - 0.01))));
-  ok('...its skin the market’s: stalls for barricades, the market’s clutter for craters, by name too', MAPS.vesk.skin === 'market' &&
+  const fountain = MAPS.vesk.pieces.find((p) => p.kind === 'fountain');
+  const near = (p, q) => p.x <= q.x + q.w + 0.6 && q.x <= p.x + p.w + 0.6 && p.y <= q.y + q.h + 0.6 && q.y <= p.y + p.h + 0.6;
+  ok('Vesk is a crossroads: four paved roads into a paved square in the middle, a fountain at its heart that blocks the view across it',
+    !!fountain && Math.abs(fountain.x + fountain.w / 2 - 24) < 1 && Math.abs(fountain.y + fountain.h / 2 - 24) < 1 && R.TERRAIN.fountain.blocks && R.TERRAIN.fountain.impassable &&
+    roads.filter((p) => near(p, fountain)).length === 4 && ['w', 'e', 'n', 's'].every((d) => roads.some((p) => d === 'w' ? p.x + p.w <= 18.01 && p.y < 24 && p.y + p.h > 24 : d === 'e' ? p.x >= 29.99 && p.y < 24 && p.y + p.h > 24 : d === 'n' ? p.y + p.h <= 18.01 && p.x < 24 && p.x + p.w > 24 : p.y >= 29.99 && p.x < 24 && p.x + p.w > 24)));
+ok('...its skin the market’s: stalls for barricades, the market’s clutter for craters, by name too', MAPS.vesk.skin === 'market' &&
     MAPS.vesk.pieces.filter((p) => p.kind === 'barricade').length >= 6 && R.terrainName({ cfg: { story: { skin: 'market' } } }, 'barricade') === 'Market stalls' &&
     R.terrainName({ cfg: { story: { skin: 'market' } } }, 'crater') === 'Market clutter' && R.terrainName({ cfg: { story: {} } }, 'crater') === 'Rubble and craters');
 }

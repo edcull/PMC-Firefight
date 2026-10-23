@@ -52,7 +52,8 @@
         { who: 'kettering', text: 'No hard feelings, {commander:rank}. Your employer’s log is in my hold, and my hold lifts in an hour. That’s how auctions go, sometimes.' },
         { who: 'vane', text: 'Kettering. Name a figure.' },
         { who: 'kettering', text: 'Mr Vane! An honour. The figure is high, and it goes up every minute you think about it. Or your hired help can come and try the field. I’d rather they didn’t; it’s bad for the paintwork.' },
-        { who: 'reader', text: 'I have the first eleven pages, {commander:rank}. Photographed. If they run, they’ll run where the log points, and we can follow.' }
+        { who: 'reader', text: 'I have the first eleven pages, {commander:rank}. Photographed. If they run, they’ll run where the log points, and we can follow.' },
+        { who: 'kettering', text: 'Or here’s a thought, {commander:rank}, between professionals. No money. A share, at the end of the road, and the log goes back in your reader’s bag tonight. Think it over. Quickly.' }
       ],
 
       // ---- 2. The First Lodestone ----
@@ -88,6 +89,13 @@
         { who: 'hal', text: 'Company! First come, first served, and we came first. The beacon’s our claim. You land one more boat on this island and I sink it.' },
         { who: 'commander', text: 'You’re cutting into something you don’t understand, Hal.' },
         { who: 'hal', text: 'Don’t need to understand it to sell it. Nothing against you, it’s a buyer’s market. But my crew don’t get paid if you get the stone, so you come in, we kill you. Simple as that.' }
+      ],
+
+      'c3.sale': [
+        { who: 'ops', text: 'Ship in the reeds. It’s Brass Ledger’s, from Vesk. The Reavers’ boats are alongside, and there’s a tent lit up between them.' },
+        { who: 'kettering', text: 'Hal, Hal. The price is the price. You want the road to that beacon, it’s in this case, and the case is mine.' },
+        { who: 'hal', text: 'I’m digging the beacon already, Moss. I want to know what’s under it before I pay for the map to it.' },
+        { who: 'reader', text: 'That’s the log, {commander:rank}. That’s our log, on a folding table, in a swamp.' }
       ],
 
       // ---- 4. The Broker ----
@@ -496,6 +504,12 @@
         searched: [{ who: 'ops', text: 'Not here. Crates of tinned fish and somebody’s laundry. Next one!' }],
         found: [{ who: 'ops', text: 'The case! It’s here, it’s the log! Get it off the field!' }],
         guard: [{ who: 'kettering', text: 'They’ve got the case! Five thousand to whoever gets it back on my ship!' }]
+      },
+      'c3s.battle': {
+        start: [{ who: 'kettering', text: 'Not now! Of all the — guard the case! Hal, your boys too, or there’s no sale!' }],
+        searched: [{ who: 'ops', text: 'Not on the boats. Just shovels and somebody’s lunch. Next!' }],
+        found: [{ who: 'ops', text: 'The case! It’s the log! Get it off the bank!' }],
+        guard: [{ who: 'kettering', text: 'That’s my merchandise! Nobody leaves this bank with it!' }]
       },
       'c2f.battle': {
         start: [{ who: 'nine', text: 'Wraith to company on the flats. Last warning. Anyone who lifts a spade gets a round through the visor.' }],

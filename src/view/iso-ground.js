@@ -64,6 +64,7 @@
        under the stalls and the market's clutter, cobbles on the roads. */
     var PAVING = { ramp: ['#4a4640', '#57524a', '#635e55', '#706a60', '#7d776c'], fleck: ['#3a3631', '#8c857a', '#2e2b27'], rim: '#2a2723' };
     var COBBLE = { ramp: ['#3e3b37', '#48443f', '#524e48', '#5c5751', '#66615a'], fleck: ['#2c2a27', '#7a746b', '#34312d'], rim: '#24221f' };
+    FLOOR.fountain = PAVING;
     function skinFloor(r) {
       if (r.market) return PAVING;
       if (r.kind === 'road' && r.paved) return COBBLE;

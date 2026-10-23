@@ -108,7 +108,7 @@ console.log('\nLot 47 lost: Brass Ledger have the log');
   };
   let c = lost();
   ok('lost, the debrief says so: Brass Ledger have the log', /Brass Ledger have the log/.test(global.PMCStoryText['dead-reckoning']['c1.debrief']) && c.story.lastGrade === 'defeat');
-  ok('...and what comes next is about the log: hit their ship, have Vane buy it back, or follow it', S.view(c).id === 'c1.lost' && ['raid', 'buy', 'follow'].every((o) => S.view(c).options.some((x) => x.id === o && x.ok)),
+  ok('...and what comes next is about the log: hit their ship, have Vane buy it back, or follow it', S.view(c).id === 'c1.lost' && ['raid', 'buy', 'cutin', 'follow'].every((o) => S.view(c).options.some((x) => x.id === o && x.ok)),
     S.view(c).id);
   S.choose(c, 'raid');
   ok('hitting their ship: a battle on Vesk’s landing field for the log, carried off or not', S.view(c).type === 'battle' && c.story.node === 'c1r.battle' && S.battleSpec(c).variant.relic && S.battleSpec(c).map === 'veskfield');
@@ -120,6 +120,10 @@ console.log('\nLot 47 lost: Brass Ledger have the log');
   c = lost(); const v0 = c.story.meters.vane;
   S.choose(c, 'buy');
   ok('Vane buying it back: it costs his Trust, and Brass Ledger are the stronger for it', !c.story.flags.ledger_has_log && c.story.meters.vane === v0 - 2);
+  c = lost();
+  S.choose(c, 'cutin');
+  ok('cutting Kettering in on the claim: the log back now, paid for at the end of the road (Brass Ledger are partners)', !c.story.flags.ledger_has_log && !c.story.flags.log_lost &&
+    c.story.flags.kettle_partner === true && c.companies.A.kUC === 0);
   c = lost(); const t0 = c.story.meters.theirs;
   S.choose(c, 'follow');
   ok('following it: the rivals have its pages, and the company only the first eleven', c.story.flags.ledger_has_log === true && c.story.meters.theirs === t0 + 1 &&
@@ -134,6 +138,22 @@ console.log('\nLot 47 lost: Brass Ledger have the log');
   r2.story.chapter = 'c2'; r2.story.node = 'c2t.records';
   S.choose(r2, 'listen');
   ok('...or Morrow’s own records at Station Thule', !r2.story.flags.ledger_has_log);
+  // ...a second chance at the beacon: Kettering has brought it to sell to the Reavers
+  const at3 = () => { const x = lost(); S.choose(x, 'follow'); x.story.chapter = 'c3'; x.story.node = 'c3.brief'; S.proceed(x); return x; };
+  let s3 = at3();
+  ok('at the beacon, a second chance: the private sale, Brass Ledger selling the log to the Reavers', S.view(s3).id === 'c3.sale' && ['raid', 'outbid', 'wait'].every((o) => S.view(s3).options.some((x) => x.id === o)), S.view(s3).id);
+  S.choose(s3, 'raid');
+  ok('...broken up: a battle on the mud bank for the case', S.view(s3).type === 'battle' && s3.story.node === 'c3s.battle' && S.battleSpec(s3).variant.relic && S.battleSpec(s3).map === 'mudbank');
+  S.resolveBattle(s3, { winner: 'A', units: [], turns: 6, story: { relic: 'A' } });
+  ok('...the case carried off: the log is back, and the beacon is next', !s3.story.flags.ledger_has_log && S.view(s3).id !== 'c3s.battle');
+  s3 = at3(); S.choose(s3, 'wait');
+  ok('...or let go: the sale goes through, and Kerrigan is the next chance', s3.story.flags.ledger_has_log === true && s3.story.node === 'c3.contact');
+  const nw = lost(); S.choose(nw, 'follow');
+  ok('...and a company that never had the log back has it rebuilt as the second half begins, from the stones', (() => {
+    nw.story.chapter = 'c4'; nw.story.node = 'c4.interlude';
+    for (let i = 0; i < 12 && nw.story.chapter !== 'fault'; i++) { const v = S.view(nw); if (v.type === 'event') S.choose(nw, v.options.filter((o) => o.ok)[0].id); else S.proceed(nw); }
+    return nw.story.chapter === 'fault' && !nw.story.flags.ledger_has_log && nw.story.journal.some((j) => (j.effects || []).some((e) => /lodestones themselves/.test(e.journal || '')));
+  })(), nw.story.chapter);
   // ...and at the Broker, the log is on the block beside the heading
   c.story.chapter = 'c4'; c.story.node = 'c4.lot'; c.companies.A.kUC = 10;
   ok('...until Kerrigan, where Lot 47 itself is back on the block', /Lot 47 itself/.test(S.render(c, global.PMCStoryText['dead-reckoning']['c4.lot'])));

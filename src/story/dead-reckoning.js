@@ -389,6 +389,8 @@
         { id: 'c1.lost', type: 'event', who: 'kettering', title: 'The log is gone', text: 'Brass Ledger have the log, and a ship on the landing field.', options: [
           { id: 'raid', text: 'Hit their ship before it lifts.', next: 'c1r.battle' },
           { id: 'buy', text: 'Have Vane buy it back.', effects: [{ meter: 'vane', add: -2 }, { meter: 'kettle', add: 1 }, { meter: 'kettle_price', add: 1 }, { flag: 'log_lost', set: false }], next: 'c1.interlude' },
+          // (no money changes hands: the price is paid at the end of the road, where Brass Ledger take their share of the claim)
+          { id: 'cutin', text: 'Cut Kettering in on the claim.', effects: [{ flag: 'kettle_partner' }, { flag: 'kettle_contact' }, { meter: 'kettle_trust', add: 2 }, { meter: 'vane', add: -1 }, { flag: 'log_lost', set: false }], next: 'c1.interlude' },
           { id: 'follow', text: 'Let them run with it, and follow.', effects: [{ meter: 'theirs', add: 1 }, { meter: 'lead', add: -1 }, { flag: 'log_lost', set: false }, { flag: 'ledger_has_log' }], next: 'c1.interlude' }
         ], next: 'c1.interlude' },
         // the log, carried off their ship (the relic variant): back in the company's hands, or gone with Brass Ledger
@@ -465,7 +467,20 @@
 
       { id: 'c3', half: 1, title: 'The Drowned Beacon', place: { system: 'Tessaly', planet: 'Tessaly IV', kind: 'jungle', world: { atmosphere: 'foggy' }, site: 'the Mire' },
         intro: 'Morrow’s beacon is a structure nobody built, half under water, and the Red Reavers are digging at it.', nodes: [
-        { id: 'c3.brief', type: 'brief', text: 'The beacon, in the flooded forest.', next: 'c3.contact' },
+        { id: 'c3.brief', type: 'brief', text: 'The beacon, in the flooded forest.', next: 'c3.route0' },
+        /* The log still Brass Ledger's (c1.lost): they have brought it here, to sell
+           to the Reavers digging at the beacon. A second chance at it, before Kerrigan. */
+        { id: 'c3.route0', type: 'branch', when: [{ if: { flag: 'ledger_has_log' }, next: 'c3.sale' }, { next: 'c3.contact' }] },
+        { id: 'c3.sale', type: 'event', who: 'kettering', title: 'The private sale', text: 'Brass Ledger are selling the log to the Reavers, here.', options: [
+          { id: 'raid', text: 'Break up the sale.', next: 'c3s.battle' },
+          { id: 'outbid', text: 'Have Vane outbid the Reavers.', if: { meter: 'vane', gte: 0 }, why: 'Vane will pay no more for the company’s losses.',
+            effects: [{ meter: 'vane', add: -1 }, { meter: 'kettle', add: 1 }].concat(LOG_BACK), next: 'c3.contact' },
+          { id: 'wait', text: 'Let it go through, and wait for Kerrigan.', effects: [{ meter: 'reavers', add: 1 }], next: 'c3.contact' }
+        ], next: 'c3.contact' },
+        { id: 'c3s.battle', type: 'battle', scenario: 'find', map: 'mudbank', tier: 'max', pl: 1, planet: 'jungle', variant: { relic: true }, enemy: rival('kettle'),
+          on: { success: [{ if: { relic: 'A' }, effects: [{ meter: 'kettle', add: -1 }].concat(LOG_BACK) }, { effects: [{ meter: 'reavers', add: 1 }] }],
+                failure: [{ if: { relic: 'A' }, effects: LOG_BACK }, { effects: [{ meter: 'reavers', add: 1 }] }] }, next: 'c3s.debrief' },
+        { id: 'c3s.debrief', type: 'debrief', text: '{if relic}The log is back.{/if}{if not relic}The sale goes through.{/if}', events: [], next: 'c3.contact' },
         { id: 'c3.contact', type: 'event', who: 'hal', title: 'Claim jumpers', text: 'The Reavers are digging at the beacon.', options: [
           { id: 'storm', text: 'Storm it.', battle: { scenario: 'strike', name: 'Storm the Beacon' }, effects: [{ meter: 'alarm', add: 1 }, { flag: 'beacon_stormed' }, { reveal: 'client_reavers', journal: 'The Red Reavers work for nobody. They are claim jumpers, and sell to whoever buys.' }] },
           { id: 'watch', text: 'Watch first.', battle: { tier: 'max-1' }, effects: [{ meter: 'understanding', add: 1 }, { meter: 'intel', add: 1 }, { meter: 'lead', add: -1 }, { reveal: 'client_reavers', journal: 'The Red Reavers work for nobody. They are claim jumpers, and sell to whoever buys.' }] },
@@ -627,7 +642,8 @@
       ] },
 
       /* ================= the second half: The Long Jump ================= */
-      { id: 'fault', half: 2, counts: false, title: 'The Long Jump', intro: 'Halloran reads the last pages of the log, and Morrow names them at last: Xenotripods, the three-legged ones, who step out of the air. Every newsfeed in the sector has the word by the next jump. From here the company chooses where to go, and what it leaves behind goes on without it.', nodes: [
+      // (the log never lost for good: still Brass Ledger's at the half, Halloran rebuilds it from the stones, which have begun to point)
+      { id: 'fault', half: 2, counts: false, title: 'The Long Jump', onStart: rebuilt('the lodestones themselves, which have begun to point the way'), intro: 'Halloran reads the last pages of the log, and Morrow names them at last: Xenotripods, the three-legged ones, who step out of the air. Every newsfeed in the sector has the word by the next jump. From here the company chooses where to go, and what it leaves behind goes on without it.', nodes: [
         { id: 'fault.brief', type: 'brief', text: 'The trail splits.{if vane_cut_off} Vane has stopped paying.{/if}', next: 'pool' },
         { id: 'pool', type: 'pool', picks: 3, then: 'end' }
       ] },

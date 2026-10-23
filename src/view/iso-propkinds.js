@@ -924,6 +924,46 @@
           edgeLine(g, [pole[0] + a(2.5), pole[1] - a(15.6)], [pole[0] + a(2.3), pole[1] - a(12.3)], '#cfcabd', 1);
           break;
         }
+        /* A town square's fountain: a round stone basin of water with a broad
+           rim, a column rising out of it and a figure on top, and water falling
+           from a bowl half way up. Tall enough to block the view across the square. */
+        case 'fountain': {
+          var fl = lift || 0, fcx = pr.x + pr.w / 2, fcy = pr.y + pr.h / 2, fR = Math.min(pr.w, pr.h) / 2 - 0.1;
+          function FQ(x, y, up) { var q = toScreen(x, y); return [q.x, q.y - fl - (up || 0)]; }
+          function ring(rad, up) { var pts = []; for (var fi = 0; fi < 28; fi++) { var th = fi / 28 * Math.PI * 2; pts.push(FQ(fcx + Math.cos(th) * rad, fcy + Math.sin(th) * rad, up)); } return pts; }
+          var rimH = a(2.2);
+          shadowBlob(g, { x: FQ(fcx, fcy)[0] + a(2), y: FQ(fcx, fcy)[1] + a(1) }, a(fR * 6.2), a(fR * 3.1));
+          // the basin's outer wall, then its rim, then the water inside
+          var outer = ring(fR, 0), top = ring(fR, rimH);
+          for (var fw = 0; fw < 28; fw++) {
+            var n2 = (fw + 1) % 28;
+            poly(g, [outer[fw], outer[n2], top[n2], top[fw]], fw > 3 && fw < 17 ? STONE[2] : STONE[3]);
+          }
+          poly(g, top, STONE[4]);
+          poly(g, ring(fR - 0.35, rimH), '#2c5a6a');
+          poly(g, ring(fR - 0.55, rimH), '#3a7486');
+          var fr2 = rng(pr.seed || 3);
+          for (var fd = 0; fd < 10; fd++) { var fa = fr2() * Math.PI * 2, fdr = fr2() * (fR - 0.7); var fq = FQ(fcx + Math.cos(fa) * fdr, fcy + Math.sin(fa) * fdr, rimH); dot(g, fq[0], fq[1], '#8ac8d8', 1); }
+          // the column, the bowl half way up with water falling from it, and the figure on top
+          var cb = FQ(fcx, fcy, rimH), colH = pr.height - a(6), cw2 = a(2.2);
+          // a stepped plinth, then the column
+          rect(g, cb[0] - a(3.4), cb[1] - a(2.4), a(6.8), a(2.4), STONE[3]); rect(g, cb[0] - a(3.4), cb[1] - a(2.4), a(2.2), a(2.4), STONE[4]);
+          rect(g, cb[0] - cw2, cb[1] - colH, cw2 * 2, colH, STONE[3]);
+          rect(g, cb[0] - cw2, cb[1] - colH, cw2 * 0.7, colH, STONE[4]);
+          rect(g, cb[0] + cw2 * 0.6, cb[1] - colH, cw2 * 0.4, colH, STONE[2]);
+          var bowlY = cb[1] - colH * 0.45;
+          ellipse(g, cb[0], bowlY, a(3.4), a(1.2), STONE[4]);
+          ellipse(g, cb[0], bowlY - a(0.3), a(2.8), a(0.9), '#3a7486');
+          for (var fs = -2; fs <= 2; fs++) edgeLine(g, [cb[0] + fs * a(1.3), bowlY + a(0.6)], [cb[0] + fs * a(1.7), cb[1] - a(0.4)], 'rgba(150,210,225,.55)', 1);
+          // the figure: a cloaked statue with an arm raised, weathered green
+          var sy = cb[1] - colH;
+          rect(g, cb[0] - a(2.6), sy - a(0.8), a(5.2), a(0.8), STONE[4]);
+          rect(g, cb[0] - a(1.7), sy - a(6.4), a(3.4), a(5.6), '#5f7a66');
+          rect(g, cb[0] - a(1.7), sy - a(6.4), a(1.2), a(5.6), '#78947e');
+          ellipse(g, cb[0], sy - a(7.3), a(1.2), a(1.2), '#6a866f');
+          edgeLine(g, [cb[0] + a(1.4), sy - a(5.4)], [cb[0] + a(3.2), sy - a(9.2)], '#5f7a66', 3);
+          break;
+        }
         case 'pumphouse': {
           var pl2 = lift || 0, PH = pr.height;
           box(g, pr, PREFAB, { roof: '#4a4f47', roofEdge: '#5e645a', windows: null, lift: pl2 });
