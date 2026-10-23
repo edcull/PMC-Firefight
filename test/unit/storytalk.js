@@ -132,9 +132,12 @@ console.log('\nThe allies: they report in, and answer their orders');
   ok('without allies, nothing of theirs', !cfg.story.allyVoice && !cfg.story.talk.some((l) => l.on === 'allies'));
   const said2 = [];
   const k2 = Engine.create({ card: (x) => { if (x.talk) said2.push(x); } });
-  kc.mode = 'ai'; k2.start(kc); deployAndStart(k2);
-  for (let i = 0; i < 400 && !said2.length; i++) if (!k2.intent(k2.state().activeSide || 'A', { k: 'step' }).ok) break;
-  ok('in the battle, they report in first, as it opens', said2[0] && said2[0].talk.who === 'portguard' && said2[0].note === rep.text, said2[0] && said2[0].note);
+  kc.mode = 'ai'; k2.start(kc);
+  ok('they report in as the table is laid, before anyone deploys', said2.length === 1 && said2[0].talk.who === 'portguard' && said2[0].note === rep.text && k2.state().phase !== 'battle',
+    said2[0] && said2[0].note + ' (' + k2.state().phase + ')');
+  deployAndStart(k2);
+  for (let i = 0; i < 400 && said2.length < 2; i++) if (!k2.intent(k2.state().activeSide || 'A', { k: 'step' }).ok) break;
+  ok('...once only: the battle opens with the next line', said2.filter((x) => x.talk.who === 'portguard').length === 1);
   const ks = k2.state();
   ks.phase = 'battle'; ks.over = null;
   const before = said2.length;

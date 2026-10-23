@@ -297,7 +297,7 @@
     }
     function talkMoment(on, state) {
       if (on === 'start') return state.turn >= 1;
-      if (on === 'allies') return state.turn >= 1 && !!state.allies;
+      if (on === 'allies') return !!state.allies;
       if (on === 'turn3') return state.turn >= 3;
       if (on === 'kill') return lostOf('B', true).lost >= 1;
       if (on === 'loss') return lostOf('A').lost >= 1;
@@ -310,13 +310,17 @@
       }
       return false;
     }
-    function storyTalk() {
+    /* `setup`: asked once the table is laid and before anyone deploys, when
+       only the allies speak: they report in as the force is placed. */
+    function storyTalk(setup) {
       var sty = story(), state = E.state;
-      if (!sty || !sty.talk || !sty.talk.length || state.phase !== 'battle' || state.over || !state.turn) return;
+      if (!sty || !sty.talk || !sty.talk.length || state.over) return;
+      if (!setup && (state.phase !== 'battle' || !state.turn)) return;
       var said = state.talkSaid = state.talkSaid || {};
       sty.talk.forEach(function (l) {
-        if (said[l.on] || !talkMoment(l.on, state)) return;
-        said[l.on] = state.turn;
+        if (setup && l.on !== 'allies') return;
+        if (said[l.on] != null || !talkMoment(l.on, state)) return;   // (the turn it was said: 0 while setting up)
+        said[l.on] = state.turn || 0;
         say(l, TALK_VOICE[l.who] || null);
       });
     }
