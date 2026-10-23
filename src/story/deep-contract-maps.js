@@ -24,16 +24,26 @@
 
   root.PMCStoryMaps['deep-contract'] = {
 
-    /* The starport: three landing pads, the hangars along the north fence, the
-       control tower, and the terminal the Front came through. */
+    /* The starport: three landing pads, each a marked pad of ferrocrete with
+       its objective in the middle of it; the hangars along the north fence,
+       the control tower with its comms dish, and the terminal the Front came
+       through. A bowser stands on Pad Three and a cargo lifter on Pad One,
+       and cargo is stacked on the pads and on concrete beside them, for
+       cover. */
     starport: {
       name: 'Kessler’s Reach starport', planet: 'industrial',
       pieces: [
-        R('road', 9, 33, 7, 7), R('road', 20.5, 20.5, 7, 7), R('road', 32, 8, 7, 7),
-        B(7, 5, 11, 7, 'block'), B(21, 4, 7, 6, 'annex'), B(32, 33, 10, 7, 'U'),
+        Object.assign(R('road', 7.5, 31.5, 10, 10), { pad: true }), Object.assign(R('road', 19, 19, 10, 10), { pad: true }), Object.assign(R('road', 30.5, 6.5, 10, 10), { pad: true }),
+        B(7, 5, 11, 7, 'block'), Object.assign(B(21, 4, 7, 6, 'annex'), { dish: true }), B(32, 33, 10, 7, 'U'),
         R('bunker', 22, 34, 5, 5),
-        R('wall', 12, 16, 7, 1), R('wall', 30, 21, 1, 6), R('barricade', 17, 28, 4, 1), R('barricade', 30, 28, 4, 1),
-        N('crater', 11, 23, 5, 4, 'blob'), N('crater', 34, 19, 4, 4, 'lobed'), N('ruins', 36, 41, 5, 4)
+        R('wall', 12, 16, 7, 1), R('wall', 30, 21, 1, 6),
+        N('crater', 11, 23, 5, 4, 'blob'), N('crater', 34, 19, 4, 4, 'lobed'), N('ruins', 36, 41, 5, 4),
+        // the pads' support vehicles: a bowser on Pad Three, a cargo lifter on Pad One
+        R('fueltruck', 36.5, 14.5, 2.8, 1.4), R('cargolifter', 8, 38.5, 2.5, 2.5),
+        // cargo for cover, on the pads and on concrete beside them
+        R('crates', 19.5, 19.6, 3, 1.2), R('crates', 26, 27.5, 3, 1.2), R('crates', 31, 7, 1.2, 3), R('crates', 15.8, 37.5, 1.2, 3),
+        Object.assign(R('road', 15, 29.2, 4, 1.8), { slab: true }), R('crates', 15.3, 29.5, 3.4, 1.2),
+        Object.assign(R('road', 30, 27.5, 4, 1.8), { slab: true }), R('crates', 30.3, 27.8, 3.4, 1.2)
       ],
       objectives: [{ x: 12.5, y: 36.5, name: 'Pad One' }, { x: 24, y: 24, name: 'Pad Two' }, { x: 35.5, y: 11.5, name: 'Pad Three' }]
     },

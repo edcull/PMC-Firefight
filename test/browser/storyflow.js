@@ -117,7 +117,7 @@ async function cards(p) {
   await p.waitForTimeout(1200);
   const st = await p.evaluate(() => { const s = window.PMC_STATE && window.PMC_STATE(); return s ? { node: s.cfg.story && s.cfg.story.node, scen: s.cfg.scenario, b: s.units.filter(u => u.side === 'B').length } : null; });
   check('the battle starts with the story’s cfg', st && st.node === 'c1.battle' && st.scen === 'secure' && st.b > 0, JSON.stringify(st));
-  const ground = await p.evaluate(() => { const s = window.PMC_STATE(); return { name: s.scen.name, book: s.scen.bookName, pads: s.terrain.filter((t) => t.kind === 'road').length, header: (document.getElementById('hdr-init') || {}).textContent }; });
+  const ground = await p.evaluate(() => { const s = window.PMC_STATE(); return { name: s.scen.name, book: s.scen.bookName, pads: s.terrain.filter((t) => t.kind === 'road' && t.pad).length, header: (document.getElementById('hdr-init') || {}).textContent }; });
   check('...on the starport, under the mission\u2019s own name', ground.name === 'Hold the Port' && ground.book === 'Secure and control' && ground.pads === 3, JSON.stringify(ground));
   await cards(p);
   // the mission's card (its name, its briefing, the pads by name) put away, to see the ground

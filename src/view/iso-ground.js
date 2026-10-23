@@ -463,11 +463,13 @@
       // lava lies at the bottom of cracks: the rock walls go in over the melt
       terrain.forEach(function (r, ri) { if (r.kind === 'lava' || r.kind === 'ravine') lavaWalls(g, r, seed + ri * 131, r.kind); });
 
-      // the board itself: a slab with a lit top edge and a shadowed lip
+      // the board itself: a slab with a lit top edge and a shadowed lip (not round a station: open space has no edge)
       var nE = toScreen(B.W, 0), nS = toScreen(B.W, B.H), nWt = toScreen(0, B.H);
-      poly(g, [[nWt.x, nWt.y], [nS.x, nS.y], [nS.x, nS.y + LIP], [nWt.x, nWt.y + LIP]], '#221b13');
-      // (the far edges are hidden behind the table's own surface, so only the two near faces are drawn)
-      poly(g, [[nE.x, nE.y], [nS.x, nS.y], [nS.x, nS.y + LIP], [nE.x, nE.y + LIP]], '#181309');
+      if (!terrain.some(function (r) { return r.space; })) {
+        poly(g, [[nWt.x, nWt.y], [nS.x, nS.y], [nS.x, nS.y + LIP], [nWt.x, nWt.y + LIP]], '#221b13');
+        // (the far edges are hidden behind the table's own surface, so only the two near faces are drawn)
+        poly(g, [[nE.x, nE.y], [nS.x, nS.y], [nS.x, nS.y + LIP], [nE.x, nE.y + LIP]], '#181309');
+      }
 
       rand = rng(seed + 11);
 
