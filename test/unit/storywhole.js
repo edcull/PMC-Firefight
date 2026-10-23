@@ -98,11 +98,20 @@ console.log('  (an epilogue: ' + (eps[0] ? eps[0].ending + ': ' + eps[0].ep.line
 console.log('  (battles ' + avg(t.battles) + ' a walk, side contracts ' + (t.sides / N).toFixed(1) + ', kUC at the end ' + avg(t.kUC) + ')');
 
 console.log('\nAt the other difficulties');
+const byDiff = {};
 ['story', 'hard'].forEach((d) => {
   const td = walks(Math.ceil(N / 2), d), n = Math.ceil(N / 2);
+  byDiff[d] = td;
   ok(dc.difficulty[d].name + ': every walk reaches an ending, nothing going wrong', !td.errors.length && !td.endings['(none)'], JSON.stringify(td.endings));
   ok('...and Broken Company stays rare', (td.endings.broken || 0) <= n * 0.15, (td.endings.broken || 0) + ' of ' + n);
 });
 
+/* the difficulties in order: Story leaves the company better off than Hard. A
+   company spends what it has on growing between chapters, so better off is
+   richer or a higher Tier, and never a lower one. */
+const kOf = (td) => +avg(td.kUC), tierOf = (td) => avg(Object.keys(td.tierEnd).reduce((xs, k) => xs.concat(Array(td.tierEnd[k]).fill(+k)), []));
+ok('...and they are in order: a company ends a Story walk better off than a Hard one (richer, or higher in Tier), and never lower in Tier',
+  (kOf(byDiff.story) > kOf(byDiff.hard) || +tierOf(byDiff.story) > +tierOf(byDiff.hard)) && +tierOf(byDiff.story) >= +tierOf(byDiff.hard),
+  'kUC ' + kOf(byDiff.story) + ' / ' + kOf(t) + ' / ' + kOf(byDiff.hard) + ', Tier ' + tierOf(byDiff.story) + ' / ' + tierOf(t) + ' / ' + tierOf(byDiff.hard));
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

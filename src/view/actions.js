@@ -160,6 +160,7 @@
         if (SFX) {
           if (res.kind === 'Initiative') { SFX.dice(); SFX.chime(); }
           else if (res.dice || res.blocks) SFX.dice();
+          else if (beaconRes(res) && SFX.beacon) SFX.beacon();
         }
         clearTimeout(ui.resTimer);
         // straight on to the next one; the card it just wrote stays in the rail
@@ -173,7 +174,10 @@
       el('resolution').hidden = false;
       el('res-continue').addEventListener('click', closeRes);
       if (SFX) {
-        if (res.kind === 'Result') SFX.victory();
+        // a story's voice: Mental Projection (a line in brackets) or a radio line; the beacon as the unknown step out of the air
+        if (res.talk && SFX.mind) { if (/^\[/.test(res.note || '')) SFX.mind(); else SFX.radio(); }
+        else if (beaconRes(res) && SFX.beacon) SFX.beacon();
+        else if (res.kind === 'Result') SFX.victory();
         else if (res.kind === 'Initiative') { SFX.dice(); SFX.chime(); }
         else if (res.dice || res.blocks) SFX.dice();
         else SFX.click();
@@ -266,6 +270,10 @@
       scheduleReturn();
     }
 
+    // the End phase the unknown step out of the air (storybattle.js contacts): the beacon's sound
+    function beaconRes(res) {
+      return res.kind === 'End phase' && (res.list || []).some(function (l) { return /^Contact: \d+ unknown/.test(l.text || ''); });
+    }
     function chipClass(text) {
       if (/Man down/.test(text)) return 'hitchip kill';
       if (/Get down|Ouch|SP/.test(text)) return 'hitchip sp';

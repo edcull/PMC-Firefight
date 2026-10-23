@@ -500,6 +500,31 @@
       [131, 196, 247, 330].forEach(function (f, i) { pad(t + i * 0.18, 2.6 - i * 0.2, 0.06, 'triangle', f, 0.5); });
       pad(t + 0.9, 2.2, 0.05, 'sine', 392, 0.6);
     },
+    /* A story's voices in the battle (actions.js talkHTML): a radio line, a
+       squelch of static and a click; a Xenotripod's Mental Projection, a line
+       in brackets in every head at once, a cluster of detuned notes swelling
+       up from under hearing; and the beacon (unknown contacts stepping out of
+       the air), a deep pulse that beats against itself. */
+    radio: function () {
+      if (!ensure()) return;
+      var t = now();
+      burstOfNoise(t, 0.09, 0.07, 'bandpass', 2200, 0.8);
+      tone(t + 0.08, 0.03, 0.05, 'square', 1400, 1400);
+    },
+    mind: function () {
+      if (!ensure()) return;
+      var t = now();
+      [[110, 0.05], [113, 0.05], [164, 0.035], [233, 0.025], [347, 0.018]].forEach(function (n, i) { pad(t + i * 0.05, 2.2 - i * 0.1, n[1], 'sine', n[0], 0.9); });
+      burstOfNoise(t, 1.6, 0.025, 'lowpass', 260, 0.4, 90);
+    },
+    beacon: function () {
+      if (!ensure()) return;
+      var t = now();
+      pad(t, 2.6, 0.09, 'sine', 55, 0.3);
+      pad(t, 2.6, 0.08, 'sine', 57.5, 0.3);
+      pad(t + 0.2, 2.2, 0.04, 'triangle', 220, 0.6);
+      for (var k = 0; k < 3; k++) tone(t + 0.15 + k * 0.42, 0.3, 0.05, 'sine', 880, 660);
+    },
     victory: function () {
       if (!ensure()) return;
       var t = now();
