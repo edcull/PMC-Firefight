@@ -922,6 +922,9 @@
     return KIT_STORY || (KIT_STORY = root.PMCStoryScreens({
       C: C, R: R, ROMAN: ROMAN, esc: esc, ask: ask, note: note, colourOf: colourOf, save: save, close: close,
       memorialList: memorialList, beginStory: beginStory,
+      // a story battle's force is picked with the contract's own muster (dossier-contract.js)
+      get contract() { return contract; }, set contract(v) { contract = v; },
+      storyForce: function () { return (KIT_CONTRACT || kitContract()).storyForce(); },
       get camp() { return camp; }, get view() { return view; }, set view(v) { view = v; },
       render: function () { render(); }
     }));

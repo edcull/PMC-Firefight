@@ -199,26 +199,28 @@
 
     /* ================= the muster ================= */
 
+    /* The force for a story battle is picked as a contract's is, with the
+       campaign's own muster and add list (dossier-contract.js storyForce): the
+       story's muster sets up E.contract for it, its Battle Tier and Priority
+       Level the story's, and keeps what is the story's own (the role, the edge). */
     function beginMuster() {
       var spec = S().battleSpec(E.camp), co = E.camp.companies.A;
       var tier = L().tierFor(co, { tier: spec.tier, minTier: spec.minTier, maxTier: spec.maxTier });
       var pl = L().plFor(co, tier, spec.levers.pl || spec.pl);
-      var picks = C.pickForce(co, tier, pl, null, { scenario: spec.scenario });
-      muster = { node: spec.node, tier: tier, pl: pl, rids: picks.map(function (e) { return e.rid; }), role: 'A' };
+      muster = { node: spec.node, tier: tier, pl: pl, role: 'A' };
+      E.contract = { side: 'A', tier: tier, pl: pl, tactic: null, scenario: { id: spec.scenario }, story: spec.node,
+        picks: C.pickForce(co, tier, pl, null, { scenario: spec.scenario }) };
     }
-    function picked() {
-      var co = E.camp.companies.A;
-      return muster.rids.map(function (r) { return C.byRid(co, r); }).filter(Boolean);
-    }
+    function picked() { return E.contract ? E.contract.picks : []; }
     function legal() {
       var co = E.camp.companies.A;
       return R.checkArmy(picked().map(function (e) { return R.entryPick(e); }), muster.tier, muster.pl, co.doctrines || [], null);
     }
     function musterView() {
-      if (!muster || muster.node !== E.camp.story.node) beginMuster();
-      var co = E.camp.companies.A, spec = S().battleSpec(E.camp);
-      var h = '<h2>Your force — ' + esc(scenName(spec.scenario)) + '</h2>';
-      h += '<p>Battle Tier ' + ROMAN[muster.tier] + ', Priority Level ' + muster.pl + ': ' + (R.COMPOSITION[muster.tier].points * muster.pl) + ' composition points.</p>';
+      if (!muster || muster.node !== E.camp.story.node || !E.contract || E.contract.story !== muster.node) beginMuster();
+      var spec = S().battleSpec(E.camp);
+      var h = '<h2>Your force — ' + esc(spec.name || scenName(spec.scenario)) + '</h2>';
+      h += '<p class="hint">' + esc(scenName(spec.scenario)) + ' \u00b7 Battle Tier ' + ROMAN[muster.tier] + ', Priority Level ' + muster.pl + ': ' + (R.COMPOSITION[muster.tier].points * muster.pl) + ' composition points.</p>';
       var role = spec.levers.role || spec.role;
       if (role === 'choose') {
         h += '<div class="segs story-role">' + [['A', 'Attack'], ['B', 'Defend']].map(function (r) {
@@ -231,16 +233,11 @@
           return '<button class="lnk' + ((muster.edge || 'west') === r[0] ? ' on' : '') + '" data-go="storyedge" data-e="' + r[0] + '">' + r[1] + '</button>';
         }).join('') + '</div>';
       }
-      var res = legal();
-      h += '<div class="story-roster">' + co.roster.map(function (e) {
-        var p = R.profile(e.key), on = muster.rids.indexOf(e.rid) >= 0, resting = e.restUntil > 0;
-        return '<button class="story-unit' + (on ? ' on' : '') + '"' + (resting ? ' disabled' : ' data-go="storypick" data-rid="' + esc(e.rid) + '"') + '>' +
-          '<span class="ct">' + ROMAN[p ? p.tier : 1] + '</span> ' + esc(e.name) + (resting ? ' <small>resting</small>' : '') + '</button>';
-      }).join('') + '</div>';
-      h += res.ok ? '<p class="hint">A legal army.</p>' : '<p class="warn">' + esc((res.faults || res.errors || ['Not a legal army.']).join(' ')) + '</p>';
-      h += '<div class="story-go"><button class="lnk" data-go="storyauto">Pick for me</button>' +
-        '<button class="start" data-go="storyfight"' + (res.ok ? '' : ' disabled') + '>To battle</button></div>';
-      h += '<p class="camp-foot"><button class="lnk" data-go="story">← Back</button></p>';
+      // the campaign's own force line and muster (its add list, pick for me and clear)
+      var force = E.storyForce(), res = legal();
+      h += force.html;
+      h += '<div class="cacts"><button class="start" data-go="storyfight"' + (res.ok ? '' : ' aria-disabled="true" data-tip="' + esc((res.faults || ['Not a legal army.'])[0]) + '" data-tip-title="Not yet"') + '>To battle</button></div>';
+      h += '<p class="camp-foot"><button class="lnk" data-go="story">\u2190 Back</button></p>';
       return h;
     }
 
@@ -259,6 +256,7 @@
       };
       E.save();
       muster = null;
+      E.contract = null;
       E.close();
       root.PMC_NEWGAME(cfg);
     }
@@ -352,16 +350,10 @@
         case 'storyon': S().proceed(E.camp); after(); return true;
         case 'storyopt': S().choose(E.camp, t.getAttribute('data-o')); after(); return true;
         case 'storyside': S().takeSide(E.camp, t.getAttribute('data-j')); after(); return true;
-        case 'storymuster': muster = null; E.view = 'storymuster'; E.render(); return true;
-        case 'storypick': {
-          var rid = t.getAttribute('data-rid'), i = muster.rids.indexOf(rid);
-          if (i >= 0) muster.rids.splice(i, 1); else muster.rids.push(rid);
-          E.render(); return true;
-        }
-        case 'storyauto': beginMuster(); E.render(); return true;
+        case 'storymuster': muster = null; E.contract = null; E.view = 'storymuster'; E.render(); return true;
         case 'storyrole': muster.role = t.getAttribute('data-r') === 'B' ? 'B' : 'A'; E.render(); return true;
         case 'storyedge': muster.edge = t.getAttribute('data-e') === 'east' ? 'east' : 'west'; E.render(); return true;
-        case 'storyfight': if (legal().ok) fight(); return true;
+        case 'storyfight': if (muster && legal().ok) fight(); return true;
         case 'storyjournal': E.view = 'storyjournal'; E.render(); return true;
         case 'storyrewind':
           E.ask({ kind: 'confirm', title: 'Go back?', text: 'The story and the company go back to how they were then: the dead, the kUC and the EXP with them.',
