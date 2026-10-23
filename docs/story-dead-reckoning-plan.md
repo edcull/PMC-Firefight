@@ -1155,6 +1155,34 @@ In parts, each tested and pushed as it is done:
   reachable, the threads reaching their finales, the finales' forces and the
   pay tuned to its targets.
 
+**Where it stands (5a, 5b).** Done:
+
+- **5a.** *The Long Jump* opens on the name: Halloran reads it out of Morrow's
+  last pages, Vane reprices everything on the line, and the newsfeeds have
+  it. Every page of the second half has its words: each chapter's intro,
+  every page, option and reason, and every battle's name and briefing.
+  - Rivals met again say whether they have been beaten (`{if beat_<id>}`).
+  - Clients still secret stay unnamed.
+  - The Hashamer's dead are said by name (`{fallen:eshaven}`).
+- **5b.** Every open-table battle has its own ground (`mapsPending` is gone):
+  - the Hollin Shelf;
+  - Ilya's fuel depot;
+  - the Quiet's landing field (*The Landing* and *The Collector*) and its fog
+    (*Recall*);
+  - the Brannock pass, with the Strike's three shield turrets;
+  - the camp on Sedra II;
+  - a Hashamer village;
+  - the lake shore on Orlo;
+  - the beacon lit on Tessaly IV, with Hold the Line's pass at the beacon;
+  - Umber's refinery belt;
+  - Tarn's yard.
+
+  Each keeps clear what its scenario lays itself. Each new map was played AI
+  against AI to an end.
+- The second half's maps have no scenes of their own yet: a briefing on one
+  shows none. That goes with 5c.
+- Tested by `storydrwords.js` (61 checks).
+
 ### Phase 6: polish
 Sounds for the Xenotripod battles (Mental Projection lines, the beacon), the
 README's Story mode section, difficulty checked against both stories.
