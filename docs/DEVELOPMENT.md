@@ -333,6 +333,7 @@ allyorders.js      the allies' orders in a story battle: Move, Attack and Hold h
 storytalk.js       what is said in a story battle: the lines handed to each battle, by what has happened,
                    and each said once, on a card with the speaker's face, when its moment comes; the sump's
                    hunt for the Front, and the hive's first counter turned over before any line about the walls
+carapace.js        the hive's barriers: a barricade or Ballistic Barrier the bugs put down is carapace (drawn so), nobody else's
 pumphouses.js      The Hunt's pump houses: Find and secure's locations where the map puts them, blocking line of
                    sight, searched and held from their walls, searched by the AI; and the net calling the search
 storyscenes.js     the story's places as pictures: each drawn the same every time, none alike, and

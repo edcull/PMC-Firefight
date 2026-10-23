@@ -362,6 +362,8 @@
         var len = pa.len || 3, th = pa.why === 'fortify' ? 0.6 : 1;
         var r = pa.vertical ? { kind: 'barricade', x: x - th / 2, y: y - len / 2, w: th, h: len }
           : { kind: 'barricade', x: x - len / 2, y: y - th / 2, w: len, h: th };
+        // the hive's are shed carapace
+        if (E.state.units.some(function (u) { return u.side === pa.side && u.faction === 'bugs'; })) r.carapace = true;
         var why = placeOK(pa, r);
         if (why) return why;
         E.state.terrain.push(r);

@@ -151,6 +151,8 @@
   /* n barricade sections on open ground near a side's own zone, clear of the foe's. */
   function placeBarricades(state, side, n) {
     var foe = side === 'A' ? 'B' : 'A';
+    // the hive builds its walls of shed carapace (drawn so; the same barricade)
+    var shelled = state.units.some(function (u) { return u.side === side && u.faction === 'bugs'; });
     // the rebels' own ground, sampled every 2"
     var home = [];
     for (var gx = 1; gx < R.BOARD.w; gx += 2) for (var gy = 1; gy < R.BOARD.h; gy += 2) if (inZone(state, side, gx, gy)) home.push([gx, gy]);
@@ -160,7 +162,7 @@
       for (var tries = 0; tries < 300; tries++) {
         var horiz = Math.random() < 0.5;
         var x = 2 + Math.random() * (R.BOARD.w - 4 - (horiz ? len : 1)), y = 2 + Math.random() * (R.BOARD.h - 4 - (horiz ? 1 : len));
-        var pc = { kind: 'barricade', x: x, y: y, w: horiz ? len : 1, h: horiz ? 1 : len, lastStand: side };
+        var pc = { kind: 'barricade', x: x, y: y, w: horiz ? len : 1, h: horiz ? 1 : len, lastStand: side, carapace: shelled || undefined };
         var pts = [[pc.x, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x + pc.w / 2, pc.y + pc.h / 2]];
         if (pts.some(function (q) { return inZone(state, foe, q[0], q[1]); })) continue;
         // on open ground, clear of other pieces and of any unit already standing there

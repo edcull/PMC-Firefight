@@ -261,6 +261,16 @@
               rad: 1 + rand() * 1.4, h: a(4 + rand() * 5), seed: (rand() * 9999) | 0
             });
           }
+        } else if (r.kind === 'barricade' && r.carapace) {
+          /* The hive's barrier, a Ballistic Barrier or a barricade alike: shed
+             carapace, curved plates stood on edge and overlapping down the line,
+             so it reads as grown, not built. */
+          var chz = r.w > r.h, cln = chz ? r.w : r.h, nch = Math.max(2, Math.round(cln / 0.9)), csl = cln / nch, ctone = rand();
+          for (var ch = 0; ch < nch; ch++) {
+            var cmd = (ch + 0.5) * csl;
+            props.push({ kind: 'carapace', x: chz ? r.x + cmd : r.x + r.w / 2, y: chz ? r.y + r.h / 2 : r.y + cmd, horiz: chz, len: csl + 0.12,
+              height: a((r.shield ? 3.6 : 3) + rand() * 1.2), tone: ctone, seed: (rand() * 9999) | 0 });
+          }
         } else if (r.kind === 'barricade' && r.shield) {
           /* A Ballistic Barrier: portable shields stood edge to edge along the
              line, each its own plate, so it reads as kit set down, not a wall. */
@@ -563,7 +573,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4 };
+      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];

@@ -323,6 +323,49 @@
         }
         /* A portable ballistic shield: a steel plate on its feet, a vision slit
            near the top, a hazard band across its foot. */
+        /* A plate of the hive's barrier (iso-props.js): a curved shell of
+           carapace on edge, its back darker for its thickness, ribbed across,
+           a sheen along its crown and a hooked spine at each end. */
+        case 'carapace': {
+          var cr = rng(pr.seed || 11), chl = pr.len / 2, cH = pr.height, clf = lift || 0;
+          var cux = pr.horiz ? 1 : 0, cuy = pr.horiz ? 0 : 1, cvx = 1 - cux, cvy = 1 - cuy, CT = 0.12;
+          var ctn = pr.tone || 0;
+          var shell = ctn < 0.33 ? ['#2a1f2c', '#46324a', '#6a4c6a', '#9a7a94'] : ctn < 0.66 ? ['#2c2418', '#4a3b24', '#6e5634', '#a8895a'] : ['#1f2622', '#334036', '#4c5e4c', '#82947a'];
+          var cs = function (t, off, up) {
+            var q = toScreen(pr.x + cux * (t * chl) + cvx * off, pr.y + cuy * (t * chl) + cvy * off);
+            return [q.x, q.y - clf - up];
+          };
+          // its profile: a low arch, highest a little off the middle, as no two shells are alike
+          var peak = (cr() - 0.5) * 0.4, N2 = 10;
+          var upAt = function (t) { var k = 1 - Math.pow((t - peak) / (t < peak ? 1 + peak : 1 - peak), 2); return cH * Math.max(0, k) * 0.85 + cH * 0.15; };
+          shadowBlob(g, { x: cs(0, 0.3, 0)[0], y: cs(0, 0.3, 0)[1] }, a(pr.len * 2.4), a(1));
+          ['back', 'front'].forEach(function (side2) {
+            var off = side2 === 'back' ? -CT : CT, pts2 = [];
+            for (var i2 = 0; i2 <= N2; i2++) { var t2 = -1 + 2 * i2 / N2; pts2.push(cs(t2, off, upAt(t2))); }
+            pts2.push(cs(1, off, 0)); pts2.push(cs(-1, off, 0));
+            poly(g, pts2, side2 === 'back' ? shell[0] : shell[1]);
+          });
+          // the crown, joining back to front
+          for (var i3 = 0; i3 < N2; i3++) {
+            var ta = -1 + 2 * i3 / N2, tb = -1 + 2 * (i3 + 1) / N2;
+            poly(g, [cs(ta, -CT, upAt(ta)), cs(tb, -CT, upAt(tb)), cs(tb, CT, upAt(tb)), cs(ta, CT, upAt(ta))], shell[2]);
+          }
+          // the ribs, curving down across the front
+          for (var rb = 1; rb < 5; rb++) {
+            var tr = -1 + 2 * rb / 5 + (cr() - 0.5) * 0.1;
+            edgeLine(g, cs(tr, CT, upAt(tr) - a(0.3)), cs(tr * 1.08, CT, a(0.4)), shell[0], 1);
+          }
+          // the sheen along the crown, and a hooked spine at each end
+          for (var i4 = 2; i4 < N2 - 2; i4++) {
+            var tc = -1 + 2 * i4 / N2, td = -1 + 2 * (i4 + 1) / N2;
+            edgeLine(g, cs(tc, CT * 0.4, upAt(tc)), cs(td, CT * 0.4, upAt(td)), shell[3], 1);
+          }
+          [-1, 1].forEach(function (end) {
+            var base = cs(end * 0.92, 0, upAt(end * 0.92)), tip = [base[0] + end * a(0.9), base[1] - a(1.4)];
+            poly(g, [[base[0] - a(0.35), base[1]], [base[0] + a(0.35), base[1]], tip], shell[0]);
+          });
+          break;
+        }
         case 'shield': {
           var hl = pr.len / 2, th2 = 0.07;
           var sq = pr.horiz ? { x: pr.x - hl, y: pr.y - th2, w: pr.len, h: th2 * 2 } : { x: pr.x - th2, y: pr.y - hl, w: th2 * 2, h: pr.len };
