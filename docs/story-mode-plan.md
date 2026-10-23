@@ -1110,7 +1110,12 @@ Port Master Okonkwo, Petrak, HTX, Black Lantern, the teacher, the miners' guild,
 the hive) each carry a `face` (skin, hair, headgear, clothes, details such as a
 scar, glasses or a bandana), drawn by `view/story-portraits.js` as a head and
 shoulders on a 32 x 32 grid with a bold black edge, beside every event that names
-them (`who`); the hive has a bug's face. Sounds, made
+them (`who`); the hive has a bug's face. Each place is a pixel-art scene too (`view/story-scenes.js`: the
+starport, the refinery, the ore yards, the pumping station, Pit Nine, the Sump,
+the ridges, the hills, the redoubt, the way station, the pass, the uplink, the
+haul road, HTX's headquarters and the slag fields, each at its own time of day),
+on every chapter's card (the chapter's `scene`), every battle's briefing (its
+map's, or the Sump's for a compound) and every ending (its `scene`). Sounds, made
 by `view/sfx.js` like the rest: a chapter's card, the second half's first, a
 battle lost and the ending, each once for its page. Three difficulties, chosen
 when the story begins (`difficulty` in the story, `story.js` `difficultyOf`):

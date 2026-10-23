@@ -71,6 +71,8 @@ async function cards(p) {
   txt = await body(p);
   check('the story begins: Deep Contract, Landfall', /Deep Contract/.test(txt) && /Landfall/.test(txt), txt.slice(0, 160));
   check('...on the chapter’s card', await p.evaluate(() => !!document.querySelector('#camp-body .story-card')));
+  check('...which opens on a picture of the place: the starport', await p.evaluate(() => { const i = document.querySelector('#camp-body .story-card img.story-scene'); return !!i && /^data:image\/png/.test(i.src) && i.naturalWidth === 128; }));
+  await p.screenshot({ path: path.join(SHOTS, 'story-chapter.png') });
   check('the commander is named in the story: Second Lieutenant Okafor', /Mara Okafor is on the first shuttle/.test(txt) && /addressed to Second Lieutenant Okafor/.test(txt), txt.slice(0, 600));
   const officer = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(), co = c.companies.A, e = co.roster.find((x) => x.rid === co.cmdRid); return e && e.men && e.men[0]; });
   check('...and is the officer at the head of the command squad', officer && officer.name === 'Mara Okafor', JSON.stringify(officer));
@@ -87,6 +89,7 @@ async function cards(p) {
   await p.screenshot({ path: path.join(SHOTS, 'story-event.png') });
   await go(p, '[data-go="storyopt"][data-o="ask"]');
   await p.screenshot({ path: path.join(SHOTS, 'story-briefing.png') });
+  check('the briefing opens on a picture of its ground', await p.evaluate(() => !!document.querySelector('#camp-body .story-battle img.story-scene')));
   txt = await body(p);
   check('asking what they know: the mission’s briefing: its name, its ground, the story of it, then the rules and the enemy', /Hold the Port/i.test(txt) && /starport/i.test(txt) && /Front is coming through the terminal/.test(txt) && /Secure and control/i.test(txt) && /Battle Tier I/.test(txt) && /The enemy, as you know them/i.test(txt), txt.slice(0, 300));
   check('...and, having asked, an outline of the enemy (not every unit)', /You have their outline/.test(txt) && /bands of fighters/.test(txt) && !/Word is:/.test(txt), txt.slice(txt.indexOf('The enemy'), txt.indexOf('The enemy') + 200));

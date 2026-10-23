@@ -109,6 +109,8 @@ src/
                      contract's own muster (dossier-contract.js storyForce)
     story-portraits.js  the story's people as pixel-art faces: head and shoulders on a 32 x 32
                      grid, drawn from each person's `face`, as an SVG of square pixels
+    story-scenes.js  the story's places as pixel-art scenes, 128 x 48, on the chapter cards, the
+                     battle briefings and the endings (a PNG drawn once on a canvas)
     viewer.js        the unit viewer
 
   net/               playing somebody else
@@ -321,6 +323,8 @@ commander.js       the company's commander (the officer at the head of its field
                    casualty or replaced, through the muster, a squad wiped out and the aftermath
 allyorders.js      the allies' orders in a story battle: Move, Attack and Hold here, given and kept once
                    a turn, and the allies' AI answering each (only the allies act)
+storyscenes.js     the story's places as pictures: each drawn the same every time, none alike, and
+                   every chapter card, battle map and ending with one
 storyside.js       HTX's bonus by HTX Standing, and the side contracts: offered at an interlude, taken
                    (a battle of its own, then back) or passed up, catching up, and cut off from HTX
 storywhole.js      Deep Contract from Landfall to an ending, 30 times with made-up results: endings and epilogues,

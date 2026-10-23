@@ -2525,3 +2525,5 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .story-who small { color: var(--ink-dim); }
 .story-portrait { flex: none; border-radius: 4px; box-shadow: 0 0 0 1px var(--line); image-rendering: pixelated; }
 .story-badges { margin: 0 0 8px; }
+.story-scene-wrap { margin: 0 0 10px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); line-height: 0; }
+.story-scene { display: block; width: 100%; height: auto; image-rendering: pixelated; aspect-ratio: 128 / 48; }

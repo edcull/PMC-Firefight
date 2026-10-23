@@ -123,7 +123,7 @@
       var node = d._nodes[v.id];
       if (node && node._first && ch && !ch.shared) {
         cue('card:' + st.chapterNo + ':' + v.id, ch.half === 2 && ch.counts === false ? 'storyFault' : 'storyChapter');
-        h += '<div class="story-card"><small>' + (ch.counts === false ? '' : 'Chapter ' + st.chapterNo + (ch.half === 2 ? ' · Fault Lines' : ' · The Contract')) + '</small>' +
+        h += '<div class="story-card">' + sceneOf(ch.scene) + '<small>' + (ch.counts === false ? '' : 'Chapter ' + st.chapterNo + (ch.half === 2 ? ' · Fault Lines' : ' · The Contract')) + '</small>' +
           '<b>' + esc(ch.title) + '</b>' + (ch.intro ? para(ch.intro) : '') + '</div>';
       }
       if (v.type === 'brief') h += para(v.text) + '<div class="story-go"><button class="start" data-go="storyon">Go on</button></div>';
@@ -164,6 +164,12 @@
       return h + '</div>';
     }
 
+    // where it happens, as a picture (story-scenes.js): { place, time }
+    function sceneOf(sc) {
+      var SS = root.PMCStoryScenes;
+      return sc && SS && SS.SCENES[sc.place] ? SS.html(sc.place, sc.time || null) : '';
+    }
+
     // who an event is about: their face, name and what they are (story-portraits.js)
     function whoView(id) {
       var n = def()._nodes[id], who = n && n.who && (def().people || {})[n.who], PF = root.PMCStoryPortraits;
@@ -197,7 +203,9 @@
          Then what it is under the rules: the book's scenario, how big, against whom. */
       var maps = (root.PMCStoryMaps && root.PMCStoryMaps[d.id]) || {}, map = spec.map && maps[spec.map];
       var compound = SC() && SC().SCENARIOS[spec.scenario] && SC().SCENARIOS[spec.scenario].compound;
-      var h = '<div class="story-battle"><h3>' + esc(spec.name || scenName(spec.scenario)) + '</h3>';
+      // the ground in a picture: the map's own place, or below ground for a compound
+      var place = compound ? { place: 'sump' } : spec.map ? { place: spec.map } : null;
+      var h = '<div class="story-battle">' + sceneOf(place) + '<h3>' + esc(spec.name || scenName(spec.scenario)) + '</h3>';
       if (map && !compound) h += '<p class="story-where">' + esc(map.name) + '</p>';
       if (spec.text) h += para(spec.text);
       var win = SC() && SC().SCENARIOS[spec.scenario] && SC().SCENARIOS[spec.scenario].win;
@@ -347,7 +355,7 @@
       cue('end:' + st.ended, 'storyEnding');
       var h = '<h2>' + esc(d.name) + ' — ' + esc(en.title || en.id) + '</h2>';
       h += badgeLine(st);
-      h += '<div class="story-card"><b>' + esc(en.title || en.id) + '</b>' + para(en.text || '') + '</div>';
+      h += '<div class="story-card">' + sceneOf(en.scene) + '<b>' + esc(en.title || en.id) + '</b>' + para(en.text || '') + '</div>';
       // the epilogue: what became of the moon and its people, and who stayed with the company
       var ep = S().epilogue(E.camp);
       if (ep.lines.length) h += '<div class="story-epilogue">' + ep.lines.map(para).join('') + '</div>';
