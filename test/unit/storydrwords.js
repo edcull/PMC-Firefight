@@ -35,6 +35,30 @@ nodes.concat(shared).forEach((n) => {
 });
 ok('every chapter, page and option of the first half has its own words', !unwritten.length, unwritten.slice(0, 6).join(', '));
 const battles = nodes.filter((n) => n.type === 'battle');
+{
+  // the second half too (phase 5a): every pool chapter, Recall and the end, every page, option and battle
+  const second = Object.keys(dr._chapters).filter((id) => dr._chapters[id].half === 2);
+  const miss = [];
+  second.forEach((id) => {
+    const ch = dr._chapters[id];
+    if (!TEXT[id]) miss.push(id);
+    ch.nodes.forEach((n) => {
+      if (['brief', 'event', 'debrief', 'interlude', 'battle'].indexOf(n.type) >= 0 && !TEXT[n.id]) miss.push(n.id);
+      if (n.type === 'battle' && !TEXT[n.id + '#name']) miss.push(n.id + '#name');
+      (n.options || []).forEach((o) => {
+        if (!TEXT[n.id + '/' + o.id]) miss.push(n.id + '/' + o.id);
+        if (o.why && (o.cost || o.if) && !o.hire && !TEXT[n.id + '/' + o.id + '.why']) miss.push(n.id + '/' + o.id + '.why');
+      });
+    });
+  });
+  ok('the second half has its own words too: every chapter, page, option, reason and battle', second.length >= 17 && !miss.length, miss.slice(0, 8).join(', '));
+  ok('...and opens on the name: Halloran reads it out, and the newsfeeds have it', /Xenotripods/.test(TEXT.fault) && dr._nodes['fault.brief'].talk.some((l) => l.who === 'reader' && /Xenotripods/.test(l.text)));
+  const c = { companies: { A: { name: 'T', kUC: 0, tier: 1, roster: [] } } };
+  S.begin(c, 'dead-reckoning', {});
+  const before = S.render(c, TEXT['wreck.hatch']);
+  c.story.flags.beat_sable = true;
+  ok('...and a rival met again says whether it has been beaten before', /fired on/.test(before) && !/Kerrigan/.test(before) && /Kerrigan/.test(S.render(c, TEXT['wreck.hatch'])));
+}
 ok('...every battle its mission name and its briefing', battles.every((n) => TEXT[n.id + '#name'] && TEXT[n.id] && n.name === TEXT[n.id + '#name']), battles.map((n) => n.id + ':' + n.name).join(', '));
 ok('...and the words are laid over the working', dr._chapters.c1.intro === TEXT.c1 && dr._nodes['c1.bidding'].options[0].text === TEXT['c1.bidding/outbid']);
 ok('no words for a page or option the story does not have', Object.keys(TEXT).every((k) => {
