@@ -26,28 +26,32 @@
   root.PMCStoryMaps['dead-reckoning'] = {
 
     /* Vesk Free Port: a settlement at a crossroads, crossed west to east. Paved
-       roads from the four quarters meet in the market square in the middle;
-       a fountain stands in the middle of it, too tall to see across; the
-       auction house stands on its north-west corner, houses and the
-       arcade round the rest, and market stalls line the square's corners. The
-       landing field is beyond the east edge, where Vane's ship waits (Escort).
-       Its skin is the market's (`skin`): the barricades are stalls, the craters
-       market clutter, as the rules still read them (levers.js, iso-props.js). */
+       roads run in from the four edges of the table and meet in the market
+       square in the middle; the auction house stands in the middle of the
+       square, so the way across goes round it, and a fountain fills the
+       square's north-west corner, too tall to see across. Houses, warehouses
+       and the arcade crowd the four quarters, and market stalls line the roads
+       where they come into the square. The landing field is beyond the east
+       edge, where Vane's ship waits (Escort). Its skin is the market's
+       (`skin`): the barricades are stalls, the craters market clutter, as the
+       rules still read them (levers.js, iso-props.js). */
     vesk: {
       name: 'The market square, Vesk Free Port', planet: 'dense', skin: 'market',
       pieces: [
-        // the crossroads: four paved roads, and the square where they meet, paved round the fountain in its middle
-        P(4, 22, 14, 4), P(30, 22, 14, 4), P(22, 0, 4, 18), P(22, 30, 4, 18),
-        P(18, 18, 12, 3.5), P(18, 26.5, 12, 3.5), P(18, 21.5, 3.5, 5), P(26.5, 21.5, 3.5, 5),
-        R('fountain', 21.5, 21.5, 5, 5),
-        // the auction house, the houses and the arcade, a quarter each
-        B(6, 4, 10, 7, 'U'), B(31, 3, 9, 6, 'L'), B(6, 37, 8, 7, 'T'), B(15, 40, 5, 5, 'annex'), B(32, 37, 9, 6, 'block'),
-        R('wall', 29, 38, 1, 6), R('ruins', 38, 12, 4, 4),
-        // the stalls round the square
-        R('barricade', 11, 19, 5, 1), R('barricade', 19, 12, 1, 5), R('barricade', 28, 12, 1, 5), R('barricade', 32, 19, 5, 1),
-        R('barricade', 11, 28, 5, 1), R('barricade', 19, 31, 1, 5), R('barricade', 28, 31, 1, 5), R('barricade', 32, 28, 5, 1),
-        // the market's clutter: barrows, crates and barrels where the stalls overflow
-        N('crater', 8, 13, 4, 4, 'blob'), N('crater', 8, 31, 4, 4, 'blob'), N('crater', 38, 31, 4, 4, 'blob')
+        // the crossroads: four paved roads from the table's edges, and the square where they meet, paved round the auction house
+        P(0, 22, 16, 4), P(32, 22, 16, 4), P(22, 0, 4, 16), P(22, 32, 4, 16),
+        P(20, 16, 12, 4), P(28, 20, 4, 12), P(16, 28, 12, 4), P(16, 20, 4, 8),
+        R('fountain', 16, 16, 4, 4), B(20, 20, 8, 8, 'block'),
+        // the four quarters: houses, warehouses, the arcade
+        B(5, 3, 9, 7, 'U'), B(15, 3, 5, 5, 'block'), B(5, 13, 5, 6, 'L'),
+        B(30, 3, 9, 6, 'L'), B(40, 4, 4, 5, 'annex'), B(31, 11, 5, 5, 'block'), R('ruins', 38, 12, 4, 4),
+        B(5, 30, 5, 4, 'block'), B(5, 36, 8, 7, 'T'), B(15, 40, 5, 5, 'annex'),
+        B(33, 30, 4, 5, 'annex'), B(32, 37, 9, 6, 'block'), R('wall', 29, 38, 1, 6),
+        // the stalls where the roads come into the square
+        R('barricade', 11, 19, 5, 1), R('barricade', 19, 10, 1, 5), R('barricade', 28, 10, 1, 5), R('barricade', 32, 19, 5, 1),
+        R('barricade', 11, 28, 5, 1), R('barricade', 19, 33, 1, 5), R('barricade', 28, 33, 1, 5), R('barricade', 32, 28, 5, 1),
+        // the market's clutter: cargo cases, drums and vending terminals where the stalls overflow
+        N('crater', 11, 12, 4, 4, 'blob'), N('crater', 11, 31, 4, 4, 'blob'), N('crater', 38, 31, 4, 4, 'blob')
       ]
     },
 

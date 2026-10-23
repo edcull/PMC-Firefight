@@ -359,9 +359,14 @@
 
       // one piece's floor (the plateau of a hill is painted after the slopes)
       var floorsDone = false;
+      /* A settlement's paved roads are one surface: where one piece meets
+         another, neither draws its lip, so the joins don't show as lines. */
+      var paved = terrain.filter(function (q) { return q.kind === 'road' && q.paved; });
       function floorOf1(r, ri, rows) {
         if (r.kind === 'hill') return;
-        if (FLOOR[r.kind]) paintFloor(d, r, roomTheme(r) || skinFloor(r) || floorOf(r.kind), seed + ri * 131, lat, fN, fD, 0, null, null, rows);
+        var spec = roomTheme(r) || skinFloor(r) || floorOf(r.kind);
+        if (r.kind === 'road' && r.paved && paved.length > 1) spec = Object.assign({}, spec, { joins: paved.filter(function (q) { return q !== r; }) });
+        if (FLOOR[r.kind]) paintFloor(d, r, spec, seed + ri * 131, lat, fN, fD, 0, null, null, rows);
       }
       // the rows a piece's floor can paint, in bands of a few dozen: a step of a sliced bake each
       function floorBands(r) {
@@ -755,7 +760,16 @@
             continue;
           }
           if (din < -WOB) continue;
-          if (WOB && din < WOB) {                    // only the boundary pays for noise
+          // (an edge that meets another piece of the same surface: no wander, no lip)
+          var joined = false;
+          if (spec.joins && din < WOB + 0.08) {
+            for (var jq = 0; jq < spec.joins.length && !joined; jq++) {
+              var q = spec.joins[jq];
+              joined = wx > q.x - 0.15 && wx < q.x + q.w + 0.15 && wy > q.y - 0.15 && wy < q.y + q.h + 0.15;
+            }
+            if (joined && din < 0) continue;
+          }
+          if (WOB && din < WOB && !joined) {                    // only the boundary pays for noise
             if (din + (vnoise(wx * 6.5, wy * 6.5, seed) - 0.5) * 2 * WOB < 0) continue;
           }
           var n = lat(fN, bx, by + lift), dry = lat(fD, bx, by + lift);
@@ -769,7 +783,7 @@
           if (idx < 0) idx = 0;
           var c = ramp[idx];
           var j = hash(bx, by, seed & 1023);
-          if (din < 0.08) c = rim;                   // a darker lip marks the exact edge
+          if (din < 0.08 && !joined) c = rim;        // a darker lip marks the exact edge
           else if (j > 0.955) c = fleck[(j * 977) % fleck.length | 0];
           var o = row + bx * 4;
           d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;

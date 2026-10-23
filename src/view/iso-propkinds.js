@@ -22,10 +22,11 @@
     var MACH = ['#1a1e22', '#2a3036', '#3d454c', '#50595f', '#636d74', '#86919a'];
     var SHIELD = ['#1f2428', '#2e353b', '#46515a', '#5d6a74', '#73808a', '#94a1ab'];
     var DOOR_STEEL = ['#23282c', '#323a40', '#465058', '#58636c', '#6b7781', '#8a96a0'];
-    // a market: the stalls' timber, their awnings' stripes, and what is for sale
-    var TIMBER = ['#2a1e14', '#3e2c1c', '#564028', '#6e5234', '#866642', '#9e7c54'];
-    var AWNING = [['#b8402e', '#e8dcc0'], ['#2e6a8a', '#e8dcc0'], ['#c8a040', '#5a3a22'], ['#3e7a4a', '#e8dcc0'], ['#7a3a6a', '#e8c890']];
-    var WARES = ['#d8a03a', '#c8402a', '#7aa83a', '#e8dcc0', '#8a5a3a', '#4a7aa8'];
+    // a market: the stalls' steel, their canopies (sheet, neon, holo-sign), and what is for sale
+    var KIOSK = ['#181c20', '#262c32', '#363e46', '#48525c', '#5c6872', '#7a8792'];
+    var CANOPY = [['#1f5866', '#6fe8ff', 'rgba(111,232,255,.28)'], ['#5e2a56', '#ff7ad8', 'rgba(255,122,216,.28)'], ['#6a5218', '#ffcf5a', 'rgba(255,207,90,.28)'],
+      ['#24503a', '#7affb0', 'rgba(122,255,176,.28)'], ['#2e3470', '#9aa8ff', 'rgba(154,168,255,.28)']];
+    var WARES = ['#6fe8ff', '#ffcf5a', '#7affb0', '#d8dee4', '#ff7ad8', '#8a96a0'];
     function drawKind(cutaway, g, lift, p, pr) {
       switch (pr.kind) {
         case 'tree': {
@@ -182,35 +183,44 @@
           dot(g, p.x + cw7 * 0.3, p.y - cl7 - ch7 * 0.2, '#7bdc6a', 2);
           break;
         }
-        /* A market stall (a settlement's barricade, iso-props.js): a timber
-           trestle laid with wares, on four posts under a striped awning that
-           slopes down towards the viewer. */
+        /* A market stall (a settlement's barricade, iso-props.js): a steel
+           kiosk counter laid with glowing wares, two masts at the back holding a
+           canopy of tinted panels that slopes down towards the viewer, a neon
+           strip along its front edge and a holo-sign over the back. */
         case 'stall': {
           var str = rng(pr.seed), slf = lift || 0, hz = pr.horiz, sl0 = (pr.len || 1.6) - 0.15, dp = 0.75;
           var tx0 = hz ? pr.x - sl0 / 2 : pr.x - dp / 2, ty0 = hz ? pr.y - dp / 2 : pr.y - sl0 / 2, tw = hz ? sl0 : dp, th = hz ? dp : sl0;
-          var tH = a(1.5), pH = a(4.2);
-          box(g, { x: tx0, y: ty0, w: tw, h: th, height: tH, seed: pr.seed }, TIMBER, { roof: TIMBER[4], roofEdge: TIMBER[5], windows: null, lift: slf });
+          var tH = a(1.4), pH = a(4.4), cn = CANOPY[Math.floor((pr.tone || 0) * CANOPY.length) % CANOPY.length];
+          box(g, { x: tx0, y: ty0, w: tw, h: th, height: tH, seed: pr.seed }, KIOSK, { roof: KIOSK[4], roofEdge: KIOSK[5], windows: null, lift: slf });
           function sp(x, y, up) { var q = toScreen(x, y); return [q.x, q.y - slf - up]; }
-          // the wares, heaped on the boards
-          for (var wi = 0; wi < 7; wi++) {
+          // a lit strip along the counter's front face
+          edgeLine(g, sp(hz ? tx0 : tx0 + tw, ty0 + th, tH * 0.55), sp(tx0 + tw, ty0 + th, tH * 0.55), cn[1], 1);
+          // the wares on the counter: cases and cells, some of them glowing
+          for (var wi = 0; wi < 6; wi++) {
             var wq = sp(tx0 + 0.1 + str() * (tw - 0.2), ty0 + 0.1 + str() * (th - 0.2), tH + a(0.2));
             dot(g, wq[0], wq[1], WARES[Math.floor(str() * WARES.length)], 2);
           }
-          // the posts at the four corners, and the awning over them, striped down its length
+          // the masts at the back corners (the back being the side away from the viewer)
           var ax0 = tx0 - 0.08, ay0 = ty0 - 0.08, ax1 = tx0 + tw + 0.08, ay1 = ty0 + th + 0.08;
-          [[ax0, ay0], [ax1, ay0], [ax1, ay1], [ax0, ay1]].forEach(function (c) { edgeLine(g, sp(c[0], c[1], 0), sp(c[0], c[1], pH), TIMBER[1], 1); });
-          var aw = AWNING[Math.floor((pr.tone || 0) * AWNING.length) % AWNING.length], nstr = 6;
-          for (var si2 = 0; si2 < nstr; si2++) {
-            var f0 = si2 / nstr, f1 = (si2 + 1) / nstr;
-            var q00 = hz ? [ax0 + (ax1 - ax0) * f0, ay0] : [ax0, ay0 + (ay1 - ay0) * f0];
-            var q01 = hz ? [ax0 + (ax1 - ax0) * f1, ay0] : [ax0, ay0 + (ay1 - ay0) * f1];
-            var q10 = hz ? [ax0 + (ax1 - ax0) * f0, ay1] : [ax1, ay0 + (ay1 - ay0) * f0];
-            var q11 = hz ? [ax0 + (ax1 - ax0) * f1, ay1] : [ax1, ay0 + (ay1 - ay0) * f1];
-            // the back edge high, the front (towards the viewer) a little lower
-            poly(g, [sp(q00[0], q00[1], pH + a(0.6)), sp(q01[0], q01[1], pH + a(0.6)), sp(q11[0], q11[1], pH - a(0.2)), sp(q10[0], q10[1], pH - a(0.2))], aw[si2 % 2]);
+          var backs = hz ? [[ax0, ay0], [ax1, ay0]] : [[ax0, ay0], [ax0, ay1]];
+          backs.forEach(function (c) { edgeLine(g, sp(c[0], c[1], 0), sp(c[0], c[1], pH + a(0.6)), KIOSK[1], 2); edgeLine(g, sp(c[0], c[1], tH), sp(c[0], c[1], pH + a(0.6)), KIOSK[3], 1); });
+          // the canopy: one tinted sheet, high at the back and lower at the front, ribbed into panels
+          var cA = sp(ax0, ay0, pH + a(0.6)), cB = hz ? sp(ax1, ay0, pH + a(0.6)) : sp(ax0, ay1, pH + a(0.6));
+          var cC = sp(ax1, ay1, pH - a(0.2)), cD = hz ? sp(ax0, ay1, pH - a(0.2)) : sp(ax1, ay0, pH - a(0.2));
+          poly(g, [cA, cB, cC, cD], cn[0]);
+          var nrib = 4;
+          for (var ri = 1; ri < nrib; ri++) {
+            var f = ri / nrib;
+            edgeLine(g, [cA[0] + (cB[0] - cA[0]) * f, cA[1] + (cB[1] - cA[1]) * f], [cD[0] + (cC[0] - cD[0]) * f, cD[1] + (cC[1] - cD[1]) * f], 'rgba(10,14,18,.45)', 1);
           }
-          // the awning's hem, a shade darker
-          edgeLine(g, sp(hz ? ax0 : ax1, ay1, pH - a(0.2)), sp(ax1, ay1, pH - a(0.2)), 'rgba(20,14,10,.55)', 1);
+          // the back edge catches the light; the front edge is the neon strip
+          edgeLine(g, cA, cB, 'rgba(255,255,255,.25)', 1);
+          edgeLine(g, cD, cC, cn[1], 2);
+          // the holo-sign over the back of the canopy, see-through, its letters a flicker of light
+          var hm = [(cA[0] + cB[0]) / 2, (cA[1] + cB[1]) / 2], hw = a(0.9), hh = a(0.55);
+          rect(g, hm[0] - hw, hm[1] - hh * 2.2, hw * 2, hh, cn[2]);
+          edgeLine(g, [hm[0] - hw, hm[1] - hh * 2.2], [hm[0] + hw, hm[1] - hh * 2.2], cn[1], 1);
+          for (var li = 0; li < 3; li++) dot(g, hm[0] - hw * 0.6 + li * hw * 0.6, hm[1] - hh * 1.7, cn[1], 1);
           break;
         }
         case 'sacks': {

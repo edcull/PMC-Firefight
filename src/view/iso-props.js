@@ -204,10 +204,10 @@
           return;
         }
         if (r.kind === 'crater' && r.market) {
-          // a settlement's crater field (the market skin): the market's overflow, crates, barrels and sacks on the paving
+          // a settlement's crater field (the market skin): the market's overflow, cargo cases, fuel drums and vending terminals on the paving
           for (var mk = 0; mk < Math.max(3, Math.round(area / 2.5)); mk++) {
             var mq = spotIn(r, 0.5, rand), mr = rand();
-            props.push({ kind: mr < 0.45 ? 'smallbox' : mr < 0.7 ? 'drums' : 'sacks', x: mq.x, y: mq.y, n: 1 + Math.floor(rand() * 2), tone: rand(), seed: (rand() * 9999) | 0 });
+            props.push({ kind: mr < 0.45 ? 'smallbox' : mr < 0.7 ? 'drums' : 'console', x: mq.x, y: mq.y, n: 1 + Math.floor(rand() * 2), tone: rand(), seed: (rand() * 9999) | 0 });
           }
           return;
         }
@@ -277,7 +277,7 @@
           }
         } else if (r.kind === 'barricade' && r.market) {
           /* A settlement's barricade (a map's market skin, storybattle.js): a row
-             of market stalls, trestles under striped awnings, a stall a length. */
+             of market stalls, steel kiosks under tinted canopies, a stall a length. */
           var mhz = r.w > r.h, mln = mhz ? r.w : r.h, nst = Math.max(1, Math.round(mln / 1.7)), msl = mln / nst, mtone = rand();
           for (var st = 0; st < nst; st++) {
             var smd2 = (st + 0.5) * msl;
