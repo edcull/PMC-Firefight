@@ -532,7 +532,7 @@
     var st = campaign.story, def = storyOf(campaign), node = nodeAt(campaign);
     if (!node || node.type !== 'battle') return null;
     var spec = {
-      node: node.id, scenario: node.scenario, variant: clone(node.variant) || null, name: node.name || null, map: node.map || null,
+      node: node.id, scenario: node.scenario, variant: clone(node.variant) || null, name: node.name || null, map: node.map || null, scene: node.scene || null,
       text: node.text || null,
       tier: node.tier || 'max', pl: node.pl || 1, planet: node.planet || null, tactics: node.tactics || null, role: node.role || null,
       enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, waves: clone(node.waves) || null, levers: clone(st.pending) || {},
@@ -580,7 +580,7 @@
      side, one after the other. `sighted` is the first of the enemy's hidden
      counters turned over; a line with `after` waits until that moment's line
      has been said. */
-  var TALK_MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard'];
+  var TALK_MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard', 'contact'];
   function talkFor(campaign, spec) {
     var def = storyOf(campaign), talk = def && def.talk;
     if (!talk || !spec) return [];
@@ -591,11 +591,13 @@
     var pick = seeded('talk:' + def.id + ':' + spec.node + ':' + ((campaign.story && campaign.story.journal) || []).length + ':' + ((campaign.companies && campaign.companies.A && campaign.companies.A.name) || ''));
     TALK_MOMENTS.forEach(function (m) {
       var open = function (ls) { return arr(ls).filter(function (l) { return !l.if || test(ctx, l.if); }); };
-      var ls = open(own[m]);
-      if (!ls.length) ls = open(side[m]);
+      var ls = open(own[m]), theirs = open(side[m]);
+      if (!ls.length) ls = theirs;
       if (!ls.length) return;
-      // a line that answers what has happened comes before one that could be said anywhere
+      /* a line that answers what has happened comes before one that could be said
+         anywhere: the battle's own, or else the side's (a grudge, say), over the battle's plain ones */
       var apt = ls.filter(function (l) { return l.if; });
+      if (!apt.length) apt = theirs.filter(function (l) { return l.if; });
       if (apt.length) ls = apt;
       var l = ls[Math.floor(pick() * ls.length)], who = people[l.who] || {};
       out.push({ on: m, who: l.who, name: who.name || l.who, role: who.role || '', text: render(campaign, l.text), after: l.after || undefined });
@@ -692,6 +694,52 @@
     } };
   }
 
+  /* The star chart (a story with `chart`, as Dead Reckoning has; view/story-chart.js):
+     the stops the company has made, in order, each a place (a chapter's, or the
+     battle's own where it had one); where it is now; the next heading, if the
+     log has given it; each rival's strength and the stop where the company last
+     met it; who each works for (`clients`), kept secret until something
+     reveals it (`client_<id>`); and the lodestones on each side, the rivals'
+     count shown only once it has been revealed. Drawn from the story's state
+     alone. */
+  function chart(campaign) {
+    var st = campaign.story, def = storyOf(campaign);
+    if (!def || !def.chart) return null;
+    var stops = [], at = {};
+    function stopFor(id, place) {
+      if (!place) return null;
+      var key = (place.system || '') + '/' + (place.planet || '');
+      if (at[key] == null) { at[key] = stops.length; stops.push({ key: key, system: place.system || null, planet: place.planet || null, site: place.site || null, kind: place.kind || null, chapter: id }); }
+      return stops[at[key]];
+    }
+    var seen = {};
+    st.journal.forEach(function (j) {
+      var ch = def._chapters[j.chapter], n = def._nodes[j.node];
+      if (!ch || ch.shared) return;
+      // where the company was: a battle's own place where it had one (the two readings), else the chapter's
+      var s = stopFor(ch.id, (n && n.place) || ch.place);
+      if (!s) return;
+      if (j.grade && n && n.enemy && n.enemy.side) {
+        var side = n.enemy.rival === 'leading' ? st.leading : n.enemy.side;
+        if (side) seen[side] = s.key;
+      }
+    });
+    var cur = def._chapters[st.chapter], here = cur ? stopFor(cur.id, cur.place) : null;
+    var rivals = ((def.leading && def.leading.from) || []).concat(def._meters.lance ? ['lance'] : []).map(function (id) {
+      var side = (def.sides || {})[id] || {};
+      // its client: a name once revealed (or the story is over), false while still a secret, null when the story keeps none
+      var cl = def.clients && def.clients[id] != null ? (st.revealed['client_' + id] || st.ended ? def.clients[id] : false) : null;
+      return { id: id, name: side.name || id, strength: st.meters[id] || 0, at: seen[id] || null, leading: st.leading === id, client: cl };
+    });
+    var shown = (def._meters.theirs && def._meters.theirs.shown) || st.revealed.theirs || st.ended;
+    return {
+      stops: stops, here: here ? here.key : null,
+      // past the first half, the log gives no more easy headings: the next is chosen, not read
+      ahead: cur && cur.half === 1 && !st.ended ? 'the next heading' : st.ended ? null : 'chosen, not read',
+      rivals: rivals, stones: st.meters.stones || 0, theirs: shown ? st.meters.theirs || 0 : null
+    };
+  }
+
   /* A battle's report graded from side A's view (the plan, section 3):
      decisive, victory, draw, defeat or rout. Losses are counted in
      composition points: a unit's Tier, times the share of it lost. */
@@ -757,6 +805,14 @@
       if (b.next) to = b.next;
       return true;
     });
+    /* A rival the company has beaten bears a grudge (the story's `grudges`):
+       `beat_<side>`, set the first time, and read by its words and its forces
+       from then on. It is business until somebody loses. */
+    var foe = node.enemy && (node.enemy.rival === 'leading' ? st.leading : node.enemy.side);
+    if (SUCCESS[g] && foe && arr(def.grudges).indexOf(foe) >= 0 && !st.flags['beat_' + foe]) {
+      st.flags['beat_' + foe] = true;
+      lines.push({ flag: 'beat_' + foe, set: true });
+    }
     // what was held for this battle is spent
     st.next = st.next.filter(function (n) { return n.battle !== node.id; });
     st.pending = null;
@@ -1177,7 +1233,7 @@
     battleSpec: battleSpec, intel: intel, difficultyOf: difficultyOf, takeSide: takeSide, nodeAt: nodeAt, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
     test: test, apply: apply, roll: roll, pressure: pressure, finaleChapter: finaleChapter,
     endingFor: endingFor, epilogue: epilogue, broken: broken, breakCompany: breakCompany,
-    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf, leadingRival: leadingRival, talkFor: talkFor, allyVoice: allyVoice, parleyFor: parleyFor,
+    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf, leadingRival: leadingRival, talkFor: talkFor, allyVoice: allyVoice, parleyFor: parleyFor, chart: chart,
     GRADES: GRADES, COND_KEYS: COND_KEYS, CMP: CMP, EFFECT_KEYS: EFFECT_KEYS
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCStory;

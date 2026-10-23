@@ -136,11 +136,18 @@
         h += para(v.text) + '<div class="story-go"><button class="start" data-go="storyon">Go on</button></div>';
       } else if (v.type === 'interlude') {
         h += para(v.text);
+        h += chartView();
         h += sideView(v);
         h += '<p class="hint">Between chapters: recruit, promote and spend at the company before you go on.</p>';
         h += '<div class="story-go"><button class="lnk" data-go="hub">To the company</button><button class="start" data-go="storyon">Go on</button></div>';
       } else if (v.type === 'pool') h += poolView(v);
       return h + foot();
+    }
+
+    // a trail's star chart, for a story that keeps one (story.js chart, view/story-chart.js)
+    function chartView() {
+      var CH = root.PMCStoryChart, c = S().chart && S().chart(E.camp);
+      return CH && c ? CH.html(c, E.camp.story.id) : '';
     }
 
     /* An interlude's side contracts: each a small job, its pay, what taking it
@@ -218,8 +225,10 @@
          Then what it is under the rules: the book's scenario, how big, against whom. */
       var maps = (root.PMCStoryMaps && root.PMCStoryMaps[d.id]) || {}, map = spec.map && maps[spec.map];
       var compound = SC() && SC().SCENARIOS[spec.scenario] && SC().SCENARIOS[spec.scenario].compound;
-      // the ground in a picture: the map's own place, or below ground for a compound
-      var place = compound ? { place: 'sump' } : spec.map ? { place: spec.map } : null;
+      /* the ground in a picture: the battle's own scene if it names one, the
+         map's own place, or for a compound its chapter's (below ground if none) */
+      var chap = d._chapters && d._nodes && d._nodes[spec.node] ? d._chapters[d._nodes[spec.node]._chapter] : null;
+      var place = spec.scene ? { place: spec.scene } : compound ? (chap && chap.scene) || { place: 'sump' } : spec.map ? { place: spec.map } : null;
       var h = '<div class="story-battle">' + sceneOf(place) + '<h3>' + esc(spec.name || scenName(spec.scenario)) + '</h3>';
       if (map && !compound) h += '<p class="story-where">' + esc(map.name) + '</p>';
       if (spec.text) h += para(spec.text);
@@ -329,6 +338,7 @@
       h += '<div class="story-hist">' + shown.map(function (k) {
         return '<div><b>' + esc(d._meters[k].name) + '</b> ' + (st.history[k] || []).map(function (x) { return x.v; }).join(' → ') + '</div>';
       }).join('') + '</div>';
+      h += chartView();
       // what is known, told as prose
       var facts = Object.keys(st.flags).filter(function (f) { return d.flagText && d.flagText[f]; }).map(function (f) { return d.flagText[f]; });
       if (facts.length) h += '<ul class="story-facts">' + facts.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';

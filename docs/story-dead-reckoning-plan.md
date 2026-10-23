@@ -1,7 +1,7 @@
 # Story mode: *Dead Reckoning* (plan)
 
 The second story. A treasure hunt across several star systems: the company is
-hired to follow a dead surveyor's clues to a lost Xenotripod world, and it is not
+hired to follow a dead surveyor's clues to a lost world, and it is not
 the only company on the trail. Every rival PMC is one of the game's six
 archetypes with a face and a name, each racing for the same prize for a
 different patron. Somewhere at the end of the clues is a civilisation that
@@ -16,6 +16,80 @@ story is, and what it needs that *Deep Contract* did not.
 
 This is a plan, not a spec. Section 8 records the decisions, settled with the
 owner; only the story's length waits on the walk. Every name is a placeholder.
+
+---
+
+## 0. The rework: first contact (settled, and built for the first half)
+
+Asked for by the owner after phase 4, and settled in two rounds: the story
+stays **a treasure hunt, with clashes against rival PMC companies** (a war was
+"a bit much"), but the Xenotripods are **unknown** until the second half, the
+campaign is **first contact**, every **full Xenotripod battle is in the second
+half**, and the patron is a **rich, powerful, elusive man**. Where sections 2 to
+4 disagree with this section, this section wins.
+
+### What changed
+
+| | Was | Now |
+|---|---|---|
+| **The patron** | Ottilie Vane, of Vane Antiquities, at the auction in person | **Lucan Vane**: shipping lines, three banks and a moon, and seen by almost nobody. He is a voice on a scrambled line, and his face is drawn half in shadow (`face.shadow`). He comes into the room once, at *The Collector*. The meter, flags and thread keep their names (`vane`, `vane_cut_off`…). |
+| **Lot 47's Escort** | Vane across the square | **Halloran**, Vane's chief reader, with the log and an open line to his employer |
+| **The stones** | Xenotripod lodestones | Lodestones "no human hand had made". Nobody in the first half says whose. |
+| **The Drowned Beacon** | A battle against the Sh'kar | The **Red Reavers** digging at a structure nobody built. Once the lodestone is found, or by turn 4, the Reavers break and run, and **unknown contacts** step out of the air by the objective. |
+| **The one-off through the gate** | A battle against the Mithdu | The Reavers went through first, after the hoard. By turn 3 the tunnels' keepers come out of the walls as unknown contacts. |
+| **Survey Cover** (side contract against the Mithdu) | From chapter 3 | From chapter 5 |
+| **The reveal** | none (named from the first page) | The second half opens on it: Halloran reads the last of the log, and Morrow names them, the three-legged ones who step out of the air. Every newsfeed has the word by the next jump. |
+
+**Who hired the rivals is a secret** (`clients`, settled after the rework).
+Every rival's client starts unknown, and the star chart says "client unknown"
+beside its name. Something in the story reveals each one
+(`{ reveal: 'client_<id>' }`), with a line in the journal:
+
+| Rival | Client | Found out by |
+|---|---|---|
+| Brass Ledger | the Orrin Mercantile Bank, behind shell companies | paying Kettering's man for what he knows (chapter 1), or buying their catalogue |
+| Wraith Section | the Admiralty's Office of Naval Intelligence | reading their orders in the dead drop (the Glass Flats) |
+| Sable Armour Group | the Halvorsen Mining Combine | taking the warehouse (its papers), or following Sable |
+| Kestrel Air Cavalry | the Meridian newsfeed | Rook Kestrel's call (*The newsfeed*) |
+| The Red Reavers | nobody: claim jumpers | Hal says so at the beacon |
+| The Ninth Lance | Lucan Vane | Daw says so (*The Double-Cross*) |
+
+**Business until somebody loses** (settled after the rework). The rival
+companies are confrontational, and they make it business: clients, invoices,
+contracts, prices. The first time the company beats one (`grudges`; the flag
+`beat_<id>`, set by `story.js` `resolveBattle`), it becomes personal. From
+then on the rival comes readier for the company (Readiness +1), and talks
+about it. Its side's lines with `if: { flag: 'beat_<id>' }` win over a
+battle's own plain ones (`talkFor`). Brass Ledger has not forgotten Vesk,
+Sable her warehouse, Nine the Glass Flats, Hal the beacon, and Daw the
+docking ring.
+
+**Brass Ledger** is the new name of Coin & Kettle.
+
+The rivals, the race, the Ninth Lance and the second half's threads stand as
+written in sections 2 to 4. Only the Tribes are now met for the first time
+under a name.
+
+### Unknown contacts (`storybattle.js` `contacts`)
+
+- A battle's `variant.contacts: { turn, found, keys }`. At the End phase of
+  `turn`, or the first after the objective is found (`found`), side B's force
+  breaks and runs. Its units go off the table as fled, not lost, and they and
+  side B's dead leave the side's rout tally (`superseded`; `scenarios.js`
+  `routed`).
+- In their place come side B's **unknown contacts**: a unit for each key, two
+  more than the battle's Tier, as many as there are keys at most. They appear
+  near the objective (a carried relic is dropped first). Each is named
+  "Unknown contact" and labelled "Unknown contact 1 [B]", and side B is called
+  "Unknown contacts" from then on. Its stat panel shows only its models and its
+  Suppression, and says that nothing in the company's files matches it.
+- The figures are drawn as they are: the company sees them, and has no word
+  for them.
+- The moment `contact` is said (`TALK_MOMENTS`). Before the reveal they speak
+  only as `unknown`, a dark shape with lights in it (`face.shadow: 'full'`), in
+  brackets.
+- Tests: `storycontacts.js`, and `storydrwords.js` checks that the first half
+  never names them.
 
 ---
 
@@ -71,7 +145,7 @@ the trail is a PMC company built on one of the game's archetypes:
 
 | Rival | Archetype | Hired by | How it races |
 |---|---|---|---|
-| **Coin & Kettle** | Mercenary (`swarm`) | Whoever pays this week | Shadows the others and sells what it learns. Can be bought. |
+| **Brass Ledger** | Mercenary (`swarm`) | Whoever pays this week | Shadows the others and sells what it learns. Can be bought. |
 | **Wraith Section** | Special Ops (`marksmen`) | A naval intelligence office | Steals the clues instead of finding them. Always one jump behind, listening. |
 | **Sable Armour Group** | Bastion (`armour`) | A mining combine | Slow. Digs in at every site it reaches and dares anyone to take it. |
 | **Kestrel Air Cavalry** | Cavalry (`aircav`) | A newsfeed that wants the first pictures | Fast. First to every site, not always the best at holding it. |
@@ -122,7 +196,7 @@ is named, and every one lost is remembered by name, in the battle and after it.
   company *the other hands*. It is the first time in their history they have
   been asked to fight for someone rather than told.
 - **The other tribes want them back.** To the Sh'kar, the Ulvar and the rest,
-  the Hashamer are runaways, property to be returned to the Quiet. Coin & Kettle
+  the Hashamer are runaways, property to be returned to the Quiet. Brass Ledger
   have found a buyer for them too. Nobody else on the trail will fight beside
   them.
 - **They remember the way, and they fear it.** The Hashamer carry the doctrine
@@ -156,7 +230,7 @@ rivals are, and how many lodestones each side holds.
 
 ```mermaid
 flowchart TD
-  C1[1. Lot 47<br/>Vesk, a free port<br/>vs Coin & Kettle] --> C2{2. The First Lodestone}
+  C1[1. Lot 47<br/>Vesk, a free port<br/>vs Brass Ledger] --> C2{2. The First Lodestone}
   C2 -->|the dig| C2a[The Glass Flats<br/>desert world<br/>vs Wraith Section]
   C2 -->|the station| C2b[Station Thule<br/>arctic, Close Encounters<br/>vs scavengers]
   C2a --> C3[3. The Drowned Beacon<br/>jungle world<br/>vs the Sh'kar: first contact]
@@ -178,12 +252,12 @@ The treasure hunt as Vane describes it: a race between companies, for a dead
 world.
 
 - **1. Lot 47.** Vesk, a free port on a colonised world. The auction, and the
-  company as Vane's escort. Coin & Kettle tries to take the log in the street
+  company as Vane's escort. Brass Ledger tries to take the log in the street
   outside. A Tier I *Secure and control* or *Meeting engagement* in the port's
   market square; it teaches the story screens and cannot be lost outright (a
   defeat: the log is held, at a cost, Lead −1). Events: how to handle the
   auction (outbid in the open, let Vane bid while the company watches the room,
-  or have Coin & Kettle's agent followed); what to do with the agent taken.
+  or have Brass Ledger's agent followed); what to do with the agent taken.
 - **2. The First Lodestone.** Morrow's first stop could be read two ways. The
   player picks one; the rival who takes the other gets a lodestone (Lead −1,
   that rival +1):
@@ -203,7 +277,7 @@ world.
   rubbing of the beacon and leave; on a fail, the *ambush* variant, sprung by
   them). The lodestone here is in the beacon (the relic variant again).
 - **4. The Broker.** Kerrigan, an industrial free port. The next heading is in
-  the hands of Coin & Kettle's broker, who is auctioning it again, to everyone.
+  the hands of Brass Ledger's broker, who is auctioning it again, to everyone.
   Sable Armour Group has already bought the warehouse it sits in. Buy it (kUC),
   take it (*Hostile takeover* against Sable), or let Sable have it and follow
   Sable (Lead −1, Intel +2: where Sable goes next is the clue; and Sable owes
@@ -232,7 +306,7 @@ pressure that has had a chapter played.
 |---|---|---|---|
 | **The Race** (the rivals) | Low Lead, the rivals' lodestones, a rival wronged (`kestrel_burned`, `wraith_robbed`…) | *Claim Jumpers* (Kestrel reaches a site first: *Convoy* or *Meeting*), *The Wreck of the Morrow* (Morrow's ship, found and fought over with Sable: *Clearing out*), fallback *Bounty* (Wraith Section has been paid to stop you: the *ambush* variant) | **The Landing**: at the Quiet, the leading rival is dug in on the only landing field. *Hostile takeover* with the target variant (their commander). |
 | **The Tribes** (hostile) | Alarm, the Warren entered, relics taken by force | *The Watchers* (the Ulvar shieldwall: *Strike* on its shield turrets), *Teleport Storm* (the Sh'kar raid the company's camp: *Invasion*, defending), fallback *Cold Sites* (the Mithdu in old ruins: *Clearing out*) | **The Spire**: into an Amt tower, Close Encounters, shield generators as chambers to burn out (*Hive Heart*'s machinery, with turrets for brood chambers). |
-| **First Contact** (allies, no finale) | Understanding, relics returned, the Esh-Aven helped | *The Mimics* (the Hashamer Esh-Aven ask for help against Coin & Kettle's slavers, and fight beside you: **Xenotripod allies**), *The Speaker* (a *Parley* with an Alpha, through Mental Projection), fallback *Signal Fires* | none: it changes the finales instead, as the truce does |
+| **First Contact** (allies, no finale) | Understanding, relics returned, the Esh-Aven helped | *The Mimics* (the Hashamer Esh-Aven ask for help against Brass Ledger's slavers, and fight beside you: **Xenotripod allies**), *The Speaker* (a *Parley* with an Alpha, through Mental Projection), fallback *Signal Fires* | none: it changes the finales instead, as the truce does |
 | **The Patron** (Vane and the Ninth Lance) | Low Vane's Trust, `vane_suspects`, `vane_cut_off`, the Lance's strength | *The Vault* (Vane's store of relics, and what she has been selling: *Strike*), *The Escort* (Vane's relics across a contested world: *Convoy*), fallback *Debts* (Vane's creditors come for the company: *Meeting*) | **The Collector**: the Ninth Lance at the Quiet's landing. *Hostile takeover* with the target variant (the Lance's commander). |
 
 - **First Contact has no finale**, as the truce had none. With `contact` set,
@@ -256,7 +330,7 @@ Checked in order; the first that holds is the story's. The last has no condition
 | **Claim Jumped** | *The Landing* was lost, or the rivals hold more lodestones than the company at the end (`theirs` above `stones`). Another company's name is on the claim. |
 | **Repossessed** | *The Collector* was lost, or Vane cut you off and the finale was lost. Vane has the Quiet, and the company has nothing. |
 | **First Contact** | `contact` or `relics_returned`, the finale won, Alarm under 8, and neither `child_taken` nor `promise_broken`. The company is the first to speak with the Amt and walks away with no salvage at all, and every newsfeed in the sector wants the story. |
-| **Finder's Fee** | Stayed with Vane (no `contact`, not cut off, not `vane_exposed`), the finale won, Vane's Trust 2 or more (shared with Coin & Kettle with `kettle_partner`). The claim is filed in Vane's name. The company is rich, and the Quiet will be stripped. |
+| **Finder's Fee** | Stayed with Vane (no `contact`, not cut off, not `vane_exposed`), the finale won, Vane's Trust 2 or more (shared with Brass Ledger with `kettle_partner`). The claim is filed in Vane's name. The company is rich, and the Quiet will be stripped. |
 | **Dead Reckoning** | Anything else: the company reaches the end of the log, and what it does with it decides nothing. |
 
 Each has an epilogue, as in *Deep Contract*: the Quiet, the tribes, each rival
@@ -329,12 +403,12 @@ the systems in the order the company reaches them.
 
 | Chapter | The event | Options (and the levers under them) |
 |---|---|---|
-| 1. Lot 47 | *The bidding.* Lot 47 comes up, and half the room is bidding for somebody else. | Outbid in the open (kUC −1, Vane's Trust +1, every rival sees who has it: their Readiness +1). Let Vane bid while the company watches the room (Intel +1: an outline of the enemy). Have Coin & Kettle's agent followed out of the room (the company chooses its role; `kettle_marked`). |
+| 1. Lot 47 | *The bidding.* Lot 47 comes up, and half the room is bidding for somebody else. | Outbid in the open (kUC −1, Vane's Trust +1, every rival sees who has it: their Readiness +1). Let Vane bid while the company watches the room (Intel +1: an outline of the enemy). Have Brass Ledger's agent followed out of the room (the company chooses its role; `kettle_marked`). |
 | 2. (the choice) | *Two readings.* Morrow's first heading could mean the Glass Flats or Station Thule. | The Glass Flats (Find and secure + relic, vs Wraith Section). Station Thule (Critical control, vs scavengers). The other site goes to a rival: `theirs` +1, Lead −1, and that rival's strength +1. |
 | 2. The Glass Flats | *The dig.* Wraith Section's camp is already on the flats. | Dig at night (one Battle Tier down, enemy Readiness 0). Jam their comms first (`cost: { intel: 1 }`: Wraith's drones start Suppressed). Go straight for the dig (you attack; `glassflats_rushed`: the lodestone is easier to find, one search site fewer). |
 | 2. Station Thule | *The airlock.* The scavengers have welded the station shut. | Cut through the main lock (you attack, the role is set). Find Morrow's maintenance hatch in the log (a roll on Intel: success, you choose where to come in; failure, enemy Readiness +1). Pay them to leave (kUC −2, no battle: Lead −1, and the records are half burned: no Intel). |
 | 3. The Drowned Beacon | *First contact.* The beacon is a Xenotripod structure, and it has guards. | Storm it (the Strike scenario: Alarm +2, `beacon_stormed`). Watch first (one Battle Tier down, Understanding +1, Intel +1, Lead −1). Try a signal (a roll on Understanding, +1 with `thule_records`: success, no battle, `beacon_rubbing`, the lodestone given; failure, the ambush variant, sprung by them). |
-| 4. The Broker | *Lot 47, again.* Coin & Kettle's broker is selling the next heading to everyone, from inside Sable's warehouse. | Buy it (kUC −3, no battle: Lead −1, `theirs` +1, the broker sells copies). Take it (Hostile takeover against Sable). Let Sable have it and follow Sable (no battle: Lead −1, Intel +2, `sable_owed`). With `kettle_contact`: hire Coin & Kettle for the takeover (allies, `cost` their Price). **Extreme**, with Vane's Trust −1 or lower: sell a copy of the chart to the broker (kUC +4, `chart_sold`: the Double-Cross). |
+| 4. The Broker | *Lot 47, again.* Brass Ledger's broker is selling the next heading to everyone, from inside Sable's warehouse. | Buy it (kUC −3, no battle: Lead −1, `theirs` +1, the broker sells copies). Take it (Hostile takeover against Sable). Let Sable have it and follow Sable (no battle: Lead −1, Intel +2, `sable_owed`). With `kettle_contact`: hire Brass Ledger for the takeover (allies, `cost` their Price). **Extreme**, with Vane's Trust −1 or lower: sell a copy of the chart to the broker (kUC +4, `chart_sold`: the Double-Cross). |
 | Into the Warren (one-off) | *The other side.* The company is through, and the turret is closing behind it. | Hold the gate open with charges (strikes before turn 1, Alarm +1: the way back stays open). Let it close (no way back but forward: your units start with 1 SP; Understanding +1). Follow the voices (a roll on Understanding: success, the Mithdu let you pass a chamber, one objective fewer; failure, the ambush variant). |
 | The Double-Cross (one-off) | *The repossession.* Vane's own company, the Ninth Lance, docks beside yours with a court order. | Hand back the log (no battle: `vane_cut_off`, Lead −2, the trail goes on from memory: Intel −2). Refuse (you choose the role). Fire first (strikes before turn 1, Vane's Trust −2, `lance_burned`). |
 
@@ -342,13 +416,13 @@ the systems in the order the company reaches them.
 
 | After | The event | Options |
 |---|---|---|
-| 1. Lot 47 | *The agent.* Coin & Kettle's man is in the company's hands. | Let him go with a message (`kettle_contact`: Coin & Kettle can be hired from chapter 4). Pay him for what he knows (kUC −1, Intel +1, `kettle_contact`). Hand him to the port police (Vane's Trust +1, Coin & Kettle strength −1, `kettle_burned`: they won't deal with you). |
+| 1. Lot 47 | *The agent.* Brass Ledger's man is in the company's hands. | Let him go with a message (`kettle_contact`: Brass Ledger can be hired from chapter 4). Pay him for what he knows (kUC −1, Intel +1, `kettle_contact`). Hand him to the port police (Vane's Trust +1, Brass Ledger strength −1, `kettle_burned`: they won't deal with you). |
 | 2. The Glass Flats, won | *Wraith's dead drop.* Their camp holds a copy of their own orders. | Read it (Intel +2, `wraith_orders`: Wraith's patron is a navy, and the navy wants the teleports). Leave a message in it (Wraith strength −1, `wraith_warned`). Take their stolen copy of the log back (Lead +1, `wraith_robbed`: Wraith will come for it). |
 | 2. The Glass Flats, lost | *Second best.* Wraith carried the lodestone off. | Follow their dropship (Lead +1, Loyalty −1: a forced march). Let it go and dig on (the dig's notes: Intel +1; `theirs` stays +1). |
 | 2. Station Thule, won | *Morrow's records.* The relay kept his log entries, his voice and his fear. | Listen to all of it (Understanding +1, `thule_records`: he heard them talk). Send the records to Vane (Vane's Trust +1). Sell a copy to a newsfeed (kUC +2, `kestrel_deal`: Kestrel's patron, and Kestrel can be hired). |
 | 2. Station Thule, lost | *Burned.* The scavengers fired the archive. | Sift the ashes (Lead −1, a roll on Intel: success, the lodestone after all). Take what's left and go (nothing). |
 | 3. The Drowned Beacon | *What the Sh'kar left.* A wounded Alpha, and the lodestone still in its socket. | Take the lodestone (`stones` +1, Alarm +1). Leave it, and the Alpha, where they are (Understanding +2, Lead −1, `relics_returned`: the tribes remember). Take both (`stones` +1, Alarm +3, Vane's Trust +2, `alpha_taken`: Vane wants it alive). After a storming or a signal failure only: *the gate stays open*: **extreme**, step through after them (`warren_entered`, Alarm +2: Into the Warren). |
-| 4. The Broker | *The broker's copies.* Everybody bought one. | Burn his stock (Lead +1, Coin & Kettle strength −1). Buy them all (kUC −2, `theirs` −1: one rival goes the wrong way). Let them go (nothing, `theirs` +1). |
+| 4. The Broker | *The broker's copies.* Everybody bought one. | Burn his stock (Lead +1, Brass Ledger strength −1). Buy them all (kUC −2, `theirs` −1: one rival goes the wrong way). Let them go (nothing, `theirs` +1). |
 | Into the Warren | *The Mithdu's hoard.* A chamber of relics, and a lodestone among them that no rival will ever know about. | Take the lodestone only (`stones` +1, Lead +1). Take everything you can carry (kUC +4, `stones` +1, Alarm +2, `hoard_taken`). Take nothing, and mark the way (Understanding +2, `mithdu_marked`: a route the tribes thread can use). |
 | The Double-Cross | *Vane's terms.* Her lawyer calls before the smoke clears. | Pay her for the log (kUC −4, Vane's Trust back to 0, `vane_cut_off` cleared, `vane_suspects`). Tell her where to put it (`vane_cut_off`, the patron thread). Offer her the next lodestone (`vane_suspects`, Vane's Trust −1, `owed_vane`: she will collect). |
 
@@ -359,12 +433,12 @@ the systems in the order the company reaches them.
 | *Claim Jumpers* (Race) | *The scoop.* Kestrel's dropships are already down. Race them in (you attack, Readiness 0). Offer them the pictures (`kestrel_scooped`, no allies yet; Lead −1, Kestrel can be hired). With `kestrel_deal`: hire them against whoever else is there. | *The footage.* Let Kestrel run it (Vane's Trust −1, `kestrel_filmed`: every rival knows where the company is). Buy it from them (kUC −2). | `theirs` +1 |
 | *The Wreck of the Morrow* (Race) | *The hatch.* Sable is already cutting in. Cut a second way in (strikes, Alarm +1: the wreck's own systems wake). Wait for Sable to open it (enemy Readiness −1, Lead −1). With `sable_owed`: hire Sable for free. | *Morrow.* His body, his last entry, and a lodestone in his fist. Take it (`stones` +1, `morrow_found`). Bury him with it (Understanding +1, Loyalty +1, `relics_returned`: the last stone is given back). | Sable strength +1, `theirs` +1 |
 | *Bounty* (Race, fallback) | *The tip.* Wraith Section has been paid to stop the company. Lay a trap for the trap (the ambush variant, yours). Run (Lead −1, Readiness 0). With `wraith_warned`: Wraith's commander offers to call it off for a lodestone (`stones` −1, no battle). | *The bounty hunters' paymaster.* Hand them in (Vane's Trust +1). Turn them (Intel +2, `wraith_turned`: an outline of every rival force). | Wraith strength +1 |
-| **The Landing** (Race finale) | *The field.* The leading rival holds the only landing field on the Quiet. With `wraith_turned`: their full list. With `kettle_partner`: Coin & Kettle beside you, at their price. | The ending. | — |
+| **The Landing** (Race finale) | *The field.* The leading rival holds the only landing field on the Quiet. With `wraith_turned`: their full list. With `kettle_partner`: Brass Ledger beside you, at their price. | The ending. | — |
 | *The Watchers* (Tribes) | *The shieldwall.* The Ulvar's domes cover the only pass. Strike the shield turrets (the Strike scenario). Go round (Lead −2, no battle, Alarm +1). With `mithdu_marked`: under it (one Battle Tier down, you choose the role). | *The dome falls.* Its keepers ask for their dead. Give them back (Understanding +1, Alarm −1). Keep the turret cores (kUC +3, Alarm +2, Vane's Trust +1). | Alarm +1 |
 | *Teleport Storm* (Tribes) | *The air goes wrong.* The camp's sensors scream. Dig in (barricades for you: the Invasion as defender). Move the stones away from the camp (`stones` held off the table: the Sh'kar's target is gone; enemy Readiness −1, Lead −1). | *What they came for.* Return a lodestone (`stones` −1, Alarm −2, `relics_returned`). Keep them all (Alarm +1). | Alarm +1, `theirs` +1 (the Sh'kar take one from a rival instead) |
 | *Cold Sites* (Tribes, fallback) | *The sand moves.* Clear the ruins (Clearing out). Seal them (no battle: Alarm +1, Lead +1). | *A Mithdu child.* Let it go (Understanding +1). Take it to Vane (Vane's Trust +2, Alarm +2, `child_taken`). | Alarm +1 |
 | **The Spire** (Tribes finale) | *The door.* With `contact`: the Esh-Aven open it, and the battle is against the Ulvar hardliners only. With `hoard_taken`: the Amt know the company, Readiness +2. | The ending. | — |
-| *The Mimics* (First Contact) | *A village asks.* Coin & Kettle are taking Esh-Aven for a buyer. Help them (Xenotripod allies; against Coin & Kettle). With `kettle_contact`: pay Coin & Kettle to leave (kUC −Price, no battle, Understanding +1). | *The Esh-Aven's thanks.* Their crested leader offers a guide who remembers the road to the Quiet, and names the price. Make the promise (`eshaven_freed`, `eshaven_promise`, Understanding +2, Lead +1: the guide knows a shorter way). Take the guide and promise nothing (`eshaven_freed`, Understanding +1). Ask for a lodestone instead (`stones` +1, Understanding −1: they give it, and stop talking). | Understanding −1, Coin & Kettle strength +1 |
+| *The Mimics* (First Contact) | *A village asks.* Brass Ledger are taking Esh-Aven for a buyer. Help them (Xenotripod allies; against Brass Ledger). With `kettle_contact`: pay Brass Ledger to leave (kUC −Price, no battle, Understanding +1). | *The Esh-Aven's thanks.* Their crested leader offers a guide who remembers the road to the Quiet, and names the price. Make the promise (`eshaven_freed`, `eshaven_promise`, Understanding +2, Lead +1: the guide knows a shorter way). Take the guide and promise nothing (`eshaven_freed`, Understanding +1). Ask for a lodestone instead (`stones` +1, Understanding −1: they give it, and stop talking). | Understanding −1, Brass Ledger strength +1 |
 | *The Speaker* (First Contact) | *The pylon.* An Alpha waits on the far shore. Meet it (the Parley scenario). Bring Vane's people (Vane's Trust +2, the Parley with enemy Readiness +1: the Alpha sees them). | Held: `contact`, `speaker_met`; Alarm −2. Broken: Alarm +2. | Understanding −1 |
 | *Signal Fires* (First Contact, fallback) | *The beacon again.* Light it (Hold the Line: the Sh'kar test the company, waves of them, nobody meaning to kill). | Held: Understanding +2. | nothing |
 | *The Vault* (Patron) | *Vane's vault.* Her store of relics, and receipts for what she has sold. Break in by night (the Strike scenario, a Tier down). Ask to see it (a roll on Vane's Trust: success, no battle, `vault_seen`). | *The receipts.* Vane has been selling stones to the rivals all along. Publish them (`vane_exposed`, Vane's Trust −5, `vane_cut_off`). Use them (`vane_owes`: Vane pays double from now). | Vane's Trust −1, Lance strength +1 |
@@ -384,7 +458,7 @@ them, so that when the village asks for help the request makes sense:
 | *What the Sh'kar left* (the beacon) | The Sh'kar wounded Alpha's projection names the company's kind: "*[hands without a master]*". The tribes think of servants and mercenaries as the same thing. | The bracketed voice, in the event's conversation. |
 | *Voices* (an interlude) | The soldier who hears them hears the Esh-Aven too: many small voices, all saying the same thing to each other, nobody answering from above. | The event's text. |
 | *The Mimics*, the card | Nine million Esh-Aven, and not a Crock among them. The masters left; the war stayed. | The chapter card. |
-| *The Mimics*, the conversation | Why they fight in their masters' castes; why Coin & Kettle is taking them; why they asked the company and not anyone else. | The opening conversation (below). |
+| *The Mimics*, the conversation | Why they fight in their masters' castes; why Brass Ledger is taking them; why they asked the company and not anyone else. | The opening conversation (below). |
 | *The Esh-Aven's thanks* | The road they remember, and what they fear at the end of it: the price is a promise. | The event, and its options. |
 | *The Speaker* | The Amt's Alpha calls them "*[our lost hands]*", and asks the company to return them. | The Parley's conversation; with `eshaven_promise`, the company's answer is written for it. |
 | *Recall* | If the Quiet wakes, the Esh-Aven allies stop, mid-battle, and turn towards the towers. | A battle voice (`wave`), and the allies walk (as hired allies do), unless `eshaven_promise` was kept. |
@@ -425,12 +499,12 @@ each time, they want a share, and they cannot be trusted with the prize.
 
   | Company | What makes them available | Their terms |
   |---|---|---|
-  | **Coin & Kettle** | *The agent* (after *Lot 47*): let go with a message, or paid (`kettle_contact`). From then on they are always for sale. | Money, and more of it each time. |
+  | **Brass Ledger** | *The agent* (after *Lot 47*): let go with a message, or paid (`kettle_contact`). From then on they are always for sale. | Money, and more of it each time. |
   | **Kestrel Air Cavalry** | *Morrow's records* sold to the newsfeed, or *The scoop* (`kestrel_deal`, `kestrel_scooped`). | Pictures, not money: first access to a site (Lead −1), and they want the story told their way. |
   | **The Red Reavers** | *Claim jumpers* (a side contract): their captain spared or bought off (`reavers_spared`). | Cheap, and they leave a mess (Alarm +1 at a Xenotripod battle, Loyalty −1 for what the company watches them do). |
   | **Sable Armour Group** | *Lot 47, again*: left the warehouse (`sable_owed`). | Once, for free. After that, ordinary terms. |
 
-  The earliest hire is at *The Broker* (chapter 4), and only Coin & Kettle,
+  The earliest hire is at *The Broker* (chapter 4), and only Brass Ledger,
   only with `kettle_contact`. Hiring is then an option at the event before a
   battle (written into that event, with `hire: 'kettle'` on it), with a `cost`
   of that company's **Price**, and an `if` on what opened their door.
@@ -464,7 +538,7 @@ Their events (one each, after a battle they fought in):
 
 | Event | Company | Options |
 |---|---|---|
-| *The invoice* | Coin & Kettle | Pay the extra (kUC −2, Trust +1). Dispute it (Trust −1, Price +1). Offer them a share of the claim instead (`kettle_partner`, Trust +2: *Finder's Fee* is split; *The Landing* brings them as allies). |
+| *The invoice* | Brass Ledger | Pay the extra (kUC −2, Trust +1). Dispute it (Trust −1, Price +1). Offer them a share of the claim instead (`kettle_partner`, Trust +2: *Finder's Fee* is split; *The Landing* brings them as allies). |
 | *The edit* | Kestrel | Let them cut the footage their way (Vane's Trust −1, Trust +1). Demand the raw footage (Trust −1, Intel +1). Give them an interview (Lead −1, Trust +2, `kestrel_filmed`). |
 | *The mess* | The Red Reavers | Pay them off and walk away (kUC −1). Make them clean it up (Trust −2, Loyalty +1). Look the other way (Trust +1, Loyalty −1, Alarm +1 if it was near the tribes). |
 | *Favour returned* | Sable | (the free hire) Thank them (Sable's Price back to its start). Ask for another (Price +1: no longer free). |
@@ -482,7 +556,7 @@ One before each hub, the first that applies:
 | *Send one ahead* | Vane's Trust 1 or more, and `stones` 2 or more | Vane wants a lodestone sent to her now. Send it (`stones` −1, Vane's Trust +2). Refuse (Vane's Trust −1, `vane_suspects` if she already suspects). |
 | *A warm stone* | `stones` 3 or more | The lodestones are warm, and pointing the same way. Follow them (Lead +1, Alarm +1). Shield them (kUC −1). |
 | *The newsfeed* | Kestrel is in the race, and `kestrel_deal` isn't set | A newsfeed wants pictures. Sell them (kUC +2, `kestrel_deal`, Lead −1). Refuse (nothing). |
-| *Coin & Kettle's catalogue* | `kettle_contact` | They are selling what they know. Buy (kUC −2, Intel +1, an outline of the next battle). Sell them yours (kUC +2, `theirs` +1). |
+| *Brass Ledger's catalogue* | `kettle_contact` | They are selling what they know. Buy (kUC −2, Intel +1, an outline of the next battle). Sell them yours (kUC +2, `theirs` +1). |
 
 ### Side contracts
 
@@ -495,8 +569,8 @@ catch-up offer.
 |---|---|---|---|
 | *Escort to the Yards* | 3 | Red Reavers | A freighter through claim-jumper space. |
 | *Claim jumpers* | 3 | Red Reavers | A bounty. Their captain can be spared or bought off at the end (`reavers_spared`: the Reavers can be hired). |
-| *Salvage dispute* | 4 | Coin & Kettle or Sable | Whoever has the lower strength; the loser's strength −1. |
-| *The village* | 2 | Coin & Kettle | A Hashamer village; only once the Esh-Aven are known. Understanding +1 if taken, −1 if passed up. |
+| *Salvage dispute* | 4 | Brass Ledger or Sable | Whoever has the lower strength; the loser's strength −1. |
+| *The village* | 2 | Brass Ledger | A Hashamer village; only once the Esh-Aven are known. Understanding +1 if taken, −1 if passed up. |
 | *Survey cover* | 3 | The Mithdu | A survey team on a quiet world. Alarm +1 if taken. |
 | *Vane's errand* | 4 | Whoever holds a stone she wants | Only while Vane's Trust is 1 or more. Vane's Trust +1. |
 | *Any port in a storm* | 4 | The Ninth Lance | Only with `vane_cut_off`: a creditor of Vane's pays you to hit her. Lance strength −1 on a win. |
@@ -511,22 +585,22 @@ validator checks both, as for *Deep Contract*.
 |---|---|---|
 | Vane's Trust | *The bidding* (outbid), *The agent* (police), *Morrow's records* (send), *What the Sh'kar left* (take both), *Lot 47, again* (buy), *The Watchers* (keep cores), *Cold Sites* (take the child), *The Speaker* (bring her people), *Bounty* (hand in), *The Escort* (deliver), *Send one ahead*, a decisive win | *The repossession*, *Vane's terms*, *The footage*, *The edit*, *The Escort* (keep a stone), *The receipts*, *Send one ahead* (refuse), questions in conversations that read `vane_suspects` |
 | Loyalty | *Morrow* (bury him), *The mess* (clean up), *Voices* (send home), *The wake* (pay), winning | *Second best* (follow), *The mess* (look away), *Voices* (listen), *The wake* (don't), *The jump* (a bad roll), Red Reavers hired |
-| Intel | *The bidding* (watch), *Wraith's dead drop*, *Second best* (dig on), *Station Thule*'s records, *Lot 47, again* (follow Sable), *The edit*, *Bounty* (turn), *Coin & Kettle's catalogue* | Spent on options (`cost: { intel: 1 }`), *The repossession* (hand back) |
+| Intel | *The bidding* (watch), *Wraith's dead drop*, *Second best* (dig on), *Station Thule*'s records, *Lot 47, again* (follow Sable), *The edit*, *Bounty* (turn), *Brass Ledger's catalogue* | Spent on options (`cost: { intel: 1 }`), *The repossession* (hand back) |
 | Lead | *Wraith's dead drop* (take it back), *Second best* (follow), *The broker's copies* (burn), *The Mithdu's hoard*, *Cold Sites* (seal), *A warm stone* | *Two readings* (the other site), *Station Thule* (pay), *First contact* (watch), *Lot 47, again* (buy, follow), *Burned*, *What the Sh'kar left* (leave it), *The repossession*, *The scoop*, *The hatch* (wait), *Bounty* (run), *The Watchers* (go round), *Teleport Storm* (move the stones), *The Escort* (long road), *The edit*, *The newsfeed*, *The jump*, side contracts in the second half |
 | `stones` | The relic carried off, *What the Sh'kar left* (take), *The Mithdu's hoard*, *Morrow*, *The Esh-Aven's thanks* (ask), *The Escort* (keep one), *Burned* (a roll) | *Bounty* (Wraith's price), *Teleport Storm* (return one), *Send one ahead*, a relic lost in a defeat |
-| `theirs` | *Two readings*, *Second best*, *Lot 47, again* (buy), *The broker's copies* (let go), *Claim Jumpers* passed up, *The Wreck* passed up, *Coin & Kettle's catalogue* (sell) | *The broker's copies* (buy them all), a relic taken from a rival in battle, *Teleport Storm* passed up (the Sh'kar take a rival's) |
+| `theirs` | *Two readings*, *Second best*, *Lot 47, again* (buy), *The broker's copies* (let go), *Claim Jumpers* passed up, *The Wreck* passed up, *Brass Ledger's catalogue* (sell) | *The broker's copies* (buy them all), a relic taken from a rival in battle, *Teleport Storm* passed up (the Sh'kar take a rival's) |
 | Alarm | *First contact* (storm), *What the Sh'kar left* (take), the Warren, *The Mithdu's hoard* (take everything), *The hatch* (cut in), *The Watchers* (keep cores, go round, passed up), *Teleport Storm* (keep them, passed up), *Cold Sites* (seal, take the child), *The Speaker* (broken), *A warm stone*, Red Reavers near the tribes, *Survey cover* | *The dome falls* (give them back), *Teleport Storm* (return one), *The Speaker* (held), *Recall* (leave the stones) |
 | Understanding | *First contact* (watch), *What the Sh'kar left* (leave it), *Into the Warren* (let it close, mark the way), *Morrow's records* (listen), *Morrow* (bury), *The dome falls*, *Cold Sites* (let it go), *The Mimics*, *Signal Fires*, *Voices*, *The village* | *The Esh-Aven's thanks* (ask for a stone), *The Mimics* or *The Speaker* passed up, *The village* passed up, massacre (a decisive win against Esh-Aven allies' kin) |
-| Rival strength (each) | The other site of *Two readings*, their chapter passed up, *Coin & Kettle's catalogue*, a hire refused | *The agent* (police), *Wraith's dead drop* (warn), *The broker's copies* (burn), their defeat in battle (−1), *Salvage dispute* |
+| Rival strength (each) | The other site of *Two readings*, their chapter passed up, *Brass Ledger's catalogue*, a hire refused | *The agent* (police), *Wraith's dead drop* (warn), *The broker's copies* (burn), their defeat in battle (−1), *Salvage dispute* |
 | Lance strength | `vane_suspects` or `vane_cut_off` (+1 a chapter in the second half), *The Vault* or *Debts* passed up | *Debts* and *Any port in a storm* won, *The Double-Cross* won |
 | Price (each hired company) | Each hire, their losses, *The invoice* (dispute), *Favour returned* (ask again) | A decisive win paid in full, *Favour returned* (thank them) |
 | Trust (each hired company) | *The invoice* (pay, share), *The edit* (their way, interview), *The mess* (look away) | *The invoice* (dispute), *The edit* (raw footage), *The mess* (clean up), orders they refused, their losses |
 
 | Flag | Set by | Read by |
 |---|---|---|
-| `kettle_marked` | *The bidding* (follow the agent) | The Lot 47 battle (Coin & Kettle start Suppressed: they were followed) |
-| `kettle_contact` | *The agent* (let go, pay) | Hiring Coin & Kettle; *The Mimics* (pay them to leave); *Coin & Kettle's catalogue* |
-| `kettle_burned` | *The agent* (police) | Coin & Kettle never hire out; their forces Readiness +1 |
+| `kettle_marked` | *The bidding* (follow the agent) | The Lot 47 battle (Brass Ledger start Suppressed: they were followed) |
+| `kettle_contact` | *The agent* (let go, pay) | Hiring Brass Ledger; *The Mimics* (pay them to leave); *Brass Ledger's catalogue* |
+| `kettle_burned` | *The agent* (police) | Brass Ledger never hire out; their forces Readiness +1 |
 | `kettle_partner` | *The invoice* (a share) | *The Landing* (allies), *Finder's Fee* (split) |
 | `glassflats_rushed` | *The dig* | The Glass Flats battle (one search site fewer) |
 | `wraith_orders` | *Wraith's dead drop* (read) | *Bounty* (Wraith's commander can be reasoned with), *The Speaker* (the navy's interest: Vane's people are not the only threat; a roll +1) |
@@ -584,7 +658,7 @@ the briefings; hidden ones only in the writing until an event reveals them, as i
 | **Understanding** (0 to 6) | 0 | once a tribe is met | Signal rolls; Xenotripod allies' size (one unit more at 4 or more). | First Contact's pressure; *Voices* at 2; *The Speaker* offered at 3 (or `beacon_rubbing`); the *First Contact* ending. |
 | **Rival strength** (one per rival: `kettle`, `wraith`, `sable`, `kestrel`, `reavers`; 0 to 10) | 2 | no; from Intel 4 | Their optional units and filler, as Rebel Strength. | Which rivals the second half brings (the two strongest met, plus Kestrel). A rival at 0 is out of the race. |
 | **Lance strength** (0 to 10) | 2 | no; from `lance_known` | The Ninth Lance's optional units. | The Patron's pressure; at 7, *The Collector* comes on a draw as a loss. |
-| **Price** (one per company that can be hired; kUC) | Coin & Kettle 2, Kestrel 0 (they want pictures), Reavers 1, Sable 0 once | on the hiring option | The `cost` of hiring them. | *A better offer* doubles it. |
+| **Price** (one per company that can be hired; kUC) | Brass Ledger 2, Kestrel 0 (they want pictures), Reavers 1, Sable 0 once | on the hiring option | The `cost` of hiring them. | *A better offer* doubles it. |
 | **Trust** (one per company that can be hired) | 0 | no | Orders refused at −1 or lower (on a 4+ at −1, always at −3); walking off at −2 from the start. | *A better offer* at −3. |
 
 Time alone: Lance strength +1 a chapter while Vane suspects, and **each jump in
@@ -659,7 +733,7 @@ function tribe(id, extra) {
 
 | Who | Company | Face | Voice |
 |---|---|---|---|
-| **Moss Kettering** | Coin & Kettle | Grey stubble, an earring, a waistcoat over armour | Everything has a price, and he will tell you it. |
+| **Moss Kettering** | Brass Ledger | Grey stubble, an earring, a waistcoat over armour | Everything has a price, and he will tell you it. |
 | **Nine** | Wraith Section | A visor, never lifted | Says little; what she says, she already knew. |
 | **Colonel Agathe Sable** | Sable Armour Group | Helmet, scar, a combine's crest | Patient, polite, immovable. |
 | **Rook Kestrel** | Kestrel Air Cavalry | Flight helmet, pushed back; a grin | Talks to the cameras as much as to you. |
@@ -855,15 +929,15 @@ battles are worlds apart (the Glass Flats and Station Thule).
   3, an event after the beacon (*A buyer for a copy*), not at The Broker: the
   Double-Cross takes the place of chapter 4, so the choice has to come before it.
 - Vane's Trust starts at 0, not 1, and has ways down in the first half (letting
-  Coin & Kettle's agent go, selling Morrow's records, leaving the relic, following
+  Brass Ledger's agent go, selling Morrow's records, leaving the relic, following
   Sable): at 1 it almost never fell far enough for the Double-Cross.
 - *Claim Jumped* comes from losing The Landing, or from the rivals holding four
   or more lodestones and more than the company: with "more than the company"
   alone it was most walks' ending.
 - Several events stopped handing the rivals lodestones (buying the heading,
-  passing up The Wreck or Teleport Storm, selling Coin & Kettle your notes), and
+  passing up The Wreck or Teleport Storm, selling Brass Ledger your notes), and
   winning against a rival gains Lead.
-- Kestrel and Sable never sell the company out; Coin & Kettle and the Reavers
+- Kestrel and Sable never sell the company out; Brass Ledger and the Reavers
   make their *better offer* at Trust −2, and no company takes a hire at −3 or
   lower.
 - The rivals' strengths and the hired companies' prices and trust are meters the
@@ -972,11 +1046,11 @@ story beside *Deep Contract*, and the new-story form offers both):
   docking ring. Station Thule and the Warren are compounds, laid from their seed.
   The second half's battles are fought on rolled ground until phase 5
   (`mapsPending: [2]`).
-- **The voices** (`dead-reckoning-talk.js`): Vane and her reader Halloran opening
+- **The voices** (`dead-reckoning-talk.js`): Vane (on the line) and his reader Halloran opening
   Lot 47, Kettering's call about his man, the two readings, Nine on the open
   channel, the Thule scavengers, the fog at the beacon, Colonel Sable at the
   broker's, the Warren, Commander Daw's court order; each battle's lines and
-  each enemy side's, the Xenotripods in brackets; the hired companies reporting
+  each enemy side's, the unknown in brackets; the hired companies reporting
   in and answering orders.
 - **Shared screens:** each story names its own halves on the chapter cards
   (`halves`) and its own first day (`firstDay`); the side contracts' time cost
@@ -995,10 +1069,91 @@ from the Epsilons' own figures so a skinned Alpha still reads as the tribe's
 leader (a crest and a staff of office) and a skinned Gamma still carries its
 heavy weapon; the Esh-Aven face for the conversations.
 
+**Where it stands.** Built:
+
+- **Faces** (`story-portraits.js`):
+  - a Xenotripod Crock (`tripod`): a faceted ceramic carapace and a wedged
+    helmet with three eyes in its slit, gold at the brow for an Alpha;
+  - an Esh-Aven (`eshaven`): a low lizard's head, a horn, five compound eyes,
+    and an Alpha's gold crest where it wears one.
+  - The Sh'kar, the Mithdu and Seven-Holds-the-Staff wear them.
+- **Scenes** (`story-scenes.js`): Vesk's auction night, the Glass Flats under two
+  suns, Station Thule under an airless sky, the Drowned Beacon in the fog, the
+  Warren, Kerrigan's docks, and the orbital's docking ring. Each is named for
+  its map, so a battle's briefing opens on it. A battle can name a scene of its
+  own (`scene`: Thule, the Warren), and a compound otherwise shows its chapter's.
+- **The star chart** (`story.js` `chart`, `view/story-chart.js`), for a story
+  with `chart`:
+  - the stops made, in order, each with its kind of world;
+  - where the company is, and the next heading as far as the log has given it;
+  - each rival where it was last met, and its strength;
+  - the lodestones held, and the rivals' once revealed.
+  - It shows between chapters and in the journal.
+- **The Esh-Aven on the table** (`iso-troops.js`, `iso-xenofig.js`): every caste
+  in its own Esh-Aven kit (`xesh_alpha` to `xesh_delta`), not the Epsilons'.
+  The Alpha carries a staff of office and a gold crest, the Gamma a heavy
+  launcher on the shoulder, the Beta a gauss rifle and plates, the Delta its
+  blades. The Hashamer's skin draws them so (`storybattle.js` `skin`).
+
+From playing the first half:
+
+- **Lot 47 is an Escort** (`scenarios-story.js` `escort`): Halloran, Vane's
+  reader, with the log, across Vesk's market square to Vane's ship. He comes on
+  as side A's own unit to move. Through to the far edge, the battle is won;
+  killed, it is lost; the enemy goes for him and nothing else.
+- **Outbid them in the open** is Vane's money, not the company's (it had none
+  to start with).
+
+Tested by `storydrwords.js` (the chart), `storyforces.js` (the castes' kits)
+and `storyescort.js`.
+
+### After phase 4: first contact, the patron, the rivals
+Asked for by the owner after playing the first half; section 0 has all of it.
+
+**Where it stands.** Built and merged (PR #316):
+
+- the Xenotripods unknown in the first half (unknown contacts, `storycontacts.js`);
+- Lucan Vane, the elusive patron;
+- the rivals made confrontational, Brass Ledger renamed, and the secret
+  clients and grudges.
+
+Also merged in PR #316: units may stand in a compound's doorway.
+
 ### Phase 5: the second half and the endings
 The four threads, the finales, Recall, Xenotripod allies, hired allies (Price,
 Trust, demands, orders refused, walking, the Turn), the endings and their
 epilogues, the side contracts. `storywhole.js` tuned to its targets.
+
+What the rework adds to it: the second half is where the Xenotripods are first
+named and first fought in force. The rivals meet the company again knowing who
+beat them, so every Race and Patron battle has grudge lines. A client still
+secret at the half can be found out in the second.
+
+In parts, each tested and pushed as it is done:
+
+- **5a. The reveal and the second half's words.**
+  - *The Long Jump*'s opening conversation: Halloran reads Morrow's last
+    pages, the name, and Vane's reaction on the line.
+  - Then every pool chapter's intro, pages, options and closed options'
+    reasons, each battle's mission name and briefing, and the endings' and
+    epilogues' words, in `dead-reckoning-text.js`.
+  - `storydrwords.js` extended to the whole story.
+- **5b. The second half's maps.** Ground of its own for every open-table battle
+  (*Claim Jumpers*, *Bounty*, *The Landing*, *The Watchers*, *Teleport Storm*,
+  *The Mimics*, *The Speaker*, *Signal Fires*, *The Escort*, *Debts*, *The
+  Collector*, *Recall*). The compounds keep their seeds. `mapsPending` goes.
+- **5c. The second half's voices.**
+  - Each chapter's opening conversation.
+  - Each battle's lines: the tribes in brackets until *The Speaker*, the
+    Ulvar, the Amt and the Hashamer given sides.
+  - The rivals' grudge lines wherever they come back, and Seven-Holds-the-Staff.
+- **5d. Hired allies answering back.**
+  - Orders refused at low Trust (on a 4+ at −1, always at −3).
+  - Walking off the table at −2.
+  - The Turn: a hired company bought out from under the company.
+- **5e. The whole walk.** `storywhole.js` over *Dead Reckoning*: every ending
+  reachable, the threads reaching their finales, the finales' forces and the
+  pay tuned to its targets.
 
 ### Phase 6: polish
 Sounds for the Xenotripod battles (Mental Projection lines, the beacon), the
@@ -1014,9 +1169,13 @@ Settled with the owner:
 |---|---|
 | **Rivals: written forces or real companies?** | **Written forces**, scaled by each rival's meter, as *Deep Contract*'s enemies are. No battle in the background, and the tests keep their made-up reports. A rival's commander and one veteran unit are named and carry wounds through flags. |
 | **How many rivals in the second half?** | **Three per playthrough**: the two the first half met most, plus Kestrel (who always gets there first). The Race's chapters are written so any rival can take them, with that rival's archetype. |
-| **Do jumps cost money?** | **A flat 1 kUC per jump**, waived by Vane while her Trust is 1 or more. |
+| **Do jumps cost money?** | **A flat 1 kUC per jump**, waived by Vane while his Trust is 1 or more. |
 | **How many lodestones open the Quiet?** | **Five, but never a dead end**: with fewer the finale is fought anyway, harder, and *Lost Signal* and *Claim Jumped* are likelier. |
 | **The Xenotripods' voice** | **Bracketed Mental Projection until *The Speaker*, then words.** |
+| **The shape of the story** | **A treasure hunt with clashes against rival companies**, not a war (section 0). |
+| **The Xenotripods** | **Unknown in the first half**: met only as unknown contacts, never in a full battle, and named when the second half opens. |
+| **The patron** | **Lucan Vane**: rich, powerful, elusive, a voice on the line. |
+| **The rivals** | **Confrontational, and all business, until beaten**; then it is a grudge. Who hired each is a secret until found out. |
 | **Allies** | **Xenotripod allies** in First Contact chapters and, with `contact`, the finales. **PMC allies too, as hired guns** (section 3): they cost money, cost more each time, make demands, refuse orders when their Trust is low, walk off the table, and can sell the company out. |
 
 Still open, to be settled by the walk:

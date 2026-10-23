@@ -239,6 +239,16 @@
           'when it comes into sight of one of yours, chooses to show itself, is charged, or is picked up by Detect.</p>';
         return;
       }
+      /* An unknown contact (a story's first contact): seen, and shot at, and
+         nothing in anybody's files to say what it is. */
+      if (u.unknown) {
+        box._html = null;
+        box.innerHTML = '<div class="stat-head"><span class="code code-' + u.side + '"' + armyStyle(u.paint || u.side) + '>' + esc(u.code) + '</span>' +
+          '<div class="sh-text"><h2>Unknown contact</h2><span class="sub">' + esc(sideName(u.side)) + '</span></div></div>' +
+          '<div class="stats">' + stat('Models', u.models + '/' + u.size) + stat('SP', u.sp) + '</div>' +
+          '<p class="hint small">Nothing in the company\u2019s files matches it: what it carries, how well it is armoured and how hard it is to break are unknown.</p>';
+        return;
+      }
       if (R.isMachine(u)) { drawMachineStats(u, box); return; }
       var st = R.status(u), m = R.currentMorale(u);
       var h = statHead(u);

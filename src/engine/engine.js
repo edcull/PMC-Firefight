@@ -537,14 +537,16 @@
       able.forEach(function (u) { u.rules.push('Battlefield Insertion'); u.mimic = true; });
     });
     /* A solitaire scenario can bring units of its own: a VIP and bodyguard,
-       civilians and militia to protect, the enemy leaders to kill. */
+       civilians and militia to protect, the enemy leaders to kill; and so can a
+       story's (Escort: whoever is to be got across). */
     var soloScen = SC.SCENARIOS[scenId];
-    if (state.solo && soloScen.extraUnits) {
+    if ((state.solo || soloScen.story) && soloScen.extraUnits) {
       soloScen.extraUnits(state).forEach(function (x) {
         var u = makeUnit(x.profile, x.side, state.units.length, null, false, null, false);
         u.startSize = u.models;
         if (x.side === 'A') { u.owner = x.owner || 1; if (u.owner === 2) u.paint = 'C'; }
         if (x.vip) u.vip = true;
+        if (x.escort) u.escort = true;
         if (x.objective) u.soloObjective = true;
         if (x.civ) u.soloCiv = true;
         if (x.militia) u.soloMilitia = true;

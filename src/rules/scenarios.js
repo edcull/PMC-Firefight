@@ -315,6 +315,9 @@
       /* A Rapid insertion platform "does not count towards victory conditions"
          (p. 79), so it is in neither the tally nor the losses. */
       if (!R.countsForVictory(u)) return;
+      /* A force replaced in the middle of a battle (a story's unknown contacts,
+         storybattle.js) is no longer the side's: the tally is of what took its place. */
+      if (u.superseded) return;
       // a unit lifted out from a story battle's landing zone is safe, not lost
       if (u.extracted) { out++; return; }
       /* Expendable troops, "when destroyed ... do not count as a casualty for

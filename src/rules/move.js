@@ -615,7 +615,9 @@
        part of it on ground it could not stand on, and never astride a wall or a
        stretch of wire — "a unit cannot be split by linear terrain, with models on
        both sides" (p. 42). A Tier III-V hull flattens a wall it stops on (p. 35).
-       Aircraft fly over all of it. Returns a test of a point. */
+       A compound's doorway is the exception: a unit may stand in it, the door
+       held open (doorOpen), unless the door is locked against it. Aircraft fly
+       over all of it. Returns a test of a point. */
     var RIM = (function () {
       var out = [];
       for (var a = 0; a < 16; a++) out.push([Math.cos(a * Math.PI / 8), Math.sin(a * Math.PI / 8)]);
@@ -627,6 +629,7 @@
       var bars = state.terrain.filter(function (r) {
         var t = TERRAIN[r.kind];
         if (!t) return false;
+        if (t.door && !terrainBars(u, r.kind)) return false;
         if (t.linear) return !(crush && t.destructible === 'linear' && !r.reinforced);
         return lands ? t.impassable : terrainBars(u, r.kind);
       });

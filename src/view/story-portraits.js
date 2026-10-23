@@ -10,7 +10,15 @@
    face: { bg, skin, hair, hairStyle: short|long|bun|bald, hat: helmet|cap|beanie|
    hardhat|visor, hatColour, clothes, clothesStyle: jacket|suit|uniform|overalls|
    armour|cardigan, accent, extras: [glasses, beard, moustache, stubble, scar,
-   bandana, earring], bandana, lips, eyes }, or { bug: true, bg, shell, glow }. */
+   bandana, earring], bandana, lips, eyes }, or { bug: true, bg, shell, glow };
+   a Xenotripod (a Crock) { tripod: true, bg, shell, glow, gold }: a faceted
+   ceramic carapace and a wedge of a helmet with three eyes in its slit; an
+   Esh-Aven { eshaven: true, bg, skin, eyes, crest, plate }: a low lizard's
+   head, a horn, a snout and five compound eyes (with `crest`, an Alpha's gold
+   crest worn over it, as the Hashamer's leaders wear their masters').
+   Any of them with `shadow`: half the face in shadow (true: a man who would
+   rather not be seen), or all of it but what glows ('full': nobody knows what
+   it is). */
 (function (root) {
   'use strict';
 
@@ -141,6 +149,69 @@
     return g;
   }
 
+  /* A Crock of the Xenotripods: shoulders of cut ceramic plates, the carapace
+     rising in facets, and a wedge of a helmet with a slit across it and three
+     eyes glowing in the slit. An Alpha's has gold at the brow. */
+  function tripod(f) {
+    var g = grid(f.bg), shell = f.shell || '#c9c4b4', lite = shade(shell, 0.3), dark = shade(shell, -0.3), deep = shade(shell, -0.55);
+    var glow = f.glow || '#7ae0ff', gold = f.gold ? '#d8b04a' : null;
+    // the shoulders: faceted plates, lit on the left
+    for (var y = 23; y < N; y++) {
+      var w = Math.min(15, 7 + Math.round((y - 23) * 1.4));
+      rect(g, 16 - w, y, 15 + w, y, shell);
+      rect(g, 16 - w, y, 16 - w + Math.round(w * 0.45), y, lite);
+      rect(g, 15 + w - 2, y, 15 + w, y, dark);
+    }
+    rect(g, 4, 27, 27, 27, dark); rect(g, 15, 23, 16, 31, deep);
+    // the neck: dark armoured ribs
+    rect(g, 11, 20, 20, 24, deep); for (var r = 21; r <= 23; r += 2) rect(g, 11, r, 20, r, dark);
+    // the helmet: a wedge, its crown sloped back, full across the eyes, a blunt jaw
+    for (var hy = 4; hy <= 21; hy++) {
+      var hw = hy < 9 ? 4 + (hy - 4) : hy < 16 ? 9 : Math.max(5, 9 - Math.round((hy - 16) * 0.8));
+      rect(g, 16 - hw, hy, 15 + hw, hy, shell);
+      rect(g, 16 - hw, hy, 16 - hw + Math.round(hw * 0.6), hy, lite);
+      rect(g, 15 + hw - 1, hy, 15 + hw, hy, dark);
+    }
+    rect(g, 15, 4, 16, 21, shade(shell, 0.12));                 // the ridge down the middle of the face
+    if (gold) { rect(g, 10, 4, 21, 5, gold); rect(g, 14, 2, 17, 4, gold); put(g, 15, 1, gold); put(g, 16, 1, gold); }
+    // the slit, and three eyes glowing in it
+    rect(g, 8, 11, 23, 13, deep);
+    [10, 15, 20].forEach(function (x) { rect(g, x, 11, x + 1, 12, glow); put(g, x, 11, '#ffffff'); });
+    return g;
+  }
+  /* An Esh-Aven: a low, forward head on a hunched neck, a horn swept back from
+     the brow, a blunt snout, and five compound eyes in a cluster. With a
+     `plate`, a white ceramic brow plate; with a `crest`, the gold crest of an
+     Alpha, worn as their masters wore it. */
+  function eshaven(f) {
+    var g = grid(f.bg), skin = f.skin || '#8a8a5a', lite = shade(skin, 0.28), dark = shade(skin, -0.32), deep = shade(skin, -0.55);
+    var eye = f.eyes || '#e9f07a';
+    // the hunched shoulders, and spines down the back of the neck
+    for (var y = 22; y < N; y++) { var w = Math.min(15, 8 + (y - 22)); rect(g, 16 - w, y, 15 + w, y, dark); rect(g, 16 - w, y, 16 - w + 3, y, skin); }
+    [[22, 20], [24, 23], [26, 26]].forEach(function (p) { rect(g, p[0], p[1], p[0] + 1, p[1] + 1, deep); put(g, p[0] + 2, p[1] - 1, deep); });
+    // the neck, thick and low
+    ellipse(g, 15, 20, 6, 5, skin);
+    // the head: low and long, thrust forward to the left
+    ellipse(g, 14, 14, 8, 6.5, skin);
+    ellipse(g, 12, 12, 5, 3.5, lite);
+    // the snout
+    rect(g, 4, 15, 9, 18, skin); rect(g, 4, 17, 9, 18, dark); put(g, 5, 16, deep); put(g, 7, 16, deep);
+    rect(g, 4, 19, 8, 19, deep);
+    // the horn, swept back from the brow
+    [[18, 9], [19, 8], [20, 7], [21, 6], [22, 5], [23, 5], [24, 4]].forEach(function (p) { rect(g, p[0], p[1], p[0], p[1] + 1, dark); });
+    if (f.plate) { rect(g, 9, 8, 17, 10, '#e8e4d8'); rect(g, 9, 10, 17, 10, '#bdb9ad'); }
+    if (f.crest) {
+      // an Alpha's crest: a gold fan over the brow, a jewel at its foot
+      for (var cx = 10; cx <= 20; cx += 2) rect(g, cx, 3 + Math.round(Math.abs(15 - cx) / 2), cx, 8, '#d8b04a');
+      rect(g, 9, 8, 21, 8, '#a8822a'); rect(g, 14, 7, 15, 8, '#7ae0c8');
+    }
+    // five compound eyes, in a cluster at the front of the head
+    [[8, 12], [10, 11], [9, 14], [11, 13], [12, 15]].forEach(function (p, i) {
+      rect(g, p[0], p[1], p[0] + (i === 1 ? 1 : 0), p[1], eye); put(g, p[0], p[1], i === 1 ? '#ffffff' : eye);
+    });
+    return g;
+  }
+
   // the bold black edge: every background pixel that touches the figure
   function outline(g, bg) {
     var out = g.map(function (r) { return r.slice(); });
@@ -155,7 +226,16 @@
   function pixels(f) {
     f = f || {};
     var bg = f.bg || '#3a4250';
-    return outline(f.bug ? bug(Object.assign({}, f, { bg: bg })) : person(Object.assign({ skin: '#d6a27c' }, f, { bg: bg })), bg);
+    var drawn = f.bug ? bug(Object.assign({}, f, { bg: bg })) : f.tripod ? tripod(Object.assign({}, f, { bg: bg })) : f.eshaven ? eshaven(Object.assign({}, f, { bg: bg }))
+      : person(Object.assign({ skin: '#d6a27c' }, f, { bg: bg }));
+    if (f.shadow) {
+      for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+        var c = drawn[y][x];
+        if (c === bg || c === f.glow) continue;
+        if (f.shadow === 'full' || x < 15 + (y - 16) * 0.35) drawn[y][x] = shade(c, -0.68);
+      }
+    }
+    return outline(drawn, bg);
   }
 
   // the face as an SVG of square pixels, a run of one colour a rectangle

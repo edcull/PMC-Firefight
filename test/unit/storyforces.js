@@ -90,7 +90,7 @@ ok('a rival fills its force with its own kind: Wraith Section, observers and lig
   'Wraith ' + wraithKeys.join(' ') + ' / Sable ' + sableKeys.join(' '));
 ok('...the same force each time it is looked at', JSON.stringify(at3('bounty.battle').armyB) === JSON.stringify(wraith3.armyB));
 ok('...and a tribe its own: the Ulvar behind shield turrets', at3('watchers.battle').armyB.some((k) => /Shield Turrets|Defensive Turrets/.test(groupOf(k))));
-ok('a Xenotripod force is led by an Alpha for the Tier', ['c3.battle', 'spire.battle', 'cold.battle'].every((id) => runs[id].cfg.armyB.some((k) => /^xalpha/.test(k))));
+ok('a Xenotripod force is led by an Alpha for the Tier', ['storm.battle', 'spire.battle', 'cold.battle'].every((id) => runs[id].cfg.armyB.some((k) => /^xalpha/.test(k))));
 const shk = L.describeForce(L.buildForce(S.battleSpec(at('c3.battle')).enemy, { campaign: at('c3.battle'), tier: 2, pl: 1 }), 1, 'xeno');
 ok('...and the briefing tells it as Xenotripods', /Alpha leads them/.test(JSON.stringify(shk.items)), JSON.stringify(shk.items));
 
@@ -99,7 +99,7 @@ console.log('\nThe leading rival');
   const c = at('landing.battle', (st) => { st.meters.kettle = 6; });
   c.story.leading = null;
   const spec = S.battleSpec(c);
-  ok('The Landing is fought against the strongest rival: Coin & Kettle at strength 6', spec.enemy.side === 'kettle' && spec.enemy.archetype === 'swarm', spec.enemy.side);
+  ok('The Landing is fought against the strongest rival: Brass Ledger at strength 6', spec.enemy.side === 'kettle' && spec.enemy.archetype === 'swarm', spec.enemy.side);
   ok('...its commander the target', spec.variant.target === 'Kettering’s Own');
   const k2 = at('landing.battle'); k2.story.leading = null;
   ok('...Kestrel first on a tie: it always gets there first', S.battleSpec(k2).enemy.side === 'kestrel');
@@ -124,8 +124,18 @@ const withAllies = (id, set) => { const c = at(id, set); c.story.pending = JSON.
 const m = started(withAllies('mimics.battle'));
 const eshA = m.st.units.filter((u) => u.ally);
 ok('they fight beside the company in The Mimics', eshA.length >= 2 && eshA.every((u) => u.skin === 'eshaven'), eshA.map((u) => u.name).join(', '));
-ok('...each trooper drawn as an Esh-Aven and called one', eshA.filter((u) => !R.isMachine(u)).every((u) => /^x_eps\d$/.test(u.art) && /^Esh-Aven /.test(u.name)),
+ok('...each trooper drawn as an Esh-Aven and called one: an Epsilon as itself, every other caste in its own Esh-Aven kit', eshA.filter((u) => !R.isMachine(u)).every((u) => /^(x_eps\d|xesh_(alpha|beta|gamma|delta))$/.test(u.art) && /^Esh-Aven /.test(u.name)),
   eshA.map((u) => u.art + ' ' + u.name).join(', '));
+{
+  // a Hashamer force with every caste in it: an Alpha, a Beta, a Gamma and a Delta, all Esh-Aven
+  const c = at('mimics.battle'); c.story.pending = JSON.parse(JSON.stringify(allyLever));
+  c.story.pending.allies.core = ['xalpha2', 'xbeta2', 'xgamma3', 'xdelta1'];
+  const all = started(c).st.units.filter((u) => u.ally && !R.isMachine(u));
+  // (brought down to a new company's Tier, the castes are what the Tier allows: each still in its own kit)
+  const caste = (u) => (/^x(alpha|beta|gamma|delta|eps)/.exec(u.key) || [])[1];
+  ok('...every caste in its own Esh-Aven kit: the Alpha with its staff and crest still the leader',
+    all.some((u) => caste(u) === 'alpha') && all.every((u) => caste(u) === 'eps' ? /^x_eps\d$/.test(u.art) : u.art === 'xesh_' + caste(u)), all.map((u) => u.key + ':' + u.art).join(', '));
+}
 ok('...each one named, in their manner, and none only a count', eshA.filter((u) => !R.isMachine(u)).every((u) => !R.counted(u) && u.men.length === u.models && u.men.every((x) => ESH.test(x.name))),
   eshA.map((u) => u.men.map((x) => x.name).join('/')).join('; '));
 ok('...the same numbers as the unskinned unit: a reskin, nothing more', eshA.every((u) => { const p = R.profile(u.key); return u.models === p.size && u.move === p.move; }));

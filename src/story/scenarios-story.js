@@ -284,6 +284,59 @@
     }
   };
 
+  /* ------------------------------------------------ Escort */
+  /* Someone who matters (the story's `variant.escort`: their name) crosses the
+     table with side A, from its own edge to the far one, and the other side
+     wants them. They come on with side A as a unit of their own, side A's to
+     move: a Command Unit's statline of the Battle Tier, and no special rules,
+     as the solitaire VIP is (p. 151). Through to within 3" of the far edge at
+     an End phase, they are out, and A has won; killed, B has. */
+  function escortOf(state) { return state.units.filter(function (u) { return u.escort; })[0] || null; }
+  SCENARIOS.escort = {
+    story: true, edges: true,
+    id: 'escort', name: 'Escort', page: null,
+    blurb: 'Someone has to get across the table alive. The other side wants them.',
+    win: 'A wins when the escorted unit is through to the far edge, or the enemy is routed. B wins if it is killed, or still on the table at the end of turn 10.',
+    turns: 10,
+    objectives: function () { return []; },
+    extraUnits: function (state) {
+      var C = root.PMCCamp, key = C && C.commandKey ? C.commandKey({ faction: 'pmc' }, state.cfg.tier || 1) : 'cmd2';
+      var base = R.profile(key) || R.profile('cmd2'), p = {};
+      for (var k in base) p[k] = base[k];
+      var who = (story(state).variant && story(state).variant.escort) || 'The VIP';
+      p.key = 'escortvip'; p.code = 'VIP'; p.name = who; p.rules = []; p.command = false;
+      return [{ profile: p, side: 'A', escort: true }];
+    },
+    entersTurn1: true,
+    deploy: function (state) {
+      K.entryEdges(state);
+      var vip = escortOf(state);
+      state.sc.escort = vip ? vip.id : null;
+      state.sc.extract = { side: 'A', rectX: R.BOARD.w - 3, from: 1, only: vip ? [vip.id] : [] };
+    },
+    reserves: function (state, side) { return K.entering(state, side); },
+    deployText: function () { return K.ENTRY_TEXT; },
+    zoneFor: function (state, side) { return state.sc.zones[side]; },
+    hint: 'Get the escorted unit to the far edge: within 3″ of it at an End phase, it is through. The enemy will go for it, and nothing else matters to them.',
+    // the enemy goes for whoever is escorted; side A's own (the AI's) for the far edge
+    goals: function (state, u) {
+      var vip = escortOf(state);
+      if (u.side === 'B') return vip && vip.alive && vip.x >= 0 ? [vip] : [];
+      return [{ x: R.BOARD.w - 1.5, y: u.y }];
+    },
+    groundTaking: true,
+    check: function (state) {
+      var vip = escortOf(state);
+      if (!vip) return null;
+      if (vip.extracted) { state.storyOutcome = Object.assign({}, state.storyOutcome || {}, { escort: 'through' }); return { winner: 'A', text: vip.name + ' is through.' }; }
+      if (!vip.alive) { state.storyOutcome = Object.assign({}, state.storyOutcome || {}, { escort: 'killed' }); return { winner: 'B', text: vip.name + ' is dead.', routed: ['A'] }; }
+      if (SC.routed(state, 'B')) return { winner: 'A', text: 'A routs the enemy, and ' + vip.name + ' walks on unhurt.', routed: ['B'] };
+      if (SC.routed(state, 'A')) return { winner: 'B', text: 'B routs the escort: ' + vip.name + ' is left alone in the open.', routed: ['A'] };
+      if (state.turn >= 10) return { winner: 'B', text: vip.name + ' is still on the table at the end of turn 10.', timeout: true };
+      return null;
+    }
+  };
+
   /* ------------------------------------------------ Parley */
   /* Both sides close to a meeting point, talking. A story's Parley is talked
      out as turn 1 opens, a conversation the player answers (cfg.story.parley;

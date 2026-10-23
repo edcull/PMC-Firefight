@@ -104,7 +104,8 @@
             if (e.set != null || (e.add || 0) < 0) m.down[h] = (m.down[h] || 0) + 1;
           });
         }
-        if (e.reveal && !mdefs[e.reveal]) err(at + ': no meter ' + e.reveal + ' to reveal');
+        // (a meter, or who a rival works for: `client_<id>`, of the story's `clients`)
+        if (e.reveal && !mdefs[e.reveal] && !(/^client_/.test(e.reveal) && def.clients && def.clients[e.reveal.slice(7)] != null)) err(at + ': no meter or client ' + e.reveal + ' to reveal');
         if (e.roll) {
           arr(e.roll.mods).forEach(function (md) {
             if (md.meter) M(md.meter).read.push({ at: at, kind: 'choice' });
@@ -399,6 +400,11 @@
     if (plain.length && plain[plain.length - 1].if) err('The last ending must have no conditions, so every path has one');
     Object.keys(mdefs).forEach(function (k) { if (mdefs[k].uses.length) M(k).read.push({ at: 'meter ' + k, kind: 'table' }); });
 
+    // (a grudge is set by the engine, on the first battle won against that side: story.js resolveBattle)
+    arr(def.grudges).forEach(function (id) {
+      if (!(def.sides || {})[id]) err('grudges: no side ' + id);
+      F('beat_' + id).set.push({ at: 'a battle won against ' + id, extreme: false, half: 'both', chapter: null });
+    });
     /* ---- flags: set, read, and read where it matters ---- */
     Object.keys(flags).forEach(function (f) {
       var x = flags[f];

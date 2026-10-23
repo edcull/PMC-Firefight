@@ -62,12 +62,34 @@ Object.keys(TALK.sides).forEach((id) => Object.keys(TALK.sides[id]).forEach((m) 
 ok('everyone who speaks is one of the story’s people, with a face', said.every((x) => people[x.who] && people[x.who].face), said.filter((x) => !people[x.who]).map((x) => x.at + ':' + x.who).join(', '));
 ok('every conversation opens a page the story has', Object.keys(TALK.conversations).every((id) => dr._nodes[id] && dr._nodes[id].talk));
 ok('every chapter of the first half opens on one', chapters.every((c) => c.nodes[0].talk && c.nodes[0].talk.length >= 3), chapters.filter((c) => !c.nodes[0].talk).map((c) => c.id).join(', '));
-const MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard'];
+const MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard', 'contact'];
 ok('every battle line is said at a moment the battle has', said.every((x) => !/\//.test(x.at) || MOMENTS.indexOf(x.at.split('/').pop()) >= 0 || TALK.conversations[x.at]));
 ok('...every battle of the first half has its own, and every enemy side its own', battles.every((n) => TALK.battles[n.id]) &&
   battles.every((n) => TALK.sides[n.enemy.side]), battles.filter((n) => !TALK.battles[n.id] || !TALK.sides[n.enemy.side]).map((n) => n.id).join(', '));
-ok('the Xenotripods speak in brackets, in every head at once', said.filter((x) => x.who === 'shkar' || x.who === 'mithdu').length > 4 &&
-  [].concat(...Object.keys(TALK.sides.shkar).map((m) => TALK.sides.shkar[m])).every((l) => /^\[.*\]$/.test(l.text)));
+ok('the patron is a man nobody sees: Lucan Vane, on the line, half his face in shadow', people.vane.name === 'Lucan Vane' && people.vane.face.shadow === true &&
+  /seen by almost nobody/.test(dr.blurb) && /nobody does/.test(TALK.conversations['c1.brief'][0].text));
+{
+  /* First contact: in the first half nobody knows what the Xenotripods are. No
+     word names them or a tribe, no tribe speaks, and no battle is fought
+     against one; what is met is unknown, speaks in brackets, and has no name. */
+  const NAMES = /Xenotripod|Sh’kar|Mithdu|Hashamer|Esh-Aven|Ulvar|\bAmt\b|Crock/;
+  const firstIds = new Set(nodes.map((n) => n.id).concat(FIRST));
+  const named = Object.keys(TEXT).filter((k) => firstIds.has(k.split(/[/#]/)[0]) && NAMES.test(TEXT[k]));
+  chapters.forEach((c) => { if (NAMES.test(c.intro || '') || NAMES.test(c.title || '')) named.push(c.id); });
+  nodes.forEach((n) => { if (NAMES.test(n.text || '') || NAMES.test(n.title || '')) named.push(n.id); (n.options || []).forEach((o) => { if (NAMES.test(o.text || '')) named.push(n.id + '/' + o.id); }); });
+  if (NAMES.test(dr.blurb)) named.push('blurb');
+  ok('the first half never names them: no word for the Xenotripods or any tribe', !named.length, named.join(', '));
+  const firstSaid = said.filter((x) => firstIds.has(x.at.split('/')[0]) || /^side (kettle|wraith|sable|scavengers|reavers)/.test(x.at));
+  ok('...no tribe speaks there; what does is unknown, in brackets', firstSaid.every((x) => ['shkar', 'mithdu', 'seven'].indexOf(x.who) < 0) &&
+    firstSaid.filter((x) => x.who === 'unknown').length >= 3 && [].concat(...Object.values(TALK.battles).map((b) => [].concat(...Object.values(b)))).concat(...Object.values(TALK.conversations))
+    .filter((l) => l.who === 'unknown').every((l) => /^\[.*\]$/.test(l.text)), firstSaid.filter((x) => ['shkar', 'mithdu'].indexOf(x.who) >= 0).map((x) => x.at).join(', '));
+  ok('...and no battle of the first half is fought against a tribe: they come only as unknown contacts', battles.every((n) => !dr.sides[n.enemy.side] || dr.sides[n.enemy.side].faction !== 'xeno') &&
+    ['c3.battle', 'warren.battle'].every((id) => dr._nodes[id].variant.contacts && dr._nodes[id].variant.contacts.keys.every((k) => /^x/.test(k))),
+    battles.filter((n) => dr.sides[n.enemy.side] && dr.sides[n.enemy.side].faction === 'xeno').map((n) => n.id).join(', '));
+  const sideJobs = dr.side.jobs.filter((j) => j.enemy && j.enemy.faction === 'xeno');
+  ok('...nor any side contract before the second half', sideJobs.every((j) => j.if && JSON.stringify(j.if).indexOf('"gte":5') >= 0 || JSON.stringify(j.if || {}).indexOf('played') >= 0), sideJobs.map((j) => j.id).join(', '));
+  ok('the second half opens on the name: Morrow names them, and it is out', /Xenotripods/.test(dr._chapters.fault.intro));
+}
 ok('the hired companies have their voices: reporting in, and an answer to each order', ['kettle', 'kestrel', 'reavers', 'sable'].every((k) => {
   const v = TALK.allies[k]; return v && people[v.who] && ['report', 'move', 'attack', 'hold', 'clear'].every((o) => v[o] && v[o].length);
 }));
@@ -99,10 +121,71 @@ Object.keys(MAPS).forEach((k) => {
 });
 const used = (id) => battles.filter((n) => n.map === id);
 ok('the Glass Flats and the Mire put their three places where the map says, for the relic', ['glassflats', 'mire'].every((k) => MAPS[k].sites.at.length === 3 && used(k).every((n) => n.scenario === 'find' && n.variant.relic)));
-ok('Vesk’s square has its three objectives, named, for Secure and control', MAPS.vesk.objectives.length === 3 && used('vesk').every((n) => n.scenario === 'secure'));
+ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 ok('the docks leave the middle clear, for the warehouse Sable holds (Hostile takeover)', MAPS.docks.pieces.every((p) => !overlap(p, { x: 18, y: 18, w: 12, h: 12 })) && used('docks').every((n) => n.scenario === 'takeover'));
 ok('each map’s world is its chapter’s', open.every((n) => { const ch = dr._chapters[n._chapter]; const place = n.place || ch.place; return !place || MAPS[n.map].planet === place.kind; }),
   open.map((n) => n.id + ' ' + MAPS[n.map].planet + '/' + ((n.place || dr._chapters[n._chapter].place) || {}).kind).join(', '));
+
+console.log('\nThe star chart');
+{
+  const c = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+  S.begin(c, 'dead-reckoning', {});
+  ok('a new story: nothing visited yet, the first stop where the company is, the next heading to come', (() => { const ch = S.chart(c); return ch && ch.stops.length === 1 && ch.here === ch.stops[0].key && ch.ahead && ch.theirs === null; })());
+  for (let i = 0; i < 60 && c.story.chapter !== 'c3'; i++) {
+    const v = S.view(c); if (!v) break;
+    if (v.type === 'event') { const o = v.options.filter((x) => x.ok); S.choose(c, (o.find((x) => x.id === 'flats') || o[0]).id); }
+    else if (v.type === 'battle') S.resolveBattle(c, 'victory'); else S.proceed(c);
+  }
+  const ch = S.chart(c);
+  ok('through chapter 2 by the Glass Flats: Vesk, Vantor III, Tessaly IV, in order, each with its kind of world', ch.stops.map((s) => s.planet).join() === 'Vesk,Vantor III,Tessaly IV' &&
+    ch.stops.map((s) => s.kind).join() === 'dense,desert,jungle', ch.stops.map((s) => s.planet + '/' + s.kind).join(', '));
+  ok('...the company at the last of them, and each rival where it was last met', ch.here === ch.stops[2].key &&
+    ch.rivals.find((r) => r.id === 'kettle').at === ch.stops[0].key && ch.rivals.find((r) => r.id === 'wraith').at === ch.stops[1].key && !ch.rivals.find((r) => r.id === 'sable').at);
+  c.story.revealed.theirs = true;
+  ok('...and the rivals’ lodestones counted once they are revealed', S.chart(c).theirs === (c.story.meters.theirs || 0));
+  require('../../src/view/story-chart.js');
+  const html = global.PMCStoryChart.html(S.chart(c), 'dead-reckoning');
+  ok('drawn: the map, the stops by name, who was met where, the lodestones', /<svg class="story-chart-map"/.test(html) && /Vantor III/.test(html) && /met Wraith Section/.test(html) && /Lodestones/.test(html));
+  {
+    // who each rival works for: a secret at first, on the chart as "client unknown", until something reveals it
+    const c2 = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+    S.begin(c2, 'dead-reckoning', {});
+    const ch0 = S.chart(c2);
+    ok('every rival’s client is a secret at the start', ch0.rivals.every((r) => r.client === false), ch0.rivals.map((r) => r.id + ':' + r.client).join(' '));
+    const reveals = {};
+    const scan = (x, at) => { if (!x || typeof x !== 'object') return; if (typeof x.reveal === 'string' && /^client_/.test(x.reveal)) (reveals[x.reveal.slice(7)] = reveals[x.reveal.slice(7)] || []).push(at); Object.keys(x).forEach((k) => scan(x[k], at)); };
+    Object.keys(dr._nodes).forEach((id) => scan(dr._nodes[id], id));
+    ok('...and every one of them can be found out, with a line for the journal', Object.keys(dr.clients).every((id) => (reveals[id] || []).length) &&
+      JSON.stringify(dr._nodes['c2f.drop']).indexOf('"reveal":"client_wraith","journal"') >= 0, Object.keys(dr.clients).map((id) => id + ':' + (reveals[id] || []).join('/')).join(' '));
+    c2.story.revealed.client_wraith = true;
+    c2.story.journal.push({ chapter: 'c2', node: 'c2f.battle', grade: 'victory' });
+    const h2 = global.PMCStoryChart.html(S.chart(c2), 'dead-reckoning');
+    ok('...the chart names Wraith Section’s once it is known', /Wraith Section.*for the Admiralty/.test(h2), h2.slice(h2.indexOf('chart-rivals'), h2.indexOf('chart-rivals') + 300));
+    c2.story.revealed.client_wraith = false; c2.story.leading = 'kestrel';
+    ok('...and says "client unknown" while it is not', /Kestrel Air Cavalry \(leading\) <small class="secret">client unknown/.test(global.PMCStoryChart.html(S.chart(c2), 'dead-reckoning')));
+  }
+  {
+    // business until somebody loses: a rival beaten bears a grudge, in its words and at the table
+    const c3 = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+    S.begin(c3, 'dead-reckoning', {});
+    ok('no grudges at the start', !Object.keys(c3.story.flags).some((f) => /^beat_/.test(f)));
+    c3.story.chapter = 'c1'; c3.story.node = 'c1.battle';
+    S.resolveBattle(c3, 'victory');
+    ok('Brass Ledger beaten at Vesk: it bears a grudge', c3.story.flags.beat_kettle === true && !c3.story.flags.beat_wraith);
+    const later = { node: 'mimics.battle', enemy: { side: 'kettle' } };
+    const said = S.talkFor(c3, later), st0 = said.find((l) => l.on === 'start');
+    ok('...and says so next time: Vesk, and personal', st0 && /Vesk/.test(st0.text) && /mine/.test(st0.text), st0 && st0.text);
+    ok('...over a battle’s own plain line', /Vesk/.test((S.talkFor(c3, { node: 'c4.battle', enemy: { side: 'kettle' } }).find((l) => l.on === 'start') || {}).text || ''));
+    ok('...and its forces come readier for it', JSON.stringify(dr.rivals.kettle.changes).indexOf('beat_kettle') >= 0);
+    const fresh = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+    S.begin(fresh, 'dead-reckoning', {});
+    ok('...where a company never beaten is still all business', !/Vesk/.test((S.talkFor(fresh, later).find((l) => l.on === 'start') || {}).text || ''));
+  }
+  require('../../src/story/deep-contract.js');
+  const dc = { companies: { A: { name: 'T', kUC: 0, tier: 1, roster: [] } } };
+  S.begin(dc, 'deep-contract', {});
+  ok('a story with no trail has no chart', S.chart(dc) === null);
+}
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');
 process.exit(fail ? 1 : 0);

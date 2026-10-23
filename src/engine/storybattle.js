@@ -55,8 +55,9 @@
       if (x.skin !== 'eshaven' || R.isMachine(u)) return;
       u.named = true;
       if (x.men && x.men.length) u.storyMen = x.men.map(function (n) { return { name: n }; });
+      // every caste an Esh-Aven, in its own caste's kit (iso-troops.js `xesh_*`): the Alpha still the leader
       var m = CASTE.exec(u.art || '');
-      if (m) u.art = 'x_eps' + Math.max(1, Math.min(5, +m[2]));
+      if (m) u.art = 'xesh_' + m[1];
       if (!x.name) {
         u.name = 'Esh-Aven ' + u.name.charAt(0).toLowerCase() + u.name.slice(1);
         u.label = u.name + ' [' + u.side + ']';
@@ -319,6 +320,54 @@
       w.n += w.per;
     }
 
+    /* Unknown contacts (Dead Reckoning's first half, docs/story-dead-reckoning-plan.md
+       section 0): `variant.contacts` { turn, found, keys }. At the End phase of
+       `turn`, or the first after the objective is found (`found`), whatever side B
+       had on the table breaks and runs (off the table, fled: not lost), and in its
+       place something nobody has a name for steps out of the air by the objective:
+       a unit for each key, two more than the battle's Tier (as many as there are
+       keys at most), side B's from then on, and known only as an unknown contact. */
+    function contacts(state, lines) {
+      var sty = story(), ct = sty && sty.variant && sty.variant.contacts;
+      if (!ct || state.sc.contacts) return;
+      var due = (ct.turn && state.turn >= ct.turn) || (ct.found && state.sc.found);
+      if (!due) return;
+      state.sc.contacts = { turn: state.turn };
+      // a carrier of side B's drops the relic as it runs
+      var rl = state.sc.relic, carrier = rl && rl.carrier != null ? unitById(state, rl.carrier) : null;
+      if (carrier && carrier.side === 'B') { rl.carrier = null; carrier.relic = false; }
+      /* (the force that ran, and its dead, are no longer side B's for its rout:
+         from here the tally is of the contacts, scenarios.js routed) */
+      var ran = 0;
+      state.units.forEach(function (u) {
+        if (u.side !== 'B' || u.unknown) return;
+        u.superseded = true;
+        if (!u.alive || u.aboard) return;
+        u.alive = false; u.extracted = true; u.fled = true; u.activated = true; ran++;
+      });
+      if (ran) lines.push({ side: 'B', text: (state.cfg.nameB || 'The enemy') + ' break and run.' });
+      state.cfg.nameB = 'Unknown contacts';
+      var o = state.objectives[0], at = rl ? { x: rl.x, y: rl.y } : o ? { x: o.x, y: o.y } : { x: R.BOARD.w / 2, y: R.BOARD.h / 2 };
+      var n = Math.min(ct.keys.length, (state.cfg.tier || 1) + 2);
+      for (var i = 0; i < n; i++) {
+        var p = R.profile(ct.keys[i]);
+        if (!p) continue;
+        var u = E.makeUnit(p, 'B', 'k' + i, null, false, null, false);
+        u.unknown = true;
+        u.name = 'Unknown contact';
+        u.code = '?' + (i + 1);
+        u.label = 'Unknown contact ' + (i + 1) + ' [B]';
+        u.startSize = u.models;
+        u.spawned = true;
+        var ang = (i / n) * Math.PI * 2, spot = R.nearestFree(state, at.x + Math.cos(ang) * 4, at.y + Math.sin(ang) * 4, u);
+        u.x = spot ? spot.x : at.x; u.y = spot ? spot.y : at.y;
+        u.facing = Math.PI;   // towards side A's edge
+        R.musterMen(u, null, state.namesTaken || (state.namesTaken = {}));
+        state.units.push(u);
+      }
+      lines.push({ side: 'B', text: 'Contact: ' + n + ' unknown, stepping out of the air by the objective.' });
+    }
+
     /* The orbital countdown: from turn `from`, D3 of the table's areas are hit
        each End phase, and an area hit once burns on. A unit in a burning area
        takes the strike: two hits on a squad, a damage roll on a machine. The
@@ -489,6 +538,7 @@
       countdown(state, lines);
       extraction(state, lines);
       relicEndPhase(state, lines);
+      contacts(state, lines);
       waves(state, lines);
       if (lines.length) {
         lines.forEach(function (l) { E.logLine('note', l.text); });
@@ -515,6 +565,7 @@
       if (on === 'loss') return lostOf('A').lost >= 1;
       if (on === 'bhalf' || on === 'ahalf') { var l = lostOf(on === 'bhalf' ? 'B' : 'A'); return l.n > 1 && l.lost * 2 >= l.n; }
       if (on === 'wave') return !!(state.sc && state.sc.waves && state.sc.waves.n);
+      if (on === 'contact') return !!(state.sc && state.sc.contacts);
       // (talks that broke down in the conversation said so there; this is for talks broken by a shot)
       if (on === 'parley') return !!(state.sc && state.sc.parley && state.sc.parley.broken && state.sc.parley.by !== 'talks');
       // Find and secure: a location searched and empty, and the one that holds the objective (`guard` its holders' answer)
