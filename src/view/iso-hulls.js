@@ -124,6 +124,19 @@
             var tbed = function () {
               slabF(HF, bedA0, bedA1, -w, w, z0, H * 0.4, TB);
               var boxH = H * (heavy ? 1.35 : 1.15), topZ = z0 + H * (heavy ? 1.75 : 1.55);
+              if (st.fuelTank) {
+                /* a fuel tank in place of the cargo box: a long steel drum on the
+                   bed, stepped in at the top and bottom so it reads round, a red
+                   hazard band round it and a manhole on top */
+                var TK = tone('#d4d8dc', '#a8aeb4', '#6a7076', '#bcc2c8'), tz = z0 + H * 0.4, ta0 = bedA0 + 0.03, ta1 = bedA1 - 0.03;
+                slabF(HF, ta0 + 0.02, ta1 - 0.02, -w * 0.62, w * 0.62, tz, boxH * 0.18, TK);
+                slabF(HF, ta0, ta1, -w * 0.9, w * 0.9, tz + boxH * 0.18, boxH * 0.52, TK);
+                slabF(HF, ta0 + 0.02, ta1 - 0.02, -w * 0.62, w * 0.62, tz + boxH * 0.7, boxH * 0.2, TK, 0, 0, w * 0.12);
+                bandOnSides(g, box((ta0 + ta1) / 2, 0, ta1 - ta0, w * 1.8), tz + boxH * 0.42, 2, 2, '#b8402e');
+                var mh = S3(HF((ta0 + ta1) / 2, 0), tz + boxH * 0.9 + 1);
+                sEllipse(mh[0], mh[1], 2.4, 1.3, '#5a6066');
+                return;
+              }
               if (st.armourBox) {
                 /* an armoured cargo box in the force colour: slab sides, a
                    panel seam along it, vision slits and a rear door */

@@ -454,12 +454,12 @@
         /* A fuel bowser: a long pale tank on a chassis, a yellow cab at its
            east end with a dark windscreen, red hazard bands, six wheels. */
         case 'fueltruck': {
-          /* The bowser is the company lorry from the unit art (the unarmoured
-             transport's hull), parked: drawn as a machine is, in the port's
-             ochre. Drawn by hand only where that art is not loaded. */
+          /* The bowser is the heavy lorry from the unit art with a fuel tank on
+             its bed in place of the cargo box (iso-machines 'bowser'), parked,
+             in hazard yellow. Drawn by hand only where that art is not loaded. */
           var ISO = root.PMCIso;
           if (ISO && ISO.machine) {
-            ISO.machine(g, { id: 'bowser', art: 'hlorry', side: 'B', paint: 'ochre', cls: 'vehicle', alive: true, facing: pr.facing || 0 },
+            ISO.machine(g, { id: 'bowser', art: 'bowser', side: 'N', faction: 'civilian', cls: 'vehicle', alive: true, facing: pr.facing || 0 },
               { at: { x: pr.x + pr.w / 2, y: pr.y + pr.h / 2 }, lift: lift || 0, status: 'ready' });
             break;
           }
