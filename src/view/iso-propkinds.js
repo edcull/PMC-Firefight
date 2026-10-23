@@ -326,6 +326,49 @@
         /* A plate of the hive's barrier (iso-props.js): a curved shell of
            carapace on edge, its back darker for its thickness, ribbed across,
            a sheen along its crown and a hooked spine at each end. */
+        /* The hive's growth (a brood chamber): a heap of resin, glossy, ribbed
+           with veins, heaped against a wall or spread on the floor; burnt, a
+           black crust. */
+        case 'hivegrowth': {
+          var hr = rng(pr.seed || 5), HR = a(pr.rad * 4.2), HU = a(pr.up * 9), hlf = lift || 0, py = p.y - hlf;
+          var hcol = pr.burnt ? ['#141110', '#211b18', '#2e2622', '#3a302a'] : pr.tone < 0.5 ? ['#2a1424', '#44203a', '#5e2e50', '#8a5476'] : ['#26201a', '#3e3426', '#584a32', '#82704a'];
+          var hpts = [];
+          for (var hk = 0; hk <= 12; hk++) {
+            var ang = Math.PI + Math.PI * hk / 12, wob = 0.8 + hr() * 0.35;
+            hpts.push([p.x + Math.cos(ang) * HR * wob, py + Math.sin(ang) * HU * wob]);
+          }
+          hpts.push([p.x + HR, py + a(0.6)]); hpts.push([p.x - HR, py + a(0.6)]);
+          ellipse(g, p.x, py + a(0.3), HR * 1.15, HR * 0.45, hcol[0]);
+          poly(g, hpts, hcol[1]);
+          ellipse(g, p.x - HR * 0.15, py - HU * 0.45, HR * 0.55, Math.max(1, HU * 0.35), hcol[2]);
+          // the veins over it, and a wet highlight
+          for (var hv = 0; hv < 3; hv++) {
+            var vx = p.x - HR * 0.7 + hr() * HR * 1.4;
+            edgeLine(g, [vx, py], [vx + (hr() - 0.5) * HR * 0.6, py - HU * (0.4 + hr() * 0.5)], hcol[0], 1);
+          }
+          if (!pr.burnt) dot(g, p.x - HR * 0.25, py - HU * 0.6, hcol[3], 2);
+          break;
+        }
+        /* A clutch of the hive's eggs: leathery ovals standing on end in a
+           pool of resin, veined, faintly lit from inside; burnt, split and black. */
+        case 'eggs': {
+          var er = rng(pr.seed || 9), elf = lift || 0;
+          ellipse(g, p.x, p.y - elf, a(3.4), a(1.6), pr.burnt ? '#120f0e' : '#2c1a28');
+          for (var ek = 0; ek < pr.n; ek++) {
+            var eang = ek / pr.n * Math.PI * 2 + er(), ed = ek === 0 ? 0 : a(1.2 + er() * 0.9);
+            var ex = p.x + Math.cos(eang) * ed, ey = p.y - elf + Math.sin(eang) * ed * 0.5, EH = a(2.2 + er() * 0.8), EW = a(1.1 + er() * 0.3);
+            if (pr.burnt) {
+              ellipse(g, ex, ey - EH * 0.35, EW, EH * 0.45, '#1e1915');
+              edgeLine(g, [ex - EW * 0.6, ey - EH * 0.7], [ex + EW * 0.5, ey - EH * 0.2], '#0c0a09', 1);
+              continue;
+            }
+            ellipse(g, ex, ey - EH * 0.5, EW, EH * 0.55, pr.tone < 0.5 ? '#8a8a5a' : '#7a8a6a');
+            ellipse(g, ex - EW * 0.25, ey - EH * 0.62, EW * 0.55, EH * 0.38, pr.tone < 0.5 ? '#b0ae78' : '#9eb08a');
+            edgeLine(g, [ex - EW * 0.3, ey - EH * 0.15], [ex + EW * 0.1, ey - EH * 0.9], 'rgba(90,40,70,.6)', 1);
+            dot(g, ex, ey - EH * 0.5, 'rgba(200,230,140,.45)', 2);
+          }
+          break;
+        }
         case 'carapace': {
           var cr = rng(pr.seed || 11), chl = pr.len / 2, cH = pr.height, clf = lift || 0;
           var cux = pr.horiz ? 1 : 0, cuy = pr.horiz ? 0 : 1, cvx = 1 - cux, cvy = 1 - cuy, CT = 0.12;
@@ -815,6 +858,25 @@
            fat pipe out of its side to a valve wheel, a vent stack on the roof.
            Searched and empty, its roof is struck through in red; the one that
            holds the objective has its lamp lit and the company's tape on the door. */
+        case 'parleyflag': {
+          // the table: a top on four legs, two crates either side, and the pole with its flag
+          var tlf = lift || 0, T0 = function (x, y, up) { var q = toScreen(x, y); return [q.x, q.y - tlf - up]; };
+          shadowBlob(g, { x: p.x, y: p.y }, a(5), a(2.5));
+          [[-0.5, -0.3], [0.5, -0.3], [-0.5, 0.3], [0.5, 0.3]].forEach(function (L) {
+            var f0 = T0(pr.x + L[0], pr.y + L[1], 0); edgeLine(g, f0, [f0[0], f0[1] - a(3)], '#3a3630', 1);
+          });
+          poly(g, [T0(pr.x - 0.6, pr.y - 0.4, a(3)), T0(pr.x + 0.6, pr.y - 0.4, a(3)), T0(pr.x + 0.6, pr.y + 0.4, a(3)), T0(pr.x - 0.6, pr.y + 0.4, a(3))], '#7a6a52');
+          [[-1.2, 0], [1.2, 0]].forEach(function (C2) {
+            var c0 = T0(pr.x + C2[0], pr.y + C2[1], 0);
+            rect(g, c0[0] - a(1), c0[1] - a(1.8), a(2), a(1.8), '#5a4a34');
+            rect(g, c0[0] - a(1), c0[1] - a(1.8), a(2), a(0.4), '#6e5c42');
+          });
+          var pole = T0(pr.x - 0.7, pr.y - 0.5, 0);
+          edgeLine(g, pole, [pole[0], pole[1] - a(16)], '#bdb6a8', 2);
+          poly(g, [[pole[0], pole[1] - a(16)], [pole[0] + a(6), pole[1] - a(15)], [pole[0] + a(5.4), pole[1] - a(12.6)], [pole[0], pole[1] - a(12)]], '#f2efe6');
+          edgeLine(g, [pole[0] + a(2.5), pole[1] - a(15.6)], [pole[0] + a(2.3), pole[1] - a(12.3)], '#cfcabd', 1);
+          break;
+        }
         case 'pumphouse': {
           var pl2 = lift || 0, PH = pr.height;
           box(g, pr, PREFAB, { roof: '#4a4f47', roofEdge: '#5e645a', windows: null, lift: pl2 });
@@ -888,6 +950,17 @@
           break;
         }
         case 'beacon': {
+          /* A relic (the relic variant): a lodestone the size of a palm. On the
+             ground it sits in a scrape of turned earth; carried, nothing is on the
+             ground, and the stone is drawn over its carrier, live (drawLive). */
+          if (pr.relic) {
+            if (!pr.carried) {
+              shadowBlob(g, { x: p.x, y: p.y }, a(3), a(1.5));
+              ellipse(g, p.x, p.y, a(2.8), a(1.4), 'rgba(40,30,22,.55)');
+              ellipse(g, p.x, p.y, a(1.9), a(0.95), 'rgba(20,16,12,.6)');
+            }
+            break;
+          }
           if (pr.lz) {
             /* An Invasion landing zone (p. 53): a smoke canister set down in the
                middle of it, its smoke (the attacker's colour) drawn rising every frame (drawLive). */
@@ -1034,6 +1107,25 @@
         core.addColorStop(1, 'rgba(' + rgbC + ',0)');
         g.fillStyle = core;
         g.beginPath(); g.arc(cx, cy - a(0.6), a(1.6), 0, Math.PI * 2); g.fill();
+        g.restore();
+        return;
+      }
+      if (pr.kind === 'beacon' && pr.relic) {
+        // the lodestone: a faceted stone, its veins glowing in a slow beat, lifted over a carrier
+        var rup = pr.carried ? a(13) + Math.sin(t / 600) * a(0.6) : a(1.4), rx = p.x, ry = p.y - rup;
+        var glow = 0.55 + 0.45 * Math.sin(t / 1400 * Math.PI * 2);
+        g.save();
+        g.globalAlpha = 0.35 + 0.35 * glow;
+        ellipse(g, rx, ry, a(3.2), a(2.6), 'rgba(120,230,210,.35)');
+        if (pr.carried) edgeLine(g, [rx, ry + a(1.2)], [rx, p.y - a(6)], 'rgba(120,230,210,.35)', 2);
+        g.restore();
+        poly(g, [[rx - a(1.3), ry], [rx - a(0.5), ry - a(1.4)], [rx + a(0.9), ry - a(1.1)], [rx + a(1.4), ry + a(0.2)], [rx + a(0.4), ry + a(1.2)], [rx - a(0.9), ry + a(0.9)]], '#2b3a3f');
+        poly(g, [[rx - a(0.5), ry - a(1.4)], [rx + a(0.9), ry - a(1.1)], [rx + a(0.2), ry - a(0.1)], [rx - a(0.8), ry - a(0.2)]], '#4a6670');
+        g.save();
+        g.globalAlpha = 0.5 + 0.5 * glow;
+        edgeLine(g, [rx - a(0.8), ry + a(0.4)], [rx + a(0.2), ry - a(0.3)], '#8ff0dc', 1);
+        edgeLine(g, [rx + a(0.2), ry - a(0.3)], [rx + a(0.9), ry + a(0.5)], '#8ff0dc', 1);
+        dot(g, rx - a(0.1), ry - a(0.4), '#e6fff8', 2);
         g.restore();
         return;
       }

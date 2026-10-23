@@ -164,7 +164,9 @@
       { ramp: ['#3a3426', '#433c2b', '#4c4431', '#564d37', '#60563e'], fleck: ['#262118', '#76683f', '#8a6a24'], rim: '#1e1a12' },    // workshop
       { ramp: ['#25302a', '#2b3830', '#314036', '#38483d', '#3f5144'], fleck: ['#18201b', '#4f6b4c', '#5f7f3a'], rim: '#131a15' },    // hydroponics
       { ramp: ['#262d38', '#2c3441', '#323b4a', '#394354', '#404b5e'], fleck: ['#1a1f27', '#56637a', '#3c5c8a'], rim: '#141820' },    // command
-      { ramp: ['#352826', '#3d2e2b', '#453430', '#4e3b36', '#57423c'], fleck: ['#241a18', '#6e534a', '#8a3a24'], rim: '#1c1412' }     // reactor
+      { ramp: ['#352826', '#3d2e2b', '#453430', '#4e3b36', '#57423c'], fleck: ['#241a18', '#6e534a', '#8a3a24'], rim: '#1c1412' },    // reactor
+      // a brood chamber (the Hive Heart): the floor gone under the hive's resin, dark and wet
+      { ramp: ['#2a1a26', '#33202e', '#3c2636', '#462c3e', '#503346'], fleck: ['#1a0f18', '#6a3a5a', '#7a6a3a', '#3a5a3a'], rim: '#160c14' }
     ];
     function roomTheme(r) {
       var t = root.PMCCompound ? root.PMCCompound.roomTheme(r) : null;

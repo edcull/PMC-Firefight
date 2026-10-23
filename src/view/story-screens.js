@@ -63,7 +63,7 @@
     }
     function readNew() {
       var p = document.getElementById('story-pick'), im = document.getElementById('story-ironman');
-      if (p) want.id = p.value;
+      if (p && p.value !== want.id) { want.id = p.value; want.difficulty = null; }
       if (im) want.ironman = !!im.checked;
     }
 
@@ -123,7 +123,7 @@
       var node = d._nodes[v.id];
       if (node && node._first && ch && !ch.shared) {
         cue('card:' + st.chapterNo + ':' + v.id, ch.half === 2 && ch.counts === false ? 'storyFault' : 'storyChapter');
-        h += '<div class="story-card">' + sceneOf(ch.scene) + '<small>' + (ch.counts === false ? '' : 'Chapter ' + st.chapterNo + (ch.half === 2 ? ' · Fault Lines' : ' · The Contract')) + '</small>' +
+        h += '<div class="story-card">' + sceneOf(ch.scene) + '<small>' + (ch.counts === false ? '' : 'Chapter ' + st.chapterNo + ' · ' + ((def().halves || ['The Contract', 'Fault Lines'])[ch.half === 2 ? 1 : 0])) + '</small>' +
           '<b>' + esc(ch.title) + '</b>' + (ch.intro ? para(ch.intro) : '') + '</div>';
       }
       if (v.talk) h += talkView(v.talk);
@@ -151,7 +151,10 @@
         return (list || []).filter(function (e) { return e.meter && !e.if; }).map(function (e) {
           var m = d._meters[e.meter];
           return (m ? m.name : e.meter) + ' ' + (e.add > 0 ? '+' : '') + e.add;
-        }).concat((list || []).some(function (e) { return e.if && e.meter === 'hive'; }) && E.camp.story.chapterNo >= 5 ? ['time: Hive Growth +1'] : []).join(', ');
+        }).concat((list || []).filter(function (e) {
+          // what time costs, once the story is far enough on (a cost with a chapter to it: Hive Growth, a rival's Lead)
+          return e.if && e.if.chapter && e.if.chapter.gte && e.meter && E.camp.story.chapterNo >= e.if.chapter.gte;
+        }).map(function (e) { var m = d._meters[e.meter]; return 'time: ' + (m ? m.name : e.meter) + ' ' + (e.add > 0 ? '+' : '') + e.add; })).join(', ');
       };
       var h = '<div class="story-side"><h3>Side contracts</h3><p class="hint">' + (v.side.length > 1 ? 'Work on offer between chapters. You can take one.' : 'Work on offer between chapters.') + '</p>';
       v.side.forEach(function (o) {
@@ -373,7 +376,7 @@
       if (ep.lines.length) h += '<div class="story-epilogue">' + ep.lines.map(para).join('') + '</div>';
       if (ep.stayed.length) {
         h += '<h3>Who stayed</h3><ul class="story-stayed">' + ep.stayed.map(function (x) {
-          return '<li><b>' + esc(x.name) + '</b> ' + esc([x.first ? 'on Kessler\u2019s Reach from the first day' : '', x.honours ? x.honours + (x.honours === 1 ? ' honour' : ' honours') : ''].filter(Boolean).join(', ')) + '</li>';
+          return '<li><b>' + esc(x.name) + '</b> ' + esc([x.first ? (d.firstDay || 'there from the first day') : '', x.honours ? x.honours + (x.honours === 1 ? ' honour' : ' honours') : ''].filter(Boolean).join(', ')) + '</li>';
         }).join('') + '</ul>';
       }
       // every meter, hidden or not, now the story is over
@@ -433,8 +436,17 @@
       if (st.ironman) S().forfeit(E.camp);
     }
 
+    /* Another story picked on the new-story form: its own blurb and its own
+       difficulties, the story's default chosen to start. */
+    function pickStory(id) {
+      readNew();
+      if (want.id !== id) want.id = id;
+      want.difficulty = null;
+      E.render();
+    }
+
     return {
-      newView: newView, storyView: storyView, musterView: musterView, journalView: journalView,
+      newView: newView, storyView: storyView, musterView: musterView, journalView: journalView, pickStory: pickStory,
       act: act, onFinish: onFinish, abandoned: abandoned
     };
   };

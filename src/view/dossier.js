@@ -1953,6 +1953,8 @@
       // the army picked: its pill (and the rules behind it) follows
       else if (ev.target.id === 'camp-faction') { wantFaction = ev.target.value; render(); }
       else if (ev.target.id === 'camp-bfaction') { wantB = ev.target.value; render(); }
+      // a story picked on the new-story form: its blurb and its difficulties follow
+      else if (ev.target.id === 'story-pick') kitStory().pickStory(ev.target.value);
       // solo: how many opposing forces, and what each of them runs
       else if (ev.target.id === 'camp-rivals') { wantRivals = +ev.target.value || 3; render(); }
       else if (ev.target.id === 'camp-hotai') { wantHotAi = +ev.target.value || 0; render(); }

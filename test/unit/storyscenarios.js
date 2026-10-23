@@ -59,6 +59,43 @@ s = started('hive_heart');
 s.objectives.forEach((o) => { o.owner = 'A'; });
 let r = SC.SCENARIOS.hive_heart.check(s);
 ok('Hive Heart: every chamber held at the End phase burns, and A wins', r && r.winner === 'A' && s.objectives.every((o) => o.destroyed));
+{
+  /* The Hive Heart's own ground: wider tunnels, bigger chambers grown over,
+     and the hive coming out of the chambers it still has. */
+  const h = started('hive_heart'), CMP = require('../../src/rules/compound.js');
+  const ch = h.terrain.filter((t) => t.hive);
+  ok('Hive Heart: laid on a 4" grid, wider than the book\'s 3"; corridors and rooms as much bigger', h.compound.cell === 4 &&
+    h.terrain.filter((t) => t.kind === 'corridor').every((t) => Math.min(t.w, t.h) >= 4) && h.terrain.filter((t) => t.kind === 'room').every((t) => Math.min(t.w, t.h) >= 8));
+  ok('...and every other compound on the book\'s 3"', CMP.CELL === 3 && started('ce_clear').compound.cell === 3);
+  ok('...three brood chambers, grown over: the hive\'s colours, and nothing of the base left in them', ch.length === 3 && ch.every((r) => CMP.roomTheme(r) === 6) &&
+    !h.terrain.some((t) => ['crates', 'machinery', 'pillar'].indexOf(t.kind) >= 0 && ch.some((r) => t.x + t.w / 2 > r.x && t.x + t.w / 2 < r.x + r.w && t.y + t.h / 2 > r.y && t.y + t.h / 2 < r.y + r.h)));
+  ok('...against the hive\'s edge, one to each part of it: the nest the compound was laid with', ch.every((r) => r.nest && r.x + r.w >= R.BOARD.w - 2 * h.compound.cell) &&
+    new Set(ch.map((r) => Math.floor((r.y + r.h / 2) / (R.BOARD.h / 3)))).size >= 2, ch.map((r) => (r.x + r.w) + '@' + (r.y + r.h / 2).toFixed(0)).join(' '));
+  ok('...and no entry corridors on that edge at all: the hive comes on in its chambers', h.compound.entries.R.length === 0);
+  ok('...standing in for its entry corridors: the hive comes on in them, side A by the left-hand edge', h.sc.entry.B.length === 3 &&
+    h.sc.entry.B.every((b, i) => b.x === h.sc.rooms[i].x && b.w === h.sc.rooms[i].w) && h.sc.entry.A.every((b) => b.x < 1) &&
+    h.units.filter((u) => u.side === 'B' && u.alive && u.x >= 0 && !u.spawned).every((u) => h.sc.rooms.some((r) => u.x >= r.x - 1 && u.x <= r.x + r.w + 1 && u.y >= r.y - 1 && u.y <= r.y + r.h + 1)),
+    h.units.filter((u) => u.side === 'B' && u.alive && u.x >= 0).length + ' of the hive on the table');
+  ok('...the waves come out of the chambers, not the tunnels on the hive\'s edge', h.sc.waves.mouths.length === 3 && h.sc.waves.mouths.every((m, i) => m.obj === i && m.name === 'brood chamber'));
+  // the End phase's waves, with a bare unit for each that comes out
+  const K = global.PMCEngineStory({ R, SC, state: h, logLine() {}, pushRes() {},
+    makeUnit: (p, side) => ({ key: p.key, name: p.name, side, models: p.size || 1, size: p.size || 1, alive: true, rules: [], sp: 0 }) });
+  h.turn = 3;
+  h.objectives[0].destroyed = 2; h.objectives[1].owner = 'A';
+  const n0 = h.units.length;
+  K.storyEndPhase();
+  const fresh = h.units.slice(n0), third = h.sc.rooms[2];
+  ok('...one burned sends nothing, nor one you are standing in: only the third comes alive', fresh.length === 2 &&
+    fresh.every((u) => R.inches(u.x, u.y, third.x + third.w / 2, third.y + third.h / 2) <= Math.hypot(third.w, third.h) / 2 + 3), fresh.map((u) => u.x.toFixed(0) + ',' + u.y.toFixed(0)).join(' '));
+  h.objectives[2].destroyed = 3;
+  const n1 = h.units.length;
+  K.storyEndPhase();
+  ok('...and with every chamber burned or held, nothing comes out at all', h.units.length === n1);
+  const st2 = h;
+  st2.objectives.forEach((o) => { o.owner = 'A'; o.destroyed = null; });
+  SC.SCENARIOS.hive_heart.check(st2);
+  ok('...a chamber burned is drawn burnt out', st2.sc.rooms.every((r) => r.burnt));
+}
 s = started('hive_heart'); s.turn = 14;
 r = SC.SCENARIOS.hive_heart.check(s);
 ok('...a chamber still standing at the end: the hive wins', r && r.winner === 'B');
@@ -89,6 +126,9 @@ s.objectives.forEach((o) => { o.owner = 'A'; });
 r = SC.SCENARIOS.strike.check(s);
 ok('Strike: every target reached, the real ones wrecked and the rest shown up as decoys, A wins',
   r && r.winner === 'A' && s.objectives.every((o) => (o.real ? o.wrecked : o.decoy)), s.objectives.map((o) => (o.real ? 'real' : 'decoy')).join(','));
+s = started('parley');
+ok('Parley: the meeting point is a table under a white flag, not an objective: nothing to hold, nobody sent to it',
+  s.objectives.length === 0 && s.terrain.filter((t) => t.kind === 'parleyflag').length === 1 && !R.TERRAIN.parleyflag.blocks && !R.TERRAIN.parleyflag.impassable);
 s = started('parley'); s.turn = 6;
 r = SC.SCENARIOS.parley.check(s);
 ok('Parley: the talks held to turn 6, A wins, and the report says so', r && r.winner === 'A' && s.storyOutcome.parley === 'held');

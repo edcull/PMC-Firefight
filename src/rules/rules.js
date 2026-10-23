@@ -896,6 +896,8 @@
        so they block line of sight and nothing crosses them; searched, and held,
        from within 4" of their walls like any other location. */
     pumphouse: { name: 'Pump house', blocks: true, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
+    // a story's Parley: the meeting point, a table under a white flag. Open ground, there to be seen
+    parleyflag: { name: 'The meeting point', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     // Ambush! (p. 156): the road the enemy column is on — open ground, and nothing stands on it
     road: { name: 'Road', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     // what a demolished piece leaves behind (p. 41-43)

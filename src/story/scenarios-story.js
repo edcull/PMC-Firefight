@@ -45,34 +45,68 @@
   }
 
   /* ------------------------------------------------ Hive Heart */
+  /* The hive's own tunnels are wider than a base's corridors (a 4" grid,
+     not the book's 3"), its chambers bigger, and the whole table is packed
+     with them (`dense`): room after room to fight through. The three brood chambers are the
+     rooms furthest over on the hive's side (`hive`: drawn as the hive's,
+     cleared of fittings). They stand in for the hive's entry corridors: side A
+     comes in from the left edge as ever, and the hive comes on in its
+     chambers, and its waves come out of them too. A chamber that still
+     stands, and is not held by side A at that End phase, sends them out.
+     Each one burned is one fewer. */
   SCENARIOS.hive_heart = {
-    story: true, compound: true, rooms: 3, hidden: function () { return true; },
+    story: true, compound: true, rooms: 3, cell: 4, nest: 3, dense: 2, danger: 0, hidden: function () { return true; },
     id: 'hive_heart', name: 'Hive Heart', page: null,
     blurb: 'The brood chambers, at the bottom of everything. Burn them out while the hive throws everything it has at you.',
     win: 'Destroy all three brood chambers: a chamber held by your units at the End phase is destroyed. The hive wins if you are routed, or if any chamber still stands at the end of turn 14.',
     turns: 14,
     objectives: function (state) {
       if (!state) return [];
-      state.sc.rooms = K.controlRooms(state);
+      // the three furthest over towards the hive's (right-hand) edge, spread down it where they can be
+      var all = state.terrain.filter(function (r) { return r.kind === 'room' || r.kind === 'hall'; })
+        .sort(function (a, b) { return (b.x + b.w / 2) - (a.x + a.w / 2); });
+      // the nest the compound was laid with, if it was; else the rooms furthest over
+      var rooms = all.filter(function (r) { return r.nest; }).slice(0, 3);
+      if (rooms.length < 3) rooms = [];
+      all.forEach(function (r) {
+        if (rooms.length < 3 && r.x + r.w / 2 >= R.BOARD.w / 2 && rooms.every(function (q) { return Math.abs((q.y + q.h / 2) - (r.y + r.h / 2)) >= 6; })) rooms.push(r);
+      });
+      all.forEach(function (r) { if (rooms.length < 3 && rooms.indexOf(r) < 0) rooms.push(r); });
+      state.sc.rooms = rooms;
+      rooms.forEach(function (r, i) { r.hive = true; r.chamber = i + 1; r.dangerous = false; });
+      // nothing of the base is left in them: no crates, no machinery, no pillars
+      var inHive = function (t) {
+        var cx = t.x + t.w / 2, cy = t.y + t.h / 2;
+        return rooms.some(function (r) { return cx > r.x && cx < r.x + r.w && cy > r.y && cy < r.y + r.h; });
+      };
+      state.terrain = state.terrain.filter(function (t) { return !((t.kind === 'crates' || t.kind === 'machinery' || t.kind === 'pillar') && inHive(t)); });
       return [];
     },
     entersTurn1: true,
     deploy: function (state) {
-      K.compoundEntries(state);
+      // side A by the left-hand edge's entry points; the hive in its chambers
+      var ent = state.compound ? state.compound.entries : { L: [] };
+      var chambers = state.sc.rooms.map(function (r) { return K.rectOf(r); });
+      state.sc.entry = { A: ent.L.slice(), B: chambers };
+      state.sc.boxes = { A: state.sc.entry.A, B: chambers };
       state.objectives = state.sc.rooms.map(function (r, i) {
         return { x: r.x + r.w / 2, y: r.y + r.h / 2, rect: K.rectOf(r), inside: true, name: 'Brood chamber ' + (i + 1), owner: null };
       });
-      // the bugs come out of the entry points on their own side
-      waveSetup(state, (state.sc.entry.B || []).map(function (e) { return { x: e.x + e.w / 2, y: e.y + e.h / 2, name: 'tunnel' }; }), 2);
+      // the bugs come out of the brood chambers themselves (storybattle.js waves: `obj`, the chamber's objective)
+      waveSetup(state, state.sc.rooms.map(function (r, i) { return { x: r.x + r.w / 2, y: r.y + r.h / 2, name: 'brood chamber', obj: i }; }), 2);
     },
     reserves: function (state, side) { return K.entering(state, side); },
     deployText: function () { return K.CE_ENTRY_TEXT; },
-    hint: 'Three brood chambers. Stand in one at the End phase, with no bug inside, and it burns. The hive keeps coming out of the tunnels on its side.',
+    hint: 'Three brood chambers. Stand in one at the End phase, with no bug inside, and it burns. Every chamber still standing sends out more of the hive.',
     // the hive defends what it has left
     goals: function (state) { return state.objectives.filter(function (o) { return !o.destroyed; }); },
     groundTaking: true,
     check: function (state) {
-      state.objectives.forEach(function (o) { if (!o.destroyed && o.owner === 'A') o.destroyed = state.turn; });
+      state.objectives.forEach(function (o, i) {
+        if (o.destroyed || o.owner !== 'A') return;
+        o.destroyed = state.turn;
+        if (state.sc.rooms && state.sc.rooms[i]) state.sc.rooms[i].burnt = state.turn;   // (drawn burnt out)
+      });
       var left = state.objectives.filter(function (o) { return !o.destroyed; }).length;
       if (!left) return { winner: 'A', text: 'The last brood chamber burns. The hive is finished.' };
       if (SC.routed(state, 'A')) return { winner: 'B', text: 'A is broken in the dark, and the hive goes on.', routed: ['A'] };
@@ -251,29 +285,38 @@
   };
 
   /* ------------------------------------------------ Parley */
-  /* Both sides close to a meeting point, talking. While the talks hold, the
-     enemy holds its fire; they break when side A hurts side B, or on a 6 at an
-     End phase (engine/storybattle.js). Held to the end of turn 6, A has what it
-     came for; broken, it is a Meeting engagement to the end. */
+  /* Both sides close to a meeting point, talking. A story's Parley is talked
+     out as turn 1 opens, a conversation the player answers (cfg.story.parley;
+     engine/storybattle.js parleyOpen): agreed, A has what it came for and the
+     battle is over; broken, it is a Meeting engagement to the end. Without a
+     conversation, the talks hold while nobody fires: they break when side A
+     hurts side B, or on a 6 at an End phase, and held to the end of turn 6, A
+     has what it came for. */
   SCENARIOS.parley = {
     story: true,
     id: 'parley', name: 'Parley', page: null,
     blurb: 'Two sides, a meeting point, and the hope that nobody shoots first.',
-    win: 'A wins if the talks hold to the end of turn 6. Once they break, it is a Meeting engagement: rout the enemy, or be routed; a draw at the end of turn 12.',
+    win: 'Talk it out under the white flag: an agreement ends the battle, and A has what it came for. If the talks break, it is a Meeting engagement: rout the enemy, or be routed; a draw at the end of turn 12.',
     turns: 12,
-    objectives: function () { return [{ x: R.BOARD.w / 2, y: R.BOARD.h / 2 }]; },
+    /* The meeting point is no objective (nothing is held, and nobody is sent to
+       it): a table under a white flag, in the middle, to talk across. */
+    objectives: function (state) {
+      state.terrain.push({ kind: 'parleyflag', x: R.BOARD.w / 2 - 1, y: R.BOARD.h / 2 - 1, w: 2, h: 2 });
+      return [];
+    },
     deploy: function (state) {
       var mid = R.BOARD.w / 2;
       state.sc.zones = { A: [mid - 12, mid - 3], B: [mid + 3, mid + 12] };
-      if (state.objectives[0]) state.objectives[0].name = 'The meeting point';
       state.sc.parley = {};
     },
     reserves: function () { return []; },
     deployText: function () { return 'Both sides set up close to the meeting point: within 12″ of the middle of the table, on their own side of it.'; },
     zoneFor: function (state, side) { return state.sc.zones[side]; },
-    hint: 'While the talks hold, the other side will not shoot. Any harm you do them breaks the talks, and so might nerves (a 6 at an End phase).',
+    hint: 'The talks come first. Hear the other side out, say your piece, and look for terms both can live with: every answer builds trust or raises tension, and too much tension breaks the talks.',
     check: function (state) {
       var pa = state.sc.parley || {};
+      // a conversation's agreement (storybattle.js parleyEnd): the battle is over, and A has what it came for
+      if (pa.agreed) return { winner: 'A', text: 'The talks end in an agreement. Both sides walk away.' };
       if (!pa.broken) {
         if (state.turn >= 6) { state.storyOutcome = { parley: 'held' }; return { winner: 'A', text: 'The talks held. Both sides walk away.' }; }
         return null;

@@ -482,6 +482,188 @@
       '@side:frontmoney': {
         start: [{ who: 'varga', if: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] }, text: 'HTX cut you loose, then? Welcome to the Front’s payroll, {commander:rank}.' }]
       }
+    },
+
+    /* The talks, where a battle is a Parley (story.js parleyFor; storybattle.js
+       parleyOpen): a conversation at the start of the battle, played as a chat.
+       Each side's view heard, a compromise looked for, and an agreement or a
+       fight. What has happened in the story opens and shuts lines and answers;
+       Trust is what an agreement needs, Tension what breaks the talks (at
+       `breakAt`). An agreement's `terms` are flags the story keeps. */
+    parleys: {
+      // The Ceasefire: the truce, with Varga if she is still out there, or with the Front if not
+      'ceasefire.battle': {
+        them: [{ who: 'varga', if: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] } }, { who: 'front' }],
+        breakAt: 5, start: 'open', broke: 'fight',
+        steps: {
+          open: {
+            say: [
+              { who: 'varga', if: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] }, text: 'You came. I half thought you’d send HTX’s lawyers instead.' },
+              { who: 'varga', if: { flag: 'varga_released' }, text: 'You opened that door when you didn’t have to. That’s the only reason I’m sitting here.' },
+              { who: 'front', if: { not: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] } }, text: 'We’re here because the Front voted to be here. Not because we trust you. Remember that.' },
+              { if: { flag: 'pit9_shelled' }, text: 'Before anything else: Pit Nine. You shelled a school, {commander:rank}. Say something about that, or this ends now.' },
+              { if: { flag: 'pit9_spared' }, text: 'People in Pit Nine say you held your fire when you could have levelled it. That bought you this table.' }
+            ],
+            options: [
+              { text: 'Pit Nine was my order, and my mistake. I won’t pretend otherwise.', if: { flag: 'pit9_shelled' }, trust: 2, next: 'grievance',
+                reply: [{ text: '…Nobody from HTX ever said that much. Go on, then.' }] },
+              { text: 'Pit Nine was a war. You were firing from it.', if: { flag: 'pit9_shelled' }, tension: 2, next: 'grievance',
+                reply: [{ text: 'There were children in the east wing. Remember that, when you count what this costs.' }] },
+              { text: 'Tell me why you rose. All of it, from the start.', trust: 1, next: 'grievance' },
+              { text: 'I’m here to stop the shooting. Let’s not make it more than that.', next: 'grievance' },
+              { text: 'You’re in no position to make demands.', tension: 2, next: 'grievance',
+                reply: [{ text: 'Count the guns on that ridge before you say that again.' }] }
+            ]
+          },
+          grievance: {
+            say: [
+              { text: 'The deep shafts. Two years ago HTX started sinking past the safety line. Forty dead in Pit Four in one shift, and they called it a seam collapse.' },
+              { text: 'When we stopped work to bury them, they cut the pay of everyone who stopped. That’s when the guns came out.' },
+              { if: { any: [{ flag: 'hive_known' }, { flag: 'sump_entered' }] }, text: 'And now we know what was waiting down there. HTX knew too. They sent us down anyway.' },
+              { if: { flag: 'nightshift_shot' }, text: 'And your people shot the night shift at the refinery. Men with their hands up.' },
+              { if: { flag: 'nightshift_freed' }, text: 'You let the night shift go, at the refinery. They talk about you, in the shafts. Not all of it bad.' }
+            ],
+            options: [
+              { text: 'I’ve been down there. I’ve seen what’s below the safety line. You’re right about the shafts.', if: { any: [{ flag: 'hive_known' }, { flag: 'sump_entered' }] }, trust: 2, next: 'view' },
+              { text: 'HTX never told me any of that. I believe you.', trust: 1, next: 'view' },
+              { text: 'The night shift is on me. I’ll answer for it, at a hearing, if it comes to that.', if: { flag: 'nightshift_shot' }, trust: 2, tension: -1, next: 'view' },
+              { text: 'Every company cuts pay. That’s no reason to burn refineries.', tension: 2, next: 'view',
+                reply: [{ text: 'Spoken like someone who’s never been down a shaft.' }] },
+              { text: 'Your people have killed mine, too. I need you to understand that.', next: 'view',
+                reply: [{ text: 'I do. That’s why we’re talking, instead of the other thing.' }] }
+            ]
+          },
+          view: {
+            say: [{ text: 'So. What does HTX’s hired gun want out of this?' }],
+            options: [
+              { text: 'My people home alive. That’s my side of it, all of it.', trust: 1, next: 'terms' },
+              { text: 'HTX pays me to keep the ore moving. I’d rather it moved without anyone dying.', next: 'terms' },
+              { text: 'I want the thing under this moon dealt with, before it eats both of us.', if: { flag: 'hive_known' }, trust: 1, next: 'terms',
+                reply: [{ text: 'On that, at least, we agree.' }] },
+              { text: 'I want the Front off the roads and out of the shafts.', tension: 1, next: 'terms' }
+            ]
+          },
+          terms: {
+            say: [{ text: 'Then here is what we want. The deep shafts sealed, below the safety line, for good. And no one hanged for picking up a gun.' }],
+            options: [
+              { text: 'Seal the shafts below the line. I’ll put it to HTX in writing, with my company’s name under it.', need: 2, terms: ['terms_shafts'], next: 'deal' },
+              { text: 'I’ll give you the Deep Contract files. Show the whole moon what HTX knew.', if: { all: [{ flag: 'core_recovered' }, { not: { flag: 'core_sold' } }] }, trust: 2, terms: ['terms_files'], next: 'deal' },
+              { text: 'HTX pays the families of Pit Four. I’ll see the money moves.', if: { meter: 'htx', gte: 1 }, need: 1, terms: ['terms_compensation'], next: 'counter' },
+              { text: 'Amnesty for the rank and file. The ones who gave the orders face a hearing.', need: 1, terms: ['terms_amnesty'], next: 'counter' },
+              { text: 'Lay down your guns first. Then we talk about shafts.', tension: 3, next: 'counter' }
+            ]
+          },
+          counter: {
+            say: [{ text: 'It’s something. It isn’t enough. Give me something I can take back to them, or I can’t sell this.' }],
+            options: [
+              { text: 'My company stays between you and HTX until the shafts are shut. Anyone comes for you, they come through us.', need: 3, terms: ['terms_guarantee'], next: 'deal' },
+              { text: 'Then the shafts too. Sealed below the line. You have my word.', need: 2, terms: ['terms_shafts'], next: 'deal' },
+              { text: 'That’s my best offer. Take it or don’t.', tension: 2, next: 'last' },
+              { text: 'Then we’re done here.', tension: 5, next: 'fight' }
+            ]
+          },
+          last: {
+            say: [{ text: 'You don’t make it easy.' }],
+            options: [
+              { text: 'Nobody else has to die this week. That has to be worth something to you.', need: 2, next: 'deal' },
+              { text: 'I’m not here to make it easy.', tension: 2, next: 'fight' }
+            ]
+          },
+          deal: {
+            say: [
+              { text: 'Then that’s the agreement. Nobody on this moon fires on anyone today.' },
+              { if: { not: { flag: 'htx_cut_off' } }, who: 'liaison', text: 'HTX recognises no such agreement, {commander:rank}. This is noted.' },
+              { text: 'Shake on it, before somebody up on that ridge changes their mind.' }
+            ],
+            end: 'agreed'
+          },
+          fight: {
+            say: [
+              { text: 'Then we’re finished. Back to your lines.' },
+              { who: 'fighter', text: '[a shot from the ridge. Nobody will ever know whose]' }
+            ],
+            end: 'broken'
+          }
+        }
+      },
+
+      // Under a White Flag: the Front's challenge, after Varga
+      'revenge.battle': {
+        them: [{ who: 'varga', if: { flag: 'varga_free' } }, { who: 'front' }],
+        start: 'open', broke: 'fight',
+        steps: {
+          open: {
+            say: [
+              { who: 'varga', if: { flag: 'varga_free' }, text: 'I said I’d come back for you, {commander:rank}. I didn’t say how. Today it’s talking.' },
+              { who: 'front', if: { flag: 'varga_dead' }, text: 'You killed Ada Varga. Her brother asked us to hear you before we bury you. So: speak.' },
+              { who: 'front', if: { flag: 'martyr_displayed' }, text: 'You hung her up for the whole port to see. Choose your words carefully.' }
+            ],
+            options: [
+              { text: 'I’m sorry for how it ended. I mean that.', if: { flag: 'varga_dead' }, trust: 1, next: 'want' },
+              { text: 'Taking her down was the job. I won’t apologise for doing it.', if: { flag: 'varga_dead' }, tension: 2, next: 'want' },
+              { text: 'You got away from me once. I’d rather not have to try again.', if: { flag: 'varga_free' }, next: 'want' },
+              { text: 'Say what you want. I’m listening.', trust: 1, next: 'want' }
+            ]
+          },
+          want: {
+            say: [
+              { text: 'We want the hill country left to us. Your patrols out of the Pit Four valley, and HTX’s drones with them.' },
+              { if: { flag: 'varga_dead' }, text: 'And we want her body. She goes in the ground in Pit Four, with her crew.' }
+            ],
+            options: [
+              { text: 'You’ll have her body. That much is owed.', if: { flag: 'varga_dead' }, trust: 2, terms: ['terms_body'], next: 'offer' },
+              { text: 'I can pull my patrols out of the valley. HTX’s drones aren’t mine to give.', trust: 1, next: 'offer' },
+              { text: 'The valley is HTX’s ground. My patrols stay.', tension: 2, next: 'offer' }
+            ]
+          },
+          offer: {
+            say: [{ text: 'Then what will you give, for nobody dying on this ridge today?' }],
+            options: [
+              { text: 'My company stays out of the hill country. If HTX sends anyone in, it won’t be us.', need: 2, terms: ['terms_withdraw'], next: 'deal' },
+              { text: 'Blood money, for every family that lost someone. From my own pay.', need: 1, terms: ['terms_bloodprice'], next: 'deal' },
+              { text: 'Nothing. You walk away, and you live. That’s the offer.', tension: 3, next: 'fight' }
+            ]
+          },
+          deal: { say: [{ text: 'Then we walk away. Both of us. Don’t make me regret it.' }], end: 'agreed' },
+          fight: { say: [{ text: 'Then the flag comes down. Back to your guns.' }], end: 'broken' }
+        }
+      },
+
+      // Last Words: Black Lantern's commander, under a white flag, before the showdown
+      'showdown.battle': {
+        them: 'actual', start: 'open', broke: 'fight',
+        steps: {
+          open: {
+            say: [
+              { text: 'You saved my people at the refinery, {commander:rank}. I don’t forget a debt. So I’m offering you one chance.' },
+              { text: 'HTX has paid me to put your company in the ground. I’d rather not earn it.' }
+            ],
+            options: [
+              { text: 'Then don’t. What are you offering?', trust: 1, next: 'offer' },
+              { text: 'HTX is paying you to clean up its own mess. You know that.', trust: 1, next: 'offer',
+                reply: [{ text: 'Every contract is somebody’s mess. That’s the business we’re both in.' }] },
+              { text: 'You’re offering me a chance to run.', tension: 2, next: 'offer' }
+            ]
+          },
+          offer: {
+            say: [{ text: 'Walk away. Your company, your kit, on the next hauler out. I report you gone before we arrived. Nobody bleeds.' }],
+            options: [
+              { text: 'And the miners? The Front? What happens to them when we’re gone?', if: { flag: 'truce' }, trust: 1, next: 'truce' },
+              { text: 'We take your offer. We’re done with this moon.', need: 1, terms: ['terms_walkaway'], next: 'deal' },
+              { text: 'We came to finish this. We’re not leaving.', tension: 4, next: 'fight' }
+            ]
+          },
+          truce: {
+            say: [{ text: 'Not my problem, unless they shoot at me. If they keep the truce, I’ve no orders that say I must break it.' }],
+            options: [
+              { text: 'Put that in writing, and we go.', need: 2, terms: ['terms_walkaway', 'terms_lantern_truce'], next: 'deal' },
+              { text: 'Your word isn’t enough. Not after HTX.', tension: 2, next: 'fight' }
+            ]
+          },
+          deal: { say: [{ text: 'Then we’re square, {commander:rank}. Get off my moon.' }], end: 'agreed' },
+          fight: { say: [{ text: 'Shame. I liked you.' }], end: 'broken' }
+        }
+      }
     }
   };
 })(typeof window !== 'undefined' ? window : global);

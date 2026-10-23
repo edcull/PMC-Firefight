@@ -15,6 +15,12 @@
     function depthIn() { return B.depthIn.apply(this, arguments); }
     function pebble() { return B.pebble.apply(this, arguments); }
     function spotIn() { return B.spotIn.apply(this, arguments); }
+    // a spot just inside one of a section's four walls, chosen at random
+    function edgeSpot(r, rnd) {
+      var side = (rnd() * 4) | 0, t = 0.08 + rnd() * 0.84, inset = 0.35;
+      return side === 0 ? { x: r.x + r.w * t, y: r.y + inset } : side === 1 ? { x: r.x + r.w - inset, y: r.y + r.h * t }
+        : side === 2 ? { x: r.x + r.w * t, y: r.y + r.h - inset } : { x: r.x + inset, y: r.y + r.h * t };
+    }
     function vgrad() { return B.vgrad.apply(this, arguments); }
 
     /* ---------- props ---------- */
@@ -366,6 +372,23 @@
            dangerous, scorched wreckage where it went up, fire where it burns. */
         // the automated defence system's control panel (Close Encounters, p. 160)
         if (r.kind === 'panel') { props.push({ kind: 'console', x: r.x + r.w / 2, y: r.y + r.h / 2, seed: (rr2() * 9999) | 0 }); return; }
+        /* A brood chamber (the Hive Heart): grown over. Resin heaped against the
+           walls and spread over the floor, and clutches of eggs in among it;
+           burnt out, the same, black and split. */
+        if ((r.kind === 'room' || r.kind === 'hall') && r.hive) {
+          var hs = r.w * r.h, burnt = !!r.burnt;
+          for (var hg = 0; hg < Math.round(hs / 4); hg++) {
+            // most of it along the walls, climbing them; some out on the floor
+            var edge = rr2() < 0.7, hq = edge ? edgeSpot(r, rr2) : spotIn(r, 0.8, rr2);
+            props.push({ kind: 'hivegrowth', x: hq.x, y: hq.y, rad: 0.5 + rr2() * (edge ? 0.9 : 0.6), up: edge ? 0.6 + rr2() * 0.8 : 0.15 + rr2() * 0.2,
+              burnt: burnt, tone: rr2(), seed: (rr2() * 9999) | 0 });
+          }
+          for (var he = 0; he < Math.max(3, Math.round(hs / 14)); he++) {
+            var eq = spotIn(r, 1.2, rr2);
+            props.push({ kind: 'eggs', x: eq.x, y: eq.y, n: 3 + (rr2() * 4 | 0), burnt: burnt, tone: rr2(), seed: (rr2() * 9999) | 0 });
+          }
+          return;
+        }
         if (r.kind === 'corridor' || r.kind === 'room' || r.kind === 'hall') {
           var sa = r.w * r.h;
           /* The small clutter of a lived-in compound, drawn only (nothing a rule
@@ -517,6 +540,11 @@
         /* A story's possible location that is a building of its own (rules.js
            `pumphouse`): a shed, drawn as a block, struck through on the roof once
            searched and empty, and lit up as the one that holds the objective. */
+        // a Parley's meeting point: a folding table, two crates to sit on, and a white flag
+        if (r.kind === 'parleyflag') {
+          props.push({ kind: 'parleyflag', x: r.x + r.w / 2, y: r.y + r.h / 2, seed: (rr2() * 9999) | 0 });
+          return;
+        }
         if (r.kind === 'pumphouse') {
           props.push({
             kind: 'pumphouse', x: r.x, y: r.y, w: r.w, h: r.h, height: a(13),
@@ -555,7 +583,8 @@
       objectives.forEach(function (o, i) {
         // the Demolish target is its own marker, and so is a pump house: no flag planted in front of the wall
         var onTarget = terrain.some(function (t) { return (t.kind === 'objective' || t.kind === 'pumphouse') && o.x >= t.x - 0.5 && o.x <= t.x + t.w + 0.5 && o.y >= t.y - 0.5 && o.y <= t.y + t.h + 0.5; });
-        if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz });
+        // a story's relic (storybattle.js): a lodestone, not a flag, where it lies or over whoever carries it
+        if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz, relic: !!o.relic, carried: !!o.carried });
       });
       // what lies flat on the floor goes down before anything stands on it
       var FLAT = { deckgrate: 1, cable: 1, litter: 1 };
@@ -573,7 +602,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45 };
+      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];
@@ -632,7 +661,9 @@
       ['#2c271b', '#433b28', '#5c5136', '#766945', '#8f8054', '#ab9b6a'],
       ['#1c2620', '#2b3a30', '#3c5042', '#4f6754', '#637f67', '#7f9b80'],
       ['#1e2430', '#2e3747', '#404c61', '#53627b', '#677894', '#8495ad'],
-      ['#2a1e1c', '#402d2a', '#583e39', '#714f48', '#8a6157', '#a67b6f']
+      ['#2a1e1c', '#402d2a', '#583e39', '#714f48', '#8a6157', '#a67b6f'],
+      // a brood chamber: the plating gone under the hive's growth
+      ['#22131e', '#36202f', '#4a2c40', '#5e3a52', '#734a63', '#8c5e78']
     ];
     /* A wall face from foot A to foot B, `hgt` high, shaded top to bottom. One
        gradient pinned to one end drifts along a long face, which slopes on the

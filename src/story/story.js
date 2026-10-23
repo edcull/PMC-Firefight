@@ -132,7 +132,7 @@
 
   /* ================= conditions ================= */
 
-  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped', 'target', 'more'];
+  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped', 'target', 'more', 'relic'];
   var CMP = ['gte', 'lte', 'gt', 'lt', 'eq'];
 
   function cmp(v, c) {
@@ -167,6 +167,8 @@
     if (c.wiped) return cmp(st.lastWiped || 0, c.wiped);
     // a battle's target (the target variant): 'killed' or 'captured', or nothing known
     if (c.target) return st.lastTarget === c.target;
+    // a battle's relic (the relic variant): who carried it off or held it at the end, 'A' or 'B', or 'none'
+    if (c.relic) return (st.lastRelic || 'none') === c.relic;
     if (c.chapter != null) return cmp(st.chapterNo, typeof c.chapter === 'number' ? { eq: c.chapter } : c.chapter);
     if (c.played) return !!st.played[c.played];
     if (c.revealed) return !!st.revealed[c.revealed];
@@ -625,6 +627,71 @@
     return out;
   }
 
+  /* A parley's conversation (a story's `talk.parleys`, keyed by the battle):
+     the talks played out in a chat at the start of the battle (storybattle.js
+     parleyOpen). Written as steps, each with what the other side says and the
+     answers open to the commander:
+       { them, breakAt, start, broke, steps: { id: { say: [lines], options: [
+           { text, line?, if?, need?, trust?, tension?, terms?, reply?: [lines], next } ],
+           end?: 'agreed' | 'broken' } } }
+     Each answer moves Trust (what an agreement needs: `need`, the Trust an
+     answer asks before it can be given) and Tension (at `breakAt` the talks
+     break, and the conversation goes to the `broke` step); `terms` are the
+     story flags an agreement sets. Resolved here, at the battle's start: the
+     lines and answers whose `if` holds now (what has happened in the story),
+     written out, with who says each. A battle with none written has a plain one. */
+  var PARLEY_BREAK = 4;
+  function parleyFor(campaign, spec) {
+    var def = storyOf(campaign);
+    if (!def || !spec) return null;
+    var written = def.talk && def.talk.parleys && def.talk.parleys[spec.node];
+    var pr = written || plainParley(def, spec);
+    var ctx = ctxOf(campaign), people = def.people || {}, co = campaign.companies && campaign.companies.A;
+    // who the other side's voice is: one name, or the first of a list whose `if` holds
+    var them = Array.isArray(pr.them) ? (pr.them.filter(function (t) { return !t.if || test(ctx, t.if); })[0] || {}).who : pr.them;
+    pr = Object.assign({}, pr, { them: them });
+    function line(l) {
+      var who = l.who || pr.them, p = people[who] || {}, me = who === 'commander';
+      return { who: who, name: me ? commanderWords(campaign, 'rank') : (l.name || p.name || who), role: me ? (co ? co.name : '') : (l.role || p.role || ''), text: render(campaign, l.text) };
+    }
+    function lines(ls) { return arr(ls).filter(function (l) { return !l.if || test(ctx, l.if); }).map(line); }
+    var steps = {};
+    Object.keys(pr.steps).forEach(function (id) {
+      var s = pr.steps[id];
+      steps[id] = { say: lines(s.say), end: s.end || null,
+        options: arr(s.options).filter(function (o) { return !o.if || test(ctx, o.if); }).map(function (o) {
+          return { text: render(campaign, o.text), line: line({ who: 'commander', text: o.line || o.text }), need: o.need || 0,
+            trust: o.trust || 0, tension: o.tension || 0, terms: arr(o.terms), reply: lines(o.reply), next: o.next };
+        }) };
+    });
+    return { them: pr.them, breakAt: pr.breakAt || PARLEY_BREAK, start: pr.start, broke: pr.broke, steps: steps };
+  }
+  // the talks where nothing is written for them: the other side's grievance, a view each, an offer, an answer
+  function plainParley(def, spec) {
+    var side = (def.sides || {})[spec.enemy && spec.enemy.side] || {}, people = def.people || {};
+    var them = people[spec.enemy && spec.enemy.side] ? spec.enemy.side : Object.keys(people).filter(function (k) { return k !== 'commander'; })[0];
+    var name = side.name || 'the other side';
+    return { them: them, start: 'open', broke: 'fight', steps: {
+      open: { say: [{ text: 'We came under the flag. Say what you came to say.' }], options: [
+        { text: 'Tell me what you want, and why.', trust: 1, next: 'want' },
+        { text: 'I want this to end without anyone else dying.', trust: 1, next: 'want' },
+        { text: 'I came to hear you surrender.', tension: 2, next: 'want' }
+      ] },
+      want: { say: [{ text: 'What we want is simple: to be left alone, and paid for what was taken from us.' }], options: [
+        { text: 'That sounds fair. What would that look like?', trust: 1, next: 'offer' },
+        { text: 'Nobody took anything you didn’t lose fairly.', tension: 2, next: 'offer' },
+        { text: 'I can’t promise what isn’t mine to give. But I’ll hear it.', next: 'offer' }
+      ] },
+      offer: { say: [{ text: 'Then make us an offer, and make it a real one.' }], options: [
+        { text: 'We pull back, and nobody follows you. You have my word.', need: 2, terms: ['parley_terms'], next: 'deal' },
+        { text: 'Lay down your arms, and nobody else gets hurt.', tension: 2, next: 'deal' },
+        { text: 'Then there’s nothing to talk about.', tension: 4, next: 'fight' }
+      ] },
+      deal: { say: [{ text: 'Then that is the agreement. Nobody fires today.' }], end: 'agreed' },
+      fight: { say: [{ text: 'Then we are done. Back to your lines, and may ' + name + ' forgive us both.' }], end: 'broken' }
+    } };
+  }
+
   /* A battle's report graded from side A's view (the plan, section 3):
      decisive, victory, draw, defeat or rout. Losses are counted in
      composition points: a unit's Tier, times the share of it lost. */
@@ -651,6 +718,13 @@
 
   /* The battle is over: the grade picks the branch. A report or a grade will
      do; the units that fought are kept, for effects that reach only them. */
+  // whether the battle at hand is fought for a relic: its own variant, or one an option set
+  function relicBattle(campaign, node) {
+    var lv = campaign.story.pending || {};
+    // (only Find and secure has a relic to find: the same battle fought as anything else has none)
+    if ((lv.scenario || node.scenario) !== 'find') return false;
+    return !!((lv.variant && lv.variant.relic) || (node.variant && node.variant.relic));
+  }
   function resolveBattle(campaign, result) {
     var st = campaign.story, def = storyOf(campaign), node = nodeAt(campaign);
     if (!node || node.type !== 'battle') throw new Error('The story is not at a battle');
@@ -660,8 +734,14 @@
       st.fielded = (result.units || []).filter(function (u) { return u.side === 'A' && u.rid; }).map(function (u) { return u.rid; });
       st.lastWiped = (result.units || []).filter(function (u) { return u.side === 'A' && !u.free && !u.ally && (u.wiped || u.destroyed); }).length;
       st.lastTarget = result.story && result.story.target || null;
+      st.lastRelic = result.story && result.story.relic || null;
+      // a parley agreed: the terms it was agreed on, as the story's flags
+      arr(result.story && result.story.terms).forEach(function (t) { st.flags[t] = true; });
       keepRoll(campaign, result);
-    } else st.lastWiped = 0, st.lastTarget = null;
+    } else st.lastWiped = 0, st.lastTarget = null, st.lastRelic = null;
+    /* A relic battle settled by its grade alone (a walk, a forfeit, a battle
+       skipped by the player): the relic goes with the grade. */
+    if (relicBattle(campaign, node) && !(result && typeof result === 'object' && result.story && 'relic' in result.story)) st.lastRelic = SUCCESS[g] ? 'A' : g === 'draw' ? null : 'B';
     st.lastGrade = g;
     var ctx = ctxOf(campaign, { grade: g });
     var on = node.on || {};
@@ -1029,6 +1109,8 @@
     var holds = function (f) {
       if (f === 'success') return st.lastGrade === 'decisive' || st.lastGrade === 'victory';
       if (f === 'failure') return !!st.lastGrade && st.lastGrade !== 'decisive' && st.lastGrade !== 'victory';
+      // (`relic`: the last battle's relic is the company's)
+      if (f === 'relic') return st.lastRelic === 'A';
       return !!st.flags[f];
     };
     var s = text.replace(/\{if (not )?([a-z0-9_]+)\}([\s\S]*?)\{\/if\}/g, function (m, not, f, body) {
@@ -1095,7 +1177,7 @@
     battleSpec: battleSpec, intel: intel, difficultyOf: difficultyOf, takeSide: takeSide, nodeAt: nodeAt, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
     test: test, apply: apply, roll: roll, pressure: pressure, finaleChapter: finaleChapter,
     endingFor: endingFor, epilogue: epilogue, broken: broken, breakCompany: breakCompany,
-    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf, leadingRival: leadingRival, talkFor: talkFor, allyVoice: allyVoice,
+    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf, leadingRival: leadingRival, talkFor: talkFor, allyVoice: allyVoice, parleyFor: parleyFor,
     GRADES: GRADES, COND_KEYS: COND_KEYS, CMP: CMP, EFFECT_KEYS: EFFECT_KEYS
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCStory;

@@ -602,6 +602,9 @@
     /* What the AI walks towards. Usually the objectives; in Find and secure, until
        the objective turns up, the locations nobody has checked yet. */
     function goalPoints(u) {
+      // a story's relic, carried: home, to its own table edge (storybattle.js relicGoal)
+      var home = E.relicGoal && E.relicGoal(u);
+      if (home) return [home];
       if (E.state.scen.goals) return E.state.scen.goals(E.state, u);
       if (E.state.objectives.length) return E.state.objectives;
       if (E.state.sc && E.state.sc.search && !E.state.sc.found) {

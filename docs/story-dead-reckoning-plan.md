@@ -924,10 +924,68 @@ Not yet: the hired allies answering back and walking off (phase 5), the relic
 `variant: { relic: true }`, the report, the condition, the AI's goal.
 `storyrelic.js`. The Dig only if the relic variant plays badly.
 
+**Where it stands.** Built (`engine/storybattle.js`, the relic section). On
+*Find and secure* with `variant: { relic: true }`, what is found is a relic:
+
+- **Lifting it.** At an End phase, a unit on foot within 2" of the relic, with
+  none of the other side's as close, picks it up. Both sides on it, nobody can.
+- **Carrying it.** From then on the objective is wherever the relic is, held
+  within 4" of it, and Find and secure's own hold counts there. After every
+  activation the objective follows its carrier (`relicFollow`), and the view
+  draws the lodestone floating over the carrier.
+- **Dropping it.** A carrier destroyed or caught Broken drops it where it stands.
+- **Carried off.** A carrier in its own entry strip at an End phase takes it off
+  the table, and that ends the battle as a win for its side.
+- **The report.** It says who has the relic at the end: `story.relic` is `'A'`,
+  `'B'` or nobody. The story reads `{ relic: 'A' }` (or `'B'`, or `'none'`), and
+  text can say `{if relic}`. A relic battle settled by its grade alone (a walk, a
+  forfeit) gives the relic to the side the grade favours, and a draw to nobody.
+- **The AI.** A carrier makes for its own table edge (`relicGoal`); everyone else
+  goes for the relic, as for any objective.
+- **The validator.** A relic battle has to be *Find and secure*.
+
+The Glass Flats and the Drowned Beacon are fought for one. The stone comes from
+the relic, not from the grade: a battle won with Wraith carrying the lodestone
+off is `theirs`, and one lost with it carried home is yours. Stormed as a
+*Strike*, the beacon has no relic, and *What the Sh'kar left* offers the stone
+as before.
+
+In AI-against-AI battles the relic is lifted in most of them, and the side
+carrying it usually wins on Find and secure's own three turns held, before it
+reaches its edge. That plays well enough, so *The Dig* is not built.
+
 ### Phase 3: the first half as a vertical slice
 Chapters 1 to 4 and both one-offs written in full (text, maps, conversations,
 battle voices), playable end to end. Stop and play it, as with *Deep Contract*'s
 phase 4.
+
+**Where it stands.** Written, and playable in the browser (index.html loads the
+story beside *Deep Contract*, and the new-story form offers both):
+
+- **The words** (`dead-reckoning-text.js`): every chapter's intro, every page,
+  option and closed option's reason, every battle's mission name and briefing,
+  for chapters 1 to 4 and both one-offs, and the events shared between chapters
+  (the interludes' and the hired guns').
+- **The maps** (`dead-reckoning-maps.js`): Vesk's market square (the clock, the
+  fountain, the arcade), the Glass Flats and the Mire (their three places, for
+  the relic), Sable's docks (the middle clear for her warehouse) and the orbital's
+  docking ring. Station Thule and the Warren are compounds, laid from their seed.
+  The second half's battles are fought on rolled ground until phase 5
+  (`mapsPending: [2]`).
+- **The voices** (`dead-reckoning-talk.js`): Vane and her reader Halloran opening
+  Lot 47, Kettering's call about his man, the two readings, Nine on the open
+  channel, the Thule scavengers, the fog at the beacon, Colonel Sable at the
+  broker's, the Warren, Commander Daw's court order; each battle's lines and
+  each enemy side's, the Xenotripods in brackets; the hired companies reporting
+  in and answering orders.
+- **Shared screens:** each story names its own halves on the chapter cards
+  (`halves`) and its own first day (`firstDay`); the side contracts' time cost
+  is read from any cost that waits on a chapter; picking a story on the new-story
+  form shows its own blurb and difficulties.
+
+Tested by `storydrwords.js` (unit) and `drflow.js` (browser: from the form into
+chapter 2). Not yet: the star chart, the Xenotripod faces and the trail's scenes
+(phase 4); the second half's words, maps and voices (phase 5).
 
 ### Phase 4: the star chart, faces, scenes and the Esh-Aven
 `story-chart.js`; the Xenotripod face and the rival commanders' faces; the

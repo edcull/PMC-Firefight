@@ -284,7 +284,7 @@
          or surrender, hold it as well — with nothing left to act, a step taken
          then would end the turn again and run the whole Rally phase once more. */
       return !!state && !state.over && state.phase === 'battle' && !ui.insertion &&
-        !state.martyrAsk && !state.oppAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk &&
+        !state.martyrAsk && !state.oppAsk && !state.kyfAsk && !state.nervousAsk && !state.faceAsk && !state.standAsk && !state.endAsk && !state.parleyAsk &&
         (isAI(state.activeSide) || K.allyActs());
     }
     function maybeAI() {
@@ -383,7 +383,7 @@
       : scenDef.compound
       // (a story mission's compound is the same every time it is fought: its own seed)
       ? CMP.generate(R.BOARD.w, R.BOARD.h, cfg.story && cfg.story.seed ? K.storySeeded(cfg.story.seed) : Math.random,
-        { rooms: scenDef.rooms || 0, danger: scenDef.danger != null ? scenDef.danger : 0.15 })
+        { rooms: scenDef.rooms || 0, danger: scenDef.danger != null ? scenDef.danger : 0.15, cell: scenDef.cell || null, nest: scenDef.nest || 0, dense: scenDef.dense || 0 })
       : manual
       ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
       : GEN.generate({
@@ -1181,6 +1181,8 @@
             state.activeSide = next;
           }
           state.streak = streakFor(state.activeSide);
+          // a Parley's talks, before anyone moves: they hold the phase until they end (storybattle.js)
+          if (K.parleyOpen()) return;
           render();
           maybeAI();
         }
@@ -1395,6 +1397,7 @@
       if (sd) K.finish(sd.winner, sd.text.replace(/\bA\b/g, sideName('A')).replace(/\bB\b/g, sideName('B')));
     }
     if (state.over) { render(); return; }
+    K.relicFollow();               // story mode: a relic goes where its carrier went (storybattle.js)
     K.storyTalk();                 // story mode: what is said, when it happens (storybattle.js)
 
     /* Command Vehicle (p. 57): "as soon as the Command Vehicle finishes its
@@ -1860,7 +1863,7 @@
     }
     function mayAct(side) {
       if (state.phase !== 'battle' || state.over) return false;
-      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.oppAsk || state.kyfAsk || state.nervousAsk || state.standAsk || state.faceAsk || state.endAsk) return false;   // an answer is owed first
+      if (ui.insertion || state.cmdOffer || state.martyrAsk || state.oppAsk || state.kyfAsk || state.nervousAsk || state.standAsk || state.faceAsk || state.endAsk || state.parleyAsk) return false;   // an answer is owed first
       if (state.relocating || state.placeAsk) return false;      // turn 1's relocations and fortifications come before the Action phase
       return state.activeSide === side;
     }
@@ -2245,6 +2248,11 @@
       if (!state.kyfAsk || state.kyfAsk.side !== side || !ui.kyfThen) return no('nothing to answer');
       ui.kyfThen(it.k === 'kyf');
       return yes;
+    });
+    // a Parley's talks: the commander's answer, by its place among those offered (storybattle.js)
+    on('parley', null, function (side, it) {
+      var why = K.parleySay(side, +it.i);
+      return why ? no(why) : yes;
     });
     on('nervous nonervous', null, function (side, it) {
       var why = K.answerNervous(side, it.k === 'nervous');

@@ -21,6 +21,7 @@
   'use strict';
 
   var CELL = 3;                 // a corridor is up to 3" wide (p. 157)
+  var BOOK_CELL = 3;            // (a story's compound may be laid wider: generate's `cell`)
   var RUN = 4;                  // ...and a section of it never longer than 12"
   var WALL = 0.4;               // a wall between two sections, drawn and ruled this thick
   var DOOR = 0.5;               // a door across its doorway
@@ -76,16 +77,34 @@
     /* --- rooms and halls, a cell clear of each other and of the entry columns --- */
     var rooms = [];
     var want = Math.max(6, Math.round(N / 24)), halls = rows > 18 ? 2 : 1;
+    // `dense`: a compound packed with rooms and the corridors between them, nothing left bare (the Hive Heart)
+    if (opts.dense) want = Math.max(want, Math.round(N * opts.dense / 24));
     var need = opts.rooms || 0;
-    for (var t = 0; t < 400 && rooms.length < want; t++) {
-      var hall = rooms.length < halls;
+    /* `nest`: a compound one side of which is not come into by corridors but
+       lived in (the Hive Heart). No entry points on the right-hand edge; that
+       many rooms laid first against it, one to each band of it, and the rest
+       of the compound dug from the left as ever. */
+    var nest = opts.nest || 0;
+    /* The rooms keep clear of the long edges, for the entry corridors: three
+       cells on the book's grid, and as near the same 9" on a wider one. */
+    var M = CELL === BOOK_CELL ? 3 : Math.max(2, Math.round(9 / CELL));
+    for (var nb = 0; nb < nest; nb++) {
+      var nbw = 2 + Math.floor(rand() * 2), nbh = 2 + Math.floor(rand() * 2), band0 = (rows - 2) / nest;
+      var nj0 = 1 + Math.floor(nb * band0), nj1 = Math.max(nj0, Math.floor((nb + 1) * band0) - nbh);
+      var nri = cols - 1 - nbw - (rand() < 0.4 ? 1 : 0), nrj = nj0 + Math.floor(rand() * (nj1 - nj0 + 1));
+      if (nrj + nbh > rows - 1) nrj = rows - 1 - nbh;
+      if (rooms.some(function (r) { return nri <= r.i + r.w && nri + nbw >= r.i && nrj <= r.j + r.h && nrj + nbh >= r.j; })) return null;
+      rooms.push({ i: nri, j: nrj, w: nbw, h: nbh, kind: 'room', nest: true });
+    }
+    for (var t = 0; t < (opts.dense ? 1500 : 400) && rooms.length < want; t++) {
+      var hall = rooms.filter(function (r) { return r.kind === 'hall'; }).length < halls;
       var rw = hall ? 4 + Math.floor(rand() * 2) : 2 + Math.floor(rand() * 2);
       var rh = hall ? 3 + Math.floor(rand() * 2) : 2 + Math.floor(rand() * 2);
       if (rand() < 0.5) { var sw = rw; rw = rh; rh = sw; }
-      var ri = 3 + Math.floor(rand() * (cols - 6 - rw + 1)), rj = 1 + Math.floor(rand() * (rows - 2 - rh + 1));
-      if (ri < 3 || rj < 1 || ri + rw > cols - 3 || rj + rh > rows - 1) continue;
+      var ri = M + Math.floor(rand() * (cols - 2 * M - rw + 1)), rj = 1 + Math.floor(rand() * (rows - 2 - rh + 1));
+      if (ri < M || rj < 1 || ri + rw > cols - M || rj + rh > rows - 1) continue;
       // a cell clear of the others; now and then two rooms side by side, wall to wall (a doorway between, below)
-      var touch = rand() < 0.35;
+      var touch = rand() < (opts.dense ? 0.6 : 0.35);
       var clash = rooms.some(function (r) {
         return touch ? ri < r.i + r.w && ri + rw > r.i && rj < r.j + r.h && rj + rh > r.j
           : ri <= r.i + r.w && ri + rw >= r.i && rj <= r.j + r.h && rj + rh >= r.j;
@@ -126,7 +145,7 @@
     /* --- entry points, spread down each long edge --- */
     var nEntry = opts.entries || (rows > 18 ? 3 : 2);
     var entries = { L: [], R: [] };
-    ['L', 'R'].forEach(function (side) {
+    (nest ? ['L'] : ['L', 'R']).forEach(function (side) {
       var band = (rows - 2) / nEntry;
       for (var e = 0; e < nEntry; e++) {
         var j0 = 1 + Math.floor(e * band), j1 = Math.max(j0, Math.floor((e + 1) * band) - 1);
@@ -210,7 +229,7 @@
       linked.push(best.b); pairs.push([best.a, best.b]);
     }
     nodes.forEach(function (n, a) {
-      if (!n.room || rand() > 0.7) return;
+      if (!n.room || rand() > (opts.dense ? 0.95 : 0.7)) return;
       var far = nodes.map(function (m, b) { return { b: b, d: Math.abs(m.x - n.x) + Math.abs(m.y - n.y) }; })
         .filter(function (q) { return q.b !== a && nodes[q.b].room && !pairs.some(function (pr) { return (pr[0] === a && pr[1] === q.b) || (pr[1] === a && pr[0] === q.b); }); })
         .sort(function (p1, p2) { return p1.d - p2.d; })[0];
@@ -476,17 +495,27 @@
   function generate(w, h, rand, opts) {
     rand = rand || Math.random;
     opts = opts || {};
-    for (var t = 0; t < 200; t++) {
-      var g = attempt(w, h, rand, opts);
-      if (!g) continue;
-      furnish(g, rand, opts.danger || 0);
-      var laid = piecesOf(g, { w: w, h: h });
-      return {
-        terrain: laid.terrain,
-        compound: { cell: CELL, cols: g.cols, rows: g.rows, entries: laid.entries },
-        rolls: [], generator: 'Close Encounters compound'
-      };
-    }
+    /* `cell`: a story's compound laid on a wider grid than the book's 3" (the
+       Hive Heart's tunnels): wider corridors, and rooms as many cells across. */
+    CELL = opts.cell || BOOK_CELL;
+    try {
+      for (var t = 0; t < 200; t++) {
+        var g = attempt(w, h, rand, opts);
+        if (!g) continue;
+        furnish(g, rand, opts.danger || 0);
+        var laid = piecesOf(g, { w: w, h: h });
+        // (a nest's rooms, marked on the floor they are: the scenario's own)
+        g.rooms.forEach(function (r) {
+          if (!r.nest) return;
+          laid.terrain.forEach(function (p) { if (p.kind === 'room' && p.x === r.i * CELL && p.y === r.j * CELL) p.nest = true; });
+        });
+        return {
+          terrain: laid.terrain,
+          compound: { cell: CELL, cols: g.cols, rows: g.rows, entries: laid.entries },
+          rolls: [], generator: 'Close Encounters compound'
+        };
+      }
+    } finally { CELL = BOOK_CELL; }
     throw new Error('no compound could be laid on a ' + w + '" x ' + h + '" table');
   }
 
@@ -772,11 +801,13 @@
   }
 
   /* What a room is fitted out as, for its colours (0 plain plate, 1 sick bay, 2
-     workshop, 3 hydroponics, 4 command, 5 reactor): set as the compound is laid
+     workshop, 3 hydroponics, 4 command, 5 reactor; 6 the hive's own): set as the compound is laid
      out, or for one laid out before that, drawn from where the room is. */
-  var THEMES = 6;
+  var THEMES = 6, HIVE = 6;
   function roomTheme(r) {
     if (!r || (r.kind !== 'room' && r.kind !== 'hall')) return null;
+    // a brood chamber (the Hive Heart): grown over, not fitted out
+    if (r.hive) return HIVE;
     if (r.theme != null) return ((r.theme | 0) % THEMES + THEMES) % THEMES;
     var h = Math.imul(Math.round(r.x * 37 + r.y * 101) ^ 0x5bd1e995, 2654435761) >>> 0;
     return (h >>> 7) % THEMES;
