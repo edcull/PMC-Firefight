@@ -2523,6 +2523,25 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .story-who { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
 .story-who span { display: flex; flex-direction: column; line-height: 1.2; }
 .story-who small { color: var(--ink-dim); }
+/* a story's voice in battle, over the table (storybattle.js storyTalk) */
+.res-talk { display: flex; gap: 14px; align-items: flex-start; padding: 16px 16px 6px; }
+.talk-face { flex: none; width: 72px; height: 72px; border: 2px solid var(--line); border-radius: 4px; overflow: hidden; image-rendering: pixelated; }
+.talk-face svg { display: block; width: 100%; height: 100%; }
+.talk-words { flex: 1; min-width: 0; }
+.talk-who { display: flex; flex-direction: column; line-height: 1.25; margin-bottom: 6px; }
+.talk-who b { font-family: var(--display); font-size: 13px; letter-spacing: .04em; }
+.talk-who small { color: var(--ink-dim); font-size: 11px; }
+.talk-line { margin: 0; font-size: 14px; line-height: 1.45; font-style: italic; }
+/* a conversation opening a story page: each line beside its speaker's face */
+.story-talk { display: flex; flex-direction: column; gap: 10px; margin: 0 0 16px; }
+.story-line { display: flex; gap: 10px; align-items: flex-start; }
+.story-line.mine { flex-direction: row-reverse; }
+.story-line .talk-face { width: 48px; height: 48px; }
+.story-said { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 11px 8px; max-width: min(560px, 82%); }
+.story-line.mine .story-said { border-color: color-mix(in srgb, var(--alpha) 45%, var(--line)); }
+.story-said b { font-family: var(--display); font-size: 12px; letter-spacing: .04em; }
+.story-said small { color: var(--ink-dim); font-size: 11px; margin-left: 8px; }
+.story-said p { margin: 4px 0 0; font-size: 14px; line-height: 1.45; }
 .story-portrait { flex: none; border-radius: 4px; box-shadow: 0 0 0 1px var(--line); image-rendering: pixelated; }
 .story-badges { margin: 0 0 8px; }
 .story-scene-wrap { margin: 0 0 10px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); line-height: 0; }

@@ -35,7 +35,25 @@ function ok(name, cond, note) {
   await p.waitForTimeout(1200);
   const card = () => p.evaluate(() => !document.getElementById('resolution').hidden);
   const cont = () => p.evaluate(() => { const c = document.getElementById('res-continue'); if (c) c.click(); });
-  const settle = async () => { for (let i = 0; i < 20 && await card(); i++) { await cont(); await p.waitForTimeout(150); } };
+  // nothing over the table: every card read, and none still to come
+  const quiet = async () => {
+    for (let calm = 0, i = 0; calm < 3 && i < 40; i++) {
+      await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 20000 }).catch(() => {});
+      if (await card()) { calm = 0; await settle(); } else calm++;
+      await p.waitForTimeout(200);
+    }
+  };
+  // what is said in the battle (storybattle.js storyTalk): the first such card kept, and a picture of it
+  let talk = null;
+  const settle = async () => {
+    for (let i = 0; i < 20 && await card(); i++) {
+      if (!talk) {
+        talk = await p.evaluate(() => { const t = document.querySelector('#res-card .res-talk'); return t ? { who: t.querySelector('.talk-who b').textContent, line: t.querySelector('.talk-line').textContent, face: !!t.querySelector('.talk-face svg rect') } : null; });
+        if (talk) await p.screenshot({ path: path.join(SHOTS, 'story-talk.png') });
+      }
+      await cont(); await p.waitForTimeout(150);
+    }
+  };
   await settle();
   await p.evaluate(() => window.__autoDeployBoth());
   await p.waitForTimeout(400);
@@ -49,7 +67,12 @@ function ok(name, cond, note) {
     if (ready) break;
     await p.waitForTimeout(300);
   }
+  // (what is said as the battle opens, on cards of their own: read)
+  await quiet();
   await p.evaluate(() => window.__clearSel());
+
+  console.log('\n  WHAT IS SAID');
+  ok('the battle opens with a line said over the table: who says it, their face, and the line', !!talk && !!talk.who && talk.face && talk.line.length > 10, JSON.stringify(talk));
 
   console.log('\n  THE ORDERS CARD');
   let txt = await p.evaluate(() => document.getElementById('context').innerText);
@@ -68,9 +91,13 @@ function ok(name, cond, note) {
     const c = document.getElementById('board').getBoundingClientRect();
     return { x: c.x + c.width / 2, y: c.y + c.height / 2 };
   });
-  await p.waitForFunction(() => !window.__busy() && window.__showQueue() === 0, null, { timeout: 20000 }).catch(() => {});
+  await quiet();
   await p.mouse.click(aim.x, aim.y);
   await p.waitForTimeout(500);
+  const answer = await p.evaluate(() => { const t = document.querySelector('#resolution:not([hidden]) .res-talk'); return t ? t.innerText : null; });
+  if (answer) await p.screenshot({ path: path.join(SHOTS, 'story-allyanswer.png') });
+  ok('the allies answer the order, over the table', !!answer && /Port security/.test(answer) && /hold/i.test(answer), answer);
+  await quiet();
   const order = await p.evaluate(() => window.PMC_STATE().allyOrder);
   ok('the tap puts the marker down: Hold here, on the table', order && order.kind === 'hold' && order.x > 0 && order.y > 0, JSON.stringify(order));
   txt = await p.evaluate(() => document.getElementById('context').innerText);
@@ -83,6 +110,7 @@ function ok(name, cond, note) {
   await p.waitForTimeout(150);
   await p.mouse.click(aim.x, aim.y);
   await p.waitForTimeout(400);
+  await quiet();
   ok('before the allies act, it can be put right: now Attack here', await p.evaluate(() => (window.PMC_STATE().allyOrder || {}).kind === 'attack'));
   // an ally acts on it (the engine's own hook: an ally taking its activation)
   await p.evaluate(() => { const s = window.PMC_STATE(); s.allyOrder.acted = true; });

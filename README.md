@@ -267,7 +267,11 @@ campaign, naming its commander under the company's name. The commander is the
 officer at the head of the command squad: the story calls them by name, and they
 are never a casualty.
 
-The story runs in chapters. Each opens with its card, then events: a situation
+The story runs in chapters. It opens in orbit, as the ship's captain, HTX's man on
+the moon and your commander talk over the job before the shuttle goes down, and every chapter opens the
+same way, with the people of the moon talking it over: HTX's director, Varga,
+the miners' guild, Black Lantern and your own radio, by what has happened so far.
+Each chapter has its card, then events: a situation
 and a few choices, some closed until you have the money, the Intel or the
 history for them. What you choose moves the story's **meters** (HTX Standing,
 Loyalty and Intel are shown; the rest come to light as you learn of them) and sets
@@ -279,7 +283,12 @@ Loyalty and Intel are shown; the rest come to light as you learn of them) and se
   choices before the battle. The force is picked with the campaign's own muster.
   Where a battle lets you, you choose your role or the edge you come in from.
   Allies fighting beside you take one order a turn from a marker you put on the
-  table: move here, attack here or hold here.
+  table: move here, attack here or hold here. In the fighting, the people of the
+  story have their say, on a card with their face: the Front's taunts and
+  demands, Black Lantern's offers, the hive's noises and your own radio, at the
+  start, at the first blood on either side, when a side is half gone, when the
+  waves come or the talks break. What they say answers what you have done.
+  Allies report in as the battle opens, and answer each order you give them.
 - **The two halves.** Chapters 1 to 4 are the contract as HTX wrote it, the same
   for everyone (with two one-off chapters some companies never see). From
   chapter 5 the jobs come from whatever is pressing hardest: the Front, a truce,

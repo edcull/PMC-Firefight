@@ -1124,7 +1124,28 @@ when the story begins (`difficulty` in the story, `story.js` `difficultyOf`):
 `storyside.js` checks each moves the enemy and the pay the right way, and
 `storywhole.js` walks the story at each. The README's user guide has a Story
 mode section. Also done here: a story battle's force is picked with the
-campaign's own muster.
+campaign's own muster. And the story speaks in its battles
+(`src/story/deep-contract-talk.js`): at the battle's moments (its start, turn 3,
+the first unit lost on either side, half of a side gone, the first wave, the
+talks broken, the target hurt) a line goes up over the table on a card with the
+speaker's face: the Front's fighters demanding HTX be shut down and taunting the
+company, Varga, Black Lantern's commander, HTX on the line, the hive's noises and
+the company's own radio. Each battle has lines of its own, with each enemy side's
+for the rest; a line can ask what has happened (`if`, as an option does) and is
+then said before the rest. Allies, by the side they come from (the port's
+guards, the refinery garrison, the Front, Black Lantern), report in as the battle
+opens and answer each order given them, Move, Attack or Hold here, or the order
+withdrawn (`allies` in the talk; `story.js` `allyVoice`; `storybattle.js`
+`allyAnswer`). The story opens on a conversation: Landfall's first page has the
+hauler's captain reporting the ship in orbit, HTX's director on the moon setting
+out the job, the commander answering by rank and name, and the port master
+talking the shuttle down, and every chapter after it opens on one of its own
+(a line can ask what has happened, `if`, so HTX goes quiet once it has cut the
+company off, and Varga's brother speaks for her if she is dead), each line beside its speaker's face (a node's `talk`,
+from the talk file's `conversations`; `story.js` `conversation`). `story.js`
+`talkFor` picks them as the battle is set
+up; `storybattle.js` `storyTalk` says each once, writes it to the log, and keeps
+what has been said on the battle.
 
 Phases 1 and 2 can run side by side. Phase 4 is the point to stop and play it
 before writing the rest.

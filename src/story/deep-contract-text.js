@@ -22,7 +22,7 @@
 
     /* ================= 1. Landfall ================= */
     c1: 'Kessler’s Reach is a grey moon on a long lease. The Halvorsen-Tey Extraction Consortium has worked it for forty years, and for forty years the miners have done what they were told. Six weeks ago they stopped. The Free Miners’ Front holds half the shafts and most of the roads, and HTX wants it put right, quickly and quietly. That is what it is paying {name} for, and why {commander} is on the first shuttle down.',
-    'c1.brief': 'The shuttle comes down on the starport’s last working pad. Smoke from the town beyond the fence, and a port that has been shot at for a week. HTX’s orders, addressed to {commander:rank}, are short: hold the port, so the rest of the contract can land.',
+    'c1.brief': 'The pilot takes the port master’s advice. The shuttle drops onto the pad hard, its ramp already open: smoke beyond the fence, scorch marks across the apron, and a port that has been shot at for a week. Somewhere overhead, the rest of the contract waits for the port to be held.',
     'c1.portmaster': 'Port Master Okonkwo meets {commander:rank} at the ramp with a clipboard and a sidearm. His security team has held the gates for six days without relief and without pay. He will put them under your command, if HTX makes good what it owes them. He also looks like a man who knows more than he is saying.',
     'c1.portmaster/take': 'Take his people. HTX can settle the bill, and you can carry it until then.',
     'c1.portmaster/send': 'Send them home. They’ve done enough, and they aren’t yours.',
@@ -68,7 +68,7 @@
 
     /* ================= 3. The Hunt ================= */
     c3: 'Ada Varga was a shift boss in Pit Four for nineteen years. Now she is the Front, as far as anyone on Kessler’s Reach is concerned, and HTX has found her: a pumping station in the old workings, with her people around her.',
-    'c3.brief': 'The pumping station sits above the oldest shafts on the moon. The sealed levels are below it. HTX’s map marks them in red and says nothing else.{if depot_raided} Whatever guns she had went up with the depot.{/if}',
+    'c3.brief': 'The pumping station sits above the oldest shafts on the moon. The sealed levels are below it, marked in red on HTX’s map and on nothing else.{if depot_raided} Whatever guns she had went up with the depot.{/if}',
     'c3.killorcapture': 'HTX’s orders are explicit: Varga dead, and quickly. {soldier:veteran} reads them twice and says what the company is thinking. “Dead, she’s a martyr. Alive, she’s worth something to somebody. Possibly us, {commander:rank}.”',
     'c3.killorcapture/gunship': 'Call in HTX’s gunship and finish it from the air.',
     'c3.killorcapture/snatch': 'Send a snatch team. Take her alive.',
@@ -90,7 +90,7 @@
 
     /* ================= 4. Pit Nine ================= */
     c4: 'Pit Nine is a mining town of six thousand people, and it rose in a single night. The Front has the streets, HTX has a site office in the middle of them, and HTX’s manager there has stopped answering the radio.',
-    'c4.brief': 'HTX wants the town back and its office secured. The office holds the Deep Contract’s records, a phrase that appears in your orders exactly once.',
+    'c4.brief': 'HTX wants the town back and its office secured. The Deep Contract appears in your written orders exactly once, and Hale has said all he means to say about it.',
     'c4.school': 'The Front has fortified the town school. It is the strongest building in Pit Nine, and there are children inside who did not get out in time. {if nightshift_freed}One of the teachers was on the refinery’s night shift. She remembers who let them go.{/if}',
     'c4.school/clear': 'Clear it room by room. Nobody fires blind.',
     'c4.school/shell': 'Shell it first, then go in.',
@@ -104,7 +104,7 @@
 
     /* ================= the one-offs ================= */
     sump: 'Below the blast door, the old workings go down further than any map shows. The air is warm and wet, and something has been living down here for a long time.',
-    'sump.brief': 'The company goes down in single file, lights low. The deeper levels have been dug out recently, and not by miners.',
+    'sump.brief': 'The company goes down in single file. Past the second level the radios give nothing but static, and the air is warm enough to sweat in.',
     'sump.map': 'One of Varga’s people, cut off from the rest, offers to show you the way through. He is shaking, and it isn’t because of you.',
     'sump.map/trust': 'Follow him.',
     'sump.map/surveys': 'Use HTX’s survey maps, and tell HTX where you are.',
@@ -130,7 +130,7 @@
 
     /* ================= the second half: Fault Lines ================= */
     fault: 'The contract, as HTX wrote it, is over. What is left is a moon at war with itself, a company in the middle of it, and more work than anyone can do. From here on, you choose the jobs, and the jobs you leave go on without you.',
-    'fault.brief': 'The war has changed shape. The Front is split, the shafts are louder every night, and HTX’s orders have stopped making sense.{if htx_cut_off} HTX has also stopped paying. Whatever the company earns from now on, it earns from someone else.{/if}',
+    'fault.brief': 'The board in the port’s hangar is covered in jobs, and more come in every day: the Front’s cells, the shafts, the towns, HTX. The company cannot take them all.{if htx_cut_off} Whatever it earns from now on, it earns from someone else.{/if}',
 
     // the Front
     retake: 'Number Three has flown the Front’s flag since the night the garrison broke. HTX wants it back, and so does everyone who works there.',
@@ -145,7 +145,7 @@
     'retake.holdouts/walk': 'Take their weapons and let them walk home.',
     'retake.interlude': 'The refinery burns down to its frame over the next two days. The company watches the glow from the port.',
     revenge: 'The Front has not forgotten what happened at the pumping station.',
-    'revenge.brief': '{if varga_dead}Tomas Varga was a schoolteacher until his sister was killed. Now he leads what is left of her people, and he wants the company that did it.{/if}{if varga_free}Ada Varga is back with her people, and she has sent word that she wants to see you. All of you.{/if}',
+    'revenge.brief': '{if varga_dead}Tomas Varga was a schoolteacher until his sister was killed. Now he leads what is left of her people, and he wants the company that did it.{/if}{if varga_free}Ada Varga is back with her people, and the Front has stopped hiding. Whatever she means to do, she means to do it to you.{/if}',
     'revenge.challenge': 'A boy comes to the port gate with a white rag on a stick and a message: the Front’s leaders will meet {commander:rank} on the slag ridges, at noon, alone. Nobody believes the “alone”.',
     'revenge.challenge/meet': 'Go to the meeting, with the company close behind.',
     'revenge.challenge/ambush': 'Get there first, and be waiting for them.',
@@ -166,7 +166,7 @@
     'splinter.bomber/turn': 'Turn him. He knows everyone the Front has left.',
     'splinter.interlude': 'The hill country goes quiet. Nobody believes it will stay that way.',
     redoubt: 'Whatever the Front has left, it has taken up onto one hill, and it means to die there.',
-    'redoubt.brief': '{if truce}The truce holds everywhere but here. The hardliners who refused it have taken the old redoubt above the shafts, and Varga’s own people have asked you to finish it.{/if}{if not truce}The Front makes its last stand on the redoubt above the old shafts: trenches, wire, a bunker, and nowhere left to fall back to.{/if}',
+    'redoubt.brief': '{if truce}The truce holds everywhere but here. The hardliners who refused it have taken the old redoubt above the shafts, and the Front itself has asked you to finish it.{/if}{if not truce}The Front makes its last stand on the redoubt above the old shafts: trenches, wire, a bunker, and nowhere left to fall back to.{/if}',
     'redoubt.approach': 'The redoubt sits on a bare hilltop with clear ground on every side. You can wait them out, or you can go up.',
     'redoubt.approach/siege': 'Ring the hill and starve them out for a week.',
     'redoubt.approach/storm': 'Bombard it, then storm it.',

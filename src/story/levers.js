@@ -301,6 +301,9 @@
         readiness: rd,
         barricades: rd >= 1 ? { B: 2 * pl } : null,
         intel: S.intel(campaign, spec),
+        // what is said in it, and when (storybattle.js storyTalk)
+        talk: S.talkFor(campaign, spec),
+        allyVoice: S.allyVoice(campaign, spec),
         edge: east ? 'east' : lv.edge === 'choose' ? 'west' : null,
         turns: lv.turns || (variant && variant.turns) || null,
         // the story scenarios' waves: so many a turn, by a meter (a battle's `waves`: base + 1 for each `per` points)
