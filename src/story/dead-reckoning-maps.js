@@ -66,7 +66,7 @@
       pieces: [
         // Brass Ledger's pad: the shuttle down on it, the bowser fuelling it, the lifter loading it
         Object.assign(P(30, 2, 14, 14), { pad: true }), R('shuttle', 32, 3, 10, 8),
-        Object.assign(R('fueltruck', 30.6, 12, 4.4, 2), { hose: { x: 37, y: 11 } }), R('cargolifter', 40.5, 12.2, 2.5, 2.5),
+        Object.assign(R('fueltruck', 31.4, 12.2, 2.8, 1.4), { hose: { x: 37, y: 11 } }), R('cargolifter', 40.5, 12.2, 2.5, 2.5),
         // an empty pad, the control block and the customs shed
         Object.assign(P(6, 6, 8, 8), { pad: true }), B(5, 36, 8, 6, 'annex'), R('bunker', 35, 36, 6, 5),
         B(28, 31, 6, 5, 'block'), B(26, 38, 6, 3, 'block'), R('ruins', 7, 20, 4, 4), R('wall', 38, 22, 1, 6),

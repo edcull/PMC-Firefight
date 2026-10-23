@@ -569,7 +569,7 @@
         if (r.kind === 'shuttle') { props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'fueltruck') {
           props.push({ kind: 'fueltruck', x: r.x, y: r.y, w: r.w, h: r.h, height: a(13), seed: (rr2() * 9999) | 0 });
-          if (r.hose) props.push({ kind: 'hose', x: r.x + r.w - 1.7, y: r.y + r.h + 0.05, to: r.hose, seed: (rr2() * 9999) | 0 });
+          if (r.hose) props.push({ kind: 'hose', x: r.x + r.w * 0.35, y: r.y + r.h - 0.1, to: r.hose, seed: (rr2() * 9999) | 0 });
           return;
         }
         if (r.kind === 'cargolifter') { props.push({ kind: 'cargolifter', x: r.x, y: r.y, w: r.w, h: r.h, height: a(15), seed: (rr2() * 9999) | 0 }); return; }
