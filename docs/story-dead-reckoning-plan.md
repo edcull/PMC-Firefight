@@ -54,6 +54,18 @@ beside its name. Something in the story reveals each one
 | The Red Reavers | nobody: claim jumpers | Hal says so at the beacon |
 | The Ninth Lance | Lucan Vane | Daw says so (*The Double-Cross*) |
 
+**Business until somebody loses** (settled after the rework). The rival
+companies are confrontational, and they make it business: clients, invoices,
+contracts, prices. The first time the company beats one (`grudges`; the flag
+`beat_<id>`, set by `story.js` `resolveBattle`), it becomes personal. From
+then on the rival comes readier for the company (Readiness +1), and talks
+about it. Its side's lines with `if: { flag: 'beat_<id>' }` win over a
+battle's own plain ones (`talkFor`). Brass Ledger has not forgotten Vesk,
+Sable her warehouse, Nine the Glass Flats, Hal the beacon, and Daw the
+docking ring.
+
+**Brass Ledger** is the new name of Coin & Kettle.
+
 The rivals, the race, the Ninth Lance and the second half's threads stand as
 written in sections 2 to 4. Only the Tribes are now met for the first time
 under a name.
@@ -1034,11 +1046,11 @@ story beside *Deep Contract*, and the new-story form offers both):
   docking ring. Station Thule and the Warren are compounds, laid from their seed.
   The second half's battles are fought on rolled ground until phase 5
   (`mapsPending: [2]`).
-- **The voices** (`dead-reckoning-talk.js`): Vane and her reader Halloran opening
+- **The voices** (`dead-reckoning-talk.js`): Vane (on the line) and his reader Halloran opening
   Lot 47, Kettering's call about his man, the two readings, Nine on the open
   channel, the Thule scavengers, the fog at the beacon, Colonel Sable at the
   broker's, the Warren, Commander Daw's court order; each battle's lines and
-  each enemy side's, the Xenotripods in brackets; the hired companies reporting
+  each enemy side's, the unknown in brackets; the hired companies reporting
   in and answering orders.
 - **Shared screens:** each story names its own halves on the chapter cards
   (`halves`) and its own first day (`firstDay`); the side contracts' time cost
@@ -1085,20 +1097,63 @@ heavy weapon; the Esh-Aven face for the conversations.
 
 From playing the first half:
 
-- **Lot 47 is an Escort** (`scenarios-story.js` `escort`): Ottilie Vane, with
-  the log, across Vesk's market square to her ship. She comes on as side A's
-  own unit to move. Through to the far edge, the battle is won; killed, it is
-  lost; the enemy goes for her and nothing else.
+- **Lot 47 is an Escort** (`scenarios-story.js` `escort`): Halloran, Vane's
+  reader, with the log, across Vesk's market square to Vane's ship. He comes on
+  as side A's own unit to move. Through to the far edge, the battle is won;
+  killed, it is lost; the enemy goes for him and nothing else.
 - **Outbid them in the open** is Vane's money, not the company's (it had none
   to start with).
 
 Tested by `storydrwords.js` (the chart), `storyforces.js` (the castes' kits)
 and `storyescort.js`.
 
+### After phase 4: first contact, the patron, the rivals
+Asked for by the owner after playing the first half; section 0 has all of it.
+
+**Where it stands.** Built and merged (PR #316):
+
+- the Xenotripods unknown in the first half (unknown contacts, `storycontacts.js`);
+- Lucan Vane, the elusive patron;
+- the rivals made confrontational, Brass Ledger renamed, and the secret
+  clients and grudges.
+
+Also merged in PR #316: units may stand in a compound's doorway.
+
 ### Phase 5: the second half and the endings
 The four threads, the finales, Recall, Xenotripod allies, hired allies (Price,
 Trust, demands, orders refused, walking, the Turn), the endings and their
 epilogues, the side contracts. `storywhole.js` tuned to its targets.
+
+What the rework adds to it: the second half is where the Xenotripods are first
+named and first fought in force. The rivals meet the company again knowing who
+beat them, so every Race and Patron battle has grudge lines. A client still
+secret at the half can be found out in the second.
+
+In parts, each tested and pushed as it is done:
+
+- **5a. The reveal and the second half's words.**
+  - *The Long Jump*'s opening conversation: Halloran reads Morrow's last
+    pages, the name, and Vane's reaction on the line.
+  - Then every pool chapter's intro, pages, options and closed options'
+    reasons, each battle's mission name and briefing, and the endings' and
+    epilogues' words, in `dead-reckoning-text.js`.
+  - `storydrwords.js` extended to the whole story.
+- **5b. The second half's maps.** Ground of its own for every open-table battle
+  (*Claim Jumpers*, *Bounty*, *The Landing*, *The Watchers*, *Teleport Storm*,
+  *The Mimics*, *The Speaker*, *Signal Fires*, *The Escort*, *Debts*, *The
+  Collector*, *Recall*). The compounds keep their seeds. `mapsPending` goes.
+- **5c. The second half's voices.**
+  - Each chapter's opening conversation.
+  - Each battle's lines: the tribes in brackets until *The Speaker*, the
+    Ulvar, the Amt and the Hashamer given sides.
+  - The rivals' grudge lines wherever they come back, and Seven-Holds-the-Staff.
+- **5d. Hired allies answering back.**
+  - Orders refused at low Trust (on a 4+ at −1, always at −3).
+  - Walking off the table at −2.
+  - The Turn: a hired company bought out from under the company.
+- **5e. The whole walk.** `storywhole.js` over *Dead Reckoning*: every ending
+  reachable, the threads reaching their finales, the finales' forces and the
+  pay tuned to its targets.
 
 ### Phase 6: polish
 Sounds for the Xenotripod battles (Mental Projection lines, the beacon), the
@@ -1114,9 +1169,13 @@ Settled with the owner:
 |---|---|
 | **Rivals: written forces or real companies?** | **Written forces**, scaled by each rival's meter, as *Deep Contract*'s enemies are. No battle in the background, and the tests keep their made-up reports. A rival's commander and one veteran unit are named and carry wounds through flags. |
 | **How many rivals in the second half?** | **Three per playthrough**: the two the first half met most, plus Kestrel (who always gets there first). The Race's chapters are written so any rival can take them, with that rival's archetype. |
-| **Do jumps cost money?** | **A flat 1 kUC per jump**, waived by Vane while her Trust is 1 or more. |
+| **Do jumps cost money?** | **A flat 1 kUC per jump**, waived by Vane while his Trust is 1 or more. |
 | **How many lodestones open the Quiet?** | **Five, but never a dead end**: with fewer the finale is fought anyway, harder, and *Lost Signal* and *Claim Jumped* are likelier. |
 | **The Xenotripods' voice** | **Bracketed Mental Projection until *The Speaker*, then words.** |
+| **The shape of the story** | **A treasure hunt with clashes against rival companies**, not a war (section 0). |
+| **The Xenotripods** | **Unknown in the first half**: met only as unknown contacts, never in a full battle, and named when the second half opens. |
+| **The patron** | **Lucan Vane**: rich, powerful, elusive, a voice on the line. |
+| **The rivals** | **Confrontational, and all business, until beaten**; then it is a grudge. Who hired each is a secret until found out. |
 | **Allies** | **Xenotripod allies** in First Contact chapters and, with `contact`, the finales. **PMC allies too, as hired guns** (section 3): they cost money, cost more each time, make demands, refuse orders when their Trust is low, walk off the table, and can sell the company out. |
 
 Still open, to be settled by the walk:

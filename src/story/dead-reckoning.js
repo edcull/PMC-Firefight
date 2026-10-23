@@ -843,7 +843,7 @@
       { about: 'eshaven', if: { flag: 'promise_broken' }, text: 'The Hashamer remember the company that broke its word.' },
       { about: 'eshaven', if: { flag: 'eshaven_promise' }, text: 'The Hashamer are still on their world, free, and they say the names of their dead.' },
       { about: 'vane', if: { flag: 'vane_exposed' }, text: 'Lucan Vane’s receipts are public, and so, at last, is his face.' },
-      { about: 'vane', text: 'Ottilie Vane has another lot in the catalogue.' },
+      { about: 'vane', text: 'Lucan Vane has another lot in the catalogue, bought by telephone, from nowhere.' },
       { about: 'rivals', if: { flag: 'kettle_partner' }, text: 'Brass Ledger are partners in the claim, and remind everyone of it.' },
       { about: 'rivals', text: 'The rivals went back to the work they had before the log.' },
       { about: 'company', text: '{name} came back with {commander}, and fewer than it took.' }
