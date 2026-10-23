@@ -15,6 +15,41 @@
 (function (root) {
   'use strict';
   var S = root.PMCStory || require('./story.js');
+  // the story's words, maps and voices, kept in files of their own (dead-reckoning-text.js, -maps.js, -talk.js)
+  if (!(root.PMCStoryText && root.PMCStoryText['dead-reckoning']) && typeof require === 'function') require('./dead-reckoning-text.js');
+  if (!(root.PMCStoryMaps && root.PMCStoryMaps['dead-reckoning']) && typeof require === 'function') require('./dead-reckoning-maps.js');
+  if (!(root.PMCStoryTalk && root.PMCStoryTalk['dead-reckoning']) && typeof require === 'function') require('./dead-reckoning-talk.js');
+  var TEXT = (root.PMCStoryText && root.PMCStoryText['dead-reckoning']) || {};
+
+  /* The words laid over the working, where the words file has them: a
+     chapter's intro, a node's text and mission name, an option's text and
+     why it is closed. */
+  function withProse(def) {
+    (def.chapters || []).forEach(function (ch) {
+      if (TEXT[ch.id]) ch.intro = TEXT[ch.id];
+      (ch.nodes || []).forEach(function (n) {
+        if (TEXT[n.id]) n.text = TEXT[n.id];
+        if (TEXT[n.id + '#name']) n.name = TEXT[n.id + '#name'];
+        (n.options || []).forEach(function (o) {
+          if (TEXT[n.id + '/' + o.id]) o.text = TEXT[n.id + '/' + o.id];
+          if (TEXT[n.id + '/' + o.id + '.why']) o.why = TEXT[n.id + '/' + o.id + '.why'];
+        });
+      });
+    });
+    return def;
+  }
+  /* What is said in its battles and on its pages (dead-reckoning-talk.js),
+     and the voices that say it among its people. */
+  function withTalk(def) {
+    var talk = root.PMCStoryTalk && root.PMCStoryTalk['dead-reckoning'];
+    if (!talk) return def;
+    def.talk = { sides: talk.sides || {}, battles: talk.battles || {}, allies: talk.allies || {}, parleys: talk.parleys || {} };
+    Object.keys(talk.people || {}).forEach(function (k) { if (!def.people[k]) def.people[k] = talk.people[k]; });
+    Object.keys(talk.conversations || {}).forEach(function (id) {
+      (def.chapters || []).forEach(function (ch) { (ch.nodes || []).forEach(function (n) { if (n.id === id) n.talk = talk.conversations[id]; }); });
+    });
+    return def;
+  }
 
   /* ---------- the forces ---------- */
   function over(base, extra) {
@@ -130,8 +165,12 @@
   // the promise broken by an act, where it was made
   function breaks() { return { if: { flag: 'eshaven_promise' }, flag: 'promise_broken' }; }
 
-  S.register({
+  S.register(withTalk(withProse({
     id: 'dead-reckoning', name: 'Dead Reckoning', version: 1, length: 8,
+    // (the second half's battles are fought on rolled ground until their maps are written, phase 5)
+    mapsPending: [2],
+    // the two halves, as the chapter cards name them, and those who were there from the start
+    halves: ['The Chart', 'The Long Jump'], firstDay: 'on the trail from Vesk',
     blurb: 'A dead surveyor’s log, and the Xenotripod lodestones he left behind, lead across the stars to a world nobody has charted. Ottilie Vane hires your company to follow them. Every other company on the trail was hired to get there first.',
     start: { faction: 'pmc', found: 'standard' },
 
@@ -288,7 +327,7 @@
           { id: 'watch', text: 'Let Vane bid while the company watches the room.', battle: { intel: 1 }, effects: [{ meter: 'intel', add: 1 }] },
           { id: 'follow', text: 'Have Coin & Kettle’s agent followed out of the room.', battle: { role: 'choose' }, effects: [{ flag: 'kettle_marked', local: true }] }
         ], next: 'c1.battle' },
-        { id: 'c1.battle', type: 'battle', scenario: 'secure', tier: 1, pl: 1, planet: 'dense',
+        { id: 'c1.battle', type: 'battle', scenario: 'secure', map: 'vesk', tier: 1, pl: 1, planet: 'dense',
           enemy: rival('kettle', { core: [{ key: 'recruits', name: 'Kettering’s Own' }], optional: { meter: 'kettle', per: 3, units: ['irregulars', 'recruits'] }, fill: { to: 0.6, from: ['recruits', 'irregulars'], meter: 'kettle', step: 0.05 },
             changes: [{ if: { flag: 'kettle_marked' }, readiness: -1 }] }),
           on: { success: [{ effects: [{ meter: 'kettle', add: -1 }, { meter: 'lead', add: 1 }] }], failure: [{ effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: -1 }] }] }, next: 'c1.debrief' },
@@ -315,7 +354,7 @@
         ], next: 'c2f.battle' },
         // (a battle can have a place of its own: the chapter's two sites are worlds apart)
         // (the relic variant: the lodestone is dug up, and whoever carries it off, or holds it at the end, has it)
-        { id: 'c2f.battle', type: 'battle', scenario: 'find', tier: 'max', pl: 1, planet: 'desert', variant: { relic: true },
+        { id: 'c2f.battle', type: 'battle', scenario: 'find', map: 'glassflats', tier: 'max', pl: 1, planet: 'desert', variant: { relic: true },
           place: { system: 'Vantor', planet: 'Vantor III', kind: 'desert', world: { gravity: 'low' }, site: 'the Glass Flats' },
           enemy: rival('wraith', { changes: [{ if: { flag: 'glassflats_rushed' }, readiness: -1 }] }),
           on: {
@@ -368,7 +407,7 @@
             fail: [{ flag: 'signal_failed', local: true }, { next: { battle: 'c3.battle', levers: { variant: { ambush: true }, name: 'The Beacon Answers' } } }] }] }
         ], next: 'c3.battle' },
         // (the relic variant: the beacon's lodestone, prised out of its socket and carried off, or not)
-        { id: 'c3.battle', type: 'battle', scenario: 'find', tier: 'max', pl: 1, planet: 'jungle', variant: { relic: true }, enemy: tribe('shkar'),
+        { id: 'c3.battle', type: 'battle', scenario: 'find', map: 'mire', tier: 'max', pl: 1, planet: 'jungle', variant: { relic: true }, enemy: tribe('shkar'),
           on: { success: [{ if: { relic: 'A' }, effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 1 }] }, {}],
                 failure: [{ if: { relic: 'A' }, effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 2 }] }, { effects: [{ meter: 'alarm', add: 1 }] }] }, next: 'c3.debrief' },
         { id: 'c3.debrief', type: 'debrief', pick: 2, text: '{if success}The beacon is quiet.{/if}{if failure}The Sh’kar drove you off.{/if}', events: ['c3.left', 'c3.copy'], next: 'c3.end' },
@@ -405,7 +444,7 @@
           { id: 'follow', text: 'Let Sable have it, and follow Sable.', battle: { skip: true, intel: 2 }, effects: [{ meter: 'lead', add: -1 }, { meter: 'intel', add: 2 }, { meter: 'vane', add: -1 }, { meter: 'sable', add: 1 }, { flag: 'sable_owed' }] },
           hireOption('kettle', 'Hire Coin & Kettle for the takeover.')
         ], next: 'c4.battle' },
-        { id: 'c4.battle', type: 'battle', scenario: 'takeover', role: 'attacker', tier: 'max', pl: 1, planet: 'industrial', enemy: rival('sable'),
+        { id: 'c4.battle', type: 'battle', scenario: 'takeover', map: 'docks', role: 'attacker', tier: 'max', pl: 1, planet: 'industrial', enemy: rival('sable'),
           on: { success: [{ effects: [{ meter: 'stones', add: 1 }, { meter: 'sable', add: -1 }, { meter: 'lead', add: 1 }] }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] }, next: 'c4.debrief' },
         { id: 'c4.debrief', type: 'debrief', pick: 3, text: 'The heading is out, one way or another.', events: ['c4.copies'].concat(HIRED_EVENTS), next: 'c4.interlude' },
         { id: 'c4.copies', type: 'event', title: 'The broker’s copies', text: 'Everybody bought one.', options: [
@@ -444,7 +483,7 @@
           { id: 'refuse', text: 'Refuse.', battle: { role: 'choose', edge: 'choose' } },
           { id: 'fire', text: 'Fire first.', battle: { strikes: 'D3+PL' }, effects: [{ meter: 'vane', add: -2 }, { flag: 'lance_burned' }] }
         ], next: 'dx.battle' },
-        { id: 'dx.battle', type: 'battle', scenario: 'meeting', tier: 'max', pl: 1, planet: 'industrial', enemy: rival('lance'),
+        { id: 'dx.battle', type: 'battle', scenario: 'meeting', map: 'dockring', tier: 'max', pl: 1, planet: 'industrial', enemy: rival('lance'),
           on: { success: [{ effects: [{ meter: 'lance', add: -1 }] }], skip: [{}], failure: [{ effects: [{ meter: 'lance', add: 1 }, { meter: 'stones', add: -1 }] }] }, next: 'dx.debrief' },
         { id: 'dx.debrief', type: 'debrief', text: 'The Lance pulls back.', events: ['dx.terms'], next: 'dx.interlude' },
         { id: 'dx.terms', type: 'event', who: 'vane', title: 'Vane’s terms', text: 'Her lawyer calls before the smoke clears.', options: [
@@ -770,7 +809,7 @@
       { about: 'rivals', text: 'The rivals went back to the work they had before the log.' },
       { about: 'company', text: '{name} came back with {commander}, and fewer than it took.' }
     ]
-  });
+  })));
 
   if (typeof module !== 'undefined' && module.exports) module.exports = S.get('dead-reckoning');
 })(typeof window !== 'undefined' ? window : global);

@@ -338,6 +338,8 @@ pumphouses.js      The Hunt's pump houses: Find and secure's locations where the
                    sight, searched and held from their walls, searched by the AI; and the net calling the search
 storyscenes.js     the story's places as pictures: each drawn the same every time, none alike, and
                    every chapter card, battle map and ending with one
+storydrwords.js    Dead Reckoning's first half written: every page, option and battle its own words, every voice
+                   one of its people, every open-table battle its own ground laid sound (the relic's sites, the objectives)
 storydr.js         Dead Reckoning as data: the validator, its forces (archetypes; the Hashamer all Esh-Aven, no
                    craft or teleport turrets), the hired guns, and 6,000 seeded walks (endings, one-offs, finales)
 storyparley.js     a Parley's talks: the conversation written from what has happened, Trust and Tension, an agreement
@@ -445,6 +447,8 @@ bundle.js          the published site: one bundle, no test hooks, and a battle p
 **The campaign**
 
 ```
+drflow.js          Dead Reckoning from the new-story form into chapter 2: picked, founded, Vane's conversation,
+                   the bidding, the market square's battle, Kettering's call, the jump, the Glass Flats' briefing
 storyflow.js       story mode from the menu's Story card to the end of chapter 1: founding, the
                    chapter card, an event, the briefing and muster, the battle (conceded, not played),
                    the aftermath and debrief, the journal, and the Continue list

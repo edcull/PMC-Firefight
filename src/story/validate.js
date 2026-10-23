@@ -245,7 +245,8 @@
           scenario(at, n.scenario);
           var maps = root.PMCStoryMaps && root.PMCStoryMaps[def.id];
           if (n.map && maps && !maps[n.map]) err(at + ': no map "' + n.map + '"');
-          if (opts.scenarios && opts.scenarios[n.scenario] && !opts.scenarios[n.scenario].compound && !n.map && def.chapters.some(function (c) { return c.id === ch.id && !c.test; }) && maps) warn(at + ': no map of its own: its ground is rolled');
+          if (opts.scenarios && opts.scenarios[n.scenario] && !opts.scenarios[n.scenario].compound && !n.map && def.chapters.some(function (c) { return c.id === ch.id && !c.test; }) && maps &&
+            !(def.mapsPending && def.mapsPending.indexOf(ch.half) >= 0)) warn(at + ': no map of its own: its ground is rolled');
           if (n.solo) err(at + ': story battles never set solo');
           // the relic variant is found and carried: Find and secure, and nothing else
           if (n.variant && n.variant.relic && n.scenario !== 'find') err(at + ': a relic battle is Find and secure, not ' + n.scenario);

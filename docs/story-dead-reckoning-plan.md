@@ -959,6 +959,34 @@ Chapters 1 to 4 and both one-offs written in full (text, maps, conversations,
 battle voices), playable end to end. Stop and play it, as with *Deep Contract*'s
 phase 4.
 
+**Where it stands.** Written, and playable in the browser (index.html loads the
+story beside *Deep Contract*, and the new-story form offers both):
+
+- **The words** (`dead-reckoning-text.js`): every chapter's intro, every page,
+  option and closed option's reason, every battle's mission name and briefing,
+  for chapters 1 to 4 and both one-offs, and the events shared between chapters
+  (the interludes' and the hired guns').
+- **The maps** (`dead-reckoning-maps.js`): Vesk's market square (the clock, the
+  fountain, the arcade), the Glass Flats and the Mire (their three places, for
+  the relic), Sable's docks (the middle clear for her warehouse) and the orbital's
+  docking ring. Station Thule and the Warren are compounds, laid from their seed.
+  The second half's battles are fought on rolled ground until phase 5
+  (`mapsPending: [2]`).
+- **The voices** (`dead-reckoning-talk.js`): Vane and her reader Halloran opening
+  Lot 47, Kettering's call about his man, the two readings, Nine on the open
+  channel, the Thule scavengers, the fog at the beacon, Colonel Sable at the
+  broker's, the Warren, Commander Daw's court order; each battle's lines and
+  each enemy side's, the Xenotripods in brackets; the hired companies reporting
+  in and answering orders.
+- **Shared screens:** each story names its own halves on the chapter cards
+  (`halves`) and its own first day (`firstDay`); the side contracts' time cost
+  is read from any cost that waits on a chapter; picking a story on the new-story
+  form shows its own blurb and difficulties.
+
+Tested by `storydrwords.js` (unit) and `drflow.js` (browser: from the form into
+chapter 2). Not yet: the star chart, the Xenotripod faces and the trail's scenes
+(phase 4); the second half's words, maps and voices (phase 5).
+
 ### Phase 4: the star chart, faces, scenes and the Esh-Aven
 `story-chart.js`; the Xenotripod face and the rival commanders' faces; the
 trail's scenes; the place on the chapter card and the briefing. The Esh-Aven

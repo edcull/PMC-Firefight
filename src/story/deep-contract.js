@@ -147,6 +147,8 @@
 
   S.register(withTalk(withWho(withProse({
     id: 'deep-contract', name: 'Deep Contract', version: 1, length: 8,
+    // the two halves, as the chapter cards name them, and those who were there from the start
+    halves: ['The Contract', 'Fault Lines'], firstDay: 'on Kessler\u2019s Reach from the first day',
     blurb: 'Kessler\'s Reach is a mining moon, and its miners have risen. HTX hires your company to restore order, quickly and quietly. HTX is hiding why they rose.',
     // the locals talk: with their trust, you know what you face before a battle
     /* What the company knows of the enemy before a battle (story.js `intel`):
