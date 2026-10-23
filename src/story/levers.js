@@ -374,6 +374,13 @@
         // the story scenarios' waves: so many a turn, by a meter (a battle's `waves`: base + 1 for each `per` points)
         waves: spec.waves ? { per: (spec.waves.base || 1) + Math.floor(Math.max(0, campaign.story.meters[spec.waves.meter] || 0) / (spec.waves.per || 3)) } : null,
         allyFrom: allyFrom,
+        /* A hired company beside the company (Dead Reckoning's hired guns): its
+           Trust, which decides whether it takes orders unpaid and whether it
+           walks off the table (storybattle.js hired). */
+        hired: lv.allies && campaign.story.meters[lv.allies.side + '_trust'] != null ? {
+          side: lv.allies.side, name: ((def.sides || {})[lv.allies.side] || {}).name || lv.allies.side,
+          trust: campaign.story.meters[lv.allies.side + '_trust']
+        } : null,
         units: units
       }
     };

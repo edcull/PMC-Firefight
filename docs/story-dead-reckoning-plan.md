@@ -1155,7 +1155,7 @@ In parts, each tested and pushed as it is done:
   reachable, the threads reaching their finales, the finales' forces and the
   pay tuned to its targets.
 
-**Where it stands (5a to 5c).** Done:
+**Where it stands (5a to 5d).** Done:
 
 - **5a.** *The Long Jump* opens on the name: Halloran reads it out of Morrow's
   last pages, Vane reprices everything on the line, and the newsfeeds have
@@ -1194,6 +1194,20 @@ In parts, each tested and pushed as it is done:
     sites, the vault, the spire). Every chapter with a battle has its card's
     picture.
 - Tested by `storydrwords.js` (69 checks) and `storyparley.js`.
+- **5d.** Hired guns answer back (`storybattle.js`; Trust from `levers.js`
+  `story.hired`):
+  - **Orders.** With Trust −1 or −2, an order is refused on a D6 of 1 to 3
+    (rolled once a turn); at −3 or lower, always. A refused order is a
+    demand: the order card offers to pay 1 kUC on the spot, which is billed
+    after the battle (`storyOutcome.allyPaid`). Otherwise the order does not
+    stand.
+  - **Walking.** With Trust −2 or lower from the start, or half their units
+    lost, they walk off the table at the next End phase. They leave side A's
+    tally rather than counting as lost or as escaped.
+  - Each company has its words for both.
+  - Being sold out stays as written: the `<company>_turned` flags make *The
+    Landing* readier.
+  - Tested by `storyhired.js`.
 
 ### Phase 6: polish
 Sounds for the Xenotripod battles (Mental Projection lines, the beacon), the

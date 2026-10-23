@@ -625,7 +625,8 @@
     var v = al && talk && talk.allies && talk.allies[al.side];
     if (!v) return null;
     var who = (def.people || {})[v.who] || {}, out = { who: v.who, name: who.name || v.who, role: who.role || '' };
-    ['report', 'move', 'attack', 'hold', 'clear'].forEach(function (k) { out[k] = arr(v[k]).map(function (t) { return render(campaign, t); }); });
+    // (and, for a hired company, what it says asking to be paid for an order, and walking off the table)
+    ['report', 'move', 'attack', 'hold', 'clear', 'demand', 'walk'].forEach(function (k) { out[k] = arr(v[k]).map(function (t) { return render(campaign, t); }); });
     return out;
   }
 
@@ -783,6 +784,10 @@
       st.lastWiped = (result.units || []).filter(function (u) { return u.side === 'A' && !u.free && !u.ally && (u.wiped || u.destroyed); }).length;
       st.lastTarget = result.story && result.story.target || null;
       st.lastRelic = result.story && result.story.relic || null;
+      // hired guns paid on the spot in the battle, billed now
+      var paid = result.story && result.story.allyPaid;
+      var coA = campaign.companies && campaign.companies.A;
+      if (paid && coA) coA.kUC = Math.max(0, (coA.kUC || 0) - paid);
       // a parley agreed: the terms it was agreed on, as the story's flags
       arr(result.story && result.story.terms).forEach(function (t) { st.flags[t] = true; });
       keepRoll(campaign, result);
