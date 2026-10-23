@@ -55,7 +55,8 @@ src/
     solo.js          the solitaire turn: whose unit goes next, and the OpFor's phase
     save.js          saving and loading a battle: the snapshot of everything
     storybattle.js   a story battle's own changes: named units, allies and their activations, the
-                     prelude (strikes, Suppression, an ambush), the target variant
+                     prelude (strikes, Suppression, an ambush), the target variant, and the story
+                     scenarios' End phase (waves, the orbital countdown, extraction, a parley)
     ai.js            the AI: its behaviour, moves, targets, honours
     offtable.js      the other forces' battles, fought AI against AI on a table nobody sees
     protocol.js      message names and legal settings, shared by browser and server
@@ -65,9 +66,15 @@ src/
                      their effects, battles graded, the second half's pool, endings, checkpoints, ironman
     validate.js      a story checked before anyone plays it, and the Monte Carlo walk over it
     levers.js        a story battle set up: its Tier and PL for the company, the enemy force built from
-                     what the story wrote, the allies, Readiness, and the engine's cfg
+                     what the story wrote, the allies, Readiness, and the engine's cfg; the enemy told
+                     at the intel the company has (word of them, an outline, the full list)
     deep-contract.js Deep Contract, the first story, as data
-    deep-contract-text.js  its words, keyed by chapter, node and option
+    scenarios-story.js  the story's own scenarios (Hive Heart, Convoy, Breakout, Hold the Line,
+                     Strike, Parley), loaded with the engine; never offered outside a story
+    deep-contract-text.js  its words, keyed by chapter, node and option; each battle's mission
+                     name (`node#name`) and the briefing read before the force is chosen
+    deep-contract-maps.js  its ground: each open-table battle's own map (pieces in inches on a
+                     48" table, stretched on a 6' x 4'), with named objectives where they fit
 
   view/              the browser
     game.js          the board: its state, and the modules below wired together
@@ -305,6 +312,16 @@ story.js           story mode's engine: conditions, effects, grading, the pool a
                    saving, checkpoints and ironman, on a small test story (test/story-fixture.js)
 storygraph.js      the story validator catches each way of writing a story wrong, and the walk;
                    Deep Contract validates, and its one-offs and Scorched Earth stay in range
+storyscenarios.js  the story's own scenarios: set up, their victory checks, every second-half battle
+                   set up, and one battle of each played AI against AI (the scenario's own test)
+commander.js       the company's commander (the officer at the head of its field command): never a
+                   casualty or replaced, through the muster, a squad wiped out and the aftermath
+allyorders.js      the allies' orders in a story battle: Move, Attack and Hold here, given and kept once
+                   a turn, and the allies' AI answering each (only the allies act)
+storyside.js       HTX's bonus by HTX Standing, and the side contracts: offered at an interlude, taken
+                   (a battle of its own, then back) or passed up, catching up, and cut off from HTX
+storywhole.js      Deep Contract from Landfall to an ending, 30 times with made-up results: endings and epilogues,
+                   Broken Company, Scorched Earth and the growth curve (STORY_WALKS for more)
 storyfirsthalf.js  Deep Contract's first half: every battle under every choice set up and started (not
                    played), and the first half walked with made-up reports through the real aftermath
 storylevers.js     a story battle set up: Tier and PL, the enemy force, the cfg, and in the engine the
@@ -402,6 +419,8 @@ bundle.js          the published site: one bundle, no test hooks, and a battle p
 storyflow.js       story mode from the menu's Story card to the end of chapter 1: founding, the
                    chapter card, an event, the briefing and muster, the battle (conceded, not played),
                    the aftermath and debrief, the journal, and the Continue list
+allyorders.js      the allies' orders card beside the board: an order picked, put down with a tap, the
+                   marker drawn, and kept once the allies act on it
 founding.js        founding a force: its name, colours, roster and charter
 hotseatfound.js    a hotseat campaign founding both players' forces
 hotseatpick.js     a hotseat contract: each player picks their own force, then the battle starts

@@ -2295,8 +2295,12 @@
       return u.men;
     }
     var want = crewed(u) ? (isMachine(u) ? crewSize(u) : Math.max(0, u.models || 0)) : 0;
-    u.men = (carried || []).filter(function (m) { return m && m.name && m.lost == null; })
-      .slice(0, want).map(function (m) { return { name: m.name }; });
+    /* The company's commander (the officer at the head of its field command,
+       `commander`) stands first, so keeps the first rank, and is never cut. */
+    var kept = (carried || []).filter(function (m) { return m && m.name && m.lost == null; });
+    kept = kept.filter(function (m) { return m.commander; }).concat(kept.filter(function (m) { return !m.commander; }));
+    u.men = kept.slice(0, Math.max(want, kept[0] && kept[0].commander ? 1 : 0))
+      .map(function (m) { return m.commander ? { name: m.name, commander: true } : { name: m.name }; });
     u.men.forEach(function (m) { if (taken) taken[m.name] = 1; });
     while (u.men.length < want) u.men.push(freshMan(u, taken));
     u.men.forEach(function (m, i) { m.rank = rankFor(u, i); var r = roleFor(u, i); if (r) m.role = r; else delete m.role; });
@@ -2322,8 +2326,14 @@
       live.forEach(function (m) { if (!m.out) { m.lost = turn || 0; out.push(m); } });
       return out;
     }
+    /* The casualties, at random from the men still standing; never the
+       company's commander, who is the last man up and comes through even a
+       squad wiped out (and so never goes to the hospital, nor is replaced). */
     while (live.length > want) {
-      var m = live.splice(Math.floor(Math.random() * live.length), 1)[0];
+      var pool = live.filter(function (x) { return !x.commander; });
+      if (!pool.length) break;
+      var m = pool[Math.floor(Math.random() * pool.length)];
+      live.splice(live.indexOf(m), 1);
       m.lost = turn || 0;
       out.push(m);
     }
@@ -2349,7 +2359,11 @@
   }
   // who comes back for the next battle: everyone who was not a casualty
   function survivors(u) {
-    return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) { return m.role ? { name: m.name, rank: m.rank, role: m.role } : { name: m.name, rank: m.rank }; });
+    return (u.men || []).filter(function (m) { return m.lost == null; }).map(function (m) {
+      var o = m.role ? { name: m.name, rank: m.rank, role: m.role } : { name: m.name, rank: m.rank };
+      if (m.commander) o.commander = true;
+      return o;
+    });
   }
 
   /* The kits, made now that everything they are handed exists, and linked:

@@ -149,6 +149,40 @@ ok('the ambush: the side that sprang it has the first turn', st.initiative === '
 ok('a named unit is named, with the rules the story gave it', st.units.some((u) => u.side === 'B' && u.name === "The Teacher's Brother" && u.rules.indexOf('Determined') >= 0));
 ok('the prelude is rolled once', (kit.storyPrelude(true), st.log.filter((l) => /^Strike on/.test(l.text || '')).length === 3));
 
+console.log('\nThe ambush');
+/* Nobody marches on: the side caught out sets up on its own edge, the side that
+   sprang it anywhere more than 12" from it, after it. */
+const gapOf = (st2, side) => Math.min(...st2.units.filter((u) => u.side === side && u.alive && u.x >= 0 && !u.aboard).map((u) =>
+  Math.min(...st2.units.filter((e) => e.side !== side && e.alive && e.x >= 0 && !e.aboard).map((e) => R.inches(u.x, u.y, e.x, e.y)))));
+const cfgAm = (by) => ({ tier: 1, pl: 1, scenario: 'meeting', attacker: 'A', armyA: picks.map((p) => R.entryPick(p)), armyB: ['rinstigators', 'rciv', 'rciv', 'rciv'],
+  campaign: true, dossier: { A: picks, B: null }, story: { ambush: by, name: 'Ambush on the Square', units: { A: {}, B: {} } } });
+// (as in a real game: the OpFor is never told to deploy; it sets up on its own)
+e = Engine.create(); { const cb = cfgAm('B'); cb.mode = 'ai'; e.start(cb); }
+for (let i = 0; i < 6 && e.state().phase !== 'battle'; i++) { e.intent('A', { k: 'autodeploy' }); e.intent('A', { k: 'start' }); }
+st = e.state();
+const onA = st.units.filter((u) => u.side === 'A' && u.alive && u.x >= 0), onB = st.units.filter((u) => u.side === 'B' && u.alive && u.x >= 0);
+ok('the enemy’s ambush: both sides are on the table before turn 1, nobody marching on', st.phase === 'battle' && onA.length > 0 && onB.length > 0, onA.length + ' v ' + onB.length);
+ok('...you set up on your own edge', onA.every((u) => u.x <= 6.5), onA.map((u) => u.x.toFixed(1)).join(' '));
+ok('...and they set up after you, anywhere, more than 12" from every unit of yours', gapOf(st, 'B') > 12 && onB.some((u) => u.x < R.BOARD.w - 6), 'nearest ' + gapOf(st, 'B').toFixed(1) + '"');
+ok('...they have the first turn, and the log says they were lying in wait', st.initiative === 'B' && st.log.some((l) => /lying in wait/.test(l.text || '')), st.initiative + ' | ' + st.log.filter((l) => /ambush|wait|initiative/i.test(l.text || '')).map((l) => l.text).join(' / '));
+e = started(cfgAm('A')); st = e.state();
+const myA = st.units.filter((u) => u.side === 'A' && u.alive && u.x >= 0);
+ok('your ambush: the enemy is on its own edge, and you set up more than 12" from it, anywhere', myA.length > 0 && gapOf(st, 'A') > 12 && st.initiative === 'A', 'nearest ' + gapOf(st, 'A').toFixed(1) + '"');
+
+console.log('\nThe edge, chosen on the muster');
+/* Retake the Refinery, with the night shift freed: the player picks the edge to
+   come in from, and from the east the refinery is laid the other way about. */
+c = campaign();
+c.story.chapter = 'retake'; c.story.node = 'retake.battle'; c.story.flags.nightshift_freed = true;
+const west = L.toCfg(c, { picks, role: 'A' }), eastCfg = L.toCfg(c, { picks, role: 'A', edge: 'east' });
+ok('the battle offers the choice', S.battleSpec(c).levers.edge === 'choose' && west.story.edge === 'west' && eastCfg.story.edge === 'east');
+const tower = (cf) => cf.terrainPlan.find((t) => t.plan === 'L');
+ok('from the east, the map is mirrored: the sheds by the tank farm stand the other way about', Math.abs((tower(west).x + tower(west).w / 2) + (tower(eastCfg).x + tower(eastCfg).w / 2) - R.BOARD.w) < 0.01,
+  (tower(west).x).toFixed(1) + ' / ' + (tower(eastCfg).x).toFixed(1));
+ok('...and it is a mission of its own, seeded apart', west.story.seed !== eastCfg.story.seed);
+c.story.flags.nightshift_freed = false;
+ok('without the choice, the edge is the map’s own, whatever is asked', L.toCfg(c, { picks, role: 'A', edge: 'east' }).story.edge === null);
+
 console.log('\nThe target');
 const cfgT = Object.assign({}, cfgP, { story: { variant: { target: 'Varga', capture: true }, units: { A: {}, B: { 1: { name: 'Varga', target: true } } } } });
 e = started(cfgT); st = e.state();

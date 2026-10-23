@@ -932,6 +932,7 @@
     beginFounding('', 'solo', 'pmc');
     draft.story = { id: id, ironman: !!ironman };
     draft.name = defaultForceName('pmc', 'A');
+    draft.commander = R.soldierName({ faction: 'pmc' });
     if (wantColours.A) { draft.colour = wantColours.A; draft.colourChosen = true; }
     camp.options = {};
     render();
@@ -1180,8 +1181,9 @@
   /* The founding screen redraws whenever a unit, a doctrine or a colour is
      picked, which would wipe a half-typed name. Read it back first, every time. */
   function keepFoundName() {
-    var box = el('found-name');
+    var box = el('found-name'), cbox = el('found-commander');
     if (box && draft) draft.name = box.value;
+    if (cbox && draft) draft.commander = cbox.value;
   }
 
   function onClick(ev) {
@@ -1627,7 +1629,8 @@
           }
           // a story: no rivals, and the story begins (story.js)
           if (draft.story) {
-            root.PMCStory.begin(camp, draft.story.id, { ironman: draft.story.ironman });
+            var cmdName = (el('found-commander') ? el('found-commander').value : draft.commander || '').trim();
+            root.PMCStory.begin(camp, draft.story.id, { ironman: draft.story.ironman, commander: cmdName || draft.commander || null });
             camp.title = root.PMCStory.get(draft.story.id).name;
             save(); view = 'story'; render(); return;
           }
@@ -1908,6 +1911,7 @@
     host.addEventListener('input', function (ev) {
       // the new campaign's name, kept as it is typed (a redraw of the page keeps it)
       if (ev.target && ev.target.id === 'camp-name') { wantName = ev.target.value; return; }
+      if (ev.target && ev.target.id === 'found-commander' && draft) { draft.commander = ev.target.value; return; }
       if (!ev.target || ev.target.id !== 'found-name' || !draft) return;
       draft.name = ev.target.value;
       var sign = el('found-sign');

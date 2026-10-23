@@ -433,8 +433,11 @@
          the rout the scenario counts — the objective of p. 49 where it has one, or a
          side wiped out — so only a check that ended the battle on it marks a side.
          A battle conceded never gets here with one marked (surrender, above). */
-      // a story's target, killed or taken, ends it first (storybattle.js)
-      var res = E.targetCheck(E.state) || SC.check(E.state), rs = (res && res.routed) || [];
+      // a story battle's own End phase (waves, the countdown, extraction, a parley), then its target and turn limit (storybattle.js)
+      E.storyEndPhase();
+      var res = E.storyCheck(E.state);
+      if (res === null) res = SC.check(E.state);
+      var rs = (res && res.routed) || [];
       E.state.routed.A = rs.indexOf('A') >= 0;
       E.state.routed.B = rs.indexOf('B') >= 0;
       if (res) {
@@ -497,13 +500,14 @@
              still on the table: a unit that scattered and ran took its survivors
              with it, and only its actual casualties count against it. */
           endSize: R.isMachine(u) ? (u.alive ? 1 : 0) : u.models,
-          destroyed: !u.alive && R.isMachine(u),
+          destroyed: !u.alive && R.isMachine(u) && !u.extracted,
+          extracted: !!u.extracted,           // a story battle's: lifted out from the landing zone, safe
           catastrophic: !!u.catastrophic,
           brokenEver: !!u.brokenEver,
           /* Wiped out means every soldier was killed (p. 85) — that, and only that,
              takes a unit off the dossier. A unit that scattered and ran still has
              men left and comes back; penal troops whose collars went off do not. */
-          wiped: !R.isMachine(u) && u.models <= 0,
+          wiped: !R.isMachine(u) && u.models <= 0 && !u.extracted,
           fled: !!u.fled,
           aboardDowned: !!u.lostAboard,
           weakened: !!u.weakened,

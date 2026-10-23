@@ -767,7 +767,8 @@
     function deploymentDone() {
       if (!splitsOK()) return false;
       // (a side entering in turn 1 has nothing to place now)
-      return E.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve || entering(u.side); });
+      // (an OpFor lying in wait, story mode, sets up once the battle is begun: startBattle)
+      return E.state.units.every(function (u) { return u.x >= 0 || u.aboard || u.reserve || entering(u.side) || E.ambushWaits(u.side); });
     }
     // one side's part done: its split legal and its units down (online, each player says they are ready on their own)
     function sideDone(side) {
@@ -789,6 +790,10 @@
         logLine('note', entering() ? 'Both companies enter from their own table edges in the Reserve phase of turn 1, a unit each in turn from the side with the initiative.'
           : sideName(E.state.sc.attacker) + ' enters in the Reserve phase of turn 1.');
       }
+      // an ambush the OpFor springs (story mode): it sets up now, with the other side down
+      ['A', 'B'].forEach(function (sd) {
+        if (E.ambushWaits(sd)) { E.storyFixed('ambush', function () { autoDeploy(sd); }); logLine('note', sideName(sd) + ' was lying in wait.'); }
+      });
       // a hull nobody was asked about faces the enemy
       E.state.units.forEach(function (u) {
         if (faces(u) && u.facing == null) u.facing = faceDefault(u);

@@ -1430,6 +1430,32 @@
       B.ctx.restore();
     }
 
+    /* Story mode: the allies' order (storybattle.js), a flag in the allies' ink
+       with the ground it means ringed round it — twice as wide for an attack,
+       which takes the fight to the enemy near it. */
+    function drawAllyOrder() {
+      var o = B.state.allyOrder, ink = sideInk('C'), z = cam.z, lift = liftOf(o.x, o.y);
+      var word = { move: 'MOVE', attack: 'ATTACK', hold: 'HOLD' }[o.kind] || '';
+      B.ctx.save(); clipTable();
+      B.ctx.setLineDash([7, 5]); B.ctx.lineWidth = 2; B.ctx.strokeStyle = ink;
+      B.ctx.fillStyle = 'rgba(255,255,255,.05)';
+      isoRing(o.x, o.y, o.kind === 'attack' ? 8 : 4, lift); B.ctx.fill(); B.ctx.stroke();
+      B.ctx.restore();
+      var p = hud(o.x, o.y, lift), r = Math.max(6, 9 * Math.min(1.6, z + 0.3));
+      B.ctx.save();
+      B.ctx.lineWidth = 3; B.ctx.strokeStyle = 'rgba(8,10,14,.7)';
+      B.ctx.beginPath(); B.ctx.moveTo(p.x, p.y); B.ctx.lineTo(p.x, p.y - 3 * r); B.ctx.stroke();
+      B.ctx.lineWidth = 1.6; B.ctx.strokeStyle = ink;
+      B.ctx.beginPath(); B.ctx.moveTo(p.x, p.y); B.ctx.lineTo(p.x, p.y - 3 * r); B.ctx.stroke();
+      B.ctx.beginPath(); B.ctx.moveTo(p.x, p.y - 3 * r); B.ctx.lineTo(p.x + 1.8 * r, p.y - 2.4 * r); B.ctx.lineTo(p.x, p.y - 1.8 * r); B.ctx.closePath();
+      B.ctx.fillStyle = ink; B.ctx.fill(); B.ctx.lineWidth = 1.5; B.ctx.strokeStyle = 'rgba(8,10,14,.7)'; B.ctx.stroke();
+      B.ctx.font = '700 ' + Math.max(9, Math.round(10 * Math.min(1.4, z + 0.2))) + 'px Oxanium, system-ui, sans-serif';
+      B.ctx.textAlign = 'left'; B.ctx.textBaseline = 'middle';
+      B.ctx.lineWidth = 3; B.ctx.strokeStyle = 'rgba(8,10,14,.75)'; B.ctx.strokeText(word, p.x + 2.1 * r, p.y - 2.4 * r);
+      B.ctx.fillStyle = ink; B.ctx.fillText(word, p.x + 2.1 * r, p.y - 2.4 * r);
+      B.ctx.restore();
+    }
+
     /* An area that runs off the table is drawn only where it is on it: the
        quarter of a circle in a corner, not the rest hanging in the air. Call
        inside a save()/restore(). */
@@ -1800,6 +1826,7 @@
 
       B.ctx.restore();
       if (B.state.solo) drawSoloMarks();
+      if (B.state.allyOrder && B.state.allies) drawAllyOrder();
 
       // objective control radius
       B.ctx.save(); clipTable();

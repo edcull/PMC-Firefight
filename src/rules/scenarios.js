@@ -307,12 +307,14 @@
        its units are worth (a unit costs its Tier), so the same units are in the
        tally as below, a free or spawned one included. */
     var book = R.opt(state, 'bookkeeper');
-    var started = 0, left = 0;
+    var started = 0, left = 0, out = 0;
     state.units.forEach(function (u) {
       if (u.side !== side) return;
       /* A Rapid insertion platform "does not count towards victory conditions"
          (p. 79), so it is in neither the tally nor the losses. */
       if (!R.countsForVictory(u)) return;
+      // a unit lifted out from a story battle's landing zone is safe, not lost
+      if (u.extracted) { out++; return; }
       /* Expendable troops, "when destroyed ... do not count as a casualty for
          the purposes of victory conditions" (p. 57) — however they went. */
       if (!u.alive && (u.expended || R.has(u, 'Expendable'))) return;
@@ -320,6 +322,8 @@
       started += worth;
       if (u.alive) left += worth;
     });
+    // (a force that has all gone out by the landing zone is not routed: it got away)
+    if (!started && out) return false;
     return (started - left) >= Math.ceil(started / 2);
   }
 
@@ -1203,9 +1207,43 @@
     return roles;
   }
 
+  /* The scenario a battle is fought under. A story mission fights a book's
+     scenario under a name of its own (cfg.story.name): the same scenario, every
+     rule of it, with the mission's name and blurb laid over it. */
+  function scenFor(state, id) {
+    var s = SCENARIOS[id] || SCENARIOS.secure, sty = state && state.cfg && state.cfg.story;
+    if (!sty || !(sty.name || sty.ambush)) return s;
+    var named = Object.create(s);
+    if (sty.name) { named.name = sty.name; named.bookName = s.name; }
+    if (sty.blurb) named.blurb = sty.blurb;
+    if (sty.ambush) ambushed(named, s, sty.ambush);
+    return named;
+  }
+  /* The ambush variant (story mode): nobody marches on. The side caught out sets
+     up first, on its own edge as the scenario has it; the side that sprang the
+     ambush then sets up anywhere more than 12" from every unit of it. (It has the
+     first turn, and the side caught out starts pinned: storybattle.js.) An AI
+     side that sprang it waits to set up until the other side is down (engine.js,
+     deploy.js startBattle). */
+  var AMBUSH_GAP = 12;
+  function ambushed(named, s, by) {
+    named.entersTurn1 = false;
+    named.attackerEnters = false;
+    named.ambushBy = by;
+    named.boxes = function (state, side, u) {
+      if (side === by) return [{ x: R.UNIT_R, y: R.UNIT_R, w: R.BOARD.w - 2 * R.UNIT_R, h: R.BOARD.h - 2 * R.UNIT_R }];
+      return s.boxes ? s.boxes.call(this, state, side, u) : (state.sc && state.sc.boxes && state.sc.boxes[side]) || null;
+    };
+    named.deployOK = function (state, side, x, y, u) {
+      if (side !== by) return s.deployOK ? s.deployOK.call(this, state, side, x, y, u) : null;
+      return state.units.every(function (e) {
+        return e.side === side || !e.alive || e.x < 0 || e.aboard || dist(x, y, e.x, e.y) > AMBUSH_GAP;
+      });
+    };
+  }
   function begin(state, id, opts) {
     opts = opts || {};
-    var s = SCENARIOS[id] || SCENARIOS.secure;
+    var s = scenFor(state, id);
     state.scen = s;
     state.sc = { id: s.id, hold: {}, streak: {}, lastEndRoll: null };
     if (s.attacker) {
@@ -1216,7 +1254,11 @@
       if (roles.bestDefence) state.sc.bestDefence = roles.bestDefence;
     }
     var pts = s.objectives(state) || [];
-    state.objectives = pts.map(function (p) { return { x: p.x, y: p.y, owner: null }; });
+    /* A story mission's map puts its objectives where the story wants them (the
+       landing pads, the pass), as many as the scenario has. */
+    var fixed = state.cfg && state.cfg.story && state.cfg.story.objectives;
+    if (fixed && fixed.length === pts.length) pts = pts.map(function (p, i) { return Object.assign({}, p, { x: fixed[i].x, y: fixed[i].y, name: fixed[i].name }); });
+    state.objectives = pts.map(function (p) { return { x: p.x, y: p.y, owner: null, name: p.name || undefined }; });
     if (s.setupTerrain) s.setupTerrain(state);
     // a compound's walls and floors are laid edge to edge on purpose
     if (!state.compound) separateTerrain(state);
@@ -1383,12 +1425,18 @@
     begin: begin, deploy: deploy, lastStandBarricades: lastStandBarricades, lzOK: lzOK, lzSpots: lzSpots, autoLZs: autoLZs, setLZs: setLZs, zoneFor: zoneFor, deployOK: deployOK,
     reserves: reserves, reservePick: reservePick, check: check, noInsertion: noInsertion,
     gunRule: gunRule, freeToHold: freeToHold, holderOf: holderOf, holdClock: holdClock, areaOf: areaOf, routed: routed, annihilated: annihilated, inBoxes: inBoxes,
-    rollRoles: rollRoles, bestDefence: bestDefence,
+    rollRoles: rollRoles, bestDefence: bestDefence, scenFor: scenFor,
     searchSpots: searchSpots, checkArea: checkArea,
     boxesFor: function (state, side, u) {
       if (state.scen && state.scen.boxes) return state.scen.boxes(state, side, u);
       return (state.sc && state.sc.boxes && state.sc.boxes[side]) || null;
     },
-    FORT_SECTIONS: FORT_SECTIONS, FORT_KINDS: FORT_KINDS, fortRect: fortRect, fortWhy: fortWhy, takeoverForts: takeoverForts
+    FORT_SECTIONS: FORT_SECTIONS, FORT_KINDS: FORT_KINDS, fortRect: fortRect, fortWhy: fortWhy, takeoverForts: takeoverForts,
+    // what the story's own scenarios are built from (src/story/scenarios-story.js)
+    kit: {
+      ENTRY_TEXT: ENTRY_TEXT, CE_ENTRY_TEXT: CE_ENTRY_TEXT, entryEdges: entryEdges, entering: entering, strip: strip,
+      compoundEntries: compoundEntries, compoundEntering: compoundEntering, routCheck: routCheck, controlRooms: controlRooms,
+      rectOf: rectOf, mine: mine, halve: halve, noteSplit: noteSplit, spread3: spread3
+    }
   };
 })(typeof window !== 'undefined' ? window : global);

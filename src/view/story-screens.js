@@ -108,10 +108,33 @@
         h += para(v.text) + '<div class="story-go"><button class="start" data-go="storyon">Go on</button></div>';
       } else if (v.type === 'interlude') {
         h += para(v.text);
+        h += sideView(v);
         h += '<p class="hint">Between chapters: recruit, promote and spend at the company before you go on.</p>';
         h += '<div class="story-go"><button class="lnk" data-go="hub">To the company</button><button class="start" data-go="storyon">Go on</button></div>';
       } else if (v.type === 'pool') h += poolView(v);
       return h + foot();
+    }
+
+    /* An interlude's side contracts: each a small job, its pay, what taking it
+       costs and what passing it up does; one can be taken. */
+    function sideView(v) {
+      if (!v.side || !v.side.length) return '';
+      var d = def(), words = function (list) {
+        return (list || []).filter(function (e) { return e.meter && !e.if; }).map(function (e) {
+          var m = d._meters[e.meter];
+          return (m ? m.name : e.meter) + ' ' + (e.add > 0 ? '+' : '') + e.add;
+        }).concat((list || []).some(function (e) { return e.if && e.meter === 'hive'; }) && E.camp.story.chapterNo >= 5 ? ['time: Hive Growth +1'] : []).join(', ');
+      };
+      var h = '<div class="story-side"><h3>Side contracts</h3><p class="hint">' + (v.side.length > 1 ? 'Work on offer between chapters. You can take one.' : 'Work on offer between chapters.') + '</p>';
+      v.side.forEach(function (o) {
+        var cost = words(o.cost), passed = words(o.passed), sides = def().sides || {};
+        h += '<div class="story-job"><b>' + esc(o.title) + '</b><small>' + esc(o.pay + ' kUC') +
+          (o.against && sides[o.against] ? ' \u00b7 against ' + esc(sides[o.against].name) : '') + '</small>' + para(o.text) +
+          (o.catchUp ? '<small class="good">Offered to help the company catch up: it costs no time.</small>' : cost ? '<small>Taking it: ' + esc(cost) + '</small>' : '') +
+          (passed ? '<small class="warn">Passed up: ' + esc(passed) + '</small>' : '') +
+          '<button class="lnk" data-go="storyside" data-j="' + esc(o.id) + '">Take the job</button></div>';
+      });
+      return h + '</div>';
     }
 
     function eventView(v) {
@@ -136,9 +159,16 @@
       var tier = L().tierFor(co, { tier: spec.tier, minTier: spec.minTier, maxTier: spec.maxTier });
       var pl = L().plFor(co, tier, spec.levers.pl || spec.pl);
       var side = spec.enemy && d.sides && d.sides[spec.enemy.side] || {};
-      var name = spec.variant && spec.variant.name ? spec.variant.name + ' (' + scenName(spec.scenario) + ')' : scenName(spec.scenario);
-      var h = '<div class="story-battle"><h3>' + esc(name) + '</h3>';
-      h += '<p>Battle Tier ' + ROMAN[tier] + ', Priority Level ' + pl + (side.name ? ', against ' + esc(side.name) : '') + '.</p>';
+      /* The mission first, as a story tells it: its name, where it is, the briefing.
+         Then what it is under the rules: the book's scenario, how big, against whom. */
+      var maps = (root.PMCStoryMaps && root.PMCStoryMaps[d.id]) || {}, map = spec.map && maps[spec.map];
+      var compound = SC() && SC().SCENARIOS[spec.scenario] && SC().SCENARIOS[spec.scenario].compound;
+      var h = '<div class="story-battle"><h3>' + esc(spec.name || scenName(spec.scenario)) + '</h3>';
+      if (map && !compound) h += '<p class="story-where">' + esc(map.name) + '</p>';
+      if (spec.text) h += para(spec.text);
+      var win = SC() && SC().SCENARIOS[spec.scenario] && SC().SCENARIOS[spec.scenario].win;
+      h += '<div class="story-rules"><small>' + esc(scenName(spec.scenario)) + ' \u00b7 Battle Tier ' + ROMAN[tier] + ', Priority Level ' + pl +
+        (side.name ? ' \u00b7 against ' + esc(side.name) : '') + '</small>' + (win ? '<small class="win">' + esc(win) + '</small>' : '') + '</div>';
       var notes = [];
       if (spec.levers.strikes) notes.push('Strikes before the first turn (' + spec.levers.strikes + ').');
       if (spec.levers.suppressOwn) notes.push('Some of your squads start the battle pinned.');
@@ -146,19 +176,16 @@
       if (spec.variant && spec.variant.target) notes.push('The target: ' + spec.variant.target + (spec.variant.capture ? ', to be taken alive.' : '.'));
       if (spec.variant && spec.variant.ambush) notes.push(spec.variant.ambush === 'player' ? 'You spring the ambush.' : 'You are walking into an ambush.');
       if (notes.length) h += '<ul class="story-notes">' + notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';
-      if (seesEnemy(spec)) {
-        var f = L().buildForce(spec.enemy, { campaign: E.camp, tier: tier, pl: pl, allowance: L().allowance(co), readiness: spec.levers.readiness || 0 });
-        h += '<div class="story-enemy"><small>The enemy, as you know them</small><ul>' + f.picks.map(function (p) {
-          var pr = R.profile(p.key);
-          return '<li>' + esc(p.name || (pr ? pr.name : p.key)) + (pr ? ' <span class="ct">' + ROMAN[pr.tier] + '</span>' : '') + '</li>';
-        }).join('') + '</ul></div>';
-      } else h += '<p class="hint">You don’t know what they have.</p>';
+      /* The enemy, as much as the company knows: word of them, an outline, or every unit. */
+      var f = L().buildForce(spec.enemy, { campaign: E.camp, tier: tier, pl: pl, allowance: L().allowance(co), readiness: spec.levers.readiness || 0 });
+      var known = L().describeForce(f, S().intel(E.camp, spec), side.faction || (spec.enemy && spec.enemy.faction));
+      h += '<div class="story-enemy intel-' + known.level + '"><small>The enemy, as you know them</small><p>' + esc(known.word) + '</p>' +
+        (known.items.length ? '<ul>' + known.items.map(function (it) {
+          return '<li>' + esc(it.name) + (it.tier ? ' <span class="ct">' + ROMAN[it.tier] + '</span>' : '') + '</li>';
+        }).join('') + '</ul>' : '') +
+        (known.level < 2 ? '<small class="hint">Intel, the locals and the right questions tell you more.</small>' : '') + '</div>';
       h += '<div class="story-go"><button class="start" data-go="storymuster">Choose your force</button></div></div>';
       return h;
-    }
-    function seesEnemy(spec) {
-      var d = def();
-      return !!(spec.levers.showEnemy || (d.showEnemyIf && S().test(S().ctxOf(E.camp), d.showEnemyIf)));
     }
 
     function poolView(v) {
@@ -198,6 +225,12 @@
           return '<button class="lnk' + (muster.role === r[0] ? ' on' : '') + '" data-go="storyrole" data-r="' + r[0] + '">' + r[1] + '</button>';
         }).join('') + '</div>';
       }
+      // where the battle lets you choose it: the edge you come in from (the map laid the other way about)
+      if (spec.levers.edge === 'choose' && spec.map) {
+        h += '<p class="hint">Come in from:</p><div class="segs story-edge">' + [['west', 'The west edge'], ['east', 'The east edge']].map(function (r) {
+          return '<button class="lnk' + ((muster.edge || 'west') === r[0] ? ' on' : '') + '" data-go="storyedge" data-e="' + r[0] + '">' + r[1] + '</button>';
+        }).join('') + '</div>';
+      }
       var res = legal();
       h += '<div class="story-roster">' + co.roster.map(function (e) {
         var p = R.profile(e.key), on = muster.rids.indexOf(e.rid) >= 0, resting = e.restUntil > 0;
@@ -216,7 +249,7 @@
        campaign's own. */
     function fight() {
       var co = E.camp.companies.A, picks = picked();
-      var cfg = L().toCfg(E.camp, { picks: picks, role: muster.role, tier: muster.tier, pl: muster.pl, options: E.camp.options || {} });
+      var cfg = L().toCfg(E.camp, { picks: picks, role: muster.role, edge: muster.edge || 'west', tier: muster.tier, pl: muster.pl, options: E.camp.options || {} });
       cfg.colourA = E.colourOf(co);
       cfg.campLid = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.lid ? root.PMC_CAMPAIGN.lid() : null;
       cfg.track = !!E.camp.debugTrack;
@@ -255,6 +288,9 @@
           var label = o ? o.text : d._chapters[j.choice] ? d._chapters[j.choice].title : j.choice;
           lines.push('<p>' + esc(n.title || 'The next job') + ': <i>' + esc(words(label)) + '</i></p>');
         }
+        // a side contract: taken, and how it went
+        var sj = j.side ? (d.side.jobs || []).filter(function (x) { return x.id === j.side; })[0] : null;
+        if (sj) lines.push('<p>Side contract: <i>' + esc(sj.title) + '</i></p>');
         if (j.grade) lines.push('<p>' + esc(GRADE[j.grade]) + '.</p>');
         if (j.skipped) lines.push('<p>No battle.</p>');
         (j.effects || []).forEach(function (e) { if (e.journal) lines.push('<p class="hint">' + esc(e.journal) + '</p>'); });
@@ -279,12 +315,20 @@
       var h = '<h2>' + esc(d.name) + ' — ' + esc(en.title || en.id) + '</h2>';
       if (st.ironman) h += '<p class="story-badge">Ironman</p>';
       h += '<div class="story-card"><b>' + esc(en.title || en.id) + '</b>' + para(en.text || '') + '</div>';
+      // the epilogue: what became of the moon and its people, and who stayed with the company
+      var ep = S().epilogue(E.camp);
+      if (ep.lines.length) h += '<div class="story-epilogue">' + ep.lines.map(para).join('') + '</div>';
+      if (ep.stayed.length) {
+        h += '<h3>Who stayed</h3><ul class="story-stayed">' + ep.stayed.map(function (x) {
+          return '<li><b>' + esc(x.name) + '</b> ' + esc([x.first ? 'on Kessler\u2019s Reach from the first day' : '', x.honours ? x.honours + (x.honours === 1 ? ' honour' : ' honours') : ''].filter(Boolean).join(', ')) + '</li>';
+        }).join('') + '</ul>';
+      }
       // every meter, hidden or not, now the story is over
       h += '<div class="story-hist">' + Object.keys(d._meters).map(function (k) {
         return '<div><b>' + esc(d._meters[k].name) + '</b> ' + (st.history[k] || []).map(function (x) { return x.v; }).join(' → ') + '</div>';
       }).join('') + '</div>';
       var rec = co.record || {};
-      h += '<p>' + esc(co.name) + ': ' + (rec.battles || 0) + ' battles, ' + (rec.wins || 0) + ' won, ' + (rec.losses || 0) + ' lost.</p>';
+      h += '<p>' + esc(co.name) + ': ' + (rec.battles || 0) + ((rec.battles || 0) === 1 ? ' battle, ' : ' battles, ') + (rec.wins || 0) + ' won, ' + (rec.losses || 0) + ' lost.</p>';
       if ((co.memorial || []).length) h += '<h3>Roll of honour</h3>' + E.memorialList(co);
       h += foot();
       return h;
@@ -307,6 +351,7 @@
         case 'story': E.view = 'story'; E.render(); return true;
         case 'storyon': S().proceed(E.camp); after(); return true;
         case 'storyopt': S().choose(E.camp, t.getAttribute('data-o')); after(); return true;
+        case 'storyside': S().takeSide(E.camp, t.getAttribute('data-j')); after(); return true;
         case 'storymuster': muster = null; E.view = 'storymuster'; E.render(); return true;
         case 'storypick': {
           var rid = t.getAttribute('data-rid'), i = muster.rids.indexOf(rid);
@@ -315,6 +360,7 @@
         }
         case 'storyauto': beginMuster(); E.render(); return true;
         case 'storyrole': muster.role = t.getAttribute('data-r') === 'B' ? 'B' : 'A'; E.render(); return true;
+        case 'storyedge': muster.edge = t.getAttribute('data-e') === 'east' ? 'east' : 'west'; E.render(); return true;
         case 'storyfight': if (legal().ok) fight(); return true;
         case 'storyjournal': E.view = 'storyjournal'; E.render(); return true;
         case 'storyrewind':

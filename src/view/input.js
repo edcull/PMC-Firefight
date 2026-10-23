@@ -313,7 +313,7 @@
          screen is asking for a tap on the table itself (a landing zone, a drop, a
          piece to put down): on a phone the card sits in the Results tab, out of
          sight of the question, and the tap would go nowhere. */
-      var askTap = ui.insertion || B.state.relocating || B.state.placeAsk || B.state.minePick || B.faceAsked();
+      var askTap = ui.insertion || ui.allyOrderPick || B.state.relocating || B.state.placeAsk || B.state.minePick || B.faceAsked();
       if (ui.resOpen && !askTap) return;
       hideTerrainTip();
       var c = canvasPoint(e), p = ISO.toWorld(bufferFromCanvas(c).x, bufferFromCanvas(c).y);
@@ -443,6 +443,15 @@
       // (p is the tap on the table, zoom and pan taken out; the raw canvas point is not)
       if (ui.insertion) {
         if (insertionMine()) placeInsertion(p);
+        return;
+      }
+
+      // the allies' order being put down (story mode): the tap is where it goes
+      if (ui.allyOrderPick) {
+        var kind = ui.allyOrderPick;
+        ui.allyOrderPick = null;
+        send({ k: 'allyorder', kind: kind, x: p.x, y: p.y });
+        render();
         return;
       }
 

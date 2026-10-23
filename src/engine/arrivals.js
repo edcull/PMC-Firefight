@@ -155,7 +155,7 @@
     function askInvasionLZ(done) {
       var atk = E.state.sc.attacker;
       if (isAI(atk)) {
-        SC.setLZs(E.state, SC.autoLZs(E.state));
+        E.storyFixed('lzs', function () { SC.setLZs(E.state, SC.autoLZs(E.state)); });
         logLine('note', sideName(atk) + ' nominates three landing zones.');
         done(); return;
       }

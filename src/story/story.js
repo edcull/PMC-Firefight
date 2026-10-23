@@ -102,11 +102,16 @@
       next: [],                    // short-term changes held for a later node
       queue: [],                   // a debrief's or interlude's events still to come
       pool: null,                  // the second half's picks
+      side: null,                  // an interlude's side contracts on offer
+      detour: null,                // a side contract being fought: { id, job, back, pay }
       tokens: {},                  // {unit:…} picks, kept for the chapter
       checkpoints: [],
+      founders: (campaign.companies && campaign.companies.A && campaign.companies.A.roster || []).map(function (e) { return e.rid; }),
+      commander: null,             // the company's commander: the officer of its command squad, and the player
       ended: null
     };
     Object.keys(meters).forEach(function (k) { campaign.story.history[k] = [{ ch: 0, v: meters[k] }]; });
+    nameCommander(campaign, opts.commander);
     enter(campaign, resolve(def, def.start && def.start.node || (def.chapters[0] && def.chapters[0].id)));
     return campaign.story;
   }
@@ -335,6 +340,7 @@
       return enter(campaign, resolve(def, node.next), depth + 1);
     }
     if (node.type === 'pool') return enterPool(campaign, node, depth);
+    if (node.type === 'interlude' && !(st.side && st.side.node === node.id)) st.side = makeOffers(campaign, node);
     if (node.type === 'ending') {
       st.ended = endingFor(campaign);
       note(campaign, { node: node.id, ending: st.ended });
@@ -367,7 +373,7 @@
   /* The node the story waits at, made ready to show: its options, each with
      whether it can be taken and why not. */
   function view(campaign) {
-    var st = campaign.story, def = storyOf(campaign), node = def && def._nodes[st.node];
+    var st = campaign.story, def = storyOf(campaign), node = def && nodeAt(campaign);
     if (!node) return null;
     var ctx = ctxOf(campaign), out = { id: node.id, type: node.type, title: node.title || null, text: node.text || '', chapter: st.chapter };
     if (node.type === 'event') out.options = optionsOf(ctx, node);
@@ -376,6 +382,8 @@
       return { id: o.chapter, text: ch.title, thread: o.thread, ok: true };
     }) : [];
     if (node.type === 'battle') out.battle = battleSpec(campaign);
+    if (node.type === 'interlude') out.side = sideOffers(campaign, node);
+    if (node.side) out.sideJob = st.detour ? st.detour.job : null;
     if (node.type === 'ending') out.ending = st.ended;
     return out;
   }
@@ -391,7 +399,7 @@
 
   /* Take an option at an event, or a chapter at the pool. */
   function choose(campaign, optionId) {
-    var st = campaign.story, def = storyOf(campaign), node = def._nodes[st.node];
+    var st = campaign.story, def = storyOf(campaign), node = nodeAt(campaign);
     if (!node) throw new Error('The story is not waiting on a choice');
     if (node.type === 'pool') return choosePool(campaign, node, optionId);
     if (node.type !== 'event') throw new Error(node.id + ' is not an event');
@@ -417,7 +425,7 @@
   /* Go on from a node that only shows something (a brief, a debrief, an
      interlude), or from an event to whatever its debrief queued next. */
   function proceed(campaign) {
-    var st = campaign.story, def = storyOf(campaign), node = def._nodes[st.node];
+    var st = campaign.story, def = storyOf(campaign), node = nodeAt(campaign);
     if (!node) return null;
     if (node.type === 'event' || node.type === 'battle' || node.type === 'pool') throw new Error(node.id + ' waits on a choice');
     if (node.type === 'ending') return null;
@@ -428,6 +436,7 @@
         return ev && test(ctx, ev.if);
       }).slice(0, node.pick || (node.type === 'interlude' ? 1 : 2));
       st.queue = picks.concat([{ after: node.next }]).slice(0);
+      if (node.type === 'interlude') leaveSide(campaign, node);
       return advanceQueue(campaign);
     }
     return advance(campaign, node.next);
@@ -454,12 +463,13 @@
      the event before it chose, and any short-term change held for it. The
      battle hooks (phase 2) turn this into the engine's cfg. */
   function battleSpec(campaign) {
-    var st = campaign.story, def = storyOf(campaign), node = def._nodes[st.node];
+    var st = campaign.story, def = storyOf(campaign), node = nodeAt(campaign);
     if (!node || node.type !== 'battle') return null;
     var spec = {
-      node: node.id, scenario: node.scenario, variant: clone(node.variant) || null,
+      node: node.id, scenario: node.scenario, variant: clone(node.variant) || null, name: node.name || null, map: node.map || null,
+      text: node.text || null,
       tier: node.tier || 'max', pl: node.pl || 1, planet: node.planet || null, tactics: node.tactics || null, role: node.role || null,
-      enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, levers: clone(st.pending) || {}
+      enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, waves: clone(node.waves) || null, levers: clone(st.pending) || {}
     };
     st.next.forEach(function (n) {
       if (n.battle !== node.id) return;
@@ -473,6 +483,8 @@
     if (spec.levers.variant) spec.variant = mergeLevers(spec.variant, spec.levers.variant);
     if (spec.levers.tier) spec.tier = spec.levers.tier;
     if (spec.levers.role) spec.role = spec.levers.role;
+    if (spec.levers.name) spec.name = spec.levers.name;
+    if (spec.levers.map) spec.map = spec.levers.map;
     return spec;
   }
 
@@ -503,7 +515,7 @@
   /* The battle is over: the grade picks the branch. A report or a grade will
      do; the units that fought are kept, for effects that reach only them. */
   function resolveBattle(campaign, result) {
-    var st = campaign.story, def = storyOf(campaign), node = def._nodes[st.node];
+    var st = campaign.story, def = storyOf(campaign), node = nodeAt(campaign);
     if (!node || node.type !== 'battle') throw new Error('The story is not at a battle');
     var g = typeof result === 'string' ? result : grade(result, 'A');
     if (GRADES.indexOf(g) < 0) throw new Error('No grade ' + g);
@@ -517,7 +529,10 @@
     var on = node.on || {};
     var branches = on[g] || (SUCCESS[g] ? on.success : on.failure) || [];
     var lines = [], to = node.next;
-    arr(def.everyBattle).forEach(function (e) { apply(ctx, e, lines); });
+    // a side contract: its own pay and effects, and back to the interlude; time and HTX's bonus are the story's battles'
+    if (!node.side) arr(def.everyBattle).forEach(function (e) { apply(ctx, e, lines); });
+    var bonus = node.side ? jobPay(st.detour, g) : bonusFor(ctx, node, g);
+    if (bonus) apply(ctx, { kUC: bonus }, lines);
     arr(branches).some(function (b) {
       if (!test(ctx, b.if)) return false;
       apply(ctx, b.effects, lines);
@@ -528,6 +543,7 @@
     st.next = st.next.filter(function (n) { return n.battle !== node.id; });
     st.pending = null;
     note(campaign, { node: node.id, grade: g, effects: lines });
+    if (node.side) { st.detour = null; st.node = node.next; return view(campaign); }
     enter(campaign, resolve(def, to));
     return view(campaign);
   }
@@ -549,6 +565,110 @@
     st.pending = null;
     note(campaign, { node: node.id, skipped: true, effects: lines });
     return enter(campaign, resolve(def, to), (depth || 0) + 1);
+  }
+
+  /* ================= pay, and side contracts ================= */
+
+  /* The node the story waits at: one of the story's own, or the side contract
+     being fought, made up from its job (it is no node of the graph). */
+  function nodeAt(campaign) {
+    var st = campaign.story, def = storyOf(campaign);
+    if (!def || !st.node) return null;
+    if (def._nodes[st.node]) return def._nodes[st.node];
+    return st.detour && st.detour.id === st.node ? jobNode(def, st.detour) : null;
+  }
+  function jobOf(def, id) { return arr(def.side && def.side.jobs).filter(function (j) { return j.id === id; })[0] || null; }
+  function jobNode(def, d) {
+    var j = jobOf(def, d.job);
+    if (!j) return null;
+    return { id: d.id, type: 'battle', side: true, title: j.title, name: j.name || j.title, text: j.text || null, scenario: j.scenario, map: j.map || null,
+      tier: j.tier || 'max', pl: j.pl || 1, role: j.role || null, enemy: j.enemy, variant: j.variant || null, waves: j.waves || null,
+      on: j.on || {}, next: d.back };
+  }
+
+  /* The bonus HTX pays for a story battle (the plan, section 4): the battle's
+     `pay`, else the story's base, by HTX Standing; a share of it for a draw; none
+     for a defeat, and none once HTX has stopped paying.
+     def.pay: { base, meter, step, draw, cutOff: [flags] }. */
+  function bonusFor(ctx, node, g) {
+    var P = ctx.def.pay;
+    if (!P || node.pay === 0) return 0;
+    if (arr(P.cutOff).some(function (f) { return ctx.st.flags[f]; })) return 0;
+    var share = SUCCESS[g] ? 1 : g === 'draw' ? (P.draw || 0) : 0;
+    if (!share) return 0;
+    var m = P.meter ? ctx.st.meters[P.meter] || 0 : 0;
+    return Math.max(0, Math.round((node.pay != null ? node.pay : P.base || 0) * share * (1 + (P.step || 0) * m)));
+  }
+  // a side contract's pay: all of it for a win, half for a draw
+  function jobPay(d, g) { return !d ? 0 : SUCCESS[g] ? d.pay : g === 'draw' ? Math.floor(d.pay / 2) : 0; }
+
+  /* Whether the company is behind the story's growth curve (def.side.curve:
+     the Company Tier wanted by each chapter): then side contracts are offered
+     to catch up, more of them and at no cost in time. */
+  function behind(campaign) {
+    var side = storyOf(campaign).side, co = campaign.companies && campaign.companies.A;
+    var want = side && side.curve ? side.curve[campaign.story.chapterNo] : null;
+    return !!(co && want && (co.tier || 1) < want);
+  }
+  function cutOffNow(campaign) {
+    var side = storyOf(campaign).side;
+    return arr(side && side.cutOff).some(function (f) { return campaign.story.flags[f]; });
+  }
+  /* An interlude's side contracts (the plan, section 4): how many, by whether the
+     company is behind and whether HTX still pays (def.side.offers: { base,
+     behind, cutOff }), drawn from the jobs open now, never the last one taken
+     twice running. Drawn once, on arriving, and kept: ironman holds. */
+  function makeOffers(campaign, node) {
+    var st = campaign.story, def = storyOf(campaign), side = def.side;
+    if (!side || node.side === false) return null;
+    var ctx = ctxOf(campaign), cut = cutOffNow(campaign), late = behind(campaign), o = side.offers || {};
+    var n = node.sideOffers != null ? node.sideOffers : cut ? (o.cutOff || 0) : late ? (o.behind || 0) : (o.base || 0);
+    var open = arr(side.jobs).filter(function (j) { return test(ctx, j.if) && st.lastJob !== j.id; }), offers = [];
+    while (offers.length < n && open.length) {
+      var j = open.splice(Math.floor(Math.random() * open.length), 1)[0];
+      offers.push({ job: j.id, pay: Math.round(j.pay * (cut ? side.cutOffPay || 1 : 1)), catchUp: late });
+    }
+    return { node: node.id, offers: offers, taken: null };
+  }
+  // the offers as the interlude shows them
+  function sideOffers(campaign, node) {
+    var st = campaign.story, def = storyOf(campaign);
+    if (!st.side || st.side.node !== node.id || st.side.taken) return [];
+    return st.side.offers.map(function (o) {
+      var j = jobOf(def, o.job) || {};
+      return { id: o.job, title: j.title, text: j.text || '', against: j.enemy && j.enemy.side, pay: o.pay, catchUp: o.catchUp,
+        cost: o.catchUp ? null : j.cost || null, passed: j.passed || null };
+    });
+  }
+  /* Take a side contract at an interlude: what it costs (time, unless it was
+     offered to catch up), and its battle, after which the story comes back to
+     the interlude. Only one an interlude. */
+  function takeSide(campaign, jobId) {
+    var st = campaign.story, def = storyOf(campaign), node = nodeAt(campaign);
+    if (!node || node.type !== 'interlude' || !st.side || st.side.node !== node.id || st.side.taken) throw new Error('No side contract on offer here');
+    var o = st.side.offers.filter(function (x) { return x.job === jobId; })[0], j = o && jobOf(def, jobId);
+    if (!j) throw new Error('Side contract ' + jobId + ' is not on offer');
+    var ctx = ctxOf(campaign), lines = [];
+    if (!o.catchUp) apply(ctx, j.cost, lines);
+    // the others on offer, passed up
+    st.side.offers.forEach(function (x) { if (x !== o) apply(ctx, (jobOf(def, x.job) || {}).passed, lines); });
+    st.side.taken = jobId;
+    st.lastJob = jobId;
+    st.pending = null;
+    st.detour = { id: '@side:' + jobId, job: jobId, back: node.id, pay: o.pay };
+    st.node = st.detour.id;
+    note(campaign, { node: st.detour.id, side: jobId, effects: lines });
+    return view(campaign);
+  }
+  // going on from an interlude: the side contracts not taken are passed up
+  function leaveSide(campaign, node) {
+    var st = campaign.story, def = storyOf(campaign);
+    if (st.side && st.side.node === node.id && !st.side.taken && st.side.offers.length) {
+      var ctx = ctxOf(campaign), lines = [];
+      st.side.offers.forEach(function (x) { apply(ctx, (jobOf(def, x.job) || {}).passed, lines); });
+      if (lines.length) note(campaign, { node: node.id, passedSide: true, effects: lines });
+    }
+    st.side = null;
   }
 
   /* ================= the pool: the second half ================= */
@@ -633,11 +753,39 @@
     return e ? e.id : null;
   }
 
+  /* The ending's epilogue (the plan, section 2): the story's `epilogue`, a
+     list of { about, if, text }, the first that fits for each `about` (the
+     moon, Varga, the hive, the town, the company's paymasters...), in the order
+     they are written; then who stayed, from the company's own roster: the units
+     that came down with it on the first day, and the ones it honoured. */
+  function epilogue(campaign) {
+    var def = storyOf(campaign), st = campaign.story, ctx = ctxOf(campaign), done = {}, out = [];
+    if (!def || !st.ended) return { lines: [], stayed: [] };
+    arr(def.epilogue).forEach(function (e) {
+      if (e.about && done[e.about]) return;
+      if (e.ending && arr(e.ending).indexOf(st.ended) < 0) return;
+      if (e.if && !test(ctx, e.if)) return;
+      if (e.about) done[e.about] = true;
+      out.push(render(campaign, e.text));
+    });
+    var co = campaign.companies && campaign.companies.A, founders = st.founders || [];
+    var stayed = (co && co.roster || []).filter(function (e) {
+      return founders.indexOf(e.rid) >= 0 || (e.honours || []).length;
+    }).map(function (e) {
+      return { rid: e.rid, name: e.name, first: founders.indexOf(e.rid) >= 0, honours: (e.honours || []).length };
+    });
+    return { lines: out, stayed: stayed };
+  }
+
   /* Broken Company: the force cannot field a Tier I army after its hub turn. */
   function broken(campaign) {
     var cc = C(), co = campaign.companies && campaign.companies.A;
     if (!cc || !co) return false;
-    return !cc.canFieldArmy(co, 1, 1, true);
+    /* Broken: no legal army at any Battle Tier up to its own, with the units
+       not resting. (A company grown past Tier I may no longer fit a Tier I list,
+       its units promoted out of it, and is not broken for that.) */
+    for (var t = 1; t <= Math.max(1, co.tier || 1); t++) if (cc.canFieldArmy(co, t, 1, true)) return false;
+    return true;
   }
   function breakCompany(campaign) {
     var st = campaign.story, def = storyOf(campaign);
@@ -691,9 +839,37 @@
     return view(campaign);
   }
 
+  /* The commander: the officer at the head of the command squad, named as the
+     player asked when the story began (else as the roster already has them).
+     The name is kept on the story and the company, whatever becomes of the
+     squad's other men. */
+  function nameCommander(campaign, name) {
+    var co = campaign.companies && campaign.companies.A, cc = C();
+    var cmd = co && cc && co.cmdRid ? cc.byRid(co, co.cmdRid) : null;
+    if (cmd && cc.menOf) cc.menOf(cmd, co);
+    var officer = cmd && cmd.men && cmd.men[0];
+    name = String(name || '').trim().slice(0, 28);
+    if (officer && name) officer.name = name;
+    campaign.story.commander = name || (officer ? officer.name : null);
+    if (co && campaign.story.commander) co.commander = campaign.story.commander;
+  }
+  /* {commander}: the name; {commander:rank}: the rank and surname, as the men
+     call them (the command squad's officer's rank, as it is now). */
+  function commanderWords(campaign, form) {
+    var st = campaign.story, co = campaign.companies && campaign.companies.A, cc = C();
+    var name = st.commander || (co && co.commander);
+    if (!name) return 'the commander';
+    if (form !== 'rank') return name;
+    var cmd = co && cc && co.cmdRid ? cc.byRid(co, co.cmdRid) : null;
+    var officer = cmd && cmd.men && cmd.men[0];
+    var rank = officer && officer.name === name && officer.rank ? officer.rank : 'Commander';
+    var parts = name.split(/\s+/);
+    return rank + ' ' + parts[parts.length - 1];
+  }
+
   /* ================= text ================= */
 
-  /* {name}, {if flag}…{/if}, {if not flag}…{/if} (and {if success}, {if failure}: the last battle's), {meter:htx},
+  /* {name}, {commander} and {commander:rank}, {if flag}…{/if}, {if not flag}…{/if} (and {if success}, {if failure}: the last battle's), {meter:htx},
      {unit:command|recon|veteran|wounded}, {soldier:…}. A unit token keeps the
      same unit for the rest of the chapter, and has a fallback if none fits. */
   function render(campaign, text) {
@@ -708,8 +884,9 @@
     var s = text.replace(/\{if (not )?([a-z0-9_]+)\}([\s\S]*?)\{\/if\}/g, function (m, not, f, body) {
       return holds(f) !== !!not ? body : '';
     });
-    return s.replace(/\{(name|meter:[a-z0-9_]+|unit:[a-z]+|soldier:[a-z]+)\}/g, function (m, k) {
+    return s.replace(/\{(name|commander(?::rank)?|meter:[a-z0-9_]+|unit:[a-z]+|soldier:[a-z]+)\}/g, function (m, k) {
       if (k === 'name') return co ? co.name : 'the company';
+      if (k === 'commander' || k === 'commander:rank') return commanderWords(campaign, k === 'commander:rank' ? 'rank' : 'name');
       if (k.indexOf('meter:') === 0) return String(st.meters[k.slice(6)]);
       var u = tokenUnit(campaign, k.split(':')[1]);
       if (k.indexOf('soldier:') === 0) {
@@ -740,12 +917,28 @@
     return pick;
   }
 
+  /* How much the company knows of the enemy it is about to fight: 0, word of
+     them (how many, what kind); 1, an outline (roughly how many of each, and
+     who leads them); 2, the full list. The story's `intel` rules ({ if, add,
+     side }: the Intel meter, the locals' goodwill, a turned informant) and the
+     battle's own `intel` lever (a scout's report, a bribe) add up. */
+  function intel(campaign, spec) {
+    var def = storyOf(campaign);
+    spec = spec || battleSpec(campaign);
+    if (!def || !spec) return 0;
+    var ctx = ctxOf(campaign), side = spec.enemy && spec.enemy.side, n = (spec.levers && spec.levers.intel) || 0;
+    arr(def.intel).forEach(function (r) {
+      if ((!r.side || r.side === side) && (!r.if || test(ctx, r.if))) n += r.add == null ? 1 : r.add;
+    });
+    return Math.max(0, Math.min(2, n));
+  }
+
   root.PMCStory = {
     register: register, get: get, list: list, resolve: resolve,
     active: active, begin: begin, view: view, choose: choose, proceed: proceed,
-    battleSpec: battleSpec, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
+    battleSpec: battleSpec, intel: intel, takeSide: takeSide, nodeAt: nodeAt, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
     test: test, apply: apply, roll: roll, pressure: pressure, finaleChapter: finaleChapter,
-    endingFor: endingFor, broken: broken, breakCompany: breakCompany,
+    endingFor: endingFor, epilogue: epilogue, broken: broken, breakCompany: breakCompany,
     checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf,
     GRADES: GRADES, COND_KEYS: COND_KEYS, CMP: CMP, EFFECT_KEYS: EFFECT_KEYS
   };

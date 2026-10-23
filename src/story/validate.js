@@ -21,8 +21,8 @@
 
   var EFFECT_PARAMS = { add: 1, set: 1, local: 1, to: 1, free: 1, name: 1, pass: 1, fail: 1, else: 1, is: 1 };
   var FAILURE_GRADES = ['draw', 'defeat', 'rout'];
-  var LEVERS = ['showEnemy', 'role', 'edge', 'strikes', 'suppressOwn', 'readiness', 'scenario', 'variant', 'tier', 'pl',
-    'allies', 'turns', 'terrain', 'planet', 'world', 'skip', 'tactics'];
+  var LEVERS = ['intel', 'role', 'edge', 'strikes', 'suppressOwn', 'readiness', 'scenario', 'variant', 'tier', 'pl',
+    'allies', 'turns', 'terrain', 'planet', 'world', 'skip', 'tactics', 'name', 'map'];
 
   function check(def, opts) {
     opts = opts || {};
@@ -219,8 +219,15 @@
         }
         if (n.type === 'battle') {
           scenario(at, n.scenario);
+          var maps = root.PMCStoryMaps && root.PMCStoryMaps[def.id];
+          if (n.map && maps && !maps[n.map]) err(at + ': no map "' + n.map + '"');
+          if (opts.scenarios && opts.scenarios[n.scenario] && !opts.scenarios[n.scenario].compound && !n.map && def.chapters.some(function (c) { return c.id === ch.id && !c.test; }) && maps) warn(at + ': no map of its own: its ground is rolled');
           if (n.solo) err(at + ': story battles never set solo');
           force(at, n.enemy, ch.id);
+          if (n.waves && n.waves.meter) {
+            if (!mdefs[n.waves.meter]) err(at + ': no meter ' + n.waves.meter + ' for its waves');
+            M(n.waves.meter).read.push({ at: at, kind: 'table' });
+          }
           force(at, n.allies, ch.id);
           arr(n.adjust).forEach(function (a) { readCond(a.if, at, 'table', ch.id); levers(at, a.levers, where); });
           var on = n.on || {};
@@ -291,6 +298,42 @@
     /* ---- the story's own rules ---- */
     arr(def.everyChapter).forEach(function (e, i) { readEffects(e, 'everyChapter[' + i + ']', { half: 0, time: true }); });
     arr(def.everyBattle).forEach(function (e, i) { readEffects(e, 'everyBattle[' + i + ']', { half: 0, time: true }); });
+    /* ---- the epilogue: { about, ending, if, text }; its reads are text, and count for nothing ---- */
+    arr(def.epilogue).forEach(function (e, i) {
+      var at = 'epilogue[' + i + ']';
+      if (!e.text) err(at + ': an epilogue line with no text');
+      readCond(e.if, at, 'text');
+      textReads(e.text, at);
+      arr(e.ending).forEach(function (id) { if (!arr(def.endings).some(function (x) { return x.id === id; })) err(at + ': no ending ' + id); });
+    });
+    /* ---- the side contracts, and HTX's bonus ---- */
+    if (def.side) {
+      var sideMaps = root.PMCStoryMaps && root.PMCStoryMaps[def.id];
+      arr(def.side.jobs).forEach(function (j) {
+        var at = 'side ' + j.id, where = { half: 'both' };
+        if (!j.id || !j.title) err(at + ': a side contract needs an id and a title');
+        if (!(j.pay > 0)) err(at + ': a side contract that pays nothing');
+        scenario(at, j.scenario);
+        if (j.map && sideMaps && !sideMaps[j.map]) err(at + ': no map "' + j.map + '"');
+        force(at, j.enemy, null);
+        readCond(j.if, at, 'choice');
+        readEffects(j.cost, at, where);
+        readEffects(j.passed, at, where);
+        Object.keys(j.on || {}).forEach(function (k) {
+          arr(j.on[k]).forEach(function (b) { readCond(b.if, at, 'route'); readEffects(b.effects, at, where); });
+        });
+      });
+      arr(def.side.cutOff).forEach(function (f) { F(f).read.push({ at: 'side contracts', kind: 'choice' }); });
+    }
+    if (def.pay) {
+      if (def.pay.meter) { if (!mdefs[def.pay.meter]) err('pay: no meter ' + def.pay.meter); else M(def.pay.meter).read.push({ at: 'pay', kind: 'table' }); }
+      arr(def.pay.cutOff).forEach(function (f) { F(f).read.push({ at: 'pay', kind: 'table' }); });
+    }
+    // what the company knows of the enemy before a battle: { if, add, side }
+    arr(def.intel).forEach(function (r, i) {
+      readCond(r.if, 'intel[' + i + ']', 'table');
+      if (r.side && !(def.sides || {})[r.side]) err('intel[' + i + ']: no side "' + r.side + '"');
+    });
     Object.keys(def.threads || {}).forEach(function (tid) {
       var t = def.threads[tid];
       arr(t.pressure).forEach(function (w) {
@@ -388,6 +431,8 @@
           S.resolveBattle(campaign, pickGrade());
         } else if (v.type === 'ending') {
           break;
+        } else if (v.type === 'interlude' && v.side && v.side.length && Math.random() < 0.5) {
+          S.takeSide(campaign, v.side[Math.floor(Math.random() * v.side.length)].id);
         } else {
           S.proceed(campaign);
         }

@@ -5,7 +5,7 @@
    campaign's real aftermath taking each one, to see that the company stays
    able to fight and how it grows. */
 'use strict';
-const { R, C, Engine } = require('../../server/rules.js');
+const { R, C, SC, Engine } = require('../../server/rules.js');
 const S = require('../../src/story/story.js');
 const L = require('../../src/story/levers.js');
 const { makeReport } = require('../story-report.js');
@@ -81,6 +81,83 @@ PATHS.forEach(([node, opt, flags, meters]) => {
 });
 console.log('\n  (how even each one is, for a new company: its points against the enemy’s)');
 fair.forEach((f) => console.log('    ' + f));
+
+console.log('\nEvery battle on its own ground, the same each time');
+/* Each battle of the story, set up twice: its map laid as written (or its
+   compound from its seed), its objectives where the map puts them, its name
+   over the book's scenario. */
+function ground(st) { return JSON.stringify(st.terrain.map((t) => [t.kind, +t.x.toFixed(2), +t.y.toFixed(2), +t.w.toFixed(2), +t.h.toFixed(2)])); }
+const dc = S.get('deep-contract'), MAPS = global.PMCStoryMaps['deep-contract'];
+dc.chapters.forEach((ch) => (ch.nodes || []).filter((n) => n.type === 'battle').forEach((n) => {
+  const runs = [0, 1].map(() => {
+    const c = campaign();
+    c.story.chapter = ch.id; c.story.node = n.id;
+    const picks = C.pickForce(c.companies.A, 1, 1, null, { scenario: n.scenario });
+    const cfg = L.toCfg(c, { picks, role: 'A' });
+    cfg.mode = 'ai';
+    return { cfg, st: started(cfg).state() };
+  });
+  const [a, b] = runs, map = n.map && MAPS[n.map];
+  const same = ground(a.st) === ground(b.st);
+  const named = a.st.scen.name === n.name && a.st.scen.bookName === (SC.SCENARIOS[n.scenario] || {}).name;
+  let laid = true, note = '';
+  if (map && !SC.SCENARIOS[n.scenario].compound) {
+    // every piece of the map is on the table (a scenario's own pieces besides)
+    laid = map.pieces.every((p) => a.st.terrain.some((t) => t.kind === p.kind && Math.abs(t.x - p.x) < 0.01 && Math.abs(t.y - p.y) < 0.01));
+    const objs = map.objectives && map.objectives.length === a.st.objectives.length;
+    if (objs) laid = laid && map.objectives.every((o, i) => Math.abs(a.st.objectives[i].x - o.x) < 0.01 && Math.abs(a.st.objectives[i].y - o.y) < 0.01);
+    note = map.name + (objs ? ', its objectives' : '');
+  } else note = 'a compound from its seed';
+  ok(n.id + ' \u2014 ' + n.name + ': ' + note, same && named && laid, (same ? '' : 'not the same twice; ') + (named ? '' : 'named ' + a.st.scen.name + '; ') + (laid ? '' : 'the map not laid as written'));
+}));
+
+console.log('\nThe enemy, as much as the company knows');
+/* A new company knows little: word of the enemy, how big and what kind. The
+   Intel meter, the locals, an informant and the right choices tell it more. */
+function known(node, opt, flags, meters) {
+  const c = at(campaign(), node, flags, meters);
+  c.companies.A.kUC = 5;
+  if (opt) S.choose(c, opt);
+  const spec = S.battleSpec(c), co = c.companies.A;
+  const tier = L.tierFor(co, { tier: spec.tier, minTier: spec.minTier, maxTier: spec.maxTier }), pl = L.plFor(co, tier, spec.levers.pl || spec.pl);
+  const f = L.buildForce(spec.enemy, { campaign: c, tier, pl, allowance: L.allowance(co), readiness: spec.levers.readiness || 0 });
+  return L.describeForce(f, S.intel(c, spec), dc.sides[spec.enemy.side].faction);
+}
+const word = known('c1.portmaster', 'take');
+ok('a new company: only word of the enemy — ' + word.word, word.level === 0 && word.items.length === 0 && /^Word is: a (small|sizeable|large|very large) force/.test(word.word));
+const asked = known('c1.portmaster', 'ask');
+ok('asking the dockers: an outline — ' + asked.items.map((i) => i.name).join(' '), asked.level === 1 && asked.items.length > 0 && asked.items.every((i) => !i.tier));
+const net = known('c1.portmaster', 'take', {}, { intel: 3 });
+ok('Intel 3 gives an outline of every enemy', net.level === 1);
+const paid = known('c2d.truck', 'pay');
+ok('the guard rota bought: every unit, with its Tier', paid.level === 2 && paid.items.length > 0 && paid.items.every((i) => i.tier));
+const both = known('c1.portmaster', 'ask', {}, { intel: 3 });
+ok('intel adds up: the dockers and the network give the full list', both.level === 2);
+const town = known('c1.portmaster', 'take', {}, { sentiment: 3 });
+ok('the locals’ goodwill (Sentiment 3) gives an outline', town.level === 1);
+const capped = known('c2d.truck', 'pay', {}, { intel: 6, sentiment: 3 });
+ok('never more than the full list', capped.level === 2);
+const vargaOutline = known('c3.killorcapture', 'snatch', {}, { intel: 3 });
+ok('an outline names who leads them: ' + vargaOutline.items.map((i) => i.name).join(' '), vargaOutline.items.some((i) => /is with them|leads them/.test(i.name)));
+const hiveWord = (() => { const c = campaign(); c.story.chapter = 'sump'; c.story.node = 'sump.battle'; const spec = S.battleSpec(c);
+  const f = L.buildForce(spec.enemy, { campaign: c, tier: 1, pl: 1, allowance: 0 }); return L.describeForce(f, S.intel(c, spec), 'bugs'); })();
+ok('the hive is a swarm, not a force: ' + hiveWord.word, hiveWord.level === 0 && /swarm/.test(hiveWord.word));
+
+console.log('\nThe commander');
+{
+  const c = C.newCampaign({ mode: 'solo' });
+  C.found(c.companies.A, FOUNDING, 'S2');
+  S.begin(c, 'deep-contract', { commander: '  Mara Okafor ' });
+  const co = c.companies.A, officer = C.byRid(co, co.cmdRid).men[0];
+  ok('named as asked: the officer at the head of the command squad', officer.name === 'Mara Okafor' && c.story.commander === 'Mara Okafor' && co.commander === 'Mara Okafor', JSON.stringify(officer));
+  ok('{commander} is the name, {commander:rank} the rank and surname', S.render(c, '{commander}|{commander:rank}') === 'Mara Okafor|' + officer.rank + ' Okafor', S.render(c, '{commander}|{commander:rank}'));
+  ok('...and the story says it: the port master meets the commander', /meets .* Okafor at the ramp/.test(S.render(c, dc._nodes['c1.portmaster'].text)));
+  const d = C.newCampaign({ mode: 'solo' });
+  C.found(d.companies.A, FOUNDING, 'S2');
+  S.begin(d, 'deep-contract');
+  const off2 = C.byRid(d.companies.A, d.companies.A.cmdRid).men[0];
+  ok('with no name given, the officer the roster already has', d.story.commander === off2.name && S.render(d, '{commander}') === off2.name);
+}
 
 console.log('\nThe first half, played through with made-up results');
 const N = 40, tally = { done: 0, broken: 0, sump: 0, relief: 0, tierAt4: {}, kUC: [], battles: [], units: [] };

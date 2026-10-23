@@ -760,7 +760,8 @@
       if (B.state.objectives.length) {
         h += '<ul>' + B.state.objectives.map(function (o, i) {
           var hb = heldBy(o);
-          return '<li>Objective ' + (i + 1) + ' — ' + (hb ? 'held by <b>' + esc(sideName(hb)) + '</b>' : 'nobody holds it') + '</li>';
+          // (a story mission's objectives have names: the landing pads, the pass)
+          return '<li>' + (o.name ? esc(o.name) : 'Objective ' + (i + 1)) + ' — ' + (hb ? 'held by <b>' + esc(sideName(hb)) + '</b>' : 'nobody holds it') + '</li>';
         }).join('') + '</ul>';
       }
       if (sc.hint) h += '<p class="hint small">' + esc(sc.hint) + '</p>';

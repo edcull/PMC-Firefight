@@ -663,6 +663,9 @@
         html = targetPanel(ui.selected);
       }
       else if (ui.selected && !isAI(ui.selected.side) && atThisScreen(ui.selected.side)) html = idleCard(ui.selected);
+      // story mode: the allies' order, while nothing else is being asked
+      if (allyOrders() && (!html || html.indexOf('card idle') >= 0)) html += allyOrderCard();
+      else if (!allyOrders()) ui.allyOrderPick = null;
       // a modal open over the card keeps its place when the card is drawn again
       var ms = ctxBox.querySelector('.cmodal:not([hidden]) .cmodal-scroll'), mTop = ms ? ms.scrollTop : 0;
       ctxBox.innerHTML = html;
@@ -918,6 +921,36 @@
       // having moved, an Advance may still decline its shot — and that ends the activation
       if (ui.mode === 'advance-fire') {
         h += '<div class="acts"><button class="act" data-act="holdfire"><span>Hold its fire</span><small>Ends the activation</small></button></div>';
+      }
+      return h + '</div>';
+    }
+
+    /* Story mode: the allies' one order (storybattle.js) — Move here, Attack here,
+       Hold here — given with a tap on the table, and changed at most once a turn. */
+    var ORDER_WORDS = {
+      move: ['Move here', 'At the double: a Move, no shooting on the way.'],
+      attack: ['Attack here', 'Advance on it and take on the enemy round it.'],
+      hold: ['Hold here', 'Get there, take cover near it and shoot from there.']
+    };
+    function allyOrders() {
+      var s = B.state;
+      return !!(s && s.allies && s.phase === 'battle' && !s.over && !isAI(s.allies.side) && atThisScreen(s.allies.side));
+    }
+    function allyOrderCard() {
+      var o = B.state.allyOrder, locked = !!(o && o.turn === B.state.turn && o.acted), pick = ui.allyOrderPick;
+      var h = '<div class="card allyorders"><h2>Allies\u2019 orders</h2>';
+      if (pick && ORDER_WORDS[pick]) {
+        h += '<p class="sub">Tap the table where they should <b>' + esc(ORDER_WORDS[pick][0].toLowerCase()) + '</b>.</p>' +
+          '<div class="orderbtns"><button class="lnk" data-act="allyordercancel">Cancel</button></div>';
+        return h + '</div>';
+      }
+      h += '<p class="sub">' + (o ? '<b>' + esc(ORDER_WORDS[o.kind][0]) + '</b> \u2014 ' + esc(ORDER_WORDS[o.kind][1])
+        : 'No orders: they use their own judgement.') + '</p>';
+      if (locked) h += '<p class="hint">They are acting on it. It can be changed next turn.</p>';
+      else {
+        h += '<div class="orderbtns">' + Object.keys(ORDER_WORDS).map(function (k) {
+          return '<button class="order' + (o && o.kind === k ? ' on' : '') + '" data-act="allyorder" data-kind="' + k + '" title="' + esc(ORDER_WORDS[k][1]) + '">' + esc(ORDER_WORDS[k][0]) + '</button>';
+        }).join('') + (o ? '<button class="lnk" data-act="allyorderclear">Clear</button>' : '') + '</div>';
       }
       return h + '</div>';
     }
@@ -1460,6 +1493,9 @@
           else if (a === 'cmdcoord' || a === 'cmdskip') { send({ k: a }); return; }
           else if (a === 'cmdact') { send({ k: a, id: b.getAttribute('data-id') }); return; }
           else if (a === 'nomine') { send({ k: 'mine', i: -1 }); return; }
+          else if (a === 'allyorder') { ui.allyOrderPick = b.getAttribute('data-kind'); render(); return; }
+          else if (a === 'allyordercancel') { ui.allyOrderPick = null; render(); return; }
+          else if (a === 'allyorderclear') { send({ k: 'allyorder', kind: null }); return; }
           // whose list is being kept: in a hotseat's round of swaps the next player is up the moment it is
           else if (a === 'swapdone') { send({ k: a, who: b.getAttribute('data-who') }); return; }
           else if (a === 'placerot' || a === 'placedone') { send({ k: a }); return; }

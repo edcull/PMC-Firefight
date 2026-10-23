@@ -219,7 +219,7 @@
         if (!snap) { E.state = null; return; }
         // the table's baked plates are the view's own (game.js vc), kept by battle, not here
         E.state = snap;
-        E.state.scen = SC.SCENARIOS[(snap.sc && snap.sc.id) || snap.cfg.scenario] || SC.SCENARIOS.secure;
+        E.state.scen = SC.scenFor(E.state, (snap.sc && snap.sc.id) || snap.cfg.scenario);
         var by = {};
         E.state.units.forEach(function (u) { by[u.id] = u; });
         E.state.units.forEach(function (u) {

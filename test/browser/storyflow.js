@@ -56,7 +56,9 @@ async function cards(p) {
   check('...with ironman to choose, for good', /Ironman/.test(txt));
   await go(p, '[data-go="storynew"]');
   check('the campaign’s own founding screen comes up', await p.evaluate(() => !!document.getElementById('found-name')));
-  await p.evaluate(() => { document.getElementById('found-name').value = 'Kessler Rifles'; });
+  const cmd0 = await p.evaluate(() => { const b = document.getElementById('found-commander'); return b ? b.value : null; });
+  check('...with a box for the commander\u2019s name under the company\u2019s, already filled in', !!cmd0 && cmd0.trim().length > 3, cmd0);
+  await p.evaluate(() => { document.getElementById('found-name').value = 'Kessler Rifles'; document.getElementById('found-commander').value = 'Mara Okafor'; });
   for (const k of ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng']) await go(p, `#camp-body button[data-add="${k}"]`);
   await go(p, '#camp-body button[data-doc="S2"]');
   check('the charter is signed', await clickText(p, 'Sign the charter'));
@@ -65,6 +67,9 @@ async function cards(p) {
   txt = await body(p);
   check('the story begins: Deep Contract, Landfall', /Deep Contract/.test(txt) && /Landfall/.test(txt), txt.slice(0, 160));
   check('...on the chapter’s card', await p.evaluate(() => !!document.querySelector('#camp-body .story-card')));
+  check('the commander is named in the story: Second Lieutenant Okafor', /Mara Okafor is on the first shuttle/.test(txt) && /addressed to Second Lieutenant Okafor/.test(txt), txt.slice(0, 600));
+  const officer = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(), co = c.companies.A, e = co.roster.find((x) => x.rid === co.cmdRid); return e && e.men && e.men[0]; });
+  check('...and is the officer at the head of the command squad', officer && officer.name === 'Mara Okafor', JSON.stringify(officer));
   check('...with the meters the company can see (and not the hidden ones)', /HTX Standing/.test(txt) && /Loyalty/.test(txt) && !/Hive Growth/.test(txt));
   const camp0 = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); return { mode: c.mode, rivals: (c.rivals || []).length, story: c.story && c.story.id }; });
   check('a solo dossier with the story on it, and no rivals raised', camp0.mode === 'solo' && camp0.story === 'deep-contract' && camp0.rivals <= 1, JSON.stringify(camp0));
@@ -75,7 +80,8 @@ async function cards(p) {
   await go(p, '[data-go="storyopt"][data-o="ask"]');
   await p.screenshot({ path: path.join(SHOTS, 'story-briefing.png') });
   txt = await body(p);
-  check('asking what they know: the battle’s briefing, with the enemy shown', /Secure and control/i.test(txt) && /Battle Tier I/.test(txt) && /The enemy, as you know them/i.test(txt), txt.slice(0, 300));
+  check('asking what they know: the mission’s briefing: its name, its ground, the story of it, then the rules and the enemy', /Hold the Port/i.test(txt) && /starport/i.test(txt) && /Front is coming through the terminal/.test(txt) && /Secure and control/i.test(txt) && /Battle Tier I/.test(txt) && /The enemy, as you know them/i.test(txt), txt.slice(0, 300));
+  check('...and, having asked, an outline of the enemy (not every unit)', /You have their outline/.test(txt) && /bands of fighters/.test(txt) && !/Word is:/.test(txt), txt.slice(txt.indexOf('The enemy'), txt.indexOf('The enemy') + 200));
   await go(p, '[data-go="storymuster"]');
   txt = await body(p);
   check('the muster picks a legal force for the battle', /A legal army/.test(txt) && await p.evaluate(() => !document.querySelector('[data-go="storyfight"]').disabled), txt.slice(0, 200));
@@ -83,6 +89,13 @@ async function cards(p) {
   await p.waitForTimeout(1200);
   const st = await p.evaluate(() => { const s = window.PMC_STATE && window.PMC_STATE(); return s ? { node: s.cfg.story && s.cfg.story.node, scen: s.cfg.scenario, b: s.units.filter(u => u.side === 'B').length } : null; });
   check('the battle starts with the story’s cfg', st && st.node === 'c1.battle' && st.scen === 'secure' && st.b > 0, JSON.stringify(st));
+  const ground = await p.evaluate(() => { const s = window.PMC_STATE(); return { name: s.scen.name, book: s.scen.bookName, pads: s.terrain.filter((t) => t.kind === 'road').length, header: (document.getElementById('hdr-init') || {}).textContent }; });
+  check('...on the starport, under the mission\u2019s own name', ground.name === 'Hold the Port' && ground.book === 'Secure and control' && ground.pads === 3, JSON.stringify(ground));
+  await cards(p);
+  // the mission's card (its name, its briefing, the pads by name) put away, to see the ground
+  await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^done$/i.test(x.textContent.trim()) && x.offsetParent); if (b) b.click(); });
+  await p.waitForTimeout(800);
+  await p.screenshot({ path: path.join(SHOTS, 'story-board.png') });
 
   // the enemy concedes: a result without a battle played
   await cards(p);
@@ -112,6 +125,8 @@ async function cards(p) {
   await go(p, '[data-go="storyopt"][data-o="bury"]');
   txt = await body(p);
   check('...and on to the interlude, with the way to the company', /company/i.test(txt) && await p.evaluate(() => !!document.querySelector('#camp-body [data-go="hub"]')));
+  check('...and a side contract on offer, with its pay', /Side contracts/i.test(txt) && /kUC/.test(txt) && await p.evaluate(() => !!document.querySelector('#camp-body [data-go="storyside"]')), txt.slice(0, 200));
+  await p.screenshot({ path: path.join(SHOTS, 'story-side.png'), fullPage: true });
 
   console.log('\nThe journal, and coming back');
   await go(p, '[data-go="storyjournal"]');
@@ -130,6 +145,15 @@ async function cards(p) {
   txt = await body(p);
   check('...and goes back to where the story was', /Deep Contract/.test(txt) && await p.evaluate(() => window.PMC_CAMPAIGN.get().story.chapter === 'c1'), txt.slice(0, 120));
   await p.screenshot({ path: path.join(SHOTS, 'story-interlude.png') });
+
+  console.log('\nThe ending');
+  // the story taken to an ending as it stands (the second half is not played here): its screen
+  await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(); c.story.flags.varga_dead = true; c.story.flags.pit9_spared = true; c.story.ended = 'paidoff'; c.story.node = null; });
+  await go(p, '#camp-body [data-go="hub"]');
+  await go(p, '#camp-body .hubtake [data-go="story"]');
+  txt = await body(p);
+  check('the ending\u2019s screen: its title and text, the epilogue, and who stayed', /Paid Off/i.test(txt) && /Pit Four/.test(txt) && /school was open again/.test(txt) && /Who stayed/i.test(txt) && /from the first day/.test(txt), txt.slice(0, 400));
+  await p.screenshot({ path: path.join(SHOTS, 'story-ending.png'), fullPage: true });
 
   check('no page errors', !errs.length, errs.slice(0, 3).join(' | '));
   await b.close();

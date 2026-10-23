@@ -12,6 +12,8 @@
      unready. Rolled here, and written to the battle log;
    - the allies' activations: side A's units the AI runs for the story, taking
      side A's activations in turn with the player's own (allyActs);
+   - the allies' orders: one marker the player puts down, and may move once a
+     turn, that the allies' AI answers (allyOrder; ai.js);
    - the target variant: the target killed, or with `capture` Broken and then
      reached, ends the battle (targetCheck, asked by scenarios.js). */
 (function (root) {
@@ -114,6 +116,14 @@
       E.pushRes({ kind: 'Prelude', title: 'Before the first turn', note: 'What the story brought to this battle.', list: lines });
     }
 
+    /* An ambush an AI side springs: it sets up last, once the side it caught is
+       down (scenarios.js `ambushed`; deploy.js startBattle). */
+    function ambushWaits(side) {
+      var sty = story(), state = E.state;
+      return !!(sty && sty.ambush === side && state.phase !== 'battle' && E.isAI(side) &&
+        state.units.some(function (u) { return u.side === side && u.alive && u.x < 0 && !u.reserve && !u.aboard; }));
+    }
+
     /* Turn 1's initiative, where an ambush has settled it. */
     function storyFirstTurn() {
       var sty = story();
@@ -160,7 +170,223 @@
       return null;
     }
 
-    return { storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck };
+    /* ================= the End phase: the story scenarios' own events =================
+       Set up by a scenario's deploy (src/story/scenarios-story.js) on state.sc,
+       and run here, once an End phase, before the battle is checked. */
+
+    /* Waves: from turn `from`, every End phase, `per` units come out of the
+       tunnel mouths for `side`, ready to act from the next turn. */
+    function waves(state, lines) {
+      var w = state.sc && state.sc.waves;
+      if (!w || state.turn < (w.from || 1) || (w.until && state.turn > w.until) || !(w.mouths || []).length) return;
+      w.n = w.n || 0;
+      for (var i = 0; i < w.per; i++) {
+        var key = w.keys[(w.n + i) % w.keys.length], p = R.profile(key);
+        if (!p) continue;
+        var m = w.mouths[(w.n + i) % w.mouths.length];
+        var u = E.makeUnit(p, w.side, 'w' + (w.n + i), null, false, null, false);
+        u.code = (u.code || 'W') + (w.n + i + 1);
+        u.label = u.name + ' [' + w.side + ']';
+        u.startSize = u.models;
+        u.spawned = true;
+        var spot = R.nearestFree ? R.nearestFree(state, m.x, m.y, u) : null;
+        u.x = spot ? spot.x : m.x; u.y = spot ? spot.y : m.y;
+        u.facing = Math.atan2(R.BOARD.h / 2 - u.y, R.BOARD.w / 2 - u.x);
+        R.musterMen(u, null, state.namesTaken || (state.namesTaken = {}));
+        state.units.push(u);
+        lines.push({ side: w.side, text: u.label + ' comes out of the ' + (m.name || 'tunnel mouth') + '.' });
+      }
+      w.n += w.per;
+    }
+
+    /* The orbital countdown: from turn `from`, D3 of the table's areas are hit
+       each End phase, and an area hit once burns on. A unit in a burning area
+       takes the strike: two hits on a squad, a damage roll on a machine. The
+       landing zone is never hit. */
+    function countdown(state, lines) {
+      var cd = state.sc && state.sc.countdown;
+      if (!cd || state.turn < cd.from) return;
+      var left = cd.areas.filter(function (a) { return !a.struck && !a.safe; });
+      for (var n = R.d3(); n > 0 && left.length; n--) {
+        var a = left.splice(Math.floor(Math.random() * left.length), 1)[0];
+        a.struck = state.turn;
+        lines.push({ side: null, text: 'The orbital strike hits ' + a.name + '.' });
+      }
+      var log = [];
+      state.units.forEach(function (u) {
+        if (!u.alive || u.reserve || u.aboard || u.x < 0) return;
+        var a = cd.areas.filter(function (r) { return r.struck && R.inRect(u.x, u.y, r); })[0];
+        if (!a) return;
+        if (R.isMachine(u)) {
+          var dmg = R.resolveDamage(u, 1, false, 0);
+          if (dmg.damage) R.applyDamage(state, u, dmg.damage, log, null);
+        } else R.applyResult(state, u, R.resolveShootingHits(state, u, 2, 0, null), log, null);
+        lines.push({ side: u.side, text: u.label + ' is caught in the burning ' + a.name + '.' });
+      });
+      log.forEach(function (l) { lines.push({ side: null, text: l.text }); });
+    }
+
+    /* Extraction: a unit of `side` standing in the landing zone (a circle, or
+       everything past `rectX`: the far edge) at the End phase leaves the table,
+       safe. It is out of the battle, and no loss. `only`: the units that may. */
+    function extraction(state, lines) {
+      var ex = state.sc && state.sc.extract;
+      if (!ex || state.turn < (ex.from || 1)) return;
+      state.units.forEach(function (u) {
+        if (u.side !== ex.side || !u.alive || u.reserve || u.aboard || u.x < 0 || u.ally) return;
+        if (ex.only && ex.only.indexOf(u.id) < 0) return;
+        if (ex.rectX != null ? u.x < ex.rectX : R.inches(u.x, u.y, ex.x, ex.y) > ex.r) return;
+        u.alive = false; u.extracted = true; u.activated = true;
+        (u.cargo || []).forEach(function (cid) {
+          var c = state.units.filter(function (x) { return x.id === cid; })[0];
+          if (c) { c.alive = false; c.extracted = true; }
+        });
+        ex.out = (ex.out || 0) + (u.tier || 1);
+        lines.push({ side: u.side, text: u.label + ' is lifted out.' });
+      });
+    }
+
+    /* A parley: while it holds, the enemy (and the allies) hold their fire.
+       It breaks when side A hurts side B, or on a 6 at an End phase. */
+    function parley(state, lines) {
+      var pa = state.sc && state.sc.parley;
+      if (!pa || pa.broken) return;
+      var hurt = state.units.some(function (u) {
+        if (u.side !== 'B') return false;
+        var was = pa.seen && pa.seen[u.id];
+        return !u.alive || (was && (u.sp > was.sp || u.models < was.models || (u.damage || 0) > was.damage));
+      });
+      if (hurt) { pa.broken = state.turn; pa.by = 'A'; lines.push({ side: 'A', text: 'Shots are fired. The talks are over.' }); }
+      else if (R.d6() === 6) { pa.broken = state.turn; pa.by = 'roll'; lines.push({ side: null, text: 'Somebody panics. The talks are over.' }); }
+      pa.seen = {};
+      state.units.forEach(function (u) { if (u.side === 'B') pa.seen[u.id] = { sp: u.sp, models: u.models, damage: u.damage || 0 }; });
+    }
+    /* Whether this unit holds its fire: the enemy, and the allies, while the talks hold. */
+    function parleyHolds(u) {
+      var pa = E.state && E.state.sc && E.state.sc.parley;
+      if (!pa || pa.broken) return false;
+      return !u || u.side === 'B' || u.ally;
+    }
+
+    function storyEndPhase() {
+      var state = E.state;
+      if (!state || !state.sc) return;
+      var lines = [];
+      parley(state, lines);
+      countdown(state, lines);
+      extraction(state, lines);
+      waves(state, lines);
+      if (!lines.length) return;
+      lines.forEach(function (l) { E.logLine('note', l.text); });
+      E.pushRes({ kind: 'End phase', title: state.scen.name, list: lines });
+    }
+
+    /* What a story asks of the check, before the scenario's own: its target, and
+       its own turn limit (the scenario judged as at the end of its time). Null
+       where the story asks nothing, and the scenario is checked as usual. */
+    function storyCheck(state) {
+      var t = targetCheck(state);
+      if (t) return t;
+      var sty = state.cfg && state.cfg.story;
+      if (!sty || !sty.turns || state.turn < sty.turns) return null;
+      var real = state.turn;
+      state.turn = Math.max(real, (state.scen && state.scen.turns) || 20);
+      var res = E.SC.check(state);
+      state.turn = real;
+      return res || { winner: null, text: 'Time runs out, and nothing is settled — a draw.', timeout: true };
+    }
+
+    /* ================= a mission's own map =================
+       A seeded random: the same numbers every time from the same seed (a string
+       or a number), so a mission's map, and its compound, look the same each
+       time it is fought. */
+    function storySeeded(seed) {
+      var h = 2166136261 >>> 0, str = String(seed);
+      for (var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619) >>> 0;
+      return function () {
+        h = (h + 0x6D2B79F5) >>> 0;
+        var t = h;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    /* A story mission's setup, done the same way every time: what the scenario
+       lays of its own at random (Find and secure's search sites, Demolish's
+       target, Hostile takeover's fortifications, Last Stand's barricades, the
+       landing zones, the story scenarios' tunnel mouths and decoys) is laid from
+       the mission's seed. Only the setup: the battle's dice are its own. */
+    function storyFixed(label, fn) {
+      var sty = story();
+      if (!sty || !sty.seed) return fn();
+      var was = Math.random;
+      Math.random = storySeeded(sty.seed + ':' + label);
+      try { return fn(); } finally { Math.random = was; }
+    }
+
+    /* The map as the story wrote it (cfg.terrainPlan, already fitted to the table
+       by levers.js): each piece given its outline, a wood its lobes, a building
+       its wings, by the mission's seed, so it is drawn the same each time. */
+    function storyTerrain(cfg) {
+      var rand = storySeeded((cfg.story && cfg.story.seed) || 'map');
+      var terrain = cfg.terrainPlan.map(function (p) {
+        var t = JSON.parse(JSON.stringify(p)), fam = t.shape || t.plan || null;
+        delete t.shape;
+        if (R.shapePiece) R.shapePiece(t, rand, fam);
+        return t;
+      });
+      return { terrain: terrain, rolls: [], generator: (cfg.story && cfg.story.mapName) || 'The mission\u2019s own ground' };
+    }
+
+    /* The allies' orders: one marker for all of them, put down by the player and
+       moved at most once a turn (until an ally has acted on it, it can still be
+       put right). Move here: at the double, a Move with no shot on the way.
+       Attack here: Advance on it, and engage the enemy round it. Hold here: get
+       there, then take the best cover near it and shoot from there. Within
+       ORDER_REACH of the marker, a unit has arrived. Kept on the battle, so a save
+       and a replay carry it. */
+    var ORDER_KINDS = { move: 'Move here', attack: 'Attack here', hold: 'Hold here' }, ORDER_REACH = 4;
+    function allyOrder(u) {
+      var o = E.state && E.state.allyOrder;
+      return o && ORDER_KINDS[o.kind] && (!u || u.ally) ? o : null;
+    }
+    function orderReach() { return ORDER_REACH; }
+    function orderLocked() {
+      var o = E.state && E.state.allyOrder;
+      return !!(o && o.turn === E.state.turn && o.acted);
+    }
+    // { kind, x, y } (kind null: the order withdrawn); a reason it cannot be given, or null
+    function giveAllyOrder(side, it) {
+      var state = E.state;
+      if (!state.allies || side !== state.allies.side) return 'there are no allies to order';
+      if (state.phase !== 'battle' || state.over) return 'orders are given once the battle is under way';
+      if (orderLocked()) return 'the allies are already acting on this turn’s orders';
+      if (it.kind == null) {
+        if (state.allyOrder) E.logLine('note', 'The allies are left to their own judgement.');
+        state.allyOrder = null;
+        return null;
+      }
+      if (!ORDER_KINDS[it.kind]) return 'no such order';
+      var x = +it.x, y = +it.y;
+      if (!isFinite(x) || !isFinite(y) || x < 0 || y < 0 || x > R.BOARD.w || y > R.BOARD.h) return 'that is off the table';
+      state.allyOrder = { kind: it.kind, x: x, y: y, turn: state.turn, acted: false };
+      E.logLine('note', 'The allies’ orders: ' + ORDER_KINDS[it.kind].toLowerCase() + '.');
+      return null;
+    }
+    // an ally acting on the order: from now, this turn's order stands
+    function orderActed(u) {
+      var o = allyOrder(u);
+      if (o) { o.acted = true; o.turn = E.state.turn; }
+      return o;
+    }
+
+    return {
+      ambushWaits: ambushWaits, allyOrder: allyOrder, orderReach: orderReach, orderLocked: orderLocked, giveAllyOrder: giveAllyOrder, orderActed: orderActed,
+      orderWord: function (k) { return ORDER_KINDS[k] || ''; },
+      storySeeded: storySeeded, storyTerrain: storyTerrain, storyFixed: storyFixed,
+      storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck,
+      storyEndPhase: storyEndPhase, storyCheck: storyCheck, parleyHolds: parleyHolds
+    };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineStory;
 })(typeof window !== 'undefined' ? window : global);

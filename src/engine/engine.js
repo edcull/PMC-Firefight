@@ -304,6 +304,8 @@
       K.aiStands(state.activeSide);
       var list = eligible(state.activeSide);
       if (!list.length) { endActivation(); return true; }
+      // a story's parley: while the talks hold, the enemy and the allies stand where they are (storybattle.js)
+      if (K.parleyHolds(list[0])) { list[0].activated = true; logLine('note', list[0].label + ' holds its fire.'); endActivation(list[0]); return true; }
       if (state.solo && state.activeSide === 'B') {
         // the OpFor phase starts with the unit furthest from the players (p. 147)
         list.sort(function (a, b) { return K.gapToFoes(b) - K.gapToFoes(a); });
@@ -370,13 +372,18 @@
     /* Close Encounters (Appendix 1): the battle is fought inside a compound,
        laid by its own generator in place of the world's table. */
     var scenDef = SC.SCENARIOS[scenId] || {};
-    var manual = !scenDef.compound && K.wantsManualTerrain(cfg);
+    // a story mission's own map, laid as written (storybattle.js): never by hand, never rolled
+    var storyMap = !scenDef.compound && cfg.terrainPlan ? K.storyTerrain(cfg) : null;
+    var manual = !scenDef.compound && !storyMap && K.wantsManualTerrain(cfg);
     /* A compound the players laid out themselves (cfg.compoundPlan) where it fits
        this table and can be fought in; the generator's otherwise. */
     var handBuilt = scenDef.compound && cfg.compoundPlan ? CMP.build(cfg.compoundPlan, R.BOARD.w, R.BOARD.h) : null;
     var built = handBuilt ? handBuilt
+      : storyMap ? storyMap
       : scenDef.compound
-      ? CMP.generate(R.BOARD.w, R.BOARD.h, Math.random, { rooms: scenDef.rooms || 0, danger: scenDef.danger != null ? scenDef.danger : 0.15 })
+      // (a story mission's compound is the same every time it is fought: its own seed)
+      ? CMP.generate(R.BOARD.w, R.BOARD.h, cfg.story && cfg.story.seed ? K.storySeeded(cfg.story.seed) : Math.random,
+        { rooms: scenDef.rooms || 0, danger: scenDef.danger != null ? scenDef.danger : 0.15 })
       : manual
       ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
       : GEN.generate({
@@ -569,7 +576,7 @@
       V.colour('C', cc);
     }
     // the scenario, provisionally: the terrain phase wants its name and whether it has table edges
-    state.scen = SC.SCENARIOS[scenId];
+    state.scen = SC.scenFor(state, scenId);
     state.sc = { id: scenId };
     /* When the commandos bring hulls or aircraft the OpFor needs a unit that can
        answer them (p. 148). Where its list has none at this Tier, say so rather
@@ -789,7 +796,7 @@
     ['A', 'B'].forEach(function (sd) { if (state.tactics && state.tactics[sd] === 'laststand' && byHand(sd)) state.manualLaststand[sd] = true; });
     // and so is a player's own position in Hostile takeover (p. 55)
     state.manualForts = { A: byHand('A'), B: byHand('B') };
-    SC.begin(state, scenId, { attacker: cfg.attacker, roles: cfg.roles });
+    K.storyFixed('begin', function () { SC.begin(state, scenId, { attacker: cfg.attacker, roles: cfg.roles }); });
     // the scenario may have moved or dropped pieces to keep them apart; a mined one must still be there
     if (state.mined && state.terrain.indexOf(state.mined.piece) < 0) {
       var pool2 = state.terrain.filter(function (r) {
@@ -859,10 +866,10 @@
       heldIns[sd] = state.units.filter(function (u) { return u.side === sd && u.reserve && u.wave == null; });
       heldIns[sd].forEach(function (u) { u.reserve = false; });
     });
-    SC.deploy(state);
+    K.storyFixed('deploy', function () { SC.deploy(state); });
     // Last Stand's barricades, for a side not placing them by hand: now the zones are known (REB-8)
     var nT = state.terrain.length;
-    SC.lastStandBarricades(state);
+    K.storyFixed('barricades', function () { SC.lastStandBarricades(state); });
     if (state.terrain.length !== nT) V.scenery();
     Object.keys(heldIns).forEach(function (sd) {
       if (state.sc.split && state.sc.split[sd]) return;
@@ -907,10 +914,16 @@
         note: 'Close Encounters (p. 157): corridors, rooms and halls inside solid walls, with entry points on each long edge.',
         list: [{ text: made + '.' }].concat(secs.danger ? [{ text: secs.danger + ' dangerous section' + (secs.danger === 1 ? '' : 's') + ' (fuel drums): fire into one may set it off.' }] : []) });
     } else {
-      logLine('note', 'Terrain generator: ' + built.generator + '. ' +
-        built.rolls.map(function (r) { return r.area + ' D6 ' + r.roll; }).join(', ') + '.');
-      if (!built.manual) built.rolls.forEach(function (r) { logLine('terrain', r.area + ' — D6 ' + r.roll + ': ' + r.text); });
-      if (!built.manual) pushRes({
+      // a story mission's own ground: named, not rolled
+      if (cfg.terrainPlan) {
+        logLine('note', 'The ground: ' + built.generator + '.');
+        pushRes({ kind: 'Terrain', title: built.generator, note: 'The mission\u2019s own ground, laid the same way each time it is fought.' });
+      } else {
+        logLine('note', 'Terrain generator: ' + built.generator + '. ' +
+          built.rolls.map(function (r) { return r.area + ' D6 ' + r.roll; }).join(', ') + '.');
+        if (!built.manual) built.rolls.forEach(function (r) { logLine('terrain', r.area + ' — D6 ' + r.roll + ': ' + r.text); });
+      }
+      if (!built.manual && !cfg.terrainPlan) pushRes({
         kind: 'Terrain', title: built.generator,
         note: 'The table is divided into 2′ × 2′ areas; a D6 is rolled for each and the result placed in it.',
         dice: built.rolls.map(function (r) { return { label: r.area, value: r.roll }; }),
@@ -924,7 +937,7 @@
     // (where both companies enter in turn 1, nobody is placed now: the OpFor comes on then, like everyone)
     state.cfg.aiSides.forEach(function (s2) { K.aiLoadReserves(s2); });     // its waiting squads board its waiting hulls
     state.cfg.aiSides.forEach(function (s2) { K.aiLoadStart(s2); });        // and its squads on the table board the hulls there
-    state.cfg.aiSides.forEach(function (s2) { if (!K.entering(s2)) K.autoDeploy(s2); });
+    state.cfg.aiSides.forEach(function (s2) { if (!K.entering(s2) && !K.ambushWaits(s2)) K.autoDeploy(s2); });
     /* Hero of the People (p. 111): "in scenarios using the alternating deployment
        sequence, the opponent has to set up half of their units first before the
        Rebel player deploys any" — that is turn 1's entry in the scenarios where both
@@ -2128,6 +2141,13 @@
       state.mined = mi >= 0 ? { side: side, piece: state.terrain[mi] } : null;
       state.minePick = null;
       logLine('note', sideName(side) + (mi >= 0 ? ' has quietly mined a piece of the table.' : ' leaves the charges in the crates.'));
+      render();
+      return yes;
+    });
+    // story mode: the allies' one order, a marker on the table (storybattle.js)
+    on('allyorder', null, function (side, it) {
+      var why = K.giveAllyOrder(side, it);
+      if (why) { setHint(null, why); render(); return no(why); }
       render();
       return yes;
     });
