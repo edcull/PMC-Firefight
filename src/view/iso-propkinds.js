@@ -454,12 +454,12 @@
         /* A fuel bowser: a long pale tank on a chassis, a yellow cab at its
            east end with a dark windscreen, red hazard bands, six wheels. */
         case 'fueltruck': {
-          /* The bowser is the company lorry from the unit art (the unarmoured
-             transport's hull), parked: drawn as a machine is, in the port's
-             ochre. Drawn by hand only where that art is not loaded. */
+          /* The bowser is the heavy lorry from the unit art with a fuel tank on
+             its bed in place of the cargo box (iso-machines 'bowser'), parked,
+             in the port's amber. Drawn by hand only where that art is not loaded. */
           var ISO = root.PMCIso;
           if (ISO && ISO.machine) {
-            ISO.machine(g, { id: 'bowser', art: 'hlorry', side: 'B', paint: 'ochre', cls: 'vehicle', alive: true, facing: pr.facing || 0 },
+            ISO.machine(g, { id: 'bowser', art: 'bowser', side: 'N', paint: 'P', faction: 'civilian', cls: 'vehicle', alive: true, facing: pr.facing || 0 },
               { at: { x: pr.x + pr.w / 2, y: pr.y + pr.h / 2 }, lift: lift || 0, status: 'ready' });
             break;
           }
@@ -483,6 +483,15 @@
         /* A cargo lifter: a squat orange loader, a roll cage over its seat, and a
            mast at its east end with a crate up on its forks. */
         case 'cargolifter': {
+          /* The lifter is the patrol pickup from the unit art with a forklift on
+             its front (iso-machines 'loader'), a case up on its forks, in the
+             port's amber. Drawn by hand only where that art is not loaded. */
+          var ISO2 = root.PMCIso;
+          if (ISO2 && ISO2.machine) {
+            ISO2.machine(g, { id: 'loader', art: 'loader', side: 'N', paint: 'P', faction: 'civilian', cls: 'vehicle', alive: true, facing: pr.facing || 0 },
+              { at: { x: pr.x + pr.w / 2, y: pr.y + pr.h / 2 }, lift: lift || 0, status: 'ready' });
+            break;
+          }
           var ll = lift || 0, lx = pr.x, ly = pr.y, lw = pr.w, lh2 = pr.h;
           function LP(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - ll - z]; }
           var lm = LP(lx + lw / 2, ly + lh2 / 2, 0);
@@ -498,6 +507,42 @@
           edgeLine(g, LP(lx + lw - 0.15, ly + 0.5, a(15)), LP(lx + lw - 0.15, ly + lh2 - 0.4, a(15)), '#2a2e32', 3);
           [0.6, lw - 0.9].forEach(function (wx) { var wq = LP(lx + wx, ly + lh2 - 0.25, a(1.3)); ellipse(g, wq[0], wq[1], a(1.3), a(1.3), '#121314'); });
           dot(g, LP(lx + 0.85, ly + 1.2, a(12.6))[0], LP(lx + 0.85, ly + 1.2, a(12.6))[1], '#ffb02e', 4);   // the beacon on the cage
+          break;
+        }
+        /* A station's solar array, out in open space: a truss along its middle
+           running in towards the station, and two wings of cells either side
+           of it, deep blue in a pale frame, lit along their near edges. */
+        case 'solar': {
+          var sz = a(9), sl3 = lift || 0;
+          function SO(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sl3 - (z == null ? sz : z)]; }
+          var ym = pr.y + pr.h / 2, tx0 = pr.x, tx1 = pr.x + pr.w;
+          // the truss: two rails and their cross-bracing, on in towards the station
+          var tin = pr.toward.x > 0 ? tx1 + pr.w * 0.12 : tx0 - pr.w * 0.12;
+          var t0 = Math.min(tx0, tin), t1 = Math.max(tx1, tin);
+          edgeLine(g, SO(t0, ym - 0.35), SO(t1, ym - 0.35), '#8a96a0', 2);
+          edgeLine(g, SO(t0, ym + 0.35), SO(t1, ym + 0.35), '#b4c0c8', 2);
+          for (var tb2 = 0; tb2 <= (t1 - t0) / 0.9; tb2++) {
+            var bx2 = t0 + tb2 * 0.9;
+            edgeLine(g, SO(bx2, ym - 0.35), SO(bx2 + 0.45, ym + 0.35), '#6a7680', 1);
+          }
+          // the two wings
+          [[pr.y + 0.2, ym - 0.7], [ym + 0.7, pr.y + pr.h - 0.2]].forEach(function (Wg) {
+            var nc = Math.max(3, Math.round(pr.w / 1.6)), nr = 2;
+            for (var ci3 = 0; ci3 < nc; ci3++) {
+              for (var rj = 0; rj < nr; rj++) {
+                var x0c = pr.x + 0.2 + (pr.w - 0.4) * ci3 / nc, x1c = pr.x + 0.2 + (pr.w - 0.4) * (ci3 + 1) / nc - 0.12;
+                var y0c = Wg[0] + (Wg[1] - Wg[0]) * rj / nr, y1c = Wg[0] + (Wg[1] - Wg[0]) * (rj + 1) / nr - 0.1;
+                var Q = [SO(x0c, y0c), SO(x1c, y0c), SO(x1c, y1c), SO(x0c, y1c)];
+                poly(g, Q, (ci3 + rj) % 2 ? '#1c3d78' : '#20468a');
+                edgeLine(g, Q[0], Q[1], 'rgba(150,190,255,.35)', 1);
+                edgeLine(g, Q[3], Q[2], '#b4c0c8', 1);
+              }
+            }
+            var F = [SO(pr.x + 0.15, Wg[0] - 0.05), SO(pr.x + pr.w - 0.15, Wg[0] - 0.05), SO(pr.x + pr.w - 0.15, Wg[1] + 0.05), SO(pr.x + 0.15, Wg[1] + 0.05)];
+            edgeLine(g, F[0], F[1], '#d4dde4', 1); edgeLine(g, F[3], F[2], '#d4dde4', 1);
+            edgeLine(g, F[0], F[3], '#d4dde4', 1); edgeLine(g, F[1], F[2], '#d4dde4', 1);
+          });
+          dot(g, SO(tin, ym)[0], SO(tin, ym)[1], '#ff4a3a', 3);
           break;
         }
         case 'sacks': {
@@ -1322,6 +1367,23 @@
            of its own. */
         case 'searchsite': {
           var sr = rng(pr.seed || 7);
+          /* A port's possible location (a map's sites skinned 'cargo'): a cargo
+             container on a pallet, its doors stencilled, a manifest tag on it. */
+          if (pr.cargo) {
+            var cl = lift || 0, cpal = sr() < 0.5 ? CRATE2 : CRATE;
+            shadowBlob(g, { x: p.x + a(1), y: p.y + a(0.5) }, a(9), a(4));
+            box(g, { x: pr.x - 1.5, y: pr.y - 0.9, w: 3, h: 1.8, height: a(1), seed: pr.seed }, PLANTER, { roof: '#6a5a3a', roofEdge: '#8a7a52', windows: null, lift: cl, noShadow: true });
+            box(g, { x: pr.x - 1.4, y: pr.y - 0.8, w: 2.8, h: 1.6, height: a(9), seed: pr.seed + 1 }, cpal, { roof: cpal[3], roofEdge: cpal[5], windows: null, lift: cl + a(1), noShadow: true });
+            // the seam between its doors, at the east end, and the manifest tag on its side
+            var cdoor = toScreen(pr.x + 1.4, pr.y), ctag = toScreen(pr.x, pr.y + 0.8);
+            edgeLine(g, [cdoor.x, cdoor.y - cl - a(1.5)], [cdoor.x, cdoor.y - cl - a(9.5)], 'rgba(10,12,14,.55)', 1);
+            rect(g, ctag.x - a(1), ctag.y - cl - a(7), a(2), a(1.4), '#e8dcc0');
+            if (pr.checked && !pr.found) {
+              edgeLine(g, [p.x - a(6.5), p.y - a(3.2) - a(6)], [p.x + a(6.5), p.y + a(3.2) - a(6)], '#d0503c', 4);
+              edgeLine(g, [p.x - a(6.5), p.y + a(3.2) - a(6)], [p.x + a(6.5), p.y - a(3.2) - a(6)], '#d0503c', 4);
+            }
+            break;
+          }
           shadowBlob(g, { x: p.x, y: p.y }, a(7), a(3.5));
           ellipse(g, p.x, p.y, a(7), a(3.5), '#2e2820');
           ellipse(g, p.x, p.y, a(5), a(2.5), '#221d17');

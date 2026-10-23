@@ -49,6 +49,21 @@
         });
         if (spawn.length) terrain = terrain.concat(spawn);
       }
+      /* A station's solar arrays: out in the open space round it, one off each
+         corner of the table wherever the dark is wide enough to hold one (drawn
+         only: nothing stands out there). */
+      var space = terrain.filter(function (q) { return q.kind === 'bulkhead' && q.space; });
+      if (space.length) {
+        var SW = 0, SH = 0;
+        terrain.forEach(function (q) { SW = Math.max(SW, q.x + q.w); SH = Math.max(SH, q.y + q.h); });
+        var voidAt = function (x, y) { return space.some(function (q) { return x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h; }); };
+        var aw = SW * 0.33, ah = SH * 0.2;
+        [[1, 1, 1, 1], [SW - 1 - aw, 1, -1, 1], [1, SH - 1 - ah, 1, -1], [SW - 1 - aw, SH - 1 - ah, -1, -1]].forEach(function (c, ci) {
+          var r = { x: c[0], y: c[1], w: aw, h: ah }, clear = true;
+          for (var sx = 0; sx <= 6 && clear; sx++) for (var sy = 0; sy <= 4 && clear; sy++) clear = voidAt(r.x + r.w * sx / 6, r.y + r.h * sy / 4);
+          if (clear) props.push({ kind: 'solar', x: r.x, y: r.y, w: r.w, h: r.h, toward: { x: c[2], y: c[3] }, seed: 4111 + ci });
+        });
+      }
       /* The stretches of a bulkhead's sides that face a floor, not more plating
          or a door: [side, from, to], the side 'N', 'S', 'W' or 'E' and the run
          along it in inches of the table. */
@@ -105,7 +120,17 @@
           var j0 = Math.max(0, Math.round(q.y / RES)), j1 = Math.min(NY, Math.round((q.y + q.h) / RES));
           for (var j = j0; j < j1; j++) for (var i = i0; i < i1; i++) m[j * NX + i] = v;
         }
-        walls.forEach(function (q) { mark(drawnRect(q), 1); });
+        walls.forEach(function (q) {
+          if (!q.space) { mark(drawnRect(q), 1); return; }
+          /* open space round a station: only its hull is drawn, a wall's
+             thickness about each stretch that meets a floor, run on at the
+             ends so two stretches meet in a corner */
+          openEdges(q, solids).forEach(function (o) {
+            var lo = o[1] - HW, len = o[2] - o[1] + HW * 2;
+            mark(o[0] === 'N' ? { x: lo, y: q.y - HW, w: len, h: HW * 2 } : o[0] === 'S' ? { x: lo, y: q.y + q.h - HW, w: len, h: HW * 2 }
+              : o[0] === 'W' ? { x: q.x - HW, y: lo, w: HW * 2, h: len } : { x: q.x + q.w - HW, y: lo, w: HW * 2, h: len }, 1);
+          });
+        });
         /* A door's frame stops where the wall it meets comes out to its grid line:
            an end already covered by a wall (a fifth of an inch at a time) is the
            wall's, not the door's, so the frame meets that wall flush. */
@@ -478,9 +503,16 @@
         if (r.kind === 'searchsite') {
           props.push({
             kind: 'searchsite', x: r.x + r.w / 2, y: r.y + r.h / 2,
-            checked: !!r.checked, found: !!r.found, cold: !!r.cold,
+            checked: !!r.checked, found: !!r.found, cold: !!r.cold, cargo: r.skin === 'cargo',
             seed: (rr2() * 9999) | 0
           });
+          // a port's possible location is a pallet of cargo, with cases set down round it
+          if (r.skin === 'cargo') {
+            for (var cs2 = 0; cs2 < 4; cs2++) {
+              props.push({ kind: 'smallbox', x: r.x + 0.5 + rr2() * (r.w - 1), y: r.y + 0.5 + rr2() * (r.h - 1), tone: rr2(), seed: (rr2() * 9999) | 0 });
+            }
+            return;
+          }
           for (var sw = 0; sw < 6; sw++) {
             props.push({
               kind: 'wreckstone',
@@ -568,11 +600,11 @@
         if (r.kind === 'road' && r.pad) { props.push({ kind: 'padmark', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'shuttle') { props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'fueltruck') {
-          props.push({ kind: 'fueltruck', x: r.x, y: r.y, w: r.w, h: r.h, height: a(13), seed: (rr2() * 9999) | 0 });
+          props.push({ kind: 'fueltruck', x: r.x, y: r.y, w: r.w, h: r.h, height: a(13), facing: r.facing || 0, seed: (rr2() * 9999) | 0 });
           if (r.hose) props.push({ kind: 'hose', x: r.x + r.w * 0.35, y: r.y + r.h - 0.1, to: r.hose, seed: (rr2() * 9999) | 0 });
           return;
         }
-        if (r.kind === 'cargolifter') { props.push({ kind: 'cargolifter', x: r.x, y: r.y, w: r.w, h: r.h, height: a(15), seed: (rr2() * 9999) | 0 }); return; }
+        if (r.kind === 'cargolifter') { props.push({ kind: 'cargolifter', x: r.x, y: r.y, w: r.w, h: r.h, height: a(15), facing: r.facing || 0, seed: (rr2() * 9999) | 0 }); return; }
         // a town square's fountain: its basin, column and statue, drawn as one block among the others
         if (r.kind === 'fountain') {
           props.push({ kind: 'fountain', x: r.x, y: r.y, w: r.w, h: r.h, height: a(22), seed: (rr2() * 9999) | 0 });
@@ -625,7 +657,7 @@
         if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz, relic: !!o.relic, carried: !!o.carried });
       });
       // what lies flat on the floor goes down before anything stands on it
-      var FLAT = { deckgrate: 1, cable: 1, litter: 1, padmark: 1, hose: 1 };
+      var FLAT = { deckgrate: 1, cable: 1, litter: 1, padmark: 1, hose: 1, solar: 1 };
       props.forEach(function (p) {
         // the search-site hatch draws over its own scatter, so it stays readable; an objective's flag over the hatch it stands in
         p.depth = (p.w ? p.x + p.w / 2 + p.y + p.h / 2 : p.x + p.y) +

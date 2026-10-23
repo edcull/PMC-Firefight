@@ -42,7 +42,8 @@
         // the crossroads: four paved roads from the table's edges, and the square where they meet, paved round the auction house
         P(0, 22, 16, 4), P(32, 22, 16, 4), P(22, 0, 4, 16), P(22, 32, 4, 16),
         P(16, 16, 16, 4), P(16, 20, 4, 12), P(28, 20, 4, 12), P(20, 28, 8, 4),
-        R('fountain', 33, 16.5, 4, 4), Object.assign(B(20, 20, 8, 8, 'block'), { style: 'glass', tall: 4.5 }),
+        P(20, 20, 8, 1.5), P(20, 26.5, 8, 1.5), P(20, 21.5, 1.5, 5), P(26.5, 21.5, 1.5, 5),
+        R('fountain', 33, 16.5, 4, 4), Object.assign(B(21.5, 21.5, 5, 5, 'block'), { style: 'glass', tall: 4.5 }),
         // the four quarters: houses, warehouses, the arcade
         B(5, 3, 9, 7, 'U'), B(15, 3, 5, 5, 'block'), B(5, 13, 5, 6, 'L'),
         B(30, 3, 9, 6, 'L'), B(40, 4, 4, 5, 'annex'), B(31, 11, 5, 5, 'block'), R('ruins', 38, 12, 4, 4),
@@ -58,28 +59,75 @@
 
     /* Vesk's landing field, after Lot 47 was lost: Brass Ledger's shuttle on
        its pad in the north-east corner, a fuel bowser hosed up to it and a
-       cargo lifter loading it, cargo stacked across the apron, an empty pad,
-       the port's comms block in the far corner with a dish on its roof,
-       the customs shed, and three places the log could be as they load it
-       (Find and secure, the relic: the log carried off, or not). */
+       cargo lifter loading it, cargo stacked on concrete across the apron;
+       the north pad as big, its own bowser and lifter standing by and cargo
+       waiting on it; the port's comms block in the far corner with a dish on
+       its roof, a road through the port with a spur up to each pad, the
+       customs shed, and three places the log could be as they load it, each
+       a pallet of cargo (Find and secure, the relic: the log carried off, or
+       not). */
     veskfield: {
       name: 'The landing field, Vesk Free Port', planet: 'dense',
       pieces: [
         // Brass Ledger's pad: the shuttle down on it, the bowser fuelling it, the lifter loading it
         Object.assign(P(30, 2, 14, 14), { pad: true }), R('shuttle', 32, 3, 10, 8),
         Object.assign(R('fueltruck', 31.4, 12.2, 2.8, 1.4), { hose: { x: 37, y: 11 } }), R('cargolifter', 40.5, 12.2, 2.5, 2.5),
-        // an empty pad, the comms block (its dish on the roof) and the customs shed
-        Object.assign(P(6, 6, 8, 8), { pad: true }), Object.assign(B(5, 36, 8, 6, 'annex'), { dish: true }), R('bunker', 35, 36, 6, 5),
-        B(28, 31, 6, 5, 'block'), B(26, 38, 6, 3, 'block'), R('ruins', 7, 20, 4, 4), R('wall', 38, 22, 1, 6),
-        // cargo, stacked across the apron
-        R('crates', 23, 4, 5, 1.5), R('crates', 23, 7, 1.5, 4), R('crates', 12, 18.5, 6, 1.5), R('crates', 21.5, 20, 1.5, 5),
-        R('crates', 11, 28.5, 5, 1.5), R('crates', 34, 26, 1.5, 5)
+        // the port's road, in from the west edge and out at the east, a spur up to the pad
+        P(0, 27.5, 48, 3), P(36, 16, 3, 11.5),
+        // the north pad, as big as Brass Ledger's, empty but for its support vehicles and cargo waiting, a spur down to the road
+        Object.assign(P(5, 2, 14, 14), { pad: true }), P(6.5, 16, 3, 11.5),
+        Object.assign(R('fueltruck', 6.2, 12.6, 2.8, 1.4), { facing: Math.PI / 2 }), Object.assign(R('cargolifter', 14.8, 11.6, 2.5, 2.5), { facing: Math.PI }),
+        R('crates', 6.5, 4, 4, 1.5), R('crates', 13.5, 4, 1.5, 4), R('crates', 10.5, 9.5, 3, 1.5),
+        // the comms block (its dish on the roof) and the customs shed
+        Object.assign(B(5, 36, 8, 6, 'annex'), { dish: true }), R('bunker', 35, 36, 6, 5),
+        B(28, 31, 6, 5, 'block'), B(26, 38, 6, 3, 'block'), R('wall', 42, 19, 1, 6),
+        // cargo, stacked on concrete across the apron
+        Object.assign(P(22, 3, 7, 9), { slab: true }), R('crates', 23, 4, 5, 1.5), R('crates', 23, 7, 1.5, 4),
+        Object.assign(P(11, 17, 8, 3.6), { slab: true }), R('crates', 12, 18.5, 6, 1.5),
+        Object.assign(P(20.5, 19.5, 3.5, 6.5), { slab: true }), R('crates', 21.5, 20, 1.5, 5),
+        Object.assign(P(10, 31.5, 7, 2.5), { slab: true }), R('crates', 11, 32, 5, 1.5),
+        Object.assign(P(32, 18.5, 2.5, 6), { slab: true }), R('crates', 32.5, 19, 1.5, 5)
       ],
-      sites: { kind: 'searchsite', at: [
+      // the three places the log could be are cargo, like everything else on the apron
+      sites: { kind: 'searchsite', skin: 'cargo', at: [
         { x: 27, y: 16, name: 'The ship’s ramp' },
         { x: 16, y: 24, name: 'The cargo stacks' },
         { x: 24, y: 34, name: 'The customs shed' }
       ] }
+    },
+
+    /* Station Thule, the relay Morrow stopped at, in orbit over Okoro II: a
+       compound laid by hand, not by its seed, the same about both its axes. A
+       hub in the middle, a ring corridor round it with spokes in, a module to
+       the north and one to the south (the hub and the two modules are the
+       control rooms Critical control asks for), a lab on each flank, and two
+       docking arms out to each edge. Its skin is the station's (`skin`): the
+       solid round it is open space, a star field, the floors walled in by the
+       station's hull where they meet it, and solar arrays out in the dark. */
+    thule: {
+      name: 'Station Thule, in orbit over Okoro II', skin: 'station',
+      compound: {
+        cols: 16, rows: 16, walls: [], danger: [],
+        cells: [
+          '................',
+          '......rrrr......',
+          '......rrrr......',
+          '......c..c......',
+          '....cccccccc....',
+          'ccccc.c..c.ccccc',
+          '....ccrrrrcc....',
+          '.rrrc.rrrr.crrr.',
+          '.rrrc.rrrr.crrr.',
+          '....ccrrrrcc....',
+          'ccccc.c..c.ccccc',
+          '....cccccccc....',
+          '......c..c......',
+          '......rrrr......',
+          '......rrrr......',
+          '................'
+        ].join(''),
+        doors: ['86|102',  '89|105',  '150|166',  '153|169',  '101|102',  '105|106',  '149|150',  '153|154',  '38|54',  '41|57',  '198|214',  '201|217',  '115|116',  '123|124',  '131|132',  '139|140']
+      }
     },
 
     /* A mud bank on Tessaly IV, a mile from the beacon: Brass Ledger's ship down

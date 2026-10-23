@@ -320,9 +320,11 @@
       q.x *= sx; q.w *= sx; q.y *= sy; q.h *= sy; return q;
     };
     var terrainPlan = map && !compound ? map.pieces.map(fitPiece) : null;
+    // a compound mission's own layout, where its map lays one by hand (on a table it fits; the generator's otherwise)
+    var compoundPlan = map && compound && map.compound ? JSON.parse(JSON.stringify(map.compound)) : null;
     var mapObjectives = map && !compound && map.objectives ? map.objectives.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) : null;
     // the map's own possible locations, for Find and secure: where, and what they are
-    var mapSites = map && !compound && map.sites ? { kind: map.sites.kind || 'searchsite',
+    var mapSites = map && !compound && map.sites ? { kind: map.sites.kind || 'searchsite', skin: map.sites.skin || undefined,
       at: map.sites.at.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) } : null;
     var role = lv.role || spec.role;
     var attacker = role === 'choose' ? opts.role || 'A' : ROLE[role] || null;
@@ -348,6 +350,7 @@
       campaign: true, mode: 'ai',
       planet: lv.planet || (terrainPlan && map.planet) || (place && place.kind) || spec.planet || 'random',
       terrainPlan: terrainPlan,
+      compoundPlan: compoundPlan,
       world: lv.world || (place && place.world ? R().cleanWorld(place.world) : null),
       options: options,
       story: {
@@ -355,8 +358,9 @@
         // the mission: its name over the book's scenario, its ground, and the seed that lays it the same each time
         name: spec.name || null, blurb: spec.text ? S.render(campaign, spec.text) : null,
         mapName: map ? map.name : null, objectives: mapObjectives, sites: mapSites,
-        // the map's look for its pieces: 'market' (a settlement: barricades are railings and planters, craters market clutter)
-        skin: map && !compound && map.skin || null,
+        // the map's look for its pieces: 'market' (a settlement: barricades are railings and planters, craters market clutter),
+        // 'station' (a compound in orbit: the solid round it is open space)
+        skin: map && map.skin || null,
         place: place ? { system: place.system || null, planet: place.planet || null, site: place.site || null } : null,
         seed: spec.node + ':' + spec.scenario + (east ? ':east' : ''),
         variant: variant,

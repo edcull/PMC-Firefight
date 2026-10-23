@@ -448,7 +448,7 @@
             pass: [{ next: { battle: 'c2t.battle', levers: { role: 'choose' } } }], fail: [{ next: { battle: 'c2t.battle', levers: { readiness: 1 } } }] }] },
           { id: 'pay', text: 'Pay them to leave.', cost: { kUC: 2 }, why: 'You can’t pay them.', battle: { skip: true }, effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: 1 }] }
         ], next: 'c2t.battle' },
-        { id: 'c2t.battle', type: 'battle', scenario: 'ce_control', tier: 'max', pl: 1, planet: 'arctic',
+        { id: 'c2t.battle', type: 'battle', scenario: 'ce_control', map: 'thule', tier: 'max', pl: 1, planet: 'arctic',
           place: { system: 'Okoro', planet: 'Okoro II', kind: 'arctic', world: { atmosphere: 'none' }, site: 'Station Thule' },
           enemy: { side: 'scavengers', faction: 'rebel', archetype: 'freespace', core: ['rridergang', 'rmilitia'], optional: { meter: 'kettle', per: 3, units: ['rmilitia', 'rtechnical'] }, fill: { to: 0.8, from: ['rmilitia', 'rridergang'] } },
           on: { success: [{ effects: [{ meter: 'stones', add: 1 }] }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{}] }, next: 'c2t.debrief' },
