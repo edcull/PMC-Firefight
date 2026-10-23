@@ -54,7 +54,7 @@
      stands, and is not held by side A at that End phase, sends them out.
      Each one burned is one fewer. */
   SCENARIOS.hive_heart = {
-    story: true, compound: true, rooms: 3, cell: 4, danger: 0, hidden: function () { return true; },
+    story: true, compound: true, rooms: 3, cell: 4, nest: 3, danger: 0, hidden: function () { return true; },
     id: 'hive_heart', name: 'Hive Heart', page: null,
     blurb: 'The brood chambers, at the bottom of everything. Burn them out while the hive throws everything it has at you.',
     win: 'Destroy all three brood chambers: a chamber held by your units at the End phase is destroyed. The hive wins if you are routed, or if any chamber still stands at the end of turn 14.',
@@ -64,7 +64,9 @@
       // the three furthest over towards the hive's (right-hand) edge, spread down it where they can be
       var all = state.terrain.filter(function (r) { return r.kind === 'room' || r.kind === 'hall'; })
         .sort(function (a, b) { return (b.x + b.w / 2) - (a.x + a.w / 2); });
-      var rooms = [];
+      // the nest the compound was laid with, if it was; else the rooms furthest over
+      var rooms = all.filter(function (r) { return r.nest; }).slice(0, 3);
+      if (rooms.length < 3) rooms = [];
       all.forEach(function (r) {
         if (rooms.length < 3 && r.x + r.w / 2 >= R.BOARD.w / 2 && rooms.every(function (q) { return Math.abs((q.y + q.h / 2) - (r.y + r.h / 2)) >= 6; })) rooms.push(r);
       });

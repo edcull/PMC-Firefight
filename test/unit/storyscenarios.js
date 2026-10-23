@@ -69,7 +69,9 @@ ok('Hive Heart: every chamber held at the End phase burns, and A wins', r && r.w
   ok('...and every other compound on the book\'s 3"', CMP.CELL === 3 && started('ce_clear').compound.cell === 3);
   ok('...three brood chambers, grown over: the hive\'s colours, and nothing of the base left in them', ch.length === 3 && ch.every((r) => CMP.roomTheme(r) === 6) &&
     !h.terrain.some((t) => ['crates', 'machinery', 'pillar'].indexOf(t.kind) >= 0 && ch.some((r) => t.x + t.w / 2 > r.x && t.x + t.w / 2 < r.x + r.w && t.y + t.h / 2 > r.y && t.y + t.h / 2 < r.y + r.h)));
-  ok('...on the hive\'s side of the table, the right-hand half', ch.filter((r) => r.x + r.w / 2 >= R.BOARD.w / 2).length >= 2, ch.map((r) => (r.x + r.w / 2).toFixed(0)).join(' '));
+  ok('...against the hive\'s edge, one to each part of it: the nest the compound was laid with', ch.every((r) => r.nest && r.x + r.w >= R.BOARD.w - 2 * h.compound.cell) &&
+    new Set(ch.map((r) => Math.floor((r.y + r.h / 2) / (R.BOARD.h / 3)))).size >= 2, ch.map((r) => (r.x + r.w) + '@' + (r.y + r.h / 2).toFixed(0)).join(' '));
+  ok('...and no entry corridors on that edge at all: the hive comes on in its chambers', h.compound.entries.R.length === 0);
   ok('...standing in for its entry corridors: the hive comes on in them, side A by the left-hand edge', h.sc.entry.B.length === 3 &&
     h.sc.entry.B.every((b, i) => b.x === h.sc.rooms[i].x && b.w === h.sc.rooms[i].w) && h.sc.entry.A.every((b) => b.x < 1) &&
     h.units.filter((u) => u.side === 'B' && u.alive && u.x >= 0 && !u.spawned).every((u) => h.sc.rooms.some((r) => u.x >= r.x - 1 && u.x <= r.x + r.w + 1 && u.y >= r.y - 1 && u.y <= r.y + r.h + 1)),

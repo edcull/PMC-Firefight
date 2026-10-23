@@ -383,7 +383,7 @@
       : scenDef.compound
       // (a story mission's compound is the same every time it is fought: its own seed)
       ? CMP.generate(R.BOARD.w, R.BOARD.h, cfg.story && cfg.story.seed ? K.storySeeded(cfg.story.seed) : Math.random,
-        { rooms: scenDef.rooms || 0, danger: scenDef.danger != null ? scenDef.danger : 0.15, cell: scenDef.cell || null })
+        { rooms: scenDef.rooms || 0, danger: scenDef.danger != null ? scenDef.danger : 0.15, cell: scenDef.cell || null, nest: scenDef.nest || 0 })
       : manual
       ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
       : GEN.generate({

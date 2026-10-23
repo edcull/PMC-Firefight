@@ -78,8 +78,21 @@
     var rooms = [];
     var want = Math.max(6, Math.round(N / 24)), halls = rows > 18 ? 2 : 1;
     var need = opts.rooms || 0;
+    /* `nest`: a compound one side of which is not come into by corridors but
+       lived in (the Hive Heart). No entry points on the right-hand edge; that
+       many rooms laid first against it, one to each band of it, and the rest
+       of the compound dug from the left as ever. */
+    var nest = opts.nest || 0;
+    for (var nb = 0; nb < nest; nb++) {
+      var nbw = 2 + Math.floor(rand() * 2), nbh = 2 + Math.floor(rand() * 2), band0 = (rows - 2) / nest;
+      var nj0 = 1 + Math.floor(nb * band0), nj1 = Math.max(nj0, Math.floor((nb + 1) * band0) - nbh);
+      var nri = cols - 1 - nbw - (rand() < 0.4 ? 1 : 0), nrj = nj0 + Math.floor(rand() * (nj1 - nj0 + 1));
+      if (nrj + nbh > rows - 1) nrj = rows - 1 - nbh;
+      if (rooms.some(function (r) { return nri <= r.i + r.w && nri + nbw >= r.i && nrj <= r.j + r.h && nrj + nbh >= r.j; })) return null;
+      rooms.push({ i: nri, j: nrj, w: nbw, h: nbh, kind: 'room', nest: true });
+    }
     for (var t = 0; t < 400 && rooms.length < want; t++) {
-      var hall = rooms.length < halls;
+      var hall = rooms.filter(function (r) { return r.kind === 'hall'; }).length < halls;
       var rw = hall ? 4 + Math.floor(rand() * 2) : 2 + Math.floor(rand() * 2);
       var rh = hall ? 3 + Math.floor(rand() * 2) : 2 + Math.floor(rand() * 2);
       if (rand() < 0.5) { var sw = rw; rw = rh; rh = sw; }
@@ -127,7 +140,7 @@
     /* --- entry points, spread down each long edge --- */
     var nEntry = opts.entries || (rows > 18 ? 3 : 2);
     var entries = { L: [], R: [] };
-    ['L', 'R'].forEach(function (side) {
+    (nest ? ['L'] : ['L', 'R']).forEach(function (side) {
       var band = (rows - 2) / nEntry;
       for (var e = 0; e < nEntry; e++) {
         var j0 = 1 + Math.floor(e * band), j1 = Math.max(j0, Math.floor((e + 1) * band) - 1);
@@ -486,6 +499,11 @@
         if (!g) continue;
         furnish(g, rand, opts.danger || 0);
         var laid = piecesOf(g, { w: w, h: h });
+        // (a nest's rooms, marked on the floor they are: the scenario's own)
+        g.rooms.forEach(function (r) {
+          if (!r.nest) return;
+          laid.terrain.forEach(function (p) { if (p.kind === 'room' && p.x === r.i * CELL && p.y === r.j * CELL) p.nest = true; });
+        });
         return {
           terrain: laid.terrain,
           compound: { cell: CELL, cols: g.cols, rows: g.rows, entries: laid.entries },
