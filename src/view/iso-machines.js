@@ -59,6 +59,8 @@
       mdest: { axles: 4, len: 2.55, wid: 1.45, hgt: 17, gun: 2.1, fat: true, style: { body: 'mbt', skirts: 'panels', turret: 'mbt', tSize: 1.0, gunLen: 2.5, gunW: 3.2, tMissiles: true, plasma: true } },
       lorry: { rearDoor: true, axles: 2, len: 2.10, wid: 1.00, hgt: 15, wheelR: 0.72, gun: 0.8, style: { body: 'truck', noGuard: true } },
       hlorry: { rearDoor: true, axles: 3, len: 2.45, wid: 1.10, hgt: 17, wheelR: 0.8, gun: 0.8, style: { body: 'truck', heavy: true, armourBox: true } },
+      // a cargo loader (a story map's piece, not a unit): the patrol pickup with a forklift mast and forks at its front
+      loader: { axles: 2, len: 1.95, wid: 1.00, hgt: 16, wheelR: 0.7, gun: 0.8, style: { body: 'pickup', forks: true } },
       // a fuel bowser (a story map's piece, not a unit): the heavy lorry with a steel tank on its bed
       bowser: { axles: 3, len: 2.45, wid: 1.10, hgt: 17, wheelR: 0.8, gun: 0.8, style: { body: 'truck', heavy: true, fuelTank: true } },
       m113: { rearDoor: true, axles: 3, len: 2.20, wid: 1.20, hgt: 19, gun: 0.9, style: { body: 'box', pintle: [0.06, 0.25], shield: true } },

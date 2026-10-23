@@ -483,6 +483,15 @@
         /* A cargo lifter: a squat orange loader, a roll cage over its seat, and a
            mast at its east end with a crate up on its forks. */
         case 'cargolifter': {
+          /* The lifter is the patrol pickup from the unit art with a forklift on
+             its front (iso-machines 'loader'), a case up on its forks, in the
+             port's amber. Drawn by hand only where that art is not loaded. */
+          var ISO2 = root.PMCIso;
+          if (ISO2 && ISO2.machine) {
+            ISO2.machine(g, { id: 'loader', art: 'loader', side: 'N', paint: 'P', faction: 'civilian', cls: 'vehicle', alive: true, facing: pr.facing || 0 },
+              { at: { x: pr.x + pr.w / 2, y: pr.y + pr.h / 2 }, lift: lift || 0, status: 'ready' });
+            break;
+          }
           var ll = lift || 0, lx = pr.x, ly = pr.y, lw = pr.w, lh2 = pr.h;
           function LP(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - ll - z]; }
           var lm = LP(lx + lw / 2, ly + lh2 / 2, 0);

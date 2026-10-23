@@ -97,8 +97,28 @@
               ];
               walls.sort(function (p, q) { return p.d - q.d; }).forEach(function (p) { p.fn(); });
             };
-            [{ t: L * 0.33, fn: bonnet }, { t: (cA0 + cA1) / 2, fn: cab }, { t: (bedA1 - L * 0.5) / 2, fn: bed }]
-              .sort(function (p, q) { return p.t * fwdP - q.t * fwdP; })
+            /* a loader's forklift (style.forks): a mast of two steel uprights off
+               the front bumper, a carriage across them, and two tines carrying a
+               cargo case up off the ground */
+            var forks = function () {
+              var fa = L * 0.53, top = z0 + H * 3.1, lz = z0 + H * 1.1;
+              var CASE = tone('#76828b', '#5f6a72', '#3a4248', '#6a757d');
+              var MAST = tone('#9aa6b0', '#6a757e', '#3a4248', '#86929c');
+              [-w * 0.6, w * 0.6].forEach(function (s0) {
+                slabF(HF, fa, fa + L * 0.05, s0 - w * 0.08, s0 + w * 0.08, z0 + 1, top - z0 - 1, MAST);
+              });
+              // the lift chain and the hazard stripe across the top of the mast
+              edge(g, S3(HF(fa + L * 0.03, 0), z0 + H * 0.4), S3(HF(fa + L * 0.03, 0), top), '#2a2e32', 1);
+              slabF(HF, fa + L * 0.03, fa + L * 0.06, -w * 0.68, w * 0.68, top - H * 0.2, H * 0.2, tone('#e0b440', '#c89c32', '#6a5418', '#d8ac3a'));
+              slabF(HF, fa + L * 0.04, fa + L * 0.07, -w * 0.6, w * 0.6, lz, H * 0.35, TS);
+              [-w * 0.32, w * 0.32].forEach(function (s0) {
+                slabF(HF, fa + L * 0.07, fa + L * 0.42, s0 - w * 0.07, s0 + w * 0.07, lz, 1.2, TS);
+              });
+              slabF(HF, fa + L * 0.09, fa + L * 0.4, -w * 0.52, w * 0.52, lz + 1.2, H * 0.75, CASE, 0, 0, w * 0.02);
+            };
+            var parts = [{ t: L * 0.33, fn: bonnet }, { t: (cA0 + cA1) / 2, fn: cab }, { t: (bedA1 - L * 0.5) / 2, fn: bed }];
+            if (st.forks) parts.push({ t: L * 0.7, fn: forks });
+            parts.sort(function (p, q) { return p.t * fwdP - q.t * fwdP; })
               .forEach(function (p) { p.fn(); });
             if (st.turret && fwdP > 0.02) pickupFront = function () { cab(); bonnet(); };
             return;
