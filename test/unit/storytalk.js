@@ -48,6 +48,16 @@ const people = new Set();
 ok('everyone who speaks is one of the story’s people, with a face', [...people].every((w) => dc.people[w] && dc.people[w].face), [...people].join(', '));
 ok('every battle it names is one of the story’s', Object.keys(dc.talk.battles).every((k) => dc._nodes[k] || (k.indexOf('@side:') === 0 && dc.side.jobs.some((j) => '@side:' + j.id === k))));
 
+console.log('\nThe arrival: the story opens on a conversation');
+{
+  const k = at('c1.brief'), v = S.view(k);
+  ok('Landfall’s first page opens with the ship’s captain reporting in orbit', v.id === 'c1.brief' && v.talk && v.talk[0].who === 'captain' && /orbit/.test(v.talk[0].text));
+  ok('...HTX’s director setting out the job, the port master on the radio last', v.talk.some((l) => l.who === 'liaison') && v.talk[v.talk.length - 1].who === 'okonkwo');
+  ok('...and the commander answering, by rank and name, for the company', v.talk.some((l) => l.who === 'commander' && /Quill/.test(l.name) && l.role === k.companies.A.name));
+  ok('...written out, and every speaker one of the story’s people', v.talk.every((l) => !/[{}]/.test(l.text) && dc.people[l.who]));
+  ok('a page with no conversation has none', !S.view(at('c1.portmaster')).talk);
+}
+
 console.log('\nSaid in the battle');
 function deployAndStart(e) {
   for (let i = 0; i < 8 && e.state().phase !== 'battle'; i++) {

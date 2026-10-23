@@ -73,6 +73,11 @@ async function cards(p) {
   check('...on the chapter’s card', await p.evaluate(() => !!document.querySelector('#camp-body .story-card')));
   check('...which opens on a picture of the place: the starport', await p.evaluate(() => { const i = document.querySelector('#camp-body .story-card img.story-scene'); return !!i && /^data:image\/png/.test(i.src) && i.naturalWidth === 128; }));
   await p.screenshot({ path: path.join(SHOTS, 'story-chapter.png') });
+  const talk = await p.evaluate(() => [...document.querySelectorAll('#camp-body .story-talk .story-line')].map((l) => ({ who: l.querySelector('b').textContent, face: !!l.querySelector('.talk-face svg rect'), mine: l.classList.contains('mine') })));
+  check('...and a conversation as the ship arrives: its captain, HTX’s man, the commander and the port, each with a face', talk.length >= 6 && talk.every((l) => l.face) &&
+    /Captain/.test(talk[0].who) && talk.some((l) => /Hale/.test(l.who)) && talk.some((l) => l.mine) && /Okonkwo/.test(talk[talk.length - 1].who), JSON.stringify(talk.map((l) => l.who)));
+  await p.evaluate(() => document.querySelector('#camp-body .story-talk').scrollIntoView());
+  await p.screenshot({ path: path.join(SHOTS, 'story-arrival.png') });
   check('the commander is named in the story: Second Lieutenant Okafor', /Mara Okafor is on the first shuttle/.test(txt) && /addressed to Second Lieutenant Okafor/.test(txt), txt.slice(0, 600));
   const officer = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(), co = c.companies.A, e = co.roster.find((x) => x.rid === co.cmdRid); return e && e.men && e.men[0]; });
   check('...and is the officer at the head of the command squad', officer && officer.name === 'Mara Okafor', JSON.stringify(officer));

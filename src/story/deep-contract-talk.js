@@ -33,9 +33,29 @@
     people: {
       ops: { name: 'Company net', role: 'Your radio operator', face: { bg: '#6a8a6a', skin: '#c99a76', hair: '#3a2a1a', hairStyle: 'short', hat: 'cap', hatColour: '#3d4a38', clothes: '#4a5a40', clothesStyle: 'uniform', accent: '#d8c070', extras: ['stubble'] } },
       fighter: { name: 'A Front fighter', role: 'The Free Miners’ Front', face: { bg: '#b0502c', skin: '#9a6a48', hair: '#2a2018', hat: 'hardhat', hatColour: '#d89a20', clothes: '#4a3a2e', clothesStyle: 'overalls', accent: '#b03a2e', extras: ['bandana', 'stubble'], bandana: '#b03a2e' } },
+      captain: { name: 'Captain Ilse Varn', role: 'Master of the hauler Patient Margin', face: { bg: '#3a4a6e', skin: '#e2b48f', hair: '#c8c0b0', hairStyle: 'bun', hat: 'cap', hatColour: '#1e2638', clothes: '#1e2638', clothesStyle: 'uniform', accent: '#d8c070', extras: ['scar'], eyes: '#5a7a9a' } },
+      liaison: { name: 'Director Calder Hale', role: 'HTX, Kessler\u2019s Reach operations', face: { bg: '#5fb4d2', skin: '#d8a682', hair: '#3a2a1a', hairStyle: 'short', clothes: '#22262e', clothesStyle: 'suit', accent: '#3a8fb0', extras: ['glasses'], eyes: '#4a5a6a' } },
+      commander: { name: 'The commander', role: 'Your company', face: { bg: '#8a7a5a', skin: '#c99a76', hair: '#2b2622', hairStyle: 'short', hat: 'cap', hatColour: '#3d4a38', clothes: '#4a5240', clothesStyle: 'uniform', accent: '#e0c25a', extras: ['stubble'] } },
       portguard: { name: 'Port security', role: 'The starport\u2019s guard', face: { bg: '#7fa3b9', skin: '#d8a682', hair: '#5a3a22', hairStyle: 'short', hat: 'cap', hatColour: '#2f3e5a', clothes: '#2f3e5a', clothesStyle: 'uniform', accent: '#e8c25a', extras: ['moustache'] } },
       garrison: { name: 'Garrison sergeant', role: 'HTX\u2019s refinery garrison', face: { bg: '#8a9a7a', skin: '#b07a55', hair: '#1d1612', hairStyle: 'bald', hat: 'helmet', hatColour: '#55604a', clothes: '#4a5240', clothesStyle: 'armour', accent: '#c8a040', extras: ['stubble', 'scar'] } },
       actual: { name: 'Lantern Actual', role: 'Black Lantern Security', face: { bg: '#d8b84a', skin: '#b88a66', hair: '#222', hairStyle: 'short', hat: 'visor', hatColour: '#1e1e24', clothes: '#2c2c34', clothesStyle: 'armour', accent: '#e0c25a', extras: ['scar'] } }
+    },
+
+    /* Conversations on the story's own pages, before the page's text: keyed by
+       the node they open. `commander` is the company's own commander, named. */
+    conversations: {
+      'c1.brief': [
+        { who: 'captain', text: 'Patient Margin to {name}. We\u2019ve made orbit over Kessler\u2019s Reach. Ten hours late, and the starport\u2019s beacon is the only one still lit on the whole moon.' },
+        { who: 'captain', text: 'Something down there took a shot at our approach lights on the way in. Small arms, from the town. I\u2019m not putting my ship on the ground.' },
+        { who: 'liaison', text: 'Welcome to Kessler\u2019s Reach, {commander:rank}. Calder Hale, HTX operations. I\u2019ll be your contact for the length of the contract.' },
+        { who: 'liaison', text: 'The miners have stopped working and started shooting. They call themselves the Free Miners\u2019 Front. They hold half the shafts, the roads, and they want the starport.' },
+        { who: 'commander', text: 'And HTX wants?' },
+        { who: 'liaison', text: 'Order restored. Quickly, and quietly. The board would rather not see this moon on the news. Hold the port, and the rest of your contract can land behind you.' },
+        { who: 'commander', text: 'Anything I should know about why they rose?' },
+        { who: 'liaison', text: 'Pay disputes. Agitators. It\u2019s all in the briefing pack.' },
+        { who: 'captain', text: 'Shuttle\u2019s on the rail, {commander:rank}. You drop in ten. After that, you\u2019re on your own until the next run.' },
+        { who: 'okonkwo', text: 'Port Master to incoming shuttle\u2014pad three, the last one standing. Come in fast and low. They\u2019ve a launcher somewhere on the terminal roof.' }
+      ]
     },
 
     /* The allies, by the side they come from (a battle's `allies`): what they

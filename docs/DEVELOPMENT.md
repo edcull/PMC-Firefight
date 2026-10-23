@@ -77,7 +77,8 @@ src/
                      48" table, stretched on a 6' x 4'), with named objectives where they fit
     deep-contract-talk.js  what is said in its battles: each enemy side's lines and each battle's
                      own, by moment (start, first kill or loss, half gone, waves, talks broken),
-                     and the allies' words, reporting in and answering each order,
+                     and the allies' words, reporting in and answering each order, and the
+                     conversations that open a story page (a node's `talk`: the arrival),
                      and the voices heard only there (story.js talkFor; storybattle.js storyTalk)
 
   view/              the browser

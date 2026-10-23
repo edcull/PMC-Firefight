@@ -63,6 +63,10 @@
     if (!talk) return def;
     def.talk = { sides: talk.sides || {}, battles: talk.battles || {}, allies: talk.allies || {} };
     Object.keys(talk.people || {}).forEach(function (k) { if (!def.people[k]) def.people[k] = talk.people[k]; });
+    // a conversation opens the page it is keyed to
+    Object.keys(talk.conversations || {}).forEach(function (id) {
+      (def.chapters || []).forEach(function (ch) { (ch.nodes || []).forEach(function (n) { if (n.id === id) n.talk = talk.conversations[id]; }); });
+    });
     return def;
   }
   function withWho(def) {

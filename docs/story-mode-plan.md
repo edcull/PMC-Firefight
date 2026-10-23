@@ -1136,7 +1136,12 @@ then said before the rest. Allies, by the side they come from (the port's
 guards, the refinery garrison, the Front, Black Lantern), report in as the battle
 opens and answer each order given them, Move, Attack or Hold here, or the order
 withdrawn (`allies` in the talk; `story.js` `allyVoice`; `storybattle.js`
-`allyAnswer`). `story.js` `talkFor` picks them as the battle is set
+`allyAnswer`). The story opens on a conversation: Landfall's first page has the
+hauler's captain reporting the ship in orbit, HTX's director on the moon setting
+out the job, the commander answering by rank and name, and the port master
+talking the shuttle down, each line beside its speaker's face (a node's `talk`,
+from the talk file's `conversations`; `story.js` `conversation`). `story.js`
+`talkFor` picks them as the battle is set
 up; `storybattle.js` `storyTalk` says each once, writes it to the log, and keeps
 what has been said on the battle.
 

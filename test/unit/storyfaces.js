@@ -37,6 +37,7 @@ ok('events name who they are about, each one of the story’s people', named.len
 const talkers = [];
 [dc.talk.sides, dc.talk.battles].forEach((g) => Object.keys(g).forEach((k) => Object.keys(g[k]).forEach((m) => g[k][m].forEach((l) => talkers.push(l.who)))));
 Object.keys(dc.talk.allies).forEach((k) => talkers.push(dc.talk.allies[k].who));
+nodes.forEach((n) => (n.talk || []).forEach((l) => talkers.push(l.who)));
 ok('...and every person is in at least one, or speaks in a battle', ids.every((k) => named.some((n) => n.who === k) || talkers.indexOf(k) >= 0));
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');

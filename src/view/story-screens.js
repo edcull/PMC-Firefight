@@ -126,6 +126,7 @@
         h += '<div class="story-card">' + sceneOf(ch.scene) + '<small>' + (ch.counts === false ? '' : 'Chapter ' + st.chapterNo + (ch.half === 2 ? ' · Fault Lines' : ' · The Contract')) + '</small>' +
           '<b>' + esc(ch.title) + '</b>' + (ch.intro ? para(ch.intro) : '') + '</div>';
       }
+      if (v.talk) h += talkView(v.talk);
       if (v.type === 'brief') h += para(v.text) + '<div class="story-go"><button class="start" data-go="storyon">Go on</button></div>';
       else if (v.type === 'event') h += eventView(v);
       else if (v.type === 'battle') h += battleView(v);
@@ -175,6 +176,17 @@
       var n = def()._nodes[id], who = n && n.who && (def().people || {})[n.who], PF = root.PMCStoryPortraits;
       if (!who || !PF) return '';
       return '<div class="story-who">' + PF.svg(who.face, 64) + '<span><b>' + esc(who.name) + '</b><small>' + esc(who.role || '') + '</small></span></div>';
+    }
+
+    /* A conversation opening a page (the node's `talk`): each line beside the
+       speaker's face, the company's own commander on the right. */
+    function talkView(lines) {
+      var people = def().people || {}, PF = root.PMCStoryPortraits;
+      return '<div class="story-talk">' + lines.map(function (l) {
+        var p = people[l.who], face = p && p.face && PF ? PF.svg(p.face, 48) : '';
+        return '<div class="story-line' + (l.who === 'commander' ? ' mine' : '') + '">' + (face ? '<div class="talk-face">' + face + '</div>' : '') +
+          '<div class="story-said"><b>' + esc(l.name) + '</b>' + (l.role ? '<small>' + esc(l.role) + '</small>' : '') + '<p>' + esc(l.text) + '</p></div></div>';
+      }).join('') + '</div>';
     }
 
     function eventView(v) {

@@ -2532,6 +2532,16 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .talk-who b { font-family: var(--display); font-size: 13px; letter-spacing: .04em; }
 .talk-who small { color: var(--ink-dim); font-size: 11px; }
 .talk-line { margin: 0; font-size: 14px; line-height: 1.45; font-style: italic; }
+/* a conversation opening a story page: each line beside its speaker's face */
+.story-talk { display: flex; flex-direction: column; gap: 10px; margin: 0 0 16px; }
+.story-line { display: flex; gap: 10px; align-items: flex-start; }
+.story-line.mine { flex-direction: row-reverse; }
+.story-line .talk-face { width: 48px; height: 48px; }
+.story-said { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 11px 8px; max-width: min(560px, 82%); }
+.story-line.mine .story-said { border-color: color-mix(in srgb, var(--alpha) 45%, var(--line)); }
+.story-said b { font-family: var(--display); font-size: 12px; letter-spacing: .04em; }
+.story-said small { color: var(--ink-dim); font-size: 11px; margin-left: 8px; }
+.story-said p { margin: 4px 0 0; font-size: 14px; line-height: 1.45; }
 .story-portrait { flex: none; border-radius: 4px; box-shadow: 0 0 0 1px var(--line); image-rendering: pixelated; }
 .story-badges { margin: 0 0 8px; }
 .story-scene-wrap { margin: 0 0 10px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); line-height: 0; }

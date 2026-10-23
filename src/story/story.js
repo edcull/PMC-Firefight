@@ -386,6 +386,7 @@
     if (node.type === 'interlude') out.side = sideOffers(campaign, node);
     if (node.side) out.sideJob = st.detour ? st.detour.job : null;
     if (node.type === 'ending') out.ending = st.ended;
+    if (node.talk) out.talk = conversation(campaign, node.talk);
     return out;
   }
 
@@ -516,6 +517,16 @@
     var av = allyVoice(campaign, spec);
     if (av && av.report.length) out.unshift({ on: 'allies', who: av.who, name: av.name, role: av.role, text: av.report[Math.floor(Math.random() * av.report.length)] });
     return out;
+  }
+  /* A conversation on a page (a node's `talk`): each line with who says it,
+     their name and what they are, written out; `commander` is the company's
+     own, by rank and name. */
+  function conversation(campaign, lines) {
+    var people = (storyOf(campaign) || {}).people || {}, co = campaign.companies && campaign.companies.A;
+    return arr(lines).map(function (l) {
+      var who = people[l.who] || {}, me = l.who === 'commander';
+      return { who: l.who, name: me ? commanderWords(campaign, 'rank') : (who.name || l.who), role: me ? (co ? co.name : '') : (who.role || ''), text: render(campaign, l.text) };
+    });
   }
   /* What the allies say, if a battle has them: who they are, and their words
      for reporting in and for each order, written out. */

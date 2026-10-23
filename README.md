@@ -267,7 +267,9 @@ campaign, naming its commander under the company's name. The commander is the
 officer at the head of the command squad: the story calls them by name, and they
 are never a casualty.
 
-The story runs in chapters. Each opens with its card, then events: a situation
+The story runs in chapters. It opens in orbit, as the ship's captain, HTX's man on
+the moon and your commander talk over the job before the shuttle goes down. Each
+chapter opens with its card, then events: a situation
 and a few choices, some closed until you have the money, the Intel or the
 history for them. What you choose moves the story's **meters** (HTX Standing,
 Loyalty and Intel are shown; the rest come to light as you learn of them) and sets
