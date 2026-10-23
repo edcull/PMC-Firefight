@@ -659,7 +659,7 @@
        by levers.js): each piece given its outline, a wood its lobes, a building
        its wings, by the mission's seed, so it is drawn the same each time. */
     /* A map's skin for its pieces (levers.js `skin`): on a settlement's
-       ('market'), a barricade is a row of market stalls and a crater field the
+       ('market'), a barricade is a boulevard's railings and planters and a crater field the
        market's clutter. The rules read them as they always did; only the look
        and the name change. Asked of the map's pieces and of any put down later. */
     function marketSkin(cfg, t) {

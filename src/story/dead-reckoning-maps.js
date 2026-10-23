@@ -27,30 +27,31 @@
 
     /* Vesk Free Port: a settlement at a crossroads, crossed west to east. Paved
        roads run in from the four edges of the table and meet in the market
-       square in the middle; the auction house stands in the middle of the
-       square, so the way across goes round it, and a fountain fills the
-       square's north-west corner, too tall to see across. Houses, warehouses
-       and the arcade crowd the four quarters, and market stalls line the roads
-       where they come into the square. The landing field is beyond the east
-       edge, where Vane's ship waits (Escort). Its skin is the market's
-       (`skin`): the barricades are stalls, the craters market clutter, as the
-       rules still read them (levers.js, iso-props.js). */
+       square in the middle. The auction house, a glass tower over the whole
+       port, stands in the middle of the square, so the way across goes round
+       it, and a fountain fills the square's south-east corner, too tall to see
+       across. Houses, warehouses and the arcade crowd the four quarters, and
+       railings and planters line the boulevards where they come into the
+       square. The landing field is beyond the east edge, where Vane's ship
+       waits (Escort). Its skin is the market's (`skin`): the barricades are
+       railings and planters, the craters market clutter, as the rules still
+       read them (levers.js, iso-props.js). */
     vesk: {
       name: 'The market square, Vesk Free Port', planet: 'dense', skin: 'market',
       pieces: [
         // the crossroads: four paved roads from the table's edges, and the square where they meet, paved round the auction house
         P(0, 22, 16, 4), P(32, 22, 16, 4), P(22, 0, 4, 16), P(22, 32, 4, 16),
-        P(20, 16, 12, 4), P(28, 20, 4, 12), P(16, 28, 12, 4), P(16, 20, 4, 8),
-        R('fountain', 16, 16, 4, 4), B(20, 20, 8, 8, 'block'),
+        P(16, 16, 16, 4), P(16, 20, 4, 12), P(28, 20, 4, 8), P(20, 28, 8, 4),
+        R('fountain', 28, 28, 4, 4), Object.assign(B(20, 20, 8, 8, 'block'), { style: 'glass', tall: 4.5 }),
         // the four quarters: houses, warehouses, the arcade
         B(5, 3, 9, 7, 'U'), B(15, 3, 5, 5, 'block'), B(5, 13, 5, 6, 'L'),
         B(30, 3, 9, 6, 'L'), B(40, 4, 4, 5, 'annex'), B(31, 11, 5, 5, 'block'), R('ruins', 38, 12, 4, 4),
         B(5, 30, 5, 4, 'block'), B(5, 36, 8, 7, 'T'), B(15, 40, 5, 5, 'annex'),
         B(33, 30, 4, 5, 'annex'), B(32, 37, 9, 6, 'block'), R('wall', 29, 38, 1, 6),
-        // the stalls where the roads come into the square
+        // the boulevards' railings and planters, where the roads come into the square
         R('barricade', 11, 19, 5, 1), R('barricade', 19, 10, 1, 5), R('barricade', 28, 10, 1, 5), R('barricade', 32, 19, 5, 1),
         R('barricade', 11, 28, 5, 1), R('barricade', 19, 33, 1, 5), R('barricade', 28, 33, 1, 5), R('barricade', 32, 28, 5, 1),
-        // the market's clutter: cargo cases, drums and vending terminals where the stalls overflow
+        // the market's clutter: cargo cases, drums and vending terminals where the market overflows
         N('crater', 11, 12, 4, 4, 'blob'), N('crater', 11, 31, 4, 4, 'blob'), N('crater', 38, 31, 4, 4, 'blob')
       ]
     },

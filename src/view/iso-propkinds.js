@@ -27,6 +27,61 @@
     var CANOPY = [['#1f5866', '#6fe8ff', 'rgba(111,232,255,.28)'], ['#5e2a56', '#ff7ad8', 'rgba(255,122,216,.28)'], ['#6a5218', '#ffcf5a', 'rgba(255,207,90,.28)'],
       ['#24503a', '#7affb0', 'rgba(122,255,176,.28)'], ['#2e3470', '#9aa8ff', 'rgba(154,168,255,.28)']];
     var WARES = ['#6fe8ff', '#ffcf5a', '#7affb0', '#d8dee4', '#ff7ad8', '#8a96a0'];
+    // a boulevard: the railings' steel, the planters' cast stone and the trees in them
+    var RAIL = ['#1e2328', '#3a434b', '#7d8a95', '#a9b6c0', '#dbe4ea'];
+    var PLANTER = ['#2a2c2c', '#3c3f3f', '#545858', '#6a6f6f', '#7f8484', '#989d9c'];
+    var SHRUB = ['#1f3a1c', '#2e5a2a', '#4a7e3a', '#6a9e4a'];
+    // a glass tower: tinted curtain wall, its mullions, and the light in it
+    var GLASS = ['#0c1820', '#13283a', '#1a3a54', '#21506e', '#2b6a8a', '#3c86a8'];
+    /* A glass tower (a map's landmark, style 'glass'): a tinted curtain wall
+       ruled into panes by bright mullions and floor by floor, a sheen of sky
+       slanting across it, lit offices here and there, and a narrower crown on
+       top with a lit band and a mast. Cut away, it is a building like any other. */
+    function glassTower(g, pr, lift, cutaway) {
+      if (cutaway) { box(g, pr, GLASS, { roof: GLASS[1], roofEdge: GLASS[5], windows: null, lift: lift, cutaway: true }); return; }
+      var gr = rng(pr.seed || 11), body = Math.round(pr.height * 0.82);
+      function pt(x, y, up) { var q = toScreen(x, y); return [q.x, q.y - lift - (up || 0)]; }
+      function curtain(q, h, base) {
+        box(g, { x: q.x, y: q.y, w: q.w, h: q.h, height: h, seed: q.seed }, GLASS, { roof: '#18232c', roofEdge: '#7fd8f0', windows: null, lift: lift + (base || 0), noShadow: !!base });
+        var faces = [[[q.x + q.w, q.y], [q.x + q.w, q.y + q.h]], [[q.x, q.y + q.h], [q.x + q.w, q.y + q.h]]];
+        faces.forEach(function (F, fi) {
+          var len = Math.hypot(F[1][0] - F[0][0], F[1][1] - F[0][1]), cols = Math.max(2, Math.round(len / 0.8)), floors = Math.max(3, Math.round(h / a(2.2)));
+          // the glass, lit floor by floor: an office's lights on in some of the panes
+          for (var fl = 0; fl < floors; fl++) {
+            for (var c = 0; c < cols; c++) {
+              if (gr() > 0.16) continue;
+              var u0 = c / cols, u1 = (c + 1) / cols, z0 = base + h * fl / floors + 2, z1 = base + h * (fl + 1) / floors - 2;
+              var A = lerp2(F[0], F[1], u0), B2 = lerp2(F[0], F[1], u1);
+              poly(g, [pt(A[0], A[1], z0), pt(B2[0], B2[1], z0), pt(B2[0], B2[1], z1), pt(A[0], A[1], z1)], gr() > 0.4 ? 'rgba(255,214,140,.55)' : 'rgba(150,230,255,.45)');
+            }
+          }
+          // the sky's sheen, one slanting band across the face
+          for (var sb = 0; sb < 1; sb++) {
+            var s0 = 0.2 + gr() * 0.3, sw = 0.16, zz0 = base + h * 0.05, zz1 = base + h * 0.95;
+            var P0 = lerp2(F[0], F[1], s0), P1 = lerp2(F[0], F[1], Math.min(1, s0 + sw)), P2 = lerp2(F[0], F[1], Math.min(1, s0 + sw + 0.18)), P3 = lerp2(F[0], F[1], Math.min(1, s0 + 0.18));
+            poly(g, [pt(P0[0], P0[1], zz0), pt(P1[0], P1[1], zz0), pt(P2[0], P2[1], zz1), pt(P3[0], P3[1], zz1)], fi ? 'rgba(200,240,255,.07)' : 'rgba(200,240,255,.12)');
+          }
+          // mullions up the face and a spandrel at every floor
+          for (var m = 1; m < cols; m++) { var M = lerp2(F[0], F[1], m / cols); edgeLine(g, pt(M[0], M[1], base + 1), pt(M[0], M[1], base + h - 1), 'rgba(160,215,235,.35)', 1); }
+          for (var f2 = 1; f2 < floors; f2++) edgeLine(g, pt(F[0][0], F[0][1], base + h * f2 / floors), pt(F[1][0], F[1][1], base + h * f2 / floors), 'rgba(10,20,28,.55)', 1);
+        });
+        // the corner nearest the viewer, catching the light all the way up
+        edgeLine(g, pt(q.x + q.w, q.y + q.h, base), pt(q.x + q.w, q.y + q.h, base + h), '#a8eaff', 1);
+      }
+      curtain(pr, body, 0);
+      // a lit band where the crown begins
+      var cA = pt(pr.x + pr.w, pr.y, body), cB = pt(pr.x + pr.w, pr.y + pr.h, body), cC = pt(pr.x, pr.y + pr.h, body);
+      edgeLine(g, cA, cB, '#6fe8ff', 2); edgeLine(g, cC, cB, '#6fe8ff', 2);
+      // the crown: set back from the edge, a storey and a half taller
+      var inset = Math.min(pr.w, pr.h) * 0.22;
+      var crown = { x: pr.x + inset, y: pr.y + inset, w: pr.w - inset * 2, h: pr.h - inset * 2, seed: (pr.seed || 11) + 3 };
+      curtain(crown, pr.height - body, body);
+      // the mast on the crown, a warning light at its tip
+      var mb = pt(crown.x + crown.w / 2, crown.y + crown.h / 2, pr.height), mh = a(9);
+      edgeLine(g, mb, [mb[0], mb[1] - mh], '#8a96a0', 2);
+      edgeLine(g, [mb[0] - a(0.6), mb[1] - mh * 0.45], [mb[0] + a(0.6), mb[1] - mh * 0.45], '#8a96a0', 1);
+      dot(g, mb[0], mb[1] - mh - 1, '#ff4a3a', 3);
+    }
     function drawKind(cutaway, g, lift, p, pr) {
       switch (pr.kind) {
         case 'tree': {
@@ -221,6 +276,42 @@
           rect(g, hm[0] - hw, hm[1] - hh * 2.2, hw * 2, hh, cn[2]);
           edgeLine(g, [hm[0] - hw, hm[1] - hh * 2.2], [hm[0] + hw, hm[1] - hh * 2.2], cn[1], 1);
           for (var li = 0; li < 3; li++) dot(g, hm[0] - hw * 0.6 + li * hw * 0.6, hm[1] - hh * 1.7, cn[1], 1);
+          break;
+        }
+        /* A stretch of boulevard (a settlement's barricade, iso-props.js): steel
+           posts and two rails with a glass panel between them, a planter with a
+           young tree in it every other length, and a street lamp at its head. */
+        case 'railing': {
+          var rr = rng(pr.seed), rl = lift || 0, rhz = pr.horiz, half = (pr.len || 1.25) / 2;
+          function rp(x, y, up) { var q = toScreen(x, y); return [q.x, q.y - rl - (up || 0)]; }
+          var RA = rhz ? [pr.x - half, pr.y] : [pr.x, pr.y - half], RB = rhz ? [pr.x + half, pr.y] : [pr.x, pr.y + half];
+          if (pr.planter) {
+            var pw2 = rhz ? pr.len * 0.8 : 0.7, ph2 = rhz ? 0.7 : pr.len * 0.8;
+            box(g, { x: pr.x - pw2 / 2, y: pr.y - ph2 / 2, w: pw2, h: ph2, height: a(1.3), seed: pr.seed }, PLANTER, { roof: '#3a2c1e', roofEdge: PLANTER[5], windows: null, lift: rl });
+            // a young tree: a slim trunk and a crown of leaves, a shade lighter where the light comes from
+            var tb = rp(pr.x, pr.y, a(1.3)), th2 = a(3.4 + rr() * 1.2), cr = a(1.5 + rr() * 0.4);
+            rect(g, tb[0] - 1, tb[1] - th2, 2, th2, BARK[1]);
+            ellipse(g, tb[0], tb[1] - th2 - cr * 0.3, cr, cr * 0.85, SHRUB[1]);
+            ellipse(g, tb[0] - cr * 0.25, tb[1] - th2 - cr * 0.55, cr * 0.65, cr * 0.55, SHRUB[2]);
+            for (var lf = 0; lf < 5; lf++) dot(g, tb[0] + (rr() - 0.5) * cr * 1.4, tb[1] - th2 - cr * 0.3 + (rr() - 0.5) * cr, SHRUB[rr() > 0.5 ? 0 : 3], 1);
+          } else {
+            var rH = a(2.4), rM = a(1.2);
+            // the glass between the rails, then the posts, then the rails over them
+            poly(g, [rp(RA[0], RA[1], rM), rp(RB[0], RB[1], rM), rp(RB[0], RB[1], rH), rp(RA[0], RA[1], rH)], 'rgba(140,210,230,.22)');
+            [RA, RB].forEach(function (c) { edgeLine(g, rp(c[0], c[1], 0), rp(c[0], c[1], rH), RAIL[1], 2); edgeLine(g, rp(c[0], c[1], 0), rp(c[0], c[1], rH), RAIL[3], 1); });
+            edgeLine(g, rp(RA[0], RA[1], rM), rp(RB[0], RB[1], rM), RAIL[2], 1);
+            edgeLine(g, rp(RA[0], RA[1], rH), rp(RB[0], RB[1], rH), RAIL[2], 2);
+            edgeLine(g, rp(RA[0], RA[1], rH + 1), rp(RB[0], RB[1], rH + 1), RAIL[4], 1);
+          }
+          if (pr.lamp) {
+            // the street lamp: a tall mast, an arm over the walk and a cold white light under it
+            var lb = rp(RA[0], RA[1], 0), lh = a(7.5), arm = a(1.2);
+            edgeLine(g, lb, [lb[0], lb[1] - lh], RAIL[0], 2);
+            edgeLine(g, [lb[0] + 1, lb[1]], [lb[0] + 1, lb[1] - lh], RAIL[3], 1);
+            edgeLine(g, [lb[0], lb[1] - lh], [lb[0] + arm, lb[1] - lh + a(0.3)], RAIL[2], 2);
+            ellipse(g, lb[0] + arm, lb[1] - lh + a(0.6), a(0.9), a(0.5), 'rgba(190,240,255,.25)');
+            rect(g, lb[0] + arm - a(0.35), lb[1] - lh + a(0.25), a(0.7), a(0.3), '#e8faff');
+          }
           break;
         }
         case 'sacks': {
@@ -1027,6 +1118,7 @@
         case 'bunker':
         case 'highwall': {
           var bst = pr.kind === 'building' ? (pr.style || 'concrete') : null;
+          if (bst === 'glass') { glassTower(g, pr, lift || 0, !!cutaway); break; }
           var bp = pr.kind === 'bunker' ? CONCRETE : pr.kind === 'highwall' ? STONE : bst === 'brick' ? BRICK : bst === 'prefab' ? PREFAB : CONCRETE;
           box(g, pr, bp, {
             style: bst, main: pr.main !== false,

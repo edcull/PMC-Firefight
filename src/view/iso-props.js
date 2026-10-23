@@ -276,13 +276,14 @@
             });
           }
         } else if (r.kind === 'barricade' && r.market) {
-          /* A settlement's barricade (a map's market skin, storybattle.js): a row
-             of market stalls, steel kiosks under tinted canopies, a stall a length. */
-          var mhz = r.w > r.h, mln = mhz ? r.w : r.h, nst = Math.max(1, Math.round(mln / 1.7)), msl = mln / nst, mtone = rand();
+          /* A settlement's barricade (a map's market skin, storybattle.js): a
+             stretch of boulevard, steel railings with glass between the rails,
+             planters with a tree in each, and a street lamp at its head. */
+          var mhz = r.w > r.h, mln = mhz ? r.w : r.h, nst = Math.max(2, Math.round(mln / 1.25)), msl = mln / nst;
           for (var st = 0; st < nst; st++) {
             var smd2 = (st + 0.5) * msl;
-            props.push({ kind: 'stall', x: mhz ? r.x + smd2 : r.x + r.w / 2, y: mhz ? r.y + r.h / 2 : r.y + smd2, horiz: mhz, len: msl,
-              tone: (mtone + st * 0.37) % 1, seed: (rand() * 9999) | 0 });
+            props.push({ kind: 'railing', x: mhz ? r.x + smd2 : r.x + r.w / 2, y: mhz ? r.y + r.h / 2 : r.y + smd2, horiz: mhz, len: msl,
+              planter: st % 2 === 1, lamp: st === 0, tone: rand(), seed: (rand() * 9999) | 0 });
           }
         } else if (r.kind === 'barricade' && r.carapace) {
           /* The hive's barrier, a Ballistic Barrier or a barricade alike: shed
@@ -586,10 +587,13 @@
           : r.kind === 'wall' ? a(9 + rand() * 2)
             : r.kind === 'objective' ? a(22)
               : a(10 + Math.min(8, Math.max(r.w, r.h)) + rand() * 3);
+        // a map's landmark stands taller than the rest (r.tall, a multiple of its height)
+        if (r.kind === 'building' && r.tall) height *= r.tall;
         // a building's style, and each of its wings as a block of its own
         var sty = ['concrete', 'concrete', 'brick', 'prefab'][(rand() * 4) | 0];
         if (planet === 'industrial' && rand() < 0.5) sty = 'prefab';
         if ((planet === 'sparse' || planet === 'jungle') && rand() < 0.4) sty = 'brick';
+        if (r.kind === 'building' && r.style) sty = r.style;      // a map's own choice: a glass tower
         var wings = r.kind === 'building' && r.parts ? r.parts : [r];
         // the entrance, the sign and the awning go on the biggest wing only
         var mainW = wings.reduce(function (b2, q) { return !b2 || q.w * q.h > b2.w * b2.h ? q : b2; }, null);
@@ -624,7 +628,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, sacks: 0.3 };
+      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];

@@ -984,7 +984,7 @@
   /* A kind of ground as this table calls it: a settlement's map (a story map's
      market skin) names its barricades and crater fields for what they look
      like, and a paved road a paved road. The rules read them all as before. */
-  var SKIN_NAMES = { market: { barricade: 'Market stalls', crater: 'Market clutter', road: 'Paved road' } };
+  var SKIN_NAMES = { market: { barricade: 'Railings and planters', crater: 'Market clutter', road: 'Paved road' } };
   function terrainName(state, kind, piece) {
     var skin = state && state.cfg && state.cfg.story && state.cfg.story.skin;
     var named = skin && SKIN_NAMES[skin] && SKIN_NAMES[skin][kind];
