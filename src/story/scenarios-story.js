@@ -261,11 +261,15 @@
     blurb: 'Two sides, a meeting point, and the hope that nobody shoots first.',
     win: 'A wins if the talks hold to the end of turn 6. Once they break, it is a Meeting engagement: rout the enemy, or be routed; a draw at the end of turn 12.',
     turns: 12,
-    objectives: function () { return [{ x: R.BOARD.w / 2, y: R.BOARD.h / 2 }]; },
+    /* The meeting point is no objective (nothing is held, and nobody is sent to
+       it): a table under a white flag, in the middle, to talk across. */
+    objectives: function (state) {
+      state.terrain.push({ kind: 'parleyflag', x: R.BOARD.w / 2 - 1, y: R.BOARD.h / 2 - 1, w: 2, h: 2 });
+      return [];
+    },
     deploy: function (state) {
       var mid = R.BOARD.w / 2;
       state.sc.zones = { A: [mid - 12, mid - 3], B: [mid + 3, mid + 12] };
-      if (state.objectives[0]) state.objectives[0].name = 'The meeting point';
       state.sc.parley = {};
     },
     reserves: function () { return []; },

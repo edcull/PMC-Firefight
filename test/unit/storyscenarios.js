@@ -89,6 +89,9 @@ s.objectives.forEach((o) => { o.owner = 'A'; });
 r = SC.SCENARIOS.strike.check(s);
 ok('Strike: every target reached, the real ones wrecked and the rest shown up as decoys, A wins',
   r && r.winner === 'A' && s.objectives.every((o) => (o.real ? o.wrecked : o.decoy)), s.objectives.map((o) => (o.real ? 'real' : 'decoy')).join(','));
+s = started('parley');
+ok('Parley: the meeting point is a table under a white flag, not an objective: nothing to hold, nobody sent to it',
+  s.objectives.length === 0 && s.terrain.filter((t) => t.kind === 'parleyflag').length === 1 && !R.TERRAIN.parleyflag.blocks && !R.TERRAIN.parleyflag.impassable);
 s = started('parley'); s.turn = 6;
 r = SC.SCENARIOS.parley.check(s);
 ok('Parley: the talks held to turn 6, A wins, and the report says so', r && r.winner === 'A' && s.storyOutcome.parley === 'held');

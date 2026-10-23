@@ -247,6 +247,8 @@
           if (n.map && maps && !maps[n.map]) err(at + ': no map "' + n.map + '"');
           if (opts.scenarios && opts.scenarios[n.scenario] && !opts.scenarios[n.scenario].compound && !n.map && def.chapters.some(function (c) { return c.id === ch.id && !c.test; }) && maps) warn(at + ': no map of its own: its ground is rolled');
           if (n.solo) err(at + ': story battles never set solo');
+          // the relic variant is found and carried: Find and secure, and nothing else
+          if (n.variant && n.variant.relic && n.scenario !== 'find') err(at + ': a relic battle is Find and secure, not ' + n.scenario);
           force(at, n.enemy, ch.id);
           place(at, n.place);
           if (n.enemy && n.enemy.rival === 'leading' && !ch.rival) err(at + ': fights the leading rival, but its chapter does not name one');
@@ -302,7 +304,7 @@
 
     function textReads(text, at, chapter) {
       String(text || '').replace(/\{if (?:not )?([a-z0-9_]+)\}/g, function (m, f) {
-        if (f !== 'success' && f !== 'failure') F(f).read.push({ at: at, kind: 'text', chapter: chapter });
+        if (f !== 'success' && f !== 'failure' && f !== 'relic') F(f).read.push({ at: at, kind: 'text', chapter: chapter });
         return m;
       });
     }

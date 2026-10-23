@@ -314,17 +314,22 @@
           { id: 'rush', text: 'Go straight for the dig.', battle: { role: 'attacker' }, effects: [{ flag: 'glassflats_rushed', local: true }] }
         ], next: 'c2f.battle' },
         // (a battle can have a place of its own: the chapter's two sites are worlds apart)
-        { id: 'c2f.battle', type: 'battle', scenario: 'find', tier: 'max', pl: 1, planet: 'desert',
+        // (the relic variant: the lodestone is dug up, and whoever carries it off, or holds it at the end, has it)
+        { id: 'c2f.battle', type: 'battle', scenario: 'find', tier: 'max', pl: 1, planet: 'desert', variant: { relic: true },
           place: { system: 'Vantor', planet: 'Vantor III', kind: 'desert', world: { gravity: 'low' }, site: 'the Glass Flats' },
           enemy: rival('wraith', { changes: [{ if: { flag: 'glassflats_rushed' }, readiness: -1 }] }),
-          on: { success: [{ effects: [{ meter: 'stones', add: 1 }, { meter: 'wraith', add: -1 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] }, next: 'c2f.debrief' },
-        { id: 'c2f.debrief', type: 'debrief', text: '{if success}The lodestone is yours.{/if}{if failure}Wraith carried it off.{/if}', events: ['c2f.drop', 'c2f.second'], next: 'c2.interlude' },
+          on: {
+            success: [{ if: { relic: 'A' }, effects: [{ meter: 'stones', add: 1 }, { meter: 'wraith', add: -1 }] },
+                      { if: { relic: 'B' }, effects: [{ meter: 'theirs', add: 1 }, { meter: 'wraith', add: -1 }] }, { effects: [{ meter: 'wraith', add: -1 }] }],
+            failure: [{ if: { relic: 'A' }, effects: [{ meter: 'stones', add: 1 }] }, { if: { relic: 'B' }, effects: [{ meter: 'theirs', add: 1 }] }, {}]
+          }, next: 'c2f.debrief' },
+        { id: 'c2f.debrief', type: 'debrief', text: '{if relic}The lodestone is yours.{/if}{if not relic}You come away without the lodestone.{/if}', events: ['c2f.drop', 'c2f.second'], next: 'c2.interlude' },
         { id: 'c2f.drop', type: 'event', who: 'nine', if: { grade: 'success' }, title: 'Wraith’s dead drop', text: 'Their camp holds a copy of their own orders.', options: [
           { id: 'read', text: 'Read them.', effects: [{ meter: 'intel', add: 2 }, { flag: 'wraith_orders' }] },
           { id: 'warn', text: 'Leave a message in it.', effects: [{ meter: 'wraith', add: -1 }, { flag: 'wraith_warned' }] },
           { id: 'take', text: 'Take back their stolen copy of the log.', effects: [{ meter: 'lead', add: 1 }, { flag: 'wraith_robbed' }] }
         ] },
-        { id: 'c2f.second', type: 'event', if: { grade: 'failure' }, title: 'Second best', text: 'Wraith carried the lodestone off.', options: [
+        { id: 'c2f.second', type: 'event', if: { not: { relic: 'A' } }, title: 'Second best', text: 'The lodestone got away from you.', options: [
           { id: 'chase', text: 'Follow their dropship.', effects: [{ meter: 'lead', add: 1 }, { meter: 'loyalty', add: -1 }] },
           { id: 'dig', text: 'Let it go, and dig on.', effects: [{ meter: 'intel', add: 1 }] }
         ] },
@@ -362,10 +367,12 @@
             pass: [{ flag: 'beacon_rubbing' }, { meter: 'alarm', add: -1 }, { meter: 'stones', add: 1 }, { next: { battle: 'c3.battle', levers: { skip: true } } }],
             fail: [{ flag: 'signal_failed', local: true }, { next: { battle: 'c3.battle', levers: { variant: { ambush: true }, name: 'The Beacon Answers' } } }] }] }
         ], next: 'c3.battle' },
-        { id: 'c3.battle', type: 'battle', scenario: 'find', tier: 'max', pl: 1, planet: 'jungle', enemy: tribe('shkar'),
-          on: { success: [{}], failure: [{ effects: [{ meter: 'alarm', add: 1 }] }] }, next: 'c3.debrief' },
+        // (the relic variant: the beacon's lodestone, prised out of its socket and carried off, or not)
+        { id: 'c3.battle', type: 'battle', scenario: 'find', tier: 'max', pl: 1, planet: 'jungle', variant: { relic: true }, enemy: tribe('shkar'),
+          on: { success: [{ if: { relic: 'A' }, effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 1 }] }, {}],
+                failure: [{ if: { relic: 'A' }, effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 2 }] }, { effects: [{ meter: 'alarm', add: 1 }] }] }, next: 'c3.debrief' },
         { id: 'c3.debrief', type: 'debrief', pick: 2, text: '{if success}The beacon is quiet.{/if}{if failure}The Sh’kar drove you off.{/if}', events: ['c3.left', 'c3.copy'], next: 'c3.end' },
-        { id: 'c3.left', type: 'event', if: { not: { flag: 'beacon_rubbing' } }, title: 'What the Sh’kar left', text: 'A wounded Alpha, and the lodestone still in its socket.', options: [
+        { id: 'c3.left', type: 'event', if: { all: [{ not: { flag: 'beacon_rubbing' } }, { not: { relic: 'A' } }] }, title: 'What the Sh’kar left', text: 'A wounded Alpha, and the lodestone still in its socket.', options: [
           { id: 'stone', text: 'Take the lodestone.', effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 1 }] },
           { id: 'leave', text: 'Leave it, and the Alpha, where they are.', effects: [{ meter: 'understanding', add: 2 }, { meter: 'lead', add: -1 }, { meter: 'vane', add: -1 }, { flag: 'relics_returned' }] },
           { id: 'both', text: 'Take both, for Vane.', effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 2 }, { meter: 'vane', add: 1 }, { meter: 'understanding', add: -1 }, { flag: 'alpha_taken' }] },

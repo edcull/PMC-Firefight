@@ -718,6 +718,8 @@
       var held = { A: 0, B: 0 };
       B.state.objectives.forEach(function (o) { var hb = heldBy(o); if (hb) held[hb]++; });
       el('hdr-obj').innerHTML = 'Objectives <b>' + held.A + '</b>–<b>' + held.B + '</b>';
+      // (nothing to hold, nothing to count: a Meeting engagement, a Parley, a search with nothing found yet)
+      el('hdr-obj').hidden = !B.state.objectives.length;
       // in the three asymmetric scenarios, which side of it the player is on
       var rl = el('hdr-role');
       if (rl) {

@@ -517,6 +517,11 @@
         /* A story's possible location that is a building of its own (rules.js
            `pumphouse`): a shed, drawn as a block, struck through on the roof once
            searched and empty, and lit up as the one that holds the objective. */
+        // a Parley's meeting point: a folding table, two crates to sit on, and a white flag
+        if (r.kind === 'parleyflag') {
+          props.push({ kind: 'parleyflag', x: r.x + r.w / 2, y: r.y + r.h / 2, seed: (rr2() * 9999) | 0 });
+          return;
+        }
         if (r.kind === 'pumphouse') {
           props.push({
             kind: 'pumphouse', x: r.x, y: r.y, w: r.w, h: r.h, height: a(13),
@@ -555,7 +560,8 @@
       objectives.forEach(function (o, i) {
         // the Demolish target is its own marker, and so is a pump house: no flag planted in front of the wall
         var onTarget = terrain.some(function (t) { return (t.kind === 'objective' || t.kind === 'pumphouse') && o.x >= t.x - 0.5 && o.x <= t.x + t.w + 0.5 && o.y >= t.y - 0.5 && o.y <= t.y + t.h + 0.5; });
-        if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz });
+        // a story's relic (storybattle.js): a lodestone, not a flag, where it lies or over whoever carries it
+        if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz, relic: !!o.relic, carried: !!o.carried });
       });
       // what lies flat on the floor goes down before anything stands on it
       var FLAT = { deckgrate: 1, cable: 1, litter: 1 };

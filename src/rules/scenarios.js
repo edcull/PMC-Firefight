@@ -185,7 +185,7 @@
   }
   function separateTerrain(state) {
     var genCount = state.genCount != null ? state.genCount : state.terrain.length;
-    var FIXED = { objective: 1, searchsite: 1, pumphouse: 1, road: 1 };
+    var FIXED = { objective: 1, searchsite: 1, pumphouse: 1, parleyflag: 1, road: 1 };
     var ranked = state.terrain.map(function (t, i) {
       return { t: t, rank: FIXED[t.kind] ? 0 : i >= genCount ? 1 : 2, i: i };
     }).sort(function (a, b) { return a.rank - b.rank || a.i - b.i; });
@@ -612,7 +612,9 @@
       },
       check: function (state) {
         var found = state.sc.found;
-        var holder = found ? holderOf(state, found.x, found.y, 4, areaOf(found)) : null;
+        // a story's relic, once lifted, is held where it is now: on its carrier, or where it was dropped (storybattle.js)
+        var rl = state.sc.relic && state.sc.relic.moved ? state.sc.relic : null;
+        var holder = !found ? null : rl ? holderOf(state, rl.x, rl.y, 4, null) : holderOf(state, found.x, found.y, 4, areaOf(found));
         if (found) {
           state.sc.hold[holder === 'A' ? 'A' : 'B'] = holder ? state.sc.hold[holder] + 1 : 0;
           if (holder) {

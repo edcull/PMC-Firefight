@@ -132,7 +132,7 @@
 
   /* ================= conditions ================= */
 
-  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped', 'target', 'more'];
+  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped', 'target', 'more', 'relic'];
   var CMP = ['gte', 'lte', 'gt', 'lt', 'eq'];
 
   function cmp(v, c) {
@@ -167,6 +167,8 @@
     if (c.wiped) return cmp(st.lastWiped || 0, c.wiped);
     // a battle's target (the target variant): 'killed' or 'captured', or nothing known
     if (c.target) return st.lastTarget === c.target;
+    // a battle's relic (the relic variant): who carried it off or held it at the end, 'A' or 'B', or 'none'
+    if (c.relic) return (st.lastRelic || 'none') === c.relic;
     if (c.chapter != null) return cmp(st.chapterNo, typeof c.chapter === 'number' ? { eq: c.chapter } : c.chapter);
     if (c.played) return !!st.played[c.played];
     if (c.revealed) return !!st.revealed[c.revealed];
@@ -651,6 +653,13 @@
 
   /* The battle is over: the grade picks the branch. A report or a grade will
      do; the units that fought are kept, for effects that reach only them. */
+  // whether the battle at hand is fought for a relic: its own variant, or one an option set
+  function relicBattle(campaign, node) {
+    var lv = campaign.story.pending || {};
+    // (only Find and secure has a relic to find: the same battle fought as anything else has none)
+    if ((lv.scenario || node.scenario) !== 'find') return false;
+    return !!((lv.variant && lv.variant.relic) || (node.variant && node.variant.relic));
+  }
   function resolveBattle(campaign, result) {
     var st = campaign.story, def = storyOf(campaign), node = nodeAt(campaign);
     if (!node || node.type !== 'battle') throw new Error('The story is not at a battle');
@@ -660,8 +669,12 @@
       st.fielded = (result.units || []).filter(function (u) { return u.side === 'A' && u.rid; }).map(function (u) { return u.rid; });
       st.lastWiped = (result.units || []).filter(function (u) { return u.side === 'A' && !u.free && !u.ally && (u.wiped || u.destroyed); }).length;
       st.lastTarget = result.story && result.story.target || null;
+      st.lastRelic = result.story && result.story.relic || null;
       keepRoll(campaign, result);
-    } else st.lastWiped = 0, st.lastTarget = null;
+    } else st.lastWiped = 0, st.lastTarget = null, st.lastRelic = null;
+    /* A relic battle settled by its grade alone (a walk, a forfeit, a battle
+       skipped by the player): the relic goes with the grade. */
+    if (relicBattle(campaign, node) && !(result && typeof result === 'object' && result.story && 'relic' in result.story)) st.lastRelic = SUCCESS[g] ? 'A' : g === 'draw' ? null : 'B';
     st.lastGrade = g;
     var ctx = ctxOf(campaign, { grade: g });
     var on = node.on || {};
@@ -1029,6 +1042,8 @@
     var holds = function (f) {
       if (f === 'success') return st.lastGrade === 'decisive' || st.lastGrade === 'victory';
       if (f === 'failure') return !!st.lastGrade && st.lastGrade !== 'decisive' && st.lastGrade !== 'victory';
+      // (`relic`: the last battle's relic is the company's)
+      if (f === 'relic') return st.lastRelic === 'A';
       return !!st.flags[f];
     };
     var s = text.replace(/\{if (not )?([a-z0-9_]+)\}([\s\S]*?)\{\/if\}/g, function (m, not, f, body) {

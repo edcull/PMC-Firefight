@@ -191,6 +191,98 @@
       return null;
     }
 
+    /* ================= the relic (docs/story-dead-reckoning-plan.md, section 5) =================
+       `variant: { relic: true }` on Find and secure: what is found is a relic,
+       and can be carried. At an End phase a unit on foot within 2" of it, with
+       none of the other side's as close, picks it up; from then on the
+       objective is wherever its carrier is, and the side that holds it is the
+       side that has it. A carrier destroyed (or caught Broken) drops it where it
+       stands. Carried into its own side's entry strip at an End phase, it is
+       off the table: the battle is over, and won by the side that carried it.
+       Who has it at the end goes in the report (`story.relic`). */
+    var RELIC_REACH = 2;
+    function relicOn(state) {
+      var v = state && state.cfg && state.cfg.story && state.cfg.story.variant;
+      return !!(v && v.relic && state.sc && state.sc.search && state.sc.found);
+    }
+    function unitById(state, id) { return state.units.filter(function (u) { return u.id === id; })[0] || null; }
+    function canCarry(u) {
+      return u.alive && !u.reserve && !u.aboard && u.x >= 0 && !R.isMachine(u) && R.holdsGround(u) && R.status(u) !== 'broken';
+    }
+    // where the relic is now: on its carrier, or on the ground; a carrier who can no longer carry it drops it
+    function relicFollow() {
+      var state = E.state;
+      if (!relicOn(state)) return null;
+      var rl = state.sc.relic = state.sc.relic || { x: state.sc.found.x, y: state.sc.found.y, carrier: null, off: null };
+      var c = rl.carrier != null ? unitById(state, rl.carrier) : null;
+      if (c && !canCarry(c) && !c.extracted) {
+        E.logLine('note', c.label + ' drops the relic.');
+        rl.carrier = null; c.relic = false; c = null;
+      }
+      if (c && !c.extracted) { rl.x = c.x; rl.y = c.y; }
+      var o = state.objectives[0];
+      if (o) {
+        o.x = rl.x; o.y = rl.y; o.relic = true;
+        // (picked up, it is a point: held within 4" of whoever has it)
+        if (rl.carrier != null || rl.moved) o.rect = null;
+        o.carried = c ? c.side : null;
+      }
+      return rl;
+    }
+    // who has it, for the report: its carrier's side, or whoever holds the ground it lies on
+    function relicHolder(state) {
+      var rl = state.sc.relic;
+      if (!rl) return null;
+      if (rl.off) return rl.off;
+      var c = rl.carrier != null ? unitById(state, rl.carrier) : null;
+      if (c) return c.side;
+      var o = state.objectives[0];
+      return E.SC.holderOf(state, rl.x, rl.y, 4, o && o.rect ? E.SC.areaOf(o) : undefined) || null;
+    }
+    function relicEndPhase(state, lines) {
+      var rl = relicFollow();
+      if (!rl || rl.off) return;
+      var c = rl.carrier != null ? unitById(state, rl.carrier) : null;
+      if (!c) {
+        // picked up by the nearest unit on foot in reach, if the other side has nobody as close
+        var near = state.units.filter(function (u) { return canCarry(u) && R.inches(u.x, u.y, rl.x, rl.y) <= RELIC_REACH + R.UNIT_R; })
+          .sort(function (a, b) { return R.inches(a.x, a.y, rl.x, rl.y) - R.inches(b.x, b.y, rl.x, rl.y); });
+        if (near.length && near.every(function (u) { return u.side === near[0].side; })) {
+          c = near[0];
+          rl.carrier = c.id; rl.moved = true; c.relic = true;
+          lines.push({ side: c.side, text: c.label + ' picks up the relic.' });
+          relicFollow();
+        } else if (near.length) lines.push({ side: null, text: 'Both sides are on the relic: nobody can lift it.' });
+        return;
+      }
+      // carried into its own entry strip: off the table, and theirs
+      var strip = state.sc.entry && state.sc.entry[c.side];
+      var home = strip && strip.some(function (b) { return c.x >= b.x && c.x <= b.x + b.w && c.y >= b.y && c.y <= b.y + b.h; });
+      if (home) {
+        rl.off = c.side;
+        c.alive = false; c.extracted = true; c.activated = true;
+        lines.push({ side: c.side, text: c.label + ' carries the relic off the table.' });
+      }
+    }
+    // the AI's way home: a carrier makes for the nearest point of its own entry strip (ai.js goalPoints)
+    function relicGoal(u) {
+      var state = E.state;
+      if (!u || !u.relic || !relicOn(state)) return null;
+      var strip = state.sc.entry && state.sc.entry[u.side], best = null;
+      (strip || []).forEach(function (b) {
+        var p = { x: Math.max(b.x + 1, Math.min(b.x + b.w - 1, u.x)), y: Math.max(b.y + 1, Math.min(b.y + b.h - 1, u.y)) };
+        if (!best || R.inches(u.x, u.y, p.x, p.y) < R.inches(u.x, u.y, best.x, best.y)) best = p;
+      });
+      return best;
+    }
+    // the relic carried off ends the battle; otherwise the report is told who has it, and the scenario goes on
+    function relicCheck(state) {
+      if (!relicOn(state) || !state.sc.relic) return null;
+      state.storyOutcome = Object.assign({}, state.storyOutcome || {}, { relic: relicHolder(state) });
+      var off = state.sc.relic.off;
+      return off ? { winner: off, text: off + ' carries the relic off the table.' } : null;
+    }
+
     /* ================= the End phase: the story scenarios' own events =================
        Set up by a scenario's deploy (src/story/scenarios-story.js) on state.sc,
        and run here, once an End phase, before the battle is checked. */
@@ -296,6 +388,7 @@
       parley(state, lines);
       countdown(state, lines);
       extraction(state, lines);
+      relicEndPhase(state, lines);
       waves(state, lines);
       if (lines.length) {
         lines.forEach(function (l) { E.logLine('note', l.text); });
@@ -370,6 +463,8 @@
     function storyCheck(state) {
       var t = targetCheck(state);
       if (t) return t;
+      var rc = relicCheck(state);
+      if (rc) return rc;
       var sty = state.cfg && state.cfg.story;
       if (!sty || !sty.turns || state.turn < sty.turns) return null;
       var real = state.turn;
@@ -469,7 +564,7 @@
       orderWord: function (k) { return ORDER_KINDS[k] || ''; },
       storySeeded: storySeeded, storyTerrain: storyTerrain, storyFixed: storyFixed,
       storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck,
-      storyEndPhase: storyEndPhase, storyTalk: storyTalk, storyCheck: storyCheck, parleyHolds: parleyHolds
+      storyEndPhase: storyEndPhase, storyTalk: storyTalk, relicFollow: relicFollow, relicGoal: relicGoal, relicCheck: relicCheck, storyCheck: storyCheck, parleyHolds: parleyHolds
     };
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCEngineStory;

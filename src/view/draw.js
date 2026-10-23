@@ -1022,7 +1022,7 @@
          or arrive (an Invasion's zones are nominated after deployment), repaint. */
       // a barricade put down by hand: the structures again, not the whole table
       if (B.vc.structsDirty && B.vc.structs) { B.vc.structsDirty = false; paintStructures(); }
-      var ok0 = B.state.objectives.map(function (o) { return o.x.toFixed(1) + ',' + o.y.toFixed(1); }).join(';');
+      var ok0 = B.state.objectives.map(function (o) { return o.x.toFixed(1) + ',' + o.y.toFixed(1) + (o.relic ? (o.carried || '-') : ''); }).join(';');
       if (B.vc.structs && B.vc.objKey != null && B.vc.objKey !== ok0) paintStructures();
       B.vc.objKey = ok0;
       // the plate is large: paint it once, off the first frame, with a word to the player
