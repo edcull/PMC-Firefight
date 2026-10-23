@@ -69,7 +69,8 @@
     var PADC = { ramp: ['#55595a', '#5f6364', '#6a6e6f', '#75797a', '#808485'], fleck: ['#3c3f40', '#2a2c2d', '#8e9293'], rim: '#2e3132' };
     function skinFloor(r) {
       if (r.market) return PAVING;
-      if (r.kind === 'road' && r.pad) return PADC;
+      if (r.kind === 'road' && (r.pad || r.slab)) return PADC;
+      if (r.kind === 'searchsite' && r.skin === 'cargo') return PADC;
       if (r.kind === 'road' && r.paved) return COBBLE;
       return null;
     }

@@ -68,7 +68,9 @@
       B: COLOURS.steel,
       C: COLOURS.steel,
       // the automated defence system's guns (Close Encounters), nobody's
-      N: COLOURS.hazard
+      N: COLOURS.hazard,
+      // a spaceport's ground vehicles (a story map's fuel bowser): orange amber, nobody's
+      P: { name: 'Port amber', ink: '#e8962a', light: '#f0b45e', mid: '#d47e1c', dark: '#5e360a', helm: '#b0661a', cloth: '#7a5a2c' }
     };
     /* The page's own side colours (--side-A, --side-B: the army pills, titles and
        marks round the board) follow the armies' colours. */

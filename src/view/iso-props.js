@@ -478,9 +478,16 @@
         if (r.kind === 'searchsite') {
           props.push({
             kind: 'searchsite', x: r.x + r.w / 2, y: r.y + r.h / 2,
-            checked: !!r.checked, found: !!r.found, cold: !!r.cold,
+            checked: !!r.checked, found: !!r.found, cold: !!r.cold, cargo: r.skin === 'cargo',
             seed: (rr2() * 9999) | 0
           });
+          // a port's possible location is a pallet of cargo, with cases set down round it
+          if (r.skin === 'cargo') {
+            for (var cs2 = 0; cs2 < 4; cs2++) {
+              props.push({ kind: 'smallbox', x: r.x + 0.5 + rr2() * (r.w - 1), y: r.y + 0.5 + rr2() * (r.h - 1), tone: rr2(), seed: (rr2() * 9999) | 0 });
+            }
+            return;
+          }
           for (var sw = 0; sw < 6; sw++) {
             props.push({
               kind: 'wreckstone',

@@ -160,7 +160,7 @@ Object.keys(MAPS).forEach((k) => {
     if ((p.x < 4 || p.x + p.w > 44) && p.kind !== 'road') bad.push(p.kind + ' in an entry strip');
     if (p.y < 0 || p.y + p.h > 48) bad.push(p.kind + ' off the table');
     // (a landing pad is a floor: what stands on it, stands on it)
-    ps.forEach((q, j) => { if (j > i && overlap(p, q) && !p.pad && !q.pad) bad.push(p.kind + ' on ' + q.kind); });
+    ps.forEach((q, j) => { if (j > i && overlap(p, q) && !p.pad && !q.pad && !p.slab && !q.slab) bad.push(p.kind + ' on ' + q.kind); });
   });
   (m.objectives || []).forEach((o) => ps.forEach((p) => { if (o.x > p.x - 2 && o.x < p.x + p.w + 2 && o.y > p.y - 2 && o.y < p.y + p.h + 2) bad.push(o.name + ' under ' + p.kind); }));
   const sites = (m.sites && m.sites.at) || [];

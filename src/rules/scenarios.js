@@ -181,7 +181,9 @@
      there is no room for it anywhere near. */
   var GAP = 0.5;
   function clashes(a, b) {
-    // (a road is open ground: a piece may stand right against it, only not on it)
+    // (a road is open ground: a piece may stand right against it, only not on it;
+    // a landing pad or a concrete apron is a floor, and what stands on it stands on it)
+    if ((a.kind === 'road' && (a.pad || a.slab)) || (b.kind === 'road' && (b.pad || b.slab))) return false;
     var gap = a.kind === 'road' || b.kind === 'road' ? 0 : GAP;
     return a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
   }
@@ -561,7 +563,7 @@
         var spots = sites ? sites.at : clusterAt(R.BOARD.w / 2, R.BOARD.h / 2, 3, 12, 12);
         state.sc.search = spots.map(function (p, i) {
           var piece = {
-            kind: sites ? sites.kind : 'searchsite', x: p.x - 2, y: p.y - 2, w: 4, h: 4, name: p.name || undefined,
+            kind: sites ? sites.kind : 'searchsite', x: p.x - 2, y: p.y - 2, w: 4, h: 4, name: p.name || undefined, skin: (sites && sites.skin) || undefined,
             site: i, cx: p.x, cy: p.y, checked: false, found: false, cold: false
           };
           state.terrain.push(piece);

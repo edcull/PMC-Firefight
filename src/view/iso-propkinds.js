@@ -456,10 +456,10 @@
         case 'fueltruck': {
           /* The bowser is the heavy lorry from the unit art with a fuel tank on
              its bed in place of the cargo box (iso-machines 'bowser'), parked,
-             in hazard yellow. Drawn by hand only where that art is not loaded. */
+             in the port's amber. Drawn by hand only where that art is not loaded. */
           var ISO = root.PMCIso;
           if (ISO && ISO.machine) {
-            ISO.machine(g, { id: 'bowser', art: 'bowser', side: 'N', faction: 'civilian', cls: 'vehicle', alive: true, facing: pr.facing || 0 },
+            ISO.machine(g, { id: 'bowser', art: 'bowser', side: 'N', paint: 'P', faction: 'civilian', cls: 'vehicle', alive: true, facing: pr.facing || 0 },
               { at: { x: pr.x + pr.w / 2, y: pr.y + pr.h / 2 }, lift: lift || 0, status: 'ready' });
             break;
           }
@@ -1322,6 +1322,23 @@
            of its own. */
         case 'searchsite': {
           var sr = rng(pr.seed || 7);
+          /* A port's possible location (a map's sites skinned 'cargo'): a cargo
+             container on a pallet, its doors stencilled, a manifest tag on it. */
+          if (pr.cargo) {
+            var cl = lift || 0, cpal = sr() < 0.5 ? CRATE2 : CRATE;
+            shadowBlob(g, { x: p.x + a(1), y: p.y + a(0.5) }, a(9), a(4));
+            box(g, { x: pr.x - 1.5, y: pr.y - 0.9, w: 3, h: 1.8, height: a(1), seed: pr.seed }, PLANTER, { roof: '#6a5a3a', roofEdge: '#8a7a52', windows: null, lift: cl, noShadow: true });
+            box(g, { x: pr.x - 1.4, y: pr.y - 0.8, w: 2.8, h: 1.6, height: a(9), seed: pr.seed + 1 }, cpal, { roof: cpal[3], roofEdge: cpal[5], windows: null, lift: cl + a(1), noShadow: true });
+            // the seam between its doors, at the east end, and the manifest tag on its side
+            var cdoor = toScreen(pr.x + 1.4, pr.y), ctag = toScreen(pr.x, pr.y + 0.8);
+            edgeLine(g, [cdoor.x, cdoor.y - cl - a(1.5)], [cdoor.x, cdoor.y - cl - a(9.5)], 'rgba(10,12,14,.55)', 1);
+            rect(g, ctag.x - a(1), ctag.y - cl - a(7), a(2), a(1.4), '#e8dcc0');
+            if (pr.checked && !pr.found) {
+              edgeLine(g, [p.x - a(6.5), p.y - a(3.2) - a(6)], [p.x + a(6.5), p.y + a(3.2) - a(6)], '#d0503c', 4);
+              edgeLine(g, [p.x - a(6.5), p.y + a(3.2) - a(6)], [p.x + a(6.5), p.y - a(3.2) - a(6)], '#d0503c', 4);
+            }
+            break;
+          }
           shadowBlob(g, { x: p.x, y: p.y }, a(7), a(3.5));
           ellipse(g, p.x, p.y, a(7), a(3.5), '#2e2820');
           ellipse(g, p.x, p.y, a(5), a(2.5), '#221d17');

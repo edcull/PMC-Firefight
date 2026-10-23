@@ -322,7 +322,7 @@
     var terrainPlan = map && !compound ? map.pieces.map(fitPiece) : null;
     var mapObjectives = map && !compound && map.objectives ? map.objectives.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) : null;
     // the map's own possible locations, for Find and secure: where, and what they are
-    var mapSites = map && !compound && map.sites ? { kind: map.sites.kind || 'searchsite',
+    var mapSites = map && !compound && map.sites ? { kind: map.sites.kind || 'searchsite', skin: map.sites.skin || undefined,
       at: map.sites.at.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) } : null;
     var role = lv.role || spec.role;
     var attacker = role === 'choose' ? opts.role || 'A' : ROLE[role] || null;
