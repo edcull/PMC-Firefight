@@ -612,7 +612,9 @@
             main: q === mainW,
             kind: r.kind === 'wall' ? 'highwall' : r.kind,
             x: q.x, y: q.y, w: q.w, h: q.h, height: Math.max(a(8), Math.round(height * (q.hf || 1) * storeys(r, q))),
-            style: r.kind === 'building' ? sty : null, seed: (rand() * 9999) | 0
+            style: r.kind === 'building' ? sty : null, seed: (rand() * 9999) | 0,
+            // a map's comms dish, on the roof of the building's biggest wing
+            dish: r.kind === 'building' && !!r.dish && q === mainW
           });
         });
       });

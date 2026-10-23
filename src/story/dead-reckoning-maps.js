@@ -59,6 +59,7 @@
     /* Vesk's landing field, after Lot 47 was lost: Brass Ledger's shuttle on
        its pad in the north-east corner, a fuel bowser hosed up to it and a
        cargo lifter loading it, cargo stacked across the apron, an empty pad,
+       the port's comms block in the far corner with a dish on its roof,
        the customs shed, and three places the log could be as they load it
        (Find and secure, the relic: the log carried off, or not). */
     veskfield: {
@@ -67,8 +68,8 @@
         // Brass Ledger's pad: the shuttle down on it, the bowser fuelling it, the lifter loading it
         Object.assign(P(30, 2, 14, 14), { pad: true }), R('shuttle', 32, 3, 10, 8),
         Object.assign(R('fueltruck', 31.4, 12.2, 2.8, 1.4), { hose: { x: 37, y: 11 } }), R('cargolifter', 40.5, 12.2, 2.5, 2.5),
-        // an empty pad, the control block and the customs shed
-        Object.assign(P(6, 6, 8, 8), { pad: true }), B(5, 36, 8, 6, 'annex'), R('bunker', 35, 36, 6, 5),
+        // an empty pad, the comms block (its dish on the roof) and the customs shed
+        Object.assign(P(6, 6, 8, 8), { pad: true }), Object.assign(B(5, 36, 8, 6, 'annex'), { dish: true }), R('bunker', 35, 36, 6, 5),
         B(28, 31, 6, 5, 'block'), B(26, 38, 6, 3, 'block'), R('ruins', 7, 20, 4, 4), R('wall', 38, 22, 1, 6),
         // cargo, stacked across the apron
         R('crates', 23, 4, 5, 1.5), R('crates', 23, 7, 1.5, 4), R('crates', 12, 18.5, 6, 1.5), R('crates', 21.5, 20, 1.5, 5),

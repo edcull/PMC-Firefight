@@ -87,6 +87,41 @@
       edgeLine(g, [mb[0] - a(0.6), mb[1] - mh * 0.45], [mb[0] + a(0.6), mb[1] - mh * 0.45], '#8a96a0', 1);
       dot(g, mb[0], mb[1] - mh - 1, '#ff4a3a', 3);
     }
+    /* A comms dish on a roof (a map's building with `dish`): a squat equipment
+       box, a mast, and a big dish on a yoke tilted up at the sky to the
+       north-east, its feed horn out in front on struts, a red light on top. */
+    function commsDish(g, pr, lift) {
+      var cx = pr.x + pr.w * 0.5, cy = pr.y + pr.h * 0.5, z0 = pr.height;
+      function D(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - lift - z]; }
+      box(g, { x: cx - 0.7, y: cy - 0.5, w: 1.4, h: 1.0, height: a(3), seed: pr.seed + 7 }, MACH, { roof: MACH[3], roofEdge: MACH[5], windows: null, lift: lift + z0, noShadow: true });
+      var hub = z0 + a(3) + a(7), R = Math.min(pr.w, pr.h) * 0.32 + 0.6;
+      edgeLine(g, D(cx, cy, z0 + a(3)), D(cx, cy, hub), '#3a4248', 3);
+      edgeLine(g, D(cx, cy, z0 + a(3)), D(cx, cy, hub), '#7a858f', 1);
+      // the dish faces up and out to the north-east: its rim a circle in a tilted plane
+      var dx = 0.7071, dy = -0.7071, tilt = 0.85;              // the way it looks, and how far up
+      var nx = dx * Math.cos(tilt), ny = dy * Math.cos(tilt), nz = Math.sin(tilt);
+      var ux = 0.7071, uy = 0.7071;                             // across it, level
+      var vx = -nz * dx, vy = -nz * dy, vz = Math.cos(tilt);    // up its face
+      var ZS = a(8);                                            // inches up, in pixels
+      function rim(t, k) {
+        var c = Math.cos(t) * R * k, s2 = Math.sin(t) * R * k;
+        return D(cx + c * ux + s2 * vx, cy + c * uy + s2 * vy, hub + s2 * vz * ZS);
+      }
+      var back = [], face = [], bowl = [];
+      for (var i = 0; i <= 28; i++) { var t = i / 28 * Math.PI * 2; back.push(rim(t, 1.04)); face.push(rim(t, 1)); bowl.push(rim(t, 0.72)); }
+      poly(g, back, '#4a535a');
+      poly(g, face, '#c9d0d4');
+      poly(g, bowl, '#a9b2b8');
+      for (var sp = 0; sp < 4; sp++) {
+        var ts = sp / 4 * Math.PI * 2 + 0.4;
+        var foot = rim(ts, 0.95), horn = D(cx + nx * R * 0.9, cy + ny * R * 0.9, hub + nz * R * 0.9 * ZS);
+        edgeLine(g, foot, horn, '#5a646c', 1);
+      }
+      var hn = D(cx + nx * R * 0.9, cy + ny * R * 0.9, hub + nz * R * 0.9 * ZS);
+      ellipse(g, hn[0], hn[1], a(0.9), a(0.9), '#2a3036');
+      var top = rim(Math.PI / 2, 1.04);
+      dot(g, top[0], top[1] - 2, '#ff4a3a', 3);
+    }
     function drawKind(cutaway, g, lift, p, pr) {
       switch (pr.kind) {
         case 'tree': {
@@ -1279,6 +1314,7 @@
             lift: lift || 0, bunker: pr.kind === 'bunker',
             cutaway: !!cutaway
           });
+          if (pr.dish && !cutaway) commsDish(g, pr, lift || 0);
           break;
         }
         /* A possible objective location (p. 52): a prised-open hatch. Searched and
