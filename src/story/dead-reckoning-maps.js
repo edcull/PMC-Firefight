@@ -26,44 +26,59 @@
   root.PMCStoryMaps['dead-reckoning'] = {
 
     /* Vesk Free Port: a settlement at a crossroads, crossed west to east. Paved
-       roads from the four quarters meet in the market square in the middle;
-       a fountain stands in the middle of it, too tall to see across; the
-       auction house stands on its north-west corner, houses and the
-       arcade round the rest, and market stalls line the square's corners. The
-       landing field is beyond the east edge, where Vane's ship waits (Escort).
-       Its skin is the market's (`skin`): the barricades are stalls, the craters
-       market clutter, as the rules still read them (levers.js, iso-props.js). */
+       roads run in from the four edges of the table and meet in the market
+       square in the middle. The auction house, a glass tower over the whole
+       port, stands in the middle of the square, so the way across goes round
+       it, and a fountain stands off its north-east corner, between the roads,
+       too tall to see across. Houses, warehouses and the arcade crowd the four quarters, and
+       railings and planters line both sides of each road where it comes
+       into the square. The landing field is beyond the east edge, where Vane's ship
+       waits (Escort). Its skin is the market's (`skin`): the barricades are
+       railings and planters, the craters market clutter, as the rules still
+       read them (levers.js, iso-props.js). */
     vesk: {
       name: 'The market square, Vesk Free Port', planet: 'dense', skin: 'market',
       pieces: [
-        // the crossroads: four paved roads, and the square where they meet, paved round the fountain in its middle
-        P(4, 22, 14, 4), P(30, 22, 14, 4), P(22, 0, 4, 18), P(22, 30, 4, 18),
-        P(18, 18, 12, 3.5), P(18, 26.5, 12, 3.5), P(18, 21.5, 3.5, 5), P(26.5, 21.5, 3.5, 5),
-        R('fountain', 21.5, 21.5, 5, 5),
-        // the auction house, the houses and the arcade, a quarter each
-        B(6, 4, 10, 7, 'U'), B(31, 3, 9, 6, 'L'), B(6, 37, 8, 7, 'T'), B(15, 40, 5, 5, 'annex'), B(32, 37, 9, 6, 'block'),
-        R('wall', 29, 38, 1, 6), R('ruins', 38, 12, 4, 4),
-        // the stalls round the square
-        R('barricade', 11, 19, 5, 1), R('barricade', 19, 12, 1, 5), R('barricade', 28, 12, 1, 5), R('barricade', 32, 19, 5, 1),
-        R('barricade', 11, 28, 5, 1), R('barricade', 19, 31, 1, 5), R('barricade', 28, 31, 1, 5), R('barricade', 32, 28, 5, 1),
-        // the market's clutter: barrows, crates and barrels where the stalls overflow
-        N('crater', 8, 13, 4, 4, 'blob'), N('crater', 8, 31, 4, 4, 'blob'), N('crater', 38, 31, 4, 4, 'blob')
+        // the crossroads: four paved roads from the table's edges, and the square where they meet, paved round the auction house
+        P(0, 22, 16, 4), P(32, 22, 16, 4), P(22, 0, 4, 16), P(22, 32, 4, 16),
+        P(16, 16, 16, 4), P(16, 20, 4, 12), P(28, 20, 4, 12), P(20, 28, 8, 4),
+        R('fountain', 33, 16.5, 4, 4), Object.assign(B(20, 20, 8, 8, 'block'), { style: 'glass', tall: 4.5 }),
+        // the four quarters: houses, warehouses, the arcade
+        B(5, 3, 9, 7, 'U'), B(15, 3, 5, 5, 'block'), B(5, 13, 5, 6, 'L'),
+        B(30, 3, 9, 6, 'L'), B(40, 4, 4, 5, 'annex'), B(31, 11, 5, 5, 'block'), R('ruins', 38, 12, 4, 4),
+        B(5, 30, 5, 4, 'block'), B(5, 36, 8, 7, 'T'), B(15, 40, 5, 5, 'annex'),
+        B(33, 30, 4, 5, 'annex'), B(32, 37, 9, 6, 'block'), R('wall', 29, 38, 1, 6),
+        // the boulevards' railings and planters, along both edges of each road where it comes into the square (the fountain stands in place of the east road's north side)
+        R('barricade', 10, 21, 6, 1), R('barricade', 10, 26, 6, 1), R('barricade', 32, 26, 6, 1),
+        R('barricade', 21, 10, 1, 6), R('barricade', 26, 10, 1, 6), R('barricade', 21, 32, 1, 6), R('barricade', 26, 32, 1, 6),
+        // the market's clutter: cargo cases, drums and vending terminals where the market overflows
+        N('crater', 11, 12, 4, 4, 'blob'), N('crater', 11, 31, 4, 4, 'blob'), N('crater', 38, 31, 4, 4, 'blob')
       ]
     },
 
-    /* Vesk's landing field, after Lot 47 was lost: Brass Ledger's ship on its
-       pad, cargo stacks, the customs shed, and three places the log could be as
-       they load it (Find and secure, the relic: the log carried off, or not). */
+    /* Vesk's landing field, after Lot 47 was lost: Brass Ledger's shuttle on
+       its pad in the north-east corner, a fuel bowser hosed up to it and a
+       cargo lifter loading it, cargo stacked across the apron, an empty pad,
+       the port's comms block in the far corner with a dish on its roof,
+       the customs shed, and three places the log could be as they load it
+       (Find and secure, the relic: the log carried off, or not). */
     veskfield: {
       name: 'The landing field, Vesk Free Port', planet: 'dense',
       pieces: [
-        P(6, 6, 8, 8), B(34, 5, 7, 5, 'block'), B(6, 36, 8, 6, 'annex'), R('bunker', 35, 36, 6, 5),
-        B(26, 38, 6, 3, 'block'), R('barricade', 27, 10, 4, 1), R('ruins', 8, 20, 4, 4), R('wall', 37, 24, 1, 6)
+        // Brass Ledger's pad: the shuttle down on it, the bowser fuelling it, the lifter loading it
+        Object.assign(P(30, 2, 14, 14), { pad: true }), R('shuttle', 32, 3, 10, 8),
+        Object.assign(R('fueltruck', 31.4, 12.2, 2.8, 1.4), { hose: { x: 37, y: 11 } }), R('cargolifter', 40.5, 12.2, 2.5, 2.5),
+        // an empty pad, the comms block (its dish on the roof) and the customs shed
+        Object.assign(P(6, 6, 8, 8), { pad: true }), Object.assign(B(5, 36, 8, 6, 'annex'), { dish: true }), R('bunker', 35, 36, 6, 5),
+        B(28, 31, 6, 5, 'block'), B(26, 38, 6, 3, 'block'), R('ruins', 7, 20, 4, 4), R('wall', 38, 22, 1, 6),
+        // cargo, stacked across the apron
+        R('crates', 23, 4, 5, 1.5), R('crates', 23, 7, 1.5, 4), R('crates', 12, 18.5, 6, 1.5), R('crates', 21.5, 20, 1.5, 5),
+        R('crates', 11, 28.5, 5, 1.5), R('crates', 34, 26, 1.5, 5)
       ],
       sites: { kind: 'searchsite', at: [
-        { x: 17, y: 16, name: 'The ship’s ramp' },
-        { x: 31, y: 21, name: 'The cargo stacks' },
-        { x: 21, y: 31, name: 'The customs shed' }
+        { x: 27, y: 16, name: 'The ship’s ramp' },
+        { x: 16, y: 24, name: 'The cargo stacks' },
+        { x: 24, y: 34, name: 'The customs shed' }
       ] }
     },
 

@@ -156,9 +156,11 @@ Object.keys(MAPS).forEach((k) => {
   const bad = [];
   ps.forEach((p, i) => {
     if (!R.TERRAIN[p.kind]) bad.push(p.kind + ' is no terrain');
-    if (p.x < 4 || p.x + p.w > 44) bad.push(p.kind + ' in an entry strip');
+    // (a road may run to the edge: it is open ground, and the way on to the table)
+    if ((p.x < 4 || p.x + p.w > 44) && p.kind !== 'road') bad.push(p.kind + ' in an entry strip');
     if (p.y < 0 || p.y + p.h > 48) bad.push(p.kind + ' off the table');
-    ps.forEach((q, j) => { if (j > i && overlap(p, q)) bad.push(p.kind + ' on ' + q.kind); });
+    // (a landing pad is a floor: what stands on it, stands on it)
+    ps.forEach((q, j) => { if (j > i && overlap(p, q) && !p.pad && !q.pad) bad.push(p.kind + ' on ' + q.kind); });
   });
   (m.objectives || []).forEach((o) => ps.forEach((p) => { if (o.x > p.x - 2 && o.x < p.x + p.w + 2 && o.y > p.y - 2 && o.y < p.y + p.h + 2) bad.push(o.name + ' under ' + p.kind); }));
   const sites = (m.sites && m.sites.at) || [];
@@ -173,15 +175,19 @@ Object.keys(MAPS).forEach((k) => {
 const used = (id) => allBattles.filter((n) => n.map === id);
 ok('the Glass Flats and the Mire put their three places where the map says, for the relic', ['glassflats', 'mire'].every((k) => MAPS[k].sites.at.length === 3 && used(k).every((n) => n.scenario === 'find' && n.variant.relic)));
 {
-  // Vesk as a settlement: paved roads from the four quarters meeting in a square in the middle, round a fountain
+  // Vesk as a settlement: paved roads from the table's four edges meeting in a square in the middle, round the auction house, a fountain in its corner
   const roads = MAPS.vesk.pieces.filter((p) => p.kind === 'road' && p.paved);
   const fountain = MAPS.vesk.pieces.find((p) => p.kind === 'fountain');
-  const near = (p, q) => p.x <= q.x + q.w + 0.6 && q.x <= p.x + p.w + 0.6 && p.y <= q.y + q.h + 0.6 && q.y <= p.y + p.h + 0.6;
-  ok('Vesk is a crossroads: four paved roads into a paved square in the middle, a fountain at its heart that blocks the view across it',
-    !!fountain && Math.abs(fountain.x + fountain.w / 2 - 24) < 1 && Math.abs(fountain.y + fountain.h / 2 - 24) < 1 && R.TERRAIN.fountain.blocks && R.TERRAIN.fountain.impassable &&
-    roads.filter((p) => near(p, fountain)).length === 4 && ['w', 'e', 'n', 's'].every((d) => roads.some((p) => d === 'w' ? p.x + p.w <= 18.01 && p.y < 24 && p.y + p.h > 24 : d === 'e' ? p.x >= 29.99 && p.y < 24 && p.y + p.h > 24 : d === 'n' ? p.y + p.h <= 18.01 && p.x < 24 && p.x + p.w > 24 : p.y >= 29.99 && p.x < 24 && p.x + p.w > 24)));
-ok('...its skin the market’s: stalls for barricades, the market’s clutter for craters, by name too', MAPS.vesk.skin === 'market' &&
-    MAPS.vesk.pieces.filter((p) => p.kind === 'barricade').length >= 6 && R.terrainName({ cfg: { story: { skin: 'market' } } }, 'barricade') === 'Market stalls' &&
+  const middle = MAPS.vesk.pieces.find((p) => p.kind === 'building' && p.x < 24 && p.x + p.w > 24 && p.y < 24 && p.y + p.h > 24);
+  ok('Vesk is a crossroads: paved roads from all four edges of the table into a paved square, the auction house in the middle of it',
+    !!middle && roads.some((p) => p.x === 0) && roads.some((p) => p.x + p.w === 48) && roads.some((p) => p.y === 0) && roads.some((p) => p.y + p.h === 48) &&
+    MAPS.vesk.pieces.filter((p) => p.kind === 'building').length >= 10);
+  ok('...and a fountain off a corner of the square, clear of the roads, that blocks the view across it',
+    !!fountain && Math.hypot(fountain.x + fountain.w / 2 - 24, fountain.y + fountain.h / 2 - 24) > 8 && Math.hypot(fountain.x + fountain.w / 2 - 24, fountain.y + fountain.h / 2 - 24) < 14 &&
+    roads.every((p) => !(p.x < fountain.x + fountain.w && fountain.x < p.x + p.w && p.y < fountain.y + fountain.h && fountain.y < p.y + p.h)) &&
+    R.TERRAIN.fountain.blocks && R.TERRAIN.fountain.impassable);
+ok('...its skin the market’s: railings for barricades, the market’s clutter for craters, by name too', MAPS.vesk.skin === 'market' &&
+    MAPS.vesk.pieces.filter((p) => p.kind === 'barricade').length >= 6 && R.terrainName({ cfg: { story: { skin: 'market' } } }, 'barricade') === 'Railings and planters' &&
     R.terrainName({ cfg: { story: { skin: 'market' } } }, 'crater') === 'Market clutter' && R.terrainName({ cfg: { story: {} } }, 'crater') === 'Rubble and craters');
 }
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));

@@ -181,11 +181,13 @@
      there is no room for it anywhere near. */
   var GAP = 0.5;
   function clashes(a, b) {
-    return a.x < b.x + b.w + GAP && b.x < a.x + a.w + GAP && a.y < b.y + b.h + GAP && b.y < a.y + a.h + GAP;
+    // (a road is open ground: a piece may stand right against it, only not on it)
+    var gap = a.kind === 'road' || b.kind === 'road' ? 0 : GAP;
+    return a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
   }
   function separateTerrain(state) {
     var genCount = state.genCount != null ? state.genCount : state.terrain.length;
-    var FIXED = { objective: 1, searchsite: 1, pumphouse: 1, parleyflag: 1, road: 1, fountain: 1 };
+    var FIXED = { objective: 1, searchsite: 1, pumphouse: 1, parleyflag: 1, road: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1 };
     var ranked = state.terrain.map(function (t, i) {
       return { t: t, rank: FIXED[t.kind] ? 0 : i >= genCount ? 1 : 2, i: i };
     }).sort(function (a, b) { return a.rank - b.rank || a.i - b.i; });

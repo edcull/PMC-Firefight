@@ -204,10 +204,10 @@
           return;
         }
         if (r.kind === 'crater' && r.market) {
-          // a settlement's crater field (the market skin): the market's overflow, crates, barrels and sacks on the paving
+          // a settlement's crater field (the market skin): the market's overflow, cargo cases, fuel drums and vending terminals on the paving
           for (var mk = 0; mk < Math.max(3, Math.round(area / 2.5)); mk++) {
             var mq = spotIn(r, 0.5, rand), mr = rand();
-            props.push({ kind: mr < 0.45 ? 'smallbox' : mr < 0.7 ? 'drums' : 'sacks', x: mq.x, y: mq.y, n: 1 + Math.floor(rand() * 2), tone: rand(), seed: (rand() * 9999) | 0 });
+            props.push({ kind: mr < 0.45 ? 'smallbox' : mr < 0.7 ? 'drums' : 'console', x: mq.x, y: mq.y, n: 1 + Math.floor(rand() * 2), tone: rand(), seed: (rand() * 9999) | 0 });
           }
           return;
         }
@@ -276,13 +276,14 @@
             });
           }
         } else if (r.kind === 'barricade' && r.market) {
-          /* A settlement's barricade (a map's market skin, storybattle.js): a row
-             of market stalls, trestles under striped awnings, a stall a length. */
-          var mhz = r.w > r.h, mln = mhz ? r.w : r.h, nst = Math.max(1, Math.round(mln / 1.7)), msl = mln / nst, mtone = rand();
+          /* A settlement's barricade (a map's market skin, storybattle.js): a
+             stretch of boulevard, steel railings with glass between the rails,
+             planters with a tree in each, and a street lamp at its head. */
+          var mhz = r.w > r.h, mln = mhz ? r.w : r.h, nst = Math.max(2, Math.round(mln / 1.25)), msl = mln / nst;
           for (var st = 0; st < nst; st++) {
             var smd2 = (st + 0.5) * msl;
-            props.push({ kind: 'stall', x: mhz ? r.x + smd2 : r.x + r.w / 2, y: mhz ? r.y + r.h / 2 : r.y + smd2, horiz: mhz, len: msl,
-              tone: (mtone + st * 0.37) % 1, seed: (rand() * 9999) | 0 });
+            props.push({ kind: 'railing', x: mhz ? r.x + smd2 : r.x + r.w / 2, y: mhz ? r.y + r.h / 2 : r.y + smd2, horiz: mhz, len: msl,
+              planter: st % 2 === 1, lamp: st === 0, tone: rand(), seed: (rand() * 9999) | 0 });
           }
         } else if (r.kind === 'barricade' && r.carapace) {
           /* The hive's barrier, a Ballistic Barrier or a barricade alike: shed
@@ -562,6 +563,16 @@
           props.push({ kind: 'parleyflag', x: r.x + r.w / 2, y: r.y + r.h / 2, seed: (rr2() * 9999) | 0 });
           return;
         }
+        /* A spaceport's apron: the pad's markings painted on it, a shuttle down on
+           it, a fuel bowser with its hoses run out to the shuttle, a cargo lifter. */
+        if (r.kind === 'road' && r.pad) { props.push({ kind: 'padmark', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
+        if (r.kind === 'shuttle') { props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), seed: (rr2() * 9999) | 0 }); return; }
+        if (r.kind === 'fueltruck') {
+          props.push({ kind: 'fueltruck', x: r.x, y: r.y, w: r.w, h: r.h, height: a(13), seed: (rr2() * 9999) | 0 });
+          if (r.hose) props.push({ kind: 'hose', x: r.x + r.w * 0.35, y: r.y + r.h - 0.1, to: r.hose, seed: (rr2() * 9999) | 0 });
+          return;
+        }
+        if (r.kind === 'cargolifter') { props.push({ kind: 'cargolifter', x: r.x, y: r.y, w: r.w, h: r.h, height: a(15), seed: (rr2() * 9999) | 0 }); return; }
         // a town square's fountain: its basin, column and statue, drawn as one block among the others
         if (r.kind === 'fountain') {
           props.push({ kind: 'fountain', x: r.x, y: r.y, w: r.w, h: r.h, height: a(22), seed: (rr2() * 9999) | 0 });
@@ -586,10 +597,13 @@
           : r.kind === 'wall' ? a(9 + rand() * 2)
             : r.kind === 'objective' ? a(22)
               : a(10 + Math.min(8, Math.max(r.w, r.h)) + rand() * 3);
+        // a map's landmark stands taller than the rest (r.tall, a multiple of its height)
+        if (r.kind === 'building' && r.tall) height *= r.tall;
         // a building's style, and each of its wings as a block of its own
         var sty = ['concrete', 'concrete', 'brick', 'prefab'][(rand() * 4) | 0];
         if (planet === 'industrial' && rand() < 0.5) sty = 'prefab';
         if ((planet === 'sparse' || planet === 'jungle') && rand() < 0.4) sty = 'brick';
+        if (r.kind === 'building' && r.style) sty = r.style;      // a map's own choice: a glass tower
         var wings = r.kind === 'building' && r.parts ? r.parts : [r];
         // the entrance, the sign and the awning go on the biggest wing only
         var mainW = wings.reduce(function (b2, q) { return !b2 || q.w * q.h > b2.w * b2.h ? q : b2; }, null);
@@ -598,7 +612,9 @@
             main: q === mainW,
             kind: r.kind === 'wall' ? 'highwall' : r.kind,
             x: q.x, y: q.y, w: q.w, h: q.h, height: Math.max(a(8), Math.round(height * (q.hf || 1) * storeys(r, q))),
-            style: r.kind === 'building' ? sty : null, seed: (rand() * 9999) | 0
+            style: r.kind === 'building' ? sty : null, seed: (rand() * 9999) | 0,
+            // a map's comms dish, on the roof of the building's biggest wing
+            dish: r.kind === 'building' && !!r.dish && q === mainW
           });
         });
       });
@@ -609,7 +625,7 @@
         if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz, relic: !!o.relic, carried: !!o.carried });
       });
       // what lies flat on the floor goes down before anything stands on it
-      var FLAT = { deckgrate: 1, cable: 1, litter: 1 };
+      var FLAT = { deckgrate: 1, cable: 1, litter: 1, padmark: 1, hose: 1 };
       props.forEach(function (p) {
         // the search-site hatch draws over its own scatter, so it stays readable; an objective's flag over the hatch it stands in
         p.depth = (p.w ? p.x + p.w / 2 + p.y + p.h / 2 : p.x + p.y) +
@@ -620,11 +636,11 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, sacks: 0.3 };
+      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];

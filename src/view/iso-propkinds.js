@@ -22,10 +22,106 @@
     var MACH = ['#1a1e22', '#2a3036', '#3d454c', '#50595f', '#636d74', '#86919a'];
     var SHIELD = ['#1f2428', '#2e353b', '#46515a', '#5d6a74', '#73808a', '#94a1ab'];
     var DOOR_STEEL = ['#23282c', '#323a40', '#465058', '#58636c', '#6b7781', '#8a96a0'];
-    // a market: the stalls' timber, their awnings' stripes, and what is for sale
-    var TIMBER = ['#2a1e14', '#3e2c1c', '#564028', '#6e5234', '#866642', '#9e7c54'];
-    var AWNING = [['#b8402e', '#e8dcc0'], ['#2e6a8a', '#e8dcc0'], ['#c8a040', '#5a3a22'], ['#3e7a4a', '#e8dcc0'], ['#7a3a6a', '#e8c890']];
-    var WARES = ['#d8a03a', '#c8402a', '#7aa83a', '#e8dcc0', '#8a5a3a', '#4a7aa8'];
+    // a market: the stalls' steel, their canopies (sheet, neon, holo-sign), and what is for sale
+    var KIOSK = ['#181c20', '#262c32', '#363e46', '#48525c', '#5c6872', '#7a8792'];
+    var CANOPY = [['#1f5866', '#6fe8ff', 'rgba(111,232,255,.28)'], ['#5e2a56', '#ff7ad8', 'rgba(255,122,216,.28)'], ['#6a5218', '#ffcf5a', 'rgba(255,207,90,.28)'],
+      ['#24503a', '#7affb0', 'rgba(122,255,176,.28)'], ['#2e3470', '#9aa8ff', 'rgba(154,168,255,.28)']];
+    var WARES = ['#6fe8ff', '#ffcf5a', '#7affb0', '#d8dee4', '#ff7ad8', '#8a96a0'];
+    // a boulevard: the railings' steel, the planters' cast stone and the trees in them
+    var RAIL = ['#1e2328', '#3a434b', '#7d8a95', '#a9b6c0', '#dbe4ea'];
+    var PLANTER = ['#2a2c2c', '#3c3f3f', '#545858', '#6a6f6f', '#7f8484', '#989d9c'];
+    var SHRUB = ['#1f3a1c', '#2e5a2a', '#4a7e3a', '#6a9e4a'];
+    // a spaceport: a shuttle's hull, a fuel bowser's tank and cab, a cargo lifter's paint
+    var HULL = ['#1e2226', '#2e343a', '#454d55', '#5e6871', '#7a858f', '#9aa6b0'];
+    var TANK = ['#4a4636', '#6a6450', '#9a9478', '#bcb698', '#d8d2b2', '#ece6c8'];
+    var CAB = ['#3a2e0c', '#6a5418', '#a8842a', '#c89c32', '#e0b440', '#f0cc60'];
+    var LIFT = ['#3a240c', '#6a4214', '#a8661e', '#d08428', '#e8a038', '#f4bc58'];
+    // a glass tower: tinted curtain wall, its mullions, and the light in it
+    var GLASS = ['#0c1820', '#13283a', '#1a3a54', '#21506e', '#2b6a8a', '#3c86a8'];
+    /* A glass tower (a map's landmark, style 'glass'): a tinted curtain wall
+       ruled into panes by bright mullions and floor by floor, a sheen of sky
+       slanting across it, lit offices here and there, and a narrower crown on
+       top with a lit band and a mast. Cut away, it is a building like any other. */
+    function glassTower(g, pr, lift, cutaway) {
+      if (cutaway) { box(g, pr, GLASS, { roof: GLASS[1], roofEdge: GLASS[5], windows: null, lift: lift, cutaway: true }); return; }
+      var gr = rng(pr.seed || 11), body = Math.round(pr.height * 0.82);
+      function pt(x, y, up) { var q = toScreen(x, y); return [q.x, q.y - lift - (up || 0)]; }
+      function curtain(q, h, base) {
+        box(g, { x: q.x, y: q.y, w: q.w, h: q.h, height: h, seed: q.seed }, GLASS, { roof: '#18232c', roofEdge: '#7fd8f0', windows: null, lift: lift + (base || 0), noShadow: !!base });
+        var faces = [[[q.x + q.w, q.y], [q.x + q.w, q.y + q.h]], [[q.x, q.y + q.h], [q.x + q.w, q.y + q.h]]];
+        faces.forEach(function (F, fi) {
+          var len = Math.hypot(F[1][0] - F[0][0], F[1][1] - F[0][1]), cols = Math.max(2, Math.round(len / 0.8)), floors = Math.max(3, Math.round(h / a(2.2)));
+          // the glass, lit floor by floor: an office's lights on in some of the panes
+          for (var fl = 0; fl < floors; fl++) {
+            for (var c = 0; c < cols; c++) {
+              if (gr() > 0.16) continue;
+              var u0 = c / cols, u1 = (c + 1) / cols, z0 = base + h * fl / floors + 2, z1 = base + h * (fl + 1) / floors - 2;
+              var A = lerp2(F[0], F[1], u0), B2 = lerp2(F[0], F[1], u1);
+              poly(g, [pt(A[0], A[1], z0), pt(B2[0], B2[1], z0), pt(B2[0], B2[1], z1), pt(A[0], A[1], z1)], gr() > 0.4 ? 'rgba(255,214,140,.55)' : 'rgba(150,230,255,.45)');
+            }
+          }
+          // the sky's sheen, one slanting band across the face
+          for (var sb = 0; sb < 1; sb++) {
+            var s0 = 0.2 + gr() * 0.3, sw = 0.16, zz0 = base + h * 0.05, zz1 = base + h * 0.95;
+            var P0 = lerp2(F[0], F[1], s0), P1 = lerp2(F[0], F[1], Math.min(1, s0 + sw)), P2 = lerp2(F[0], F[1], Math.min(1, s0 + sw + 0.18)), P3 = lerp2(F[0], F[1], Math.min(1, s0 + 0.18));
+            poly(g, [pt(P0[0], P0[1], zz0), pt(P1[0], P1[1], zz0), pt(P2[0], P2[1], zz1), pt(P3[0], P3[1], zz1)], fi ? 'rgba(200,240,255,.07)' : 'rgba(200,240,255,.12)');
+          }
+          // mullions up the face and a spandrel at every floor
+          for (var m = 1; m < cols; m++) { var M = lerp2(F[0], F[1], m / cols); edgeLine(g, pt(M[0], M[1], base + 1), pt(M[0], M[1], base + h - 1), 'rgba(160,215,235,.35)', 1); }
+          for (var f2 = 1; f2 < floors; f2++) edgeLine(g, pt(F[0][0], F[0][1], base + h * f2 / floors), pt(F[1][0], F[1][1], base + h * f2 / floors), 'rgba(10,20,28,.55)', 1);
+        });
+        // the corner nearest the viewer, catching the light all the way up
+        edgeLine(g, pt(q.x + q.w, q.y + q.h, base), pt(q.x + q.w, q.y + q.h, base + h), '#a8eaff', 1);
+      }
+      curtain(pr, body, 0);
+      // a lit band where the crown begins
+      var cA = pt(pr.x + pr.w, pr.y, body), cB = pt(pr.x + pr.w, pr.y + pr.h, body), cC = pt(pr.x, pr.y + pr.h, body);
+      edgeLine(g, cA, cB, '#6fe8ff', 2); edgeLine(g, cC, cB, '#6fe8ff', 2);
+      // the crown: set back from the edge, a storey and a half taller
+      var inset = Math.min(pr.w, pr.h) * 0.22;
+      var crown = { x: pr.x + inset, y: pr.y + inset, w: pr.w - inset * 2, h: pr.h - inset * 2, seed: (pr.seed || 11) + 3 };
+      curtain(crown, pr.height - body, body);
+      // the mast on the crown, a warning light at its tip
+      var mb = pt(crown.x + crown.w / 2, crown.y + crown.h / 2, pr.height), mh = a(9);
+      edgeLine(g, mb, [mb[0], mb[1] - mh], '#8a96a0', 2);
+      edgeLine(g, [mb[0] - a(0.6), mb[1] - mh * 0.45], [mb[0] + a(0.6), mb[1] - mh * 0.45], '#8a96a0', 1);
+      dot(g, mb[0], mb[1] - mh - 1, '#ff4a3a', 3);
+    }
+    /* A comms dish on a roof (a map's building with `dish`): a squat equipment
+       box, a mast, and a big dish on a yoke tilted up at the sky to the
+       north-east, its feed horn out in front on struts, a red light on top. */
+    function commsDish(g, pr, lift) {
+      var cx = pr.x + pr.w * 0.5, cy = pr.y + pr.h * 0.5, z0 = pr.height;
+      function D(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - lift - z]; }
+      box(g, { x: cx - 0.7, y: cy - 0.5, w: 1.4, h: 1.0, height: a(3), seed: pr.seed + 7 }, MACH, { roof: MACH[3], roofEdge: MACH[5], windows: null, lift: lift + z0, noShadow: true });
+      var hub = z0 + a(3) + a(7), R = Math.min(pr.w, pr.h) * 0.32 + 0.6;
+      edgeLine(g, D(cx, cy, z0 + a(3)), D(cx, cy, hub), '#3a4248', 3);
+      edgeLine(g, D(cx, cy, z0 + a(3)), D(cx, cy, hub), '#7a858f', 1);
+      // the dish faces up and out to the north-east: its rim a circle in a tilted plane
+      var dx = 0.7071, dy = -0.7071, tilt = 0.85;              // the way it looks, and how far up
+      var nx = dx * Math.cos(tilt), ny = dy * Math.cos(tilt), nz = Math.sin(tilt);
+      var ux = 0.7071, uy = 0.7071;                             // across it, level
+      var vx = -nz * dx, vy = -nz * dy, vz = Math.cos(tilt);    // up its face
+      var ZS = a(8);                                            // inches up, in pixels
+      function rim(t, k) {
+        var c = Math.cos(t) * R * k, s2 = Math.sin(t) * R * k;
+        return D(cx + c * ux + s2 * vx, cy + c * uy + s2 * vy, hub + s2 * vz * ZS);
+      }
+      var back = [], face = [], bowl = [];
+      for (var i = 0; i <= 28; i++) { var t = i / 28 * Math.PI * 2; back.push(rim(t, 1.04)); face.push(rim(t, 1)); bowl.push(rim(t, 0.72)); }
+      poly(g, back, '#4a535a');
+      poly(g, face, '#c9d0d4');
+      poly(g, bowl, '#a9b2b8');
+      for (var sp = 0; sp < 4; sp++) {
+        var ts = sp / 4 * Math.PI * 2 + 0.4;
+        var foot = rim(ts, 0.95), horn = D(cx + nx * R * 0.9, cy + ny * R * 0.9, hub + nz * R * 0.9 * ZS);
+        edgeLine(g, foot, horn, '#5a646c', 1);
+      }
+      var hn = D(cx + nx * R * 0.9, cy + ny * R * 0.9, hub + nz * R * 0.9 * ZS);
+      ellipse(g, hn[0], hn[1], a(0.9), a(0.9), '#2a3036');
+      var top = rim(Math.PI / 2, 1.04);
+      dot(g, top[0], top[1] - 2, '#ff4a3a', 3);
+    }
     function drawKind(cutaway, g, lift, p, pr) {
       switch (pr.kind) {
         case 'tree': {
@@ -182,35 +278,226 @@
           dot(g, p.x + cw7 * 0.3, p.y - cl7 - ch7 * 0.2, '#7bdc6a', 2);
           break;
         }
-        /* A market stall (a settlement's barricade, iso-props.js): a timber
-           trestle laid with wares, on four posts under a striped awning that
-           slopes down towards the viewer. */
+        /* A market stall (a settlement's barricade, iso-props.js): a steel
+           kiosk counter laid with glowing wares, two masts at the back holding a
+           canopy of tinted panels that slopes down towards the viewer, a neon
+           strip along its front edge and a holo-sign over the back. */
         case 'stall': {
           var str = rng(pr.seed), slf = lift || 0, hz = pr.horiz, sl0 = (pr.len || 1.6) - 0.15, dp = 0.75;
           var tx0 = hz ? pr.x - sl0 / 2 : pr.x - dp / 2, ty0 = hz ? pr.y - dp / 2 : pr.y - sl0 / 2, tw = hz ? sl0 : dp, th = hz ? dp : sl0;
-          var tH = a(1.5), pH = a(4.2);
-          box(g, { x: tx0, y: ty0, w: tw, h: th, height: tH, seed: pr.seed }, TIMBER, { roof: TIMBER[4], roofEdge: TIMBER[5], windows: null, lift: slf });
+          var tH = a(1.4), pH = a(4.4), cn = CANOPY[Math.floor((pr.tone || 0) * CANOPY.length) % CANOPY.length];
+          box(g, { x: tx0, y: ty0, w: tw, h: th, height: tH, seed: pr.seed }, KIOSK, { roof: KIOSK[4], roofEdge: KIOSK[5], windows: null, lift: slf });
           function sp(x, y, up) { var q = toScreen(x, y); return [q.x, q.y - slf - up]; }
-          // the wares, heaped on the boards
-          for (var wi = 0; wi < 7; wi++) {
+          // a lit strip along the counter's front face
+          edgeLine(g, sp(hz ? tx0 : tx0 + tw, ty0 + th, tH * 0.55), sp(tx0 + tw, ty0 + th, tH * 0.55), cn[1], 1);
+          // the wares on the counter: cases and cells, some of them glowing
+          for (var wi = 0; wi < 6; wi++) {
             var wq = sp(tx0 + 0.1 + str() * (tw - 0.2), ty0 + 0.1 + str() * (th - 0.2), tH + a(0.2));
             dot(g, wq[0], wq[1], WARES[Math.floor(str() * WARES.length)], 2);
           }
-          // the posts at the four corners, and the awning over them, striped down its length
+          // the masts at the back corners (the back being the side away from the viewer)
           var ax0 = tx0 - 0.08, ay0 = ty0 - 0.08, ax1 = tx0 + tw + 0.08, ay1 = ty0 + th + 0.08;
-          [[ax0, ay0], [ax1, ay0], [ax1, ay1], [ax0, ay1]].forEach(function (c) { edgeLine(g, sp(c[0], c[1], 0), sp(c[0], c[1], pH), TIMBER[1], 1); });
-          var aw = AWNING[Math.floor((pr.tone || 0) * AWNING.length) % AWNING.length], nstr = 6;
-          for (var si2 = 0; si2 < nstr; si2++) {
-            var f0 = si2 / nstr, f1 = (si2 + 1) / nstr;
-            var q00 = hz ? [ax0 + (ax1 - ax0) * f0, ay0] : [ax0, ay0 + (ay1 - ay0) * f0];
-            var q01 = hz ? [ax0 + (ax1 - ax0) * f1, ay0] : [ax0, ay0 + (ay1 - ay0) * f1];
-            var q10 = hz ? [ax0 + (ax1 - ax0) * f0, ay1] : [ax1, ay0 + (ay1 - ay0) * f0];
-            var q11 = hz ? [ax0 + (ax1 - ax0) * f1, ay1] : [ax1, ay0 + (ay1 - ay0) * f1];
-            // the back edge high, the front (towards the viewer) a little lower
-            poly(g, [sp(q00[0], q00[1], pH + a(0.6)), sp(q01[0], q01[1], pH + a(0.6)), sp(q11[0], q11[1], pH - a(0.2)), sp(q10[0], q10[1], pH - a(0.2))], aw[si2 % 2]);
+          var backs = hz ? [[ax0, ay0], [ax1, ay0]] : [[ax0, ay0], [ax0, ay1]];
+          backs.forEach(function (c) { edgeLine(g, sp(c[0], c[1], 0), sp(c[0], c[1], pH + a(0.6)), KIOSK[1], 2); edgeLine(g, sp(c[0], c[1], tH), sp(c[0], c[1], pH + a(0.6)), KIOSK[3], 1); });
+          // the canopy: one tinted sheet, high at the back and lower at the front, ribbed into panels
+          var cA = sp(ax0, ay0, pH + a(0.6)), cB = hz ? sp(ax1, ay0, pH + a(0.6)) : sp(ax0, ay1, pH + a(0.6));
+          var cC = sp(ax1, ay1, pH - a(0.2)), cD = hz ? sp(ax0, ay1, pH - a(0.2)) : sp(ax1, ay0, pH - a(0.2));
+          poly(g, [cA, cB, cC, cD], cn[0]);
+          var nrib = 4;
+          for (var ri = 1; ri < nrib; ri++) {
+            var f = ri / nrib;
+            edgeLine(g, [cA[0] + (cB[0] - cA[0]) * f, cA[1] + (cB[1] - cA[1]) * f], [cD[0] + (cC[0] - cD[0]) * f, cD[1] + (cC[1] - cD[1]) * f], 'rgba(10,14,18,.45)', 1);
           }
-          // the awning's hem, a shade darker
-          edgeLine(g, sp(hz ? ax0 : ax1, ay1, pH - a(0.2)), sp(ax1, ay1, pH - a(0.2)), 'rgba(20,14,10,.55)', 1);
+          // the back edge catches the light; the front edge is the neon strip
+          edgeLine(g, cA, cB, 'rgba(255,255,255,.25)', 1);
+          edgeLine(g, cD, cC, cn[1], 2);
+          // the holo-sign over the back of the canopy, see-through, its letters a flicker of light
+          var hm = [(cA[0] + cB[0]) / 2, (cA[1] + cB[1]) / 2], hw = a(0.9), hh = a(0.55);
+          rect(g, hm[0] - hw, hm[1] - hh * 2.2, hw * 2, hh, cn[2]);
+          edgeLine(g, [hm[0] - hw, hm[1] - hh * 2.2], [hm[0] + hw, hm[1] - hh * 2.2], cn[1], 1);
+          for (var li = 0; li < 3; li++) dot(g, hm[0] - hw * 0.6 + li * hw * 0.6, hm[1] - hh * 1.7, cn[1], 1);
+          break;
+        }
+        /* A stretch of boulevard (a settlement's barricade, iso-props.js): steel
+           posts and two rails with a glass panel between them, a planter with a
+           young tree in it every other length, and a street lamp at its head. */
+        case 'railing': {
+          var rr = rng(pr.seed), rl = lift || 0, rhz = pr.horiz, half = (pr.len || 1.25) / 2;
+          function rp(x, y, up) { var q = toScreen(x, y); return [q.x, q.y - rl - (up || 0)]; }
+          var RA = rhz ? [pr.x - half, pr.y] : [pr.x, pr.y - half], RB = rhz ? [pr.x + half, pr.y] : [pr.x, pr.y + half];
+          if (pr.planter) {
+            var pw2 = rhz ? pr.len * 0.8 : 0.7, ph2 = rhz ? 0.7 : pr.len * 0.8;
+            box(g, { x: pr.x - pw2 / 2, y: pr.y - ph2 / 2, w: pw2, h: ph2, height: a(1.3), seed: pr.seed }, PLANTER, { roof: '#3a2c1e', roofEdge: PLANTER[5], windows: null, lift: rl });
+            // a young tree: a slim trunk and a crown of leaves, a shade lighter where the light comes from
+            var tb = rp(pr.x, pr.y, a(1.3)), th2 = a(3.4 + rr() * 1.2), cr = a(1.5 + rr() * 0.4);
+            rect(g, tb[0] - 1, tb[1] - th2, 2, th2, BARK[1]);
+            ellipse(g, tb[0], tb[1] - th2 - cr * 0.3, cr, cr * 0.85, SHRUB[1]);
+            ellipse(g, tb[0] - cr * 0.25, tb[1] - th2 - cr * 0.55, cr * 0.65, cr * 0.55, SHRUB[2]);
+            for (var lf = 0; lf < 5; lf++) dot(g, tb[0] + (rr() - 0.5) * cr * 1.4, tb[1] - th2 - cr * 0.3 + (rr() - 0.5) * cr, SHRUB[rr() > 0.5 ? 0 : 3], 1);
+          } else {
+            var rH = a(2.4), rM = a(1.2);
+            // the glass between the rails, then the posts, then the rails over them
+            poly(g, [rp(RA[0], RA[1], rM), rp(RB[0], RB[1], rM), rp(RB[0], RB[1], rH), rp(RA[0], RA[1], rH)], 'rgba(140,210,230,.22)');
+            [RA, RB].forEach(function (c) { edgeLine(g, rp(c[0], c[1], 0), rp(c[0], c[1], rH), RAIL[1], 2); edgeLine(g, rp(c[0], c[1], 0), rp(c[0], c[1], rH), RAIL[3], 1); });
+            edgeLine(g, rp(RA[0], RA[1], rM), rp(RB[0], RB[1], rM), RAIL[2], 1);
+            edgeLine(g, rp(RA[0], RA[1], rH), rp(RB[0], RB[1], rH), RAIL[2], 2);
+            edgeLine(g, rp(RA[0], RA[1], rH + 1), rp(RB[0], RB[1], rH + 1), RAIL[4], 1);
+          }
+          if (pr.lamp) {
+            // the street lamp: a tall mast, an arm over the walk and a cold white light under it
+            var lb = rp(RA[0], RA[1], 0), lh = a(7.5), arm = a(1.2);
+            edgeLine(g, lb, [lb[0], lb[1] - lh], RAIL[0], 2);
+            edgeLine(g, [lb[0] + 1, lb[1]], [lb[0] + 1, lb[1] - lh], RAIL[3], 1);
+            edgeLine(g, [lb[0], lb[1] - lh], [lb[0] + arm, lb[1] - lh + a(0.3)], RAIL[2], 2);
+            ellipse(g, lb[0] + arm, lb[1] - lh + a(0.6), a(0.9), a(0.5), 'rgba(190,240,255,.25)');
+            rect(g, lb[0] + arm - a(0.35), lb[1] - lh + a(0.25), a(0.7), a(0.3), '#e8faff');
+          }
+          break;
+        }
+        /* A landing pad's markings: a hazard-striped border, a ring in the middle
+           and the scorch of a hundred landings. */
+        case 'padmark': {
+          var pl = lift || 0, pm = rng(pr.seed);
+          function PM(x, y) { var q = toScreen(x, y); return [q.x, q.y - pl]; }
+          var cx = pr.x + pr.w / 2, cy = pr.y + pr.h / 2, rad = Math.min(pr.w, pr.h) * 0.36;
+          var sc = PM(cx, cy);
+          ellipse(g, sc[0], sc[1], a(rad * 1.1 * 1.4), a(rad * 1.1 * 0.7), 'rgba(16,14,12,.28)');
+          var ring = [];
+          for (var ri2 = 0; ri2 <= 40; ri2++) { var an = ri2 / 40 * Math.PI * 2; ring.push(PM(cx + Math.cos(an) * rad, cy + Math.sin(an) * rad)); }
+          for (var rs = 0; rs < 40; rs++) edgeLine(g, ring[rs], ring[rs + 1], 'rgba(226,184,74,.75)', 2);
+          // the border, inset a little, in hazard stripes
+          var ins = 0.5, X0 = pr.x + ins, Y0 = pr.y + ins, X1 = pr.x + pr.w - ins, Y1 = pr.y + pr.h - ins;
+          [[[X0, Y0], [X1, Y0]], [[X1, Y0], [X1, Y1]], [[X1, Y1], [X0, Y1]], [[X0, Y1], [X0, Y0]]].forEach(function (E2) {
+            var len = Math.hypot(E2[1][0] - E2[0][0], E2[1][1] - E2[0][1]), n = Math.max(2, Math.round(len / 0.7));
+            for (var k = 0; k < n; k++) {
+              var t0 = k / n, t1 = (k + 1) / n;
+              edgeLine(g, PM(E2[0][0] + (E2[1][0] - E2[0][0]) * t0, E2[0][1] + (E2[1][1] - E2[0][1]) * t0),
+                PM(E2[0][0] + (E2[1][0] - E2[0][0]) * t1, E2[0][1] + (E2[1][1] - E2[0][1]) * t1), k % 2 ? 'rgba(20,18,16,.8)' : 'rgba(226,184,74,.85)', 3);
+            }
+          });
+          // the slab joints
+          for (var jx = 1; jx < 4; jx++) edgeLine(g, PM(pr.x + pr.w * jx / 4, pr.y + 0.1), PM(pr.x + pr.w * jx / 4, pr.y + pr.h - 0.1), 'rgba(30,32,34,.35)', 1);
+          for (var jy = 1; jy < 4; jy++) edgeLine(g, PM(pr.x + 0.1, pr.y + pr.h * jy / 4), PM(pr.x + pr.w - 0.1, pr.y + pr.h * jy / 4), 'rgba(30,32,34,.35)', 1);
+          for (var sp2 = 0; sp2 < pr.w * pr.h * 0.4; sp2++) { var sq3 = PM(pr.x + pm() * pr.w, pr.y + pm() * pr.h); dot(g, sq3[0], sq3[1], 'rgba(20,18,16,.35)', 2); }
+          break;
+        }
+        /* A bowser's fuel hoses, run out across the apron to the shuttle: two
+           heavy lines lying in loose curves, a coupling at the far end. */
+        case 'hose': {
+          var hl = lift || 0, hr = rng(pr.seed);
+          function HP(x, y) { var q = toScreen(x, y); return [q.x, q.y - hl - 1]; }
+          for (var hn = 0; hn < 2; hn++) {
+            var off = (hn - 0.5) * 0.5, bend = 0.5 + hr() * 0.5, pts = [];
+            var dx = pr.to.x - pr.x, dy = pr.to.y - pr.y, ln = Math.hypot(dx, dy) || 1, nx = -dy / ln, ny = dx / ln;
+            for (var hk = 0; hk <= 12; hk++) {
+              var t = hk / 12, sw = Math.sin(t * Math.PI) * bend + Math.sin(t * Math.PI * 3) * 0.15;
+              pts.push(HP(pr.x + dx * t + nx * (sw + off), pr.y + dy * t + ny * (sw + off)));
+            }
+            for (var hs = 0; hs < 12; hs++) { edgeLine(g, pts[hs], pts[hs + 1], '#141414', 3); edgeLine(g, [pts[hs][0], pts[hs][1] - 1], [pts[hs + 1][0], pts[hs + 1][1] - 1], hn ? '#5a4a2a' : '#3e3e3a', 1); }
+            dot(g, pts[12][0], pts[12][1], '#e0b440', 3);
+          }
+          break;
+        }
+        /* A shuttle, down on its pad: a lifting body on four legs, nose to the
+           west, swept wings, a tall fin, two engines glowing in its tail, its
+           ramp down under them, and its owner's gold stripe down the side. */
+        case 'shuttle': {
+          var sl = lift || 0, x0 = pr.x, w = pr.w, yc = pr.y + pr.h / 2, hb = a(6), ht = a(22), wz = a(10);
+          function SP(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sl - z]; }
+          var sm = SP(x0 + w / 2, yc, 0);
+          shadowBlob(g, { x: sm[0] + a(3), y: sm[1] + a(1.5) }, a(w * 4.2), a(pr.h * 2));
+          // the legs, each on a foot
+          [[x0 + 2.8, yc - 1.1], [x0 + 2.8, yc + 1.1], [x0 + 8.2, yc - 1.1], [x0 + 8.2, yc + 1.1]].forEach(function (L) {
+            var f = SP(L[0], L[1], 0); ellipse(g, f[0], f[1], a(1.6), a(0.8), '#1a1d20');
+            edgeLine(g, f, SP(L[0], L[1], hb + 2), HULL[1], 4); edgeLine(g, f, SP(L[0], L[1], hb + 2), HULL[3], 1);
+          });
+          // the far wing, under everything
+          var FW = [SP(x0 + 3.6, yc - 1.2, wz), SP(x0 + 7.2, pr.y + 0.3, wz + a(1)), SP(x0 + 9.0, pr.y + 0.3, wz + a(1)), SP(x0 + 9.4, yc - 1.2, wz)];
+          poly(g, FW, HULL[2]);
+          // the ramp, down from the tail, lit inside
+          poly(g, [SP(x0 + 9.5, yc - 0.8, hb + a(2)), SP(x0 + 9.5, yc + 0.8, hb + a(2)), SP(x0 + w, yc + 0.8, 0), SP(x0 + w, yc - 0.8, 0)], HULL[3]);
+          poly(g, [SP(x0 + 9.5, yc - 0.6, hb + a(2)), SP(x0 + 9.5, yc + 0.6, hb + a(2)), SP(x0 + 9.5, yc + 0.6, hb + a(7)), SP(x0 + 9.5, yc - 0.6, hb + a(7))], 'rgba(255,214,140,.55)');
+          edgeLine(g, SP(x0 + w, yc - 0.8, 0), SP(x0 + w, yc + 0.8, 0), HULL[5], 1);
+          // the fuselage, its spine catching the light, and its nose
+          box(g, { x: x0 + 2.2, y: yc - 1.2, w: 7.4, h: 2.4, height: ht - hb, seed: pr.seed }, HULL, { roof: HULL[4], roofEdge: HULL[5], windows: null, lift: sl + hb, noShadow: true });
+          edgeLine(g, SP(x0 + 2.2, yc, ht + 1), SP(x0 + 9.6, yc, ht + 1), HULL[5], 2);
+          poly(g, [SP(x0 + 2.2, yc + 1.2, hb), SP(x0 + 2.2, yc + 1.2, ht), SP(x0 + 0.1, yc, hb + a(9)), SP(x0 + 0.1, yc, hb + a(4))], HULL[3]);
+          poly(g, [SP(x0 + 2.2, yc - 1.2, ht), SP(x0 + 2.2, yc + 1.2, ht), SP(x0 + 0.1, yc, hb + a(9))], HULL[5]);
+          // the cockpit's glass, wrapped round the top of the nose
+          poly(g, [SP(x0 + 0.9, yc - 0.45, hb + a(10)), SP(x0 + 0.9, yc + 0.45, hb + a(10)), SP(x0 + 2.3, yc + 1.05, ht - a(1)), SP(x0 + 2.3, yc - 1.05, ht - a(1))], '#16303e');
+          edgeLine(g, SP(x0 + 1.1, yc + 0.35, hb + a(10.6)), SP(x0 + 2.2, yc + 0.9, ht - a(1.4)), 'rgba(170,230,255,.7)', 1);
+          // the gold stripe of the company that owns it, and a row of ports
+          edgeLine(g, SP(x0 + 2.2, yc + 1.2, hb + a(8)), SP(x0 + 9.6, yc + 1.2, hb + a(8)), '#c9a65a', 4);
+          for (var pw = 0; pw < 6; pw++) { var pq = SP(x0 + 3 + pw * 1.0, yc + 1.2, hb + a(12)); rect(g, pq[0] - 2, pq[1] - 2, 4, 3, '#9ad8f0'); }
+          // the near wing: its leading edge lit, a gold chevron on it, its trailing edge in shadow
+          var NW = [SP(x0 + 3.6, yc + 1.2, wz), SP(x0 + 7.2, pr.y + pr.h - 0.3, wz + a(1)), SP(x0 + 9.0, pr.y + pr.h - 0.3, wz + a(1)), SP(x0 + 9.4, yc + 1.2, wz)];
+          poly(g, NW.map(function (q) { return [q[0], q[1] + a(1.5)]; }), HULL[0]);
+          poly(g, NW, HULL[3]);
+          edgeLine(g, NW[0], NW[1], HULL[5], 2);
+          edgeLine(g, NW[2], NW[3], HULL[1], 2);
+          poly(g, [SP(x0 + 6.3, yc + 2.2, wz + a(0.6)), SP(x0 + 7.4, yc + 2.2, wz + a(0.6)), SP(x0 + 8.0, yc + 3.0, wz + a(0.8)), SP(x0 + 6.9, yc + 3.0, wz + a(0.8))], '#c9a65a');
+          dot(g, NW[1][0], NW[1][1], '#3aff7a', 4);                  // the starboard light
+          // the fin, tall over the tail, and the engines glowing in the tail
+          var F0 = SP(x0 + 6.8, yc, ht), F1 = SP(x0 + 9.6, yc, ht), F2 = SP(x0 + 9.9, yc, ht + a(16)), F3 = SP(x0 + 9.0, yc, ht + a(16));
+          poly(g, [F0, F1, F2, F3], HULL[2]);
+          edgeLine(g, F0, F3, HULL[5], 2);
+          edgeLine(g, SP(x0 + 7.6, yc, ht + a(8)), SP(x0 + 9.7, yc, ht + a(8)), '#c9a65a', 3);
+          dot(g, F2[0], F2[1], '#ff4a3a', 4);
+          [-0.6, 0.6].forEach(function (o) {
+            var e = SP(x0 + 9.6, yc + o, hb + a(9));
+            ellipse(g, e[0], e[1], a(3.2), a(3.2), '#14171a');
+            ellipse(g, e[0], e[1], a(2.4), a(2.4), 'rgba(255,150,70,.6)');
+            ellipse(g, e[0], e[1], a(1.3), a(1.3), '#ffd28a');
+          });
+          break;
+        }
+        /* A fuel bowser: a long pale tank on a chassis, a yellow cab at its
+           east end with a dark windscreen, red hazard bands, six wheels. */
+        case 'fueltruck': {
+          /* The bowser is the company lorry from the unit art (the unarmoured
+             transport's hull), parked: drawn as a machine is, in the port's
+             ochre. Drawn by hand only where that art is not loaded. */
+          var ISO = root.PMCIso;
+          if (ISO && ISO.machine) {
+            ISO.machine(g, { id: 'bowser', art: 'hlorry', side: 'B', paint: 'ochre', cls: 'vehicle', alive: true, facing: pr.facing || 0 },
+              { at: { x: pr.x + pr.w / 2, y: pr.y + pr.h / 2 }, lift: lift || 0, status: 'ready' });
+            break;
+          }
+          var tl = lift || 0, tx = pr.x, ty = pr.y, tw2 = pr.w, th3 = pr.h;
+          function TP(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - tl - z]; }
+          var tm = TP(tx + tw2 / 2, ty + th3 / 2, 0);
+          shadowBlob(g, { x: tm[0] + a(2), y: tm[1] + a(1) }, a(tw2 * 3.4), a(th3 * 2.4));
+          box(g, { x: tx, y: ty + 0.25, w: tw2, h: th3 - 0.5, height: a(3), seed: pr.seed }, HULL, { roof: HULL[2], roofEdge: HULL[3], windows: null, lift: tl + a(1.5), noShadow: true });
+          box(g, { x: tx + 0.15, y: ty + 0.3, w: tw2 - 1.6, h: th3 - 0.6, height: a(8), seed: pr.seed + 1 }, TANK, { roof: TANK[4], roofEdge: TANK[5], windows: null, lift: tl + a(4.5), noShadow: true });
+          edgeLine(g, TP(tx + 0.15, ty + th3 - 0.3, a(8.5)), TP(tx + tw2 - 1.45, ty + th3 - 0.3, a(8.5)), '#b8402e', 4);
+          edgeLine(g, TP(tx + 0.15, ty + th3 - 0.3, a(10)), TP(tx + tw2 - 1.45, ty + th3 - 0.3, a(10)), '#b8402e', 2);
+          edgeLine(g, TP(tx + 0.3, ty + 0.9, a(12.6)), TP(tx + tw2 - 1.6, ty + 0.9, a(12.6)), 'rgba(255,255,255,.4)', 1);
+          box(g, { x: tx + tw2 - 1.35, y: ty + 0.25, w: 1.3, h: th3 - 0.5, height: a(10), seed: pr.seed + 2 }, CAB, { roof: CAB[4], roofEdge: CAB[5], windows: null, lift: tl + a(1.5), noShadow: true });
+          poly(g, [TP(tx + tw2 - 0.05, ty + 0.45, a(7)), TP(tx + tw2 - 0.05, ty + th3 - 0.45, a(7)), TP(tx + tw2 - 0.05, ty + th3 - 0.45, a(10.6)), TP(tx + tw2 - 0.05, ty + 0.45, a(10.6))], '#16303e');
+          dot(g, TP(tx + tw2 - 0.7, ty + 0.9, a(11.6))[0], TP(tx + tw2 - 0.7, ty + 0.9, a(11.6))[1], '#ffb02e', 4);    // its beacon
+          // the hose reel at the back, and the wheels
+          var rl2 = TP(tx + tw2 - 1.7, ty + th3 - 0.2, a(6)); ellipse(g, rl2[0], rl2[1], a(1.6), a(1.6), '#141414'); ellipse(g, rl2[0], rl2[1], a(0.7), a(0.7), '#e0b440');
+          [0.8, 1.9, tw2 - 0.7].forEach(function (wx) { var wq = TP(tx + wx, ty + th3 - 0.2, a(1.6)); ellipse(g, wq[0], wq[1], a(1.6), a(1.6), '#121314'); ellipse(g, wq[0], wq[1], a(0.6), a(0.6), '#5a5e62'); });
+          break;
+        }
+        /* A cargo lifter: a squat orange loader, a roll cage over its seat, and a
+           mast at its east end with a crate up on its forks. */
+        case 'cargolifter': {
+          var ll = lift || 0, lx = pr.x, ly = pr.y, lw = pr.w, lh2 = pr.h;
+          function LP(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - ll - z]; }
+          var lm = LP(lx + lw / 2, ly + lh2 / 2, 0);
+          shadowBlob(g, { x: lm[0] + a(1.5), y: lm[1] + a(0.8) }, a(lw * 3), a(lh2 * 1.6));
+          box(g, { x: lx + 0.15, y: ly + 0.5, w: lw - 0.9, h: lh2 - 0.8, height: a(5), seed: pr.seed }, LIFT, { roof: LIFT[4], roofEdge: LIFT[5], windows: null, lift: ll + a(1.2), noShadow: true });
+          // the roll cage over the seat
+          var c0 = [[lx + 0.4, ly + 0.7], [lx + 1.3, ly + 0.7], [lx + 1.3, ly + lh2 - 0.5], [lx + 0.4, ly + lh2 - 0.5]];
+          c0.forEach(function (c) { edgeLine(g, LP(c[0], c[1], a(6)), LP(c[0], c[1], a(12)), '#1e2226', 2); });
+          poly(g, c0.map(function (c) { return LP(c[0], c[1], a(12)); }), HULL[2]);
+          // the crate up on the forks, then the mast in front of it
+          box(g, { x: lx + lw - 1.25, y: ly + 0.55, w: 0.95, h: lh2 - 1.0, height: a(5), seed: pr.seed + 3 }, CRATE2, { roof: CRATE2[3], roofEdge: CRATE2[4], windows: null, lift: ll + a(7), noShadow: true });
+          [[lx + lw - 0.15, ly + 0.5], [lx + lw - 0.15, ly + lh2 - 0.4]].forEach(function (m) { edgeLine(g, LP(m[0], m[1], 0), LP(m[0], m[1], a(15)), '#2a2e32', 3); edgeLine(g, LP(m[0], m[1], 0), LP(m[0], m[1], a(15)), '#7a858f', 1); });
+          edgeLine(g, LP(lx + lw - 0.15, ly + 0.5, a(15)), LP(lx + lw - 0.15, ly + lh2 - 0.4, a(15)), '#2a2e32', 3);
+          [0.6, lw - 0.9].forEach(function (wx) { var wq = LP(lx + wx, ly + lh2 - 0.25, a(1.3)); ellipse(g, wq[0], wq[1], a(1.3), a(1.3), '#121314'); });
+          dot(g, LP(lx + 0.85, ly + 1.2, a(12.6))[0], LP(lx + 0.85, ly + 1.2, a(12.6))[1], '#ffb02e', 4);   // the beacon on the cage
           break;
         }
         case 'sacks': {
@@ -1017,6 +1304,7 @@
         case 'bunker':
         case 'highwall': {
           var bst = pr.kind === 'building' ? (pr.style || 'concrete') : null;
+          if (bst === 'glass') { glassTower(g, pr, lift || 0, !!cutaway); break; }
           var bp = pr.kind === 'bunker' ? CONCRETE : pr.kind === 'highwall' ? STONE : bst === 'brick' ? BRICK : bst === 'prefab' ? PREFAB : CONCRETE;
           box(g, pr, bp, {
             style: bst, main: pr.main !== false,
@@ -1026,6 +1314,7 @@
             lift: lift || 0, bunker: pr.kind === 'bunker',
             cutaway: !!cutaway
           });
+          if (pr.dish && !cutaway) commsDish(g, pr, lift || 0);
           break;
         }
         /* A possible objective location (p. 52): a prised-open hatch. Searched and

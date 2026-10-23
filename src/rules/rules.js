@@ -899,6 +899,12 @@
     // a story's Parley: the meeting point, a table under a white flag. Open ground, there to be seen
     // a town square's fountain: a stone basin round a column and a statue, too tall to see past and no way through
     fountain: { name: 'Fountain', blocks: true, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
+    /* A spaceport's apron (a story's map): a shuttle down on its pad, a fuel
+       bowser and a cargo lifter beside it. The shuttle is too big to see past;
+       the bowser and the lifter are low enough to see over. None is crossed. */
+    shuttle: { name: 'Shuttle', blocks: true, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
+    fueltruck: { name: 'Fuel bowser', blocks: false, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
+    cargolifter: { name: 'Cargo lifter', blocks: false, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
     parleyflag: { name: 'The meeting point', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     // Ambush! (p. 156): the road the enemy column is on — open ground, and nothing stands on it
     road: { name: 'Road', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
@@ -984,7 +990,7 @@
   /* A kind of ground as this table calls it: a settlement's map (a story map's
      market skin) names its barricades and crater fields for what they look
      like, and a paved road a paved road. The rules read them all as before. */
-  var SKIN_NAMES = { market: { barricade: 'Market stalls', crater: 'Market clutter', road: 'Paved road' } };
+  var SKIN_NAMES = { market: { barricade: 'Railings and planters', crater: 'Market clutter', road: 'Paved road' } };
   function terrainName(state, kind, piece) {
     var skin = state && state.cfg && state.cfg.story && state.cfg.story.skin;
     var named = skin && SKIN_NAMES[skin] && SKIN_NAMES[skin][kind];
