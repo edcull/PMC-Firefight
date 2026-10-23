@@ -2579,3 +2579,5 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .chart-stones, .chart-rivals { margin: 4px 0; font-size: 12px; color: var(--ink-dim); }
 .chart-rivals span { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; }
 .chart-rivals i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.chart-rivals small { color: var(--ink-dim); }
+.chart-rivals .secret { font-style: italic; opacity: .75; }

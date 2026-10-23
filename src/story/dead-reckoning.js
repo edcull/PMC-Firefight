@@ -301,6 +301,13 @@
        chapter that asks for one begins (story.js leadingRival), Kestrel first on a
        tie (it always gets there first), each fielding its own force. */
     leading: { from: ['kestrel', 'kettle', 'wraith', 'sable', 'reavers'] },
+    /* Who each rival company works for. Every one is a secret at the start: the
+       star chart says "client unknown" until something reveals it
+       ({ reveal: 'client_<id>' }, with the journal's line for it). */
+    clients: {
+      kettle: 'the Orrin Mercantile Bank', wraith: 'the Admiralty’s Office of Naval Intelligence', sable: 'the Halvorsen Mining Combine',
+      kestrel: 'the Meridian newsfeed', reavers: 'nobody: claim jumpers', lance: 'Lucan Vane'
+    },
     rivals: { kestrel: rival('kestrel'), kettle: rival('kettle'), wraith: rival('wraith'), sable: rival('sable'), reavers: rival('reavers') },
     // the Quiet wakes: whatever finale was due, it is Recall
     finaleOverride: [{ if: { meter: 'alarm', gte: 8 }, chapter: 'recall' }],
@@ -358,7 +365,7 @@
         { id: 'c1.debrief', type: 'debrief', text: '{if success}The log is Vane’s.{/if}{if failure}The log is held, at a cost.{/if}', events: ['c1.agent'], next: 'c1.interlude' },
         { id: 'c1.agent', type: 'event', who: 'kettering', title: 'The agent', text: 'Brass Ledger’s man is in the company’s hands.', options: [
           { id: 'message', text: 'Let him go, with a message for his employer.', effects: [{ flag: 'kettle_contact' }, { meter: 'vane', add: -1 }] },
-          { id: 'pay', text: 'Pay him for what he knows.', cost: { kUC: 1 }, why: 'You can’t pay him.', effects: [{ meter: 'intel', add: 1 }, { flag: 'kettle_contact' }] },
+          { id: 'pay', text: 'Pay him for what he knows.', cost: { kUC: 1 }, why: 'You can’t pay him.', effects: [{ meter: 'intel', add: 1 }, { flag: 'kettle_contact' }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank, behind three shell companies.' }] },
           { id: 'police', text: 'Hand him to the port police.', effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: -1 }, { flag: 'kettle_burned' }] }
         ] },
         interlude('c1.interlude', 'c2', 'The company lifts off Vesk with the log, and Vane’s first heading.')
@@ -388,7 +395,7 @@
           }, next: 'c2f.debrief' },
         { id: 'c2f.debrief', type: 'debrief', text: '{if relic}The lodestone is yours.{/if}{if not relic}You come away without the lodestone.{/if}', events: ['c2f.drop', 'c2f.second'], next: 'c2.interlude' },
         { id: 'c2f.drop', type: 'event', who: 'nine', if: { grade: 'success' }, title: 'Wraith’s dead drop', text: 'Their camp holds a copy of their own orders.', options: [
-          { id: 'read', text: 'Read them.', effects: [{ meter: 'intel', add: 2 }, { flag: 'wraith_orders' }] },
+          { id: 'read', text: 'Read them.', effects: [{ meter: 'intel', add: 2 }, { flag: 'wraith_orders' }, { reveal: 'client_wraith', journal: 'Wraith Section’s orders come from the Admiralty’s Office of Naval Intelligence. The Navy wants the Quiet too.' }] },
           { id: 'warn', text: 'Leave a message in it.', effects: [{ meter: 'wraith', add: -1 }, { flag: 'wraith_warned' }] },
           { id: 'take', text: 'Take back their stolen copy of the log.', effects: [{ meter: 'lead', add: 1 }, { flag: 'wraith_robbed' }] }
         ] },
@@ -424,9 +431,9 @@
         intro: 'Morrow’s beacon is a structure nobody built, half under water, and the Red Reavers are digging at it.', nodes: [
         { id: 'c3.brief', type: 'brief', text: 'The beacon, in the flooded forest.', next: 'c3.contact' },
         { id: 'c3.contact', type: 'event', who: 'hal', title: 'Claim jumpers', text: 'The Reavers are digging at the beacon.', options: [
-          { id: 'storm', text: 'Storm it.', battle: { scenario: 'strike', name: 'Storm the Beacon' }, effects: [{ meter: 'alarm', add: 1 }, { flag: 'beacon_stormed' }] },
-          { id: 'watch', text: 'Watch first.', battle: { tier: 'max-1' }, effects: [{ meter: 'understanding', add: 1 }, { meter: 'intel', add: 1 }, { meter: 'lead', add: -1 }] },
-          { id: 'signal', text: 'Try a signal.', effects: [{ roll: { d6: 4, meter: 'understanding', mods: [{ if: { flag: 'thule_records' }, add: 1 }] },
+          { id: 'storm', text: 'Storm it.', battle: { scenario: 'strike', name: 'Storm the Beacon' }, effects: [{ meter: 'alarm', add: 1 }, { flag: 'beacon_stormed' }, { reveal: 'client_reavers', journal: 'The Red Reavers work for nobody. They are claim jumpers, and sell to whoever buys.' }] },
+          { id: 'watch', text: 'Watch first.', battle: { tier: 'max-1' }, effects: [{ meter: 'understanding', add: 1 }, { meter: 'intel', add: 1 }, { meter: 'lead', add: -1 }, { reveal: 'client_reavers', journal: 'The Red Reavers work for nobody. They are claim jumpers, and sell to whoever buys.' }] },
+          { id: 'signal', text: 'Try a signal.', effects: [{ reveal: 'client_reavers', journal: 'The Red Reavers work for nobody. They are claim jumpers, and sell to whoever buys.' }, { roll: { d6: 4, meter: 'understanding', mods: [{ if: { flag: 'thule_records' }, add: 1 }] },
             pass: [{ flag: 'beacon_rubbing' }, { meter: 'alarm', add: -1 }, { meter: 'stones', add: 1 }, { next: { battle: 'c3.battle', levers: { skip: true } } }],
             fail: [{ flag: 'signal_failed', local: true }, { next: { battle: 'c3.battle', levers: { variant: { contacts: { turn: 2, found: true, keys: CONTACTS } }, name: 'The Beacon Answers' } } }] }] }
         ], next: 'c3.battle' },
@@ -467,11 +474,11 @@
         { id: 'c4.lot', type: 'event', who: 'agathe', title: 'Lot 47, again', text: 'Sable has bought the warehouse the heading sits in.', options: [
           { id: 'buy', text: 'Buy it.', cost: { kUC: 3 }, why: 'You can’t afford it.', battle: { skip: true }, effects: [{ meter: 'vane', add: 1 }] },
           { id: 'take', text: 'Take it.', battle: { role: 'attacker', tier: 'max' } },
-          { id: 'follow', text: 'Let Sable have it, and follow Sable.', battle: { skip: true, intel: 2 }, effects: [{ meter: 'lead', add: -1 }, { meter: 'intel', add: 2 }, { meter: 'vane', add: -1 }, { meter: 'sable', add: 1 }, { flag: 'sable_owed' }] },
+          { id: 'follow', text: 'Let Sable have it, and follow Sable.', battle: { skip: true, intel: 2 }, effects: [{ meter: 'lead', add: -1 }, { meter: 'intel', add: 2 }, { meter: 'vane', add: -1 }, { meter: 'sable', add: 1 }, { flag: 'sable_owed' }, { reveal: 'client_sable', journal: 'Sable Armour Group belongs to the Halvorsen Mining Combine, bought and paid for.' }] },
           hireOption('kettle', 'Hire Brass Ledger for the takeover.')
         ], next: 'c4.battle' },
         { id: 'c4.battle', type: 'battle', scenario: 'takeover', map: 'docks', role: 'attacker', tier: 'max', pl: 1, planet: 'industrial', enemy: rival('sable'),
-          on: { success: [{ effects: [{ meter: 'stones', add: 1 }, { meter: 'sable', add: -1 }, { meter: 'lead', add: 1 }] }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] }, next: 'c4.debrief' },
+          on: { success: [{ effects: [{ meter: 'stones', add: 1 }, { meter: 'sable', add: -1 }, { meter: 'lead', add: 1 }, { reveal: 'client_sable', journal: 'Sable Armour Group belongs to the Halvorsen Mining Combine, bought and paid for.' }] }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] }, next: 'c4.debrief' },
         { id: 'c4.debrief', type: 'debrief', pick: 3, text: 'The heading is out, one way or another.', events: ['c4.copies'].concat(HIRED_EVENTS), next: 'c4.interlude' },
         { id: 'c4.copies', type: 'event', title: 'The broker’s copies', text: 'Everybody bought one.', options: [
           { id: 'burn', text: 'Burn his stock.', effects: [{ meter: 'lead', add: 1 }, { meter: 'kettle', add: -1 }] },
@@ -507,9 +514,9 @@
         intro: 'Vane’s own company docks beside the company’s, with a court order.', nodes: [
         { id: 'dx.brief', type: 'brief', text: 'The Ninth Lance, and a repossession.', next: 'dx.repo' },
         { id: 'dx.repo', type: 'event', who: 'daw', title: 'The repossession', text: 'Commander Daw wants the log.', options: [
-          { id: 'hand', text: 'Hand back the log.', battle: { skip: true }, effects: [{ meter: 'lead', add: -2 }, { meter: 'intel', add: -2 }, { flag: 'vane_cut_off' }] },
-          { id: 'refuse', text: 'Refuse.', battle: { role: 'choose', edge: 'choose' } },
-          { id: 'fire', text: 'Fire first.', battle: { strikes: 'D3+PL' }, effects: [{ meter: 'vane', add: -2 }, { flag: 'lance_burned' }] }
+          { id: 'hand', text: 'Hand back the log.', battle: { skip: true }, effects: [{ meter: 'lead', add: -2 }, { meter: 'intel', add: -2 }, { flag: 'vane_cut_off' }, { reveal: 'client_lance', journal: 'The Ninth Lance is Lucan Vane’s own company.' }] },
+          { id: 'refuse', text: 'Refuse.', battle: { role: 'choose', edge: 'choose' }, effects: [{ reveal: 'client_lance', journal: 'The Ninth Lance is Lucan Vane’s own company.' }] },
+          { id: 'fire', text: 'Fire first.', battle: { strikes: 'D3+PL' }, effects: [{ meter: 'vane', add: -2 }, { flag: 'lance_burned' }, { reveal: 'client_lance', journal: 'The Ninth Lance is Lucan Vane’s own company.' }] }
         ], next: 'dx.battle' },
         { id: 'dx.battle', type: 'battle', scenario: 'meeting', map: 'dockring', tier: 'max', pl: 1, planet: 'industrial', enemy: rival('lance'),
           on: { success: [{ effects: [{ meter: 'lance', add: -1 }] }], skip: [{}], failure: [{ effects: [{ meter: 'lance', add: 1 }, { meter: 'stones', add: -1 }] }] }, next: 'dx.debrief' },
@@ -542,11 +549,11 @@
           { id: 'shield', text: 'Shield them.', cost: { kUC: 1 }, why: 'You can’t afford it.', effects: [{ meter: 'alarm', add: -1 }] }
         ] },
         { id: 'i.newsfeed', type: 'event', once: true, who: 'rook', if: { all: [{ chapter: { gte: 2 } }, { not: { flag: 'kestrel_deal' } }] }, title: 'The newsfeed', text: 'A newsfeed wants pictures.', options: [
-          { id: 'sell', text: 'Sell them.', effects: [{ kUC: 2 }, { flag: 'kestrel_deal' }, { meter: 'lead', add: -1 }] },
-          { id: 'refuse', text: 'Refuse.', effects: [{ meter: 'lead', add: 1 }] }
+          { id: 'sell', text: 'Sell them.', effects: [{ kUC: 2 }, { flag: 'kestrel_deal' }, { meter: 'lead', add: -1 }, { reveal: 'client_kestrel', journal: 'Kestrel Air Cavalry flies for the Meridian newsfeed, which wants the first pictures of whatever is at the end.' }] },
+          { id: 'refuse', text: 'Refuse.', effects: [{ meter: 'lead', add: 1 }, { reveal: 'client_kestrel', journal: 'Kestrel Air Cavalry flies for the Meridian newsfeed, which wants the first pictures of whatever is at the end.' }] }
         ] },
         { id: 'i.catalogue', type: 'event', once: true, who: 'kettering', if: { all: [{ flag: 'kettle_contact' }, { not: { flag: 'kettle_burned' } }] }, title: 'Brass Ledger’s catalogue', text: 'They are selling what they know.', options: [
-          { id: 'buy', text: 'Buy.', cost: { kUC: 2 }, why: 'You can’t afford it.', effects: [{ meter: 'intel', add: 1 }, { meter: 'kettle_trust', add: 1 }] },
+          { id: 'buy', text: 'Buy.', cost: { kUC: 2 }, why: 'You can’t afford it.', effects: [{ meter: 'intel', add: 1 }, { meter: 'kettle_trust', add: 1 }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank, behind three shell companies.' }] },
           { id: 'sell', text: 'Sell them yours.', effects: [{ kUC: 2 }, { meter: 'lead', add: -1 }, { meter: 'vane', add: -1 }] }
         ] },
         { id: 'i.jump', type: 'event', title: 'The jump', text: 'The drive is failing.', options: [

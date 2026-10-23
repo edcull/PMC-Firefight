@@ -40,6 +40,20 @@ half**, and the patron is a **rich, powerful, elusive man**. Where sections 2 to
 | **Survey Cover** (side contract against the Mithdu) | From chapter 3 | From chapter 5 |
 | **The reveal** | none (named from the first page) | The second half opens on it: Halloran reads the last of the log, and Morrow names them, the three-legged ones who step out of the air. Every newsfeed has the word by the next jump. |
 
+**Who hired the rivals is a secret** (`clients`, settled after the rework).
+Every rival's client starts unknown, and the star chart says "client unknown"
+beside its name. Something in the story reveals each one
+(`{ reveal: 'client_<id>' }`), with a line in the journal:
+
+| Rival | Client | Found out by |
+|---|---|---|
+| Brass Ledger | the Orrin Mercantile Bank, behind shell companies | paying Kettering's man for what he knows (chapter 1), or buying their catalogue |
+| Wraith Section | the Admiralty's Office of Naval Intelligence | reading their orders in the dead drop (the Glass Flats) |
+| Sable Armour Group | the Halvorsen Mining Combine | taking the warehouse (its papers), or following Sable |
+| Kestrel Air Cavalry | the Meridian newsfeed | Rook Kestrel's call (*The newsfeed*) |
+| The Red Reavers | nobody: claim jumpers | Hal says so at the beacon |
+| The Ninth Lance | Lucan Vane | Daw says so (*The Double-Cross*) |
+
 The rivals, the race, the Ninth Lance and the second half's threads stand as
 written in sections 2 to 4. Only the Tribes are now met for the first time
 under a name.

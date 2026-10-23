@@ -104,7 +104,8 @@
             if (e.set != null || (e.add || 0) < 0) m.down[h] = (m.down[h] || 0) + 1;
           });
         }
-        if (e.reveal && !mdefs[e.reveal]) err(at + ': no meter ' + e.reveal + ' to reveal');
+        // (a meter, or who a rival works for: `client_<id>`, of the story's `clients`)
+        if (e.reveal && !mdefs[e.reveal] && !(/^client_/.test(e.reveal) && def.clients && def.clients[e.reveal.slice(7)] != null)) err(at + ': no meter or client ' + e.reveal + ' to reveal');
         if (e.roll) {
           arr(e.roll.mods).forEach(function (md) {
             if (md.meter) M(md.meter).read.push({ at: at, kind: 'choice' });

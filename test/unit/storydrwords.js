@@ -146,6 +146,24 @@ console.log('\nThe star chart');
   require('../../src/view/story-chart.js');
   const html = global.PMCStoryChart.html(S.chart(c), 'dead-reckoning');
   ok('drawn: the map, the stops by name, who was met where, the lodestones', /<svg class="story-chart-map"/.test(html) && /Vantor III/.test(html) && /met Wraith Section/.test(html) && /Lodestones/.test(html));
+  {
+    // who each rival works for: a secret at first, on the chart as "client unknown", until something reveals it
+    const c2 = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+    S.begin(c2, 'dead-reckoning', {});
+    const ch0 = S.chart(c2);
+    ok('every rival’s client is a secret at the start', ch0.rivals.every((r) => r.client === false), ch0.rivals.map((r) => r.id + ':' + r.client).join(' '));
+    const reveals = {};
+    const scan = (x, at) => { if (!x || typeof x !== 'object') return; if (typeof x.reveal === 'string' && /^client_/.test(x.reveal)) (reveals[x.reveal.slice(7)] = reveals[x.reveal.slice(7)] || []).push(at); Object.keys(x).forEach((k) => scan(x[k], at)); };
+    Object.keys(dr._nodes).forEach((id) => scan(dr._nodes[id], id));
+    ok('...and every one of them can be found out, with a line for the journal', Object.keys(dr.clients).every((id) => (reveals[id] || []).length) &&
+      JSON.stringify(dr._nodes['c2f.drop']).indexOf('"reveal":"client_wraith","journal"') >= 0, Object.keys(dr.clients).map((id) => id + ':' + (reveals[id] || []).join('/')).join(' '));
+    c2.story.revealed.client_wraith = true;
+    c2.story.journal.push({ chapter: 'c2', node: 'c2f.battle', grade: 'victory' });
+    const h2 = global.PMCStoryChart.html(S.chart(c2), 'dead-reckoning');
+    ok('...the chart names Wraith Section’s once it is known', /Wraith Section.*for the Admiralty/.test(h2), h2.slice(h2.indexOf('chart-rivals'), h2.indexOf('chart-rivals') + 300));
+    c2.story.revealed.client_wraith = false; c2.story.leading = 'kestrel';
+    ok('...and says "client unknown" while it is not', /Kestrel Air Cavalry \(leading\) <small class="secret">client unknown/.test(global.PMCStoryChart.html(S.chart(c2), 'dead-reckoning')));
+  }
   require('../../src/story/deep-contract.js');
   const dc = { companies: { A: { name: 'T', kUC: 0, tier: 1, roster: [] } } };
   S.begin(dc, 'deep-contract', {});

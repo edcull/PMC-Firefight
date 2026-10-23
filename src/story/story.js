@@ -696,8 +696,10 @@
      the stops the company has made, in order, each a place (a chapter's, or the
      battle's own where it had one); where it is now; the next heading, if the
      log has given it; each rival's strength and the stop where the company last
-     met it; and the lodestones on each side, the rivals' count shown only once
-     it has been revealed. Drawn from the story's state alone. */
+     met it; who each works for (`clients`), kept secret until something
+     reveals it (`client_<id>`); and the lodestones on each side, the rivals'
+     count shown only once it has been revealed. Drawn from the story's state
+     alone. */
   function chart(campaign) {
     var st = campaign.story, def = storyOf(campaign);
     if (!def || !def.chart) return null;
@@ -723,7 +725,9 @@
     var cur = def._chapters[st.chapter], here = cur ? stopFor(cur.id, cur.place) : null;
     var rivals = ((def.leading && def.leading.from) || []).concat(def._meters.lance ? ['lance'] : []).map(function (id) {
       var side = (def.sides || {})[id] || {};
-      return { id: id, name: side.name || id, strength: st.meters[id] || 0, at: seen[id] || null, leading: st.leading === id };
+      // its client: a name once revealed (or the story is over), false while still a secret, null when the story keeps none
+      var cl = def.clients && def.clients[id] != null ? (st.revealed['client_' + id] || st.ended ? def.clients[id] : false) : null;
+      return { id: id, name: side.name || id, strength: st.meters[id] || 0, at: seen[id] || null, leading: st.leading === id, client: cl };
     });
     var shown = (def._meters.theirs && def._meters.theirs.shown) || st.revealed.theirs || st.ended;
     return {

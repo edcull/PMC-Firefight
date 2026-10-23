@@ -59,8 +59,12 @@
     });
     if (c.ahead) h += '<li class="ahead"><b>?</b> <small>' + esc(c.ahead) + '</small></li>';
     h += '</ol><p class="chart-stones"><b>Lodestones</b> ' + c.stones + ' held' + (c.theirs != null ? ' · the rivals hold ' + c.theirs : ' · the rivals’ count unknown') + '</p>';
-    var known = c.rivals.filter(function (rv) { return rv.at || rv.leading; });
-    if (known.length) h += '<p class="chart-rivals">' + known.map(function (rv) { return '<span><i style="background:' + (RIVAL[rv.id] || '#c8c8c8') + '"></i>' + esc(rv.name) + (rv.leading ? ' (leading)' : '') + '</span>'; }).join('') + '</p>';
+    // the rivals met (or leading, or whose client is known), and who each works for, if anyone has found out
+    var known = c.rivals.filter(function (rv) { return rv.at || rv.leading || rv.client; });
+    if (known.length) h += '<p class="chart-rivals">' + known.map(function (rv) {
+      return '<span><i style="background:' + (RIVAL[rv.id] || '#c8c8c8') + '"></i>' + esc(rv.name) + (rv.leading ? ' (leading)' : '') +
+        (rv.client ? ' <small>for ' + esc(rv.client) + '</small>' : rv.client === false ? ' <small class="secret">client unknown</small>' : '') + '</span>';
+    }).join('') + '</p>';
     return h + '</div>';
   }
 
