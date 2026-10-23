@@ -181,8 +181,9 @@ ok('the Glass Flats and the Mire put their three places where the map says, for 
   ok('Vesk is a crossroads: paved roads from all four edges of the table into a paved square, the auction house in the middle of it',
     !!middle && roads.some((p) => p.x === 0) && roads.some((p) => p.x + p.w === 48) && roads.some((p) => p.y === 0) && roads.some((p) => p.y + p.h === 48) &&
     MAPS.vesk.pieces.filter((p) => p.kind === 'building').length >= 10);
-  ok('...and a fountain in a corner of the square that blocks the view across it',
-    !!fountain && Math.hypot(fountain.x + fountain.w / 2 - 24, fountain.y + fountain.h / 2 - 24) > 4 && Math.hypot(fountain.x + fountain.w / 2 - 24, fountain.y + fountain.h / 2 - 24) < 9 &&
+  ok('...and a fountain off a corner of the square, clear of the roads, that blocks the view across it',
+    !!fountain && Math.hypot(fountain.x + fountain.w / 2 - 24, fountain.y + fountain.h / 2 - 24) > 8 && Math.hypot(fountain.x + fountain.w / 2 - 24, fountain.y + fountain.h / 2 - 24) < 14 &&
+    roads.every((p) => !(p.x < fountain.x + fountain.w && fountain.x < p.x + p.w && p.y < fountain.y + fountain.h && fountain.y < p.y + p.h)) &&
     R.TERRAIN.fountain.blocks && R.TERRAIN.fountain.impassable);
 ok('...its skin the market’s: railings for barricades, the market’s clutter for craters, by name too', MAPS.vesk.skin === 'market' &&
     MAPS.vesk.pieces.filter((p) => p.kind === 'barricade').length >= 6 && R.terrainName({ cfg: { story: { skin: 'market' } } }, 'barricade') === 'Railings and planters' &&
