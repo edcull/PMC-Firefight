@@ -48,6 +48,13 @@
         { who: 'kettering', text: 'They were paid to. It’s a job, not a grudge. You did yours, we did ours, and the client who lost is the one who’ll be unhappy. Hand him back and the account’s square. Keep him and it isn’t.' }
       ],
 
+      'c1.lost': [
+        { who: 'kettering', text: 'No hard feelings, {commander:rank}. Your employer’s log is in my hold, and my hold lifts in an hour. That’s how auctions go, sometimes.' },
+        { who: 'vane', text: 'Kettering. Name a figure.' },
+        { who: 'kettering', text: 'Mr Vane! An honour. The figure is high, and it goes up every minute you think about it. Or your hired help can come and try the field. I’d rather they didn’t; it’s bad for the paintwork.' },
+        { who: 'reader', text: 'I have the first eleven pages, {commander:rank}. Photographed. If they run, they’ll run where the log points, and we can follow.' }
+      ],
+
       // ---- 2. The First Lodestone ----
       'c2.brief': [
         { who: 'reader', text: 'Two readings, {commander:rank}. Both fit the burn times. One puts him on Vantor III, on the Glass Flats. The other at Station Thule.' },
@@ -483,6 +490,12 @@
         kill: [{ who: 'kettering', text: 'You’re costing me money, {commander:rank}. I don’t forgive that. I invoice it.' }],
         turn3: [{ who: 'reader', text: 'I’m in the arcade, {commander:rank}. Mr Vane is asking, rather calmly, whether I mean to reach the end of it.' }],
         loss: [{ who: 'vane', text: 'You’re losing people, {commander:rank}. Don’t lose Halloran. He reads, and I don’t.' }]
+      },
+      'c1r.battle': {
+        start: [{ who: 'kettering', text: 'They’re coming for the ship! Load what you can, and hold the ramp until we’re up!' }],
+        searched: [{ who: 'ops', text: 'Not here. Crates of tinned fish and somebody’s laundry. Next one!' }],
+        found: [{ who: 'ops', text: 'The case! It’s here, it’s the log! Get it off the field!' }],
+        guard: [{ who: 'kettering', text: 'They’ve got the case! Five thousand to whoever gets it back on my ship!' }]
       },
       'c2f.battle': {
         start: [{ who: 'nine', text: 'Wraith to company on the flats. Last warning. Anyone who lifts a spade gets a round through the visor.' }],

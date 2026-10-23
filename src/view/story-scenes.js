@@ -417,6 +417,16 @@
       p.shuttle(40, 12, false); p.shuttle(92, 8, true);
       p.people(56, 22, 5, '#0a0a10', 3);
     } },
+    /* Vesk's landing field at night, Lot 47 lost: Brass Ledger's ship on its
+       pad with the ramp down, cargo being loaded, and the port's lights. */
+    veskfield: { time: 'night', draw: function (p) {
+      p.sky(28).ridge(30, 3, p.t.far).ground(36);
+      p.building(4, 14, 10, 36, '#24222e', { lit: 0.5 }); p.building(108, 16, 12, 36, '#24222e', { lit: 0.5 });
+      p.rect(44, 34, 84, 37, '#3a3640');
+      p.shuttle(64, 26, false); p.rect(70, 30, 78, 34, '#4a4450');
+      [[50, 40], [56, 41], [86, 40]].forEach(function (c) { p.rect(c[0], c[1] - 3, c[0] + 4, c[1], '#6b6946'); p.rect(c[0], c[1] - 3, c[0] + 4, c[1] - 3, '#848155'); });
+      p.people(74, 40, 5, '#0c0a10', 3); for (var k = 46; k < 86; k += 8) p.light(k, 35, '#ffcf6a');
+    } },
     /* ---------- the second half (phase 5c) ---------- */
     /* The Hollin Shelf: a high plateau under a thin bright sky, peaks beyond,
        Kestrel's dropships down and the convoy's cars crawling for them. */

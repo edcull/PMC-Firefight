@@ -48,6 +48,22 @@
       ]
     },
 
+    /* Vesk's landing field, after Lot 47 was lost: Brass Ledger's ship on its
+       pad, cargo stacks, the customs shed, and three places the log could be as
+       they load it (Find and secure, the relic: the log carried off, or not). */
+    veskfield: {
+      name: 'The landing field, Vesk Free Port', planet: 'dense',
+      pieces: [
+        P(6, 6, 8, 8), B(34, 5, 7, 5, 'block'), B(6, 36, 8, 6, 'annex'), R('bunker', 35, 36, 6, 5),
+        B(26, 38, 6, 3, 'block'), R('barricade', 27, 10, 4, 1), R('ruins', 8, 20, 4, 4), R('wall', 37, 24, 1, 6)
+      ],
+      sites: { kind: 'searchsite', at: [
+        { x: 17, y: 16, name: 'The ship’s ramp' },
+        { x: 31, y: 21, name: 'The cargo stacks' },
+        { x: 21, y: 31, name: 'The customs shed' }
+      ] }
+    },
+
     /* The Glass Flats on Vantor III: a plain turned to glass by an old impact,
        outcrops of it standing like broken windows, the crater, and three places
        Morrow might have dug. */

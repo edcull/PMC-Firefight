@@ -66,6 +66,33 @@ docking ring.
 
 **Brass Ledger** is the new name of Coin & Kettle.
 
+**Lot 47 lost** (settled after the rework, from playing it). A defeat at Lot
+47 means Brass Ledger have the log (`log_lost`). The company sees their
+ship loading on Vesk's landing field and decides at once (*The log is
+gone*):
+
+- **Hit their ship** before it lifts: *Taking It Back*, Find and secure with
+  the relic on Vesk's landing field (`veskfield`), the log as the relic.
+  Carried off, it is the company's again; otherwise it leaves with them.
+- **Have Vane buy it back**: Vane's Trust −2, and Brass Ledger the stronger.
+- **Let them run with it, and follow** (`ledger_has_log`): the rivals' lead
+  (`theirs` +1, Lead −1). Halloran has only the eleven pages he photographed
+  in the arcade.
+
+While Brass Ledger have it, they sell its pages (the Race's pressure +2,
+and the readings already on sale). It comes back in one of two ways:
+
+- **Taken back at the Broker**: on Kerrigan, Lot 47 itself is on the block
+  beside the heading, and whoever takes the heading takes the log
+  (`theirs` −1).
+- **Rebuilt on the way**, from the company's own finds with Halloran's
+  pages: Wraith Section's stolen copy in their dead drop on the Glass Flats,
+  or Morrow's records at Station Thule (Lead +1, and a line in the journal).
+
+Vesk itself is now a settlement at a crossroads, with a market square in
+the middle. Its map's skin (`skin: 'market'`) draws barricades as market
+stalls and crater fields as the market's clutter, and names them so.
+
 The rivals, the race, the Ninth Lance and the second half's threads stand as
 written in sections 2 to 4. Only the Tribes are now met for the first time
 under a name.
