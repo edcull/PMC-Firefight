@@ -33,6 +33,13 @@
       if (!campaign || !campaign.companies) return campaign;
       // its star system, if it is fought across one (camp-system.js), made safe to read
       if (campaign.system) campaign.system = root.PMCSystem ? root.PMCSystem.cleanSystem(campaign.system) : campaign.system;
+      /* A story has no other forces: its side B is the story's enemy, kept on the
+         save as it is, and made afresh if a save from before that lost it (the
+         aftermath reads its doctrines and pays it as it would a rival). */
+      if (campaign.story) {
+        if (!campaign.companies.B) campaign.companies.B = newCompany('The enemy', { faction: 'pmc' });
+        return campaign;
+      }
       if (!campaign.rivals || !campaign.rivals.length) {
         campaign.rivals = campaign.companies.B ? [campaign.companies.B] : [];
         campaign.facing = 0;
@@ -50,6 +57,8 @@
       var out = {}, k;
       for (k in campaign) if (k !== 'companies') out[k] = campaign[k];
       out.companies = { A: campaign.companies.A };     // B is an alias into `rivals`
+      // ...except in a story, which has no rivals: its B is its own, and kept
+      if (campaign.story && campaign.companies.B) out.companies.B = campaign.companies.B;
       return out;
     }
 

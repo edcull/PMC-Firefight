@@ -127,6 +127,23 @@ ok('the enemy is smaller on Story, larger on Hard', easy.pts < norm.pts && norm.
 ok('...and HTX pays more on Story, less on Hard', easy.bonus > norm.bonus && norm.bonus > hard.bonus, easy.bonus + ' / ' + norm.bonus + ' / ' + hard.bonus + ' kUC');
 ok('an unknown setting is not taken', atDiff('nightmare').d === null);
 
+console.log('\nSaved and loaded');
+/* A story has no rival forces: its side B is its own, and a save keeps it, so a
+   battle after a reload still has its aftermath (the income roll reads side B). */
+{
+  const k = campaign();
+  const back = C.rehydrate(JSON.parse(JSON.stringify(C.forSave(k))));
+  ok('a story’s side B comes back from a save', !!back.companies.B && Array.isArray(back.companies.B.doctrines));
+  const lost = JSON.parse(JSON.stringify(C.forSave(k)));
+  delete lost.companies.B;
+  const mended = C.rehydrate(lost);
+  ok('...and a save that lost it has it made again', !!mended.companies.B && Array.isArray(mended.companies.B.doctrines) && (mended.rivals || []).length === 0);
+  const rep = { winner: 'A', routed: { A: false, B: true }, battleTier: 1, pl: 1, scenario: 'meeting', turns: 6, units: [], casualties: [], story: null };
+  let threw = null;
+  try { C.rollIncome(1, 1, mended.companies.A, mended.companies.B, 'A', ['A']); C.aftermath(mended, rep, {}); } catch (e) { threw = e.message; }
+  ok('...so a battle after a reload has its aftermath', !threw, threw);
+}
+
 console.log('\nThe story checks out with them');
 const r = V.check(dc, { scenarios: SC.SCENARIOS });
 ok('Deep Contract validates with its side contracts', r.errors.length === 0, r.errors.slice(0, 3).join(' | '));

@@ -173,7 +173,7 @@
       var out = { dice: { A: rollPayment(battleTier, pl), B: rollPayment(battleTier, pl) }, plunder: {}, neg: {} };
       [['A', coA], ['B', coB]].forEach(function (q) {
         var sd = q[0], co = q[1];
-        if ((people || []).indexOf(sd) >= 0) return;
+        if ((people || []).indexOf(sd) >= 0 || !co) return;
         if (hasDoctrine(co, 'V2') && winner === sd) {
           var d = out.dice[sd];
           if (sum(d) >= d.length * 3.5) out.plunder[sd] = { was: d.slice(), kept: true };
@@ -183,7 +183,7 @@
       // (the rolls handed out first, every Plunderer re-roll made: then each rival negotiates its own pay)
       [['A', coA], ['B', coB]].forEach(function (q) {
         var sd = q[0], co = q[1];
-        if ((people || []).indexOf(sd) >= 0 || !hasDoctrine(co, 'S2')) return;
+        if ((people || []).indexOf(sd) >= 0 || !co || !hasDoctrine(co, 'S2')) return;
         out.neg[sd] = negotiate(payingDice(out.dice, sd, winner, co));
       });
       return out;
