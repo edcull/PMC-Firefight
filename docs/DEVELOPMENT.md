@@ -107,7 +107,8 @@ src/
                      briefing and muster, the debrief, interludes, the second half's jobs, the
                      journal (and going back), the ending; a battle's force picked with the
                      contract's own muster (dossier-contract.js storyForce)
-    story-emblems.js the story's people as emblems: a round badge, a mark in their ink
+    story-portraits.js  the story's people as pixel-art faces: head and shoulders on a 32 x 32
+                     grid, drawn from each person's `face`, as an SVG of square pixels
     viewer.js        the unit viewer
 
   net/               playing somebody else

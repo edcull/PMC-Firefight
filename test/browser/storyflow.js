@@ -80,7 +80,7 @@ async function cards(p) {
   await go(p, '[data-go="storyon"]');
   txt = await body(p);
   check('the brief leads to the event: the port master’s offer', /port master/i.test(txt) && await p.evaluate(() => document.querySelectorAll('#camp-body .story-opt').length === 3));
-  check('...with who it is about: Port Master Okonkwo\u2019s emblem', /Port Master Okonkwo/.test(txt) && /Kessler\u2019s Reach starport/.test(txt) && await p.evaluate(() => !!document.querySelector('#camp-body .story-who svg.story-emblem')));
+  check('...with who it is about: Port Master Okonkwo\u2019s face', /Port Master Okonkwo/.test(txt) && /Kessler\u2019s Reach starport/.test(txt) && await p.evaluate(() => !!document.querySelector('#camp-body .story-who svg.story-portrait')));
   const diffNow = await p.evaluate(() => window.PMC_CAMPAIGN.get().story.difficulty);
   check('the story is played at Hard, and says so', diffNow === 'hard' && /Hard/i.test(txt), diffNow + ' | ' + txt.slice(0, 120));
   await p.screenshot({ path: path.join(SHOTS, 'story-event.png') });

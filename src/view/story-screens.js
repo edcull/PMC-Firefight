@@ -164,11 +164,11 @@
       return h + '</div>';
     }
 
-    // who an event is about: their emblem, name and what they are (story-emblems.js)
+    // who an event is about: their face, name and what they are (story-portraits.js)
     function whoView(id) {
-      var n = def()._nodes[id], who = n && n.who && (def().people || {})[n.who], EM = root.PMCStoryEmblems;
-      if (!who || !EM) return '';
-      return '<div class="story-who">' + EM.badge(who.mark, who.ink, 40) + '<span><b>' + esc(who.name) + '</b><small>' + esc(who.role || '') + '</small></span></div>';
+      var n = def()._nodes[id], who = n && n.who && (def().people || {})[n.who], PF = root.PMCStoryPortraits;
+      if (!who || !PF) return '';
+      return '<div class="story-who">' + PF.svg(who.face, 64) + '<span><b>' + esc(who.name) + '</b><small>' + esc(who.role || '') + '</small></span></div>';
     }
 
     function eventView(v) {

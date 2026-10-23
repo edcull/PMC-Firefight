@@ -1105,10 +1105,12 @@ Portraits or emblems for the people in the story (in the iso style or as plain
 emblems). Sound for the chapter cards. A second difficulty setting. Notes in the
 README and the user guide.
 
-**Where it stands.** Plain emblems, not portraits: the story's `people` (Varga,
-the Front, Port Master Okonkwo, Petrak, HTX, Black Lantern, the teacher, the
-miners' guild, the hive), each a mark and an ink, drawn as a badge by
-`view/story-emblems.js` beside every event that names them (`who`). Sounds, made
+**Where it stands.** Pixel-art faces: the story's `people` (Varga, the Front,
+Port Master Okonkwo, Petrak, HTX, Black Lantern, the teacher, the miners' guild,
+the hive) each carry a `face` (skin, hair, headgear, clothes, details such as a
+scar, glasses or a bandana), drawn by `view/story-portraits.js` as a head and
+shoulders on a 32 x 32 grid with a bold black edge, beside every event that names
+them (`who`); the hive has a bug's face. Sounds, made
 by `view/sfx.js` like the rest: a chapter's card, the second half's first, a
 battle lost and the ending, each once for its page. Three difficulties, chosen
 when the story begins (`difficulty` in the story, `story.js` `difficultyOf`):

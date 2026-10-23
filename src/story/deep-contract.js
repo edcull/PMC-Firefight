@@ -35,7 +35,7 @@
     return def;
   }
 
-  /* ---------- who each event is about: its emblem (view/story-emblems.js) ---------- */
+  /* ---------- who each event is about: their face beside it (view/story-portraits.js) ---------- */
   var WHO = {
     'c1.portmaster': 'okonkwo', 'c1.gate': 'htx', 'c2.firstmove': 'htx', 'c2r.nightshift': 'front', 'c2r.ledger': 'front',
     'c2r.survivors': 'htx', 'c2d.truck': 'petrak', 'c2d.armoury': 'front', 'c2d.rota': 'petrak', 'c3.killorcapture': 'htx',
@@ -221,18 +221,18 @@
       hive: { start: 0, min: 0, max: 10, name: 'Hive Growth', uses: ['force', 'tunnel'], twoWay: [2], thresholds: [{ gte: 3 }, { gte: 5 }, { gte: 8 }] },
       lantern: { start: 2, min: 0, max: 10, name: 'Black Lantern Strength', uses: ['force'], thresholds: [{ gte: 4 }, { gte: 7 }] }
     },
-    /* The people and sides the story's events are about, each with its emblem's
-       mark and ink (view/story-emblems.js). */
+    /* The people and sides the story's events are about, each with the face
+       drawn for them beside their events (view/story-portraits.js). */
     people: {
-      varga: { name: 'Ada Varga', role: 'The Free Miners\u2019 Front', mark: 'lamp', ink: '#d9733f' },
-      front: { name: 'The Free Miners\u2019 Front', role: 'The miners in arms', mark: 'star', ink: '#d9733f' },
-      okonkwo: { name: 'Port Master Okonkwo', role: 'Kessler\u2019s Reach starport', mark: 'tower', ink: '#8fb3c9' },
-      petrak: { name: 'Petrak', role: 'Driver, Truck Fourteen', mark: 'truck', ink: '#b9a77a' },
-      htx: { name: 'HTX', role: 'Halvorsen-Tey Extraction Consortium', mark: 'htx', ink: '#6fc4e2' },
-      lantern: { name: 'Black Lantern', role: 'Black Lantern Security', mark: 'lantern', ink: '#e0c25a' },
-      teacher: { name: 'The teacher', role: 'Pit Nine school', mark: 'book', ink: '#a8c98a' },
-      guild: { name: 'The miners\u2019 guild', role: 'Pit Nine and the shafts', mark: 'pick', ink: '#c9b68f' },
-      hive: { name: 'The hive', role: 'Below Kessler\u2019s Reach', mark: 'hive', ink: '#b06fd0' }
+      varga: { name: 'Ada Varga', role: 'The Free Miners\u2019 Front', face: { bg: '#d9733f', skin: '#c48a64', hair: '#2b2622', hairStyle: 'long', hat: 'helmet', hatColour: '#c8a040', clothes: '#6e3b2a', clothesStyle: 'jacket', accent: '#e0b070', extras: ['scar'] } },
+      front: { name: 'The Free Miners\u2019 Front', role: 'The miners in arms', face: { bg: '#c45f34', skin: '#a8754f', hair: '#3a2a20', hat: 'beanie', hatColour: '#4f5f3a', clothes: '#5a4a3a', extras: ['bandana'], bandana: '#b03a2e' } },
+      okonkwo: { name: 'Port Master Okonkwo', role: 'Kessler\u2019s Reach starport', face: { bg: '#8fb3c9', skin: '#6b4630', hair: '#1d1612', hairStyle: 'short', hat: 'cap', hatColour: '#2f3e5a', clothes: '#2f3e5a', clothesStyle: 'uniform', accent: '#e8c25a', extras: ['moustache'] } },
+      petrak: { name: 'Petrak', role: 'Driver, Truck Fourteen', face: { bg: '#b9a77a', skin: '#e2b48f', hair: '#7a5a3a', hat: 'beanie', hatColour: '#3a6a7a', clothes: '#6a6a5a', extras: ['stubble'], eyes: '#4a6a8a' } },
+      htx: { name: 'HTX', role: 'Halvorsen-Tey Extraction Consortium', face: { bg: '#6fc4e2', skin: '#e8c0a0', hair: '#bdbdbd', hairStyle: 'short', clothes: '#22262e', clothesStyle: 'suit', accent: '#3a8fb0', extras: ['glasses'], eyes: '#5a7a9a' } },
+      lantern: { name: 'Black Lantern', role: 'Black Lantern Security', face: { bg: '#e0c25a', skin: '#c99a76', hair: '#222', hairStyle: 'bald', hat: 'visor', hatColour: '#2c2c32', clothes: '#34343c', clothesStyle: 'armour', accent: '#e0c25a' } },
+      teacher: { name: 'The teacher', role: 'Pit Nine school', face: { bg: '#a8c98a', skin: '#d8a07a', hair: '#4a2a1a', hairStyle: 'bun', clothes: '#7a6a8a', clothesStyle: 'cardigan', accent: '#e8c25a', extras: ['glasses', 'earring'], lips: '#b0505a' } },
+      guild: { name: 'The miners\u2019 guild', role: 'Pit Nine and the shafts', face: { bg: '#c9b68f', skin: '#b07a55', hair: '#5a4030', hat: 'hardhat', hatColour: '#e0a020', clothes: '#4a5a6a', clothesStyle: 'overalls', accent: '#c87a2a', extras: ['beard'] } },
+      hive: { name: 'The hive', role: 'Below Kessler\u2019s Reach', face: { bug: true, bg: '#2a1a34', shell: '#5a3d6e', glow: '#e46cff' } }
     },
     sides: {
       front: { faction: 'rebel', name: "Free Miners' Front" },
