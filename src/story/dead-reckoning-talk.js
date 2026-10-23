@@ -20,7 +20,7 @@
     // the voices heard on the trail, beside the story's people
     people: {
       reader: { name: 'Halloran', role: 'Vane’s chief reader', face: { bg: '#9a8ab9', skin: '#e2b48f', hair: '#bdbdbd', hairStyle: 'short', clothes: '#3a3248', clothesStyle: 'suit', accent: '#c8a040', extras: ['glasses', 'beard'] } },
-      kettleman: { name: 'A Coin & Kettle hand', role: 'Coin & Kettle', face: { bg: '#c9a65a', skin: '#a8754f', hair: '#3a2a20', hat: 'beanie', hatColour: '#5a4a3a', clothes: '#5a4a3a', clothesStyle: 'jacket', accent: '#e0b070', extras: ['stubble'] } },
+      kettleman: { name: 'A Brass Ledger hand', role: 'Brass Ledger', face: { bg: '#c9a65a', skin: '#a8754f', hair: '#3a2a20', hat: 'beanie', hatColour: '#5a4a3a', clothes: '#5a4a3a', clothesStyle: 'jacket', accent: '#e0b070', extras: ['stubble'] } },
       scav: { name: 'Mags', role: 'The Thule scavengers', face: { bg: '#7a9ab0', skin: '#d8a682', hair: '#c8c8c8', hairStyle: 'long', hat: 'beanie', hatColour: '#3a4a5a', clothes: '#4a4a52', clothesStyle: 'jacket', accent: '#e07a3a', extras: ['scar', 'earring'] } },
       shkar: { name: 'The Sh’kar', role: 'Xenotripods, the beacon’s keepers', face: { tripod: true, bg: '#1e3a3a', shell: '#9ab8a8', glow: '#7ae0c8' } },
       mithdu: { name: 'The Mithdu', role: 'Xenotripods, under the rock', face: { tripod: true, bg: '#2a2418', shell: '#a89870', glow: '#e0a040' } },
@@ -83,7 +83,7 @@
 
       // ---- 4. The Broker ----
       'c4.brief': [
-        { who: 'kettering', text: 'Kerrigan, {commander:rank}. My broker, my rules: anyone starts shooting before the hammer falls, Coin & Kettle finishes it, and sends the bill to whoever’s left.' },
+        { who: 'kettering', text: 'Kerrigan, {commander:rank}. My broker, my rules: anyone starts shooting before the hammer falls, Brass Ledger finishes it, and sends the bill to whoever’s left.' },
         { who: 'agathe', text: 'The heading is in my warehouse. My warehouse has my tanks in front of it. That is the whole of the auction.' },
         { who: 'commander', text: 'You bought the building to stop the sale?' },
         { who: 'agathe', text: 'My client bought it, and my client pays me to keep it. You can buy a seat at the broker’s table at the broker’s price. Or you can try my front door, and I will put every one of your vehicles in the harbour. Choose before the tide turns.' }
@@ -110,7 +110,7 @@
     // the hired companies, when they fight beside the company (story.js allyVoice)
     allies: {
       kettle: { who: 'kettering',
-        report: ['Coin & Kettle, as contracted. Lots of us, cheap. Point us at something.', 'Kettle’s lads on your flank, {commander:rank}. Paid up and ready.'],
+        report: ['Brass Ledger, as contracted. Lots of us, cheap. Point us at something.', 'Ledger’s lads on your flank, {commander:rank}. Paid up and ready.'],
         move: ['Moving, moving. Mind the invoice.', 'On our way.'],
         attack: ['Right, lads, earn it!', 'Going in. Hazard pay, mind.'],
         hold: ['We’ll sit tight. Sitting tight’s cheaper.', 'Holding.'],

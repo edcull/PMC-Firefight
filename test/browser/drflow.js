@@ -84,7 +84,7 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   await go(p, '[data-go="storyfight"]');
   await p.waitForTimeout(1200);
   const st = await p.evaluate(() => { const s = window.PMC_STATE && window.PMC_STATE(); return s ? { node: s.cfg.story && s.cfg.story.node, scen: s.cfg.scenario, planet: s.cfg.planet, vane: (s.units.find((u) => u.escort) || {}).name, map: s.cfg.story.mapName, kettle: s.units.filter((u) => u.side === 'B').length } : null; });
-  check('the battle starts with the story’s cfg: c1.battle, an Escort, Coin & Kettle', st && st.node === 'c1.battle' && st.scen === 'escort' && st.kettle > 0, JSON.stringify(st));
+  check('the battle starts with the story’s cfg: c1.battle, an Escort, Brass Ledger', st && st.node === 'c1.battle' && st.scen === 'escort' && st.kettle > 0, JSON.stringify(st));
   check('...on Vesk’s market square, with Halloran on the table, the company’s to get across', st && /Vesk/.test(st.map) && st.vane === 'Halloran', JSON.stringify(st));
   await cards(p);
   await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^done$/i.test(x.textContent.trim()) && x.offsetParent); if (b) b.click(); });
@@ -105,7 +105,7 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   await p.evaluate(() => { const b = document.querySelector('#camp-body [data-go="afterhub"]'); if (b) b.click(); });
   await p.waitForTimeout(300);
   txt = await body(p);
-  check('the debrief: Coin & Kettle melt back into the market', /melt back into the market/.test(txt), txt.slice(0, 200));
+  check('the debrief: Brass Ledger melt back into the market', /melt back into the market/.test(txt), txt.slice(0, 200));
   await go(p, '[data-go="storyon"]');
   txt = await body(p);
   const call = await talkOf(p);
@@ -115,8 +115,8 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   txt = await body(p);
   check('...and on to the jump: Vane’s first heading on the board', /first heading/.test(txt), txt.slice(0, 200));
   const chart = await p.evaluate(() => { const c = document.querySelector('#camp-body .story-chart'); return c ? { map: !!c.querySelector('svg.story-chart-map rect'), text: c.innerText } : null; });
-  check('...with the star chart: Vesk the first stop, Coin & Kettle met there, the next heading still to come, the lodestones held',
-    chart && chart.map && /Vesk/.test(chart.text) && /met Coin & Kettle/.test(chart.text) && /next heading/.test(chart.text) && /0 held/.test(chart.text), chart && chart.text.slice(0, 200));
+  check('...with the star chart: Vesk the first stop, Brass Ledger met there, the next heading still to come, the lodestones held',
+    chart && chart.map && /Vesk/.test(chart.text) && /met Brass Ledger/.test(chart.text) && /next heading/.test(chart.text) && /0 held/.test(chart.text), chart && chart.text.slice(0, 200));
   await p.evaluate(() => document.querySelector('#camp-body .story-chart').scrollIntoView());
   await p.screenshot({ path: path.join(SHOTS, 'dr-interlude.png') });
 

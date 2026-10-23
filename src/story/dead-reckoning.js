@@ -132,7 +132,7 @@
     sable: { all: [{ flag: 'sable_owed' }, { meter: 'sable_trust', gte: -2 }] }
   };
   var HIRE_WHY = {
-    kettle: 'Coin & Kettle don’t deal with you.', kestrel: 'Kestrel isn’t interested in you yet.',
+    kettle: 'Brass Ledger don’t deal with you.', kestrel: 'Kestrel isn’t interested in you yet.',
     reavers: 'The Reavers have no reason to fight for you.', sable: 'Sable owes you nothing.'
   };
   function hireOption(id, text) {
@@ -202,7 +202,7 @@
       { if: { meter: 'understanding', gte: 4 }, add: 1, side: 'shkar' }
     ],
     flagText: {
-      kettle_contact: 'Coin & Kettle will deal with you.', kettle_burned: 'Coin & Kettle won’t forget the port police.',
+      kettle_contact: 'Brass Ledger will deal with you.', kettle_burned: 'Brass Ledger won’t forget the port police.',
       wraith_robbed: 'Wraith Section wants its copy of the log back.', thule_records: 'You heard Morrow’s own voice.',
       beacon_rubbing: 'The beacon answered your signal.', relics_returned: 'You gave back what was taken from the beacon.',
       warren_entered: 'You stepped through the gate at the beacon.', chart_sold: 'You sold a copy of the chart.',
@@ -229,18 +229,18 @@
       alarm: { start: 0, min: 0, max: 10, name: 'Alarm', uses: ['force'], thresholds: [{ gte: 5 }, { gte: 8 }] },
       understanding: { start: 0, min: 0, max: 6, name: 'Understanding', thresholds: [{ gte: 2 }, { gte: 4 }] },
       // each rival's strength (no event lowers some of them in both halves: they are moved by fights and time)
-      kettle: { start: 2, min: 0, max: 10, name: 'Coin & Kettle', uses: ['force'], twoWay: [] },
+      kettle: { start: 2, min: 0, max: 10, name: 'Brass Ledger', uses: ['force'], twoWay: [] },
       wraith: { start: 2, min: 0, max: 10, name: 'Wraith Section', uses: ['force'], twoWay: [] },
       sable: { start: 2, min: 0, max: 10, name: 'Sable Armour Group', uses: ['force'], twoWay: [] },
       kestrel: { start: 2, min: 0, max: 10, name: 'Kestrel Air Cavalry', uses: ['force'], twoWay: [] },
       reavers: { start: 2, min: 0, max: 10, name: 'The Red Reavers', uses: ['force'], twoWay: [] },
       lance: { start: 2, min: 0, max: 10, name: 'The Ninth Lance', uses: ['force'], twoWay: [] },
       // the hired guns: what each costs, and how far each can be trusted
-      kettle_price: { start: 2, min: 0, max: 10, name: 'Coin & Kettle’s price', twoWay: [] },
+      kettle_price: { start: 2, min: 0, max: 10, name: 'Brass Ledger’s price', twoWay: [] },
       kestrel_price: { start: 0, min: 0, max: 10, name: 'Kestrel’s price', twoWay: [] },
       reavers_price: { start: 1, min: 0, max: 10, name: 'The Reavers’ price', twoWay: [] },
       sable_price: { start: 0, min: 0, max: 10, name: 'Sable’s price', twoWay: [] },
-      kettle_trust: { start: 0, name: 'Coin & Kettle’s trust', twoWay: [] },
+      kettle_trust: { start: 0, name: 'Brass Ledger’s trust', twoWay: [] },
       kestrel_trust: { start: 0, name: 'Kestrel’s trust', twoWay: [] },
       reavers_trust: { start: 0, name: 'The Reavers’ trust', twoWay: [] },
       sable_trust: { start: 0, name: 'Sable’s trust', twoWay: [] }
@@ -251,7 +251,7 @@
       vane: { name: 'Lucan Vane', role: 'The patron', face: { bg: '#2a2238', skin: '#e2b48f', hair: '#c8c8c8', hairStyle: 'short', clothes: '#141218', clothesStyle: 'suit', accent: '#c8a040', extras: ['beard'], shadow: true } },
       // what stepped out of the air at the beacon: nothing in anybody's files (the first half's unknown contacts)
       unknown: { name: 'Unknown', role: 'No match on any file', face: { tripod: true, bg: '#0e1214', shell: '#5a6a66', glow: '#7ae0c8', shadow: 'full' } },
-      kettering: { name: 'Moss Kettering', role: 'Coin & Kettle', face: { bg: '#c9a65a', skin: '#c99a76', hair: '#8a8a8a', hairStyle: 'short', clothes: '#5a4a3a', clothesStyle: 'jacket', accent: '#e0b070', extras: ['stubble', 'earring'] } },
+      kettering: { name: 'Moss Kettering', role: 'Brass Ledger', face: { bg: '#c9a65a', skin: '#c99a76', hair: '#8a8a8a', hairStyle: 'short', clothes: '#5a4a3a', clothesStyle: 'jacket', accent: '#e0b070', extras: ['stubble', 'earring'] } },
       nine: { name: 'Nine', role: 'Wraith Section', face: { bg: '#3a4a5a', skin: '#b88a66', hair: '#222', hairStyle: 'short', hat: 'visor', hatColour: '#1e1e24', clothes: '#2c3440', clothesStyle: 'armour', accent: '#6a8aa0' } },
       agathe: { name: 'Colonel Agathe Sable', role: 'Sable Armour Group', face: { bg: '#8a9a7a', skin: '#e2b48f', hair: '#4a3a2a', hairStyle: 'short', hat: 'helmet', hatColour: '#55604a', clothes: '#4a5240', clothesStyle: 'armour', accent: '#c8a040', extras: ['scar'] } },
       rook: { name: 'Rook Kestrel', role: 'Kestrel Air Cavalry', face: { bg: '#7fb3d9', skin: '#d8a682', hair: '#a0602a', hairStyle: 'short', hat: 'helmet', hatColour: '#3a6a8a', clothes: '#3a4a5a', clothesStyle: 'jacket', accent: '#e8c25a' } },
@@ -262,7 +262,7 @@
       commander: { name: 'The commander', role: 'Your company', face: { bg: '#8a7a5a', skin: '#c99a76', hair: '#2b2622', hairStyle: 'short', hat: 'cap', hatColour: '#3d4a38', clothes: '#4a5240', clothesStyle: 'uniform', accent: '#e0c25a', extras: ['stubble'] } }
     },
     sides: {
-      kettle: { faction: 'pmc', archetype: 'swarm', name: 'Coin & Kettle' },
+      kettle: { faction: 'pmc', archetype: 'swarm', name: 'Brass Ledger' },
       wraith: { faction: 'pmc', archetype: 'marksmen', name: 'Wraith Section' },
       sable: { faction: 'pmc', archetype: 'armour', name: 'Sable Armour Group' },
       kestrel: { faction: 'pmc', archetype: 'aircav', name: 'Kestrel Air Cavalry' },
@@ -321,7 +321,7 @@
           scenario: 'find', tier: 'max-1', enemy: rival('kettle', { fill: { to: 0.7, from: ['recruits', 'irregulars'] } }),
           cost: [LATE_TIME], on: { success: [{ effects: [{ meter: 'kettle', add: -1 }] }], failure: [{}] } },
         { id: 'village', title: 'The Village', pay: 2, if: { played: 'mimics' },
-          text: 'A Hashamer village, and Coin & Kettle’s slavers on the ridge.',
+          text: 'A Hashamer village, and Brass Ledger’s slavers on the ridge.',
           scenario: 'meeting', tier: 'max-1', enemy: rival('kettle', { fill: { to: 0.6, from: ['recruits', 'irregulars'] } }),
           cost: [LATE_TIME], passed: [{ meter: 'understanding', add: -1 }],
           on: { success: [{ effects: [{ meter: 'understanding', add: 1 }] }], failure: [{ effects: [{ meter: 'understanding', add: -1 }] }] } },
@@ -348,15 +348,15 @@
           // (Vane's money, not the company's: the company has none yet)
           { id: 'outbid', text: 'Outbid them in the open.', battle: { readiness: 1 }, effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: 1 }] },
           { id: 'watch', text: 'Let Vane bid while the company watches the room.', battle: { intel: 1 }, effects: [{ meter: 'intel', add: 1 }] },
-          { id: 'follow', text: 'Have Coin & Kettle’s agent followed out of the room.', battle: { role: 'choose' }, effects: [{ flag: 'kettle_marked', local: true }] }
+          { id: 'follow', text: 'Have Brass Ledger’s agent followed out of the room.', battle: { role: 'choose' }, effects: [{ flag: 'kettle_marked', local: true }] }
         ], next: 'c1.battle' },
-        // Vane's reader across the market square to the landing field, with the log, and Coin & Kettle in the way
+        // Vane's reader across the market square to the landing field, with the log, and Brass Ledger in the way
         { id: 'c1.battle', type: 'battle', scenario: 'escort', variant: { escort: 'Halloran' }, map: 'vesk', tier: 1, pl: 1, planet: 'dense',
           enemy: rival('kettle', { core: [{ key: 'recruits', name: 'Kettering’s Own' }], optional: { meter: 'kettle', per: 3, units: ['irregulars', 'recruits'] }, fill: { to: 0.6, from: ['recruits', 'irregulars'], meter: 'kettle', step: 0.05 },
             changes: [{ if: { flag: 'kettle_marked' }, readiness: -1 }] }),
           on: { success: [{ effects: [{ meter: 'kettle', add: -1 }, { meter: 'lead', add: 1 }] }], failure: [{ effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: -1 }] }] }, next: 'c1.debrief' },
         { id: 'c1.debrief', type: 'debrief', text: '{if success}The log is Vane’s.{/if}{if failure}The log is held, at a cost.{/if}', events: ['c1.agent'], next: 'c1.interlude' },
-        { id: 'c1.agent', type: 'event', who: 'kettering', title: 'The agent', text: 'Coin & Kettle’s man is in the company’s hands.', options: [
+        { id: 'c1.agent', type: 'event', who: 'kettering', title: 'The agent', text: 'Brass Ledger’s man is in the company’s hands.', options: [
           { id: 'message', text: 'Let him go, with a message for his employer.', effects: [{ flag: 'kettle_contact' }, { meter: 'vane', add: -1 }] },
           { id: 'pay', text: 'Pay him for what he knows.', cost: { kUC: 1 }, why: 'You can’t pay him.', effects: [{ meter: 'intel', add: 1 }, { flag: 'kettle_contact' }] },
           { id: 'police', text: 'Hand him to the port police.', effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: -1 }, { flag: 'kettle_burned' }] }
@@ -468,7 +468,7 @@
           { id: 'buy', text: 'Buy it.', cost: { kUC: 3 }, why: 'You can’t afford it.', battle: { skip: true }, effects: [{ meter: 'vane', add: 1 }] },
           { id: 'take', text: 'Take it.', battle: { role: 'attacker', tier: 'max' } },
           { id: 'follow', text: 'Let Sable have it, and follow Sable.', battle: { skip: true, intel: 2 }, effects: [{ meter: 'lead', add: -1 }, { meter: 'intel', add: 2 }, { meter: 'vane', add: -1 }, { meter: 'sable', add: 1 }, { flag: 'sable_owed' }] },
-          hireOption('kettle', 'Hire Coin & Kettle for the takeover.')
+          hireOption('kettle', 'Hire Brass Ledger for the takeover.')
         ], next: 'c4.battle' },
         { id: 'c4.battle', type: 'battle', scenario: 'takeover', map: 'docks', role: 'attacker', tier: 'max', pl: 1, planet: 'industrial', enemy: rival('sable'),
           on: { success: [{ effects: [{ meter: 'stones', add: 1 }, { meter: 'sable', add: -1 }, { meter: 'lead', add: 1 }] }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] }, next: 'c4.debrief' },
@@ -545,7 +545,7 @@
           { id: 'sell', text: 'Sell them.', effects: [{ kUC: 2 }, { flag: 'kestrel_deal' }, { meter: 'lead', add: -1 }] },
           { id: 'refuse', text: 'Refuse.', effects: [{ meter: 'lead', add: 1 }] }
         ] },
-        { id: 'i.catalogue', type: 'event', once: true, who: 'kettering', if: { all: [{ flag: 'kettle_contact' }, { not: { flag: 'kettle_burned' } }] }, title: 'Coin & Kettle’s catalogue', text: 'They are selling what they know.', options: [
+        { id: 'i.catalogue', type: 'event', once: true, who: 'kettering', if: { all: [{ flag: 'kettle_contact' }, { not: { flag: 'kettle_burned' } }] }, title: 'Brass Ledger’s catalogue', text: 'They are selling what they know.', options: [
           { id: 'buy', text: 'Buy.', cost: { kUC: 2 }, why: 'You can’t afford it.', effects: [{ meter: 'intel', add: 1 }, { meter: 'kettle_trust', add: 1 }] },
           { id: 'sell', text: 'Sell them yours.', effects: [{ kUC: 2 }, { meter: 'lead', add: -1 }, { meter: 'vane', add: -1 }] }
         ] },
@@ -554,7 +554,7 @@
           { id: 'jump', text: 'Jump anyway.', effects: [{ roll: { d6: 2 }, fail: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: -1 }] }] }
         ] },
         // the hired guns, after a battle they fought in
-        { id: 'hired.invoice', type: 'event', who: 'kettering', if: { flag: 'kettle_hired' }, title: 'The invoice', text: 'Coin & Kettle want more than was agreed.', options: [
+        { id: 'hired.invoice', type: 'event', who: 'kettering', if: { flag: 'kettle_hired' }, title: 'The invoice', text: 'Brass Ledger want more than was agreed.', options: [
           { id: 'pay', text: 'Pay the extra.', cost: { kUC: 2 }, why: 'You can’t pay it.', effects: [{ meter: 'kettle_trust', add: 1 }, { flag: 'kettle_hired', set: false }] },
           { id: 'dispute', text: 'Dispute it.', effects: [{ meter: 'kettle_trust', add: -2 }, { meter: 'kettle_price', add: 1 }, { flag: 'kettle_hired', set: false }] },
           { id: 'share', text: 'Offer them a share of the claim instead.', effects: [{ meter: 'kettle_trust', add: 2 }, { flag: 'kettle_partner' }, { flag: 'kettle_hired', set: false }] }
@@ -573,7 +573,7 @@
           { id: 'thank', text: 'Thank them.', effects: [{ meter: 'sable_trust', add: 1 }, { meter: 'sable_price', set: 2 }, { flag: 'sable_owed', set: false }, { flag: 'sable_hired', set: false }] },
           { id: 'again', text: 'Ask for another.', effects: [{ meter: 'sable_trust', add: -1 }, { meter: 'sable_price', set: 3 }, { flag: 'sable_hired', set: false }] }
         ] },
-        { id: 'hired.kettleoffer', type: 'event', who: 'kettering', if: { all: [{ meter: 'kettle_trust', lte: -2 }, { not: { flag: 'kettle_turned' } }] }, title: 'A better offer', text: 'Coin & Kettle have been offered more.', options: [
+        { id: 'hired.kettleoffer', type: 'event', who: 'kettering', if: { all: [{ meter: 'kettle_trust', lte: -2 }, { not: { flag: 'kettle_turned' } }] }, title: 'A better offer', text: 'Brass Ledger have been offered more.', options: [
           { id: 'match', text: 'Match it.', cost: { kUC: 'kettle_price' }, why: 'You can’t match it.', effects: [{ meter: 'kettle_trust', set: 0 }] },
           { id: 'let', text: 'Let them go.', effects: [{ flag: 'kettle_turned' }, { meter: 'kettle', add: 1 }] }
         ] },
@@ -639,7 +639,7 @@
         brief: 'The leading rival holds the only landing field on the Quiet.',
         before: { id: 'landing.field', title: 'The field', text: 'They are dug in.', options: [
           { id: 'alone', text: 'Go in alone.', battle: { role: 'attacker' } },
-          hireOption('kettle', 'Hire Coin & Kettle for the landing.'),
+          hireOption('kettle', 'Hire Brass Ledger for the landing.'),
           hireOption('reavers', 'Hire the Reavers for the landing.')
         ] },
         // the leading rival, whoever it is, its commander the target; the more lodestones it holds, the readier it is
@@ -713,9 +713,9 @@
       poolChapter({ id: 'mimics', thread: 'contact', title: 'The Mimics', when: { meter: 'understanding', gte: 1 }, passed: [{ meter: 'understanding', add: -1 }, { meter: 'kettle', add: 1 }],
         place: { system: 'Hashamer', planet: 'Hashamer I', kind: 'desert' },
         brief: 'Nine million Esh-Aven, and not a Crock among them.',
-        before: { id: 'mimics.ask', who: 'seven', title: 'A village asks', text: 'Coin & Kettle are taking Esh-Aven for a buyer.', options: [
+        before: { id: 'mimics.ask', who: 'seven', title: 'A village asks', text: 'Brass Ledger are taking Esh-Aven for a buyer.', options: [
           { id: 'help', text: 'Fight beside them.', battle: { allies: ESHAVEN_ALLIES } },
-          { id: 'pay', text: 'Pay Coin & Kettle to leave.', if: HIRE_IF.kettle, why: 'Coin & Kettle won’t deal with you.', cost: { kUC: 'kettle_price' },
+          { id: 'pay', text: 'Pay Brass Ledger to leave.', if: HIRE_IF.kettle, why: 'Brass Ledger won’t deal with you.', cost: { kUC: 'kettle_price' },
             battle: { skip: true }, effects: [{ meter: 'understanding', add: 1 }] }
         ] },
         battle: { scenario: 'meeting', planet: 'desert', enemy: rival('kettle'),
@@ -821,7 +821,7 @@
       { id: 'firstcontact', title: 'First Contact', if: { all: [{ any: [{ flag: 'contact' }, { flag: 'relics_returned' }] }, { flag: 'finale_won' }, { meter: 'alarm', lt: 8 },
         { not: { flag: 'child_taken' } }, { not: { flag: 'promise_broken' } }] }, text: '{name} is the first company to speak with the Amt, and walks away with no salvage at all.' },
       { id: 'findersfee', title: 'Finder’s Fee', if: { all: [{ not: { flag: 'contact' } }, { not: { flag: 'vane_cut_off' } }, { not: { flag: 'vane_exposed' } }, { flag: 'finale_won' }, { meter: 'vane', gte: 2 }] },
-        text: 'The claim is filed in Vane’s name.{if kettle_partner} Coin & Kettle take their share.{/if} {name} is rich, and the Quiet will be stripped.' },
+        text: 'The claim is filed in Vane’s name.{if kettle_partner} Brass Ledger take their share.{/if} {name} is rich, and the Quiet will be stripped.' },
       { id: 'deadreckoning', title: 'Dead Reckoning', text: '{name} reached the end of the log, and what it did there decided nothing.' }
     ],
 
@@ -833,7 +833,7 @@
       { about: 'eshaven', if: { flag: 'eshaven_promise' }, text: 'The Hashamer are still on their world, free, and they say the names of their dead.' },
       { about: 'vane', if: { flag: 'vane_exposed' }, text: 'Lucan Vane’s receipts are public, and so, at last, is his face.' },
       { about: 'vane', text: 'Ottilie Vane has another lot in the catalogue.' },
-      { about: 'rivals', if: { flag: 'kettle_partner' }, text: 'Coin & Kettle are partners in the claim, and remind everyone of it.' },
+      { about: 'rivals', if: { flag: 'kettle_partner' }, text: 'Brass Ledger are partners in the claim, and remind everyone of it.' },
       { about: 'rivals', text: 'The rivals went back to the work they had before the log.' },
       { about: 'company', text: '{name} came back with {commander}, and fewer than it took.' }
     ]

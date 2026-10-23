@@ -99,7 +99,7 @@ console.log('\nThe leading rival');
   const c = at('landing.battle', (st) => { st.meters.kettle = 6; });
   c.story.leading = null;
   const spec = S.battleSpec(c);
-  ok('The Landing is fought against the strongest rival: Coin & Kettle at strength 6', spec.enemy.side === 'kettle' && spec.enemy.archetype === 'swarm', spec.enemy.side);
+  ok('The Landing is fought against the strongest rival: Brass Ledger at strength 6', spec.enemy.side === 'kettle' && spec.enemy.archetype === 'swarm', spec.enemy.side);
   ok('...its commander the target', spec.variant.target === 'Kettering’s Own');
   const k2 = at('landing.battle'); k2.story.leading = null;
   ok('...Kestrel first on a tie: it always gets there first', S.battleSpec(k2).enemy.side === 'kestrel');
