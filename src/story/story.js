@@ -119,7 +119,7 @@
 
   /* ================= conditions ================= */
 
-  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped', 'target'];
+  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped', 'target', 'more'];
   var CMP = ['gte', 'lte', 'gt', 'lt', 'eq'];
 
   function cmp(v, c) {
@@ -143,6 +143,8 @@
     if (c.not) return !test(ctx, c.not);
     if (c.flag) return (c.is === false) ? !st.flags[c.flag] : !!st.flags[c.flag];
     if (c.meter) return cmp(st.meters[c.meter] || 0, c);
+    // one meter above another: { more: ['theirs', 'stones'] }
+    if (c.more) return (st.meters[c.more[0]] || 0) > (st.meters[c.more[1]] || 0);
     if (c.grade) {
       var g = ctx.grade;
       if (c.grade === 'success') return !!SUCCESS[g];
@@ -290,20 +292,24 @@
     return gone;
   }
 
-  /* What an option costs: { intel: 1 } in meters, or { kUC: 2 }. */
+  /* What an option costs: { intel: 1 } in meters, or { kUC: 2 }. An amount
+     written as a meter's name is that meter's value now: { kUC: 'kettle_price' },
+     a company's price for hiring it. */
+  function amountOf(ctx, v) { return typeof v === 'string' ? Math.max(0, ctx.st.meters[v] || 0) : v; }
   function canPay(ctx, cost) {
     if (!cost) return true;
     var co = company(ctx);
     return Object.keys(cost).every(function (k) {
-      if (k === 'kUC') return co && (co.kUC || 0) >= cost.kUC;
-      return (ctx.st.meters[k] || 0) >= cost[k];
+      if (k === 'kUC') return co && (co.kUC || 0) >= amountOf(ctx, cost.kUC);
+      return (ctx.st.meters[k] || 0) >= amountOf(ctx, cost[k]);
     });
   }
   function pay(ctx, cost, out) {
     if (!cost) return;
     Object.keys(cost).forEach(function (k) {
-      if (k === 'kUC') apply(ctx, { kUC: -cost.kUC }, out);
-      else apply(ctx, { meter: k, add: -cost[k] }, out);
+      var n = amountOf(ctx, cost[k]);
+      if (k === 'kUC') apply(ctx, { kUC: -n }, out);
+      else apply(ctx, { meter: k, add: -n }, out);
     });
   }
 
@@ -395,7 +401,10 @@
       return !o.hidden || test(ctx, o.if);
     }).map(function (o) {
       var ok = test(ctx, o.if) && canPay(ctx, o.cost);
-      return { id: o.id, text: o.text, ok: ok, why: ok ? null : (o.why || 'Not open to you now.'), extreme: !!o.extreme, cost: o.cost || null };
+      // (a cost read from a meter is shown as what it is now)
+      var cost = o.cost ? {} : null;
+      Object.keys(o.cost || {}).forEach(function (k) { cost[k] = amountOf(ctx, o.cost[k]); });
+      return { id: o.id, text: o.text, ok: ok, why: ok ? null : (o.why || 'Not open to you now.'), extreme: !!o.extreme, cost: cost };
     });
   }
 
@@ -435,6 +444,8 @@
       var ctx = ctxOf(campaign, { grade: st.lastGrade });
       var picks = arr(node.events).filter(function (id) {
         var ev = def._nodes[id];
+        // (an event marked `once` comes up only the first time it applies)
+        if (ev && ev.once && st.journal.some(function (j) { return j.node === id; })) return false;
         return ev && test(ctx, ev.if);
       }).slice(0, node.pick || (node.type === 'interlude' ? 1 : 2));
       st.queue = picks.concat([{ after: node.next }]).slice(0);

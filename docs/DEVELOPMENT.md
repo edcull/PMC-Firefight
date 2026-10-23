@@ -80,6 +80,8 @@ src/
                      and the allies' words, reporting in and answering each order, and the
                      conversations that open a story page (a node's `talk`: the arrival),
                      and the voices heard only there (story.js talkFor; storybattle.js storyTalk)
+    dead-reckoning.js  Dead Reckoning, the second story, as data (docs/story-dead-reckoning-plan.md):
+                     placeholder text, not yet loaded in the browser
 
   view/              the browser
     game.js          the board: its state, and the modules below wired together
@@ -332,6 +334,8 @@ storytalk.js       what is said in a story battle: the lines handed to each batt
                    and each said once, on a card with the speaker's face, when its moment comes
 storyscenes.js     the story's places as pictures: each drawn the same every time, none alike, and
                    every chapter card, battle map and ending with one
+storydr.js         Dead Reckoning as data: the validator, its forces (archetypes; the Hashamer all Esh-Aven, no
+                   craft or teleport turrets), the hired guns, and 6,000 seeded walks (endings, one-offs, finales)
 storyside.js       HTX's bonus by HTX Standing, and the side contracts: offered at an interlude, taken
                    (a battle of its own, then back) or passed up, catching up, and cut off from HTX
 storywhole.js      Deep Contract from Landfall to an ending, 30 times with made-up results: endings and epilogues,

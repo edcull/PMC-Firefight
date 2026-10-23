@@ -69,6 +69,10 @@
         if (!mdefs[c.meter]) err(at + ': no meter ' + c.meter);
         M(c.meter).read.push({ at: at, kind: kind });
       }
+      arr(c.more).forEach(function (m) {
+        if (!mdefs[m]) err(at + ': no meter ' + m);
+        M(m).read.push({ at: at, kind: kind });
+      });
     }
     function flagsIn(c, out) {
       out = out || [];
@@ -185,6 +189,11 @@
             seenOpt[o.id] = 1;
             readCond(o.if, oat, 'choice', ch.id);
             Object.keys(o.cost || {}).forEach(function (k) {
+              // an amount read from a meter (a company's price)
+              if (typeof o.cost[k] === 'string') {
+                if (!mdefs[o.cost[k]]) err(oat + ': no meter ' + o.cost[k] + ' for its cost');
+                M(o.cost[k]).read.push({ at: oat, kind: 'choice' });
+              }
               if (k !== 'kUC') {
                 if (!mdefs[k]) err(oat + ': no meter ' + k + ' to pay with');
                 M(k).read.push({ at: oat, kind: 'choice' });
