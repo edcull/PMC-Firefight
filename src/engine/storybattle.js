@@ -658,6 +658,14 @@
     /* The map as the story wrote it (cfg.terrainPlan, already fitted to the table
        by levers.js): each piece given its outline, a wood its lobes, a building
        its wings, by the mission's seed, so it is drawn the same each time. */
+    /* A map's skin for its pieces (levers.js `skin`): on a settlement's
+       ('market'), a barricade is a row of market stalls and a crater field the
+       market's clutter. The rules read them as they always did; only the look
+       and the name change. Asked of the map's pieces and of any put down later. */
+    function marketSkin(cfg, t) {
+      if (cfg && cfg.story && cfg.story.skin === 'market' && (t.kind === 'barricade' || t.kind === 'crater')) t.market = true;
+      return t;
+    }
     function storyTerrain(cfg) {
       var rand = storySeeded((cfg.story && cfg.story.seed) || 'map');
       var terrain = cfg.terrainPlan.map(function (p) {
@@ -666,6 +674,7 @@
         if (R.shapePiece) R.shapePiece(t, rand, fam);
         return t;
       });
+      terrain.forEach(function (t) { marketSkin(cfg, t); });
       return { terrain: terrain, rolls: [], generator: (cfg.story && cfg.story.mapName) || 'The mission\u2019s own ground' };
     }
 
@@ -761,7 +770,7 @@
     }
 
     return {
-      ambushWaits: ambushWaits, allyOrder: allyOrder, orderReach: orderReach, orderLocked: orderLocked, giveAllyOrder: giveAllyOrder, orderActed: orderActed,
+      marketSkin: marketSkin, ambushWaits: ambushWaits, allyOrder: allyOrder, orderReach: orderReach, orderLocked: orderLocked, giveAllyOrder: giveAllyOrder, orderActed: orderActed,
       orderWord: function (k) { return ORDER_KINDS[k] || ''; },
       storySeeded: storySeeded, storyTerrain: storyTerrain, storyFixed: storyFixed,
       storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck,

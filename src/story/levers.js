@@ -355,6 +355,8 @@
         // the mission: its name over the book's scenario, its ground, and the seed that lays it the same each time
         name: spec.name || null, blurb: spec.text ? S.render(campaign, spec.text) : null,
         mapName: map ? map.name : null, objectives: mapObjectives, sites: mapSites,
+        // the map's look for its pieces: 'market' (a settlement: barricades are stalls, craters market clutter)
+        skin: map && !compound && map.skin || null,
         place: place ? { system: place.system || null, planet: place.planet || null, site: place.site || null } : null,
         seed: spec.node + ':' + spec.scenario + (east ? ':east' : ''),
         variant: variant,

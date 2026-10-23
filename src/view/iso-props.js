@@ -203,6 +203,14 @@
           }
           return;
         }
+        if (r.kind === 'crater' && r.market) {
+          // a settlement's crater field (the market skin): the market's overflow, crates, barrels and sacks on the paving
+          for (var mk = 0; mk < Math.max(3, Math.round(area / 2.5)); mk++) {
+            var mq = spotIn(r, 0.5, rand), mr = rand();
+            props.push({ kind: mr < 0.45 ? 'smallbox' : mr < 0.7 ? 'drums' : 'sacks', x: mq.x, y: mq.y, n: 1 + Math.floor(rand() * 2), tone: rand(), seed: (rand() * 9999) | 0 });
+          }
+          return;
+        }
         if (r.kind === 'crater') {
           // the debris of whatever was shelled here: stone, and the odd twisted girder
           for (var db = 0; db < Math.round(area / 3); db++) {
@@ -266,6 +274,15 @@
               y: rs2.y,
               rad: 1 + rand() * 1.4, h: a(4 + rand() * 5), seed: (rand() * 9999) | 0
             });
+          }
+        } else if (r.kind === 'barricade' && r.market) {
+          /* A settlement's barricade (a map's market skin, storybattle.js): a row
+             of market stalls, trestles under striped awnings, a stall a length. */
+          var mhz = r.w > r.h, mln = mhz ? r.w : r.h, nst = Math.max(1, Math.round(mln / 1.7)), msl = mln / nst, mtone = rand();
+          for (var st = 0; st < nst; st++) {
+            var smd2 = (st + 0.5) * msl;
+            props.push({ kind: 'stall', x: mhz ? r.x + smd2 : r.x + r.w / 2, y: mhz ? r.y + r.h / 2 : r.y + smd2, horiz: mhz, len: msl,
+              tone: (mtone + st * 0.37) % 1, seed: (rand() * 9999) | 0 });
           }
         } else if (r.kind === 'barricade' && r.carapace) {
           /* The hive's barrier, a Ballistic Barrier or a barricade alike: shed
@@ -545,6 +562,11 @@
           props.push({ kind: 'parleyflag', x: r.x + r.w / 2, y: r.y + r.h / 2, seed: (rr2() * 9999) | 0 });
           return;
         }
+        // a town square's fountain: its basin, column and statue, drawn as one block among the others
+        if (r.kind === 'fountain') {
+          props.push({ kind: 'fountain', x: r.x, y: r.y, w: r.w, h: r.h, height: a(22), seed: (rr2() * 9999) | 0 });
+          return;
+        }
         if (r.kind === 'pumphouse') {
           props.push({
             kind: 'pumphouse', x: r.x, y: r.y, w: r.w, h: r.h, height: a(13),
@@ -598,11 +620,11 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5 };
+      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];

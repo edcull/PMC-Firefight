@@ -46,6 +46,9 @@ const vane = st.units.find((u) => u.escort);
 ok('...he is on the table with side A, its own to move: named, a Command Unit’s statline, no special rules', vane && vane.side === 'A' && vane.name === 'Halloran' && !vane.ally &&
   vane.rules.length === 0 && vane.models >= 1, vane && JSON.stringify({ name: vane.name, side: vane.side, models: vane.models, rules: vane.rules }));
 ok('...and he comes on in turn 1 with the rest of side A', vane.x >= 0 && !vane.reserve, vane.x + ',' + vane.y);
+ok('Vesk’s market on the table: every barricade a stall and every crater field the market’s clutter, and the roads paved', cfg.story.skin === 'market' &&
+  st.terrain.filter((t) => t.kind === 'barricade' || t.kind === 'crater').every((t) => t.market) && st.terrain.some((t) => t.kind === 'barricade') &&
+  st.terrain.filter((t) => t.kind === 'road').every((t) => t.paved) && R.terrainName(st, 'barricade') === 'Market stalls');
 ok('the bidding’s first answer no longer asks the company for money it has not got', !dr._nodes['c1.bidding'].options[0].cost);
 {
   const s = st, g = SC.SCENARIOS.escort.goals;
@@ -87,6 +90,78 @@ console.log('\nThrough, or not');
   const e = Engine.create();
   e.start({ tier: 1, pl: 1, scenario: 'meeting', armyA: ['cmd2', 'regular'], armyB: ['cmd2', 'regular'], mode: 'ai' });
   ok('...and a battle that is not an Escort has no one to escort', !e.state().units.some((u) => u.escort));
+}
+
+console.log('\nLot 47 lost: Brass Ledger have the log');
+{
+  const lost = () => {
+    const c = C.newCampaign({ mode: 'solo' });
+    C.found(c.companies.A, FOUNDING, 'S2');
+    S.begin(c, 'dead-reckoning', {});
+    c.story.chapter = 'c1'; c.story.node = 'c1.battle';
+    S.resolveBattle(c, 'defeat');
+    for (let i = 0; i < 6 && S.view(c).type !== 'event'; i++) S.proceed(c);
+    // (the agent first, then the log)
+    if (S.view(c).id === 'c1.agent') S.choose(c, 'message');
+    for (let i = 0; i < 6 && S.view(c).id !== 'c1.lost'; i++) S.proceed(c);
+    return c;
+  };
+  let c = lost();
+  ok('lost, the debrief says so: Brass Ledger have the log', /Brass Ledger have the log/.test(global.PMCStoryText['dead-reckoning']['c1.debrief']) && c.story.lastGrade === 'defeat');
+  ok('...and what comes next is about the log, and not about money: hit their ship, cut Kettering in on the claim, or follow it', S.view(c).id === 'c1.lost' &&
+    ['raid', 'cutin', 'follow'].every((o) => S.view(c).options.some((x) => x.id === o && x.ok)) && S.view(c).options.length === 3,
+    S.view(c).id);
+  S.choose(c, 'raid');
+  ok('hitting their ship: a battle on Vesk’s landing field for the log, carried off or not', S.view(c).type === 'battle' && c.story.node === 'c1r.battle' && S.battleSpec(c).variant.relic && S.battleSpec(c).map === 'veskfield');
+  S.resolveBattle(c, { winner: 'A', units: [], turns: 6, story: { relic: 'A' } });
+  ok('...carried off: the log is the company’s again, and nothing follows from it', !c.story.flags.log_lost && !c.story.flags.ledger_has_log);
+  c = lost(); S.choose(c, 'raid');
+  S.resolveBattle(c, { winner: 'A', units: [], turns: 6, story: { relic: 'B' } });
+  ok('...won, but the log still aboard when they lift: Brass Ledger keep it', c.story.flags.ledger_has_log === true && !c.story.flags.log_lost);
+  c = lost();
+  S.choose(c, 'cutin');
+  ok('cutting Kettering in on the claim: the log back now, paid for at the end of the road (Brass Ledger are partners)', !c.story.flags.ledger_has_log && !c.story.flags.log_lost &&
+    c.story.flags.kettle_partner === true && c.companies.A.kUC === 0);
+  c = lost(); const t0 = c.story.meters.theirs;
+  S.choose(c, 'follow');
+  ok('following it: the rivals have its pages, and the company only the first eleven', c.story.flags.ledger_has_log === true && c.story.meters.theirs === t0 + 1 &&
+    /without the log/.test(S.render(c, global.PMCStoryText['dead-reckoning']['c1.interlude'])));
+  // ...or rebuilt on the way, from what the company finds: Wraith's copy on the flats, or Morrow's records at Thule
+  const r1 = lost(); S.choose(r1, 'follow');
+  r1.story.chapter = 'c2'; r1.story.node = 'c2f.drop';
+  S.choose(r1, 'take');
+  ok('...unless it is rebuilt on the way: Wraith Section’s stolen copy, with Halloran’s pages', !r1.story.flags.ledger_has_log &&
+    r1.story.journal.some((j) => (j.effects || []).some((e) => /rebuilds the log from Wraith/.test(e.journal || ''))));
+  const r2 = lost(); S.choose(r2, 'follow');
+  r2.story.chapter = 'c2'; r2.story.node = 'c2t.records';
+  S.choose(r2, 'listen');
+  ok('...or Morrow’s own records at Station Thule', !r2.story.flags.ledger_has_log);
+  // ...a second chance at the beacon: Kettering has brought it to sell to the Reavers
+  const at3 = () => { const x = lost(); S.choose(x, 'follow'); x.story.chapter = 'c3'; x.story.node = 'c3.brief'; S.proceed(x); return x; };
+  let s3 = at3();
+  ok('at the beacon, a second chance: the private sale, Brass Ledger selling the log to the Reavers', S.view(s3).id === 'c3.sale' && ['raid', 'wait'].every((o) => S.view(s3).options.some((x) => x.id === o)) && S.view(s3).options.length === 2, S.view(s3).id);
+  S.choose(s3, 'raid');
+  ok('...broken up: a battle on the mud bank for the case', S.view(s3).type === 'battle' && s3.story.node === 'c3s.battle' && S.battleSpec(s3).variant.relic && S.battleSpec(s3).map === 'mudbank');
+  S.resolveBattle(s3, { winner: 'A', units: [], turns: 6, story: { relic: 'A' } });
+  ok('...the case carried off: the log is back, and the beacon is next', !s3.story.flags.ledger_has_log && S.view(s3).id !== 'c3s.battle');
+  s3 = at3(); S.choose(s3, 'wait');
+  ok('...or let go: the sale goes through, and Kerrigan is the next chance', s3.story.flags.ledger_has_log === true && s3.story.node === 'c3.contact');
+  const nw = lost(); S.choose(nw, 'follow');
+  ok('...and a company that never had the log back has it rebuilt as the second half begins, from the stones', (() => {
+    nw.story.chapter = 'c4'; nw.story.node = 'c4.interlude';
+    for (let i = 0; i < 12 && nw.story.chapter !== 'fault'; i++) { const v = S.view(nw); if (v.type === 'event') S.choose(nw, v.options.filter((o) => o.ok)[0].id); else S.proceed(nw); }
+    return nw.story.chapter === 'fault' && !nw.story.flags.ledger_has_log && nw.story.journal.some((j) => (j.effects || []).some((e) => /lodestones themselves/.test(e.journal || '')));
+  })(), nw.story.chapter);
+  // ...and at the Broker, the log is on the block beside the heading
+  c.story.chapter = 'c4'; c.story.node = 'c4.lot'; c.companies.A.kUC = 10;
+  ok('...until Kerrigan, where Lot 47 itself is back on the block', /Lot 47 itself/.test(S.render(c, global.PMCStoryText['dead-reckoning']['c4.lot'])));
+  const t1 = c.story.meters.theirs;
+  const k = JSON.parse(JSON.stringify(c));
+  S.choose(k, 'buy');
+  ok('...not for any money: buying the heading there leaves the log with them', k.story.flags.ledger_has_log === true);
+  S.choose(c, 'take');
+  S.resolveBattle(c, 'victory');
+  ok('...only the warehouse taken by force brings it back with the heading', !c.story.flags.ledger_has_log && c.story.meters.theirs === t1 - 1);
 }
 
 console.log('\nOne battle, AI against AI');

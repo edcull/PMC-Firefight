@@ -93,8 +93,11 @@ ok('more than one way it ends: four endings or more', Object.keys(t.endings).fil
 ok('each of the three finales is reached, and Recall too, in some walk', ['landing', 'spire', 'collector', 'recall'].every((f) => t.finales[f]), JSON.stringify(t.finales));
 ok('...and no finale shuts out the others: each in a twentieth of the walks or more, none in two thirds', ['landing', 'spire', 'collector'].every((f) => (t.finales[f] || 0) >= N * 0.05 && (t.finales[f] || 0) <= N * 0.66), JSON.stringify(t.finales));
 ok('both one-offs come up, now and then: Beyond the Gate and the Double-Cross', ['warren', 'doublecross'].every((f) => t.oneOffs[f]), JSON.stringify(t.oneOffs));
-ok('...and every chapter of the second half is played in some walk', Object.keys(dc._chapters).filter((id) => dc._chapters[id].half === 2 && dc._chapters[id].nodes.some((n) => n.type === 'battle') && !dc._chapters[id].finale && id !== 'recall').every((id) => t.played[id]),
-  Object.keys(dc._chapters).filter((id) => dc._chapters[id].half === 2 && dc._chapters[id].nodes.some((n) => n.type === 'battle') && !t.played[id]).join(', '));
+// (a fallback is offered only when its thread has nothing else to give: rare by design, so most of them, not every one)
+const pool = Object.keys(dc._chapters).filter((id) => dc._chapters[id].half === 2 && dc._chapters[id].nodes.some((n) => n.type === 'battle') && !dc._chapters[id].finale && id !== 'recall');
+const arcs = pool.filter((id) => !dc._chapters[id].fallback), falls = pool.filter((id) => dc._chapters[id].fallback);
+ok('...every chapter of the second half’s threads is played in some walk, and most of the fallbacks', arcs.every((id) => t.played[id]) && falls.filter((id) => t.played[id]).length >= falls.length - 1,
+  arcs.filter((id) => !t.played[id]).concat(falls.filter((id) => !t.played[id]).map((id) => id + ' (fallback)')).join(', '));
 ok('the growth curve: Company Tier III by the end, in half the walks or more', (t.tierEnd[3] || 0) + (t.tierEnd[4] || 0) >= N * 0.5, JSON.stringify(t.tierEnd));
 ok('the finale is fought at Tier II or higher, nearly always', t.finaleTier.filter((x) => x >= 2).length >= t.finaleTier.length * 0.85, t.finaleTier.join(''));
 const eps = t.epilogues.filter((x) => x.ending !== 'broken');

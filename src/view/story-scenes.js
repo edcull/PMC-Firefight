@@ -417,6 +417,28 @@
       p.shuttle(40, 12, false); p.shuttle(92, 8, true);
       p.people(56, 22, 5, '#0a0a10', 3);
     } },
+    /* Vesk's landing field at night, Lot 47 lost: Brass Ledger's ship on its
+       pad with the ramp down, cargo being loaded, and the port's lights. */
+    veskfield: { time: 'night', draw: function (p) {
+      p.sky(28).ridge(30, 3, p.t.far).ground(36);
+      p.building(4, 14, 10, 36, '#24222e', { lit: 0.5 }); p.building(108, 16, 12, 36, '#24222e', { lit: 0.5 });
+      p.rect(44, 34, 84, 37, '#3a3640');
+      p.shuttle(64, 26, false); p.rect(70, 30, 78, 34, '#4a4450');
+      [[50, 40], [56, 41], [86, 40]].forEach(function (c) { p.rect(c[0], c[1] - 3, c[0] + 4, c[1], '#6b6946'); p.rect(c[0], c[1] - 3, c[0] + 4, c[1] - 3, '#848155'); });
+      p.people(74, 40, 5, '#0c0a10', 3); for (var k = 46; k < 86; k += 8) p.light(k, 35, '#ffcf6a');
+    } },
+    /* A mud bank on Tessaly IV in the fog: a ship down in the reeds, boats
+       pulled up beside it, and a lit tent where a sale is being made. */
+    mudbank: { time: 'dawn', draw: function (p) {
+      p.sky(24).ridge(28, 4, '#3a4a4a').ground(34);
+      for (var y = 34; y < H; y++) for (var x = 0; x < W; x++) if (dith(x, y, 0.35)) p.put(x, y, '#2a3a2e');
+      for (var i = 0; i < 12; i++) { var tx = p.r() * W; if (tx < 30 || tx > 100) p.tree(tx, 32 + p.r() * 6, 8 + Math.floor(p.r() * 6), '#1e3226'); }
+      p.shuttle(44, 30, false);
+      [[80, 39], [92, 40]].forEach(function (b) { p.rect(b[0], b[1] - 2, b[0] + 9, b[1], '#5a4030'); p.rect(b[0] + 1, b[1] - 3, b[0] + 8, b[1] - 3, '#6a5040'); });
+      for (var k = 0; k < 5; k++) p.rect(62 + k, 38 - k, 74 - k, 38 - k, '#8a7a5a'); p.light(68, 34, '#ffcf6a');
+      for (var f = 0; f < 3; f++) for (var x2 = 0; x2 < W; x2++) if (dith(x2, 22 + f * 5, 0.3)) p.rect(x2, 22 + f * 5, x2, 23 + f * 5, '#9aa8a8');
+      p.people(64, 41, 4, '#0a0c0a', 3);
+    } },
     /* ---------- the second half (phase 5c) ---------- */
     /* The Hollin Shelf: a high plateau under a thin bright sky, peaks beyond,
        Kestrel's dropships down and the convoy's cars crawling for them. */

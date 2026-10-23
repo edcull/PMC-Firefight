@@ -174,6 +174,18 @@
      two more than the battle's Tier. */
   var CONTACTS = ['xalpha1', 'xeps1', 'xbeta2', 'xeps1'];
   var CONTACTS_DEEP = ['xeps1', 'xeps1', 'xalpha1', 'xbeta2'];
+  /* Lot 47 lost and the log let go (c1.lost): it is not to be had for money.
+     Brass Ledger's broker shows it at Kerrigan beside the heading, and only the
+     warehouse taken by force brings it back (or the sale at the beacon broken
+     up). */
+  var LOG_BACK = [{ if: { flag: 'ledger_has_log' }, meter: 'theirs', add: -1 }, { if: { flag: 'ledger_has_log' }, flag: 'ledger_has_log', set: false }];
+  /* ...or the log rebuilt without them, from what the company has found on the
+     way: Wraith Section's stolen copy, or Morrow's own records at Thule, put
+     together with the first pages Halloran photographed in the arcade. */
+  function rebuilt(from) {
+    return [{ if: { flag: 'ledger_has_log' }, journal: 'Halloran rebuilds the log from ' + from + ' and his eleven photographed pages.' },
+      { if: { flag: 'ledger_has_log' }, meter: 'lead', add: 1 }, { if: { flag: 'ledger_has_log' }, flag: 'ledger_has_log', set: false }];
+  }
   var LATE_TIME = { if: { chapter: { gte: 5 } }, meter: 'lead', add: -1 };
   var FINALE_ON = {
     success: [{ effects: [{ flag: 'finale_won' }] }],
@@ -211,6 +223,7 @@
       vane_suspects: 'Vane suspects you.', vane_cut_off: 'Vane has cut you off.', eshaven_freed: 'The Hashamer guide you.',
       eshaven_promise: 'You promised the Hashamer the Quiet would stay asleep.', promise_broken: 'You broke your promise to the Hashamer.',
       contact: 'You have spoken with the Amt.', morrow_found: 'You found Morrow.',
+      log_lost: 'Brass Ledger have the log.', ledger_has_log: 'Brass Ledger have the log, and are selling what it says.',
       beat_kettle: 'Brass Ledger hasn’t forgotten Vesk.', beat_wraith: 'Wraith Section hasn’t forgotten the Glass Flats.', beat_sable: 'Colonel Sable hasn’t forgotten her warehouse.', beat_reavers: 'The Red Reavers haven’t forgotten the beacon.', beat_kestrel: 'Kestrel Air Cavalry has a score to settle.', beat_lance: 'The Ninth Lance has a score to settle.'
     },
 
@@ -294,7 +307,7 @@
     ],
 
     threads: {
-      race: { name: 'The Race', pressure: [{ meter: 'theirs', w: 0.5 }, { meter: 'lead', w: -0.5 }, { flag: 'wraith_robbed', w: 1 }, { flag: 'kestrel_filmed', w: 1 }, { flag: 'chart_sold', w: 2 }] },
+      race: { name: 'The Race', pressure: [{ flag: 'ledger_has_log', w: 2 }, { meter: 'theirs', w: 0.5 }, { meter: 'lead', w: -0.5 }, { flag: 'wraith_robbed', w: 1 }, { flag: 'kestrel_filmed', w: 1 }, { flag: 'chart_sold', w: 2 }] },
       tribes: { name: 'The Tribes', pressure: [{ meter: 'alarm', w: 1 }, { flag: 'warren_entered', w: 2 }, { flag: 'hoard_taken', w: 1 }, { flag: 'alpha_taken', w: 1 }, { flag: 'beacon_stormed', w: 1 }] },
       contact: { name: 'First Contact', finale: false, pressure: [{ meter: 'understanding', w: 1 }, { flag: 'relics_returned', w: 2 }, { flag: 'thule_records', w: 1 }, { flag: 'beacon_rubbing', w: 2 }] },
       // (a base of its own: a patron who is content is still a patron with his own designs on the Quiet; without it The Patron was offered in one walk in twenty, storydrwhole.js)
@@ -367,8 +380,27 @@
         { id: 'c1.battle', type: 'battle', scenario: 'escort', variant: { escort: 'Halloran' }, map: 'vesk', tier: 1, pl: 1, planet: 'dense',
           enemy: rival('kettle', { core: [{ key: 'recruits', name: 'Kettering’s Own' }], optional: { meter: 'kettle', per: 3, units: ['irregulars', 'recruits'] }, fill: { to: 0.6, from: ['recruits', 'irregulars'], meter: 'kettle', step: 0.05 },
             changes: [{ if: { flag: 'kettle_marked' }, readiness: -1 }] }),
-          on: { success: [{ effects: [{ meter: 'kettle', add: -1 }, { meter: 'lead', add: 1 }] }], failure: [{ effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: -1 }] }] }, next: 'c1.debrief' },
-        { id: 'c1.debrief', type: 'debrief', text: '{if success}The log is Vane’s.{/if}{if failure}The log is held, at a cost.{/if}', events: ['c1.agent'], next: 'c1.interlude' },
+          // lost, Brass Ledger have the log, and what the company does next is about getting it back, or following it
+          on: { success: [{ effects: [{ meter: 'kettle', add: -1 }, { meter: 'lead', add: 1 }] }], failure: [{ effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: -1 }, { flag: 'log_lost' }] }] }, next: 'c1.debrief' },
+        { id: 'c1.debrief', type: 'debrief', text: '{if success}The log is Vane’s.{/if}{if failure}Brass Ledger have the log.{/if}', events: ['c1.agent'], next: 'c1.route' },
+        { id: 'c1.route', type: 'branch', when: [{ if: { flag: 'log_lost' }, next: 'c1.lost' }, { next: 'c1.interlude' }] },
+        /* The log lost: Brass Ledger's ship is on the landing field, and the company
+           can hit it before it lifts, have Vane buy the log back, or let it go and
+           follow it, with only the pages Halloran photographed. */
+        { id: 'c1.lost', type: 'event', who: 'kettering', title: 'The log is gone', text: 'Brass Ledger have the log, and a ship on the landing field.', options: [
+          { id: 'raid', text: 'Hit their ship before it lifts.', next: 'c1r.battle' },
+          // (no money changes hands: the price is paid at the end of the road, where Brass Ledger take their share of the claim)
+          { id: 'cutin', text: 'Cut Kettering in on the claim.', effects: [{ flag: 'kettle_partner' }, { flag: 'kettle_contact' }, { meter: 'kettle_trust', add: 2 }, { meter: 'vane', add: -1 }, { flag: 'log_lost', set: false }], next: 'c1.interlude' },
+          { id: 'follow', text: 'Let them run with it, and follow.', effects: [{ meter: 'theirs', add: 1 }, { meter: 'lead', add: -1 }, { flag: 'log_lost', set: false }, { flag: 'ledger_has_log' }], next: 'c1.interlude' }
+        ], next: 'c1.interlude' },
+        // the log, carried off their ship (the relic variant): back in the company's hands, or gone with Brass Ledger
+        { id: 'c1r.battle', type: 'battle', scenario: 'find', map: 'veskfield', tier: 1, pl: 1, planet: 'dense', variant: { relic: true },
+          enemy: rival('kettle', { core: [{ key: 'recruits', name: 'Kettering’s Own' }], optional: { meter: 'kettle', per: 3, units: ['irregulars', 'recruits'] }, fill: { to: 0.6, from: ['recruits', 'irregulars'], meter: 'kettle', step: 0.05 }, changes: [{ if: { flag: 'kettle_marked' }, readiness: -1 }] }),
+          on: {
+            success: [{ if: { relic: 'A' }, effects: [{ meter: 'kettle', add: -1 }, { flag: 'log_lost', set: false }] }, { effects: [{ meter: 'theirs', add: 1 }, { flag: 'log_lost', set: false }, { flag: 'ledger_has_log' }] }],
+            failure: [{ if: { relic: 'A' }, effects: [{ flag: 'log_lost', set: false }] }, { effects: [{ meter: 'theirs', add: 1 }, { flag: 'log_lost', set: false }, { flag: 'ledger_has_log' }] }]
+          }, next: 'c1r.debrief' },
+        { id: 'c1r.debrief', type: 'debrief', text: '{if relic}The log is back.{/if}{if not relic}Brass Ledger lift off with the log.{/if}', events: [], next: 'c1.interlude' },
         { id: 'c1.agent', type: 'event', who: 'kettering', title: 'The agent', text: 'Brass Ledger’s man is in the company’s hands.', options: [
           { id: 'message', text: 'Let him go, with a message for his employer.', effects: [{ flag: 'kettle_contact' }, { meter: 'vane', add: -1 }] },
           { id: 'pay', text: 'Pay him for what he knows.', cost: { kUC: 1 }, why: 'You can’t pay him.', effects: [{ meter: 'intel', add: 1 }, { flag: 'kettle_contact' }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank, behind three shell companies.' }] },
@@ -403,7 +435,7 @@
         { id: 'c2f.drop', type: 'event', who: 'nine', if: { grade: 'success' }, title: 'Wraith’s dead drop', text: 'Their camp holds a copy of their own orders.', options: [
           { id: 'read', text: 'Read them.', effects: [{ meter: 'intel', add: 2 }, { flag: 'wraith_orders' }, { reveal: 'client_wraith', journal: 'Wraith Section’s orders come from the Admiralty’s Office of Naval Intelligence. The Navy wants the Quiet too.' }] },
           { id: 'warn', text: 'Leave a message in it.', effects: [{ meter: 'wraith', add: -1 }, { flag: 'wraith_warned' }] },
-          { id: 'take', text: 'Take back their stolen copy of the log.', effects: [{ meter: 'lead', add: 1 }, { flag: 'wraith_robbed' }] }
+          { id: 'take', text: 'Take back their stolen copy of the log.', effects: [{ meter: 'lead', add: 1 }, { flag: 'wraith_robbed' }].concat(rebuilt('Wraith Section’s copy')) }
         ] },
         { id: 'c2f.second', type: 'event', if: { not: { relic: 'A' } }, title: 'Second best', text: 'The lodestone got away from you.', options: [
           { id: 'chase', text: 'Follow their dropship.', effects: [{ meter: 'lead', add: 1 }, { meter: 'loyalty', add: -1 }] },
@@ -422,8 +454,8 @@
           on: { success: [{ effects: [{ meter: 'stones', add: 1 }] }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{}] }, next: 'c2t.debrief' },
         { id: 'c2t.debrief', type: 'debrief', text: '{if success}The station is yours.{/if}{if failure}The scavengers fired the archive.{/if}', events: ['c2t.records', 'c2t.burned'], next: 'c2.interlude' },
         { id: 'c2t.records', type: 'event', if: { grade: 'success' }, title: 'Morrow’s records', text: 'The relay kept his log entries, his voice and his fear.', options: [
-          { id: 'listen', text: 'Listen to all of it.', effects: [{ meter: 'understanding', add: 1 }, { flag: 'thule_records' }] },
-          { id: 'send', text: 'Send the records to Vane.', effects: [{ meter: 'vane', add: 1 }] },
+          { id: 'listen', text: 'Listen to all of it.', effects: [{ meter: 'understanding', add: 1 }, { flag: 'thule_records' }].concat(rebuilt('Morrow’s own records at Thule')) },
+          { id: 'send', text: 'Send the records to Vane.', effects: [{ meter: 'vane', add: 1 }].concat(rebuilt('Morrow’s own records at Thule, with Vane’s readers')) },
           { id: 'sell', text: 'Sell a copy to a newsfeed.', effects: [{ kUC: 2 }, { flag: 'kestrel_deal' }, { meter: 'vane', add: -1 }] }
         ] },
         { id: 'c2t.burned', type: 'event', if: { grade: 'failure' }, title: 'Burned', text: 'The scavengers fired the archive.', options: [
@@ -435,7 +467,18 @@
 
       { id: 'c3', half: 1, title: 'The Drowned Beacon', place: { system: 'Tessaly', planet: 'Tessaly IV', kind: 'jungle', world: { atmosphere: 'foggy' }, site: 'the Mire' },
         intro: 'Morrow’s beacon is a structure nobody built, half under water, and the Red Reavers are digging at it.', nodes: [
-        { id: 'c3.brief', type: 'brief', text: 'The beacon, in the flooded forest.', next: 'c3.contact' },
+        { id: 'c3.brief', type: 'brief', text: 'The beacon, in the flooded forest.', next: 'c3.route0' },
+        /* The log still Brass Ledger's (c1.lost): they have brought it here, to sell
+           to the Reavers digging at the beacon. A second chance at it, before Kerrigan. */
+        { id: 'c3.route0', type: 'branch', when: [{ if: { flag: 'ledger_has_log' }, next: 'c3.sale' }, { next: 'c3.contact' }] },
+        { id: 'c3.sale', type: 'event', who: 'kettering', title: 'The private sale', text: 'Brass Ledger are selling the log to the Reavers, here.', options: [
+          { id: 'raid', text: 'Break up the sale.', next: 'c3s.battle' },
+          { id: 'wait', text: 'Let it go through, and wait for Kerrigan.', effects: [{ meter: 'reavers', add: 1 }], next: 'c3.contact' }
+        ], next: 'c3.contact' },
+        { id: 'c3s.battle', type: 'battle', scenario: 'find', map: 'mudbank', tier: 'max', pl: 1, planet: 'jungle', variant: { relic: true }, enemy: rival('kettle'),
+          on: { success: [{ if: { relic: 'A' }, effects: [{ meter: 'kettle', add: -1 }].concat(LOG_BACK) }, { effects: [{ meter: 'reavers', add: 1 }] }],
+                failure: [{ if: { relic: 'A' }, effects: LOG_BACK }, { effects: [{ meter: 'reavers', add: 1 }] }] }, next: 'c3s.debrief' },
+        { id: 'c3s.debrief', type: 'debrief', text: '{if relic}The log is back.{/if}{if not relic}The sale goes through.{/if}', events: [], next: 'c3.contact' },
         { id: 'c3.contact', type: 'event', who: 'hal', title: 'Claim jumpers', text: 'The Reavers are digging at the beacon.', options: [
           { id: 'storm', text: 'Storm it.', battle: { scenario: 'strike', name: 'Storm the Beacon' }, effects: [{ meter: 'alarm', add: 1 }, { flag: 'beacon_stormed' }, { reveal: 'client_reavers', journal: 'The Red Reavers work for nobody. They are claim jumpers, and sell to whoever buys.' }] },
           { id: 'watch', text: 'Watch first.', battle: { tier: 'max-1' }, effects: [{ meter: 'understanding', add: 1 }, { meter: 'intel', add: 1 }, { meter: 'lead', add: -1 }, { reveal: 'client_reavers', journal: 'The Red Reavers work for nobody. They are claim jumpers, and sell to whoever buys.' }] },
@@ -478,13 +521,14 @@
         intro: 'The next heading is for sale again, to everyone, from inside Sable’s warehouse.', nodes: [
         { id: 'c4.brief', type: 'brief', text: 'Kerrigan. The broker’s auction.', next: 'c4.lot' },
         { id: 'c4.lot', type: 'event', who: 'agathe', title: 'Lot 47, again', text: 'Sable has bought the warehouse the heading sits in.', options: [
+          // (the heading can be bought; the log cannot: it comes back only with the warehouse taken)
           { id: 'buy', text: 'Buy it.', cost: { kUC: 3 }, why: 'You can’t afford it.', battle: { skip: true }, effects: [{ meter: 'vane', add: 1 }] },
           { id: 'take', text: 'Take it.', battle: { role: 'attacker', tier: 'max' } },
           { id: 'follow', text: 'Let Sable have it, and follow Sable.', battle: { skip: true, intel: 2 }, effects: [{ meter: 'lead', add: -1 }, { meter: 'intel', add: 2 }, { meter: 'vane', add: -1 }, { meter: 'sable', add: 1 }, { flag: 'sable_owed' }, { reveal: 'client_sable', journal: 'Sable Armour Group belongs to the Halvorsen Mining Combine, bought and paid for.' }] },
           hireOption('kettle', 'Hire Brass Ledger for the takeover.')
         ], next: 'c4.battle' },
         { id: 'c4.battle', type: 'battle', scenario: 'takeover', map: 'docks', role: 'attacker', tier: 'max', pl: 1, planet: 'industrial', enemy: rival('sable'),
-          on: { success: [{ effects: [{ meter: 'stones', add: 1 }, { meter: 'sable', add: -1 }, { meter: 'lead', add: 1 }, { reveal: 'client_sable', journal: 'Sable Armour Group belongs to the Halvorsen Mining Combine, bought and paid for.' }] }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] }, next: 'c4.debrief' },
+          on: { success: [{ effects: [{ meter: 'stones', add: 1 }, { meter: 'sable', add: -1 }, { meter: 'lead', add: 1 }, { reveal: 'client_sable', journal: 'Sable Armour Group belongs to the Halvorsen Mining Combine, bought and paid for.' }].concat(LOG_BACK) }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] }, next: 'c4.debrief' },
         { id: 'c4.debrief', type: 'debrief', pick: 3, text: 'The heading is out, one way or another.', events: ['c4.copies'].concat(HIRED_EVENTS), next: 'c4.interlude' },
         { id: 'c4.copies', type: 'event', title: 'The broker’s copies', text: 'Everybody bought one.', options: [
           { id: 'burn', text: 'Burn his stock.', effects: [{ meter: 'lead', add: 1 }, { meter: 'kettle', add: -1 }] },
@@ -597,7 +641,8 @@
       ] },
 
       /* ================= the second half: The Long Jump ================= */
-      { id: 'fault', half: 2, counts: false, title: 'The Long Jump', intro: 'Halloran reads the last pages of the log, and Morrow names them at last: Xenotripods, the three-legged ones, who step out of the air. Every newsfeed in the sector has the word by the next jump. From here the company chooses where to go, and what it leaves behind goes on without it.', nodes: [
+      // (the log never lost for good: still Brass Ledger's at the half, Halloran rebuilds it from the stones, which have begun to point)
+      { id: 'fault', half: 2, counts: false, title: 'The Long Jump', onStart: rebuilt('the lodestones themselves, which have begun to point the way'), intro: 'Halloran reads the last pages of the log, and Morrow names them at last: Xenotripods, the three-legged ones, who step out of the air. Every newsfeed in the sector has the word by the next jump. From here the company chooses where to go, and what it leaves behind goes on without it.', nodes: [
         { id: 'fault.brief', type: 'brief', text: 'The trail splits.{if vane_cut_off} Vane has stopped paying.{/if}', next: 'pool' },
         { id: 'pool', type: 'pool', picks: 3, then: 'end' }
       ] },

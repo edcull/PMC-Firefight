@@ -2097,7 +2097,7 @@
           B.ctx.stroke();
           var mid = hud(r.x + r.w / 2, r.y + r.h / 2, liftOf(r.x + r.w / 2, r.y + r.h / 2) + ISO.K * 1.4);
           B.ctx.setLineDash([]);
-          var label = R.TERRAIN[r.kind].name;
+          var label = R.terrainName(B.state, r.kind, r);
           B.ctx.font = '600 11px Oxanium, system-ui, sans-serif';
           B.ctx.textAlign = 'center'; B.ctx.textBaseline = 'middle';
           var w = B.ctx.measureText(label).width + 12;

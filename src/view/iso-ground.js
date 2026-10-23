@@ -60,6 +60,16 @@
       // an arctic world's ice ravine: the floor far down in blue dark
       ravine: { ramp: ['#060d15', '#0a1622', '#0f2030', '#152a3e'], fleck: ['#1f3d57', '#081018'], rim: '#dfeef7' }
     };
+    /* A settlement's ground (a map's market skin, and a paved road): flagstones
+       under the stalls and the market's clutter, cobbles on the roads. */
+    var PAVING = { ramp: ['#4a4640', '#57524a', '#635e55', '#706a60', '#7d776c'], fleck: ['#3a3631', '#8c857a', '#2e2b27'], rim: '#2a2723' };
+    var COBBLE = { ramp: ['#3e3b37', '#48443f', '#524e48', '#5c5751', '#66615a'], fleck: ['#2c2a27', '#7a746b', '#34312d'], rim: '#24221f' };
+    FLOOR.fountain = PAVING;
+    function skinFloor(r) {
+      if (r.market) return PAVING;
+      if (r.kind === 'road' && r.paved) return COBBLE;
+      return null;
+    }
 
     function hex3(h) {
       return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -96,7 +106,8 @@
       // and a colour the ground is pulled towards, with how hard: TW the weight, TR/TG/TB the colour
       var TW = new Float32Array(cw * ch), TR = new Float32Array(cw * ch), TG = new Float32Array(cw * ch), TB = new Float32Array(cw * ch);
       terrain.forEach(function (r) {
-        var f = FIT[r.kind];
+        // (a market's crater field is paving, not churned earth: it pulls nothing round it)
+        var f = r.market ? null : FIT[r.kind];
         if (!f) return;
         var i0 = Math.max(0, Math.floor((r.x - f.r) / STEP)), i1 = Math.min(cw - 1, Math.ceil((r.x + r.w + f.r) / STEP));
         var j0 = Math.max(0, Math.floor((r.y - f.r) / STEP)), j1 = Math.min(ch - 1, Math.ceil((r.y + r.h + f.r) / STEP));
@@ -350,7 +361,7 @@
       var floorsDone = false;
       function floorOf1(r, ri, rows) {
         if (r.kind === 'hill') return;
-        if (FLOOR[r.kind]) paintFloor(d, r, roomTheme(r) || floorOf(r.kind), seed + ri * 131, lat, fN, fD, 0, null, null, rows);
+        if (FLOOR[r.kind]) paintFloor(d, r, roomTheme(r) || skinFloor(r) || floorOf(r.kind), seed + ri * 131, lat, fN, fD, 0, null, null, rows);
       }
       // the rows a piece's floor can paint, in bands of a few dozen: a step of a sliced bake each
       function floorBands(r) {
@@ -511,7 +522,7 @@
 
       function craters() {
       // craters pitting the churned ground
-      terrain.filter(function (r) { return r.kind === 'crater'; }).forEach(function (r) {
+      terrain.filter(function (r) { return r.kind === 'crater' && !r.market; }).forEach(function (r) {
         var cr = rng(seed + Math.round(r.x * 17 + r.y * 7));
         /* a crater field on a hill lies on the plateau, as its churned floor is painted
            above: its scorch and bowls lifted with it wherever they are over the hill (left

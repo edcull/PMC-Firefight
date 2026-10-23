@@ -897,6 +897,8 @@
        from within 4" of their walls like any other location. */
     pumphouse: { name: 'Pump house', blocks: true, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
     // a story's Parley: the meeting point, a table under a white flag. Open ground, there to be seen
+    // a town square's fountain: a stone basin round a column and a statue, too tall to see past and no way through
+    fountain: { name: 'Fountain', blocks: true, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
     parleyflag: { name: 'The meeting point', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     // Ambush! (p. 156): the road the enemy column is on — open ground, and nothing stands on it
     road: { name: 'Road', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
@@ -979,6 +981,16 @@
   function terrainOf(state, u) { return (KIT_SPACE || kitSpace()).terrainOf(state, u); }
   function footprint(x, y) { return (KIT_SPACE || kitSpace()).footprint(x, y); }
   function kindsUnder(state, u, x, y) { return (KIT_SPACE || kitSpace()).kindsUnder(state, u, x, y); }
+  /* A kind of ground as this table calls it: a settlement's map (a story map's
+     market skin) names its barricades and crater fields for what they look
+     like, and a paved road a paved road. The rules read them all as before. */
+  var SKIN_NAMES = { market: { barricade: 'Market stalls', crater: 'Market clutter', road: 'Paved road' } };
+  function terrainName(state, kind, piece) {
+    var skin = state && state.cfg && state.cfg.story && state.cfg.story.skin;
+    var named = skin && SKIN_NAMES[skin] && SKIN_NAMES[skin][kind];
+    if (named && (!piece || piece.market || (kind === 'road' && piece.paved))) return named;
+    return TERRAIN[kind] ? TERRAIN[kind].name : kind;
+  }
   function losBatch(fn) { return (KIT_SPACE || kitSpace()).losBatch(fn); }
   function coverAt(state, x, y, u) { return (KIT_SPACE || kitSpace()).coverAt(state, x, y, u); }
   function segRect(x1, y1, x2, y2, r) { return (KIT_SPACE || kitSpace()).segRect(x1, y1, x2, y2, r); }
@@ -2524,7 +2536,7 @@
     d10: d10, d6: d6, d3: d3, answering: answering, mayRoll: mayRoll, angleWrap: angleWrap, esc: esc,
     inches: inches, unitDist: unitDist, centreDist: centreDist, hasLoS: hasLoS, losBatch: losBatch, lineClear: lineClear, doorOpen: doorOpen, doorFront: doorFront,
     isXeno: isXeno, xenoSenses: xenoSenses, sightRange: sightRange, tribeSees: tribeSees, tribeSeers: tribeSeers, shieldFor: shieldFor, jammedNearby: jammedNearby, inspiringNearby: inspiringNearby, bondMorale: bondMorale, psychicBond: psychicBond, infamyPanic: infamyPanic, panicSweep: panicSweep, regainTargets: regainTargets, regainControl: regainControl, selfRepair: selfRepair, teleportFrom: teleportFrom, teleportPads: teleportPads, teleportRoll: teleportRoll, teleport: teleport, isMedic: isMedic, alienHull: alienHull,
-    terrainAt: terrainAt, nearestFree: nearestFree, walkField: walkField, applyResult: applyResult, dmgMod: dmgMod, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
+    terrainName: terrainName, terrainAt: terrainAt, nearestFree: nearestFree, walkField: walkField, applyResult: applyResult, dmgMod: dmgMod, terrainOf: terrainOf, kindsUnder: kindsUnder, coverAt: coverAt, footprint: footprint, inRect: inRect, segRect: segRect,
     groundLevel: groundLevel, levelOf: levelOf, heightUnder: heightUnder,
     inPoly: inPoly, pieceDepth: pieceDepth, shapePiece: shapePiece, SHAPED: SHAPED, placePiece: placePiece, jumps: jumps, turnPiece: turnPiece, turnPoint: turnPoint,
     enterable: enterable, sectionsOf: sectionsOf, sectionRect: sectionRect, sectionHigh: sectionHigh, occupant: occupant,

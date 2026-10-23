@@ -22,6 +22,10 @@
     var MACH = ['#1a1e22', '#2a3036', '#3d454c', '#50595f', '#636d74', '#86919a'];
     var SHIELD = ['#1f2428', '#2e353b', '#46515a', '#5d6a74', '#73808a', '#94a1ab'];
     var DOOR_STEEL = ['#23282c', '#323a40', '#465058', '#58636c', '#6b7781', '#8a96a0'];
+    // a market: the stalls' timber, their awnings' stripes, and what is for sale
+    var TIMBER = ['#2a1e14', '#3e2c1c', '#564028', '#6e5234', '#866642', '#9e7c54'];
+    var AWNING = [['#b8402e', '#e8dcc0'], ['#2e6a8a', '#e8dcc0'], ['#c8a040', '#5a3a22'], ['#3e7a4a', '#e8dcc0'], ['#7a3a6a', '#e8c890']];
+    var WARES = ['#d8a03a', '#c8402a', '#7aa83a', '#e8dcc0', '#8a5a3a', '#4a7aa8'];
     function drawKind(cutaway, g, lift, p, pr) {
       switch (pr.kind) {
         case 'tree': {
@@ -176,6 +180,49 @@
           dot(g, p.x - cw7 * 0.3, p.y - cl7 - ch7 * 0.2, '#ff5a3a', 2);
           dot(g, p.x, p.y - cl7 - ch7 * 0.2, '#ffb02e', 2);
           dot(g, p.x + cw7 * 0.3, p.y - cl7 - ch7 * 0.2, '#7bdc6a', 2);
+          break;
+        }
+        /* A market stall (a settlement's barricade, iso-props.js): a timber
+           trestle laid with wares, on four posts under a striped awning that
+           slopes down towards the viewer. */
+        case 'stall': {
+          var str = rng(pr.seed), slf = lift || 0, hz = pr.horiz, sl0 = (pr.len || 1.6) - 0.15, dp = 0.75;
+          var tx0 = hz ? pr.x - sl0 / 2 : pr.x - dp / 2, ty0 = hz ? pr.y - dp / 2 : pr.y - sl0 / 2, tw = hz ? sl0 : dp, th = hz ? dp : sl0;
+          var tH = a(1.5), pH = a(4.2);
+          box(g, { x: tx0, y: ty0, w: tw, h: th, height: tH, seed: pr.seed }, TIMBER, { roof: TIMBER[4], roofEdge: TIMBER[5], windows: null, lift: slf });
+          function sp(x, y, up) { var q = toScreen(x, y); return [q.x, q.y - slf - up]; }
+          // the wares, heaped on the boards
+          for (var wi = 0; wi < 7; wi++) {
+            var wq = sp(tx0 + 0.1 + str() * (tw - 0.2), ty0 + 0.1 + str() * (th - 0.2), tH + a(0.2));
+            dot(g, wq[0], wq[1], WARES[Math.floor(str() * WARES.length)], 2);
+          }
+          // the posts at the four corners, and the awning over them, striped down its length
+          var ax0 = tx0 - 0.08, ay0 = ty0 - 0.08, ax1 = tx0 + tw + 0.08, ay1 = ty0 + th + 0.08;
+          [[ax0, ay0], [ax1, ay0], [ax1, ay1], [ax0, ay1]].forEach(function (c) { edgeLine(g, sp(c[0], c[1], 0), sp(c[0], c[1], pH), TIMBER[1], 1); });
+          var aw = AWNING[Math.floor((pr.tone || 0) * AWNING.length) % AWNING.length], nstr = 6;
+          for (var si2 = 0; si2 < nstr; si2++) {
+            var f0 = si2 / nstr, f1 = (si2 + 1) / nstr;
+            var q00 = hz ? [ax0 + (ax1 - ax0) * f0, ay0] : [ax0, ay0 + (ay1 - ay0) * f0];
+            var q01 = hz ? [ax0 + (ax1 - ax0) * f1, ay0] : [ax0, ay0 + (ay1 - ay0) * f1];
+            var q10 = hz ? [ax0 + (ax1 - ax0) * f0, ay1] : [ax1, ay0 + (ay1 - ay0) * f0];
+            var q11 = hz ? [ax0 + (ax1 - ax0) * f1, ay1] : [ax1, ay0 + (ay1 - ay0) * f1];
+            // the back edge high, the front (towards the viewer) a little lower
+            poly(g, [sp(q00[0], q00[1], pH + a(0.6)), sp(q01[0], q01[1], pH + a(0.6)), sp(q11[0], q11[1], pH - a(0.2)), sp(q10[0], q10[1], pH - a(0.2))], aw[si2 % 2]);
+          }
+          // the awning's hem, a shade darker
+          edgeLine(g, sp(hz ? ax0 : ax1, ay1, pH - a(0.2)), sp(ax1, ay1, pH - a(0.2)), 'rgba(20,14,10,.55)', 1);
+          break;
+        }
+        case 'sacks': {
+          // grain sacks, heaped: round-shouldered bags, a tie at the neck
+          var skr = rng(pr.seed), skl = lift || 0;
+          shadowBlob(g, { x: p.x + a(0.5), y: p.y - skl + a(0.3) }, a(1.8), a(0.7));
+          for (var ski = 0; ski < (pr.n || 2) + 1; ski++) {
+            var sx = p.x + (ski - 1) * a(0.9) + (skr() - 0.5) * a(0.3), sy = p.y - skl + (skr() - 0.5) * a(0.5);
+            ellipse(g, sx, sy - a(0.8), a(0.55), a(0.75), ski % 2 ? '#b8a07a' : '#a8906a');
+            ellipse(g, sx - a(0.12), sy - a(1.0), a(0.25), a(0.35), '#d0bc94');
+            rect(g, sx - a(0.15), sy - a(1.6), a(0.3), a(0.2), '#6a5236');
+          }
           break;
         }
         case 'drums': {
@@ -875,6 +922,61 @@
           edgeLine(g, pole, [pole[0], pole[1] - a(16)], '#bdb6a8', 2);
           poly(g, [[pole[0], pole[1] - a(16)], [pole[0] + a(6), pole[1] - a(15)], [pole[0] + a(5.4), pole[1] - a(12.6)], [pole[0], pole[1] - a(12)]], '#f2efe6');
           edgeLine(g, [pole[0] + a(2.5), pole[1] - a(15.6)], [pole[0] + a(2.3), pole[1] - a(12.3)], '#cfcabd', 1);
+          break;
+        }
+        /* A town square's fountain: a round stone basin of water with a broad
+           rim, a column rising out of it and a figure on top, and water falling
+           from a bowl half way up. Tall enough to block the view across the square. */
+        case 'fountain': {
+          var fl = lift || 0, fcx = pr.x + pr.w / 2, fcy = pr.y + pr.h / 2, fR = Math.min(pr.w, pr.h) / 2 - 0.55;
+          function FQ(x, y, up) { var q = toScreen(x, y); return [q.x, q.y - fl - (up || 0)]; }
+          function ring(rad, up) { var pts = []; for (var fi = 0; fi < 28; fi++) { var th = fi / 28 * Math.PI * 2; pts.push(FQ(fcx + Math.cos(th) * rad, fcy + Math.sin(th) * rad, up)); } return pts; }
+          var rimH = a(2.2);
+          /* a stone pillar at each corner of the fountain's square, capped, with a
+             lamp on top: the three behind the basin drawn before it, the near one after */
+          function pillar(px, py) {
+            var pb = FQ(px, py), pw = a(1.1), ph = a(8.5);
+            shadowBlob(g, { x: pb[0] + a(1), y: pb[1] + a(0.4) }, a(1.8), a(0.7));
+            rect(g, pb[0] - pw, pb[1] - ph, pw * 2, ph, STONE[3]);
+            rect(g, pb[0] - pw, pb[1] - ph, pw * 0.7, ph, STONE[4]);
+            rect(g, pb[0] + pw * 0.5, pb[1] - ph, pw * 0.5, ph, STONE[2]);
+            rect(g, pb[0] - pw * 1.4, pb[1] - ph - a(0.8), pw * 2.8, a(0.8), STONE[4]);
+            ellipse(g, pb[0], pb[1] - ph - a(1.8), a(0.9), a(0.9), '#ffd27a');
+            ellipse(g, pb[0], pb[1] - ph - a(1.8), a(2.2), a(1.4), 'rgba(255,210,122,.18)');
+          }
+          var pin = 0.35;
+          pillar(pr.x + pin, pr.y + pin); pillar(pr.x + pr.w - pin, pr.y + pin); pillar(pr.x + pin, pr.y + pr.h - pin);
+          shadowBlob(g, { x: FQ(fcx, fcy)[0] + a(2), y: FQ(fcx, fcy)[1] + a(1) }, a(fR * 6.2), a(fR * 3.1));
+          // the basin's outer wall, then its rim, then the water inside
+          var outer = ring(fR, 0), top = ring(fR, rimH);
+          for (var fw = 0; fw < 28; fw++) {
+            var n2 = (fw + 1) % 28;
+            poly(g, [outer[fw], outer[n2], top[n2], top[fw]], fw > 3 && fw < 17 ? STONE[2] : STONE[3]);
+          }
+          poly(g, top, STONE[4]);
+          poly(g, ring(fR - 0.35, rimH), '#2c5a6a');
+          poly(g, ring(fR - 0.55, rimH), '#3a7486');
+          var fr2 = rng(pr.seed || 3);
+          for (var fd = 0; fd < 10; fd++) { var fa = fr2() * Math.PI * 2, fdr = fr2() * (fR - 0.7); var fq = FQ(fcx + Math.cos(fa) * fdr, fcy + Math.sin(fa) * fdr, rimH); dot(g, fq[0], fq[1], '#8ac8d8', 1); }
+          // the column, the bowl half way up with water falling from it, and the figure on top
+          var cb = FQ(fcx, fcy, rimH), colH = pr.height - a(6), cw2 = a(2.2);
+          // a stepped plinth, then the column
+          rect(g, cb[0] - a(3.4), cb[1] - a(2.4), a(6.8), a(2.4), STONE[3]); rect(g, cb[0] - a(3.4), cb[1] - a(2.4), a(2.2), a(2.4), STONE[4]);
+          rect(g, cb[0] - cw2, cb[1] - colH, cw2 * 2, colH, STONE[3]);
+          rect(g, cb[0] - cw2, cb[1] - colH, cw2 * 0.7, colH, STONE[4]);
+          rect(g, cb[0] + cw2 * 0.6, cb[1] - colH, cw2 * 0.4, colH, STONE[2]);
+          var bowlY = cb[1] - colH * 0.45;
+          ellipse(g, cb[0], bowlY, a(3.4), a(1.2), STONE[4]);
+          ellipse(g, cb[0], bowlY - a(0.3), a(2.8), a(0.9), '#3a7486');
+          for (var fs = -2; fs <= 2; fs++) edgeLine(g, [cb[0] + fs * a(1.3), bowlY + a(0.6)], [cb[0] + fs * a(1.7), cb[1] - a(0.4)], 'rgba(150,210,225,.55)', 1);
+          // the figure: a cloaked statue with an arm raised, weathered green
+          var sy = cb[1] - colH;
+          rect(g, cb[0] - a(2.6), sy - a(0.8), a(5.2), a(0.8), STONE[4]);
+          rect(g, cb[0] - a(1.7), sy - a(6.4), a(3.4), a(5.6), '#5f7a66');
+          rect(g, cb[0] - a(1.7), sy - a(6.4), a(1.2), a(5.6), '#78947e');
+          ellipse(g, cb[0], sy - a(7.3), a(1.2), a(1.2), '#6a866f');
+          edgeLine(g, [cb[0] + a(1.4), sy - a(5.4)], [cb[0] + a(3.2), sy - a(9.2)], '#5f7a66', 3);
+          pillar(pr.x + pr.w - pin, pr.y + pr.h - pin);
           break;
         }
         case 'pumphouse': {
