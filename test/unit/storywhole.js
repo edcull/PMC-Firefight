@@ -20,6 +20,17 @@ function ok(name, cond, note) {
 const FOUNDING = ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'];
 const dc = S.get('deep-contract');
 const N = +process.env.STORY_WALKS || 30;
+/* The walks are random, but the same each run (STORY_SEED for others): thirty
+   walks are a small sample, and the shares below are measured against it. */
+{
+  let h = (+process.env.STORY_SEED || 2670) >>> 0;
+  Math.random = function () {
+    h = (h + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(h ^ (h >>> 15), h | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 // the walks at one difficulty (null: the story's default), tallied
 function walks(n, difficulty) {
   const t = { epilogues: [], endings: {}, tierEnd: {}, finaleTier: [], battles: [], sides: 0, errors: [], kUC: [] };
