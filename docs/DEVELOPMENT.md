@@ -331,7 +331,10 @@ commander.js       the company's commander (the officer at the head of its field
 allyorders.js      the allies' orders in a story battle: Move, Attack and Hold here, given and kept once
                    a turn, and the allies' AI answering each (only the allies act)
 storytalk.js       what is said in a story battle: the lines handed to each battle, by what has happened,
-                   and each said once, on a card with the speaker's face, when its moment comes
+                   and each said once, on a card with the speaker's face, when its moment comes; the sump's
+                   hunt for the Front, and the hive's first counter turned over before any line about the walls
+pumphouses.js      The Hunt's pump houses: Find and secure's locations where the map puts them, blocking line of
+                   sight, searched and held from their walls, searched by the AI; and the net calling the search
 storyscenes.js     the story's places as pictures: each drawn the same every time, none alike, and
                    every chapter card, battle map and ending with one
 storydr.js         Dead Reckoning as data: the validator, its forces (archetypes; the Hashamer all Esh-Aven, no

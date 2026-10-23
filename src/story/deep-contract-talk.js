@@ -352,7 +352,20 @@
           { who: 'varga', if: { flag: 'aim_capture' }, text: 'Alive? HTX wants me alive? Then HTX knows what I know.' }
         ],
         target: [{ who: 'varga', text: 'I’m hit—no, leave me! Get the others out!' }],
-        bhalf: [{ who: 'varga', text: 'Into the pumping hall! Seal the doors behind us!' }]
+        bhalf: [{ who: 'varga', text: 'Into the pumping hall! Seal the doors behind us!' }],
+        // the pump houses: one drawn blank, and the one she is in
+        searched: [
+          { who: 'ops', text: 'Pump house is empty, {commander:rank}. Cold stove, no Varga. She’s in one of the others.' },
+          { who: 'ops', text: 'Nothing in there but pumps. Moving on to the next one.' }
+        ],
+        found: [
+          { who: 'ops', if: { flag: 'aim_capture' }, text: 'Target located! Varga’s in that pump house, {commander:rank}. Snatch team, go, and I want her breathing.' },
+          { who: 'ops', text: 'Target located! Varga’s in that pump house, {commander:rank}. Close it down.' }
+        ],
+        guard: [
+          { who: 'fighter', text: 'They’ve found her! Protect Varga! Everyone to the pump house!' },
+          { who: 'fighter', text: 'Protect Varga! Hold them off the pump house!' }
+        ]
       },
       'c4.battle': {
         start: [
@@ -362,10 +375,25 @@
         ],
         kill: [{ who: 'guild', text: 'That was a miner. That was somebody’s father.' }]
       },
+      /* The sump: the company goes down after the Front, and finds the hive.
+         Nothing is said of bugs until the first counter turns over. */
       'sump.battle': {
         start: [
-          { who: 'ops', text: 'Lights on. Stay together. Whatever HTX was digging for, it’s still down here.' },
-          { who: 'hive', text: '[deep in the rock, something turns over in its sleep]' }
+          { who: 'ops', if: { flag: 'varga_free' }, text: 'Varga came down through here, {commander:rank}. Fresh boot prints, Front paint on the walls. She knows these tunnels and we don’t.' },
+          { who: 'ops', text: 'Front markings on the walls. Whoever’s left of them went to ground down here. Lights on, stay together.' },
+          { who: 'ops', text: 'Tracks in the dust, heading down. The Front’s holed up somewhere below us. Check every side passage.' }
+        ],
+        sighted: [
+          { who: 'ops', text: 'Contact! That’s—that isn’t the Front. That isn’t anybody. What the hell is that?' },
+          { who: 'ops', text: 'Movement! It’s not them, {commander:rank}. It’s not people. Oh God, it’s not people.' }
+        ],
+        turn3: [
+          { who: 'ops', after: 'sighted', text: 'They come out of the walls! Watch the walls!' },
+          { who: 'hive', after: 'sighted', text: '[the rock beside you splits, and something with too many legs pours out of it]' }
+        ],
+        loss: [
+          { who: 'ops', after: 'sighted', text: 'Man down! It came straight out of the wall and took him!' },
+          { who: 'ops', after: 'sighted', text: 'They’re in the walls! They’re in the walls! Pull back to the light!' }
         ]
       },
       'relief.battle': {

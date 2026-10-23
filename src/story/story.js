@@ -22,6 +22,19 @@
   function C() { return root.PMCCamp || null; }
   function d6() { var r = R(); return r && r.d6 ? r.d6() : 1 + Math.floor(Math.random() * 6); }
   function rnd() { return Math.random(); }
+  /* A random from a seed, the same numbers every time: what is said in a battle
+     is picked with one (talkFor), so a line written into a story never moves
+     the rolls of anything else. */
+  function seeded(seed) {
+    var h = 2166136261 >>> 0, str = String(seed);
+    for (var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619) >>> 0;
+    return function () {
+      h = (h + 0x6D2B79F5) >>> 0;
+      var t = Math.imul(h ^ (h >>> 15), h | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
   function clone(x) { return x == null ? x : JSON.parse(JSON.stringify(x)); }
   function arr(x) { return x == null ? [] : Array.isArray(x) ? x : [x]; }
 
@@ -560,14 +573,20 @@
      the battle's own first and the enemy side's otherwise, picked at random
      among those whose `if` holds (one with an `if` before one without), written out, with who says it. Handed to the
      battle (levers.js), which puts each up once, when it happens
-     (storybattle.js storyTalk). */
-  var TALK_MOMENTS = ['start', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target'];
+     (storybattle.js storyTalk). In Find and secure, `searched` is a location
+     drawn blank, and `found` and `guard` the one that holds it, said by each
+     side, one after the other. `sighted` is the first of the enemy's hidden
+     counters turned over; a line with `after` waits until that moment's line
+     has been said. */
+  var TALK_MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard'];
   function talkFor(campaign, spec) {
     var def = storyOf(campaign), talk = def && def.talk;
     if (!talk || !spec) return [];
     var ctx = ctxOf(campaign), own = (talk.battles || {})[spec.node] || {};
     var side = (talk.sides || {})[spec.enemy && spec.enemy.side] || {};
     var people = def.people || {}, out = [];
+    // seeded by where the story is: the same battle, at the same point, has the same lines
+    var pick = seeded('talk:' + def.id + ':' + spec.node + ':' + ((campaign.story && campaign.story.journal) || []).length + ':' + ((campaign.companies && campaign.companies.A && campaign.companies.A.name) || ''));
     TALK_MOMENTS.forEach(function (m) {
       var open = function (ls) { return arr(ls).filter(function (l) { return !l.if || test(ctx, l.if); }); };
       var ls = open(own[m]);
@@ -576,12 +595,12 @@
       // a line that answers what has happened comes before one that could be said anywhere
       var apt = ls.filter(function (l) { return l.if; });
       if (apt.length) ls = apt;
-      var l = ls[Math.floor(Math.random() * ls.length)], who = people[l.who] || {};
-      out.push({ on: m, who: l.who, name: who.name || l.who, role: who.role || '', text: render(campaign, l.text) });
+      var l = ls[Math.floor(pick() * ls.length)], who = people[l.who] || {};
+      out.push({ on: m, who: l.who, name: who.name || l.who, role: who.role || '', text: render(campaign, l.text), after: l.after || undefined });
     });
     // the allies: they report in as it opens (`allies`), and answer each order (allyVoice)
     var av = allyVoice(campaign, spec);
-    if (av && av.report.length) out.unshift({ on: 'allies', who: av.who, name: av.name, role: av.role, text: av.report[Math.floor(Math.random() * av.report.length)] });
+    if (av && av.report.length) out.unshift({ on: 'allies', who: av.who, name: av.name, role: av.role, text: av.report[Math.floor(pick() * av.report.length)] });
     return out;
   }
   /* A conversation on a page (a node's `talk`): each line with who says it,

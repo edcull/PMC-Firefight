@@ -74,7 +74,17 @@
         B(17, 4, 6, 5, 'block'), B(26, 41, 6, 4, 'block'),
         N('woods', 5, 20, 4, 8, 'long'), N('woods', 39, 20, 4, 8, 'lobed'),
         N('crater', 17, 39, 4, 4, 'blob'), N('crater', 27, 5, 4, 4, 'lobed')
-      ]
+      ],
+      /* Find and secure's three possible locations: the station's pump houses,
+         where Varga might be. Each is a shed 4" across that blocks line of sight. */
+      sites: {
+        kind: 'pumphouse',
+        at: [
+          { x: 18, y: 17, name: 'The north pump house' },
+          { x: 31, y: 22, name: 'The east pump house' },
+          { x: 21, y: 30, name: 'The south pump house' }
+        ]
+      }
     },
 
     /* Pit Nine: a mining town, its main street running east to west, the

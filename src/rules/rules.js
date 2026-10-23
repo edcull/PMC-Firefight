@@ -891,6 +891,11 @@
        terrain pieces, which do not block line of sight, do not provide cover and
        cannot be destroyed". They are there to be seen and searched, nothing else. */
     searchsite: { name: 'A possible location', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
+    /* A story's own possible locations, where its map says (deep-contract-maps.js
+       `sites`): the pumping station's pump houses. Small sheds with no way in,
+       so they block line of sight and nothing crosses them; searched, and held,
+       from within 4" of their walls like any other location. */
+    pumphouse: { name: 'Pump house', blocks: true, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
     // Ambush! (p. 156): the road the enemy column is on — open ground, and nothing stands on it
     road: { name: 'Road', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     // what a demolished piece leaves behind (p. 41-43)

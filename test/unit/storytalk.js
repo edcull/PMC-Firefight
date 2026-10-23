@@ -119,6 +119,32 @@ ok('a battle with nothing to say says nothing', (() => {
   return cards2.length === 0;
 })());
 
+console.log('\nThe sump: after the Front, and what is there instead');
+{
+  const ts = talkAt('sump.battle');
+  ok('it opens on the hunt for the Front, and nothing of bugs', /Front/.test(ts.find((l) => l.on === 'start').text) && ts.find((l) => l.on === 'start').who === 'ops');
+  ok('...with Varga loose, it is her trail', /Varga/.test(talkAt('sump.battle', { varga_free: true }).find((l) => l.on === 'start').text));
+  ok('the first of them seen has a line of its own, and the walls wait for it', ts.some((l) => l.on === 'sighted') &&
+    ts.filter((l) => l.on === 'turn3' || l.on === 'loss').every((l) => l.after === 'sighted'));
+  const cs = at('sump.battle');
+  const cfgS = L.toCfg(cs, { picks: C.pickForce(cs.companies.A, 1, 1, null, { scenario: 'ce_clear' }), role: 'A' });
+  cfgS.mode = 'demo';
+  const got = [];
+  const es = Engine.create({ card: (k) => { if (k.talk) got.push({ on: Object.keys(es.state().talkSaid).find((m) => es.state().talkSaid[m] != null && !got.some((g) => g.on === m)), seen: es.state().units.some((u) => u.side === 'B' && u.wasHidden && !u.hidden), turn: es.state().turn }); } });
+  es.start(cfgS); deployAndStart(es);
+  ok('the hive starts hidden, as counters', es.state().units.filter((u) => u.side === 'B' && u.alive && u.x >= 0).every((u) => u.hidden && u.wasHidden));
+  for (let i = 0, stuck = 0; i < 20000 && !es.over() && !(es.state().talkSaid || {}).turn3; i++) {
+    const s = es.state();
+    if (s.swapAsk) { es.intent(s.swapAsk.side, { k: 'swapdone' }); continue; }
+    if (s.faceAsk) { es.intent(s.faceAsk.side, { k: 'vfaceall' }); continue; }
+    if (es.intent(s.activeSide || 'A', { k: 'step' }).ok) { stuck = 0; continue; }
+    if (++stuck > 20) break;
+  }
+  const order = got.map((g) => g.on), si = order.indexOf('sighted');
+  ok('“That isn’t the Front”: said the moment the first counter turns over', si >= 0 && got[si].seen && got.slice(0, si).every((g) => !g.seen), order.join(', '));
+  ok('...and they come out of the walls only after it', ['turn3', 'loss'].every((m) => order.indexOf(m) < 0 || order.indexOf(m) > si), order.join(', '));
+}
+
 console.log('\nThe allies: they report in, and answer their orders');
 {
   const k = C.newCampaign({ mode: 'solo' });

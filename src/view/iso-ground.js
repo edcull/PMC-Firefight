@@ -41,6 +41,7 @@
       building: { ramp: SLAB, fleck: ['#6a6459', '#211f1b'], rim: '#1d1c18' },
       bunker: { ramp: SLAB, fleck: ['#5f5b54', '#211f1b'], rim: '#1d1c18' },
       objective: { ramp: SLAB, fleck: ['#6b6258', '#231f1b'], rim: '#1a1815' },
+      pumphouse: { ramp: SLAB, fleck: ['#5f6a6a', '#211f1b'], rim: '#1a1815' },
       wall: { ramp: SCREE, fleck: ['#6f6b62', '#22211d'], rim: '#1e1d1a' },
       // Find and secure: scoured ground where something might be buried
       searchsite: { ramp: SPOIL, fleck: ['#9b8c6c', '#3a3022', '#b0a488'], rim: '#332a1c' },

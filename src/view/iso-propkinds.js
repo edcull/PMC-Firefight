@@ -768,6 +768,44 @@
           dot(g, dc.x - 1, dc.y - dl - H - 2, lamp, 3);
           break;
         }
+        /* A pump house (rules.js `pumphouse`): a prefab shed over a wellhead, a
+           fat pipe out of its side to a valve wheel, a vent stack on the roof.
+           Searched and empty, its roof is struck through in red; the one that
+           holds the objective has its lamp lit and the company's tape on the door. */
+        case 'pumphouse': {
+          var pl2 = lift || 0, PH = pr.height;
+          box(g, pr, PREFAB, { roof: '#4a4f47', roofEdge: '#5e645a', windows: null, lift: pl2 });
+          var Q = function (x, y, up) { var q = toScreen(x, y); return [q.x, q.y - pl2 - (up || 0)]; };
+          var f1 = Q(pr.x, pr.y + pr.h), f2 = Q(pr.x + pr.w, pr.y + pr.h), f3 = Q(pr.x + pr.w, pr.y);
+          // the door, on the front wall
+          var pdA = lerp2(f1, f2, 0.38), pdB = lerp2(f1, f2, 0.6), pdh = Math.min(PH - a(2), a(7));
+          poly(g, [pdA, pdB, [pdB[0], pdB[1] - pdh], [pdA[0], pdA[1] - pdh]], pr.found ? '#2a2620' : '#3a3d38');
+          // the pipe out of the right-hand wall, down to the valve
+          var pp = lerp2(f3, f2, 0.5);
+          rect(g, pp[0], pp[1] - a(4.2), a(3.2), a(1.4), '#5c6a72');
+          rect(g, pp[0] + a(3.2) - a(0.8), pp[1] - a(4.2), a(1.4), a(4.2), '#4c5960');
+          ellipse(g, pp[0] + a(3.2), pp[1] - a(5.2), a(1.3), a(1.3), '#a8413a');
+          ellipse(g, pp[0] + a(3.2), pp[1] - a(5.2), a(0.7), a(0.7), '#4a4f47');
+          // the vent stack on the roof
+          var vs = Q(pr.x + pr.w * 0.7, pr.y + pr.h * 0.35, PH);
+          rect(g, vs[0] - a(0.8), vs[1] - a(5), a(1.6), a(5), '#6a706a');
+          ellipse(g, vs[0], vs[1] - a(5), a(0.8), a(0.4), '#2a2c2a');
+          // a lamp over the door: lit red on the one she is in
+          var pl3 = lerp2(pdA, pdB, 0.5);
+          dot(g, pl3[0] - 1, pl3[1] - pdh - a(1.4), pr.found ? '#ff5a3a' : '#4a3a30', 3);
+          if (pr.found) {
+            ellipse(g, pl3[0], pl3[1] - pdh - a(1.2), a(2), a(1), 'rgba(255,90,58,.25)');
+            edgeLine(g, [pdA[0], pdA[1] - pdh * 0.5], [pdB[0], pdB[1] - pdh * 0.7], '#d9a441', 2);
+          }
+          // searched and empty, or left cold: struck through on the roof
+          if (pr.checked && !pr.found) {
+            var r1 = Q(pr.x + 0.5, pr.y + 0.5, PH), r2 = Q(pr.x + pr.w - 0.5, pr.y + 0.5, PH),
+              r3 = Q(pr.x + pr.w - 0.5, pr.y + pr.h - 0.5, PH), r4 = Q(pr.x + 0.5, pr.y + pr.h - 0.5, PH);
+            edgeLine(g, r1, r3, '#d0503c', 4);
+            edgeLine(g, r2, r4, '#d0503c', 4);
+          }
+          break;
+        }
         case 'building':
         case 'bunker':
         case 'highwall': {

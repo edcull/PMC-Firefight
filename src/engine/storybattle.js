@@ -323,6 +323,11 @@
       if (on === 'bhalf' || on === 'ahalf') { var l = lostOf(on === 'bhalf' ? 'B' : 'A'); return l.n > 1 && l.lost * 2 >= l.n; }
       if (on === 'wave') return !!(state.sc && state.sc.waves && state.sc.waves.n);
       if (on === 'parley') return !!(state.sc && state.sc.parley && state.sc.parley.broken);
+      // Find and secure: a location searched and empty, and the one that holds the objective (`guard` its holders' answer)
+      // the first of the enemy's hidden counters turned over (Close Encounters): what they are
+      if (on === 'sighted') return state.units.some(function (u) { return u.side === 'B' && u.wasHidden && !u.hidden; });
+      if (on === 'searched') return !!(state.sc && state.sc.search && state.sc.search.some(function (sp) { return sp.checked && sp !== state.sc.found; }));
+      if (on === 'found' || on === 'guard') return !!(state.sc && state.sc.found);
       if (on === 'target') {
         var t = state.units.filter(function (u) { return u.storyTarget; })[0];
         return !!t && t.alive && ((t.sp || 0) > 0 || t.models < (t.startSize || t.models) || (t.damage || 0) > 0);
@@ -335,10 +340,12 @@
       var sty = story(), state = E.state;
       if (!sty || !sty.talk || !sty.talk.length || state.over) return;
       if (!setup && (state.phase !== 'battle' || !state.turn)) return;
-      var said = state.talkSaid = state.talkSaid || {};
+      var said = state.talkSaid = state.talkSaid || {}, before = Object.assign({}, said);
       sty.talk.forEach(function (l) {
         if (setup && l.on !== 'allies') return;
-        if (said[l.on] != null || !talkMoment(l.on, state)) return;   // (the turn it was said: 0 while setting up)
+        if (said[l.on] != null || !talkMoment(l.on, state)) return;
+        // (`after`: not until that line is said, and not on the same card run as it)
+        if (l.after && before[l.after] == null) return;   // (the turn it was said: 0 while setting up)
         said[l.on] = state.turn || 0;
         say(l, TALK_VOICE[l.who] || null);
       });

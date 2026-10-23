@@ -469,7 +469,7 @@
     if (scenDef.compound) state.units.forEach(function (u) {
       u.rules = u.rules.map(function (r) { return r === 'Markerlights' ? 'Advanced Sensors' : r === 'Pheromone Markers' ? 'Sixth Sense' : r; });
       // "in most scenarios taking place in complexes, units start the game hidden" (p. 158): as counters
-      if (scenDef.hidden && scenDef.hidden(u)) u.hidden = true;
+      if (scenDef.hidden && scenDef.hidden(u)) u.hidden = u.wasHidden = true;
     });
     /* An automated defence system (p. 160), where the players agreed to one: the
        panel marked on the floor, and three guns that belong to neither side. */

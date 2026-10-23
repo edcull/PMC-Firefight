@@ -321,6 +321,9 @@
     };
     var terrainPlan = map && !compound ? map.pieces.map(fitPiece) : null;
     var mapObjectives = map && !compound && map.objectives ? map.objectives.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) : null;
+    // the map's own possible locations, for Find and secure: where, and what they are
+    var mapSites = map && !compound && map.sites ? { kind: map.sites.kind || 'searchsite',
+      at: map.sites.at.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) } : null;
     var role = lv.role || spec.role;
     var attacker = role === 'choose' ? opts.role || 'A' : ROLE[role] || null;
     var ambush = variant && variant.ambush ? (variant.ambush === 'player' ? 'A' : 'B') : null;
@@ -351,7 +354,7 @@
         id: def.id, node: spec.node,
         // the mission: its name over the book's scenario, its ground, and the seed that lays it the same each time
         name: spec.name || null, blurb: spec.text ? S.render(campaign, spec.text) : null,
-        mapName: map ? map.name : null, objectives: mapObjectives,
+        mapName: map ? map.name : null, objectives: mapObjectives, sites: mapSites,
         place: place ? { system: place.system || null, planet: place.planet || null, site: place.site || null } : null,
         seed: spec.node + ':' + spec.scenario + (east ? ':east' : ''),
         variant: variant,

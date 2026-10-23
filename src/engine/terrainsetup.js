@@ -345,7 +345,7 @@
       return E.state.terrain.filter(function (r) {
         var t = R.TERRAIN[r.kind];
         // a piece moves once, whoever moves it (p. 141; rules review a119ac2 XEN-10)
-        return t && t.destructible !== 'target' && !r.fixed && !r.dtkMoved && r.kind !== 'objective' && r.kind !== 'searchsite';
+        return t && t.destructible !== 'target' && !r.fixed && !r.dtkMoved && r.kind !== 'objective' && r.kind !== 'searchsite' && r.kind !== 'pumphouse';
       });
     }
     function placeAt(x, y) {
