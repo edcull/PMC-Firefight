@@ -13,8 +13,9 @@
    what has happened ({if flag}…{/if}; `success` and `failure` are the last
    battle's, `relic` that the company came away with it).
 
-   Written in full: the first half (chapters 1 to 4), both one-offs, and the
-   events shared between chapters. The second half comes in phase 5. */
+   Written in full: both halves, both one-offs, Recall, and the events shared
+   between chapters. In the first half nothing names the Xenotripods; the
+   second opens on the name (docs/story-dead-reckoning-plan.md, section 0). */
 (function (root) {
   'use strict';
   root.PMCStoryText = root.PMCStoryText || {};
@@ -204,6 +205,227 @@
     'hired.reaversoffer': 'Big Hal has had a better offer, and is honest enough to say so, which for Hal is a kind of loyalty.',
     'hired.reaversoffer/match': 'Match it.',
     'hired.reaversoffer/match.why': 'The company can’t match it.',
-    'hired.reaversoffer/let': 'Let them go.'
+    'hired.reaversoffer/let': 'Let them go.',
+
+    /* ================= the second half: The Long Jump ================= */
+    'fault': 'Halloran sat up three nights with the last pages of the log, the ones Morrow wrote with the stones all pointing the same way, and on the fourth morning he read them out to the company. Morrow had a name for the ones who keep the stones after all. He wrote it once, near the end, underlined twice: Xenotripods. The three-legged ones, who step out of the air. By the next jump every newsfeed in the sector has the word, and the footage from the beacon, and nobody is calling it a treasure hunt any more.',
+    'fault.brief': 'The log gives no more easy headings. From here the stones point, and the company chooses which way to follow them, knowing now who else is out there. The rivals have heard the same newsfeeds. So have their clients.{if vane_cut_off} And Vane has stopped paying.{/if}',
+
+    /* ---- the Race: Claim Jumpers ---- */
+    'claim': 'The stones point at the Hollin Shelf, a high plateau on Corvin where Morrow made a cache before he went on. Kestrel Air Cavalry got the heading the same day the company did, and Kestrel is never second anywhere.',
+    'claim.brief': 'Kestrel’s dropships are already on the shelf, and so is a convoy of ground cars carrying whatever Morrow cached, crawling for Kestrel’s landing zone in the thin air. Rook Kestrel is filming the whole thing for somebody’s newsfeed.',
+    'claim.scoop': 'Rook Kestrel comes up on the open channel, cheerful, with a camera drone over her shoulder. The cache is Kestrel’s, the pictures are her client’s, and the company can watch from a respectful distance. Or the company can try to take the convoy, on camera, and be the villains of the evening news.',
+    'claim.scoop/race': 'Race them for the convoy, and let her film it.',
+    'claim.scoop/pictures': 'Offer her better pictures than a firefight: the company’s own footage of the beacon.',
+    'claim.scoop/hire_kestrel': 'Hire Kestrel instead, against whoever else turns up for the cache.',
+    'claim.battle#name': 'Claim Jumpers',
+    'claim.battle': 'Morrow’s cache is on Kestrel’s ground cars, crossing the shelf for their landing zone. Stop the convoy and take what it carries, before it lifts off. Kestrel is fast, airborne, and always in the wrong place for you; the thin air and the low gravity make every jump longer and every fall worse.',
+    'claim.debrief': '{if success}The convoy is stopped on the shelf, and Morrow’s cache is the company’s: a strongbox of his notes, and a lodestone wrapped in a flag from a survey service that no longer exists.{/if}{if failure}Kestrel’s dropships lift off the shelf with the cache aboard, and Rook waves from the ramp.{/if}',
+    'claim.footage': 'Kestrel filmed all of it. Rook sends a cut over before it airs, as a courtesy: it is very good, and the company does not come out of it well.',
+    'claim.footage/run': 'Let them run it. Pictures are her business.',
+    'claim.footage/buy': 'Buy the footage before it airs.',
+    'claim.footage/buy.why': 'The company can’t afford it.',
+    'claim.interlude': 'The company jumps off the shelf. Every newsfeed in the sector is running the Hollin Shelf now, one way or another.',
+
+    /* ---- the Race: The Wreck of the Morrow ---- */
+    'wreck': 'The stones point at Pell, a poisoned world with a toxic sky, and at a wreck in a gully that matches nothing on any register: Elias Morrow’s survey ship, where he brought her down for the last time. Sable Armour Group got there first, because Sable always digs in first.',
+    'wreck.brief': 'Morrow’s ship lies on her side in a gully under a yellow sky, hull split, half full of drifted ash. Sable’s vehicles ring her. Somewhere inside is the end of Morrow’s story, and possibly Morrow.',
+    'wreck.hatch': 'Colonel Sable is cutting into the wreck through the main hatch, slowly, by the book. {if beat_sable}She has seen the company’s ship come down, and has doubled her pickets. Kerrigan, she says on the open channel, will not happen twice.{/if}{if not beat_sable}Her message to the company is short: the wreck is her client’s salvage, and anyone who comes within a kilometre of it will be fired on.{/if}',
+    'wreck.hatch/cut': 'Cut a second way in, through the split in the hull, and get to the bridge first.',
+    'wreck.hatch/wait': 'Wait for Sable to open her up, and take it from her inside.',
+    'wreck.hatch/hire_sable': 'Call in what Sable owes the company, and go in together.',
+    'wreck.battle#name': 'The Wreck of the Morrow',
+    'wreck.battle': 'The wreck is corridors and holds lying on their side, ash to the knee, and Sable’s people in all of them. Clear them out of Morrow’s ship, room by room. The air outside is poison; the air inside is not much better, and every bulkhead is a place for one of Sable’s guns to hold.',
+    'wreck.debrief': '{if success}Sable’s people are out of the wreck, and the company has it to itself: the bridge, the holds, and a cabin sealed from the inside forty years ago.{/if}{if failure}Sable holds the wreck, and whatever Morrow left in it goes to her client’s vaults.{/if}',
+    'wreck.morrow': 'Elias Morrow is in his cabin, in his chair, forty years dead and dry as paper. His last entry is on the desk in front of him, unfinished. In his fist, still warm, is a lodestone.',
+    'wreck.morrow/take': 'Take the stone, and his last entry.',
+    'wreck.morrow/bury': 'Bury him on Pell, with the stone in his hand where he wanted it.',
+    'wreck.interlude': 'The company lifts off Pell with Morrow’s last words aboard, or without them. Either way, his ship is empty now.',
+
+    /* ---- the Race: Bounty ---- */
+    'bounty': 'Somebody has put a price on the company. Wraith Section took the contract, and Wraith Section does not miss twice. The company is on Ilya, a nearly empty world, to refuel, and a tip arrives an hour after landing.',
+    'bounty.brief': 'Ilya is scrub and wind and a single fuel depot. Wraith Section has been paid to stop the company here, and the tip says they are already in the hills.',
+    'bounty.tip': 'The tip comes from Nine herself, on a channel nobody should have. {if beat_wraith}“This one is not for the client,” she says. “This one is for Vantor.”{/if}{if not beat_wraith}“It’s a contract,” she says. “You understand. Leave the stones on the pad and we can all be somewhere else by sunset.”{/if}',
+    'bounty.tip/trap': 'Lay a trap for the trap: let them think the company is still refuelling.',
+    'bounty.tip/trap.why': 'There is no Intel to spend on it.',
+    'bounty.tip/run': 'Run for the far side of the depot and make them come to you.',
+    'bounty.tip/deal': 'Take Nine’s offer: a lodestone, and she calls it off.',
+    'bounty.tip/deal.why': 'Nine has no reason to talk to the company, and nothing to sell.',
+    'bounty.tip/hire_reavers': 'Hire the Reavers to hunt the hunters.',
+    'bounty.battle#name': 'Bounty',
+    'bounty.battle': 'Wraith Section is in the hills over the depot with long rifles and every channel tapped. Break them, and the bounty goes unpaid. They will shoot officers and radios first, and they will not come close if they can help it.',
+    'bounty.debrief': '{if success}Wraith Section breaks contact and is gone into the scrub. The bounty is unpaid, and somebody will be unhappy about that.{/if}{if failure}Wraith Section collects. The company gets off Ilya lighter than it landed.{/if}',
+    'bounty.paymaster': 'Wraith left someone behind: the contract’s paymaster, a neat man with a case of bearer bonds and a very good lawyer’s number.',
+    'bounty.paymaster/hand': 'Hand him in, and send Vane the case.',
+    'bounty.paymaster/turn': 'Turn him: who pays Wraith, and how much they know.',
+    'bounty.interlude': 'The company jumps on, watching its own tail all the way.',
+
+    /* ---- the Race: The Landing (finale) ---- */
+    'landing': 'The end of the log. The stones point at a world where the dead reckoning says there should be nothing at all, and there is the Quiet: a world of towers under a slow fog, and one landing field. The leading company in the race got here first. Whoever files the first claim owns everything here.',
+    'landing.brief': 'The only landing field on the Quiet is dug in from end to end, and the rival who holds it has been waiting for the company for days. Their commander is on the field. Take the field, and the claim is the company’s to file.',
+    'landing.field': 'They are dug in, and they have heard the company’s drives. There is no message on the open channel this time. There doesn’t need to be.',
+    'landing.field/alone': 'Go in alone.',
+    'landing.field/hire_kettle': 'Hire Brass Ledger for the landing.',
+    'landing.field/hire_reavers': 'Hire the Reavers for the landing.',
+    'landing.battle#name': 'The Landing',
+    'landing.battle': 'The landing field on the Quiet, and the leading rival dug in across it. Take it from them, or take their commander: either way, the claim is the company’s. The towers are watching. Everything on this world is.',
+    'landing.debrief': '{if success}The field is the company’s, and the claim is filed before the guns have cooled.{/if}{if failure}The rival holds the field, and files the claim in its client’s name before the company is off the ground.{/if}',
+
+    /* ---- the Tribes: The Watchers ---- */
+    'watchers': 'The stones point through the Brannock pass, and the pass is shut. The Ulvar, a Xenotripod tribe of shields and guns, have domed it from wall to wall. Nobody has gone through it since the word got out.',
+    'watchers.brief': 'Brannock VI is mountains and fog. The Ulvar’s shield domes sit across the only pass like soap bubbles of light, each held up by a turret, and the turrets watch everything.',
+    'watchers.wall': 'The shieldwall covers the pass from side to side. The Ulvar have seen the company. They do not move, and they do not need to.',
+    'watchers.wall/strike': 'Strike the shield turrets, and bring the domes down.',
+    'watchers.wall/round': 'Go round, the long way, over the peaks.',
+    'watchers.wall/under': 'Go under it, by the tunnels the Mithdu showed the company.',
+    'watchers.wall/under.why': 'Nobody has shown the company a way under.',
+    'watchers.battle#name': 'The Watchers',
+    'watchers.battle': 'The Ulvar’s shield turrets hold the pass, each under its own dome, with guns behind every one. Destroy the turrets and the domes come down. The Ulvar fight from behind their shields and do not give ground.',
+    'watchers.debrief': '{if success}The domes are down, and the pass is open. The Ulvar have drawn back up the mountain.{/if}{if failure}The shieldwall holds. The company goes round, the long way, and the Ulvar know its face now.{/if}',
+    'watchers.dome': 'The last dome comes down. Its keepers stand in the open, unarmed, and wait. In every head at once: they want their dead back.',
+    'watchers.dome/give': 'Give them back their dead.',
+    'watchers.dome/cores': 'Keep the turret cores. They are worth a fortune to the right buyer.',
+    'watchers.interlude': 'The company goes through the pass. Behind it, the Ulvar begin to rebuild the wall.',
+
+    /* ---- the Tribes: Teleport Storm ---- */
+    'storm': 'The Sh’kar have not forgotten the beacon. They come for the company on Sedra II, where it has made camp to refit, and they do not come by the road.',
+    'storm.brief': 'Sedra II is open plain under a sky that does strange things to time. The camp’s sensors start screaming an hour before dawn: the air itself is folding, everywhere, and something is about to step through it.',
+    'storm.air': 'The air goes wrong around the camp: shimmers, then holes, then light. The Sh’kar are coming through, and the company has minutes.',
+    'storm.air/dig': 'Dig in where the company stands, and hold until they stop coming.',
+    'storm.air/move': 'Move the lodestones away from the camp, and draw them off.',
+    'storm.battle#name': 'Teleport Storm',
+    'storm.battle': 'The Sh’kar are stepping out of the air all round the camp, and they will keep coming. Hold the camp. They come for the stones, and for the people who took them.',
+    'storm.debrief': '{if success}The air closes. The Sh’kar are gone, and the camp is still standing, more or less.{/if}{if failure}The Sh’kar take what they came for, and step back into the air with it.{/if}',
+    'storm.what': 'In the quiet after, the company understands what the Sh’kar came for: not the company. The lodestones.',
+    'storm.what/return': 'Return one. Leave it on the plain, where they can find it.',
+    'storm.what/return.why': 'The company has no stones to return.',
+    'storm.what/keep': 'Keep them all.',
+    'storm.interlude': 'The company jumps on, and nobody sleeps much for the first few nights.',
+
+    /* ---- the Tribes: Cold Sites ---- */
+    'cold': 'The stones point at Kasimir, a desert world full of old ruins that nobody has dug, and for good reason. The Mithdu live under them.',
+    'cold.brief': 'The ruins on Kasimir are half buried in sand that moves when nothing is moving it. The Mithdu are underneath, and the stones say the way on is underneath too.',
+    'cold.sand': 'The sand moves. The ruins are not empty, and whatever is in them has noticed the company.',
+    'cold.sand/clear': 'Clear the ruins.',
+    'cold.sand/seal': 'Seal them, and go round.',
+    'cold.battle#name': 'Cold Sites',
+    'cold.battle': 'The ruins are corridors and rooms half full of sand, and the Mithdu come out of the walls and up through the floors. Clear them, room by room. Keep your back to something solid, if you can find anything solid.',
+    'cold.debrief': '{if success}The ruins are clear, and the way on is open.{/if}{if failure}The Mithdu keep their ruins. The company goes the long way round.{/if}',
+    'cold.child': 'In the last room, in the sand, a Mithdu child. It hasn’t run. It is watching the company with all of its eyes.',
+    'cold.child/let': 'Let it go.',
+    'cold.child/vane': 'Take it to Vane. He will pay anything for one alive.',
+    'cold.interlude': 'The company leaves Kasimir. The sand closes over the ruins behind it.',
+
+    /* ---- the Tribes: The Spire (finale) ---- */
+    'spire': 'The end of the log is the Quiet, and the Quiet is the Amt: towers that rule a world, asleep, and waking. The tribes are gathering. The company is going into the tallest tower, to put out whatever is waking them.',
+    'spire.brief': 'The spire stands over the fog, sealed, humming, its shield generators burning in chambers all the way up. Burn them out, and the spire sleeps. Fail, and every tribe the company has met is coming home to it.',
+    'spire.door': 'The spire is sealed: a door with no seam, that knows the company is there.',
+    'spire.door/force': 'Burn the way in.',
+    'spire.door/eshaven': 'Let the Esh-Aven open it. They remember how.',
+    'spire.door/eshaven.why': 'Nobody here will open it for the company.',
+    'spire.door/quiet': 'Go in quietly, and find another way.',
+    'spire.battle#name': 'The Spire',
+    'spire.battle': 'The spire is corridors and halls, and its shield generators burn in chambers of their own. Burn every one of them out. The Amt are waking, and their servants come out of the walls to stop the company.',
+    'spire.debrief': '{if success}The last generator gutters out, and the spire’s hum drops to nothing. The Quiet is quiet again.{/if}{if failure}The company is driven out of the spire, and behind it the towers light, one by one.{/if}',
+
+    /* ---- First Contact: The Mimics ---- */
+    'mimics': 'Hashamer I is a desert world of nine million Esh-Aven, the servant race of the Xenotripods, left behind when their masters went home to the Quiet. They have kept their masters’ war going ever since by copying it. And now somebody is selling them.',
+    'mimics.brief': 'A village of low stone houses on the edge of the Hashamer desert, and on the ridge above it, Brass Ledger’s trucks: cages on the back, and a buyer’s manifest in Kettering’s pocket.',
+    'mimics.ask': 'An Esh-Aven comes down from the village alone, wearing an Alpha’s gold crest that was never made for it, and stops at a polite distance from the company’s guns. It gives its name, Seven-Holds-the-Staff, as if that were the most important thing about it. Then it asks the company, the other hands, to fight for it.',
+    'mimics.ask/help': 'Fight beside them.',
+    'mimics.ask/pay': 'Pay Brass Ledger to take their trucks and go.',
+    'mimics.ask/pay.why': 'Brass Ledger won’t deal with the company.',
+    'mimics.battle#name': 'The Mimics',
+    'mimics.battle': 'Brass Ledger is coming down off the ridge for the village, and the Hashamer will fight beside the company: every one of them an Esh-Aven, every one named. Drive the slavers off. Kettering is here for a manifest, and he means to fill it.',
+    'mimics.debrief': '{if success}Brass Ledger’s trucks are going back up the ridge empty. In the village, the Esh-Aven are saying the names of their dead aloud, one by one: {fallen:eshaven}.{/if}{if failure}Brass Ledger fills its cages. The company could not stop it.{/if}',
+    'mimics.thanks': 'Seven-Holds-the-Staff comes to the company’s fire that night. The Hashamer remember the road their masters took to the Quiet, it says: every turn of it, in their blood. They will guide the company there. They ask one thing in return. When the company reaches the Quiet, it must not wake it, for if it wakes, it will call every Esh-Aven home to serve again.',
+    'mimics.thanks/promise': 'Make the promise.',
+    'mimics.thanks/guide': 'Take the guide, and promise nothing.',
+    'mimics.thanks/stone': 'Ask for a lodestone instead.',
+    'mimics.interlude': 'The company jumps on, with an Esh-Aven guide in the navigator’s chair, or without one.',
+
+    /* ---- First Contact: The Speaker ---- */
+    'speaker': 'On Orlo, on the far shore of a lake as still as glass, an Alpha is waiting. Not hiding, not guarding: waiting, beside a pylon of its people’s make, for the company to come and talk.',
+    'speaker.brief': 'Orlo is grass, lake and sky. The Alpha stands by its pylon on the far shore with a handful of its own, weapons grounded. In every head at once, as the company lands: a word that means come.',
+    'speaker.pylon': 'The pylon hums. It is waiting for the company, and so is the Alpha.',
+    'speaker.pylon/meet': 'Meet it.',
+    'speaker.pylon/vane': 'Bring Vane’s people to the meeting.',
+    'speaker.pylon/vane.why': 'Vane has cut the company off.',
+    'speaker.battle#name': 'The Speaker',
+    'speaker.battle': 'Talks on the shore, under a flag of the company’s own making. The Alpha speaks through Mental Projection, into every head at once, and it has things to say about the beacon and the stones. Come to an understanding, or it comes to a fight.',
+    'speaker.debrief': '{if success}The Alpha’s last words are in a human voice, learned from the company over a single afternoon: “We will remember the other hands.”{/if}{if failure}The talks are over, and so is the quiet on Orlo.{/if}',
+    'speaker.interlude': 'The company jumps on. Some of it is still hearing the Alpha’s voice, a long way off, like a crowd saying the same thing.',
+
+    /* ---- First Contact: Signal Fires ---- */
+    'signal': 'Back to Tessaly IV, and the beacon, where the company first saw them. This time the company has come to light it, and to hold it lit until whoever is listening hears.',
+    'signal.brief': 'The beacon on Tessaly IV, still humming in the fog. Lit, it will call. The Sh’kar who keep it will try to stop the company lighting it, and keep trying until it is done.',
+    'signal.battle#name': 'Signal Fires',
+    'signal.battle': 'Hold the line around the beacon while it is lit and calling. The Sh’kar will keep coming out of the fog and the air, wave after wave. Hold until the signal is sent.',
+    'signal.debrief': '{if success}The beacon burns, and somewhere a long way off, something answers.{/if}{if failure}The company is driven off the island. The beacon goes dark behind it.{/if}',
+    'signal.interlude': 'The company jumps on. Behind it, on Tessaly IV, the beacon is lit or it is not.',
+
+    /* ---- the Patron: The Vault ---- */
+    'vault': 'Halcyon is a world of banks, and Lucan Vane owns three of them. Under one of them is a vault, and in the vault, if the rumours are right, is everything Vane has ever bought: relics, and receipts for what he has sold.',
+    'vault.brief': 'The Halcyon vault sits under a bank tower in the middle of the city, behind the Ninth Lance. Nobody has seen inside it. Nobody has seen Vane, either.',
+    'vault.door': 'Vane’s vault. His relics, the rumour says, and receipts for what he has sold, and to whom.',
+    'vault.door/night': 'Break in by night.',
+    'vault.door/ask': 'Ask Vane to see it.',
+    'vault.door/ask.why': 'Vane won’t see the company. Vane doesn’t see anyone.',
+    'vault.battle#name': 'The Vault',
+    'vault.battle': 'The vault is corridors and strongrooms under the bank, and the Ninth Lance holds every one. Take the vault’s control room and hold it. The Lance is few, expensive, and very good.',
+    'vault.debrief': '{if success}The vault is open, and the company is standing in it.{/if}{if failure}The Lance holds the vault. Whatever is in it stays there.{/if}',
+    'vault.receipts': 'The vault holds lodestones, a dozen of them, and receipts. Vane has been selling stones to the rival companies all along: a few to each, enough to keep the race running. He paid for every company on the trail, one way or another.',
+    'vault.receipts/publish': 'Publish them.',
+    'vault.receipts/use': 'Keep them, and use them.',
+    'vault.interlude': 'The company leaves Halcyon with the vault’s secrets, or without them. Vane, on the line, says nothing at all.',
+
+    /* ---- the Patron: The Escort ---- */
+    'escort': 'Vane wants a cargo of relics moved across Umber, a poisoned industrial world, to a ship that will take them somewhere nobody will ask. The Ninth Lance wants the cargo too, and the Lance is no longer sure whose side it is on.',
+    'escort.brief': 'Vane’s relics are in sealed containers on three trucks. The field is on the far side of Umber’s refinery belt, and the Lance is somewhere between here and there.',
+    'escort.road': 'Two roads to the field: the fast one, through the refineries, and the long one round them.',
+    'escort.road/fast': 'The fast road.',
+    'escort.road/long': 'The long road.',
+    'escort.battle#name': 'The Escort',
+    'escort.battle': 'Get Vane’s convoy across Umber to the field. The Ninth Lance is waiting on the road, and they will go for the trucks.',
+    'escort.debrief': '{if success}The convoy is through, and Vane’s relics are on the ship.{/if}{if failure}The Lance takes the convoy. Vane will want to know why.{/if}',
+    'escort.cargo': 'Vane’s relics, safe, and one of the containers is not quite sealed.',
+    'escort.cargo/deliver': 'Deliver it all.',
+    'escort.cargo/keep': 'Keep a stone.',
+    'escort.interlude': 'The company jumps on, a little richer, or a little less trusted.',
+
+    /* ---- the Patron: Debts ---- */
+    'debts': 'On Tarn, a refinery world, the bailiffs find the company. They are the Ninth Lance, with paperwork: Vane says the company owes him, and the Lance has come to collect.',
+    'debts.brief': 'The Lance has the company’s ship under a court order, and the company outside it.',
+    'debts.bailiffs': 'Commander Daw, with a writ and a very calm voice. {if beat_lance}“We have met before,” she says. “I have not forgotten it. Pay, or don’t. I would rather you didn’t.”{/if}{if not beat_lance}“Pay the debt, and we all go home. Don’t, and I take it out of the company’s hide. It is only business.”{/if}',
+    'debts.bailiffs/pay': 'Pay them.',
+    'debts.bailiffs/pay.why': 'The company can’t pay them.',
+    'debts.bailiffs/fight': 'Fight them.',
+    'debts.battle#name': 'Debts',
+    'debts.battle': 'The Ninth Lance is between the company and its ship, with a court order and very good guns. Break them, and the debt is a matter for lawyers.',
+    'debts.debrief': '{if success}The Lance pulls back, and the writ is so much paper.{/if}{if failure}The Lance collects, in full.{/if}',
+    'debts.interlude': 'The company lifts off Tarn, and Vane’s lawyers start writing letters.',
+
+    /* ---- the Patron: The Collector (finale) ---- */
+    'collector': 'The Quiet, at last, and its one landing field. The Ninth Lance holds it. And for the first time, Lucan Vane is in the room: a tall man in a grey coat, on the field, in person, come to collect what he paid for.',
+    'collector.brief': 'Vane’s flag flies over the landing field, and the Ninth Lance is dug in round it. Vane himself is there. Nobody in the company has ever seen his face. He has never needed them to.',
+    'collector.vane': 'For the first time, Vane is in the room. He is older than his voice, and smaller, and entirely calm. He has terms.',
+    'collector.vane/terms': 'Hear his terms.',
+    'collector.vane/terms.why': 'He owes the company nothing, and he knows it.',
+    'collector.vane/fight': 'Shoot the flag down.',
+    'collector.vane/hire_reavers': 'Hire the Reavers against him.',
+    'collector.battle#name': 'The Collector',
+    'collector.battle': 'The landing field on the Quiet, the Ninth Lance dug in across it, and Commander Daw in the middle. Take the field or take Daw, and the Quiet is not Vane’s.',
+    'collector.debrief': '{if success}The Lance is broken, and Vane’s flag comes down. He walks back up the ramp of his ship without a word, and nobody tries to stop him.{/if}{if failure}The field is Vane’s, and so is the Quiet.{/if}',
+
+    /* ---- Recall ---- */
+    'recall': 'Every teleport turret on the Quiet opens at once. The towers are awake, and they are calling every one of their people home.',
+    'recall.brief': 'The fog is full of light, and the light is full of Xenotripods, stepping through from everywhere. The landing field is the last way off.',
+    'recall.run': 'The field is a mile off through the fog, and the air between is opening.',
+    'recall.run/stones': 'Run with the stones.',
+    'recall.run/leave': 'Run, and leave the stones behind.',
+    'recall.battle#name': 'Recall',
+    'recall.battle': 'Break out across the field to the ships, before the Quiet’s tribes close it. They will keep coming out of the air until the last ship is gone.',
+    'recall.debrief': 'The company is off the Quiet, with what it could carry. Behind it the towers are bright, and calling.',
+    'end': 'The end of the log.'
   };
 })(typeof window !== 'undefined' ? window : global);

@@ -98,7 +98,16 @@
         { who: 'unknown', text: '[something old turns its attention to you, slowly, the way a sleeper turns over]' }
       ],
 
-      // ---- The Double-Cross ----
+      // ---- the second half: the name ----
+      'fault.brief': [
+        { who: 'reader', text: 'It’s here, {commander:rank}. The last pages. He names them. Once, underlined twice: Xenotripods. The three-legged ones, who step out of the air.' },
+        { who: 'commander', text: 'He knew. Forty years ago, he knew, and he never told anyone.' },
+        { who: 'reader', text: 'He told the log. “They let me take the stones because the stones were going home anyway. I was only carrying them.”' },
+        { who: 'vane', if: { not: { flag: 'vane_cut_off' } }, text: 'Well. That changes the price of everything. Keep going, {commander:rank}. Nothing about our arrangement has changed, except that it is now worth a great deal more.' },
+        { who: 'ops', text: 'Every newsfeed in the sector has it already. They’re calling them the Xenotripods. And every company on the trail is watching the same pictures we are.' }
+      ],
+
+      // ---- The Double-Cross ----      // ---- The Double-Cross ----
       'dx.brief': [
         { who: 'daw', text: 'Commander Iselin Daw, the Ninth Lance. You’ll have heard of us. You won’t have heard that we work for Lucan Vane, because he doesn’t tell people anything.' },
         { who: 'commander', text: 'He didn’t tell me.' },
