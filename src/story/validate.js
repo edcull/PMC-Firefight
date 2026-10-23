@@ -69,6 +69,10 @@
         if (!mdefs[c.meter]) err(at + ': no meter ' + c.meter);
         M(c.meter).read.push({ at: at, kind: kind });
       }
+      arr(c.more).forEach(function (m) {
+        if (!mdefs[m]) err(at + ': no meter ' + m);
+        M(m).read.push({ at: at, kind: kind });
+      });
     }
     function flagsIn(c, out) {
       out = out || [];
@@ -145,6 +149,8 @@
 
     function force(at, f, chapter) {
       if (!f) return;
+      // a force written from an archetype: it must be one the game has (opts.archetype: campaign.js archetype)
+      if (f.archetype && opts.archetype && !opts.archetype(f.archetype)) err(at + ': no archetype "' + f.archetype + '"');
       ['core', 'units'].forEach(function (k) { arr(f[k]).forEach(function (u) { unitKey(at, u); }); });
       if (f.optional) {
         arr(f.optional.units).forEach(function (u) { unitKey(at, u); });
@@ -162,12 +168,25 @@
       });
     }
 
+    /* A place on the trail: a kind of world the terrain generator knows, and
+       Other Worlds conditions the book has (opts.kinds, opts.world). */
+    function place(at, p) {
+      if (!p) return;
+      if (opts.kinds && p.kind && opts.kinds.indexOf(p.kind) < 0) err(at + ': no kind of world "' + p.kind + '"');
+      Object.keys(p.world || {}).forEach(function (k) {
+        if (opts.world && (!opts.world[k] || opts.world[k].indexOf(p.world[k]) < 0)) err(at + ': no world condition ' + k + ' "' + p.world[k] + '"');
+      });
+    }
+
     /* ---- the chapters, node by node ---- */
     var eventSigs = { 1: {}, 2: {} }, stateSigs = { 1: {}, 2: {} };
     var oneOffFlags = {};       // flag → the branches it opens a one-off at
     (def.chapters || []).forEach(function (ch) {
       var half = ch.shared ? 'both' : ch.half || 1, where = { half: half, chapter: ch.id };
       readCond(ch.when, ch.id, 'route', ch.id);
+      place(ch.id, ch.place);
+      if (ch.rival && ch.rival !== 'leading') err(ch.id + ': a chapter\u2019s rival is "leading" or nothing');
+      if (ch.rival && !(def.leading && arr(def.leading.from).length)) err(ch.id + ': a chapter against the leading rival, and no rivals to lead');
       readEffects(ch.onStart, ch.id, where);
       readEffects(ch.passed, ch.id, where);
       if (!(ch.nodes || []).length) err(ch.id + ': a chapter with no nodes');
@@ -185,6 +204,11 @@
             seenOpt[o.id] = 1;
             readCond(o.if, oat, 'choice', ch.id);
             Object.keys(o.cost || {}).forEach(function (k) {
+              // an amount read from a meter (a company's price)
+              if (typeof o.cost[k] === 'string') {
+                if (!mdefs[o.cost[k]]) err(oat + ': no meter ' + o.cost[k] + ' for its cost');
+                M(o.cost[k]).read.push({ at: oat, kind: 'choice' });
+              }
               if (k !== 'kUC') {
                 if (!mdefs[k]) err(oat + ': no meter ' + k + ' to pay with');
                 M(k).read.push({ at: oat, kind: 'choice' });
@@ -224,6 +248,8 @@
           if (opts.scenarios && opts.scenarios[n.scenario] && !opts.scenarios[n.scenario].compound && !n.map && def.chapters.some(function (c) { return c.id === ch.id && !c.test; }) && maps) warn(at + ': no map of its own: its ground is rolled');
           if (n.solo) err(at + ': story battles never set solo');
           force(at, n.enemy, ch.id);
+          place(at, n.place);
+          if (n.enemy && n.enemy.rival === 'leading' && !ch.rival) err(at + ': fights the leading rival, but its chapter does not name one');
           if (n.waves && n.waves.meter) {
             if (!mdefs[n.waves.meter]) err(at + ': no meter ' + n.waves.meter + ' for its waves');
             M(n.waves.meter).read.push({ at: at, kind: 'table' });
@@ -296,7 +322,13 @@
       if (n.type === 'pool') {
         go(n.then);
         (def.chapters || []).forEach(function (c) { if (c.thread) go(c.id); });
-        arr(def.finaleOverride).forEach(function (o) { go(o.chapter); });
+        Object.keys(def.rivals || {}).forEach(function (id) { force('rival ' + id, def.rivals[id], null); });
+    arr(def.leading && def.leading.from).forEach(function (id) {
+      if (!mdefs[id]) err('leading: no meter ' + id);
+      else M(id).read.push({ at: 'leading', kind: 'route' });
+      if (!(def.rivals || {})[id]) err('leading: no force for the rival ' + id);
+    });
+    arr(def.finaleOverride).forEach(function (o) { go(o.chapter); });
       }
     }
     Object.keys(nodes).forEach(function (id) { if (!reached[id]) err(id + ': can never be reached'); });

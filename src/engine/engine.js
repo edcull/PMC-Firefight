@@ -469,7 +469,7 @@
     if (scenDef.compound) state.units.forEach(function (u) {
       u.rules = u.rules.map(function (r) { return r === 'Markerlights' ? 'Advanced Sensors' : r === 'Pheromone Markers' ? 'Sixth Sense' : r; });
       // "in most scenarios taking place in complexes, units start the game hidden" (p. 158): as counters
-      if (scenDef.hidden && scenDef.hidden(u)) u.hidden = true;
+      if (scenDef.hidden && scenDef.hidden(u)) u.hidden = u.wasHidden = true;
     });
     /* An automated defence system (p. 160), where the players agreed to one: the
        panel marked on the floor, and three guns that belong to neither side. */
@@ -559,7 +559,8 @@
        survivors from the dossier; the gaps, and every other unit, are filled
        with fresh names, none repeated on the table. */
     state.namesTaken = {};
-    state.units.forEach(function (u) { R.musterMen(u, u.camp && u.camp.men, state.namesTaken); });
+    // (a story's named allies bring the names it kept for them: storybattle.js)
+    state.units.forEach(function (u) { R.musterMen(u, (u.camp && u.camp.men) || u.storyMen, state.namesTaken); });
     /* Paint the two companies. A colour the caller did not name is rolled from
        whatever the other side is not already wearing. */
     var ca = cfg.colourA && COLOURS.indexOf(cfg.colourA) >= 0 ? cfg.colourA : 'ochre';
@@ -1115,6 +1116,7 @@
       var cx = u.x + dx / d * 1.8, cy = u.y + dy / d * 1.8;
       var along = Math.abs(dx) > Math.abs(dy);
       var r = along ? { kind: 'barricade', x: cx - 0.3, y: cy - 1.5, w: 0.6, h: 3 } : { kind: 'barricade', x: cx - 1.5, y: cy - 0.3, w: 3, h: 0.6 };
+      if (u.faction === 'bugs') r.carapace = true;   // the hive's: shed carapace
       if (r.x < 0 || r.y < 0 || r.x + r.w > R.BOARD.w || r.y + r.h > R.BOARD.h) return;
       var clash = state.terrain.some(function (o) { return r.x < o.x + o.w && r.x + r.w > o.x && r.y < o.y + o.h && r.y + r.h > o.y; }) ||
         state.units.some(function (o) { return o.alive && o.x >= 0 && o.x > r.x - 1 && o.x < r.x + r.w + 1 && o.y > r.y - 1 && o.y < r.y + r.h + 1; });

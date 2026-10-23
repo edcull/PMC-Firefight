@@ -323,6 +323,49 @@
         }
         /* A portable ballistic shield: a steel plate on its feet, a vision slit
            near the top, a hazard band across its foot. */
+        /* A plate of the hive's barrier (iso-props.js): a curved shell of
+           carapace on edge, its back darker for its thickness, ribbed across,
+           a sheen along its crown and a hooked spine at each end. */
+        case 'carapace': {
+          var cr = rng(pr.seed || 11), chl = pr.len / 2, cH = pr.height, clf = lift || 0;
+          var cux = pr.horiz ? 1 : 0, cuy = pr.horiz ? 0 : 1, cvx = 1 - cux, cvy = 1 - cuy, CT = 0.12;
+          var ctn = pr.tone || 0;
+          var shell = ctn < 0.33 ? ['#2a1f2c', '#46324a', '#6a4c6a', '#9a7a94'] : ctn < 0.66 ? ['#2c2418', '#4a3b24', '#6e5634', '#a8895a'] : ['#1f2622', '#334036', '#4c5e4c', '#82947a'];
+          var cs = function (t, off, up) {
+            var q = toScreen(pr.x + cux * (t * chl) + cvx * off, pr.y + cuy * (t * chl) + cvy * off);
+            return [q.x, q.y - clf - up];
+          };
+          // its profile: a low arch, highest a little off the middle, as no two shells are alike
+          var peak = (cr() - 0.5) * 0.4, N2 = 10;
+          var upAt = function (t) { var k = 1 - Math.pow((t - peak) / (t < peak ? 1 + peak : 1 - peak), 2); return cH * Math.max(0, k) * 0.85 + cH * 0.15; };
+          shadowBlob(g, { x: cs(0, 0.3, 0)[0], y: cs(0, 0.3, 0)[1] }, a(pr.len * 2.4), a(1));
+          ['back', 'front'].forEach(function (side2) {
+            var off = side2 === 'back' ? -CT : CT, pts2 = [];
+            for (var i2 = 0; i2 <= N2; i2++) { var t2 = -1 + 2 * i2 / N2; pts2.push(cs(t2, off, upAt(t2))); }
+            pts2.push(cs(1, off, 0)); pts2.push(cs(-1, off, 0));
+            poly(g, pts2, side2 === 'back' ? shell[0] : shell[1]);
+          });
+          // the crown, joining back to front
+          for (var i3 = 0; i3 < N2; i3++) {
+            var ta = -1 + 2 * i3 / N2, tb = -1 + 2 * (i3 + 1) / N2;
+            poly(g, [cs(ta, -CT, upAt(ta)), cs(tb, -CT, upAt(tb)), cs(tb, CT, upAt(tb)), cs(ta, CT, upAt(ta))], shell[2]);
+          }
+          // the ribs, curving down across the front
+          for (var rb = 1; rb < 5; rb++) {
+            var tr = -1 + 2 * rb / 5 + (cr() - 0.5) * 0.1;
+            edgeLine(g, cs(tr, CT, upAt(tr) - a(0.3)), cs(tr * 1.08, CT, a(0.4)), shell[0], 1);
+          }
+          // the sheen along the crown, and a hooked spine at each end
+          for (var i4 = 2; i4 < N2 - 2; i4++) {
+            var tc = -1 + 2 * i4 / N2, td = -1 + 2 * (i4 + 1) / N2;
+            edgeLine(g, cs(tc, CT * 0.4, upAt(tc)), cs(td, CT * 0.4, upAt(td)), shell[3], 1);
+          }
+          [-1, 1].forEach(function (end) {
+            var base = cs(end * 0.92, 0, upAt(end * 0.92)), tip = [base[0] + end * a(0.9), base[1] - a(1.4)];
+            poly(g, [[base[0] - a(0.35), base[1]], [base[0] + a(0.35), base[1]], tip], shell[0]);
+          });
+          break;
+        }
         case 'shield': {
           var hl = pr.len / 2, th2 = 0.07;
           var sq = pr.horiz ? { x: pr.x - hl, y: pr.y - th2, w: pr.len, h: th2 * 2 } : { x: pr.x - th2, y: pr.y - hl, w: th2 * 2, h: pr.len };
@@ -766,6 +809,44 @@
           wallPart(part(len - jl, len, WT), H, 0);
           var dc = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
           dot(g, dc.x - 1, dc.y - dl - H - 2, lamp, 3);
+          break;
+        }
+        /* A pump house (rules.js `pumphouse`): a prefab shed over a wellhead, a
+           fat pipe out of its side to a valve wheel, a vent stack on the roof.
+           Searched and empty, its roof is struck through in red; the one that
+           holds the objective has its lamp lit and the company's tape on the door. */
+        case 'pumphouse': {
+          var pl2 = lift || 0, PH = pr.height;
+          box(g, pr, PREFAB, { roof: '#4a4f47', roofEdge: '#5e645a', windows: null, lift: pl2 });
+          var Q = function (x, y, up) { var q = toScreen(x, y); return [q.x, q.y - pl2 - (up || 0)]; };
+          var f1 = Q(pr.x, pr.y + pr.h), f2 = Q(pr.x + pr.w, pr.y + pr.h), f3 = Q(pr.x + pr.w, pr.y);
+          // the door, on the front wall
+          var pdA = lerp2(f1, f2, 0.38), pdB = lerp2(f1, f2, 0.6), pdh = Math.min(PH - a(2), a(7));
+          poly(g, [pdA, pdB, [pdB[0], pdB[1] - pdh], [pdA[0], pdA[1] - pdh]], pr.found ? '#2a2620' : '#3a3d38');
+          // the pipe out of the right-hand wall, down to the valve
+          var pp = lerp2(f3, f2, 0.5);
+          rect(g, pp[0], pp[1] - a(4.2), a(3.2), a(1.4), '#5c6a72');
+          rect(g, pp[0] + a(3.2) - a(0.8), pp[1] - a(4.2), a(1.4), a(4.2), '#4c5960');
+          ellipse(g, pp[0] + a(3.2), pp[1] - a(5.2), a(1.3), a(1.3), '#a8413a');
+          ellipse(g, pp[0] + a(3.2), pp[1] - a(5.2), a(0.7), a(0.7), '#4a4f47');
+          // the vent stack on the roof
+          var vs = Q(pr.x + pr.w * 0.7, pr.y + pr.h * 0.35, PH);
+          rect(g, vs[0] - a(0.8), vs[1] - a(5), a(1.6), a(5), '#6a706a');
+          ellipse(g, vs[0], vs[1] - a(5), a(0.8), a(0.4), '#2a2c2a');
+          // a lamp over the door: lit red on the one she is in
+          var pl3 = lerp2(pdA, pdB, 0.5);
+          dot(g, pl3[0] - 1, pl3[1] - pdh - a(1.4), pr.found ? '#ff5a3a' : '#4a3a30', 3);
+          if (pr.found) {
+            ellipse(g, pl3[0], pl3[1] - pdh - a(1.2), a(2), a(1), 'rgba(255,90,58,.25)');
+            edgeLine(g, [pdA[0], pdA[1] - pdh * 0.5], [pdB[0], pdB[1] - pdh * 0.7], '#d9a441', 2);
+          }
+          // searched and empty, or left cold: struck through on the roof
+          if (pr.checked && !pr.found) {
+            var r1 = Q(pr.x + 0.5, pr.y + 0.5, PH), r2 = Q(pr.x + pr.w - 0.5, pr.y + 0.5, PH),
+              r3 = Q(pr.x + pr.w - 0.5, pr.y + pr.h - 0.5, PH), r4 = Q(pr.x + 0.5, pr.y + pr.h - 0.5, PH);
+            edgeLine(g, r1, r3, '#d0503c', 4);
+            edgeLine(g, r2, r4, '#d0503c', 4);
+          }
           break;
         }
         case 'building':

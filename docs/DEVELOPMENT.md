@@ -80,6 +80,8 @@ src/
                      and the allies' words, reporting in and answering each order, and the
                      conversations that open a story page (a node's `talk`: the arrival),
                      and the voices heard only there (story.js talkFor; storybattle.js storyTalk)
+    dead-reckoning.js  Dead Reckoning, the second story, as data (docs/story-dead-reckoning-plan.md):
+                     placeholder text, not yet loaded in the browser
 
   view/              the browser
     game.js          the board: its state, and the modules below wired together
@@ -329,9 +331,18 @@ commander.js       the company's commander (the officer at the head of its field
 allyorders.js      the allies' orders in a story battle: Move, Attack and Hold here, given and kept once
                    a turn, and the allies' AI answering each (only the allies act)
 storytalk.js       what is said in a story battle: the lines handed to each battle, by what has happened,
-                   and each said once, on a card with the speaker's face, when its moment comes
+                   and each said once, on a card with the speaker's face, when its moment comes; the sump's
+                   hunt for the Front, and the hive's first counter turned over before any line about the walls
+carapace.js        the hive's barriers: a barricade or Ballistic Barrier the bugs put down is carapace (drawn so), nobody else's
+pumphouses.js      The Hunt's pump houses: Find and secure's locations where the map puts them, blocking line of
+                   sight, searched and held from their walls, searched by the AI; and the net calling the search
 storyscenes.js     the story's places as pictures: each drawn the same every time, none alike, and
                    every chapter card, battle map and ending with one
+storydr.js         Dead Reckoning as data: the validator, its forces (archetypes; the Hashamer all Esh-Aven, no
+                   craft or teleport turrets), the hired guns, and 6,000 seeded walks (endings, one-offs, finales)
+storyforces.js     Dead Reckoning's battles in the engine: every one set up and started; its place (kind of world,
+                   conditions); forces from archetypes (filler, doctrines); the leading rival; the Hashamer reskinned
+                   as Esh-Aven, named one by one, and their roll of the living and the dead carried between battles
 storyside.js       HTX's bonus by HTX Standing, and the side contracts: offered at an interlude, taken
                    (a battle of its own, then back) or passed up, catching up, and cut off from HTX
 storywhole.js      Deep Contract from Landfall to an ending, 30 times with made-up results: endings and epilogues,

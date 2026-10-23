@@ -151,6 +151,8 @@
   /* n barricade sections on open ground near a side's own zone, clear of the foe's. */
   function placeBarricades(state, side, n) {
     var foe = side === 'A' ? 'B' : 'A';
+    // the hive builds its walls of shed carapace (drawn so; the same barricade)
+    var shelled = state.units.some(function (u) { return u.side === side && u.faction === 'bugs'; });
     // the rebels' own ground, sampled every 2"
     var home = [];
     for (var gx = 1; gx < R.BOARD.w; gx += 2) for (var gy = 1; gy < R.BOARD.h; gy += 2) if (inZone(state, side, gx, gy)) home.push([gx, gy]);
@@ -160,7 +162,7 @@
       for (var tries = 0; tries < 300; tries++) {
         var horiz = Math.random() < 0.5;
         var x = 2 + Math.random() * (R.BOARD.w - 4 - (horiz ? len : 1)), y = 2 + Math.random() * (R.BOARD.h - 4 - (horiz ? 1 : len));
-        var pc = { kind: 'barricade', x: x, y: y, w: horiz ? len : 1, h: horiz ? 1 : len, lastStand: side };
+        var pc = { kind: 'barricade', x: x, y: y, w: horiz ? len : 1, h: horiz ? 1 : len, lastStand: side, carapace: shelled || undefined };
         var pts = [[pc.x, pc.y], [pc.x + pc.w, pc.y + pc.h], [pc.x + pc.w / 2, pc.y + pc.h / 2]];
         if (pts.some(function (q) { return inZone(state, foe, q[0], q[1]); })) continue;
         // on open ground, clear of other pieces and of any unit already standing there
@@ -183,7 +185,7 @@
   }
   function separateTerrain(state) {
     var genCount = state.genCount != null ? state.genCount : state.terrain.length;
-    var FIXED = { objective: 1, searchsite: 1, road: 1 };
+    var FIXED = { objective: 1, searchsite: 1, pumphouse: 1, road: 1 };
     var ranked = state.terrain.map(function (t, i) {
       return { t: t, rank: FIXED[t.kind] ? 0 : i >= genCount ? 1 : 2, i: i };
     }).sort(function (a, b) { return a.rank - b.rank || a.i - b.i; });
@@ -197,7 +199,7 @@
         if (clashes(p, kept[k])) return false;
       }
       // keep clear of the objectives as the generator does, unless it is one
-      if (p.kind !== 'objective' && p.kind !== 'searchsite') {
+      if (p.kind !== 'objective' && p.kind !== 'searchsite' && p.kind !== 'pumphouse') {
         for (var o = 0; o < (state.objectives || []).length; o++) {
           var ob = state.objectives[o];
           if (ob.x > p.x - 3 && ob.x < p.x + p.w + 3 && ob.y > p.y - 3 && ob.y < p.y + p.h + 3) return false;
@@ -547,10 +549,14 @@
            (p. 52). They go on the table as real pieces — 4" across, passable, no
            cover, no line of sight blocked, indestructible — because the players have
            to be able to see what there is to search. */
-        var spots = clusterAt(R.BOARD.w / 2, R.BOARD.h / 2, 3, 12, 12);
+        /* A story map can put them where it wants, and make them something else
+           (cfg.story.sites): the pumping station's pump houses, which block line of sight. */
+        var sites = state.cfg && state.cfg.story && state.cfg.story.sites;
+        if (sites && sites.at.length !== 3) sites = null;
+        var spots = sites ? sites.at : clusterAt(R.BOARD.w / 2, R.BOARD.h / 2, 3, 12, 12);
         state.sc.search = spots.map(function (p, i) {
           var piece = {
-            kind: 'searchsite', x: p.x - 2, y: p.y - 2, w: 4, h: 4,
+            kind: sites ? sites.kind : 'searchsite', x: p.x - 2, y: p.y - 2, w: 4, h: 4, name: p.name || undefined,
             site: i, cx: p.x, cy: p.y, checked: false, found: false, cold: false
           };
           state.terrain.push(piece);

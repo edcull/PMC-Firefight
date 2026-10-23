@@ -36,12 +36,31 @@
           if (x.name) { u.name = x.name; u.label = x.name + ' [' + u.side + ']'; }
           if (x.rules) x.rules.forEach(function (r) { if (u.rules.indexOf(r) < 0) u.rules.push(r); });
           if (x.target) u.storyTarget = true;
+          if (x.skin) skin(u, x);
         }
         if (u.side === 'A' && sty.allyFrom != null && u.pickIdx != null && u.pickIdx >= sty.allyFrom) {
           u.ally = true; u.paint = 'C'; allies = true;
         }
       });
       if (allies) state.allies = { side: 'A' };
+    }
+
+    /* A unit in a story's reskinned force: the Hashamer's Esh-Aven, a
+       Xenotripod unit with its own numbers and rules, drawn, named and counted
+       as an Esh-Aven, each one named (`named`: never only a count), and the
+       names the story kept from their last battle carried into this one. */
+    var CASTE = /^x_(alpha|beta|gamma|delta)(\d)$/;
+    function skin(u, x) {
+      u.skin = x.skin;
+      if (x.skin !== 'eshaven' || R.isMachine(u)) return;
+      u.named = true;
+      if (x.men && x.men.length) u.storyMen = x.men.map(function (n) { return { name: n }; });
+      var m = CASTE.exec(u.art || '');
+      if (m) u.art = 'x_eps' + Math.max(1, Math.min(5, +m[2]));
+      if (!x.name) {
+        u.name = 'Esh-Aven ' + u.name.charAt(0).toLowerCase() + u.name.slice(1);
+        u.label = u.name + ' [' + u.side + ']';
+      }
     }
 
     /* 'D3', 'D6', 'D3+PL', '2D3' or a plain number, rolled. */
@@ -304,6 +323,11 @@
       if (on === 'bhalf' || on === 'ahalf') { var l = lostOf(on === 'bhalf' ? 'B' : 'A'); return l.n > 1 && l.lost * 2 >= l.n; }
       if (on === 'wave') return !!(state.sc && state.sc.waves && state.sc.waves.n);
       if (on === 'parley') return !!(state.sc && state.sc.parley && state.sc.parley.broken);
+      // Find and secure: a location searched and empty, and the one that holds the objective (`guard` its holders' answer)
+      // the first of the enemy's hidden counters turned over (Close Encounters): what they are
+      if (on === 'sighted') return state.units.some(function (u) { return u.side === 'B' && u.wasHidden && !u.hidden; });
+      if (on === 'searched') return !!(state.sc && state.sc.search && state.sc.search.some(function (sp) { return sp.checked && sp !== state.sc.found; }));
+      if (on === 'found' || on === 'guard') return !!(state.sc && state.sc.found);
       if (on === 'target') {
         var t = state.units.filter(function (u) { return u.storyTarget; })[0];
         return !!t && t.alive && ((t.sp || 0) > 0 || t.models < (t.startSize || t.models) || (t.damage || 0) > 0);
@@ -316,10 +340,12 @@
       var sty = story(), state = E.state;
       if (!sty || !sty.talk || !sty.talk.length || state.over) return;
       if (!setup && (state.phase !== 'battle' || !state.turn)) return;
-      var said = state.talkSaid = state.talkSaid || {};
+      var said = state.talkSaid = state.talkSaid || {}, before = Object.assign({}, said);
       sty.talk.forEach(function (l) {
         if (setup && l.on !== 'allies') return;
-        if (said[l.on] != null || !talkMoment(l.on, state)) return;   // (the turn it was said: 0 while setting up)
+        if (said[l.on] != null || !talkMoment(l.on, state)) return;
+        // (`after`: not until that line is said, and not on the same card run as it)
+        if (l.after && before[l.after] == null) return;   // (the turn it was said: 0 while setting up)
         said[l.on] = state.turn || 0;
         say(l, TALK_VOICE[l.who] || null);
       });

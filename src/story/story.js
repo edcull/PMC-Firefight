@@ -22,6 +22,19 @@
   function C() { return root.PMCCamp || null; }
   function d6() { var r = R(); return r && r.d6 ? r.d6() : 1 + Math.floor(Math.random() * 6); }
   function rnd() { return Math.random(); }
+  /* A random from a seed, the same numbers every time: what is said in a battle
+     is picked with one (talkFor), so a line written into a story never moves
+     the rolls of anything else. */
+  function seeded(seed) {
+    var h = 2166136261 >>> 0, str = String(seed);
+    for (var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619) >>> 0;
+    return function () {
+      h = (h + 0x6D2B79F5) >>> 0;
+      var t = Math.imul(h ^ (h >>> 15), h | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
   function clone(x) { return x == null ? x : JSON.parse(JSON.stringify(x)); }
   function arr(x) { return x == null ? [] : Array.isArray(x) ? x : [x]; }
 
@@ -119,7 +132,7 @@
 
   /* ================= conditions ================= */
 
-  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped', 'target'];
+  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped', 'target', 'more'];
   var CMP = ['gte', 'lte', 'gt', 'lt', 'eq'];
 
   function cmp(v, c) {
@@ -143,6 +156,8 @@
     if (c.not) return !test(ctx, c.not);
     if (c.flag) return (c.is === false) ? !st.flags[c.flag] : !!st.flags[c.flag];
     if (c.meter) return cmp(st.meters[c.meter] || 0, c);
+    // one meter above another: { more: ['theirs', 'stones'] }
+    if (c.more) return (st.meters[c.more[0]] || 0) > (st.meters[c.more[1]] || 0);
     if (c.grade) {
       var g = ctx.grade;
       if (c.grade === 'success') return !!SUCCESS[g];
@@ -290,20 +305,24 @@
     return gone;
   }
 
-  /* What an option costs: { intel: 1 } in meters, or { kUC: 2 }. */
+  /* What an option costs: { intel: 1 } in meters, or { kUC: 2 }. An amount
+     written as a meter's name is that meter's value now: { kUC: 'kettle_price' },
+     a company's price for hiring it. */
+  function amountOf(ctx, v) { return typeof v === 'string' ? Math.max(0, ctx.st.meters[v] || 0) : v; }
   function canPay(ctx, cost) {
     if (!cost) return true;
     var co = company(ctx);
     return Object.keys(cost).every(function (k) {
-      if (k === 'kUC') return co && (co.kUC || 0) >= cost.kUC;
-      return (ctx.st.meters[k] || 0) >= cost[k];
+      if (k === 'kUC') return co && (co.kUC || 0) >= amountOf(ctx, cost.kUC);
+      return (ctx.st.meters[k] || 0) >= amountOf(ctx, cost[k]);
     });
   }
   function pay(ctx, cost, out) {
     if (!cost) return;
     Object.keys(cost).forEach(function (k) {
-      if (k === 'kUC') apply(ctx, { kUC: -cost.kUC }, out);
-      else apply(ctx, { meter: k, add: -cost[k] }, out);
+      var n = amountOf(ctx, cost[k]);
+      if (k === 'kUC') apply(ctx, { kUC: -n }, out);
+      else apply(ctx, { meter: k, add: -n }, out);
     });
   }
 
@@ -354,6 +373,8 @@
     Object.keys(st.flags).forEach(function (f) { if (st.flags[f] === 'local') delete st.flags[f]; });
     st.chapter = ch.id;
     if (ch.counts !== false) st.chapterNo++;
+    // a chapter against the leading rival fixes which one as it begins, so a reload meets the same
+    if (ch.rival === 'leading') st.leading = leadingRival(campaign);
     st.played[ch.id] = true;
     st.tokens = {};
     var ctx = ctxOf(campaign), lines = [];
@@ -395,7 +416,10 @@
       return !o.hidden || test(ctx, o.if);
     }).map(function (o) {
       var ok = test(ctx, o.if) && canPay(ctx, o.cost);
-      return { id: o.id, text: o.text, ok: ok, why: ok ? null : (o.why || 'Not open to you now.'), extreme: !!o.extreme, cost: o.cost || null };
+      // (a cost read from a meter is shown as what it is now)
+      var cost = o.cost ? {} : null;
+      Object.keys(o.cost || {}).forEach(function (k) { cost[k] = amountOf(ctx, o.cost[k]); });
+      return { id: o.id, text: o.text, ok: ok, why: ok ? null : (o.why || 'Not open to you now.'), extreme: !!o.extreme, cost: cost };
     });
   }
 
@@ -435,6 +459,8 @@
       var ctx = ctxOf(campaign, { grade: st.lastGrade });
       var picks = arr(node.events).filter(function (id) {
         var ev = def._nodes[id];
+        // (an event marked `once` comes up only the first time it applies)
+        if (ev && ev.once && st.journal.some(function (j) { return j.node === id; })) return false;
         return ev && test(ctx, ev.if);
       }).slice(0, node.pick || (node.type === 'interlude' ? 1 : 2));
       st.queue = picks.concat([{ after: node.next }]).slice(0);
@@ -464,6 +490,42 @@
   /* What the battle at this node should be: the node's own setting, the levers
      the event before it chose, and any short-term change held for it. The
      battle hooks (phase 2) turn this into the engine's cfg. */
+  /* The leading rival: the strongest of the story's rivals (`leading.from`, each
+     a meter), the first written winning a tie. */
+  function leadingRival(campaign) {
+    var def = storyOf(campaign), st = campaign.story, from = arr(def.leading && def.leading.from);
+    var best = null;
+    from.forEach(function (id) { if (best == null || (st.meters[id] || 0) > (st.meters[best] || 0)) best = id; });
+    return best;
+  }
+
+  /* A story's roll of named allies (the Hashamer's Esh-Aven): the names of the
+     living, handed to their next battle, and the fallen, by name. Kept by the
+     skin the force wears. */
+  function keepRoll(campaign, report) {
+    var st = campaign.story, roll = st.roll = st.roll || {};
+    var skinned = (report.units || []).filter(function (u) { return u.side === 'A' && u.ally && u.skin; });
+    if (!skinned.length) return;
+    var ids = {};
+    skinned.forEach(function (u) { ids[u.rid] = u.skin; });
+    Object.keys(ids).forEach(function (rid) {
+      var k = ids[rid], r = roll[k] = roll[k] || { living: [], fallen: [], last: [] };
+      r.last = [];
+    });
+    skinned.forEach(function (u) {
+      var r = roll[u.skin];
+      (u.men || []).forEach(function (m) { var n = m.name || m; if (r.living.indexOf(n) < 0) r.living.push(n); });
+    });
+    (report.casualties || []).forEach(function (c) {
+      var k = ids[c.rid];
+      if (!k || !c.name) return;
+      var r = roll[k];
+      r.living = r.living.filter(function (n) { return n !== c.name; });
+      if (r.fallen.indexOf(c.name) < 0) r.fallen.push(c.name);
+      r.last.push(c.name);
+    });
+  }
+
   function battleSpec(campaign) {
     var st = campaign.story, def = storyOf(campaign), node = nodeAt(campaign);
     if (!node || node.type !== 'battle') return null;
@@ -471,8 +533,25 @@
       node: node.id, scenario: node.scenario, variant: clone(node.variant) || null, name: node.name || null, map: node.map || null,
       text: node.text || null,
       tier: node.tier || 'max', pl: node.pl || 1, planet: node.planet || null, tactics: node.tactics || null, role: node.role || null,
-      enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, waves: clone(node.waves) || null, levers: clone(st.pending) || {}
+      enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, waves: clone(node.waves) || null, levers: clone(st.pending) || {},
+      // where it is fought: the battle's own place, else its chapter's ({ system, planet, kind, world, site })
+      place: clone(node.place || (def._chapters[node._chapter] || {}).place) || null
     };
+    /* A battle against the leading rival (`enemy: { rival: 'leading' }`): the
+       rival the chapter named when it began, its own force (the story's
+       `rivals`) with what the battle adds; a target of 'leading' is its
+       commander. */
+    if (spec.enemy && spec.enemy.rival === 'leading') {
+      var lead = st.leading || leadingRival(campaign), base = clone((def.rivals || {})[lead]) || {};
+      var add = spec.enemy;
+      delete add.rival;
+      spec.enemy = Object.assign(base, add, { changes: arr(base.changes).concat(arr(add.changes)) });
+      if (add.optional) spec.enemy.optional = add.optional;
+      if (spec.variant && spec.variant.target === 'leading') {
+        var cmd = arr(base.core).filter(function (u) { return typeof u !== 'string' && u.name; })[0];
+        spec.variant.target = cmd ? cmd.name : null;
+      }
+    }
     st.next.forEach(function (n) {
       if (n.battle !== node.id) return;
       spec.levers = mergeLevers(spec.levers, n.levers || {});
@@ -494,14 +573,20 @@
      the battle's own first and the enemy side's otherwise, picked at random
      among those whose `if` holds (one with an `if` before one without), written out, with who says it. Handed to the
      battle (levers.js), which puts each up once, when it happens
-     (storybattle.js storyTalk). */
-  var TALK_MOMENTS = ['start', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target'];
+     (storybattle.js storyTalk). In Find and secure, `searched` is a location
+     drawn blank, and `found` and `guard` the one that holds it, said by each
+     side, one after the other. `sighted` is the first of the enemy's hidden
+     counters turned over; a line with `after` waits until that moment's line
+     has been said. */
+  var TALK_MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard'];
   function talkFor(campaign, spec) {
     var def = storyOf(campaign), talk = def && def.talk;
     if (!talk || !spec) return [];
     var ctx = ctxOf(campaign), own = (talk.battles || {})[spec.node] || {};
     var side = (talk.sides || {})[spec.enemy && spec.enemy.side] || {};
     var people = def.people || {}, out = [];
+    // seeded by where the story is: the same battle, at the same point, has the same lines
+    var pick = seeded('talk:' + def.id + ':' + spec.node + ':' + ((campaign.story && campaign.story.journal) || []).length + ':' + ((campaign.companies && campaign.companies.A && campaign.companies.A.name) || ''));
     TALK_MOMENTS.forEach(function (m) {
       var open = function (ls) { return arr(ls).filter(function (l) { return !l.if || test(ctx, l.if); }); };
       var ls = open(own[m]);
@@ -510,12 +595,12 @@
       // a line that answers what has happened comes before one that could be said anywhere
       var apt = ls.filter(function (l) { return l.if; });
       if (apt.length) ls = apt;
-      var l = ls[Math.floor(Math.random() * ls.length)], who = people[l.who] || {};
-      out.push({ on: m, who: l.who, name: who.name || l.who, role: who.role || '', text: render(campaign, l.text) });
+      var l = ls[Math.floor(pick() * ls.length)], who = people[l.who] || {};
+      out.push({ on: m, who: l.who, name: who.name || l.who, role: who.role || '', text: render(campaign, l.text), after: l.after || undefined });
     });
     // the allies: they report in as it opens (`allies`), and answer each order (allyVoice)
     var av = allyVoice(campaign, spec);
-    if (av && av.report.length) out.unshift({ on: 'allies', who: av.who, name: av.name, role: av.role, text: av.report[Math.floor(Math.random() * av.report.length)] });
+    if (av && av.report.length) out.unshift({ on: 'allies', who: av.who, name: av.name, role: av.role, text: av.report[Math.floor(pick() * av.report.length)] });
     return out;
   }
   /* A conversation on a page (a node's `talk`): each line with who says it,
@@ -575,6 +660,7 @@
       st.fielded = (result.units || []).filter(function (u) { return u.side === 'A' && u.rid; }).map(function (u) { return u.rid; });
       st.lastWiped = (result.units || []).filter(function (u) { return u.side === 'A' && !u.free && !u.ally && (u.wiped || u.destroyed); }).length;
       st.lastTarget = result.story && result.story.target || null;
+      keepRoll(campaign, result);
     } else st.lastWiped = 0, st.lastTarget = null;
     st.lastGrade = g;
     var ctx = ctxOf(campaign, { grade: g });
@@ -948,8 +1034,14 @@
     var s = text.replace(/\{if (not )?([a-z0-9_]+)\}([\s\S]*?)\{\/if\}/g, function (m, not, f, body) {
       return holds(f) !== !!not ? body : '';
     });
-    return s.replace(/\{(name|commander(?::rank)?|meter:[a-z0-9_]+|unit:[a-z]+|soldier:[a-z]+)\}/g, function (m, k) {
+    return s.replace(/\{(name|commander(?::rank)?|meter:[a-z0-9_]+|unit:[a-z]+|soldier:[a-z]+|(?:fallen|dead):[a-z]+)\}/g, function (m, k) {
       if (k === 'name') return co ? co.name : 'the company';
+      // a story's named allies, by their skin: {fallen:eshaven}, those lost in the last battle; {dead:eshaven}, every one lost
+      if (/^(fallen|dead):/.test(k)) {
+        var r = (st.roll || {})[k.split(':')[1]];
+        var names = r ? (k.indexOf('dead:') === 0 ? r.fallen : r.last) : [];
+        return names.length ? names.join(', ') : 'nobody';
+      }
       if (k === 'commander' || k === 'commander:rank') return commanderWords(campaign, k === 'commander:rank' ? 'rank' : 'name');
       if (k.indexOf('meter:') === 0) return String(st.meters[k.slice(6)]);
       var u = tokenUnit(campaign, k.split(':')[1]);
@@ -1003,7 +1095,7 @@
     battleSpec: battleSpec, intel: intel, difficultyOf: difficultyOf, takeSide: takeSide, nodeAt: nodeAt, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
     test: test, apply: apply, roll: roll, pressure: pressure, finaleChapter: finaleChapter,
     endingFor: endingFor, epilogue: epilogue, broken: broken, breakCompany: breakCompany,
-    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf, talkFor: talkFor, allyVoice: allyVoice,
+    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf, leadingRival: leadingRival, talkFor: talkFor, allyVoice: allyVoice,
     GRADES: GRADES, COND_KEYS: COND_KEYS, CMP: CMP, EFFECT_KEYS: EFFECT_KEYS
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCStory;

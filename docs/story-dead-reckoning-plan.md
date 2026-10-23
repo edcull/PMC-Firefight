@@ -820,14 +820,105 @@ each chapter costs when passed up, the hired guns' terms and events, the
 interludes, the side contracts, and the tables of what moves each meter and who
 reads each flag; the meters with what each does on the table and in the story,
 the rival and tribe force shapes, and the rival commanders (section 4). The
-decisions are settled (section 8). Next: the same as data in
-`dead-reckoning.js`, with placeholder text, and the validator and the walk run
-on it.
+decisions are settled (section 8).
+
+**The data.** `src/story/dead-reckoning.js` holds the whole story as data, with
+one-line placeholder text: every chapter (the four of the contract, both
+one-offs, *The Long Jump*, the twelve pool chapters in four threads, Recall),
+every event and option with its effects, the battles with their forces, the
+hired guns' options and events, the interludes, seven side contracts, seven
+endings and a first epilogue. It is not loaded in the browser yet (phase 3), so
+the story picker still offers only *Deep Contract*. The validator finds nothing
+wrong with it; `test/unit/storydr.js` checks that, the forces (every one names an
+existing archetype; every Hashamer force, enemy or ally, is skinned Esh-Aven with
+no craft or teleport turret), the hired guns (none before chapter 4, each behind
+its door, priced from its meter), and walks it 6,000 times (seeded):
+
+| Measured | Result | Target |
+|---|---|---|
+| Endings | Claim Jumped 23%, Dead Reckoning 26%, First Contact 18%, Lost Signal 17%, Finder's Fee 9%, Repossessed 7% | each 5 to 30% |
+| One-offs | Into the Warren 13%, The Double-Cross 13% | 5 to 15% each |
+| Finales | The Spire 42%, The Landing 25%, The Collector 17%, Recall 17%; with the thread's chapters played 97% | every finale reached; with its arc 90%+ |
+| Pages | every one reached by some walk, but *The wake* (it needs a unit wiped out, and a walk plays no battle) | all |
+
+The walk is random choices and battles won half the time, so its endings are a
+check on the graph, not on how a player will do.
+
+**What the story engine gained.** A cost whose amount is a meter's value
+(`cost: { kUC: 'kettle_price' }`: shown and paid as it is now); a condition that
+compares two meters (`{ more: ['theirs', 'stones'] }`); interlude events that
+come up only once (`once: true`); and a battle's own `place`, where a chapter's
+battles are worlds apart (the Glass Flats and Station Thule).
+
+**What changed from the bible, and why.**
+- *Selling a copy of the chart* (the Double-Cross's extreme choice) is in chapter
+  3, an event after the beacon (*A buyer for a copy*), not at The Broker: the
+  Double-Cross takes the place of chapter 4, so the choice has to come before it.
+- Vane's Trust starts at 0, not 1, and has ways down in the first half (letting
+  Coin & Kettle's agent go, selling Morrow's records, leaving the relic, following
+  Sable): at 1 it almost never fell far enough for the Double-Cross.
+- *Claim Jumped* comes from losing The Landing, or from the rivals holding four
+  or more lodestones and more than the company: with "more than the company"
+  alone it was most walks' ending.
+- Several events stopped handing the rivals lodestones (buying the heading,
+  passing up The Wreck or Teleport Storm, selling Coin & Kettle your notes), and
+  winning against a rival gains Lead.
+- Kestrel and Sable never sell the company out; Coin & Kettle and the Reavers
+  make their *better offer* at Trust −2, and no company takes a hire at −3 or
+  lower.
+- The rivals' strengths and the hired companies' prices and trust are meters the
+  validator does not ask to move both ways in each half: fights and hires move
+  them, not written events. Every one of them is read where it changes something.
+
+Next: phase 1, the engine for a second story.
 
 ### Phase 1: the engine for a second story
 The audit for more than one story. A chapter's `place` and forced worlds. Forces
 by archetype (PMC and Xenotripod), doctrines on side B, the Xenotripod dossier
 words and leader. `storyforces.js`.
+
+**Where it stands.** Every one of *Dead Reckoning*'s 23 battles is set up from the
+story and started in the engine (`test/unit/storyforces.js`), and none played.
+- **More than one story.** Nothing outside the story files named *Deep Contract*
+  but comments: the text, maps and talk were already keyed by the story's id.
+- **The place.** A battle's own `place`, else its chapter's: its kind of world is
+  the table (`cfg.planet`), and its conditions are the battle's (`cfg.world`, by
+  `R.cleanWorld`, so a place need only name what is out of the ordinary), with
+  Other Worlds switched on for that battle only; the campaign's own options are
+  left as they were. The briefing gets the system, planet and site
+  (`cfg.story.place`). The validator checks each place's kind and conditions.
+- **Forces by archetype.** A force's `archetype` gives side B its doctrines (the
+  archetype's, one for each Battle Tier). With `fill.archetype`, the filler is
+  rolled as a rival of that archetype would field it at this Tier and PL
+  (`R.rollArmy` with its style), from the battle's own seed, so the same force
+  comes every time it is looked at; the units written in `fill.from` are the
+  fallback. Wraith Section fills with observers, sharpshooters, recon and
+  electronic warfare; Sable with battle armour and hunters; the Ulvar with
+  turrets. The validator checks every archetype exists.
+- **Xenotripods.** A Xenotripod force takes an Alpha for the Tier as its leader;
+  the briefing tells them as squads of Xenotripods, turrets and craft, and "An
+  Alpha leads them".
+- **Groups left out.** `without: [groups]`: no core, optional, filler or Readiness
+  unit from those groups. The Hashamer field no craft and no teleport turret at
+  any Tier, PL or Alarm.
+- **The leading rival.** A chapter with `rival: 'leading'` fixes, as it begins,
+  the strongest of the story's `leading.from` (Kestrel first on a tie), so a
+  reload meets the same rival; a battle's `enemy: { rival: 'leading' }` becomes
+  that rival's own force from the story's `rivals`, and a target of `'leading'`
+  its commander. *The Landing* is fought this way.
+- **The Esh-Aven.** A force with `skin: 'eshaven'` (the Hashamer, enemy or ally)
+  puts the skin on each unit: every trooper drawn as an Esh-Aven (the Epsilons'
+  figures for now; their own in phase 4) and named one ("Esh-Aven core Delta
+  troopers"), with its own profile unchanged. Each one is named (`named`: never
+  only a count, `R.counted`), in their manner (`R.eshavenName`: *Keeps-the-Ridge*,
+  *Seven-Follows-the-Gate*), and the battle report carries the skin. The story
+  keeps their roll (`story.roll.eshaven`: the living, the fallen, the last
+  battle's dead) from each report; the next battle they fight in brings the living
+  back by name and names new ones to fill the ranks. Text can say the dead:
+  `{fallen:eshaven}` (the last battle's), `{dead:eshaven}` (all of them).
+
+Not yet: the hired allies answering back and walking off (phase 5), the relic
+(phase 2), the Esh-Aven's own figures (phase 4).
 
 ### Phase 2: the relic variant
 `variant: { relic: true }`, the report, the condition, the AI's goal.

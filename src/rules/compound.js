@@ -736,7 +736,8 @@
   function barrierPlan(state, u, dir) {
     var R = root.PMC, UR = R.UNIT_R, f = R.nearestFacing(dir), T = SHIELD_T, D = UR + SHIELD_GAP;
     var c = Math.cos(f), s = Math.sin(f), pieces = [], dx = 0, dy = 0;
-    function shield(x, y, w, h) { pieces.push({ kind: 'barricade', x: x, y: y, w: w, h: h, kit: true, shield: true, face: f }); }
+    // (the hive's are shells of carapace: drawn so, the same low wall)
+    function shield(x, y, w, h) { pieces.push({ kind: 'barricade', x: x, y: y, w: w, h: h, kit: true, shield: true, face: f, carapace: u.faction === 'bugs' || undefined }); }
     if (Math.abs(s) < 1e-3) {
       var L = UR * 2 + 0.4;
       shield(c > 0 ? u.x + D : u.x - D - T, u.y - L / 2, T, L);
