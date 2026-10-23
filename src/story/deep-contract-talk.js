@@ -199,7 +199,7 @@
     },
 
     /* The allies, by the side they come from (a battle's `allies`): what they
-       say as the battle opens (`report`), and in answer to each order (Move
+       say as the table is laid and the force placed (`report`), and in answer to each order (Move
        here, Attack here, Hold here, and the order withdrawn), taken in turn. */
     allies: {
       port: { who: 'portguard',

@@ -946,6 +946,7 @@
     /* Look at the ground the player is being asked to fill. Zoomed in on a phone
        the middle of the table is nowhere near their own edge, and every tap used
        to land outside the strip with nothing on screen to say where it was. */
+    K.storyTalk(true);             // story mode: the allies report in as the force is placed (storybattle.js)
     lookAtDeployment();
     render();
     if (state.cfg.aiSides.length === 2) K.startBattle();

@@ -61,7 +61,7 @@ src/
     offtable.js      the other forces' battles, fought AI against AI on a table nobody sees
     protocol.js      message names and legal settings, shared by browser and server
 
-  story/             story mode (docs/story-mode-plan.md): runs in Node as well as a browser
+  story/             story mode (docs/story-mode-plan.md; the second story: docs/story-dead-reckoning-plan.md): runs in Node as well as a browser
     story.js         the engine: a story's graph, its meters and flags on the dossier, events and
                      their effects, battles graded, the second half's pool, endings, checkpoints, ironman
     validate.js      a story checked before anyone plays it, and the Monte Carlo walk over it
