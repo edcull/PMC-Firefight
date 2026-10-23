@@ -400,6 +400,11 @@
     if (plain.length && plain[plain.length - 1].if) err('The last ending must have no conditions, so every path has one');
     Object.keys(mdefs).forEach(function (k) { if (mdefs[k].uses.length) M(k).read.push({ at: 'meter ' + k, kind: 'table' }); });
 
+    // (a grudge is set by the engine, on the first battle won against that side: story.js resolveBattle)
+    arr(def.grudges).forEach(function (id) {
+      if (!(def.sides || {})[id]) err('grudges: no side ' + id);
+      F('beat_' + id).set.push({ at: 'a battle won against ' + id, extreme: false, half: 'both', chapter: null });
+    });
     /* ---- flags: set, read, and read where it matters ---- */
     Object.keys(flags).forEach(function (f) {
       var x = flags[f];

@@ -591,11 +591,13 @@
     var pick = seeded('talk:' + def.id + ':' + spec.node + ':' + ((campaign.story && campaign.story.journal) || []).length + ':' + ((campaign.companies && campaign.companies.A && campaign.companies.A.name) || ''));
     TALK_MOMENTS.forEach(function (m) {
       var open = function (ls) { return arr(ls).filter(function (l) { return !l.if || test(ctx, l.if); }); };
-      var ls = open(own[m]);
-      if (!ls.length) ls = open(side[m]);
+      var ls = open(own[m]), theirs = open(side[m]);
+      if (!ls.length) ls = theirs;
       if (!ls.length) return;
-      // a line that answers what has happened comes before one that could be said anywhere
+      /* a line that answers what has happened comes before one that could be said
+         anywhere: the battle's own, or else the side's (a grudge, say), over the battle's plain ones */
       var apt = ls.filter(function (l) { return l.if; });
+      if (!apt.length) apt = theirs.filter(function (l) { return l.if; });
       if (apt.length) ls = apt;
       var l = ls[Math.floor(pick() * ls.length)], who = people[l.who] || {};
       out.push({ on: m, who: l.who, name: who.name || l.who, role: who.role || '', text: render(campaign, l.text), after: l.after || undefined });
@@ -803,6 +805,14 @@
       if (b.next) to = b.next;
       return true;
     });
+    /* A rival the company has beaten bears a grudge (the story's `grudges`):
+       `beat_<side>`, set the first time, and read by its words and its forces
+       from then on. It is business until somebody loses. */
+    var foe = node.enemy && (node.enemy.rival === 'leading' ? st.leading : node.enemy.side);
+    if (SUCCESS[g] && foe && arr(def.grudges).indexOf(foe) >= 0 && !st.flags['beat_' + foe]) {
+      st.flags['beat_' + foe] = true;
+      lines.push({ flag: 'beat_' + foe, set: true });
+    }
     // what was held for this battle is spent
     st.next = st.next.filter(function (n) { return n.battle !== node.id; });
     st.pending = null;

@@ -89,7 +89,8 @@
       fill: { to: 0.85, archetype: true, from: r.fill, meter: id === 'lance' ? 'lance' : id, step: 0.05 },
       changes: [
         { if: { flag: 'kestrel_filmed' }, readiness: 1 },          // they have seen how the company fights
-        { if: { meter: 'lead', lte: -3 }, readiness: 1 }           // dug in before the company got there
+        { if: { meter: 'lead', lte: -3 }, readiness: 1 },          // dug in before the company got there
+        { if: { flag: 'beat_' + id }, readiness: 1 }               // beaten once, and waiting for the company since (a grudge)
       ]
     }, extra);
   }
@@ -208,7 +209,8 @@
       warren_entered: 'You stepped through the gate at the beacon.', chart_sold: 'You sold a copy of the chart.',
       vane_suspects: 'Vane suspects you.', vane_cut_off: 'Vane has cut you off.', eshaven_freed: 'The Hashamer guide you.',
       eshaven_promise: 'You promised the Hashamer the Quiet would stay asleep.', promise_broken: 'You broke your promise to the Hashamer.',
-      contact: 'You have spoken with the Amt.', morrow_found: 'You found Morrow.'
+      contact: 'You have spoken with the Amt.', morrow_found: 'You found Morrow.',
+      beat_kettle: 'Brass Ledger hasn’t forgotten Vesk.', beat_wraith: 'Wraith Section hasn’t forgotten the Glass Flats.', beat_sable: 'Colonel Sable hasn’t forgotten her warehouse.', beat_reavers: 'The Red Reavers haven’t forgotten the beacon.', beat_kestrel: 'Kestrel Air Cavalry has a score to settle.', beat_lance: 'The Ninth Lance has a score to settle.'
     },
 
     /* Vane's bonus for a story battle won, by his Trust; none once he has cut you off. */
@@ -304,6 +306,8 @@
     /* Who each rival company works for. Every one is a secret at the start: the
        star chart says "client unknown" until something reveals it
        ({ reveal: 'client_<id>' }, with the journal's line for it). */
+    // the rivals who take a beating personally: beat_<id> once the company has won against them (story.js resolveBattle)
+    grudges: ['kettle', 'wraith', 'sable', 'kestrel', 'reavers', 'lance'],
     clients: {
       kettle: 'the Orrin Mercantile Bank', wraith: 'the Admiralty’s Office of Naval Intelligence', sable: 'the Halvorsen Mining Combine',
       kestrel: 'the Meridian newsfeed', reavers: 'nobody: claim jumpers', lance: 'Lucan Vane'

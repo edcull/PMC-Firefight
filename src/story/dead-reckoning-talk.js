@@ -83,7 +83,8 @@
 
       // ---- 4. The Broker ----
       'c4.brief': [
-        { who: 'kettering', text: 'Kerrigan, {commander:rank}. My broker, my rules: anyone starts shooting before the hammer falls, Brass Ledger finishes it, and sends the bill to whoever’s left.' },
+        { who: 'kettering', if: { not: { flag: 'beat_kettle' } }, text: 'Kerrigan, {commander:rank}. My broker, my rules: anyone starts shooting before the hammer falls, Brass Ledger finishes it, and sends the bill to whoever’s left.' },
+        { who: 'kettering', if: { flag: 'beat_kettle' }, text: 'Kerrigan, {commander:rank}. My broker, my rules. And after Vesk, you’re the first name on my list: anyone starts shooting before the hammer falls, Brass Ledger finishes it. I’d very much like it to be you.' },
         { who: 'agathe', text: 'The heading is in my warehouse. My warehouse has my tanks in front of it. That is the whole of the auction.' },
         { who: 'commander', text: 'You bought the building to stop the sale?' },
         { who: 'agathe', text: 'My client bought it, and my client pays me to keep it. You can buy a seat at the broker’s table at the broker’s price. Or you can try my front door, and I will put every one of your vehicles in the harbour. Choose before the tide turns.' }
@@ -138,22 +139,22 @@
     // what each enemy side says, where a battle has nothing of its own for the moment
     sides: {
       kettle: {
-        start: [{ who: 'kettleman', text: 'There they are! Five hundred to whoever brings back the slate! Shoot anything that gets in the way!' }],
-        kill: [{ who: 'kettleman', text: 'Man down! Keep pushing, the rate’s gone up!' }],
-        loss: [{ who: 'kettleman', text: 'Got one! That’s a bonus! Who else wants to stand in front of us?' }],
-        bhalf: [{ who: 'kettleman', text: 'Contract’s not worth this! Fall back, fall back, we bill them for it later!' }]
+        start: [{ who: 'kettering', if: { flag: 'beat_kettle' }, text: 'You again. Vesk cost me a quarter’s profit and six good lads, {commander:rank}. This one isn’t for the client. This one’s mine.' }, { who: 'kettleman', text: 'There they are! Five hundred to whoever brings back the slate! Shoot anything that gets in the way!' }],
+        kill: [{ who: 'kettering', if: { flag: 'beat_kettle' }, text: 'That’s another one on your account. I’m keeping it, every line of it, and I always collect.' }, { who: 'kettleman', text: 'Man down! Keep pushing, the rate’s gone up!' }],
+        loss: [{ who: 'kettleman', if: { flag: 'beat_kettle' }, text: 'That’s for Vesk!' }, { who: 'kettleman', text: 'Got one! That’s a bonus! Who else wants to stand in front of us?' }],
+        bhalf: [{ who: 'kettering', if: { flag: 'beat_kettle' }, text: 'Fall back! We’ll settle this somewhere they can’t hide behind a client.' }, { who: 'kettleman', text: 'Contract’s not worth this! Fall back, fall back, we bill them for it later!' }]
       },
       wraith: {
-        start: [{ who: 'nine', text: 'All Wraith units: weapons free. Officers and radios first. They don’t leave with anything.' }],
-        kill: [{ who: 'nine', text: 'Nine to all. We lost one. Price of the job. Keep firing.' }],
-        loss: [{ who: 'nine', text: 'One down. Next.' }],
-        bhalf: [{ who: 'nine', text: 'Wraith, break contact. The client gets a report, not a body count.' }]
+        start: [{ who: 'nine', if: { flag: 'beat_wraith' }, text: 'All Wraith units: it’s the company from the Glass Flats. This time they don’t walk away from it.' }, { who: 'nine', text: 'All Wraith units: weapons free. Officers and radios first. They don’t leave with anything.' }],
+        kill: [{ who: 'nine', if: { flag: 'beat_wraith' }, text: 'Nine to all. They did this to us on Vantor. Not twice.' }, { who: 'nine', text: 'Nine to all. We lost one. Price of the job. Keep firing.' }],
+        loss: [{ who: 'nine', if: { flag: 'beat_wraith' }, text: 'That one’s for the flats.' }, { who: 'nine', text: 'One down. Next.' }],
+        bhalf: [{ who: 'nine', if: { flag: 'beat_wraith' }, text: 'Break contact. I have their faces now, every one of them. There’ll be a next time.' }, { who: 'nine', text: 'Wraith, break contact. The client gets a report, not a body count.' }]
       },
       sable: {
-        start: [{ who: 'agathe', text: 'Sable Armour Group holds. Anything that crosses the line, destroy it.' }],
-        kill: [{ who: 'agathe', text: 'A hull lost. It is insured; the ground is not. Close the gap. Nobody steps back.' }],
-        loss: [{ who: 'agathe', text: 'Target destroyed. Next one. They are paying for every metre of this.' }],
-        bhalf: [{ who: 'agathe', text: 'We are not finished while one of us is standing in that warehouse.' }]
+        start: [{ who: 'agathe', if: { flag: 'beat_sable' }, text: 'Sable Armour Group. You took my warehouse, {commander:rank}. I have been looking forward to this for some time.' }, { who: 'agathe', text: 'Sable Armour Group holds. Anything that crosses the line, destroy it.' }],
+        kill: [{ who: 'agathe', if: { flag: 'beat_sable' }, text: 'Another hull. I will collect for Kerrigan and for this one together.' }, { who: 'agathe', text: 'A hull lost. It is insured; the ground is not. Close the gap. Nobody steps back.' }],
+        loss: [{ who: 'agathe', if: { flag: 'beat_sable' }, text: 'That is one back for the warehouse.' }, { who: 'agathe', text: 'Target destroyed. Next one. They are paying for every metre of this.' }],
+        bhalf: [{ who: 'agathe', if: { flag: 'beat_sable' }, text: 'Hold! We did not hold at Kerrigan, and I will not have it said twice.' }, { who: 'agathe', text: 'We are not finished while one of us is standing in that warehouse.' }]
       },
       scavengers: {
         start: [{ who: 'scav', text: 'Lights out, everyone. They don’t know the station. We do. Nobody takes our salvage.' }],
@@ -173,16 +174,16 @@
         sighted: [{ who: 'ops', text: 'Contact! Xenotripods, small ones, dozens. They live down here.' }]
       },
       reavers: {
-        start: [{ who: 'hal', text: 'Reavers! Nobody touches our claim! Boarders away!' }],
-        kill: [{ who: 'hal', text: 'They got one of mine! That comes off their share. Get in there!' }],
-        loss: [{ who: 'hal', text: 'Ha! One less to split it with! Who’s next?' }],
-        bhalf: [{ who: 'hal', text: 'Not worth it! Grab what you’ve got and run for the boats!' }]
+        start: [{ who: 'hal', if: { flag: 'beat_reavers' }, text: 'It’s the beacon lot! You ran us off our claim and left us to those things! Get ’em!' }, { who: 'hal', text: 'Reavers! Nobody touches our claim! Boarders away!' }],
+        kill: [{ who: 'hal', if: { flag: 'beat_reavers' }, text: 'Another one! You owe us a whole crew already!' }, { who: 'hal', text: 'They got one of mine! That comes off their share. Get in there!' }],
+        loss: [{ who: 'hal', if: { flag: 'beat_reavers' }, text: 'That’s for the beacon!' }, { who: 'hal', text: 'Ha! One less to split it with! Who’s next?' }],
+        bhalf: [{ who: 'hal', if: { flag: 'beat_reavers' }, text: 'Run for it! Again! I’ll remember your faces, company!' }, { who: 'hal', text: 'Not worth it! Grab what you’ve got and run for the boats!' }]
       },
       lance: {
-        start: [{ who: 'daw', text: 'Lance, take the log. Minimum force, but take it.' }],
-        kill: [{ who: 'daw', text: 'That was one of mine, {commander:rank}. It goes on your bill. Lance, stop being gentle.' }],
-        loss: [{ who: 'lancer', text: 'Contact down. They’re not as good as their file.' }],
-        bhalf: [{ who: 'daw', text: 'Lance, disengage. Mr Vane can pay for a second try.' }]
+        start: [{ who: 'daw', if: { flag: 'beat_lance' }, text: 'Lance. The company that embarrassed us on Kerrigan. No court order this time, {commander:rank}. Just us.' }, { who: 'daw', text: 'Lance, take the log. Minimum force, but take it.' }],
+        kill: [{ who: 'daw', if: { flag: 'beat_lance' }, text: 'That makes two. I do not lose to the same company three times.' }, { who: 'daw', text: 'That was one of mine, {commander:rank}. It goes on your bill. Lance, stop being gentle.' }],
+        loss: [{ who: 'lancer', if: { flag: 'beat_lance' }, text: 'Paid in part. For the docking ring.' }, { who: 'lancer', text: 'Contact down. They’re not as good as their file.' }],
+        bhalf: [{ who: 'daw', if: { flag: 'beat_lance' }, text: 'Disengage. Tell Mr Vane it costs more next time. I’m not doing this one for his money.' }, { who: 'daw', text: 'Lance, disengage. Mr Vane can pay for a second try.' }]
       }
     },
 

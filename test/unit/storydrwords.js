@@ -164,6 +164,23 @@ console.log('\nThe star chart');
     c2.story.revealed.client_wraith = false; c2.story.leading = 'kestrel';
     ok('...and says "client unknown" while it is not', /Kestrel Air Cavalry \(leading\) <small class="secret">client unknown/.test(global.PMCStoryChart.html(S.chart(c2), 'dead-reckoning')));
   }
+  {
+    // business until somebody loses: a rival beaten bears a grudge, in its words and at the table
+    const c3 = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+    S.begin(c3, 'dead-reckoning', {});
+    ok('no grudges at the start', !Object.keys(c3.story.flags).some((f) => /^beat_/.test(f)));
+    c3.story.chapter = 'c1'; c3.story.node = 'c1.battle';
+    S.resolveBattle(c3, 'victory');
+    ok('Brass Ledger beaten at Vesk: it bears a grudge', c3.story.flags.beat_kettle === true && !c3.story.flags.beat_wraith);
+    const later = { node: 'mimics.battle', enemy: { side: 'kettle' } };
+    const said = S.talkFor(c3, later), st0 = said.find((l) => l.on === 'start');
+    ok('...and says so next time: Vesk, and personal', st0 && /Vesk/.test(st0.text) && /mine/.test(st0.text), st0 && st0.text);
+    ok('...over a battle’s own plain line', /Vesk/.test((S.talkFor(c3, { node: 'c4.battle', enemy: { side: 'kettle' } }).find((l) => l.on === 'start') || {}).text || ''));
+    ok('...and its forces come readier for it', JSON.stringify(dr.rivals.kettle.changes).indexOf('beat_kettle') >= 0);
+    const fresh = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+    S.begin(fresh, 'dead-reckoning', {});
+    ok('...where a company never beaten is still all business', !/Vesk/.test((S.talkFor(fresh, later).find((l) => l.on === 'start') || {}).text || ''));
+  }
   require('../../src/story/deep-contract.js');
   const dc = { companies: { A: { name: 'T', kUC: 0, tier: 1, roster: [] } } };
   S.begin(dc, 'deep-contract', {});
