@@ -172,6 +172,16 @@ Object.keys(MAPS).forEach((k) => {
 });
 const used = (id) => allBattles.filter((n) => n.map === id);
 ok('the Glass Flats and the Mire put their three places where the map says, for the relic', ['glassflats', 'mire'].every((k) => MAPS[k].sites.at.length === 3 && used(k).every((n) => n.scenario === 'find' && n.variant.relic)));
+{
+  // Vesk as a settlement: paved roads from the four quarters meeting in a square in the middle, stalls round it
+  const roads = MAPS.vesk.pieces.filter((p) => p.kind === 'road' && p.paved);
+  const mid = roads.find((p) => p.x <= 20 && p.x + p.w >= 28 && p.y <= 20 && p.y + p.h >= 28);
+  ok('Vesk is a crossroads: four paved roads and the market square where they meet, in the middle', roads.length === 5 && !!mid &&
+    ['w', 'e', 'n', 's'].every((d) => roads.some((p) => p !== mid && (d === 'w' ? p.x + p.w <= mid.x + 0.01 : d === 'e' ? p.x >= mid.x + mid.w - 0.01 : d === 'n' ? p.y + p.h <= mid.y + 0.01 : p.y >= mid.y + mid.h - 0.01))));
+  ok('...its skin the market’s: stalls for barricades, the market’s clutter for craters, by name too', MAPS.vesk.skin === 'market' &&
+    MAPS.vesk.pieces.filter((p) => p.kind === 'barricade').length >= 6 && R.terrainName({ cfg: { story: { skin: 'market' } } }, 'barricade') === 'Market stalls' &&
+    R.terrainName({ cfg: { story: { skin: 'market' } } }, 'crater') === 'Market clutter' && R.terrainName({ cfg: { story: {} } }, 'crater') === 'Rubble and craters');
+}
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 ok('the docks leave the middle clear, for the warehouse Sable holds (Hostile takeover)', MAPS.docks.pieces.every((p) => !overlap(p, { x: 18, y: 18, w: 12, h: 12 })) && used('docks').every((n) => n.scenario === 'takeover'));
 ok('the second half keeps clear what its scenarios lay themselves: the takeovers’ middle, the Parley’s, Recall’s landing zone',

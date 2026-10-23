@@ -22,6 +22,10 @@
     var MACH = ['#1a1e22', '#2a3036', '#3d454c', '#50595f', '#636d74', '#86919a'];
     var SHIELD = ['#1f2428', '#2e353b', '#46515a', '#5d6a74', '#73808a', '#94a1ab'];
     var DOOR_STEEL = ['#23282c', '#323a40', '#465058', '#58636c', '#6b7781', '#8a96a0'];
+    // a market: the stalls' timber, their awnings' stripes, and what is for sale
+    var TIMBER = ['#2a1e14', '#3e2c1c', '#564028', '#6e5234', '#866642', '#9e7c54'];
+    var AWNING = [['#b8402e', '#e8dcc0'], ['#2e6a8a', '#e8dcc0'], ['#c8a040', '#5a3a22'], ['#3e7a4a', '#e8dcc0'], ['#7a3a6a', '#e8c890']];
+    var WARES = ['#d8a03a', '#c8402a', '#7aa83a', '#e8dcc0', '#8a5a3a', '#4a7aa8'];
     function drawKind(cutaway, g, lift, p, pr) {
       switch (pr.kind) {
         case 'tree': {
@@ -176,6 +180,49 @@
           dot(g, p.x - cw7 * 0.3, p.y - cl7 - ch7 * 0.2, '#ff5a3a', 2);
           dot(g, p.x, p.y - cl7 - ch7 * 0.2, '#ffb02e', 2);
           dot(g, p.x + cw7 * 0.3, p.y - cl7 - ch7 * 0.2, '#7bdc6a', 2);
+          break;
+        }
+        /* A market stall (a settlement's barricade, iso-props.js): a timber
+           trestle laid with wares, on four posts under a striped awning that
+           slopes down towards the viewer. */
+        case 'stall': {
+          var str = rng(pr.seed), slf = lift || 0, hz = pr.horiz, sl0 = (pr.len || 1.6) - 0.15, dp = 0.75;
+          var tx0 = hz ? pr.x - sl0 / 2 : pr.x - dp / 2, ty0 = hz ? pr.y - dp / 2 : pr.y - sl0 / 2, tw = hz ? sl0 : dp, th = hz ? dp : sl0;
+          var tH = a(1.5), pH = a(4.2);
+          box(g, { x: tx0, y: ty0, w: tw, h: th, height: tH, seed: pr.seed }, TIMBER, { roof: TIMBER[4], roofEdge: TIMBER[5], windows: null, lift: slf });
+          function sp(x, y, up) { var q = toScreen(x, y); return [q.x, q.y - slf - up]; }
+          // the wares, heaped on the boards
+          for (var wi = 0; wi < 7; wi++) {
+            var wq = sp(tx0 + 0.1 + str() * (tw - 0.2), ty0 + 0.1 + str() * (th - 0.2), tH + a(0.2));
+            dot(g, wq[0], wq[1], WARES[Math.floor(str() * WARES.length)], 2);
+          }
+          // the posts at the four corners, and the awning over them, striped down its length
+          var ax0 = tx0 - 0.08, ay0 = ty0 - 0.08, ax1 = tx0 + tw + 0.08, ay1 = ty0 + th + 0.08;
+          [[ax0, ay0], [ax1, ay0], [ax1, ay1], [ax0, ay1]].forEach(function (c) { edgeLine(g, sp(c[0], c[1], 0), sp(c[0], c[1], pH), TIMBER[1], 1); });
+          var aw = AWNING[Math.floor((pr.tone || 0) * AWNING.length) % AWNING.length], nstr = 6;
+          for (var si2 = 0; si2 < nstr; si2++) {
+            var f0 = si2 / nstr, f1 = (si2 + 1) / nstr;
+            var q00 = hz ? [ax0 + (ax1 - ax0) * f0, ay0] : [ax0, ay0 + (ay1 - ay0) * f0];
+            var q01 = hz ? [ax0 + (ax1 - ax0) * f1, ay0] : [ax0, ay0 + (ay1 - ay0) * f1];
+            var q10 = hz ? [ax0 + (ax1 - ax0) * f0, ay1] : [ax1, ay0 + (ay1 - ay0) * f0];
+            var q11 = hz ? [ax0 + (ax1 - ax0) * f1, ay1] : [ax1, ay0 + (ay1 - ay0) * f1];
+            // the back edge high, the front (towards the viewer) a little lower
+            poly(g, [sp(q00[0], q00[1], pH + a(0.6)), sp(q01[0], q01[1], pH + a(0.6)), sp(q11[0], q11[1], pH - a(0.2)), sp(q10[0], q10[1], pH - a(0.2))], aw[si2 % 2]);
+          }
+          // the awning's hem, a shade darker
+          edgeLine(g, sp(hz ? ax0 : ax1, ay1, pH - a(0.2)), sp(ax1, ay1, pH - a(0.2)), 'rgba(20,14,10,.55)', 1);
+          break;
+        }
+        case 'sacks': {
+          // grain sacks, heaped: round-shouldered bags, a tie at the neck
+          var skr = rng(pr.seed), skl = lift || 0;
+          shadowBlob(g, { x: p.x + a(0.5), y: p.y - skl + a(0.3) }, a(1.8), a(0.7));
+          for (var ski = 0; ski < (pr.n || 2) + 1; ski++) {
+            var sx = p.x + (ski - 1) * a(0.9) + (skr() - 0.5) * a(0.3), sy = p.y - skl + (skr() - 0.5) * a(0.5);
+            ellipse(g, sx, sy - a(0.8), a(0.55), a(0.75), ski % 2 ? '#b8a07a' : '#a8906a');
+            ellipse(g, sx - a(0.12), sy - a(1.0), a(0.25), a(0.35), '#d0bc94');
+            rect(g, sx - a(0.15), sy - a(1.6), a(0.3), a(0.2), '#6a5236');
+          }
           break;
         }
         case 'drums': {

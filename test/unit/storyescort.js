@@ -46,6 +46,9 @@ const vane = st.units.find((u) => u.escort);
 ok('...he is on the table with side A, its own to move: named, a Command Unit’s statline, no special rules', vane && vane.side === 'A' && vane.name === 'Halloran' && !vane.ally &&
   vane.rules.length === 0 && vane.models >= 1, vane && JSON.stringify({ name: vane.name, side: vane.side, models: vane.models, rules: vane.rules }));
 ok('...and he comes on in turn 1 with the rest of side A', vane.x >= 0 && !vane.reserve, vane.x + ',' + vane.y);
+ok('Vesk’s market on the table: every barricade a stall and every crater field the market’s clutter, and the roads paved', cfg.story.skin === 'market' &&
+  st.terrain.filter((t) => t.kind === 'barricade' || t.kind === 'crater').every((t) => t.market) && st.terrain.some((t) => t.kind === 'barricade') &&
+  st.terrain.filter((t) => t.kind === 'road').every((t) => t.paved) && R.terrainName(st, 'barricade') === 'Market stalls');
 ok('the bidding’s first answer no longer asks the company for money it has not got', !dr._nodes['c1.bidding'].options[0].cost);
 {
   const s = st, g = SC.SCENARIOS.escort.goals;

@@ -364,6 +364,8 @@
           : { kind: 'barricade', x: x - len / 2, y: y - th / 2, w: len, h: th };
         // the hive's are shed carapace
         if (E.state.units.some(function (u) { return u.side === pa.side && u.faction === 'bugs'; })) r.carapace = true;
+        // a settlement's map (storybattle.js marketSkin): a market stall
+        else if (E.state.cfg.story && E.state.cfg.story.skin === 'market') r.market = true;
         var why = placeOK(pa, r);
         if (why) return why;
         E.state.terrain.push(r);

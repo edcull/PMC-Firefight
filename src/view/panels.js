@@ -435,9 +435,9 @@
           out.push('<span class="chip tpill" ' + tip('Behind a low wall', '+2 Defence against fire that crosses the wall (from any side against plunging fire). Its middle is within ' + R.WALL_REACH + '" of the wall.') + '>' +
             '<i style="background:' + tm.col + '">' + tm.ch + '</i>Behind a low wall</span>');
         } else {
-          var tk = under, mk = TERRAIN_MARK[tk], bits = terrainBits(tk, !!u.bld);
-          out.push('<span class="chip tpill" ' + tip(R.TERRAIN[tk].name, bits.length ? bits.join(' · ') : 'no cover, no penalty') + '>' +
-            (mk ? '<i style="background:' + mk.col + '">' + mk.ch + '</i>' : '') + esc(R.TERRAIN[tk].name) + '</span>');
+          var tk = under, mk = TERRAIN_MARK[tk], bits = terrainBits(tk, !!u.bld), tn = R.terrainName(B.state, tk);
+          out.push('<span class="chip tpill" ' + tip(tn, bits.length ? bits.join(' · ') : 'no cover, no penalty') + '>' +
+            (mk ? '<i style="background:' + mk.col + '">' + mk.ch + '</i>' : '') + esc(tn) + '</span>');
         }
       }
       var TXT = window.PMCRuleText;
