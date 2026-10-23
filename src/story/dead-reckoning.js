@@ -185,8 +185,6 @@
 
   S.register(withScenes(withTalk(withProse({
     id: 'dead-reckoning', name: 'Dead Reckoning', version: 1, length: 8,
-    // (the second half's battles are fought on rolled ground until their maps are written, phase 5)
-    mapsPending: [2],
     // a star chart between chapters and in the journal (story.js chart, view/story-chart.js)
     chart: true,
     // the two halves, as the chapter cards name them, and those who were there from the start
@@ -609,7 +607,7 @@
           { id: 'pictures', text: 'Offer them the pictures.', battle: { intel: 1 }, effects: [{ flag: 'kestrel_scooped' }, { meter: 'lead', add: -1 }] },
           hireOption('kestrel', 'Hire Kestrel against whoever else is there.')
         ] },
-        battle: { scenario: 'convoy', map: null, planet: 'mountain', enemy: rival('kestrel'),
+        battle: { scenario: 'convoy', map: 'hollin', planet: 'mountain', enemy: rival('kestrel'),
           on: { success: [{ effects: [{ meter: 'theirs', add: -1 }, { meter: 'stones', add: 1 }, { meter: 'kestrel', add: -1 }, { meter: 'lead', add: 2 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] } },
         after: { id: 'claim.footage', who: 'rook', title: 'The footage', text: 'Kestrel filmed all of it.', options: [
           { id: 'run', text: 'Let them run it.', effects: [{ meter: 'vane', add: -1 }, { flag: 'kestrel_filmed' }] },
@@ -640,7 +638,7 @@
             why: 'Nine has no reason to talk to you.', battle: { skip: true }, effects: [{ meter: 'stones', add: -1 }, { meter: 'theirs', add: 1 }] },
           hireOption('reavers', 'Hire the Reavers to hunt the hunters.')
         ] },
-        battle: { scenario: 'meeting', planet: 'sparse', enemy: rival('wraith', { changes: [{ if: { flag: 'wraith_robbed' }, readiness: 1 }] }),
+        battle: { scenario: 'meeting', map: 'ilya', planet: 'sparse', enemy: rival('wraith', { changes: [{ if: { flag: 'wraith_robbed' }, readiness: 1 }] }),
           on: { success: [{ effects: [{ meter: 'wraith', add: -1 }, { meter: 'stones', add: 1 }, { meter: 'theirs', add: -1 }] }], skip: [{}], failure: [{ effects: [{ meter: 'stones', add: -1 }, { meter: 'theirs', add: 1 }] }] } },
         after: { id: 'bounty.paymaster', if: { grade: 'success' }, title: 'The paymaster', text: 'The bounty hunters’ paymaster, taken.', options: [
           { id: 'hand', text: 'Hand them in.', effects: [{ meter: 'vane', add: 1 }] },
@@ -654,7 +652,7 @@
           hireOption('reavers', 'Hire the Reavers for the landing.')
         ] },
         // the leading rival, whoever it is, its commander the target; the more lodestones it holds, the readier it is
-        battle: { scenario: 'takeover', role: 'attacker', tier: 'max', pl: 'max', planet: 'dense', variant: { target: 'leading' },
+        battle: { scenario: 'takeover', map: 'quietfield', role: 'attacker', tier: 'max', pl: 'max', planet: 'dense', variant: { target: 'leading' },
           enemy: { rival: 'leading', changes: [{ if: { meter: 'theirs', gte: 4 }, readiness: 1 }] },
           adjust: [
             { if: { flag: 'kettle_partner' }, levers: { allies: HIRE.kettle } },
@@ -674,7 +672,7 @@
           { id: 'round', text: 'Go round.', battle: { skip: true }, effects: [{ meter: 'lead', add: -2 }, { meter: 'alarm', add: 1 }] },
           { id: 'under', text: 'Go under it, the way the Mithdu showed you.', if: { flag: 'mithdu_marked' }, why: 'Nobody has shown you a way under.', battle: { tier: 'max-1', role: 'choose' } }
         ] },
-        battle: { scenario: 'strike', planet: 'mountain', enemy: tribe('ulvar'),
+        battle: { scenario: 'strike', map: 'brannock', planet: 'mountain', enemy: tribe('ulvar'),
           on: { success: [{ effects: [{ meter: 'stones', add: 1 }] }], skip: [{}], failure: [{ effects: [{ meter: 'alarm', add: 2 }] }] } },
         after: { id: 'watchers.dome', if: { grade: 'success' }, title: 'The dome falls', text: 'Its keepers ask for their dead.', options: [
           { id: 'give', text: 'Give them back.', effects: [{ meter: 'understanding', add: 1 }, { meter: 'alarm', add: -1 }] },
@@ -688,7 +686,7 @@
           { id: 'dig', text: 'Dig in.', battle: { role: 'defender', turns: 6 } },
           { id: 'move', text: 'Move the stones away from the camp.', battle: { readiness: -1, suppressOwn: 'D3' }, effects: [{ meter: 'lead', add: -1 }] }
         ] },
-        battle: { scenario: 'invasion', role: 'defender', planet: 'sparse', enemy: tribe('shkar', { changes: [{ if: { flag: 'beacon_stormed' }, readiness: 1 }] }),
+        battle: { scenario: 'invasion', map: 'sedra', role: 'defender', planet: 'sparse', enemy: tribe('shkar', { changes: [{ if: { flag: 'beacon_stormed' }, readiness: 1 }] }),
           on: { success: [{ effects: [{ meter: 'alarm', add: -1 }] }], failure: [{ effects: [{ meter: 'stones', add: -1 }, { meter: 'alarm', add: 1 }] }] } },
         after: { id: 'storm.what', title: 'What they came for', text: 'They came for the lodestones.', options: [
           { id: 'return', text: 'Return one.', if: { meter: 'stones', gte: 1 }, why: 'You have none to return.', effects: [{ meter: 'stones', add: -1 }, { meter: 'alarm', add: -2 }, { flag: 'relics_returned' }] },
@@ -729,7 +727,7 @@
           { id: 'pay', text: 'Pay Brass Ledger to leave.', if: HIRE_IF.kettle, why: 'Brass Ledger won’t deal with you.', cost: { kUC: 'kettle_price' },
             battle: { skip: true }, effects: [{ meter: 'understanding', add: 1 }] }
         ] },
-        battle: { scenario: 'meeting', planet: 'desert', enemy: rival('kettle'),
+        battle: { scenario: 'meeting', map: 'hashamer', planet: 'desert', enemy: rival('kettle'),
           on: { success: [{ effects: [{ meter: 'kettle', add: -1 }, { meter: 'understanding', add: 1 }, { meter: 'stones', add: 1 }] }], skip: [{}], failure: [{ effects: [{ meter: 'understanding', add: -1 }] }] } },
         after: { id: 'mimics.thanks', who: 'seven', title: 'The Esh-Aven’s thanks', text: 'A guide who remembers the road to the Quiet, and a price.', options: [
           { id: 'promise', text: 'Make the promise.', effects: [{ flag: 'eshaven_freed' }, { flag: 'eshaven_promise' }, { meter: 'understanding', add: 2 }, { meter: 'lead', add: 1 }] },
@@ -743,14 +741,14 @@
           { id: 'meet', text: 'Meet it.', battle: { scenario: 'parley', name: 'The Speaker' } },
           { id: 'vane', text: 'Bring Vane’s people.', if: { not: { flag: 'vane_cut_off' } }, why: 'Vane has cut you off.', battle: { scenario: 'parley', readiness: 1 }, effects: [{ meter: 'vane', add: 2 }] }
         ] },
-        battle: { scenario: 'parley', planet: 'sparse', enemy: tribe('amt', { changes: [
+        battle: { scenario: 'parley', map: 'orlo', planet: 'sparse', enemy: tribe('amt', { changes: [
           { if: { flag: 'beacon_rubbing' }, readiness: -1 }, { if: { flag: 'eshaven_promise' }, readiness: -1 },
           { if: { flag: 'alpha_taken' }, readiness: 1 }, { if: { flag: 'promise_broken' }, readiness: 1 }, { if: { flag: 'wraith_orders' }, readiness: -1 }] }),
           on: { success: [{ effects: [{ flag: 'contact' }, { meter: 'alarm', add: -2 }, { meter: 'stones', add: 1 }] }], failure: [{ effects: [{ meter: 'alarm', add: 2 }] }] } } }),
       poolChapter({ id: 'signal', thread: 'contact', fallback: true, title: 'Signal Fires',
         place: { system: 'Tessaly', planet: 'Tessaly IV', kind: 'jungle', world: { atmosphere: 'foggy' } },
         brief: 'Back at the beacon, to light it.',
-        battle: { scenario: 'holdline', planet: 'jungle', waves: { meter: 'understanding', base: 1, per: 3 }, enemy: tribe('shkar'),
+        battle: { scenario: 'holdline', map: 'beaconlit', planet: 'jungle', waves: { meter: 'understanding', base: 1, per: 3 }, enemy: tribe('shkar'),
           on: { success: [{ effects: [{ meter: 'understanding', add: 2 }] }], failure: [{ effects: [{ meter: 'alarm', add: 1 }] }] } } }),
 
       // the Patron
@@ -776,7 +774,7 @@
           { id: 'fast', text: 'The fast road.', battle: { role: 'attacker', tier: 'max' } },
           { id: 'long', text: 'The long road.', battle: { readiness: 0, turns: 8 }, effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: 1 }] }
         ] },
-        battle: { scenario: 'convoy', planet: 'industrial', enemy: rival('lance'),
+        battle: { scenario: 'convoy', map: 'umber', planet: 'industrial', enemy: rival('lance'),
           on: { success: [{ effects: [{ meter: 'lance', add: -1 }] }], failure: [{ effects: [{ meter: 'vane', add: -1 }] }] } },
         after: { id: 'escort.cargo', if: { grade: 'success' }, title: 'The cargo', text: 'Vane’s relics, safe.', options: [
           { id: 'deliver', text: 'Deliver it.', effects: [{ meter: 'vane', add: 2 }] },
@@ -789,7 +787,7 @@
           { id: 'pay', text: 'Pay them.', cost: { kUC: 3 }, why: 'You can’t pay them.', battle: { skip: true, turns: 0 } },
           { id: 'fight', text: 'Fight them.', battle: { role: 'choose', readiness: 1 } }
         ] },
-        battle: { scenario: 'meeting', planet: 'industrial', enemy: rival('lance'),
+        battle: { scenario: 'meeting', map: 'tarn', planet: 'industrial', enemy: rival('lance'),
           on: { success: [{ effects: [{ meter: 'lance', add: -1 }] }], skip: [{}], failure: [{ effects: [{ meter: 'lance', add: 1 }] }] } } }),
       poolChapter({ id: 'collector', thread: 'patron', finale: true, title: 'The Collector', place: Object.assign({ site: 'the landing field' }, QUIET),
         brief: 'Vane comes in person, with the Ninth Lance.',
@@ -798,7 +796,7 @@
           { id: 'fight', text: 'Shoot the flag down.', battle: { role: 'attacker' }, effects: [{ meter: 'loyalty', add: 1 }] },
           hireOption('reavers', 'Hire the Reavers against him.')
         ] },
-        battle: { scenario: 'takeover', role: 'attacker', tier: 'max', pl: 'max', planet: 'dense', variant: { target: 'Commander Daw' },
+        battle: { scenario: 'takeover', map: 'quietfield', role: 'attacker', tier: 'max', pl: 'max', planet: 'dense', variant: { target: 'Commander Daw' },
           enemy: rival('lance', { changes: [{ if: { flag: 'lance_burned' }, readiness: 1 }] }),
           adjust: [
             { if: { all: [{ flag: 'contact' }, ESHAVEN_WITH_YOU] }, levers: { allies: ESHAVEN_ALLIES } },
@@ -815,7 +813,7 @@
           { id: 'stones', text: 'Run with the stones.', battle: { turns: 6 } },
           { id: 'leave', text: 'Run, and leave the stones.', battle: { turns: 8, readiness: -1 }, effects: [{ meter: 'alarm', add: -3 }, { meter: 'stones', set: 0 }] }
         ], next: 'recall.battle' },
-        { id: 'recall.battle', type: 'battle', scenario: 'breakout', tier: 'max', pl: 'max', planet: 'dense', waves: { meter: 'alarm', base: 1, per: 3 }, enemy: tribe('amt'),
+        { id: 'recall.battle', type: 'battle', scenario: 'breakout', map: 'quietfog', tier: 'max', pl: 'max', planet: 'dense', waves: { meter: 'alarm', base: 1, per: 3 }, enemy: tribe('amt'),
           adjust: [{ if: { all: [{ flag: 'eshaven_promise' }, ESHAVEN_WITH_YOU] }, levers: { allies: ESHAVEN_ALLIES } }],
           on: FINALE_ON, next: 'recall.debrief' },
         { id: 'recall.debrief', type: 'debrief', text: 'The company is off the Quiet, with what it could carry.', events: [], next: 'end' }

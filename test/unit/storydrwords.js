@@ -120,9 +120,12 @@ ok('the hired companies have their voices: reporting in, and an answer to each o
 
 console.log('\nThe maps');
 const compound = (n) => SC.SCENARIOS[n.scenario] && SC.SCENARIOS[n.scenario].compound;
-const open = battles.filter((n) => !compound(n));
-ok('every open-table battle of the first half has its own ground', open.every((n) => n.map && MAPS[n.map]), open.map((n) => n.id + ':' + n.map).join(', '));
-ok('...and the compounds none: their seed lays them', battles.filter(compound).every((n) => !n.map), battles.filter(compound).map((n) => n.id).join(', '));
+// (the whole story, both halves, phase 5b: no battle left on rolled ground)
+const allBattles = Object.keys(dr._nodes).map((id) => dr._nodes[id]).filter((n) => n.type === 'battle' && !n.side);
+const open = allBattles.filter((n) => !compound(n));
+ok('every open-table battle of the story has its own ground, both halves', open.every((n) => n.map && MAPS[n.map]), open.map((n) => n.id + ':' + n.map).join(', '));
+ok('...and the compounds none: their seed lays them', allBattles.filter(compound).every((n) => !n.map), allBattles.filter(compound).map((n) => n.id).join(', '));
+ok('...so nothing waits on maps to come', !dr.mapsPending);
 const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 Object.keys(MAPS).forEach((k) => {
   const m = MAPS[k], ps = m.pieces;
@@ -143,10 +146,17 @@ Object.keys(MAPS).forEach((k) => {
   });
   ok(m.name + ': laid sound', !bad.length, bad.slice(0, 4).join('; '));
 });
-const used = (id) => battles.filter((n) => n.map === id);
+const used = (id) => allBattles.filter((n) => n.map === id);
 ok('the Glass Flats and the Mire put their three places where the map says, for the relic', ['glassflats', 'mire'].every((k) => MAPS[k].sites.at.length === 3 && used(k).every((n) => n.scenario === 'find' && n.variant.relic)));
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 ok('the docks leave the middle clear, for the warehouse Sable holds (Hostile takeover)', MAPS.docks.pieces.every((p) => !overlap(p, { x: 18, y: 18, w: 12, h: 12 })) && used('docks').every((n) => n.scenario === 'takeover'));
+ok('the second half keeps clear what its scenarios lay themselves: the takeovers’ middle, the Parley’s, Recall’s landing zone',
+  ['quietfield'].every((k) => MAPS[k].pieces.every((p) => !overlap(p, { x: 18, y: 18, w: 12, h: 12 }))) &&
+  MAPS.orlo.pieces.every((p) => !overlap(p, { x: 21, y: 19, w: 6, h: 10 })) &&
+  MAPS.quietfog.pieces.every((p) => !overlap(p, { x: 29, y: 10, w: 9, h: 28 })) &&
+  used('quietfield').every((n) => n.scenario === 'takeover') && used('orlo').every((n) => n.scenario === 'parley') && used('quietfog').every((n) => n.scenario === 'breakout'));
+ok('...and the Strike’s three turrets and the Hold the Line’s beacon are where the map says', MAPS.brannock.objectives.length === 3 && MAPS.beaconlit.objectives.length === 1 &&
+  used('brannock').every((n) => n.scenario === 'strike') && used('beaconlit').every((n) => n.scenario === 'holdline'));
 ok('each map’s world is its chapter’s', open.every((n) => { const ch = dr._chapters[n._chapter]; const place = n.place || ch.place; return !place || MAPS[n.map].planet === place.kind; }),
   open.map((n) => n.id + ' ' + MAPS[n.map].planet + '/' + ((n.place || dr._chapters[n._chapter].place) || {}).kind).join(', '));
 
