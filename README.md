@@ -33,10 +33,13 @@ options switched on for a battle or a campaign.
   - online "world" campaigns: a lobby with player and AI slots, contracts
     against the AI, duels between players and co-operative contracts;
   - Close Encounters battles in a campaign, at a frequency set when it is raised.
-- **Story mode:** *Deep Contract*, a campaign written as a story for one
-  company: eight chapters on a mining moon, events and choices that move its
-  meters and flags, battles on hand-laid maps with briefings and their own
-  scenarios, side contracts, and six endings with their epilogues.
+- **Story mode:** two campaigns written as stories for one company, each in
+  eight chapters of events and choices that move its meters and flags, battles
+  on hand-laid maps with briefings and their own scenarios, side contracts, and
+  endings with their epilogues:
+  - *Deep Contract*: a mining moon, its miners' uprising and what is under it;
+  - *Dead Reckoning*: a treasure hunt across the stars after a dead surveyor's
+    log, against rival companies, and a first contact.
 - **Accounts on a game server:** sign-in or guest play, email activation and
   password resets, campaigns kept on the server, and "your move" badges and
   emails.
@@ -261,13 +264,16 @@ are halved afterwards, each company's from its own units.
 
 ### Story mode
 
-**Story** on the menu starts one. Choose the story (*Deep Contract*), the
-difficulty and whether to play it ironman, then found the company as for any
+**Story** on the menu starts one. Choose the story (*Deep Contract* or *Dead
+Reckoning*), the difficulty and whether to play it ironman, then found the company as for any
 campaign, naming its commander under the company's name. The commander is the
 officer at the head of the command squad: the story calls them by name, and they
 are never a casualty.
 
-The story runs in chapters. It opens in orbit, as the ship's captain, HTX's man on
+What follows is how both stories run, told with *Deep Contract*'s people; *Dead
+Reckoning*'s own are below.
+
+The story runs in chapters. *Deep Contract* opens in orbit, as the ship's captain, HTX's man on
 the moon and your commander talk over the job before the shuttle goes down, and every chapter opens the
 same way, with the people of the moon talking it over: HTX's director, Varga,
 the miners' guild, Black Lantern and your own radio, by what has happened so far.
@@ -303,6 +309,40 @@ Loyalty and Intel are shown; the rest come to light as you learn of them) and se
   *Contract Terminated*, *Scorched Earth*, *Paid Off*, or *Broken Company* if the
   company can no longer field an army. Its epilogue says what became of the moon
   and its people, and who stayed with the company.
+
+**Dead Reckoning.** A dead surveyor's log comes up for auction, and Lucan Vane,
+who owns more than most governments and is seen by almost nobody, hires the
+company to follow it across the stars, star by star, chapter by chapter.
+
+- **The trail.** Each chapter is a different world. A **star chart** between
+  chapters and in the journal shows the route so far, each world's kind, where
+  each rival was last met, and the lodestones each side holds.
+- **The rivals** are other companies, each racing for its own client:
+  - Brass Ledger, mercenaries;
+  - Wraith Section, special operations;
+  - Sable Armour Group, armour that digs in;
+  - Kestrel Air Cavalry, always first;
+  - the Red Reavers, claim jumpers;
+  - the Ninth Lance, Vane's own.
+
+  They talk business until the company beats them, and after that it is
+  personal. Who hired each one is a secret until something gives it away. Some
+  can be **hired** to fight beside the company; with their trust low, an order
+  costs extra and they may walk off the table.
+- **The log.** Lose Lot 47 and Brass Ledger have it. It can be taken back from
+  them, they can be cut in on the claim, or it can be rebuilt from what the
+  company finds on the way. It is never lost for good, and never for sale.
+- **First contact.** In the first half nobody has a name for what keeps the
+  stones. They are met only as **unknown contacts**, stepping out of the air
+  when a battle's other side breaks and runs. The second half opens on their
+  name, the Xenotripods, and its battles are fought against their tribes, or
+  beside the Hashamer Esh-Aven, who name their dead.
+- **The relic.** Some battles are fought for a lodestone. It has to be found,
+  dug up and carried off the table, and whoever has it at the end has it.
+- **Parleys** are played out as conversations, with an Amt Alpha learning the
+  company's words, or with Vane himself, in person at last.
+- **The endings:** *Finder's Fee*, *First Contact*, *Claim Jumped*,
+  *Repossessed*, *Lost Signal*, *Dead Reckoning*, or *Broken Company*.
 
 **Difficulty.** *Story* gives lighter enemy forces and better pay, *Contract* is
 the story as tuned, *Hard* gives stronger enemies that grow faster with you and

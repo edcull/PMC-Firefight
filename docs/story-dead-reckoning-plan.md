@@ -1271,6 +1271,25 @@ In parts, each tested and pushed as it is done:
 Sounds for the Xenotripod battles (Mental Projection lines, the beacon), the
 README's Story mode section, difficulty checked against both stories.
 
+**Where it stands.** Done:
+
+- **Sounds** (`sfx.js`, played by `actions.js` as a battle's voices speak):
+  - a radio line is a squelch of static and a click;
+  - a line in brackets (Mental Projection, the tribes and the unknown) is a
+    cluster of detuned notes swelling up from under hearing;
+  - the End phase the unknown contacts step out of the air is the beacon, a
+    deep pulse beating against itself.
+- **The README** describes both stories, with what is *Dead Reckoning*'s own:
+  the trail and its chart, the rivals and their secret clients, grudges, hired
+  guns, the log, first contact, the relic, parleys and the endings.
+- **Difficulty**, checked in both stories' whole walks (`storywhole.js`,
+  `storydrwhole.js`): every walk ends at every difficulty, and a Story walk
+  leaves the company better off than a Hard one. A company spends what it has
+  on growing between chapters, so better off means richer or higher in Tier,
+  and never lower in Tier.
+  - *Deep Contract*: kUC 31.6 against 25.5, Tier 2.9 against 2.8.
+  - *Dead Reckoning*: Tier 2.9 against 2.5.
+
 ---
 
 ## 8. Decisions
