@@ -512,6 +512,7 @@
           aboardDowned: !!u.lostAboard,
           weakened: !!u.weakened,
           ally: !!u.ally,                     // a story's allies: on side A, but on nobody's dossier
+          skin: u.skin || null,               // a story's reskinned force (the Hashamer's Esh-Aven): the story keeps their names
           owner: u.owner || null,             // co-op: whose unit it was (a campaign's co-op contract splits by it)             // Other Worlds: an unexplained weakness (+1 TP in a campaign)
           lostAboard: u.lostAboard || null,
           drugged: !!u.drugged,            // Drug Dealer: the comedown comes after

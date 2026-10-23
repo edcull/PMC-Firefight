@@ -22,6 +22,17 @@
   function R() { return root.PMC; }
   function C() { return root.PMCCamp; }
   function arr(x) { return x == null ? [] : Array.isArray(x) ? x : [x]; }
+  // a random from a seed: the same numbers every time (a battle's rolled filler, the same each time it is looked at)
+  function seeded(seed) {
+    var h = 2166136261 >>> 0, str = String(seed);
+    for (var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619) >>> 0;
+    return function () {
+      h = (h + 0x6D2B79F5) >>> 0;
+      var t = Math.imul(h ^ (h >>> 15), h | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
 
   /* ================= how big a battle ================= */
 
@@ -54,12 +65,15 @@
   /* ================= the enemy force ================= */
 
   function budget(tier, pl) { return R().COMPOSITION[tier].points * pl; }
-  function tierOf(key) { var p = R().profile(key); return p ? p.tier : 99; }
+  // (a pick can carry its drive or its riders: `lapc:wheeled`; its profile is the first part's)
+  function baseKey(key) { return String(key).split(':')[0]; }
+  function profileOf(key) { return R().profile(baseKey(key)); }
+  function tierOf(key) { var p = profileOf(key); return p ? p.tier : 99; }
 
   /* A unit above the battle's Tier comes down to the best of its kind that fits:
      a Tier I battle against the Front is the Front at Tier I. */
   function fit(key, tier, faction) {
-    var p = R().profile(key);
+    var p = profileOf(key);
     if (!p || p.tier <= tier) return key;
     var same = R().listFor(faction || p.faction).filter(function (q) {
       return q.tier <= tier && (q.cls || 'infantry') === (p.cls || 'infantry') && !q.mustDrone && !/^r?(cmd|instigators|secondary|leaders|influential|rebellion)/.test(q.key);
@@ -88,11 +102,15 @@
     var tier = ctx.tier, pl = ctx.pl, st = ctx.campaign.story, test = function (c) { return S.test(S.ctxOf(ctx.campaign), c); };
     var faction = f.faction || 'rebel';
     var picks = [], readiness = 0, tactics = f.tactics || null;
+    // the unit groups a force goes without (the Hashamer: no craft, no teleport turrets)
+    var without = arr(f.without);
+    function allowed(k) { var p = profileOf(k); return !p || without.indexOf(p.group) < 0; }
     function add(u) {
       var o = typeof u === 'string' ? { key: u } : Object.assign({}, u);
       var k = fit(o.key, tier, faction);
-      if (!k) return;
+      if (!k || !allowed(k)) return;
       o.key = k;
+      if (f.skin) o.skin = f.skin;
       picks.push(o);
     }
     /* The core: its named units always, and its troops, or the troops written
@@ -137,7 +155,7 @@
     // the leader for the Tier, unless the force names its own command
     if (f.leader !== false && ctx.leader !== false) {
       var lead = C().commandKey({ faction: faction }, tier);
-      if (lead && !picks.some(function (p) { return C().isLeaderKey(p.key); })) picks.unshift({ key: lead });
+      if (lead && !picks.some(function (p) { return C().isLeaderKey(baseKey(p.key)); })) picks.unshift(f.skin ? { key: lead, skin: f.skin } : { key: lead });
     }
     // the filler: up to a share of the battle's points, the meter and the company's allowance on top
     if (f.fill) {
@@ -147,11 +165,21 @@
         (ctx.allowance || 0) * (D.allowance != null ? D.allowance : 1) + (D.fill || 0) +
         (rd < 0 ? rd * 0.1 : 0);
       var want = budget(tier, pl) * share, have = picks.reduce(function (s, p) { return s + tierOf(p.key); }, 0);
-      var from = arr(f.fill.from).map(function (k) { return fit(k, tier, faction); }).filter(Boolean);
+      /* What it fills with: its archetype's own kind of force (`fill.archetype`),
+         rolled as a rival of that kind would field it at this Tier and PL, from
+         the battle's own seed so the same force comes every time it is looked
+         at; or the units the force wrote. */
+      var from = [], rolled = false;
+      if (f.fill.archetype && f.archetype && R().rollArmy) {
+        var army = R().rollArmy(tier, pl, seeded((ctx.seed || '') + ':' + f.archetype), faction, f.archetype) || [];
+        from = army.filter(function (k) { var p = profileOf(k); return p && !p.command && !p.alpha && !C().isLeaderKey(baseKey(k)) && allowed(k); });
+        rolled = from.length > 0;
+      }
+      if (!rolled) from = arr(f.fill.from).map(function (k) { return fit(k, tier, faction); }).filter(function (k) { return k && allowed(k); });
       for (var i = 0, guard = 0; from.length && have < want && guard < 60; guard++, i++) {
         var k = from[i % from.length], cost = tierOf(k);
-        if (have + cost > want + 0.5) { if (cost <= 1) break; from = from.filter(function (x) { return tierOf(x) < cost; }); continue; }
-        picks.push({ key: k });
+        if (have + cost > want + 0.5) { if (cost <= 1 && !rolled) break; from = from.filter(function (x) { return tierOf(x) < cost; }); continue; }
+        picks.push(f.skin ? { key: k, skin: f.skin } : { key: k });
         have += cost;
       }
     }
@@ -171,11 +199,16 @@
      0, word of them: how big, and what kind; 1, an outline: roughly how many
      of each kind, and who is with them by name; 2, every unit. Returns
      { level, word, items }: a line, and a list (empty at 0). */
+  // (`eshaven`: the Hashamer, a story's Xenotripods every one of them an Esh-Aven)
   var KINDS = {
-    troops: { rebel: 'bands of fighters', bugs: 'broods', pmc: 'squads', one: { rebel: 'band of fighters', bugs: 'brood', pmc: 'squad' } },
-    support: { rebel: 'heavy weapons', bugs: 'spitters and spore throwers', pmc: 'support teams', one: { rebel: 'heavy weapon', bugs: 'spitter', pmc: 'support team' } },
-    vehicle: { rebel: 'vehicles', bugs: 'great beasts', pmc: 'vehicles', one: { rebel: 'vehicle', bugs: 'great beast', pmc: 'vehicle' } },
-    air: { rebel: 'aircraft', bugs: 'fliers', pmc: 'aircraft', one: { rebel: 'aircraft', bugs: 'flier', pmc: 'aircraft' } }
+    troops: { rebel: 'bands of fighters', bugs: 'broods', pmc: 'squads', xeno: 'squads of Xenotripods', eshaven: 'hosts of Esh-Aven',
+      one: { rebel: 'band of fighters', bugs: 'brood', pmc: 'squad', xeno: 'squad of Xenotripods', eshaven: 'host of Esh-Aven' } },
+    support: { rebel: 'heavy weapons', bugs: 'spitters and spore throwers', pmc: 'support teams', xeno: 'heavy weapons', eshaven: 'heavy weapons',
+      one: { rebel: 'heavy weapon', bugs: 'spitter', pmc: 'support team', xeno: 'heavy weapon', eshaven: 'heavy weapon' } },
+    vehicle: { rebel: 'vehicles', bugs: 'great beasts', pmc: 'vehicles', xeno: 'turrets', eshaven: 'turrets',
+      one: { rebel: 'vehicle', bugs: 'great beast', pmc: 'vehicle', xeno: 'turret', eshaven: 'turret' } },
+    air: { rebel: 'aircraft', bugs: 'fliers', pmc: 'aircraft', xeno: 'craft', eshaven: 'craft',
+      one: { rebel: 'aircraft', bugs: 'flier', pmc: 'aircraft', xeno: 'craft', eshaven: 'craft' } }
   };
   var ORDER = ['troops', 'support', 'vehicle', 'air'];
   function kindOf(key) {
@@ -190,6 +223,7 @@
   function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
   function describeForce(force, level, faction) {
     var picks = (force && force.picks) || [], fac = KINDS.troops[faction] ? faction : 'rebel';
+    if (picks.some(function (p) { return p.skin === 'eshaven'; })) fac = 'eshaven';
     var lead = function (p) { return C() && C().isLeaderKey(p.key); };
     if (level >= 2) {
       return { level: 2, word: 'You know what they have, to the last squad.', items: picks.map(function (p) {
@@ -203,14 +237,14 @@
     var size = n <= 3 ? 'a small' : n <= 6 ? 'a sizeable' : n <= 9 ? 'a large' : 'a very large';
     if (level < 1) {
       var bits = [size + (swarm ? ' swarm' : ' force')];
-      bits.push(count.vehicle ? 'with ' + KINDS.vehicle[fac] : swarm ? 'all legs and jaws' : 'mostly on foot');
+      bits.push(count.vehicle ? 'with ' + KINDS.vehicle[fac] : swarm ? 'all legs and jaws' : fac === 'eshaven' ? 'Esh-Aven, every one of them' : 'mostly on foot');
       if (count.support) bits.push(KINDS.support[fac] + ' among them');
       if (count.air) bits.push('something in the air');
       return { level: 0, word: 'Word is: ' + bits.join(', ') + '. Nothing more.', items: [] };
     }
     var items = [];
     picks.forEach(function (p) { if (p.name) items.push({ name: p.name + ' is with them.' }); });
-    if (picks.some(function (p) { return lead(p) && !p.name; })) items.push({ name: swarm ? 'Something leads them.' : 'A commander leads them.' });
+    if (picks.some(function (p) { return lead(p) && !p.name; })) items.push({ name: swarm ? 'Something leads them.' : fac === 'xeno' ? 'An Alpha leads them.' : fac === 'eshaven' ? 'One of them wears an Alpha\u2019s crest.' : 'A commander leads them.' });
     ORDER.forEach(function (k) {
       if (count[k]) items.push({ name: cap(about(count[k])) + ' ' + (count[k] === 1 ? KINDS[k].one[fac] : KINDS[k][fac]) + '.' });
     });
@@ -235,8 +269,9 @@
     var picksA = opts.picks || [];
     var fielded = picksA.length ? picksA : co.roster;
     // (the changes held for this battle are already in spec.enemy: battleSpec put them there)
-    var enemy = buildForce(spec.enemy, { campaign: campaign, tier: tier, pl: pl, allowance: allowance(co, fielded), readiness: lv.readiness || 0 });
-    var allies = lv.allies ? buildForce(lv.allies, { campaign: campaign, tier: tier, pl: pl, leader: false }) : null;
+    var seed = spec.node + ':' + campaign.story.chapterNo;
+    var enemy = buildForce(spec.enemy, { campaign: campaign, tier: tier, pl: pl, allowance: allowance(co, fielded), readiness: lv.readiness || 0, seed: seed + ':B' });
+    var allies = lv.allies ? buildForce(lv.allies, { campaign: campaign, tier: tier, pl: pl, leader: false, seed: seed + ':A' }) : null;
     var keysA = picksA.map(function (e) { return R().entryPick(e); });
     var allyFrom = allies && allies.picks.length ? keysA.length : null;
     if (allies) allies.picks.forEach(function (p) { keysA.push(p.key); });
@@ -248,9 +283,25 @@
       if (p.name) x.name = p.name;
       if (p.rules) x.rules = p.rules;
       if (variant && variant.target && p.name === variant.target) x.target = true;
+      if (p.skin) x.skin = p.skin;
       if (Object.keys(x).length) units.B[i] = x;
     });
-    if (allies) allies.picks.forEach(function (p, i) { if (p.name || p.rules) units.A[allyFrom + i] = { name: p.name, rules: p.rules }; });
+    if (allies) {
+      /* Named allies (a story's reskinned force, the Hashamer): the living on
+         the story's roll come back by name, as many to a unit as it has men. */
+      var roll = campaign.story.roll && lv.allies.skin ? campaign.story.roll[lv.allies.skin] : null, names = roll ? roll.living.slice() : [];
+      allies.picks.forEach(function (p, i) {
+        var x = {};
+        if (p.name) x.name = p.name;
+        if (p.rules) x.rules = p.rules;
+        if (p.skin) {
+          x.skin = p.skin;
+          var pr = profileOf(p.key);
+          if (names.length && pr && pr.cls !== 'vehicle' && pr.cls !== 'aircraft') x.men = names.splice(0, pr.size || 1);
+        }
+        if (Object.keys(x).length) units.A[allyFrom + i] = x;
+      });
+    }
 
     var side = def.sides && spec.enemy && def.sides[spec.enemy.side] || {};
     /* The mission's own ground (deep-contract-maps.js): its pieces and objectives,
@@ -274,6 +325,14 @@
     var attacker = role === 'choose' ? opts.role || 'A' : ROLE[role] || null;
     var ambush = variant && variant.ambush ? (variant.ambush === 'player' ? 'A' : 'B') : null;
     var rd = enemy.readiness;
+    /* Where it is fought (the story's `place`): its kind of world, and the
+       world's conditions, Other Worlds switched on for this battle whatever
+       the campaign's options say. */
+    var place = spec.place || null, options = Object.assign({}, opts.options || campaign.options || {});
+    if (place && place.world) options.otherWorlds = true;
+    // the enemy's doctrines: its archetype's, one for each Battle Tier
+    var arch = spec.enemy && spec.enemy.archetype && C().archetype ? C().archetype(spec.enemy.archetype) : null;
+    var docsB = arch ? arch.doctrines.slice(0, tier) : [];
     return {
       tier: tier, pl: pl, scenario: spec.scenario,
       attacker: attacker,
@@ -281,18 +340,19 @@
       nameA: co.name, nameB: side.name || 'The enemy',
       colourA: opts.colourA || null, colourB: opts.colourB || null,
       dossier: { A: picksA.concat(allies ? allies.picks.map(function () { return null; }) : []), B: null },
-      doctrines: { A: (co.doctrines || []).slice(), B: [] },
+      doctrines: { A: (co.doctrines || []).slice(), B: docsB },
       tactics: { A: null, B: (spec.enemy && spec.enemy.faction === 'rebel') ? (spec.tactics || enemy.tactics) : null },
       campaign: true, mode: 'ai',
-      planet: lv.planet || (terrainPlan && map.planet) || spec.planet || 'random',
+      planet: lv.planet || (terrainPlan && map.planet) || (place && place.kind) || spec.planet || 'random',
       terrainPlan: terrainPlan,
-      world: lv.world || null,
-      options: opts.options || campaign.options || {},
+      world: lv.world || (place && place.world ? R().cleanWorld(place.world) : null),
+      options: options,
       story: {
         id: def.id, node: spec.node,
         // the mission: its name over the book's scenario, its ground, and the seed that lays it the same each time
         name: spec.name || null, blurb: spec.text ? S.render(campaign, spec.text) : null,
         mapName: map ? map.name : null, objectives: mapObjectives,
+        place: place ? { system: place.system || null, planet: place.planet || null, site: place.site || null } : null,
         seed: spec.node + ':' + spec.scenario + (east ? ':east' : ''),
         variant: variant,
         strikes: lv.strikes || null,

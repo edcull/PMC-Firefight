@@ -336,6 +336,9 @@ storyscenes.js     the story's places as pictures: each drawn the same every tim
                    every chapter card, battle map and ending with one
 storydr.js         Dead Reckoning as data: the validator, its forces (archetypes; the Hashamer all Esh-Aven, no
                    craft or teleport turrets), the hired guns, and 6,000 seeded walks (endings, one-offs, finales)
+storyforces.js     Dead Reckoning's battles in the engine: every one set up and started; its place (kind of world,
+                   conditions); forces from archetypes (filler, doctrines); the leading rival; the Hashamer reskinned
+                   as Esh-Aven, named one by one, and their roll of the living and the dead carried between battles
 storyside.js       HTX's bonus by HTX Standing, and the side contracts: offered at an interlude, taken
                    (a battle of its own, then back) or passed up, catching up, and cut off from HTX
 storywhole.js      Deep Contract from Landfall to an ending, 30 times with made-up results: endings and epilogues,

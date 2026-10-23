@@ -39,7 +39,8 @@
       side: id, faction: 'pmc', archetype: r.archetype,
       core: r.core.slice(),
       optional: { meter: id === 'lance' ? 'lance' : id, per: 2, units: r.units },
-      fill: { to: 0.85, from: r.fill, meter: id === 'lance' ? 'lance' : id, step: 0.05 },
+      // the filler: the archetype's own kind of force (levers.js), the units written here if it can't be rolled
+      fill: { to: 0.85, archetype: true, from: r.fill, meter: id === 'lance' ? 'lance' : id, step: 0.05 },
       changes: [
         { if: { flag: 'kestrel_filmed' }, readiness: 1 },          // they have seen how the company fights
         { if: { meter: 'lead', lte: -3 }, readiness: 1 }           // dug in before the company got there
@@ -60,7 +61,7 @@
       side: id, faction: 'xeno', archetype: id,
       core: t.core.slice(),
       optional: { meter: 'alarm', per: 2, units: t.units },
-      fill: { to: 0.85, from: t.fill, meter: 'alarm', step: 0.05 }
+      fill: { to: 0.85, archetype: true, from: t.fill, meter: 'alarm', step: 0.05 }
     }, extra);
   }
   // the Hashamer: Xenotripod units, every one an Esh-Aven, with no craft and no teleport turrets
@@ -114,7 +115,7 @@
     if (o.after) nodes.push(Object.assign({ type: 'event' }, o.after));
     if (!o.finale) nodes.push(interlude(id + '.interlude', 'pool'));
     return { id: id, half: 2, thread: o.thread, title: o.title, when: o.when, fallback: !!o.fallback, finale: !!o.finale,
-      passed: o.passed, onStart: o.onStart, place: o.place, nodes: nodes };
+      passed: o.passed, onStart: o.onStart, place: o.place, rival: o.rival, nodes: nodes };
   }
   // a side contract's cost in time: in the second half the rivals gain while you are away
   var LATE_TIME = { if: { chapter: { gte: 5 } }, meter: 'lead', add: -1 };
@@ -235,6 +236,11 @@
       patron: { name: 'The Patron', pressure: [{ meter: 'vane', w: -1 }, { meter: 'lance', w: 0.5 }, { flag: 'vane_suspects', w: 2 }, { flag: 'vane_cut_off', w: 3 }, { flag: 'owed_vane', w: 1 }] }
     },
     picks: 3,
+    /* The Race is run against the leading rival: the strongest of these when a
+       chapter that asks for one begins (story.js leadingRival), Kestrel first on a
+       tie (it always gets there first), each fielding its own force. */
+    leading: { from: ['kestrel', 'kettle', 'wraith', 'sable', 'reavers'] },
+    rivals: { kestrel: rival('kestrel'), kettle: rival('kettle'), wraith: rival('wraith'), sable: rival('sable'), reavers: rival('reavers') },
     // the Quiet wakes: whatever finale was due, it is Recall
     finaleOverride: [{ if: { meter: 'alarm', gte: 8 }, chapter: 'recall' }],
 
@@ -555,15 +561,16 @@
           { id: 'hand', text: 'Hand them in.', effects: [{ meter: 'vane', add: 1 }] },
           { id: 'turn', text: 'Turn them.', effects: [{ meter: 'intel', add: 2 }, { flag: 'wraith_turned' }] }
         ] } }),
-      poolChapter({ id: 'landing', thread: 'race', finale: true, title: 'The Landing', place: Object.assign({ site: 'the landing field' }, QUIET),
+      poolChapter({ id: 'landing', thread: 'race', finale: true, rival: 'leading', title: 'The Landing', place: Object.assign({ site: 'the landing field' }, QUIET),
         brief: 'The leading rival holds the only landing field on the Quiet.',
         before: { id: 'landing.field', title: 'The field', text: 'They are dug in.', options: [
           { id: 'alone', text: 'Go in alone.', battle: { role: 'attacker' } },
           hireOption('kettle', 'Hire Coin & Kettle for the landing.'),
           hireOption('reavers', 'Hire the Reavers for the landing.')
         ] },
-        battle: { scenario: 'takeover', role: 'attacker', tier: 'max', pl: 'max', planet: 'dense', variant: { target: 'Kestrel Lead' },
-          enemy: rival('kestrel', { optional: { meter: 'theirs', per: 1, units: ['lapc', 'lifv', 'recruits', 'rookie', 'lpv'] } }),
+        // the leading rival, whoever it is, its commander the target; the more lodestones it holds, the readier it is
+        battle: { scenario: 'takeover', role: 'attacker', tier: 'max', pl: 'max', planet: 'dense', variant: { target: 'leading' },
+          enemy: { rival: 'leading', changes: [{ if: { meter: 'theirs', gte: 4 }, readiness: 1 }] },
           adjust: [
             { if: { flag: 'kettle_partner' }, levers: { allies: HIRE.kettle } },
             { if: { all: [{ flag: 'contact' }, ESHAVEN_WITH_YOU] }, levers: { allies: ESHAVEN_ALLIES } },

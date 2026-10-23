@@ -36,12 +36,31 @@
           if (x.name) { u.name = x.name; u.label = x.name + ' [' + u.side + ']'; }
           if (x.rules) x.rules.forEach(function (r) { if (u.rules.indexOf(r) < 0) u.rules.push(r); });
           if (x.target) u.storyTarget = true;
+          if (x.skin) skin(u, x);
         }
         if (u.side === 'A' && sty.allyFrom != null && u.pickIdx != null && u.pickIdx >= sty.allyFrom) {
           u.ally = true; u.paint = 'C'; allies = true;
         }
       });
       if (allies) state.allies = { side: 'A' };
+    }
+
+    /* A unit in a story's reskinned force: the Hashamer's Esh-Aven, a
+       Xenotripod unit with its own numbers and rules, drawn, named and counted
+       as an Esh-Aven, each one named (`named`: never only a count), and the
+       names the story kept from their last battle carried into this one. */
+    var CASTE = /^x_(alpha|beta|gamma|delta)(\d)$/;
+    function skin(u, x) {
+      u.skin = x.skin;
+      if (x.skin !== 'eshaven' || R.isMachine(u)) return;
+      u.named = true;
+      if (x.men && x.men.length) u.storyMen = x.men.map(function (n) { return { name: n }; });
+      var m = CASTE.exec(u.art || '');
+      if (m) u.art = 'x_eps' + Math.max(1, Math.min(5, +m[2]));
+      if (!x.name) {
+        u.name = 'Esh-Aven ' + u.name.charAt(0).toLowerCase() + u.name.slice(1);
+        u.label = u.name + ' [' + u.side + ']';
+      }
     }
 
     /* 'D3', 'D6', 'D3+PL', '2D3' or a plain number, rolled. */

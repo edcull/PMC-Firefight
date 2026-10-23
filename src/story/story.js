@@ -360,6 +360,8 @@
     Object.keys(st.flags).forEach(function (f) { if (st.flags[f] === 'local') delete st.flags[f]; });
     st.chapter = ch.id;
     if (ch.counts !== false) st.chapterNo++;
+    // a chapter against the leading rival fixes which one as it begins, so a reload meets the same
+    if (ch.rival === 'leading') st.leading = leadingRival(campaign);
     st.played[ch.id] = true;
     st.tokens = {};
     var ctx = ctxOf(campaign), lines = [];
@@ -475,6 +477,42 @@
   /* What the battle at this node should be: the node's own setting, the levers
      the event before it chose, and any short-term change held for it. The
      battle hooks (phase 2) turn this into the engine's cfg. */
+  /* The leading rival: the strongest of the story's rivals (`leading.from`, each
+     a meter), the first written winning a tie. */
+  function leadingRival(campaign) {
+    var def = storyOf(campaign), st = campaign.story, from = arr(def.leading && def.leading.from);
+    var best = null;
+    from.forEach(function (id) { if (best == null || (st.meters[id] || 0) > (st.meters[best] || 0)) best = id; });
+    return best;
+  }
+
+  /* A story's roll of named allies (the Hashamer's Esh-Aven): the names of the
+     living, handed to their next battle, and the fallen, by name. Kept by the
+     skin the force wears. */
+  function keepRoll(campaign, report) {
+    var st = campaign.story, roll = st.roll = st.roll || {};
+    var skinned = (report.units || []).filter(function (u) { return u.side === 'A' && u.ally && u.skin; });
+    if (!skinned.length) return;
+    var ids = {};
+    skinned.forEach(function (u) { ids[u.rid] = u.skin; });
+    Object.keys(ids).forEach(function (rid) {
+      var k = ids[rid], r = roll[k] = roll[k] || { living: [], fallen: [], last: [] };
+      r.last = [];
+    });
+    skinned.forEach(function (u) {
+      var r = roll[u.skin];
+      (u.men || []).forEach(function (m) { var n = m.name || m; if (r.living.indexOf(n) < 0) r.living.push(n); });
+    });
+    (report.casualties || []).forEach(function (c) {
+      var k = ids[c.rid];
+      if (!k || !c.name) return;
+      var r = roll[k];
+      r.living = r.living.filter(function (n) { return n !== c.name; });
+      if (r.fallen.indexOf(c.name) < 0) r.fallen.push(c.name);
+      r.last.push(c.name);
+    });
+  }
+
   function battleSpec(campaign) {
     var st = campaign.story, def = storyOf(campaign), node = nodeAt(campaign);
     if (!node || node.type !== 'battle') return null;
@@ -482,8 +520,25 @@
       node: node.id, scenario: node.scenario, variant: clone(node.variant) || null, name: node.name || null, map: node.map || null,
       text: node.text || null,
       tier: node.tier || 'max', pl: node.pl || 1, planet: node.planet || null, tactics: node.tactics || null, role: node.role || null,
-      enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, waves: clone(node.waves) || null, levers: clone(st.pending) || {}
+      enemy: clone(node.enemy) || null, allies: clone(node.allies) || null, waves: clone(node.waves) || null, levers: clone(st.pending) || {},
+      // where it is fought: the battle's own place, else its chapter's ({ system, planet, kind, world, site })
+      place: clone(node.place || (def._chapters[node._chapter] || {}).place) || null
     };
+    /* A battle against the leading rival (`enemy: { rival: 'leading' }`): the
+       rival the chapter named when it began, its own force (the story's
+       `rivals`) with what the battle adds; a target of 'leading' is its
+       commander. */
+    if (spec.enemy && spec.enemy.rival === 'leading') {
+      var lead = st.leading || leadingRival(campaign), base = clone((def.rivals || {})[lead]) || {};
+      var add = spec.enemy;
+      delete add.rival;
+      spec.enemy = Object.assign(base, add, { changes: arr(base.changes).concat(arr(add.changes)) });
+      if (add.optional) spec.enemy.optional = add.optional;
+      if (spec.variant && spec.variant.target === 'leading') {
+        var cmd = arr(base.core).filter(function (u) { return typeof u !== 'string' && u.name; })[0];
+        spec.variant.target = cmd ? cmd.name : null;
+      }
+    }
     st.next.forEach(function (n) {
       if (n.battle !== node.id) return;
       spec.levers = mergeLevers(spec.levers, n.levers || {});
@@ -586,6 +641,7 @@
       st.fielded = (result.units || []).filter(function (u) { return u.side === 'A' && u.rid; }).map(function (u) { return u.rid; });
       st.lastWiped = (result.units || []).filter(function (u) { return u.side === 'A' && !u.free && !u.ally && (u.wiped || u.destroyed); }).length;
       st.lastTarget = result.story && result.story.target || null;
+      keepRoll(campaign, result);
     } else st.lastWiped = 0, st.lastTarget = null;
     st.lastGrade = g;
     var ctx = ctxOf(campaign, { grade: g });
@@ -959,8 +1015,14 @@
     var s = text.replace(/\{if (not )?([a-z0-9_]+)\}([\s\S]*?)\{\/if\}/g, function (m, not, f, body) {
       return holds(f) !== !!not ? body : '';
     });
-    return s.replace(/\{(name|commander(?::rank)?|meter:[a-z0-9_]+|unit:[a-z]+|soldier:[a-z]+)\}/g, function (m, k) {
+    return s.replace(/\{(name|commander(?::rank)?|meter:[a-z0-9_]+|unit:[a-z]+|soldier:[a-z]+|(?:fallen|dead):[a-z]+)\}/g, function (m, k) {
       if (k === 'name') return co ? co.name : 'the company';
+      // a story's named allies, by their skin: {fallen:eshaven}, those lost in the last battle; {dead:eshaven}, every one lost
+      if (/^(fallen|dead):/.test(k)) {
+        var r = (st.roll || {})[k.split(':')[1]];
+        var names = r ? (k.indexOf('dead:') === 0 ? r.fallen : r.last) : [];
+        return names.length ? names.join(', ') : 'nobody';
+      }
       if (k === 'commander' || k === 'commander:rank') return commanderWords(campaign, k === 'commander:rank' ? 'rank' : 'name');
       if (k.indexOf('meter:') === 0) return String(st.meters[k.slice(6)]);
       var u = tokenUnit(campaign, k.split(':')[1]);
@@ -1014,7 +1076,7 @@
     battleSpec: battleSpec, intel: intel, difficultyOf: difficultyOf, takeSide: takeSide, nodeAt: nodeAt, grade: grade, resolveBattle: resolveBattle, forfeit: forfeit,
     test: test, apply: apply, roll: roll, pressure: pressure, finaleChapter: finaleChapter,
     endingFor: endingFor, epilogue: epilogue, broken: broken, breakCompany: breakCompany,
-    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf, talkFor: talkFor, allyVoice: allyVoice,
+    checkpoint: checkpoint, rewind: rewind, render: render, ctxOf: ctxOf, leadingRival: leadingRival, talkFor: talkFor, allyVoice: allyVoice,
     GRADES: GRADES, COND_KEYS: COND_KEYS, CMP: CMP, EFFECT_KEYS: EFFECT_KEYS
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCStory;

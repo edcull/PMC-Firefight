@@ -877,6 +877,49 @@ The audit for more than one story. A chapter's `place` and forced worlds. Forces
 by archetype (PMC and Xenotripod), doctrines on side B, the Xenotripod dossier
 words and leader. `storyforces.js`.
 
+**Where it stands.** Every one of *Dead Reckoning*'s 23 battles is set up from the
+story and started in the engine (`test/unit/storyforces.js`), and none played.
+- **More than one story.** Nothing outside the story files named *Deep Contract*
+  but comments: the text, maps and talk were already keyed by the story's id.
+- **The place.** A battle's own `place`, else its chapter's: its kind of world is
+  the table (`cfg.planet`), and its conditions are the battle's (`cfg.world`, by
+  `R.cleanWorld`, so a place need only name what is out of the ordinary), with
+  Other Worlds switched on for that battle only; the campaign's own options are
+  left as they were. The briefing gets the system, planet and site
+  (`cfg.story.place`). The validator checks each place's kind and conditions.
+- **Forces by archetype.** A force's `archetype` gives side B its doctrines (the
+  archetype's, one for each Battle Tier). With `fill.archetype`, the filler is
+  rolled as a rival of that archetype would field it at this Tier and PL
+  (`R.rollArmy` with its style), from the battle's own seed, so the same force
+  comes every time it is looked at; the units written in `fill.from` are the
+  fallback. Wraith Section fills with observers, sharpshooters, recon and
+  electronic warfare; Sable with battle armour and hunters; the Ulvar with
+  turrets. The validator checks every archetype exists.
+- **Xenotripods.** A Xenotripod force takes an Alpha for the Tier as its leader;
+  the briefing tells them as squads of Xenotripods, turrets and craft, and "An
+  Alpha leads them".
+- **Groups left out.** `without: [groups]`: no core, optional, filler or Readiness
+  unit from those groups. The Hashamer field no craft and no teleport turret at
+  any Tier, PL or Alarm.
+- **The leading rival.** A chapter with `rival: 'leading'` fixes, as it begins,
+  the strongest of the story's `leading.from` (Kestrel first on a tie), so a
+  reload meets the same rival; a battle's `enemy: { rival: 'leading' }` becomes
+  that rival's own force from the story's `rivals`, and a target of `'leading'`
+  its commander. *The Landing* is fought this way.
+- **The Esh-Aven.** A force with `skin: 'eshaven'` (the Hashamer, enemy or ally)
+  puts the skin on each unit: every trooper drawn as an Esh-Aven (the Epsilons'
+  figures for now; their own in phase 4) and named one ("Esh-Aven core Delta
+  troopers"), with its own profile unchanged. Each one is named (`named`: never
+  only a count, `R.counted`), in their manner (`R.eshavenName`: *Keeps-the-Ridge*,
+  *Seven-Follows-the-Gate*), and the battle report carries the skin. The story
+  keeps their roll (`story.roll.eshaven`: the living, the fallen, the last
+  battle's dead) from each report; the next battle they fight in brings the living
+  back by name and names new ones to fill the ranks. Text can say the dead:
+  `{fallen:eshaven}` (the last battle's), `{dead:eshaven}` (all of them).
+
+Not yet: the hired allies answering back and walking off (phase 5), the relic
+(phase 2), the Esh-Aven's own figures (phase 4).
+
 ### Phase 2: the relic variant
 `variant: { relic: true }`, the report, the condition, the AI's goal.
 `storyrelic.js`. The Dig only if the relic variant plays badly.

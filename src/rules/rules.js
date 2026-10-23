@@ -2111,8 +2111,21 @@
     return n;
   }
   // one name, of the kind the unit's side would give
+  /* The Hashamer's Esh-Aven named themselves when their masters left, in the
+     masters' manner: a thing done and a place held (Keeps-the-Ridge,
+     Seven-Holds-the-Staff). A story gives a force that skin (`skin: 'eshaven'`). */
+  var ESH_FIRST = ['', '', '', 'Seven-', 'Second-', 'Third-', 'Ninth-', 'Last-', 'First-'];
+  var ESH_DEED = ['Holds', 'Keeps', 'Watches', 'Carries', 'Walks', 'Guards', 'Remembers', 'Mends', 'Follows', 'Waits-at', 'Stands-at', 'Down', 'Up'];
+  var ESH_PLACE = ['Ridge', 'Staff', 'Road', 'Well', 'Wall', 'Gate', 'Stone', 'Dune', 'Fire', 'Banner', 'Tower', 'Path', 'Water', 'Line', 'Pass', 'Door'];
+  function eshavenName() {
+    var deed = pickOf(ESH_DEED), first = pickOf(ESH_FIRST);
+    // ("Down" and "Up" are a place reached: Last-Down-the-Road)
+    if ((deed === 'Down' || deed === 'Up') && !first) first = pickOf(['Last-', 'First-']);
+    return first + deed + '-the-' + pickOf(ESH_PLACE);
+  }
   function soldierName(u) {
     var f = u.faction || 'pmc';
+    if (u.skin === 'eshaven') return eshavenName();
     if (f === 'xeno') return syllables(XENO_SYL, 2, 3) + ' ' + syllables(XENO_SYL, 2, 3);
     return humanName(f === 'rebel');
   }
@@ -2145,6 +2158,8 @@
      Esh-Aven, and penal troops, whose collars kill them off (Expendable, p. 57). */
   function counted(u) {
     if (!u) return false;
+    // (a story's Hashamer are Esh-Aven who name their dead: `named` on the unit)
+    if (u.named) return false;
     var p = BY_KEY[u.key];
     return u.faction === 'bugs' || !!u.eshAven || !!(p && p.eshAven) || !!(p && (p.rules || []).indexOf('Expendable') >= 0);
   }
@@ -2535,6 +2550,6 @@
     PROPULSION: PROPULSION, PROP_ORDER: PROP_ORDER, splitPick: splitPick, joinPick: joinPick,
     propsFor: propsFor, propOf: propOf, applyPropulsion: applyPropulsion, drives: drives,
     defaultDrive: defaultDrive, lookDrive: lookDrive, DEFAULT_DRIVE: DEFAULT_DRIVE,
-    soldierName: soldierName, rankFor: rankFor, roleFor: roleFor, crewSize: crewSize, crewed: crewed, overgrown: overgrown, beastName: beastName, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
+    soldierName: soldierName, eshavenName: eshavenName, rankFor: rankFor, roleFor: roleFor, crewSize: crewSize, crewed: crewed, overgrown: overgrown, beastName: beastName, musterMen: musterMen, syncMen: syncMen, counted: counted, survivors: survivors, biomassOf: biomassOf
   };
 })(window);

@@ -28,7 +28,8 @@ function ok(name, cond, note) {
 }
 
 console.log('\nThe graph');
-const r = V.check(dr, { scenarios: SC.SCENARIOS, profile: R.profile });
+const KINDS = ['desert', 'arctic', 'sparse', 'dense', 'industrial', 'jungle', 'mountain', 'unstable'];
+const r = V.check(dr, { scenarios: SC.SCENARIOS, profile: R.profile, archetype: require('../../server/rules.js').C.archetype, kinds: KINDS, world: R.WORLD_ROLL });
 ok('the validator finds nothing wrong', r.errors.length === 0, r.errors.slice(0, 3).join(' | '));
 ok('...and warns of nothing', r.warnings.length === 0, r.warnings.slice(0, 3).join(' | '));
 ok('both stories are registered, side by side', !!S.get('deep-contract') && S.get('dead-reckoning') === dr, S.list().map((d) => d.id).join(', '));

@@ -559,7 +559,8 @@
        survivors from the dossier; the gaps, and every other unit, are filled
        with fresh names, none repeated on the table. */
     state.namesTaken = {};
-    state.units.forEach(function (u) { R.musterMen(u, u.camp && u.camp.men, state.namesTaken); });
+    // (a story's named allies bring the names it kept for them: storybattle.js)
+    state.units.forEach(function (u) { R.musterMen(u, (u.camp && u.camp.men) || u.storyMen, state.namesTaken); });
     /* Paint the two companies. A colour the caller did not name is rolled from
        whatever the other side is not already wearing. */
     var ca = cfg.colourA && COLOURS.indexOf(cfg.colourA) >= 0 ? cfg.colourA : 'ochre';
