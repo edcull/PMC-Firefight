@@ -78,7 +78,7 @@ async function cards(p) {
     /Captain/.test(talk[0].who) && talk.some((l) => /Hale/.test(l.who)) && talk.some((l) => l.mine) && /Okonkwo/.test(talk[talk.length - 1].who), JSON.stringify(talk.map((l) => l.who)));
   await p.evaluate(() => document.querySelector('#camp-body .story-talk').scrollIntoView());
   await p.screenshot({ path: path.join(SHOTS, 'story-arrival.png') });
-  check('the commander is named in the story: Second Lieutenant Okafor', /Mara Okafor is on the first shuttle/.test(txt) && /addressed to Second Lieutenant Okafor/.test(txt), txt.slice(0, 600));
+  check('the commander is named in the story: Second Lieutenant Okafor', /Mara Okafor is on the first shuttle/.test(txt) && /Welcome to Kessler’s Reach, Second Lieutenant Okafor/.test(txt), txt.slice(0, 600));
   const officer = await p.evaluate(() => { const c = window.PMC_CAMPAIGN.get(), co = c.companies.A, e = co.roster.find((x) => x.rid === co.cmdRid); return e && e.men && e.men[0]; });
   check('...and is the officer at the head of the command squad', officer && officer.name === 'Mara Okafor', JSON.stringify(officer));
   check('...with the meters the company can see (and not the hidden ones)', /HTX Standing/.test(txt) && /Loyalty/.test(txt) && !/Hive Growth/.test(txt));

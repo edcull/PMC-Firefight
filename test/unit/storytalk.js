@@ -39,8 +39,11 @@ ok('...written out: no braces, the commander named', t.every((l) => !/[{}]/.test
 t = talkAt('revenge.battle', { varga_dead: true });
 ok('by what has happened, before anything else: Varga dead, the Front speaks for her', [...Array(20)].every(() => /Varga/.test(talkAt('revenge.battle', { varga_dead: true }).find((l) => l.on === 'start').text)));
 ok('...the school shelled, Pit Nine says so', [...Array(20)].every(() => /school/.test(talkAt('c4.battle', { pit9_shelled: true }).find((l) => l.on === 'start').text)));
-t = talkAt('holdline.battle', { truce: true });
+t = talkAt('holdline.battle', { truce: true, varga_released: true });
 ok('...in a truce, Varga holds the pass beside you', t.find((l) => l.on === 'start').who === 'varga');
+ok('...but not if she is in a cell, or dead: the Front speaks for itself', ['varga_held', 'varga_dead', 'varga_handed'].every((f) =>
+  [talkAt('holdline.battle', { truce: true, [f]: true }), talkAt('ceasefire.battle', { [f]: true })].every((x) => !x.some((l) => l.who === 'varga'))) &&
+  ['ceasefire.brief', 'redoubt.brief', 'holdline.brief', 'splinter.brief'].every((n) => !S.view(at(n, { truce: true, varga_held: true })).talk.some((l) => l.who === 'varga')));
 t = talkAt('hiveheart.battle');
 ok('the hive: chittering and the company net, and the waves', t.some((l) => l.on === 'wave') && t.every((l) => ['hive', 'ops'].indexOf(l.who) >= 0));
 const people = new Set();

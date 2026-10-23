@@ -59,19 +59,18 @@
 
       // ---- the contract ----
       'c2.brief': [
-        { who: 'liaison', text: 'Two problems, {commander:rank}, and one budget. The Front has Number Three refinery under siege, and forty of our night shift are still inside.' },
-        { who: 'liaison', text: 'And a deserter has sold us their supply depot, in the old ore yards. Hit it, and the Front runs dry.' },
-        { who: 'commander', text: 'And the night shift?' },
-        { who: 'liaison', text: 'Is insured.' },
-        { who: 'guild', text: 'Guild to whoever’s listening. Forty men in Number Three, with families in the Pits. Don’t let HTX tell you they’re numbers.' },
+        { who: 'liaison', text: 'You’ve seen the sheet, {commander:rank}. Two jobs, one budget. HTX would like an answer by morning.' },
+        { who: 'commander', text: 'And the night shift in Number Three?' },
+        { who: 'liaison', text: 'Is insured. The depot is the better buy. Starve the Front of guns, and the refinery sorts itself out.' },
+        { who: 'guild', text: 'Guild to whoever’s listening. Those are our people in Number Three, with families in the Pits. Don’t let HTX tell you they’re numbers.' },
         { who: 'ops', text: 'Trucks are fuelled both ways, {commander:rank}. Your call.' }
       ],
       'c3.brief': [
-        { who: 'liaison', text: 'We’ve found her. Ada Varga, at the pumping station above the old workings. Take her, and this ends.' },
+        { who: 'liaison', text: 'We’ve found her. Ada Varga, at the pumping station above the old workings. Finish her, and this ends.' },
         { who: 'commander', text: 'Your map has the levels under it marked in red.' },
         { who: 'liaison', text: 'Sealed levels. Unsafe. You will not need to go down there.' },
         { who: 'ops', text: 'Picking her up on an open channel, {commander:rank}. She’s talking to us.' },
-        { who: 'varga', text: 'So HTX sent its dogs. Come up the hill, {name}. But ask HTX what’s under it first.' }
+        { who: 'varga', text: 'So HTX sent its dogs. Come and get me, {name}. But ask HTX what’s under the station first.' }
       ],
       'c4.brief': [
         { who: 'liaison', text: 'Pit Nine has gone over. Six thousand people. Our site manager stopped answering last night.' },
@@ -83,16 +82,16 @@
       ],
       'sump.brief': [
         { who: 'ops', text: 'Lights low. We lose the surface net past the second level.' },
-        { who: 'commander', text: 'These tunnels aren’t mine workings. Look at the walls.' },
-        { who: 'ops', text: 'Something cut these. Recently.' },
-        { who: 'liaison', text: '{commander:rank}, you are in a restricted area. Return to the surface immedi—' },
+        { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: '{commander:rank}, you are in a restricted area. Return to the surface immedi—' },
+        { who: 'commander', text: 'These aren’t mine workings. Look at the walls.' },
+        { who: 'ops', text: 'Something cut these. And not long ago.' },
         { who: 'hive', text: '[far below, something answers the echo of your boots]' }
       ],
       'relief.brief': [
-        { who: 'liaison', text: 'HTX thanks {name} for its service. Your contract is terminated, effective at dawn. Black Lantern Security will take over.' },
+        { who: 'liaison', text: 'HTX thanks {name} for its service. Your contract is terminated, effective at dawn.' },
         { who: 'commander', text: 'Terminated. Because I asked questions.' },
-        { who: 'liaison', text: 'Because you were slow and expensive. Hand over your sector and you’ll be paid to date.' },
-        { who: 'actual', text: 'Lantern Actual, on the pad. I’d rather do this the easy way, {commander:rank}. Your call.' },
+        { who: 'liaison', text: 'Because you were slow and expensive. Hand over your sector to your relief, and you’ll be paid to date.' },
+        { who: 'ops', text: 'Six dropships inbound for dawn, {commander:rank}. Black Lantern colours. Those aren’t cargo haulers.' },
         { who: 'okonkwo', text: 'My people won’t take orders from HTX’s new dogs. Whatever you decide, the port is with you.' }
       ],
 
@@ -101,45 +100,48 @@
         { who: 'ops', text: 'Every channel’s a mess, {commander:rank}. The Front’s split, the shafts howl every night, and HTX sends a new order every hour.' },
         { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'HTX will go on paying for results. Only for results.' },
         { who: 'ops', if: { flag: 'htx_cut_off' }, text: 'And HTX has stopped answering. Accounts says the last payment bounced.' },
-        { who: 'commander', text: 'Then we choose our own work. Every job we leave goes on without us.' },
+        { who: 'commander', text: 'Then we pick our own work, and live with what we leave.' },
         { who: 'guild', text: 'The miners will talk to you now, if you’ll listen.' }
       ],
       'retake.brief': [
         { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'Number Three. HTX wants its refinery back, and its tank farm in one piece.' },
         { who: 'guild', text: 'Half the men in there used to work it. Don’t burn it down round them.' },
         { who: 'fighter', text: 'Number Three belongs to the people who sweat in it. Come and take it, if you can.' },
-        { who: 'ops', text: 'They’ve got the cracking tower as a lookout. They’ll see us coming a mile off.' }
+        { who: 'ops', text: 'They’ve had weeks to dig in, {commander:rank}. This won’t be quick.' }
       ],
       'revenge.brief': [
         { who: 'fighter', if: { flag: 'varga_dead' }, name: 'Tomas Varga', role: 'Her brother, and the Front now', text: 'You killed my sister. I was a schoolteacher, {commander:rank}. You made me this.' },
-        { who: 'varga', if: { flag: 'varga_free' }, text: 'I said I’d come back. The ridges, at dawn. Bring all of them.' },
+        { who: 'varga', if: { flag: 'varga_free' }, text: 'You should have finished it at the pumping station, {commander:rank}. You won’t get another chance.' },
         { who: 'ops', text: 'Every Front cell on the ridges is moving. They’re coming for us, not for HTX.' },
         { who: 'commander', text: 'Then we meet them on ground we choose.' }
       ],
       'splinter.brief': [
         { who: 'fighter', name: 'The cell', role: 'The hill country', text: 'The Front talks. We don’t. Every camp, every convoy, until HTX leaves this moon.' },
-        { who: 'varga', if: { not: { flag: 'varga_dead' } }, text: 'They aren’t mine any more. They won’t listen to me, and they won’t stop.' },
+        { who: 'varga', if: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] }, text: 'They aren’t mine any more. They won’t listen to me, and they won’t stop.' },
         { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'Their bomb-maker took out a survey camp yesterday. HTX wants him.' },
         { who: 'ops', text: 'Woods round the old mine head. They’ll see us long before we see them.' },
         { who: 'commander', text: 'Then we go in quiet, and we find the bomb-maker first.' }
       ],
       'redoubt.brief': [
-        { who: 'varga', if: { flag: 'truce' }, text: 'The hardliners won’t take the truce. They’ve gone up to the redoubt. Finish it, {commander:rank}, before they finish the peace.' },
+        { who: 'varga', if: { all: [{ flag: 'truce' }, { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] }] }, text: 'The hardliners won’t take the truce. Finish it, {commander:rank}, before they finish the peace.' },
+        { who: 'front', if: { all: [{ flag: 'truce' }, { not: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] } }] }, text: 'The hardliners won’t take the truce, and they won’t listen to us. Finish it, {commander:rank}, before they finish the peace.' },
         { who: 'fighter', if: { not: { flag: 'truce' } }, text: 'This hill is the last free ground on Kessler’s Reach. We are not leaving it.' },
         { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'End it. HTX will pay for the shells.' },
-        { who: 'commander', text: 'Trenches, wire, a bunker. They’ve nowhere left to fall back to.' },
-        { who: 'ops', text: 'Then they’ll fight like it.' }
+        { who: 'commander', text: 'They chose their hill. Let’s see if they chose well.' },
+        { who: 'ops', text: 'They’ve had weeks up there, {commander:rank}. They’ll fight for every yard of it.' }
       ],
       'ceasefire.brief': [
-        { who: 'varga', text: 'I’ll talk, {commander:rank}. At the way station. Not because I trust you. Because the shafts are getting louder.' },
+        { who: 'varga', if: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] }, text: 'I’ll talk, {commander:rank}. At the way station. Not because I trust you. Because the shafts are getting louder.' },
+        { who: 'front', if: { not: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] } }, text: 'The Front will talk, {commander:rank}. At the way station. Not because we trust you. Because the shafts are getting louder.' },
         { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'HTX has authorised no negotiation. Whatever you agree, we don’t.' },
         { who: 'commander', text: 'Then I’ll agree it without you.' },
-        { who: 'guild', text: 'Nobody has stopped shooting long enough to sit down in two months. Make it happen, and the whole moon owes you.' }
+        { who: 'guild', text: 'Make it happen, {commander:rank}, and the whole moon owes you.' }
       ],
       'holdline.brief': [
-        { who: 'guild', text: 'They’re coming through the pass: everyone who lived out past the shafts. Families. Front fighters. Everyone.' },
+        { who: 'guild', text: 'They’re coming through the pass, everyone from out past the shafts. Families. Front fighters. All of them.' },
         { who: 'ops', text: 'The trackers behind them are solid. The bugs are a mile back, and closing.' },
-        { who: 'varga', if: { flag: 'truce' }, text: 'My people will hold beside yours. For once we’re on the same side of something.' },
+        { who: 'varga', if: { all: [{ flag: 'truce' }, { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] }] }, text: 'My people will hold beside yours. For once we’re on the same side of something.' },
+        { who: 'front', if: { all: [{ flag: 'truce' }, { not: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] } }] }, text: 'The Front will hold beside you. For once we’re on the same side of something.' },
         { who: 'commander', text: 'Nobody gets left on the wrong side of that pass.' }
       ],
       'outbreak.brief': [
@@ -332,7 +334,7 @@
           { who: 'okonkwo', text: 'Port Master to {name}: they’re through the terminal! Get on those pads before they shut down the port!' },
           { who: 'fighter', text: 'Here come HTX’s new dogs. Welcome to Kessler’s Reach!' }
         ],
-        turn3: [{ who: 'htx', text: 'HTX to {commander:rank}. The board is watching the port’s feed. Make it look tidy.' }]
+        turn3: [{ who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'HTX to {commander:rank}. The board is watching the port’s feed. Make it look tidy.' }]
       },
       'c2r.battle': {
         start: [{ who: 'fighter', text: 'Number Three belongs to the miners now. Shut HTX down for good!' }],
@@ -386,24 +388,26 @@
       },
       'redoubt.battle': {
         start: [
-          { who: 'varga', if: { not: { flag: 'varga_dead' } }, text: 'This is the last of us, {commander:rank}. You’ll have to come in and get it.' },
+          { who: 'varga', if: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] }, text: 'This is the last of us, {commander:rank}. You’ll have to come in and get it.' },
           { who: 'fighter', text: 'No surrender! Not one more ton for HTX!' }
         ],
         bhalf: [{ who: 'fighter', text: 'Hold the inner wall! Nobody leaves! Nobody!' }]
       },
       'ceasefire.battle': {
         start: [
-          { who: 'varga', text: 'I’ll talk. But my people keep their guns until HTX shuts the deep shafts.' },
-          { who: 'htx', text: 'HTX does not negotiate with terrorists, {commander:rank}. You may listen. You may not agree.' }
+          { who: 'varga', if: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] }, text: 'I’ll talk. But my people keep their guns until HTX shuts the deep shafts.' },
+          { who: 'front', if: { not: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] } }, text: 'We’ll talk. But we keep our guns until HTX shuts the deep shafts.' },
+          { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'HTX does not negotiate with terrorists, {commander:rank}. You may listen. You may not agree.' }
         ],
         parley: [
-          { who: 'varga', text: 'I knew it. I knew you’d never mean it. Front—open fire!' },
+          { who: 'varga', if: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] }, text: 'I knew it. I knew you’d never mean it. Front—open fire!' },
           { who: 'fighter', text: 'Treachery! The talks were a trap!' }
         ]
       },
       'holdline.battle': {
         start: [
-          { who: 'varga', if: { flag: 'truce' }, text: 'We hold this pass together, or the hive takes the whole moon. Don’t make me regret this.' },
+          { who: 'varga', if: { all: [{ flag: 'truce' }, { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] }] }, text: 'We hold this pass together, or the hive takes the whole moon. Don’t make me regret this.' },
+          { who: 'front', if: { all: [{ flag: 'truce' }, { not: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] } }] }, text: 'The Front holds the left of the pass. We hold together, or the hive takes the whole moon.' },
           { who: 'ops', if: { not: { flag: 'truce' } }, text: 'All units, the pass is the line. Nothing gets past us.' }
         ],
         wave: [{ who: 'guild', text: 'They’re coming up the old workings—we sealed those twenty years ago!' }]
@@ -412,7 +416,7 @@
         start: [{ who: 'guild', text: 'They came up through the school floor. Get the families out—please!' }]
       },
       'shafts.battle': {
-        start: [{ who: 'htx', text: 'HTX to {commander:rank}. Whatever you see down there is covered by your non-disclosure clause.' }]
+        start: [{ who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'HTX to {commander:rank}. Whatever you see down there is covered by your non-disclosure clause.' }]
       },
       'hiveheart.battle': {
         start: [{ who: 'hive', text: '[the whole cavern pulses, slow as breathing. It knows you are here]' }],
@@ -423,7 +427,7 @@
       },
       'leak.battle': {
         start: [
-          { who: 'htx', text: 'If that uplink transmits, {commander:rank}, your contract is void and your company is finished.' },
+          { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'If that uplink transmits, {commander:rank}, your contract is void and your company is finished.' },
           { who: 'actual', text: 'Uplink security, Black Lantern. Nobody touches the dish.' }
         ]
       },
@@ -436,7 +440,7 @@
       },
       'breakout.battle': {
         start: [
-          { who: 'htx', text: 'Orbital authorisation confirmed. The surface will be sterilised. Make your shuttle, {name}.' },
+          { who: 'liaison', if: { not: { flag: 'htx_cut_off' } }, text: 'Orbital authorisation confirmed. The surface will be sterilised. Make your shuttle, {name}.' },
           { who: 'ops', text: 'Last shuttle off this rock is on the pad. Everybody run.' }
         ],
         wave: [{ who: 'ops', text: 'They’re pouring out of the slag—don’t stop, don’t look back!' }]
@@ -448,7 +452,7 @@
         start: [{ who: 'ops', text: 'Families in the column. Watch your fire.' }]
       },
       '@side:frontmoney': {
-        start: [{ who: 'varga', if: { not: { flag: 'varga_dead' } }, text: 'HTX cut you loose, then? Welcome to the Front’s payroll, {commander:rank}.' }]
+        start: [{ who: 'varga', if: { any: [{ flag: 'varga_free' }, { flag: 'varga_released' }, { flag: 'varga_spared' }] }, text: 'HTX cut you loose, then? Welcome to the Front’s payroll, {commander:rank}.' }]
       }
     }
   };
