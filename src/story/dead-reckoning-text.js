@@ -34,7 +34,7 @@
     'c1.agent': 'Kettering’s man is in the back of the company’s transport with his hands tied. He is young, frightened, and very keen to tell anyone who will listen that he was only paid to watch. Within the hour Kettering is on the line: return his man, or Brass Ledger will treat the company as a standing contract.',
     'c1.agent/message': 'Let him go, with a message for Kettering: the company is not for sale, but it does listen.',
     'c1.agent/interrogate': 'Find out what he knows, and don’t ask nicely. Then let him limp home with it.',
-    'c1.agent/execute': 'Execute him, and send Kettering the body. Let every company on the trail know what it costs to come for Vane’s log.',
+    'c1.agent/authorities': 'Hand him to the port authorities, with the charge sheet filled in, and make sure Vane hears you did.',
     'c1.lost': 'From the arcade roof the company can see Brass Ledger’s ship on the landing field, its ramp down and its engines warming, and Kettering’s people loading it in a hurry. The log is aboard. In an hour it will be a jump away, and in a week it will be for sale.',
     'c1.lost/raid': 'Hit their ship before it lifts, and take the log back off it.',
     'c1.lost/cutin': 'Cut Kettering in on the claim: the log back now, and Brass Ledger’s name beside the company’s when the claim is filed. Vane will not like sharing.',

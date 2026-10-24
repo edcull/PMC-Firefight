@@ -269,7 +269,7 @@
     // what each enemy side says, where a battle has nothing of its own for the moment
     sides: {
       kettle: {
-        start: [{ who: 'kettering', if: { flag: 'agent_shot' }, text: 'You shot a boy with his hands tied, {commander:rank}, and sent him back to me in a bag. There’s no invoice for that. There’s just this.' },
+        start: [{ who: 'kettering', if: { flag: 'agent_jailed' }, text: 'You gave my lad to the port, {commander:rank}. Six years on Vesk for watching a door. That’s not business. I’ve come to settle it.' },
           { who: 'kettering', if: { flag: 'beat_kettle' }, text: 'You again. Vesk cost me a quarter’s profit and six good lads, {commander:rank}. This one isn’t for the client. This one’s mine.' }, { who: 'kettleman', text: 'There they are! Five hundred to whoever brings back the slate! Shoot anything that gets in the way!' }],
         kill: [{ who: 'kettering', if: { flag: 'beat_kettle' }, text: 'That’s another one on your account. I’m keeping it, every line of it, and I always collect.' }, { who: 'kettleman', text: 'Man down! Keep pushing, the rate’s gone up!' }],
         loss: [{ who: 'kettleman', if: { flag: 'beat_kettle' }, text: 'That’s for Vesk!' }, { who: 'kettleman', text: 'Got one! That’s a bonus! Who else wants to stand in front of us?' }],

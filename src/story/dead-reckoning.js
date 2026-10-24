@@ -94,7 +94,7 @@
         { if: { flag: 'kestrel_filmed' }, readiness: 1 },          // they have seen how the company fights
         { if: { meter: 'lead', lte: -3 }, readiness: 1 },          // dug in before the company got there
         { if: { flag: 'beat_' + id }, readiness: 1 }               // beaten once, and waiting for the company since (a grudge)
-      ].concat(id === 'kettle' ? [{ if: { flag: 'agent_shot' }, readiness: 1 }] : [])   // their man shot with his hands tied: they come for the company
+      ].concat(id === 'kettle' ? [{ if: { flag: 'agent_jailed' }, readiness: 1 }] : [])   // their man handed to the port: they come for the company
     }, extra);
   }
   // a Xenotripod tribe: its archetype's force, scaled by Alarm
@@ -404,7 +404,7 @@
         { id: 'c1.agent', type: 'event', who: 'kettering', title: 'The agent', text: 'Brass Ledger’s man is in the company’s hands.', options: [
           { id: 'message', text: 'Let him go, with a message for his employer.', effects: [{ flag: 'kettle_contact' }, { meter: 'vane', add: -1 }] },
           { id: 'interrogate', text: 'Interrogate him.', effects: [{ meter: 'intel', add: 1 }, { meter: 'kettle_trust', add: -1 }, { flag: 'kettle_contact' }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank, behind three shell companies.' }] },
-          { id: 'execute', text: 'Execute him.', extreme: true, effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: 1 }, { meter: 'kettle_trust', add: -3 }, { meter: 'loyalty', add: -1 }, { flag: 'kettle_burned' }, { flag: 'agent_shot' }] }
+          { id: 'authorities', text: 'Hand him to the port authorities.', effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: -1 }, { meter: 'kettle_trust', add: -2 }, { flag: 'kettle_burned' }, { flag: 'agent_jailed' }] }
         ] },
         interlude('c1.interlude', 'c2', 'The company lifts off Vesk with the log, and Vane’s first heading.')
       ] },
