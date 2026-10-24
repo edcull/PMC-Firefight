@@ -243,6 +243,19 @@
           }
           return;
         }
+        if (r.kind === 'crater' && r.camp) {
+          /* A field camp's tents (a crater field by the rules): rows of them,
+             spread evenly over the ground, with walkways between them. */
+          var TW = 2.4, TH = 1.8, TA = 0.8;
+          var tcx = Math.max(1, Math.floor((r.w + TA) / (TW + TA))), tcy = Math.max(1, Math.floor((r.h + TA) / (TH + TA)));
+          for (var tx2 = 0; tx2 < tcx; tx2++) {
+            for (var ty2 = 0; ty2 < tcy; ty2++) {
+              props.push({ kind: 'tent', x: r.x + (tcx > 1 ? tx2 * (r.w - TW) / (tcx - 1) : (r.w - TW) / 2), y: r.y + (tcy > 1 ? ty2 * (r.h - TH) / (tcy - 1) : (r.h - TH) / 2),
+                w: TW, h: TH, height: a(10), seed: (rand() * 9999) | 0 });
+            }
+          }
+          return;
+        }
         if (r.kind === 'crater' && r.market) {
           // a settlement's crater field (the market skin): the market's overflow, cargo cases, fuel drums and vending terminals on the paving
           for (var mk = 0; mk < Math.max(3, Math.round(area / 2.5)); mk++) {
@@ -619,8 +632,7 @@
           if (r.hose) props.push({ kind: 'hose', x: r.x + r.w * 0.35, y: r.y + r.h - 0.1, to: r.hose, seed: (rr2() * 9999) | 0 });
           return;
         }
-        // a field camp: its tents, and its comms mast
-        if (r.kind === 'tent') { props.push({ kind: 'tent', x: r.x, y: r.y, w: r.w, h: r.h, height: a(10), seed: (rr2() * 9999) | 0 }); return; }
+        // a field camp's comms mast
         if (r.kind === 'commsmast') { props.push({ kind: 'commsmast', x: r.x, y: r.y, w: r.w, h: r.h, height: a(80), seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'cargolifter') { props.push({ kind: 'cargolifter', x: r.x, y: r.y, w: r.w, h: r.h, height: a(15), facing: r.facing || 0, seed: (rr2() * 9999) | 0 }); return; }
         // a town square's fountain: its basin, column and statue, drawn as one block among the others

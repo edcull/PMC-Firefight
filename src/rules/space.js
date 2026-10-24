@@ -335,8 +335,8 @@
     }
     function shapePiece(r, rand, family) {
       if (r.kind === 'building') return planBuilding(r, rand || Math.random, family);
-      // (a map's cargo stacks, a crater field skinned, keep their square footprint)
-      if (!SHAPED[r.kind] || r.poly || r.cargo || r.w < 2 || r.h < 2) return r;
+      // (a map's cargo stacks and camp's tents, crater fields skinned, keep their square footprint)
+      if (!SHAPED[r.kind] || r.poly || r.cargo || r.camp || r.w < 2 || r.h < 2) return r;
       rand = rand || Math.random;
       var fams = FAMILIES[r.kind] || ['blob'];
       var fam = family || fams[Math.floor(rand() * fams.length)];

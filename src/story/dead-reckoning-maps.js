@@ -21,8 +21,6 @@
   function N(kind, x, y, w, h, shape) { return { kind: kind, x: x, y: y, w: w, h: h, shape: shape || 'blob' }; }
   function R(kind, x, y, w, h) { return { kind: kind, x: x, y: y, w: w, h: h }; }
   // a paved road (a settlement's, not a dirt track)
-  // a field camp's tent, long side east to west
-  function T(x, y) { return { kind: 'tent', x: x, y: y, w: 2.4, h: 1.8 }; }
   // cargo stacked on concrete: a crater field by the rules, rows of crates with walkways between to look at
   function CG(x, y, w, h) { return { kind: 'crater', x: x, y: y, w: w, h: h, cargo: 'apron' }; }
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
@@ -150,16 +148,15 @@
        outcrops of it standing like broken windows, the impact crater and the
        smaller ones round it, and three places Morrow might have dug. Wraith
        Section's camp is on the east side, where they come on: a dozen low
-       tents round their comms mast, between two high, stepped hills that
+       tents (crater fields by the rules) round their comms mast, between two high, stepped hills that
        look out over the whole flat. */
     glassflats: {
       name: 'The Glass Flats, Vantor III', planet: 'desert',
       pieces: [
         // the two hills over Wraith's camp
         Object.assign(N('hill', 34, 3, 10, 10, 'lobed'), { stepped: true }), Object.assign(N('hill', 34, 34, 10, 10, 'blob'), { stepped: true }),
-        // the camp: tents in rows round the mast
-        T(35, 15), T(38.5, 15), T(41.5, 15), T(35, 18.5), T(38.5, 18.5), T(41.5, 18.5),
-        T(35, 25.5), T(38.5, 25.5), T(41.5, 25.5), T(35, 29), T(38.5, 29), T(41.5, 29),
+        // the camp: two blocks of tents either side of the mast, crater fields by the rules
+        Object.assign(R('crater', 35, 15, 8.9, 5.3), { camp: true }), Object.assign(R('crater', 35, 25.5, 8.9, 5.3), { camp: true }),
         R('commsmast', 39, 22.2, 1.5, 1.5),
         // the impact crater and the smaller ones, the glass outcrops, a spill of rocks
         N('crater', 19, 3, 8, 6, 'blob'), N('crater', 7, 13, 4, 4, 'lobed'), N('crater', 10, 36, 6, 5, 'blob'), N('crater', 26, 33, 4, 4, 'lobed'),
