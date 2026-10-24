@@ -57,9 +57,7 @@
         var SW = 0, SH = 0;
         terrain.forEach(function (q) { SW = Math.max(SW, q.x + q.w); SH = Math.max(SH, q.y + q.h); });
         var voidAt = function (x, y) { return space.some(function (q) { return x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h; }); };
-        /* (the arrays are drawn raised, so they stand a little up the screen
-           from their footprint: the north pair come in from the far edge to
-           sit against their module, the south pair out to the near one) */
+        // (where each starts: it is slid along to line up with its room below)
         var aw = SW * 0.22, ah = SH * 0.17, ax = SW * 0.06, an = SH * 0.06, as = SH * 0.01;
         [[ax, an, 1, 1], [SW - ax - aw, an, -1, 1], [ax, SH - as - ah, 1, -1], [SW - ax - aw, SH - as - ah, -1, -1]].forEach(function (c, ci) {
           var r = { x: c[0], y: c[1], w: aw, h: ah }, clear = true;
@@ -84,15 +82,24 @@
           }
           var ex = c[2] > 0 ? r.x + r.w : r.x, ey = c[3] > 0 ? r.y + r.h : r.y;
           var alongX = run(ex, r.y + r.h / 2, c[2], 0), alongY = run(r.x + r.w / 2, ey, 0, c[3]);
+          /* the array slid along the hull so its spine lines up with the middle
+             of the room the boom runs into, where it still has open space round it */
+          function roomAt(x, y) { return terrain.filter(function (q) { return (q.kind === 'hall' || q.kind === 'room' || q.kind === 'corridor') && x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h; })[0]; }
+          function clearAt(q) { for (var ix = 0; ix <= 6; ix++) for (var iy = 0; iy <= 4; iy++) if (!voidAt(q.x + q.w * ix / 6, q.y + q.h * iy / 4)) return false; return true; }
+          var rm = alongX && roomAt(alongX.x + c[2] * 0.6, alongX.y);
+          if (rm) {
+            var moved = { x: r.x, y: rm.y + rm.h / 2 - r.h / 2, w: r.w, h: r.h };
+            if (clearAt(moved)) { r = moved; alongX = run(ex, r.y + r.h / 2, c[2], 0); }
+          }
           // (across the table first: into the end of the module beside it)
           var boom = alongX ? { x0: ex, y0: r.y + r.h / 2, x1: alongX.x, y1: alongX.y, axis: 'x' }
             : alongY ? { x0: r.x + r.w / 2, y0: ey, x1: alongY.x, y1: alongY.y, axis: 'y' } : null;
           props.push({ kind: 'solar', x: r.x, y: r.y, w: r.w, h: r.h, toward: { x: c[2], y: c[3] }, boom: boom, seed: 4111 + ci });
-          /* its mount, outside against the hull where the boom meets it: clear of
-             the wall, which stands half its thickness out into the open space,
-             and the boom stopped at the mount */
+          /* its mount, outside against the hull where the boom meets it: flush
+             with the wall's face, which stands half its thickness (a fifth of
+             an inch) out into the open space, and the boom stopped at the mount */
           if (boom) {
-            var bdx = Math.sign(boom.x1 - boom.x0), bdy = Math.sign(boom.y1 - boom.y0), off = 0.25;
+            var bdx = Math.sign(boom.x1 - boom.x0), bdy = Math.sign(boom.y1 - boom.y0), off = 0.2;
             var mtx = bdx ? (bdx > 0 ? boom.x1 - off - 1 : boom.x1 + off) : boom.x1 - 0.5, mty = bdy ? (bdy > 0 ? boom.y1 - off - 1 : boom.y1 + off) : boom.y1 - 0.5;
             if (bdx) boom.x1 = bdx > 0 ? mtx : mtx + 1;
             if (bdy) boom.y1 = bdy > 0 ? mty : mty + 1;

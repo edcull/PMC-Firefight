@@ -700,12 +700,12 @@
           break;
         }
         /* A solar array's mount (iso-props sets it outside the hull where the
-           array's boom meets it): a plated block standing off the wall at the
-           height of the boom, a beacon on top. A piece of its own, so it is
+           array's boom meets it): a plated block standing against the wall's
+           face from the foot of the hull to just over the boom, a beacon on top. A piece of its own, so it is
            drawn in front of the wall it stands against, and behind one in front of it. */
         case 'solarmount': {
           var smz = a(9), sml = lift || 0;
-          box(g, { x: pr.x, y: pr.y, w: pr.w, h: pr.h, height: Math.round(smz * 0.7), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: sml + smz * 0.5, noShadow: true });
+          box(g, { x: pr.x, y: pr.y, w: pr.w, h: pr.h, height: Math.round(smz * 1.2), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: sml, noShadow: true });
           var smt = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
           dot(g, smt.x - 1, smt.y - sml - smz * 1.25 - 1, '#ff4a3a', 3);
           break;
