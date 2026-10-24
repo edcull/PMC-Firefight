@@ -241,14 +241,16 @@
 
     /* Sable's warehouse on Kerrigan's docks: the basin along the north edge
        with its quay and two gantry cranes, the broker's office and the sheds
-       round a yard, cargo stacked either side, the reaction-mass tank farm in
-       the south-east, and in the middle the warehouse itself. It is walked
+       round a yard, cargo stacked either side, the reaction-mass tank farm on
+       the quay, and in the middle the warehouse itself. It is walked
        into, not round: steel-clad walls (high walls) on a concrete floor, big
        sliding hangar doors standing open north and south, the road running
        up to both from the quay and the south edge, a doorway east and west,
        and its floor open round the objective Hostile takeover puts in the
        middle. Sable's sandbags are laid by the map (`fortified`), not by the
-       scenario. A cargo lifter works the east stack. */
+       scenario, her bunker in its south-east corner. A cargo lifter works the
+       east stack, and the south road comes in past a gatehouse and its lifting
+       gate. */
     docks: {
       name: 'The broker’s warehouse, Kerrigan docks', planet: 'industrial',
       // Sable's position is the map's own: the sandbags below, not Hostile takeover's sections laid at random
@@ -257,8 +259,10 @@
         SHAPE('deep', [[5, 0], [43, 0], [43, 3.5], [5, 3.5]]),
         SLAB(5, 3.5, 38, 3.5), R('crane', 11, 3.8, 3, 2.4), R('crane', 31, 3.8, 3, 2.4),
         // (everything stands at least 3" off the warehouse, so a squad can go all the way round it)
-        B(5, 7.5, 8, 5, 'L'), B(35, 7.5, 8, 5, 'block'), B(5, 36, 9, 7, 'U'), R('fueltanks', 33.5, 36, 9, 6),
-        CG(5, 20, 6, 7), CG(37, 20, 5.5, 7), Object.assign(R('cargolifter', 38.5, 28, 2.5, 2.5), { facing: -Math.PI / 2 }), R('ruins', 15.5, 41, 4, 4),
+        B(5, 7.5, 8, 5, 'L'), R('fueltanks', 34.5, 7.5, 9, 5.5), B(5, 36, 9, 7, 'U'), B(34, 36, 8, 6, 'block'),
+        CG(5, 20, 6, 7), CG(37, 20, 5.5, 7), Object.assign(R('cargolifter', 38.5, 28, 2.5, 2.5), { facing: -Math.PI / 2 }),
+        // the yard's gate on the south road: the gatehouse beside it, and the lifting gate's arm across it
+        Object.assign(B(17, 41, 3.5, 3, 'block'), { fixed: true }), Object.assign(R('boomgate', 20.3, 44.6, 0.6, 0.6), { span: 6.7, fixed: true }),
         // the road: off the quay to the north doors, and from the south edge of the table to the south ones
         P(21, 7, 6, 9), P(21, 32, 6, 16),
         // the warehouse: its floor, then its walls; sliding hangar doors north and south (x 20 to 28) and a doorway east and west (y 22.5 to 25.5)
@@ -268,6 +272,8 @@
         // Sable's sandbags: either side of the road before each hangar door, inside each doorway, and across the south hangar door inside
         BAGS(16, 12, 4, 1), BAGS(28, 12, 4, 1), BAGS(16, 35.5, 4, 1), BAGS(28, 35.5, 4, 1), BAGS(16.5, 21.5, 1, 5), BAGS(30.5, 21.5, 1, 5),
         BAGS(20, 27.5, 8, 1),
+        // Sable's bunker, in the warehouse's south-east corner, covering the south hangar door and the east doorway
+        Object.assign(R('bunker', 29, 27, 4, 4), { fixed: true }),
         // the broker's stock, stacked inside the north wall either side of the hangar door
         CG(15.5, 17.5, 4, 3), CG(28.5, 17.5, 4, 3)
       ]

@@ -912,6 +912,8 @@
        walked through; and a tank farm's reaction-mass tanks, too big to see past. */
     crane: { name: 'Gantry crane', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
     fueltanks: { name: 'Fuel tanks', blocks: true, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
+    // a yard's lifting gate: a striped arm on a post, ducked under or driven through (only its post is laid)
+    boomgate: { name: 'Lifting gate', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     parleyflag: { name: 'The meeting point', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     // Ambush! (p. 156): the road the enemy column is on — open ground, and nothing stands on it
     road: { name: 'Road', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },

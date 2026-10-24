@@ -664,6 +664,29 @@
           var bcn = CP(cx0 + cw * 0.75, cy0 + ch2 * 0.5, CH + a(10)); dot(g, bcn[0], bcn[1], '#ffb02e', 3);
           break;
         }
+        /* A lifting gate: a striped post with its counterweight, the arm down
+           across the road in red and white, resting on a fork on the far side. */
+        case 'boomgate': {
+          var gl = lift || 0, gx = pr.x + pr.w / 2, gy = pr.y + pr.h / 2, GH = pr.height;
+          var GP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - gl - z]; };
+          var gb = GP(gx, gy, 0); shadowBlob(g, { x: gb[0] + a(1), y: gb[1] }, a(2.2), a(1.1));
+          // the rest on the far side of the road
+          var rx2 = gx + pr.span; edgeLine(g, GP(rx2, gy, 0), GP(rx2, gy, GH), '#3a3a38', 2); edgeLine(g, GP(rx2 - 0.15, gy, GH + a(0.6)), GP(rx2 + 0.15, gy, GH + a(0.6)), '#3a3a38', 2);
+          // the post, striped, and its housing
+          box(g, { x: gx - 0.3, y: gy - 0.3, w: 0.6, h: 0.6, height: GH + a(1.4), seed: pr.seed }, ['#2a2410', '#4a3f18', '#8a7222', '#b8962c', '#d9b23a', '#f0d070'],
+            { roof: '#d9b23a', roofEdge: '#f0d070', windows: null, lift: gl, noShadow: true });
+          // the counterweight behind the pivot, then the arm, in stripes
+          var pz = GH + a(0.6);
+          box(g, { x: gx - 1.1, y: gy - 0.18, w: 0.7, h: 0.36, height: a(1.4), seed: pr.seed + 1 }, ['#141414', '#222', '#333', '#444', '#555', '#666'],
+            { roof: '#555', roofEdge: '#777', windows: null, lift: gl + pz - a(0.7), noShadow: true });
+          var ns = Math.max(4, Math.round(pr.span / 0.6));
+          for (var gs = 0; gs < ns; gs++) {
+            var ga0 = gx + pr.span * gs / ns, ga1 = gx + pr.span * (gs + 1) / ns;
+            edgeLine(g, GP(ga0, gy, pz), GP(ga1, gy, pz), gs % 2 ? '#f2f2ee' : '#c8322a', 3);
+          }
+          var pv = GP(gx, gy, pz); dot(g, pv[0] - 1, pv[1] - 1, '#222', 3);
+          break;
+        }
         /* A tank farm: reaction-mass tanks, white steel drums banded and
            stencilled, inside a low concrete bund, with a pipe rack between them. */
         case 'fueltanks': {

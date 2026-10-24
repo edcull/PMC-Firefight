@@ -718,6 +718,7 @@
         if (r.kind === 'commsmast') { props.push({ kind: 'commsmast', x: r.x, y: r.y, w: r.w, h: r.h, height: a(80), seed: (rr2() * 9999) | 0 }); return; }
         // a dock's gantry crane, its boom out over the basin; a tank farm's reaction-mass tanks
         if (r.kind === 'crane') { props.push({ kind: 'crane', x: r.x, y: r.y, w: r.w, h: r.h, height: a(24), seed: (rr2() * 9999) | 0 }); return; }
+        if (r.kind === 'boomgate') { props.push({ kind: 'boomgate', x: r.x, y: r.y, w: r.w, h: r.h, span: r.span || 6, height: a(4), seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'fueltanks') { props.push({ kind: 'fueltanks', x: r.x, y: r.y, w: r.w, h: r.h, height: a(20), seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'cargolifter') { props.push({ kind: 'cargolifter', x: r.x, y: r.y, w: r.w, h: r.h, height: a(15), facing: r.facing || 0, seed: (rr2() * 9999) | 0 }); return; }
         // a town square's fountain: its basin, column and statue, drawn as one block among the others
