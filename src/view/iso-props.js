@@ -97,13 +97,15 @@
           props.push({ kind: 'solar', x: r.x, y: r.y, w: r.w, h: r.h, toward: { x: c[2], y: c[3] }, boom: boom, seed: 4111 + ci });
           /* its mount, outside against the hull where the boom meets it: flush
              with the wall's face, which stands half its thickness (a fifth of
-             an inch) out into the open space, and the boom stopped at the mount */
+             an inch) out into the open space, the boom running into it */
           if (boom) {
             var bdx = Math.sign(boom.x1 - boom.x0), bdy = Math.sign(boom.y1 - boom.y0), off = 0.2;
             var mtx = bdx ? (bdx > 0 ? boom.x1 - off - 1 : boom.x1 + off) : boom.x1 - 0.5, mty = bdy ? (bdy > 0 ? boom.y1 - off - 1 : boom.y1 + off) : boom.y1 - 0.5;
-            if (bdx) boom.x1 = bdx > 0 ? mtx : mtx + 1;
-            if (bdy) boom.y1 = bdy > 0 ? mty : mty + 1;
-            props.push({ kind: 'solarmount', x: mtx, y: mty, w: 1, h: 1, seed: 4211 + ci });
+            // (the boom runs on through the mount to the hull, the mount drawn over its end)
+            // (its footprint takes in the boom as well, so the walls sort with all of it)
+            var fx0 = Math.min(mtx, boom.x0, boom.x1) - (bdx ? 0 : 0.4), fx1 = Math.max(mtx + 1, boom.x0, boom.x1) + (bdx ? 0 : 0.4);
+            var fy0 = Math.min(mty, boom.y0, boom.y1) - (bdy ? 0 : 0.4), fy1 = Math.max(mty + 1, boom.y0, boom.y1) + (bdy ? 0 : 0.4);
+            props.push({ kind: 'solarmount', x: fx0, y: fy0, w: fx1 - fx0, h: fy1 - fy0, box: { x: mtx, y: mty, w: 1, h: 1 }, boom: boom, seed: 4211 + ci });
           }
         });
       }

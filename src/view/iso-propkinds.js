@@ -40,6 +40,17 @@
     var TENT = [['#4a3e26', '#7a6844', '#93805a', '#a8946a', '#c0ac80', '#d8c89c'], ['#343a24', '#55603a', '#66724a', '#788656', '#8c9a66', '#a6b47e'],
       ['#3a3c3c', '#5c605e', '#6e7270', '#80847f', '#969a94', '#b0b4ac']];
     var MASTBOX = ['#22262a', '#343a40', '#4a525a', '#5e6870', '#7a858f', '#9aa6b0'];
+    /* A station's truss (a solar array's spine and boom): two rails and their
+       zigzag bracing, from P0 to P1 along one axis of the table, at the height
+       the point function SO puts a bare point (x, y). */
+    function solarTruss(g, SO, P0, P1) {
+      var ax = Math.abs(P1[0] - P0[0]) >= Math.abs(P1[1] - P0[1]), len = ax ? Math.abs(P1[0] - P0[0]) : Math.abs(P1[1] - P0[1]);
+      var sg = ax ? Math.sign(P1[0] - P0[0]) : Math.sign(P1[1] - P0[1]);
+      function at(t, o) { return ax ? SO(P0[0] + sg * t, P0[1] + o) : SO(P0[0] + o, P0[1] + sg * t); }
+      edgeLine(g, at(0, -0.35), at(len, -0.35), '#8a96a0', 2);
+      edgeLine(g, at(0, 0.35), at(len, 0.35), '#b4c0c8', 2);
+      for (var tb = 0; tb * 0.9 < len; tb++) edgeLine(g, at(tb * 0.9, -0.35), at(Math.min(len, tb * 0.9 + 0.45), 0.35), '#6a7680', 1);
+    }
     // a glass tower: tinted curtain wall, its mullions, and the light in it
     var GLASS = ['#0c1820', '#13283a', '#1a3a54', '#21506e', '#2b6a8a', '#3c86a8'];
     /* A glass tower (a map's landmark, style 'glass'): a tinted curtain wall
@@ -661,16 +672,7 @@
           // the array in its own frame: u along its spine (the boom's way), v across it
           var u0 = vert ? pr.y : pr.x, u1 = vert ? pr.y + pr.h : pr.x + pr.w, v0 = vert ? pr.x : pr.y, v1 = vert ? pr.x + pr.w : pr.y + pr.h, vm = (v0 + v1) / 2;
           function UV(u, v, z) { return vert ? SO(v, u, z) : SO(u, v, z); }
-          /* A truss: two rails and their zigzag bracing, from u = ua to ub at v = vc
-             (in the array's frame), or along the boom. */
-          function truss(P0, P1) {
-            var ax = Math.abs(P1[0] - P0[0]) >= Math.abs(P1[1] - P0[1]), len = ax ? Math.abs(P1[0] - P0[0]) : Math.abs(P1[1] - P0[1]);
-            var sg = ax ? Math.sign(P1[0] - P0[0]) : Math.sign(P1[1] - P0[1]);
-            function at(t, o) { return ax ? SO(P0[0] + sg * t, P0[1] + o) : SO(P0[0] + o, P0[1] + sg * t); }
-            edgeLine(g, at(0, -0.35), at(len, -0.35), '#8a96a0', 2);
-            edgeLine(g, at(0, 0.35), at(len, 0.35), '#b4c0c8', 2);
-            for (var tb2 = 0; tb2 * 0.9 < len; tb2++) edgeLine(g, at(tb2 * 0.9, -0.35), at(Math.min(len, tb2 * 0.9 + 0.45), 0.35), '#6a7680', 1);
-          }
+          function truss(P0, P1) { solarTruss(g, SO, P0, P1); }
           // the two wings, either side of the spine: cells in a pale frame, an edge of shadow under each to give it thickness
           [[v0 + 0.2, vm - 0.7], [vm + 0.7, v1 - 0.2]].forEach(function (Wg) {
             var nc = Math.max(3, Math.round((u1 - u0) / 1.6)), nr = Math.max(2, Math.round((Wg[1] - Wg[0]) / 1.8));
@@ -689,25 +691,35 @@
             edgeLine(g, E[0], E[1], '#d4dde4', 1); edgeLine(g, E[3], E[2], '#d4dde4', 1);
             edgeLine(g, E[0], E[3], '#d4dde4', 1); edgeLine(g, E[1], E[2], '#d4dde4', 1);
           });
-          // the spine down the middle, and the boom on from it to the hull
+          // the spine down the middle (the boom on from it is drawn with its mount, so the hull's walls stand right with it)
           truss(vert ? [vm, u0] : [u0, vm], vert ? [vm, u1] : [u1, vm]);
           if (bm) {
-            truss([bm.x0, bm.y0], [bm.x1, bm.y1]);
             // the rotary joint where the boom leaves the array
             var rj2 = SO(bm.x0, bm.y0);
             ellipse(g, rj2[0], rj2[1], a(2.2), a(1.6), '#5a646c'); ellipse(g, rj2[0], rj2[1] - 1, a(1.4), a(1), '#a8b4bc');
           }
           break;
         }
-        /* A solar array's mount (iso-props sets it outside the hull where the
-           array's boom meets it): a plated block standing against the wall's
-           face from the foot of the hull to just over the boom, a beacon on top. A piece of its own, so it is
-           drawn in front of the wall it stands against, and behind one in front of it. */
+        /* A solar array's mount and its boom (iso-props sets the mount outside
+           the hull where the boom meets it): a plated block standing against
+           the wall's face from the foot of the hull to just over the boom, a
+           beacon on top, and the boom's truss run in to it from the array. A
+           piece of its own, sorted with the walls: the boom stands out from
+           the hull at the array's height, in front of the wall it meets. Where
+           the boom comes at the mount's near face, the block first and the
+           boom up to its face; at its far face, the boom in to its middle and
+           the block over it. */
         case 'solarmount': {
-          var smz = a(9), sml = lift || 0;
-          box(g, { x: pr.x, y: pr.y, w: pr.w, h: pr.h, height: Math.round(smz * 1.2), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: sml, noShadow: true });
-          var smt = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
-          dot(g, smt.x - 1, smt.y - sml - smz * 1.25 - 1, '#ff4a3a', 3);
+          var smz = a(9), sml = lift || 0, mb = pr.box, bmm = pr.boom;
+          function SM(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sml - (z == null ? smz : z)]; }
+          function block() {
+            box(g, { x: mb.x, y: mb.y, w: mb.w, h: mb.h, height: Math.round(smz * 1.2), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: sml, noShadow: true });
+            var smt = toScreen(mb.x + mb.w / 2, mb.y + mb.h / 2);
+            dot(g, smt.x - 1, smt.y - sml - smz * 1.25 - 1, '#ff4a3a', 3);
+          }
+          var acrossX = bmm.x1 !== bmm.x0, near = acrossX ? bmm.x1 < bmm.x0 : bmm.y1 < bmm.y0;
+          var face = acrossX ? [mb.x + mb.w, bmm.y1] : [bmm.x1, mb.y + mb.h], mid = acrossX ? [mb.x + mb.w / 2, bmm.y1] : [bmm.x1, mb.y + mb.h / 2];
+          if (near) { block(); solarTruss(g, SM, [bmm.x0, bmm.y0], face); } else { solarTruss(g, SM, [bmm.x0, bmm.y0], mid); block(); }
           break;
         }
         case 'sacks': {
