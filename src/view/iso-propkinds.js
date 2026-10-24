@@ -1613,16 +1613,12 @@
           if (pr.skin === 'boats' || pr.skin === 'tent') {
             var tl3 = lift || 0;
             function TQ(dx, dy, z) { var q = toScreen(pr.x + dx, pr.y + dy); return [q.x, q.y - tl3 - (z || 0)]; }
-            function ripple(dx, dy, r) { var q = TQ(dx, dy, 0); ellipseRing(g, q[0], q[1], a(r * 4), a(r * 2), 'rgba(220,240,245,.28)'); }
             if (pr.skin === 'boats') {
-              /* Two Reaver hover-skiffs, run in from the river: angular alloy
-                 hulls riding a hand's breadth over the water on their repulsor
+              /* Two Reaver hover-skiffs, pulled up on the bank from the river:
+                 angular alloy hulls riding a hand's breadth over the mud on their repulsor
                  fields, bows up the bank to the west, a windscreen forward, twin
                  thrusters glowing at the stern, red chevrons on their decks, a
                  pintle gun on one. */
-              // their sterns in the water, the pool run out towards the river they came in by (north-east)
-              shallowPool(g, pr.x + 2.2, pr.y - 1.6, 2.4, tl3, pr.seed + 1);
-              shallowPool(g, pr.x + 1.3, pr.y - 0.3, 2.2, tl3, pr.seed);
               [[-0.9, 0.05, 0], [0.85, 0.1, 1]].forEach(function (bt) {
                 var by = bt[0], ang = bt[1], L = 3.4, Wd = 0.62, hz = a(1.6), dk = hz + a(1.7);
                 function BQ(u, v, z) { var cx = u * Math.cos(ang) - v * Math.sin(ang), cy = u * Math.sin(ang) + v * Math.cos(ang); return TQ(cx, by + cy, z); }
@@ -1630,7 +1626,6 @@
                 var fc = BQ(0, 0, 0);
                 ellipse(g, fc[0], fc[1], a(L * 2.1), a(1.5), 'rgba(110,210,255,.22)');
                 ellipse(g, fc[0], fc[1], a(L * 1.4), a(0.9), 'rgba(170,235,255,.3)');
-                ripple(-0.6, by, 0.7); ripple(0.8, by, 0.7);
                 // the hull: a flat transom east, flaring sides, a sharp bow west; and its deck, drawn in a little
                 var lo = [BQ(L / 2, -Wd, hz), BQ(L / 2, Wd, hz), BQ(-L / 6, Wd, hz), BQ(-L / 2, 0, hz + a(0.4)), BQ(-L / 6, -Wd, hz)];
                 var hi = [BQ(L / 2, -Wd * 0.85, dk), BQ(L / 2, Wd * 0.85, dk), BQ(-L / 6, Wd * 0.85, dk), BQ(-L / 2 + 0.15, 0, dk), BQ(-L / 6, -Wd * 0.85, dk)];

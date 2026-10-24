@@ -140,7 +140,7 @@
        cuts across the north-east corner of the table with a broad band of
        shallows along its bank: Brass Ledger's ship down in the reeds with its
        ramp down and its cargo out at the foot of it, the Reavers' hover-skiffs
-       run in to the edge of the shallows, the lit tent where the sale is
+       pulled up on the bank at the edge of the shallows, the lit tent where the sale is
        haggled over, and the three places the log could be as the sale is made
        (Find and secure, the relic): each its own piece (`skin`), the three
        of them in a clearing in the middle with the forest round the edges.
@@ -162,8 +162,8 @@
       ],
       sites: { kind: 'searchsite', at: [
         { x: 17, y: 27, name: 'Kettering’s ship', skin: 'cargo' },
-        { x: 28.5, y: 16.5, name: 'The Reavers’ boats', skin: 'boats' },
-        { x: 31, y: 29, name: 'The tent where they haggle', skin: 'tent' }
+        { x: 32.3, y: 18.6, name: 'The Reavers’ boats', skin: 'boats' },
+        { x: 29, y: 31, name: 'The tent where they haggle', skin: 'tent' }
       ] }
     },
 
