@@ -159,6 +159,10 @@ ok('...and the compounds none, their seed lays them, unless the map lays the com
   ok('Station Thule is laid by hand, a plan that can be fought in, with an entry on each edge', dr._nodes['c2t.battle'].map === 'thule' && chk && chk.ok && chk.entries.L > 0 && chk.entries.R > 0, JSON.stringify(chk));
   ok('...the same about both its axes', mirrored);
   ok('...and in orbit: its skin the station’s, the solid round it open space', th.skin === 'station');
+  // each side comes in along the whole of both its docking arms, not the stub of one the corridor cutter left at the edge
+  const built = pl && CMP.build(pl, 48, 48), ent = built && built.compound.entries;
+  const arms = ent && ['L', 'R'].map((sd) => ent[sd].map((e) => e.w + 'x' + e.h).join(',')).join(' / ');
+  ok('...and both sides come in along the whole of both their docking arms', arms === '12x3,12x3 / 12x3,12x3', arms);
 }
 ok('...so nothing waits on maps to come', !dr.mapsPending);
 const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
