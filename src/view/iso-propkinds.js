@@ -705,10 +705,10 @@
            the wall's face from the foot of the hull to just over the boom, a
            beacon on top, and the boom's truss run in to it from the array. A
            piece of its own, sorted with the walls: the boom stands out from
-           the hull at the array's height, in front of the wall it meets. Where
-           the boom comes at the mount's near face, the block first and the
-           boom up to its face; at its far face, the boom in to its middle and
-           the block over it. */
+           the hull at the array's height, in front of the wall it meets. The
+           block first, then the boom over it: up to the block's face where it
+           comes at the near side, in to its middle from the far side, so it is
+           plainly joined either way. */
         case 'solarmount': {
           var smz = a(9), sml = lift || 0, mb = pr.box, bmm = pr.boom;
           function SM(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sml - (z == null ? smz : z)]; }
@@ -719,7 +719,8 @@
           }
           var acrossX = bmm.x1 !== bmm.x0, near = acrossX ? bmm.x1 < bmm.x0 : bmm.y1 < bmm.y0;
           var face = acrossX ? [mb.x + mb.w, bmm.y1] : [bmm.x1, mb.y + mb.h], mid = acrossX ? [mb.x + mb.w / 2, bmm.y1] : [bmm.x1, mb.y + mb.h / 2];
-          if (near) { block(); solarTruss(g, SM, [bmm.x0, bmm.y0], face); } else { solarTruss(g, SM, [bmm.x0, bmm.y0], mid); block(); }
+          block();
+          solarTruss(g, SM, [bmm.x0, bmm.y0], near ? face : mid);
           break;
         }
         case 'sacks': {
