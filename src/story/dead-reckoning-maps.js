@@ -265,8 +265,11 @@
         SLAB(14, 16, 20, 16),
         SHED(14, 16, 6, 0.5, 'slide', 1, 8), SHED(28, 16, 6, 0.5, 'slide', -1, 8), SHED(14, 31.5, 6, 0.5, 'slide', 1, 8), SHED(28, 31.5, 6, 0.5, 'slide', -1, 8),
         SHED(14, 16.5, 0.5, 6, 'doorway', 1, 3), SHED(14, 25.5, 0.5, 6, 'doorway', -1, 3), SHED(33.5, 16.5, 0.5, 6, 'doorway', 1, 3), SHED(33.5, 25.5, 0.5, 6, 'doorway', -1, 3),
-        // Sable's sandbags: either side of the road before each hangar door, and inside each doorway
-        BAGS(16, 12, 4, 1), BAGS(28, 12, 4, 1), BAGS(16, 35.5, 4, 1), BAGS(28, 35.5, 4, 1), BAGS(16.5, 21.5, 1, 5), BAGS(30.5, 21.5, 1, 5)
+        // Sable's sandbags: either side of the road before each hangar door, inside each doorway, and across the south hangar door inside
+        BAGS(16, 12, 4, 1), BAGS(28, 12, 4, 1), BAGS(16, 35.5, 4, 1), BAGS(28, 35.5, 4, 1), BAGS(16.5, 21.5, 1, 5), BAGS(30.5, 21.5, 1, 5),
+        BAGS(20, 27.5, 8, 1),
+        // the broker's stock, stacked inside the north wall either side of the hangar door
+        CG(15.5, 17.5, 4, 3), CG(28.5, 17.5, 4, 3)
       ]
     },
 

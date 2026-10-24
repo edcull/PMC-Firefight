@@ -271,10 +271,10 @@ ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field',
     used('docks').every((n) => n.scenario === 'takeover'));
   ok('...its floor open round the objective in the middle: no wall inside it, and the walls named for what they are',
     ps.filter((p) => p.kind === 'wall').every((p) => p.shed) && R.terrainName(null, 'wall', shed[0]) === 'Warehouse wall');
-  ok('...Sable’s position laid by the map: sandbags either side of the road before each hangar door and inside each doorway, and no sections laid at random besides',
-    MAPS.docks.fortified && ps.filter((p) => p.kind === 'barricade' && p.fixed).length === 6 && !ps.some((p) => p.kind === 'trench' || p.kind === 'wire' || p.kind === 'bunker'));
+  ok('...Sable’s position laid by the map: sandbags either side of the road before each hangar door, inside each doorway and inside the south hangar door, and no sections laid at random besides',
+    MAPS.docks.fortified && ps.filter((p) => p.kind === 'barricade' && p.fixed).length === 7 && !ps.some((p) => p.kind === 'trench' || p.kind === 'wire' || p.kind === 'bunker'));
   ok('...with room to go all the way round it: nothing else within 3" of its walls but the road and Sable’s sandbags',
-    ps.filter((p) => !p.shed && !p.slab && p.kind !== 'road' && p.kind !== 'barricade').every((p) => !overlap(p, { x: floor.x - 3, y: floor.y - 3, w: floor.w + 6, h: floor.h + 6 })));
+    ps.filter((p) => !p.shed && !p.slab && p.kind !== 'road' && p.kind !== 'barricade' && !overlap(p, floor)).every((p) => !overlap(p, { x: floor.x - 3, y: floor.y - 3, w: floor.w + 6, h: floor.h + 6 })));
   ok('...and the waterfront along the north: the basin, its quay, two gantry cranes, a reaction-mass tank farm and a cargo lifter',
     ps.some((p) => p.kind === 'deep' && p.y === 0) && ps.filter((p) => p.kind === 'crane').length === 2 && ps.some((p) => p.kind === 'fueltanks') && ps.some((p) => p.kind === 'cargolifter') &&
     !R.TERRAIN.crane.blocks && R.TERRAIN.crane.impassable && R.TERRAIN.fueltanks.blocks);
