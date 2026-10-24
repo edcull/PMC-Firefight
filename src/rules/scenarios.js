@@ -189,7 +189,7 @@
   }
   function separateTerrain(state) {
     var genCount = state.genCount != null ? state.genCount : state.terrain.length;
-    var FIXED = { objective: 1, searchsite: 1, pumphouse: 1, parleyflag: 1, road: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1 };
+    var FIXED = { objective: 1, searchsite: 1, pumphouse: 1, parleyflag: 1, road: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1 };
     var ranked = state.terrain.map(function (t, i) {
       return { t: t, rank: FIXED[t.kind] ? 0 : i >= genCount ? 1 : 2, i: i };
     }).sort(function (a, b) { return a.rank - b.rank || a.i - b.i; });

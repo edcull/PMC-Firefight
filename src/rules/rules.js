@@ -905,6 +905,11 @@
     shuttle: { name: 'Shuttle', blocks: true, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
     fueltruck: { name: 'Fuel bowser', blocks: false, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
     cargolifter: { name: 'Cargo lifter', blocks: false, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
+    /* A field camp (a story's map): low tents, too thick with canvas and kit to
+       see through or push past, and the camp's comms mast, a thin lattice on
+       guy wires that blocks nothing but can't be crossed. */
+    tent: { name: 'Tent', blocks: true, impassable: true, movePenalty: 0, cover: 1, fp: 0 },
+    commsmast: { name: 'Comms mast', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
     parleyflag: { name: 'The meeting point', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     // Ambush! (p. 156): the road the enemy column is on — open ground, and nothing stands on it
     road: { name: 'Road', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },

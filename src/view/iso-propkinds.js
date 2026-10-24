@@ -36,6 +36,10 @@
     var TANK = ['#4a4636', '#6a6450', '#9a9478', '#bcb698', '#d8d2b2', '#ece6c8'];
     var CAB = ['#3a2e0c', '#6a5418', '#a8842a', '#c89c32', '#e0b440', '#f0cc60'];
     var LIFT = ['#3a240c', '#6a4214', '#a8661e', '#d08428', '#e8a038', '#f4bc58'];
+    // a field camp: its tents' canvas (sand, olive, grey; each dark to light), the mast's radio box
+    var TENT = [['#4a3e26', '#7a6844', '#93805a', '#a8946a', '#c0ac80', '#d8c89c'], ['#343a24', '#55603a', '#66724a', '#788656', '#8c9a66', '#a6b47e'],
+      ['#3a3c3c', '#5c605e', '#6e7270', '#80847f', '#969a94', '#b0b4ac']];
+    var MASTBOX = ['#22262a', '#343a40', '#4a525a', '#5e6870', '#7a858f', '#9aa6b0'];
     // a glass tower: tinted curtain wall, its mullions, and the light in it
     var GLASS = ['#0c1820', '#13283a', '#1a3a54', '#21506e', '#2b6a8a', '#3c86a8'];
     /* A glass tower (a map's landmark, style 'glass'): a tinted curtain wall
@@ -417,12 +421,12 @@
           var xa = x0 + 0.7, xb = x0 + w - 0.15;
           var ST = [[0, 0.82, a(15), a(7.5)], [0.07, 1.02, a(16), a(9)], [0.5, 1.12, a(16.5), a(9.5)], [0.68, 1.04, a(16), a(8.8)],
             [0.8, 0.86, a(15), a(7.2)], [0.9, 0.6, a(13.6), a(5)], [0.97, 0.3, a(12.4), a(2.6)], [1, 0.08, a(12), a(0.8)]];
-          var K = 16;
+          var RK = 16;
           function ring(s, k) {
-            var th = k / K * Math.PI * 2, c = Math.cos(th), sn = Math.sin(th);
+            var th = k / RK * Math.PI * 2, c = Math.cos(th), sn = Math.sin(th);
             return { x: xa + (xb - xa) * s[0], y: yc + s[1] * Math.sign(c) * Math.pow(Math.abs(c), 0.55), z: s[2] + s[3] * Math.sign(sn) * Math.pow(Math.abs(sn), 0.7), c: c, s: sn };
           }
-          var R = ST.map(function (s) { var out = []; for (var k = 0; k < K; k++) out.push(ring(s, k)); return out; });
+          var R = ST.map(function (s) { var out = []; for (var k = 0; k < RK; k++) out.push(ring(s, k)); return out; });
           function S3(p, dz) { return SP(p.x, p.y, p.z + (dz || 0)); }
           var sm = SP(x0 + w / 2, yc, 0);
           shadowBlob(g, { x: sm[0] + a(3), y: sm[1] + a(1.5) }, a(w * 4.4), a(pr.h * 2.1));
@@ -454,8 +458,8 @@
           poly(g, winglet(-1), HULL[2]);
           // the hull: each panel facing the eye, lit from above and the south
           for (var si = 0; si < R.length - 1; si++) {
-            for (var k = 0; k < K; k++) {
-              var k2 = (k + 1) % K, A = R[si][k], B = R[si][k2], C2 = R[si + 1][k2], D = R[si + 1][k];
+            for (var k = 0; k < RK; k++) {
+              var k2 = (k + 1) % RK, A = R[si][k], B = R[si][k2], C2 = R[si + 1][k2], D = R[si + 1][k];
               var q = [S3(A), S3(B), S3(C2), S3(D)];
               var ar = 0; for (var qi = 0; qi < 4; qi++) { var q1 = q[qi], q2 = q[(qi + 1) % 4]; ar += q1[0] * q2[1] - q2[0] * q1[1]; }
               if (ar <= 0) continue;
@@ -469,7 +473,7 @@
           edgeLine(g, S3(R[4][2], 1), S3(R[5][2], 1), 'rgba(170,230,255,.75)', 2);
           for (var gk = 1; gk < 7; gk++) edgeLine(g, S3(R[5][gk]), S3(R[5][gk + 1]), HULL[4], 1);
           [1, 2, 3].forEach(function (si) {
-            for (var k = 12; k < K + 9; k++) { var k1 = k % K, k2 = (k + 1) % K; if (R[si][k1].c < -0.05 || R[si][k2].c < -0.05) continue; edgeLine(g, S3(R[si][k1]), S3(R[si][k2]), 'rgba(20,24,28,.35)', 1); }
+            for (var k = 12; k < RK + 9; k++) { var k1 = k % RK, k2 = (k + 1) % RK; if (R[si][k1].c < -0.05 || R[si][k2].c < -0.05) continue; edgeLine(g, S3(R[si][k1]), S3(R[si][k2]), 'rgba(20,24,28,.35)', 1); }
           });
           // the gold stripe down the near side, and the ports above it
           for (var gs = 0; gs < 5; gs++) edgeLine(g, S3(R[gs][15]), S3(R[gs + 1][15]), '#c9a65a', 4);
@@ -503,6 +507,90 @@
           dot(g, F3[0], F3[1], '#ff4a3a', 4);
           // a light on the nose
           var nz = SP(xb, yc, a(12)); dot(g, nz[0] - 1, nz[1] - 1, '#ffffff', 3);
+          break;
+        }
+        /* A field camp's tent: canvas walls a hand high, a ridged roof over them
+           along the tent's long side, its door flap rolled up on the near end,
+           and guy lines out to pegs at the corners. */
+        case 'tent': {
+          var tl2 = lift || 0, tr = rng(pr.seed), wide = pr.w >= pr.h;
+          var TC = TENT[(tr() * TENT.length) | 0];
+          function TN(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - tl2 - z]; }
+          var x0t = pr.x + 0.15, y0t = pr.y + 0.15, x1t = pr.x + pr.w - 0.15, y1t = pr.y + pr.h - 0.15, wz2 = a(4), rz2 = a(10);
+          var tm2 = TN((x0t + x1t) / 2, (y0t + y1t) / 2, 0);
+          shadowBlob(g, { x: tm2[0] + a(1.5), y: tm2[1] + a(0.8) }, a(pr.w * 3), a(pr.h * 1.8));
+          // the pegs and guy lines at the corners, drawn first so the canvas covers the far ones
+          [[x0t, y0t, -1, -1], [x1t, y0t, 1, -1], [x0t, y1t, -1, 1], [x1t, y1t, 1, 1]].forEach(function (c) {
+            var peg = TN(c[0] + c[2] * 0.35, c[1] + c[3] * 0.35, 0);
+            edgeLine(g, TN(c[0], c[1], wz2), peg, 'rgba(40,34,24,.8)', 1); dot(g, peg[0] - 1, peg[1] - 1, '#2a241a', 2);
+          });
+          // the ridge runs along the long side; its gable ends face the short ones
+          var r0, r1;
+          if (wide) { r0 = [x0t, (y0t + y1t) / 2]; r1 = [x1t, (y0t + y1t) / 2]; } else { r0 = [(x0t + x1t) / 2, y0t]; r1 = [(x0t + x1t) / 2, y1t]; }
+          var c00 = TN(x0t, y0t, wz2), c10 = TN(x1t, y0t, wz2), c11 = TN(x1t, y1t, wz2), c01 = TN(x0t, y1t, wz2);
+          var R0 = TN(r0[0], r0[1], rz2), R1 = TN(r1[0], r1[1], rz2);
+          // the walls: the near two of them
+          poly(g, [TN(x0t, y1t, 0), TN(x1t, y1t, 0), c11, c01], TC[1]);
+          poly(g, [TN(x1t, y0t, 0), TN(x1t, y1t, 0), c11, c10], TC[2]);
+          if (wide) {
+            // the far slope, then the gable at the near (east) end, then the near slope
+            poly(g, [c00, c10, R1, R0], TC[4]);
+            poly(g, [c10, c11, R1], TC[2]);
+            poly(g, [c01, c11, R1, R0], TC[3]);
+            // the door flap rolled up on the east gable, dark inside
+            var dm = (y0t + y1t) / 2;
+            poly(g, [TN(x1t, dm - 0.35, 0), TN(x1t, dm + 0.35, 0), TN(x1t, dm + 0.2, a(6)), TN(x1t, dm - 0.2, a(6))], '#1a1610');
+            edgeLine(g, TN(x1t, dm - 0.4, a(6.4)), TN(x1t, dm + 0.4, a(6.4)), TC[0], 3);
+          } else {
+            poly(g, [c00, c01, R1, R0], TC[4]);
+            poly(g, [c01, c11, R1], TC[1]);
+            poly(g, [c10, c11, R1, R0], TC[2]);
+            var dm2 = (x0t + x1t) / 2;
+            poly(g, [TN(dm2 - 0.35, y1t, 0), TN(dm2 + 0.35, y1t, 0), TN(dm2 + 0.2, y1t, a(6)), TN(dm2 - 0.2, y1t, a(6))], '#1a1610');
+            edgeLine(g, TN(dm2 - 0.4, y1t, a(6.4)), TN(dm2 + 0.4, y1t, a(6.4)), TC[0], 3);
+          }
+          // the ridge pole catching the light, and a seam down each slope
+          edgeLine(g, R0, R1, TC[5], 2);
+          edgeLine(g, TN((r0[0] + r1[0]) / 2, (r0[1] + r1[1]) / 2, rz2), wide ? TN((x0t + x1t) / 2, y1t, wz2) : TN(x1t, (y0t + y1t) / 2, wz2), 'rgba(30,26,18,.35)', 1);
+          break;
+        }
+        /* A field camp's comms mast: a tapering lattice tower on a plinth, cross-
+           braced, with whips and a small dish at its head, a red light at the
+           top, guy wires out to three anchors, and the radio box at its foot. */
+        case 'commsmast': {
+          var ml = lift || 0, mx = pr.x + pr.w / 2, my = pr.y + pr.h / 2, mh = a(64);
+          function MS(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - ml - z]; }
+          var mb = MS(mx, my, 0);
+          shadowBlob(g, { x: mb[0] + a(1), y: mb[1] + a(0.5) }, a(5), a(2.5));
+          // the guy wires' anchors, and the far wires
+          var AN = [[mx - 2.4, my - 1.2], [mx + 2.2, my - 1.6], [mx + 0.2, my + 2.4]];
+          AN.forEach(function (an, i) { var q = MS(an[0], an[1], 0); rect(g, q[0] - 2, q[1] - 2, 4, 3, '#3a3c3e'); if (i < 2) edgeLine(g, q, MS(mx, my, mh * 0.82), 'rgba(30,32,34,.7)', 1); });
+          // the radio box at the foot
+          box(g, { x: mx + 0.25, y: my + 0.05, w: 0.7, h: 0.55, height: a(5), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: ml, noShadow: true });
+          // the tower: three legs drawn in towards the top, braced in zigzags
+          var LG = [[-0.45, -0.3], [0.45, -0.3], [0, 0.45]], top = 0.12;
+          function legAt(l, z) { var k = 1 - (1 - top) * z / mh; return MS(mx + LG[l][0] * k, my + LG[l][1] * k, z); }
+          var steps = 9;
+          for (var st2 = 0; st2 < steps; st2++) {
+            var z0 = mh * st2 / steps, z1 = mh * (st2 + 1) / steps;
+            for (var l2 = 0; l2 < 3; l2++) {
+              var l3 = (l2 + 1) % 3, far = l2 === 0;
+              edgeLine(g, legAt(l2, z0), legAt(l3, z1), far ? 'rgba(90,96,102,.7)' : '#8d969e', 1);
+              edgeLine(g, legAt(l2, z1), legAt(l3, z1), far ? 'rgba(90,96,102,.7)' : '#8d969e', 1);
+            }
+          }
+          [0, 1, 2].forEach(function (l) { edgeLine(g, legAt(l, 0), legAt(l, mh), l === 2 ? '#c8d0d6' : '#5e666e', 2); });
+          // the near wire, over the tower
+          edgeLine(g, MS(AN[2][0], AN[2][1], 0), MS(mx, my, mh * 0.82), 'rgba(30,32,34,.8)', 1);
+          // the head: whips, a crossbar with its aerials, a small dish, and the light
+          var hd = MS(mx, my, mh);
+          edgeLine(g, hd, MS(mx, my, mh + a(16)), '#2a2e32', 2);
+          edgeLine(g, MS(mx + 0.15, my - 0.1, mh), MS(mx + 0.15, my - 0.1, mh + a(10)), '#2a2e32', 1);
+          edgeLine(g, MS(mx - 0.6, my, mh - a(4)), MS(mx + 0.6, my, mh - a(4)), '#5e666e', 2);
+          [-0.6, 0.6].forEach(function (o) { edgeLine(g, MS(mx + o, my, mh - a(4)), MS(mx + o, my, mh + a(4)), '#3a3e42', 1); });
+          var dsh = MS(mx, my + 0.25, mh - a(12));
+          ellipse(g, dsh[0] + a(1.5), dsh[1], a(2.6), a(3.2), '#c8cdd2'); ellipse(g, dsh[0] + a(1.8), dsh[1], a(1.6), a(2.2), '#9aa2aa');
+          var tip = MS(mx, my, mh + a(16)); dot(g, tip[0] - 2, tip[1] - 2, '#ff4a3a', 4);
           break;
         }
         /* A fuel bowser: a long pale tank on a chassis, a yellow cab at its
