@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   root.PMCIsoProps = function (B) {
-    var a = B.a, dot = B.dot, ellipse = B.ellipse, poly = B.poly, rect = B.rect, rng = B.rng;
+    var a = B.a, dot = B.dot, ellipse = B.ellipse, ellipseRing = B.ellipseRing, poly = B.poly, rect = B.rect, rng = B.rng;
     var toScreen = B.toScreen, BAG = B.BAG, BARK = B.BARK, BRICK = B.BRICK;
     var CHAR = B.CHAR, CONCRETE = B.CONCRETE, K = B.K, LEAF = B.LEAF, PIXEL = B.PIXEL, PREFAB = B.PREFAB;
     var ROOF = B.ROOF, STONE = B.STONE;
@@ -288,6 +288,11 @@
           }
           return;
         }
+        // a camp's open-sided tent, the sale tent's (a crater field by the rules)
+        if (r.kind === 'crater' && r.camp === 'marquee') {
+          props.push({ kind: 'marquee', x: r.x + r.w / 2, y: r.y + r.h / 2, seed: (rand() * 9999) | 0 });
+          return;
+        }
         if (r.kind === 'crater' && r.camp) {
           /* A field camp's tents (a crater field by the rules): rows of them,
              spread evenly over the ground, with walkways between them. */
@@ -318,6 +323,17 @@
           for (var sc3 = 0; sc3 < Math.round(area / 18); sc3++) {
             var sq2 = spotIn(r, 0.6, rand);
             props.push({ kind: 'scrap', x: sq2.x, y: sq2.y, tone: rand(), seed: (rand() * 9999) | 0 });
+          }
+          return;
+        }
+        if (r.pipe) {
+          /* A map's pipeline (a low wall by the rules): a fat pipe on trestles,
+             laid down its length in short runs so it sorts among the models. */
+          var phz = r.w >= r.h, plen = phz ? r.w : r.h, pn = Math.max(1, Math.round(plen / 1.5)), psl = plen / pn;
+          for (var ps2 = 0; ps2 < pn; ps2++) {
+            var pm = (ps2 + 0.5) * psl;
+            props.push({ kind: 'piperun', x: phz ? r.x + pm : r.x + r.w / 2, y: phz ? r.y + r.h / 2 : r.y + pm, horiz: phz, len: psl,
+              first: ps2 === 0, last: ps2 === pn - 1, seed: (rand() * 9999) | 0 });
           }
           return;
         }
@@ -576,7 +592,7 @@
         if (r.kind === 'searchsite') {
           props.push({
             kind: 'searchsite', x: r.x + r.w / 2, y: r.y + r.h / 2,
-            checked: !!r.checked, found: !!r.found, cold: !!r.cold, cargo: r.skin === 'cargo',
+            checked: !!r.checked, found: !!r.found, cold: !!r.cold, cargo: r.skin === 'cargo', skin: r.skin || null,
             seed: (rr2() * 9999) | 0
           });
           // a port's possible location is a pallet of cargo, with cases set down round it
@@ -586,6 +602,8 @@
             }
             return;
           }
+          // a drowned beacon's possible locations are their own pieces, with nothing strewn round them
+          if (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones' || r.skin === 'boats' || r.skin === 'tent') return;
           for (var sw = 0; sw < 6; sw++) {
             props.push({
               kind: 'wreckstone',
@@ -603,13 +621,32 @@
           var whz = r.w >= r.h, wlen = whz ? r.w : r.h, WSEG = 1.5;
           var wn = Math.max(1, Math.round(wlen / WSEG)), wsl = wlen / wn;
           var wire = wr() < 0.45, wh3 = a(10 + wr() * 2.5);
+          // a warehouse's steel cladding stands taller, and neither it nor a strongroom's wall is wired
+          if (r.shed) wh3 = a(15);
+          if (r.shed || r.vault) wire = false;
           for (var ws = 0; ws < wn; ws++) {
             var wm = (ws + 0.5) * wsl;
             props.push({
               kind: 'wallrun', x: whz ? r.x + wm : r.x + r.w / 2, y: whz ? r.y + r.h / 2 : r.y + wm,
               horiz: whz, len: wsl, first: ws === 0, last: ws === wn - 1, wire: wire, height: wh3,
-              reinforced: !!r.reinforced, seed: (wr() * 9999) | 0
+              reinforced: !!r.reinforced, shed: !!r.shed, seed: (wr() * 9999) | 0
             });
+          }
+          /* A warehouse wall that ends at an opening (a story map's `opening`): a
+             hangar's sliding leaves run back along it, or a doorway's jamb; the
+             header across the opening, or the wall carried over the doorway,
+             from the wall on its near side (`end` +1), so it goes down once. */
+          if (r.shed && r.opening) {
+            var oe = r.end > 0 ? (whz ? r.x + r.w : r.y + r.h) : (whz ? r.x : r.y), ol = whz ? r.y + r.h / 2 : r.x + r.w / 2;
+            var oat = function (t) { return whz ? { x: oe + t, y: ol } : { x: ol, y: oe + t }; };
+            if (r.opening === 'slide') {
+              var lq = oat(-r.end * (r.gap / 4 + 0.15));
+              props.push({ kind: 'hangarleaves', x: lq.x, y: lq.y, horiz: whz, dir: r.end, len: r.gap / 2, height: wh3, seed: (wr() * 9999) | 0 });
+            }
+            if (r.end > 0) {
+              var mq = oat(r.gap / 2);
+              props.push({ kind: 'shedopening', style: r.opening, x: mq.x, y: mq.y, horiz: whz, gap: r.gap, height: wh3, seed: (wr() * 9999) | 0 });
+            }
           }
           return;
         }
@@ -679,6 +716,10 @@
         }
         // a field camp's comms mast
         if (r.kind === 'commsmast') { props.push({ kind: 'commsmast', x: r.x, y: r.y, w: r.w, h: r.h, height: a(80), seed: (rr2() * 9999) | 0 }); return; }
+        // a dock's gantry crane, its boom out over the basin; a tank farm's reaction-mass tanks
+        if (r.kind === 'crane') { props.push({ kind: 'crane', x: r.x, y: r.y, w: r.w, h: r.h, height: a(24), seed: (rr2() * 9999) | 0 }); return; }
+        if (r.kind === 'boomgate') { props.push({ kind: 'boomgate', x: r.x, y: r.y, w: r.w, h: r.h, span: r.span || 6, height: a(4), seed: (rr2() * 9999) | 0 }); return; }
+        if (r.kind === 'fueltanks') { props.push({ kind: 'fueltanks', x: r.x, y: r.y, w: r.w, h: r.h, height: a(20), seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'cargolifter') { props.push({ kind: 'cargolifter', x: r.x, y: r.y, w: r.w, h: r.h, height: a(15), facing: r.facing || 0, seed: (rr2() * 9999) | 0 }); return; }
         // a town square's fountain: its basin, column and statue, drawn as one block among the others
         if (r.kind === 'fountain') {
@@ -732,6 +773,14 @@
         if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz, relic: !!o.relic, carried: !!o.carried });
       });
       // what lies flat on the floor goes down before anything stands on it
+      /* What a piece strews round it stays on the table: a river laid on past its
+         edge (a map's `fixed` piece) has its reeds and stones only where the
+         table is. (A station's solar arrays stand out in the dark, and are kept.) */
+      var TW = B.W || 48, TH = B.H || 48;
+      props = props.filter(function (p) {
+        if (p.kind === 'solar' || p.kind === 'solarmount') return true;
+        return p.x >= 0 && p.y >= 0 && p.x <= TW && p.y <= TH;
+      });
       var FLAT = { deckgrate: 1, cable: 1, litter: 1, padmark: 1, hose: 1, solar: 1 };
       props.forEach(function (p) {
         // the search-site hatch draws over its own scatter, so it stays readable; an objective's flag over the hatch it stands in
@@ -743,11 +792,11 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, crane: 1, fueltanks: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
+      var SMALL = { piperun: 0.45, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];
@@ -1329,7 +1378,7 @@
     var KINDS = root.PMCIsoPropKinds({
       BAG: BAG, BARK: BARK, BASALTS: BASALTS, BRICK: BRICK, CHAR: CHAR, CONCRETE: CONCRETE, K: K, LEAF: LEAF,
       PIXEL: PIXEL, PREFAB: PREFAB, ROOF: ROOF, STONE: STONE, a: a, boulder: boulder, box: box,
-      brokenWall: brokenWall, conifer: conifer, dot: dot, edgeLine: edgeLine, ellipse: ellipse, lerp2: lerp2,
+      brokenWall: brokenWall, conifer: conifer, dot: dot, edgeLine: edgeLine, ellipse: ellipse, ellipseRing: ellipseRing, lerp2: lerp2,
       pebble: pebble, poly: poly, rect: rect, rng: rng, shadowBlob: shadowBlob, toScreen: toScreen,
       vgrad: vgrad, WALL_THEME: WALL_THEME
     });

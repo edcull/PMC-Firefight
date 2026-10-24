@@ -185,13 +185,25 @@
     // a landing pad or a concrete apron is a floor, and what stands on it stands on it)
     if ((a.kind === 'road' && (a.pad || a.slab)) || (b.kind === 'road' && (b.pad || b.slab))) return false;
     var gap = a.kind === 'road' || b.kind === 'road' ? 0 : GAP;
-    return a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
+    if (!(a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap)) return false;
+    /* A piece laid by its own outline (a map's river, `poly`): the other piece,
+       the gap round it, against that outline, not the box about it. */
+    if (a.poly && a.fixed && b.poly && b.fixed) return false;
+    if (a.poly && a.fixed) return rectInShape(b, a, gap);
+    if (b.poly && b.fixed) return rectInShape(a, b, gap);
+    return true;
+  }
+  function rectInShape(r, s, gap) {
+    var x0 = r.x - gap, y0 = r.y - gap, x1 = r.x + r.w + gap, y1 = r.y + r.h + gap;
+    for (var i = 0; i <= 8; i++) for (var j = 0; j <= 8; j++) if (R.inPoly(x0 + (x1 - x0) * i / 8, y0 + (y1 - y0) * j / 8, s.poly)) return true;
+    return s.poly.some(function (q) { return q[0] > x0 && q[0] < x1 && q[1] > y0 && q[1] < y1; });
   }
   function separateTerrain(state) {
     var genCount = state.genCount != null ? state.genCount : state.terrain.length;
-    var FIXED = { objective: 1, searchsite: 1, pumphouse: 1, parleyflag: 1, road: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, commsmast: 1 };
+    var FIXED = { objective: 1, searchsite: 1, pumphouse: 1, parleyflag: 1, road: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, commsmast: 1, crane: 1, fueltanks: 1, boomgate: 1 };
     var ranked = state.terrain.map(function (t, i) {
-      return { t: t, rank: FIXED[t.kind] ? 0 : i >= genCount ? 1 : 2, i: i };
+      // (a map's piece marked `fixed` stays as laid too: a river run off the table's edge)
+      return { t: t, rank: FIXED[t.kind] || t.fixed ? 0 : i >= genCount ? 1 : 2, i: i };
     }).sort(function (a, b) { return a.rank - b.rank || a.i - b.i; });
     var kept = [];
     function free(p) {
@@ -563,7 +575,7 @@
         var spots = sites ? sites.at : clusterAt(R.BOARD.w / 2, R.BOARD.h / 2, 3, 12, 12);
         state.sc.search = spots.map(function (p, i) {
           var piece = {
-            kind: sites ? sites.kind : 'searchsite', x: p.x - 2, y: p.y - 2, w: 4, h: 4, name: p.name || undefined, skin: (sites && sites.skin) || undefined,
+            kind: sites ? sites.kind : 'searchsite', x: p.x - 2, y: p.y - 2, w: 4, h: 4, name: p.name || undefined, skin: p.skin || (sites && sites.skin) || undefined,
             site: i, cx: p.x, cy: p.y, checked: false, found: false, cold: false
           };
           state.terrain.push(piece);
@@ -943,6 +955,8 @@
          the terrain has been settled round the objective. */
       fortify: function (state) {
         var def = state.sc.defender;
+        // a story's map that lays the position itself (levers.js `fortified`): nothing more goes down
+        if (state.cfg && state.cfg.story && state.cfg.story.fortified) return;
         if (state.manualForts && state.manualForts[def]) { state.sc.fortsByHand = true; return; }
         takeoverForts(state, def, FORT_SECTIONS, 1);
       },

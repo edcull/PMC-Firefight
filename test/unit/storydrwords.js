@@ -163,6 +163,8 @@ ok('...and the compounds none, their seed lays them, unless the map lays the com
   const built = pl && CMP.build(pl, 48, 48), ent = built && built.compound.entries;
   const arms = ent && ['L', 'R'].map((sd) => ent[sd].map((e) => e.w + 'x' + e.h).join(',')).join(' / ');
   ok('...and both sides come in along the whole of both their docking arms', arms === '12x3,12x3 / 12x3,12x3', arms);
+  const named = built && built.terrain.filter((t) => t.name).map((t) => t.name).sort().join(', ');
+  ok('...and its rooms named for what they are: the hub, the two modules, the two labs', named === 'East lab, Hub, North module, South module, West lab', named);
 }
 {
   /* A compound's enemy (and allies) fight in its corridors: no vehicles or aircraft,
@@ -186,7 +188,20 @@ ok('...and the compounds none, their seed lays them, unless the map lays the com
   ok('a compound battle’s enemy is all foot that can fight in a corridor: no vehicles, riders or indirect fire', !bad.length, bad.join('; '));
 }
 ok('...so nothing waits on maps to come', !dr.mapsPending);
-const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+const boxes = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+/* A piece laid by its own outline (a map's river: `poly`, `fixed`) is in the way only where
+   the outline is: the other's box sampled against it, and the outline's corners against the box. */
+const inShape = (r, s) => {
+  for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) if (R.inPoly(r.x + r.w * i / 8, r.y + r.h * j / 8, s.poly)) return true;
+  return s.poly.some((q) => q[0] > r.x && q[0] < r.x + r.w && q[1] > r.y && q[1] < r.y + r.h);
+};
+const overlap = (a, b) => {
+  if (!boxes(a, b)) return false;
+  if (a.poly && a.fixed && b.poly && b.fixed) return false;
+  if (a.poly && a.fixed) return inShape(b, a);
+  if (b.poly && b.fixed) return inShape(a, b);
+  return true;
+};
 Object.keys(MAPS).forEach((k) => {
   const m = MAPS[k], ps = m.pieces;
   if (!ps) return;                          // (a compound laid by hand: its plan is checked above)
@@ -194,16 +209,19 @@ Object.keys(MAPS).forEach((k) => {
   ps.forEach((p, i) => {
     if (!R.TERRAIN[p.kind]) bad.push(p.kind + ' is no terrain');
     // (a road may run to the edge: it is open ground, and the way on to the table)
-    if ((p.x < 4 || p.x + p.w > 44) && p.kind !== 'road') bad.push(p.kind + ' in an entry strip');
-    if (p.y < 0 || p.y + p.h > 48) bad.push(p.kind + ' off the table');
-    // (a landing pad is a floor: what stands on it, stands on it)
+    // (a river laid by its outline may cross a strip too: shallow water is crossed, and its deep channel is fixed where it runs)
+    if ((p.x < 4 || p.x + p.w > 44) && p.kind !== 'road' && !p.fixed) bad.push(p.kind + ' in an entry strip');
+    // (a piece laid `fixed` may run on off the table: a river)
+    if ((p.y < 0 || p.y + p.h > 48) && !p.fixed) bad.push(p.kind + ' off the table');
+    // (a landing pad is a floor: what stands on it, stands on it; a river's deep channel runs down its middle)
     ps.forEach((q, j) => { if (j > i && overlap(p, q) && !p.pad && !q.pad && !p.slab && !q.slab) bad.push(p.kind + ' on ' + q.kind); });
   });
   (m.objectives || []).forEach((o) => ps.forEach((p) => { if (o.x > p.x - 2 && o.x < p.x + p.w + 2 && o.y > p.y - 2 && o.y < p.y + p.h + 2) bad.push(o.name + ' under ' + p.kind); }));
   const sites = (m.sites && m.sites.at) || [];
   sites.forEach((s, i) => {
     const r = { x: s.x - 2, y: s.y - 2, w: 4, h: 4 };
-    ps.forEach((p) => { if (overlap({ x: r.x - 1, y: r.y - 1, w: r.w + 2, h: r.h + 2 }, p)) bad.push(s.name + ' under ' + p.kind); });
+    // (a site marked `wet` stands half in the river: the skiffs beached in its shallows)
+    ps.forEach((p) => { if (!(s.wet && p.fixed && p.poly) && overlap({ x: r.x - 1, y: r.y - 1, w: r.w + 2, h: r.h + 2 }, p)) bad.push(s.name + ' under ' + p.kind); });
     sites.forEach((t, j) => { if (j > i && Math.hypot(s.x - t.x, s.y - t.y) < 12) bad.push(s.name + ' within 12" of ' + t.name); });
     if (Math.hypot(s.x - 24, s.y - 24) > 12) bad.push(s.name + ' more than 12" from the middle');
   });
@@ -228,7 +246,44 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
     R.terrainName({ cfg: { story: { skin: 'market' } } }, 'crater') === 'Market clutter' && R.terrainName({ cfg: { story: {} } }, 'crater') === 'Rubble and craters');
 }
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
-ok('the docks leave the middle clear, for the warehouse Sable holds (Hostile takeover)', MAPS.docks.pieces.every((p) => !overlap(p, { x: 18, y: 18, w: 12, h: 12 })) && used('docks').every((n) => n.scenario === 'takeover'));
+{
+  /* The docks as the briefing has them: Sable's warehouse walked into in the middle of the table,
+     its floor open round the objective Hostile takeover puts there, and the waterfront along the north. */
+  const ps = MAPS.docks.pieces, shed = ps.filter((p) => p.kind === 'wall' && p.shed);
+  const floor = ps.find((p) => p.kind === 'road' && p.slab && p.x < 24 && p.x + p.w > 24 && p.y < 24 && p.y + p.h > 24);
+  // the openings in a ring of walls along one side, between its corners: the stretches no wall covers
+  const gaps = (walls, side, at, from, to) => {
+    const runs = walls.filter((p) => side === 'h' ? Math.abs(p.y - at) < 0.6 && p.h <= 0.5 : Math.abs(p.x - at) < 0.6 && p.w <= 0.5)
+      .map((p) => side === 'h' ? [p.x, p.x + p.w] : [p.y, p.y + p.h]).sort((a, b) => a[0] - b[0]);
+    const out = []; let c = from;
+    runs.forEach((r) => { if (r[0] > c + 0.01) out.push(r[0] - c); c = Math.max(c, r[1]); });
+    if (to > c + 0.01) out.push(to - c);
+    return out;
+  };
+  ok('the docks: Sable’s warehouse in the middle, walked into — steel walls on a concrete floor, sliding hangar doors north and south, a doorway east and west, each wide enough for a 2" base',
+    !!floor && shed.length >= 8 && shed.every((p) => p.fixed && R.TERRAIN.wall.blocks) &&
+    [gaps(shed, 'h', floor.y, floor.x, floor.x + floor.w), gaps(shed, 'h', floor.y + floor.h - 0.5, floor.x, floor.x + floor.w),
+      gaps(shed, 'v', floor.x, floor.y + 0.5, floor.y + floor.h - 0.5), gaps(shed, 'v', floor.x + floor.w - 0.5, floor.y + 0.5, floor.y + floor.h - 0.5)].every((g) => g.length === 1 && g[0] >= 3) &&
+    // (the walls beside each opening say what it is, for the drawing: the hangar doors, the doorways)
+    shed.filter((p) => p.opening === 'slide' && p.gap === 8).length === 4 && shed.filter((p) => p.opening === 'doorway' && p.gap === 3).length === 4 &&
+    // and the road runs up to the hangar doors, off the quay and in from the south edge
+    ps.some((p) => p.kind === 'road' && p.paved && p.y + p.h === floor.y) && ps.some((p) => p.kind === 'road' && p.paved && p.y === floor.y + floor.h && p.y + p.h === 48) &&
+    used('docks').every((n) => n.scenario === 'takeover'));
+  ok('...its floor open round the objective in the middle: no wall inside it, and the walls named for what they are',
+    ps.filter((p) => p.kind === 'wall').every((p) => p.shed) && R.terrainName(null, 'wall', shed[0]) === 'Warehouse wall');
+  ok('...Sable’s position laid by the map: sandbags either side of the road before each hangar door, inside each doorway and inside the south hangar door, one bunker at most, and no sections laid at random besides',
+    MAPS.docks.fortified && ps.filter((p) => p.kind === 'barricade' && p.fixed && !p.pipe).length === 7 && !ps.some((p) => p.kind === 'trench' || p.kind === 'wire') && ps.filter((p) => p.kind === 'bunker').length <= 1);
+  ok('...with room to go all the way round it: nothing else within 3" of its walls but the road and Sable’s sandbags',
+    ps.filter((p) => !p.shed && !p.slab && p.kind !== 'road' && p.kind !== 'barricade' && !overlap(p, floor)).every((p) => !overlap(p, { x: floor.x - 3, y: floor.y - 3, w: floor.w + 6, h: floor.h + 6 })));
+  ok('...the strongroom inside it, a bunker off the objective, and the south road coming in past a gatehouse and its lifting gate',
+    ps.some((p) => p.kind === 'bunker' && p.fixed && p.vault && overlap(p, floor) && Math.hypot(p.x + p.w / 2 - 24, p.y + p.h / 2 - 24) > 5 && R.terrainName(null, 'bunker', p) === 'Strongroom') &&
+    ps.some((p) => p.kind === 'boomgate' && p.span >= 6) && !R.TERRAIN.boomgate.impassable && !R.TERRAIN.boomgate.blocks && !ps.some((p) => p.kind === 'ruins'));
+  ok('...and the waterfront along the north: the basin, its quay, two gantry cranes, a reaction-mass tank farm on the quay, piped to the water and off the table, and a cargo lifter',
+    ps.some((p) => p.kind === 'deep' && p.y === 0) && ps.filter((p) => p.kind === 'crane').length === 2 && ps.some((p) => p.kind === 'fueltanks' && p.y < 10) && ps.some((p) => p.kind === 'cargolifter') &&
+    // its pipelines: one to the water's edge, one off the east side of the table
+    ps.some((p) => p.pipe && p.y < 4) && ps.some((p) => p.pipe && p.x + p.w === 48) &&
+    !R.TERRAIN.crane.blocks && R.TERRAIN.crane.impassable && R.TERRAIN.fueltanks.blocks);
+}
 ok('the second half keeps clear what its scenarios lay themselves: the takeovers’ middle, the Parley’s, Recall’s landing zone',
   ['quietfield'].every((k) => MAPS[k].pieces.every((p) => !overlap(p, { x: 18, y: 18, w: 12, h: 12 }))) &&
   MAPS.orlo.pieces.every((p) => !overlap(p, { x: 21, y: 19, w: 6, h: 10 })) &&

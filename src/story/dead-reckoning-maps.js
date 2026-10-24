@@ -23,7 +23,28 @@
   // a paved road (a settlement's, not a dirt track)
   // cargo stacked on concrete: a crater field by the rules, rows of crates with walkways between to look at
   function CG(x, y, w, h) { return { kind: 'crater', x: x, y: y, w: w, h: h, cargo: 'apron' }; }
+  // a piece laid by its own outline, run off the table and kept as laid (a river): its box about the outline
+  function SHAPE(kind, pts) {
+    var xs = pts.map(function (q) { return q[0]; }), ys = pts.map(function (q) { return q[1]; });
+    var x0 = Math.min.apply(null, xs), y0 = Math.min.apply(null, ys);
+    return { kind: kind, x: x0, y: y0, w: Math.max.apply(null, xs) - x0, h: Math.max.apply(null, ys) - y0, poly: pts, fixed: true };
+  }
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
+  // poured concrete (a quay, a warehouse's floor): open ground, and what stands on it stands on it
+  function SLAB(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, fixed: true }; }
+  // a warehouse's steel-clad wall (a high wall), laid as written
+  /* `opening`, where the wall ends at one: 'slide' (a hangar's sliding doors, run back
+     along the wall) or 'doorway' (a framed door with the wall carried over it); `end` which
+     end of the wall (+1 its far end, -1 its near one), `gap` how wide. Drawn only. */
+  function SHED(x, y, w, h, door, end, gap) {
+    var p = { kind: 'wall', x: x, y: y, w: w, h: h, shed: true, fixed: true };
+    if (door) { p.opening = door; p.end = end; p.gap = gap; }
+    return p;
+  }
+  // a sandbagged position (a low wall), laid where the map puts it
+  // a pipeline (a low wall), laid as written
+  function PIPE(x, y, w, h) { return { kind: 'barricade', x: x, y: y, w: w, h: h, pipe: true, fixed: true }; }
+  function BAGS(x, y, w, h) { return { kind: 'barricade', x: x, y: y, w: w, h: h, fixed: true }; }
 
   root.PMCStoryMaps['dead-reckoning'] = {
 
@@ -124,23 +145,41 @@
           '......rrrr......',
           '................'
         ].join(''),
-        doors: ['86|102',  '89|105',  '150|166',  '153|169',  '101|102',  '105|106',  '149|150',  '153|154',  '38|54',  '41|57',  '198|214',  '201|217',  '115|116',  '123|124',  '131|132',  '139|140']
+        doors: ['86|102',  '89|105',  '150|166',  '153|169',  '101|102',  '105|106',  '149|150',  '153|154',  '38|54',  '41|57',  '198|214',  '201|217',  '115|116',  '123|124',  '131|132',  '139|140'],
+        // the rooms by name, a cell inside each: the three control rooms and the two labs
+        names: { 22: 'North module', 102: 'Hub', 214: 'South module', 113: 'West lab', 125: 'East lab' }
       }
     },
 
-    /* A mud bank on Tessaly IV, a mile from the beacon: Brass Ledger's ship down
-       in the reeds, the Reavers' boats come to buy, and three places the log
-       could be as the sale is made (Find and secure, the relic). */
+    /* A mud bank on Tessaly IV, a mile from the beacon, where a deep river
+       cuts across the north-east corner of the table with a narrow band of
+       shallows along its bank and an inlet where the Reavers beached: Brass Ledger's ship down in the reeds with its
+       ramp down and its cargo out at the foot of it, the Reavers' hover-skiffs
+       in a rounded bay of the shallows, bows run up on the mud at its head (a site marked
+       `wet` may stand in the river), the lit tent where the sale is
+       haggled over, and the three places the log could be as the sale is made
+       (Find and secure, the relic): each its own piece (`skin`), the three
+       of them in a clearing in the middle with the forest round the edges.
+       The river and
+       its shallows are laid by their outlines (`poly`) and `fixed`: they run on
+       off the edges of the table. */
     mudbank: {
       name: 'The mud bank, Tessaly IV', planet: 'jungle',
       pieces: [
-        N('woods', 6, 4, 7, 7, 'lobed'), N('woods', 35, 4, 6, 6, 'blob'), N('woods', 6, 37, 6, 7, 'lobed'), N('woods', 35, 38, 6, 6, 'blob'),
-        N('water', 26, 6, 6, 4, 'kidney'), N('deep', 8, 24, 5, 4, 'long'), R('ruins', 38, 22, 4, 4), B(27, 38, 6, 4, 'block')
+        // the river: its shallows, and the deep channel down the middle of them
+        SHAPE('water', [[13.7, -16.3], [27, -9.3], [40.3, -2.4], [53.6, 4.6], [64.7, 10.4], [60.4, 24], [58.3, 22.7], [55.9, 21.7], [53.4, 21.1], [51.1, 20.2], [49.1, 18.6], [47.1, 17.1], [45.1, 15.5], [42.4, 15.2], [40.2, 14.1], [38.2, 13.5], [37.7, 13.4], [37.3, 13.1], [36.9, 12.8], [36.5, 12.5], [35.6, 13], [34.3, 14.4], [33, 15.9], [32, 16.7], [31.4, 16.9], [30.8, 16.8], [30.3, 16.7], [29.9, 16.4], [29.8, 15.6], [30, 14], [30.7, 11.7], [31.2, 9.6], [31.2, 8.6], [30.7, 8.4], [30.1, 8.5], [29.5, 8.6], [28.9, 8.6], [28.5, 8.4], [26.9, 7.1], [24.5, 6.3], [22.9, 3.9], [20.5, 3.2], [18.4, 1.8], [15.6, 1.8], [13.6, 0.1], [11.4, -1], [9.7, -3.1], [7.2, -3.7]]),
+        SHAPE('deep', [[10.2, -11.6], [12.6, -9.7], [15.4, -8.7], [18.2, -7.6], [20.6, -5.7], [23.2, -4.2], [26.2, -3.4], [28.8, -1.8], [31.2, 0], [34, 1.1], [36.8, 2.1], [39.2, 4], [41.8, 5.5], [44.8, 6.4], [47.4, 7.9], [49.8, 9.8], [52.6, 10.8], [55.4, 11.9], [57.8, 13.8], [60.4, 15.3], [63.4, 16.1], [60.7, 21.3], [57.7, 20.4], [55, 19.2], [52.5, 17.5], [49.9, 15.9], [47.1, 14.9], [44.4, 13.5], [42, 11.7], [39.3, 10.3], [36.4, 9.5], [33.6, 8.2], [31.3, 6.2], [28.9, 4.4], [25.9, 3.7], [22.9, 2.9], [20.5, 1], [18.2, -1.1], [15.5, -2.3], [12.4, -2.9], [9.7, -4.3], [7.4, -6.3]]),
+        // the clearing in the middle: Brass Ledger's ship down in it, its ramp to the south
+        R('shuttle', 11, 13, 10, 8),
+        // the drowned forest round the edges of the bank
+        N('woods', 5.5, 2.5, 4.5, 5, 'blob'), N('woods', 12, 4.5, 3.5, 3, 'lobed'), N('woods', 4.2, 10.5, 5.8, 4, 'kidney'), N('woods', 6, 17.5, 3, 3, 'blob'),
+        N('woods', 4.2, 23, 4, 7.5, 'long'), N('woods', 9.5, 30, 3.5, 3, 'blob'), N('woods', 5, 36, 7.5, 5.5, 'lobed'), N('woods', 14, 40.5, 4, 4, 'blob'),
+        N('woods', 19.5, 43, 6.5, 3.5, 'long'), N('woods', 34, 39, 5, 4.5, 'kidney'), N('woods', 40, 40, 3.5, 5, 'blob'), N('woods', 37.5, 22.5, 4, 4.5, 'lobed'), R('ruins', 39, 31, 4, 4), R('ruins', 27, 38, 6, 4)
       ],
       sites: { kind: 'searchsite', at: [
-        { x: 17, y: 16, name: 'Kettering’s ship' },
-        { x: 31, y: 21, name: 'The Reavers’ boats' },
-        { x: 21, y: 31, name: 'The tent where they haggle' }
+        { x: 17.6, y: 25.5, name: 'Kettering’s ship', skin: 'cargo' },
+        { x: 31.6, y: 14.9, name: 'The Reavers’ boats', skin: 'boats', wet: true },
+        { x: 29, y: 31, name: 'The tent where they haggle', skin: 'tent' }
       ] }
     },
 
@@ -172,32 +211,75 @@
       ] }
     },
 
-    /* The Mire on Tessaly IV: drowned forest, deep channels, a mud island, and
-       the beacon's spire with the three places its lodestone could be. */
+    /* The Mire on Tessaly IV: drowned forest, deep channels, a mud island
+       ringed with shallows and rising to the east, the Reavers' dig camp at
+       the foot of the spire (an open tent and the crew's tents), and the three places the beacon's lodestone could
+       be, each its own piece (`skin`): the socket at the foot of the black
+       spire, the sunken shrine and the ring of standing stones, the last two
+       out in the shallows. */
     mire: {
       name: 'The Drowned Beacon, Tessaly IV', planet: 'jungle',
       pieces: [
         N('rocks', 22, 11, 4, 4, 'blob'),
         N('woods', 6, 5, 7, 7, 'lobed'), N('woods', 34, 4, 7, 6, 'blob'), N('woods', 7, 36, 6, 7, 'lobed'), N('woods', 35, 38, 6, 6, 'blob'),
         N('woods', 37, 20, 5, 6, 'long'), N('woods', 6, 20, 5, 6, 'long'),
-        N('deep', 14, 41, 9, 3, 'long'), N('water', 26, 39, 6, 5, 'kidney'), N('water', 13, 8, 5, 4, 'kidney')
+        N('deep', 14, 41, 9, 3, 'long'), N('water', 26, 39, 6, 5, 'kidney'), N('water', 13.5, 8, 5, 4, 'kidney'),
+        // the shallows round the shrine and the standing stones, and pools across the island
+        N('water', 8, 27, 4, 6, 'kidney'), N('water', 13.5, 33, 5, 2.5, 'long'), N('water', 18.2, 27.5, 3.3, 5, 'blob'),
+        N('water', 26.5, 25.5, 3.5, 7, 'lobed'), N('water', 36, 27, 3, 6, 'kidney'), N('water', 31, 32, 4, 4, 'blob'),
+        N('water', 29, 8, 4, 4, 'blob'),
+        // more of the drowned forest, and two rises on the east side
+        N('woods', 15, 1.5, 5, 4, 'blob'), N('woods', 28, 14, 4, 4, 'lobed'), N('woods', 20, 36, 4, 4, 'blob'), N('woods', 6, 13, 4, 5, 'lobed'),
+        N('hill', 38.5, 11, 5.5, 8, 'long'), N('hill', 40, 30, 4, 7, 'blob'),
+        // the Reavers' dig at the foot of the spire: Big Hal's open tent, and the crew's tents (crater fields by the rules)
+        Object.assign(R('crater', 27.5, 19.5, 4, 3.5), { camp: 'marquee' }), Object.assign(R('crater', 17.8, 16.5, 2.6, 4.8), { camp: true })
       ],
       sites: { kind: 'searchsite', at: [
-        { x: 24, y: 19, name: 'The socket under the spire' },
-        { x: 15, y: 30, name: 'The sunken shrine' },
-        { x: 33, y: 29, name: 'The standing stones' }
+        { x: 24, y: 19, name: 'The socket under the spire', skin: 'spire' },
+        { x: 15, y: 30, name: 'The sunken shrine', skin: 'shrine' },
+        { x: 33, y: 29, name: 'The standing stones', skin: 'stones' }
       ] }
     },
 
-    /* Sable's warehouse on Kerrigan's docks: the basin to the north, sheds and
-       cranes round a yard, and the middle clear for the warehouse Sable holds. */
+    /* Sable's warehouse on Kerrigan's docks: the basin along the north edge
+       with its quay and two gantry cranes, the broker's office and the sheds
+       round a yard, cargo stacked either side, the reaction-mass tank farm on
+       the quay, and in the middle the warehouse itself. It is walked
+       into, not round: steel-clad walls (high walls) on a concrete floor, big
+       sliding hangar doors standing open north and south, the road running
+       up to both from the quay and the south edge, a doorway east and west,
+       and its floor open round the objective Hostile takeover puts in the
+       middle. Sable's sandbags are laid by the map (`fortified`), not by the
+       scenario, the strongroom (a bunker) in its far corner. A cargo lifter works the
+       east stack, and the south road comes in past a gatehouse and its lifting
+       gate. */
     docks: {
       name: 'The broker’s warehouse, Kerrigan docks', planet: 'industrial',
+      // Sable's position is the map's own: the sandbags below, not Hostile takeover's sections laid at random
+      fortified: true,
       pieces: [
-        N('deep', 14, 2, 20, 4, 'long'),
-        B(6, 8, 9, 6, 'L'), B(33, 8, 9, 6, 'block'), B(6, 35, 9, 7, 'U'), B(33, 35, 9, 7, 'annex'),
-        R('ruins', 20, 38, 4, 5), R('wall', 17, 30, 6, 1), R('wall', 26, 17, 6, 1),
-        R('barricade', 10, 22, 1, 5), R('barricade', 37, 22, 1, 5)
+        SHAPE('deep', [[5, 0], [43, 0], [43, 3.5], [5, 3.5]]),
+        SLAB(5, 3.5, 38, 3.5), R('crane', 11, 3.8, 3, 2.4), R('crane', 27.5, 3.8, 3, 2.4),
+        // (everything stands at least 3" off the warehouse, so a squad can go all the way round it)
+        B(5, 7.5, 8, 5, 'L'), R('fueltanks', 34.5, 7.5, 9, 5.5), B(5, 36, 9, 7, 'U'), B(34, 36, 8, 6, 'block'),
+        CG(5, 20, 6, 7), CG(37, 20, 5.5, 7), Object.assign(R('cargolifter', 38.5, 28, 2.5, 2.5), { facing: -Math.PI / 2 }),
+        // the tank farm's pipelines (low walls): one out along the quay to the water's edge, one east off the table
+        PIPE(38.7, 3.7, 0.6, 3.8), PIPE(43.5, 10, 4.5, 0.6),
+        // the yard's gate on the south road: the gatehouse beside it, and the lifting gate's arm across it
+        Object.assign(B(17, 41, 3.5, 3, 'block'), { fixed: true }), Object.assign(R('boomgate', 20.3, 44.6, 0.6, 0.6), { span: 6.7, fixed: true }),
+        // the road: off the quay to the north doors, and from the south edge of the table to the south ones
+        P(21, 7, 6, 9), P(21, 32, 6, 16),
+        // the warehouse: its floor, then its walls; sliding hangar doors north and south (x 20 to 28) and a doorway east and west (y 22.5 to 25.5)
+        SLAB(14, 16, 20, 16),
+        SHED(14, 16, 6, 0.5, 'slide', 1, 8), SHED(28, 16, 6, 0.5, 'slide', -1, 8), SHED(14, 31.5, 6, 0.5, 'slide', 1, 8), SHED(28, 31.5, 6, 0.5, 'slide', -1, 8),
+        SHED(14, 16.5, 0.5, 6, 'doorway', 1, 3), SHED(14, 25.5, 0.5, 6, 'doorway', -1, 3), SHED(33.5, 16.5, 0.5, 6, 'doorway', 1, 3), SHED(33.5, 25.5, 0.5, 6, 'doorway', -1, 3),
+        // Sable's sandbags: either side of the road before each hangar door, inside each doorway, and across the south hangar door inside
+        BAGS(16, 12, 4, 1), BAGS(28, 12, 4, 1), BAGS(16, 35.5, 4, 1), BAGS(28, 35.5, 4, 1), BAGS(16.5, 21.5, 1, 5), BAGS(30.5, 21.5, 1, 5),
+        BAGS(20, 27.5, 8, 1),
+        // the strongroom, the heading in it: a bunker in the warehouse's far (north-west) corner, covering the north hangar door and the west doorway
+        Object.assign(R('bunker', 15, 17.2, 4, 4), { fixed: true, vault: true }),
+        // the broker's stock, stacked inside the north wall east of the hangar door, and in the south-east corner
+        CG(28.5, 17.5, 4, 3), CG(29, 27.5, 4, 3)
       ]
     },
 

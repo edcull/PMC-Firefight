@@ -23,6 +23,8 @@
   function R(kind, x, y, w, h) { return { kind: kind, x: x, y: y, w: w, h: h }; }
   // cargo stacked on concrete: a crater field by the rules, rows of crates with walkways between to look at
   function CG(x, y, w, h) { return { kind: 'crater', x: x, y: y, w: w, h: h, cargo: 'apron' }; }
+  // a pipeline: a low wall by the rules, laid as written (it meets the pump houses it runs from)
+  function PIPE(x, y, w, h) { return { kind: 'barricade', x: x, y: y, w: w, h: h, pipe: true, fixed: true }; }
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
 
   root.PMCStoryMaps['deep-contract'] = {
@@ -90,7 +92,9 @@
         N('rocks', 7, 37, 6, 5, 'lobed'), N('rocks', 35, 6, 6, 5, 'blob'),
         B(17, 4, 6, 5, 'block'), B(26, 41, 6, 4, 'block'),
         N('woods', 5, 20, 4, 8, 'long'), N('woods', 39, 20, 4, 8, 'lobed'),
-        N('crater', 17, 39, 4, 4, 'blob'), N('crater', 27, 5, 4, 4, 'lobed')
+        N('crater', 17, 39, 4, 4, 'blob'), N('crater', 27, 5, 4, 4, 'lobed'),
+        // the pipeline: a pipe from each pump house, joining a main that runs north past the station's main building and off the table
+        PIPE(24.5, 0, 0.6, 22.9), PIPE(20, 16.7, 4.5, 0.6), PIPE(25.1, 21.7, 3.9, 0.6), PIPE(20.7, 22.3, 0.6, 5.7), PIPE(21.3, 22.3, 3.2, 0.6)
       ],
       /* Find and secure's three possible locations: the station's pump houses,
          where Varga might be. Each is a shed 4" across that blocks line of sight. */

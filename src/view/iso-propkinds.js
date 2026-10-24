@@ -9,9 +9,13 @@
     var BAG = S.BAG, BARK = S.BARK, BASALTS = S.BASALTS, BRICK = S.BRICK, CHAR = S.CHAR,
         CONCRETE = S.CONCRETE, K = S.K, LEAF = S.LEAF, PIXEL = S.PIXEL, PREFAB = S.PREFAB, ROOF = S.ROOF,
         STONE = S.STONE, WALL_THEME = S.WALL_THEME, a = S.a, boulder = S.boulder, box = S.box, brokenWall = S.brokenWall,
-        conifer = S.conifer, dot = S.dot, edgeLine = S.edgeLine, ellipse = S.ellipse, lerp2 = S.lerp2,
+        conifer = S.conifer, dot = S.dot, edgeLine = S.edgeLine, ellipse = S.ellipse, ellipseRing = S.ellipseRing, lerp2 = S.lerp2,
         pebble = S.pebble, poly = S.poly, rect = S.rect, rng = S.rng, shadowBlob = S.shadowBlob,
         toScreen = S.toScreen, vgrad = S.vgrad;
+
+    // a warehouse's steel cladding, blue-grey, and the darker steel of its posts
+    var SHEDPAL = ['#1f2a30', '#33424a', '#4a5c66', '#61757f', '#7d919a', '#a3b4bc'];
+    var BEAMPAL = ['#14181a', '#22292c', '#30393d', '#3e494e', '#56626a', '#76848c'];
 
     // a compound's plating, and its doors (Close Encounters)
     var BULK = ['#1d2124', '#2a2f33', '#3a4146', '#4a535a', '#5c666e', '#76818a'];
@@ -50,6 +54,56 @@
       edgeLine(g, at(0, -0.35), at(len, -0.35), '#8a96a0', 2);
       edgeLine(g, at(0, 0.35), at(len, 0.35), '#b4c0c8', 2);
       for (var tb = 0; tb * 0.9 < len; tb++) edgeLine(g, at(tb * 0.9, -0.35), at(Math.min(len, tb * 0.9 + 0.45), 0.35), '#6a7680', 1);
+    }
+    // the drowned beacon's spire: black stone, dark to the light (BASALTS, a little lifted)
+    var BASALT_PAL = ['#0c0a09', '#161311', '#26211d', '#332c27', '#463d37', '#5a4f47'];
+    // its standing stones and the shrine's columns: old grey stone gone green with the damp
+    var MOSSY = ['#22261f', '#30352b', '#3f4538', '#525a49', '#6a725e', '#858d76'];
+    /* A rough-hewn stone (a standing stone, a column): wd x dp across at the foot,
+       h high, its top drawn in a little and leaning `lean` east, lit from the
+       north-west, a crack or two, and moss on its top. */
+    function roughStone(g, X, Y, wd, dp, h, lift, seed, lean) {
+      var r = rng(seed), k = 0.72, lx = lean || 0;
+      function Q(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - lift - z]; }
+      var x0 = X - wd / 2, x1 = X + wd / 2, y0 = Y - dp / 2, y1 = Y + dp / 2;
+      var tx0 = X + lx - wd * k / 2, tx1 = X + lx + wd * k / 2, ty0 = Y - dp * k / 2, ty1 = Y + dp * k / 2;
+      var b = [Q(x0, y0, 0), Q(x1, y0, 0), Q(x1, y1, 0), Q(x0, y1, 0)], t = [Q(tx0, ty0, h), Q(tx1, ty0, h), Q(tx1, ty1, h), Q(tx0, ty1, h)];
+      poly(g, [b[1], b[2], t[2], t[1]], MOSSY[1]);                 // the east face, in shadow
+      poly(g, [b[2], b[3], t[3], t[2]], MOSSY[3]);                 // the south face
+      poly(g, t, MOSSY[4]);                                        // the top
+      edgeLine(g, t[3], t[0], MOSSY[5], 1); edgeLine(g, b[2], t[2], MOSSY[2], 1);
+      // a crack down the south face, and moss on the top and at the foot
+      var cx = 0.3 + r() * 0.4, c0 = Q(x0 + (x1 - x0) * cx, y1, h * (0.55 + r() * 0.3)), c1 = Q(x0 + (x1 - x0) * (cx + 0.1), y1, h * 0.25);
+      edgeLine(g, c0, c1, MOSSY[0], 1);
+      for (var m = 0; m < 3; m++) { var mq = Q(tx0 + (tx1 - tx0) * r(), ty0 + (ty1 - ty0) * r(), h); dot(g, mq[0] - 1, mq[1] - 1, m % 2 ? '#5f7d3c' : '#7a9a4a', 2); }
+      var fq = Q(x0 + (x1 - x0) * r(), y1, a(0.6)); dot(g, fq[0] - 1, fq[1] - 1, '#4f6e3a', 3);
+    }
+    /* A pool round something standing in the shallows: an irregular ring of
+       water `rad` inches about (X, Y), its bank dark, its middle deeper, a glint
+       or two of light on it. */
+    function shallowPool(g, X, Y, rad, lift, seed) {
+      var r = rng(seed), n = 12, out = [], inn = [];
+      function Q(x, y) { var q = toScreen(x, y); return [q.x, q.y - lift]; }
+      for (var i = 0; i < n; i++) {
+        var an = i / n * Math.PI * 2, rr = rad * (0.85 + r() * 0.3);
+        out.push(Q(X + Math.cos(an) * rr, Y + Math.sin(an) * rr));
+        inn.push(Q(X + Math.cos(an) * rr * 0.72, Y + Math.sin(an) * rr * 0.72));
+      }
+      poly(g, out.map(function (q) { return [q[0], q[1] + 2]; }), '#3a2e22');   // the muddy bank
+      poly(g, out, '#3d7f95');
+      poly(g, inn, '#2f6a80');
+      for (var gl = 0; gl < 4; gl++) { var gq = Q(X + (r() - 0.5) * rad * 1.2, Y + (r() - 0.5) * rad * 1.2); edgeLine(g, [gq[0] - 3, gq[1]], [gq[0] + 3, gq[1]], 'rgba(200,235,245,.45)', 1); }
+    }
+    /* A possible location's ring (Find and secure): a dotted circle on the
+       ground about (cx, cy) round the 4" it covers, amber while it is to be
+       searched, grey once ruled out, gold where the objective turned up. */
+    function siteRing(g, cx, cy, lift, checked, found, radius) {
+      var rc = found ? '#ffd860' : checked ? 'rgba(160,160,150,.7)' : '#ffb03a', ringR = radius || 2.85, rl = lift || 0, nd = Math.round(36 * ringR / 2.85);
+      for (var rd2 = 0; rd2 < nd; rd2++) {
+        var ra = rd2 / nd * Math.PI * 2, rq = toScreen(cx + Math.cos(ra) * ringR, cy + Math.sin(ra) * ringR);
+        rect(g, rq.x - 3, rq.y - rl - 2, 6, 4, 'rgba(20,14,8,.6)');
+        rect(g, rq.x - 2, rq.y - rl - 1.5, 4, 3, rc);
+      }
     }
     // a glass tower: tinted curtain wall, its mullions, and the light in it
     var GLASS = ['#0c1820', '#13283a', '#1a3a54', '#21506e', '#2b6a8a', '#3c86a8'];
@@ -568,6 +622,118 @@
         /* A field camp's comms mast: a tapering lattice tower on a plinth, cross-
            braced, with whips and a small dish at its head, a red light at the
            top, guy wires out to three anchors, and the radio box at its foot. */
+        /* A dock's gantry crane: four legs straddling the quay, braced, a girder
+           frame across their heads with the cab on it, and the boom run out
+           north over the basin with a hook hanging off its end, in dock yellow. */
+        case 'crane': {
+          var cl = lift || 0, cx0 = pr.x, cy0 = pr.y, cw = pr.w, ch2 = pr.h, CH = pr.height;
+          var CP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - cl - z]; };
+          var YEL = ['#3a2c0c', '#6a5016', '#a07a1e', '#c99a28', '#e2b43a', '#f2d06a'];
+          var cm = CP(cx0 + cw / 2, cy0 + ch2 / 2, 0);
+          shadowBlob(g, { x: cm[0] + a(3), y: cm[1] + a(1.5) }, a(cw * 4), a(ch2 * 2.2));
+          // the rails along the quay
+          edgeLine(g, CP(cx0 - 0.6, cy0 + 0.2, 0), CP(cx0 + cw + 0.6, cy0 + 0.2, 0), '#2a2a28', 2);
+          edgeLine(g, CP(cx0 - 0.6, cy0 + ch2 - 0.2, 0), CP(cx0 + cw + 0.6, cy0 + ch2 - 0.2, 0), '#2a2a28', 2);
+          var LEGS = [[cx0 + 0.2, cy0 + 0.2], [cx0 + cw - 0.2, cy0 + 0.2], [cx0 + 0.2, cy0 + ch2 - 0.2], [cx0 + cw - 0.2, cy0 + ch2 - 0.2]];
+          var leg = function (l, near) {
+            var b0 = CP(l[0], l[1], 0), t0 = CP(l[0], l[1], CH);
+            edgeLine(g, b0, t0, near ? YEL[3] : YEL[2], 7); edgeLine(g, [b0[0] + 3, b0[1]], [t0[0] + 3, t0[1]], YEL[1], 2);
+            box(g, { x: l[0] - 0.3, y: l[1] - 0.25, w: 0.6, h: 0.5, height: a(2.2), seed: pr.seed }, YEL, { roof: YEL[4], roofEdge: YEL[5], windows: null, lift: cl, noShadow: true });
+          };
+          // the boom first where it runs away north, behind the legs
+          var bz = CH + a(3), by0 = Math.max(0.4, cy0 - 4.2), bmx = cx0 + cw / 2;
+          edgeLine(g, CP(bmx - 0.35, cy0 + ch2 / 2, bz), CP(bmx - 0.35, by0, bz), YEL[2], 5);
+          edgeLine(g, CP(bmx + 0.35, cy0 + ch2 / 2, bz), CP(bmx + 0.35, by0, bz), YEL[3], 5);
+          for (var bt = 0; bt < 7; bt++) {
+            var y1b = cy0 + ch2 / 2 - (cy0 + ch2 / 2 - by0) * bt / 7, y2b = cy0 + ch2 / 2 - (cy0 + ch2 / 2 - by0) * (bt + 1) / 7;
+            edgeLine(g, CP(bmx - 0.35, y1b, bz), CP(bmx + 0.35, y2b, bz), YEL[1], 1);
+          }
+          // the hook, on its cable, over the water
+          var hk0 = CP(bmx, by0 + 0.4, bz), hk1 = CP(bmx, by0 + 0.4, CH * 0.35);
+          edgeLine(g, hk0, hk1, '#1e1e1e', 1); rect(g, hk1[0] - 3, hk1[1], 6, 4, '#2c2c2c'); dot(g, hk1[0], hk1[1] + 5, '#d0a030', 2);
+          leg(LEGS[0], false); leg(LEGS[1], false);
+          // cross-bracing between the far legs and the near ones
+          edgeLine(g, CP(LEGS[0][0], LEGS[0][1], 0), CP(LEGS[1][0], LEGS[1][1], CH * 0.6), YEL[1], 1);
+          edgeLine(g, CP(LEGS[2][0], LEGS[2][1], CH * 0.6), CP(LEGS[3][0], LEGS[3][1], 0), YEL[2], 2);
+          leg(LEGS[2], true); leg(LEGS[3], true);
+          // the frame across the leg heads, and the cab on it
+          box(g, { x: cx0, y: cy0, w: cw, h: ch2, height: a(3), seed: pr.seed + 1 }, YEL, { roof: YEL[4], roofEdge: YEL[5], windows: null, lift: cl + CH, noShadow: true });
+          box(g, { x: cx0 + cw * 0.55, y: cy0 + 0.3, w: cw * 0.4, h: ch2 - 0.6, height: a(6), seed: pr.seed + 2 }, ['#2a3034', '#3c464c', '#55626a', '#6e7c84', '#8a98a0', '#b0bcc2'],
+            { roof: '#8a98a0', roofEdge: '#b0bcc2', windows: null, lift: cl + CH + a(3), noShadow: true });
+          var cwq = CP(cx0 + cw * 0.95, cy0 + ch2 * 0.5, CH + a(6.5)); rect(g, cwq[0] - 6, cwq[1] - 4, 6, 3, '#9fd2e0');
+          var bcn = CP(cx0 + cw * 0.75, cy0 + ch2 * 0.5, CH + a(10)); dot(g, bcn[0], bcn[1], '#ffb02e', 3);
+          break;
+        }
+        /* A lifting gate: a striped post with its counterweight, the arm down
+           across the road in red and white, resting on a fork on the far side. */
+        case 'boomgate': {
+          var gl = lift || 0, gx = pr.x + pr.w / 2, gy = pr.y + pr.h / 2, GH = pr.height;
+          var GP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - gl - z]; };
+          var gb = GP(gx, gy, 0); shadowBlob(g, { x: gb[0] + a(1), y: gb[1] }, a(2.2), a(1.1));
+          // the rest on the far side of the road
+          var rx2 = gx + pr.span; edgeLine(g, GP(rx2, gy, 0), GP(rx2, gy, GH), '#3a3a38', 2); edgeLine(g, GP(rx2 - 0.15, gy, GH + a(0.6)), GP(rx2 + 0.15, gy, GH + a(0.6)), '#3a3a38', 2);
+          // the post, striped, and its housing
+          box(g, { x: gx - 0.3, y: gy - 0.3, w: 0.6, h: 0.6, height: GH + a(1.4), seed: pr.seed }, ['#2a2410', '#4a3f18', '#8a7222', '#b8962c', '#d9b23a', '#f0d070'],
+            { roof: '#d9b23a', roofEdge: '#f0d070', windows: null, lift: gl, noShadow: true });
+          // the counterweight behind the pivot, then the arm, in stripes
+          var pz = GH + a(0.6);
+          box(g, { x: gx - 1.1, y: gy - 0.18, w: 0.7, h: 0.36, height: a(1.4), seed: pr.seed + 1 }, ['#141414', '#222', '#333', '#444', '#555', '#666'],
+            { roof: '#555', roofEdge: '#777', windows: null, lift: gl + pz - a(0.7), noShadow: true });
+          var ns = Math.max(4, Math.round(pr.span / 0.6));
+          for (var gs = 0; gs < ns; gs++) {
+            var ga0 = gx + pr.span * gs / ns, ga1 = gx + pr.span * (gs + 1) / ns;
+            edgeLine(g, GP(ga0, gy, pz), GP(ga1, gy, pz), gs % 2 ? '#f2f2ee' : '#c8322a', 3);
+          }
+          var pv = GP(gx, gy, pz); dot(g, pv[0] - 1, pv[1] - 1, '#222', 3);
+          break;
+        }
+        /* A tank farm: two reaction-mass tanks, white steel drums banded and
+           stencilled, inside a low concrete bund, with a pipe rack between them. */
+        case 'fueltanks': {
+          var fl = lift || 0, fx = pr.x, fy = pr.y, fw = pr.w, fh = pr.h;
+          var FP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - fl - z]; };
+          var fmid = FP(fx + fw / 2, fy + fh / 2, 0);
+          shadowBlob(g, { x: fmid[0] + a(2), y: fmid[1] + a(1) }, a(fw * 2.6), a(fh * 1.6));
+          poly(g, [FP(fx, fy, 0), FP(fx + fw, fy, 0), FP(fx + fw, fy + fh, 0), FP(fx, fy + fh, 0)], '#4a4740');
+          // the bund's far sides now, its near sides after the tanks
+          var bund = function (x0, y0, x1, y1) { box(g, { x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.max(0.25, Math.abs(x1 - x0)), h: Math.max(0.25, Math.abs(y1 - y0)), height: a(2), seed: pr.seed }, CONCRETE, { roof: CONCRETE[4], roofEdge: CONCRETE[5], windows: null, lift: fl, noShadow: true }); };
+          bund(fx, fy, fx + fw, fy + 0.25); bund(fx, fy, fx + 0.25, fy + fh);
+          var drum = function (cx3, cy3, r3, H3, label) {
+            var N3 = 28, pts0 = [], pts1 = [];
+            for (var di = 0; di < N3; di++) {
+              var t3 = di / N3 * Math.PI * 2;
+              pts0.push(FP(cx3 + Math.cos(t3) * r3, cy3 + Math.sin(t3) * r3, 0)); pts1.push(FP(cx3 + Math.cos(t3) * r3, cy3 + Math.sin(t3) * r3, H3));
+            }
+            // the walls, far ones first, each strip shaded by which way it faces
+            var order = []; for (var dj = 0; dj < N3; dj++) order.push(dj);
+            order.sort(function (p1, p2) { return (Math.cos(p1 / N3 * 6.283) + Math.sin(p1 / N3 * 6.283)) - (Math.cos(p2 / N3 * 6.283) + Math.sin(p2 / N3 * 6.283)); });
+            order.forEach(function (dk) {
+              var dn = (dk + 1) % N3, ang = (dk + 0.5) / N3 * Math.PI * 2;
+              var lit = 0.5 + 0.5 * Math.cos(ang - 2.4), v3 = Math.round(150 + lit * 80);
+              poly(g, [pts0[dk], pts0[dn], pts1[dn], pts1[dk]], 'rgb(' + v3 + ',' + (v3 + 2) + ',' + (v3 + 4) + ')');
+            });
+            // a band round it, red, and the top, lit, with its vent
+            var bandZ = H3 * 0.3;
+            for (var bk = 0; bk < N3; bk++) {
+              var ab = (bk + 0.5) / N3 * Math.PI * 2;
+              if (Math.cos(ab) + Math.sin(ab) < 0) continue;
+              edgeLine(g, FP(cx3 + Math.cos(bk / N3 * 6.283) * r3, cy3 + Math.sin(bk / N3 * 6.283) * r3, bandZ), FP(cx3 + Math.cos((bk + 1) / N3 * 6.283) * r3, cy3 + Math.sin((bk + 1) / N3 * 6.283) * r3, bandZ), '#b8402e', 3);
+            }
+            poly(g, pts1, '#d8dcde');
+            var vt = FP(cx3, cy3, H3); rect(g, vt[0] - 2, vt[1] - 6, 4, 6, '#6a7074');
+            if (label) { var lq = FP(cx3 + r3 * 0.72, cy3 + r3 * 0.72, H3 * 0.62); rect(g, lq[0] - 7, lq[1] - 3, 14, 6, '#262626'); rect(g, lq[0] - 6, lq[1] - 2, 12, 4, '#e2b43a'); }
+          };
+          // two tanks side by side along the farm's length, clear of each other and of the bund, the pipe rack between
+          var lng = fw >= fh, span2 = lng ? fw : fh, deep2 = lng ? fh : fw, big = Math.min(deep2 / 2 - 0.45, span2 / 4 - 0.3);
+          var tc = function (u) { return lng ? [fx + u, fy + fh / 2] : [fx + fw / 2, fy + u]; };
+          var ta = tc(span2 * 0.27), tb = tc(span2 * 0.73);
+          edgeLine(g, FP(ta[0], ta[1], a(5)), FP(tb[0], tb[1], a(5)), '#5d666c', 4);
+          edgeLine(g, FP(ta[0], ta[1], a(5.6)), FP(tb[0], tb[1], a(5.6)), '#8a949a', 1);
+          drum(ta[0], ta[1], big, pr.height, true);
+          drum(tb[0], tb[1], big, pr.height, true);
+          bund(fx, fy + fh - 0.25, fx + fw, fy + fh); bund(fx + fw - 0.25, fy, fx + fw, fy + fh);
+          break;
+        }
         case 'commsmast': {
           var ml = lift || 0, mx = pr.x + pr.w / 2, my = pr.y + pr.h / 2, mh = a(64);
           function MS(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - ml - z]; }
@@ -721,6 +887,40 @@
           var acrossX = bmm.x1 !== bmm.x0, near = acrossX ? bmm.x1 < bmm.x0 : bmm.y1 < bmm.y0;
           var face = acrossX ? [mb.x + mb.w, bmm.y1] : [bmm.x1, mb.y + mb.h], mid = acrossX ? [mb.x + mb.w / 2, bmm.y1] : [bmm.x1, mb.y + mb.h / 2];
           if (near) { block(); solarTruss(g, SM, [bmm.x0, bmm.y0], face); } else { solarTruss(g, SM, [bmm.x0, bmm.y0], mid); block(); }
+          break;
+        }
+        /* A run of a pipeline: a fat steel pipe on a trestle, its shadow on the
+           ground under it, rust on it, and a flanged joint at either end. */
+        case 'piperun': {
+          var prl = lift || 0, ph = a(3.2), pr2 = rng(pr.seed), half = pr.len / 2;
+          function PQ(dx, dy, z) { var q = toScreen(pr.x + dx, pr.y + dy); return [q.x, q.y - prl - z]; }
+          var A = pr.horiz ? PQ(-half, 0, ph) : PQ(0, -half, ph), B2 = pr.horiz ? PQ(half, 0, ph) : PQ(0, half, ph);
+          // its shadow, a soft band on the ground under it, a little to the light's far side
+          var SH3 = function (t, v) { return pr.horiz ? PQ(t, v, 0) : PQ(v, t, 0); };
+          poly(g, [SH3(-half, -0.12), SH3(half, -0.12), SH3(half, 0.32), SH3(-half, 0.32)], 'rgba(20,16,12,.28)');
+          // the trestle in the middle of the run
+          var t0 = PQ(0, 0, 0), t1 = PQ(0, 0, ph);
+          edgeLine(g, [t0[0] - a(1.2), t0[1]], [t1[0], t1[1]], '#2c2f31', 2); edgeLine(g, [t0[0] + a(1.2), t0[1]], [t1[0], t1[1]], '#2c2f31', 2);
+          // the pipe: dark under, its body, a lit band along the top
+          edgeLine(g, [A[0], A[1] + 2], [B2[0], B2[1] + 2], '#25292b', a(4.2));
+          edgeLine(g, A, B2, '#5d666c', a(3.6));
+          edgeLine(g, [A[0], A[1] - a(1)], [B2[0], B2[1] - a(1)], '#8a949a', a(1.4));
+          edgeLine(g, [A[0], A[1] - a(1.5)], [B2[0], B2[1] - a(1.5)], 'rgba(220,230,235,.45)', 1);
+          // rust, here and there
+          for (var rs3 = 0; rs3 < 2; rs3++) { var tq = pr2(); dot(g, A[0] + (B2[0] - A[0]) * tq - 1, A[1] + (B2[1] - A[1]) * tq, pr2() < 0.5 ? '#7a4a2a' : '#5e3a22', 3); }
+          // a flanged joint at each end of the run
+          // (each ring stands across the pipe: in the plane of the ground's cross direction and the vertical)
+          var o0 = toScreen(pr.x, pr.y), o1 = pr.horiz ? toScreen(pr.x, pr.y + 1) : toScreen(pr.x + 1, pr.y);
+          var cvx = o1.x - o0.x, cvy = o1.y - o0.y;
+          var ring = function (E, rad, col) {
+            var pts = [];
+            for (var ri3 = 0; ri3 < 16; ri3++) {
+              var th = ri3 / 16 * Math.PI * 2, cu = Math.cos(th) * rad, su = Math.sin(th) * rad;
+              pts.push([E[0] + cvx * cu, E[1] + cvy * cu - su * K]);
+            }
+            poly(g, pts, col);
+          };
+          [A, B2].forEach(function (E) { ring(E, 0.3, '#3a4044'); ring([E[0], E[1] - 1], 0.2, '#6e787e'); });
           break;
         }
         case 'sacks': {
@@ -1058,6 +1258,42 @@
              odd crack and bullet pock, and on some walls a coil of razor wire. */
           var wr2 = rng(pr.seed), lf2 = lift || 0;
           var ux2 = pr.horiz ? 1 : 0, uy2 = pr.horiz ? 0 : 1, vx2 = 1 - ux2, vy2 = 1 - uy2;
+          if (pr.shed) {
+            /* A warehouse's wall: corrugated steel cladding on I-beam posts, the
+               ribs catching the light, a flashing along the top, rust weeping
+               from the fixings and dirt splashed up the foot. */
+            var SL = pr.len, ST = 0.2, SH = pr.height, s0 = -SL / 2, s1 = SL / 2;
+            var SQ = function (t, v, z) { var q = toScreen(pr.x + ux2 * t + vx2 * v, pr.y + uy2 * t + vy2 * v); return [q.x, q.y - lf2 - z]; };
+            var sslab = function (t0, t1, v0, v1, z0, z1, pal2) {
+              poly(g, [SQ(t0, v1, z0), SQ(t1, v1, z0), SQ(t1, v1, z1), SQ(t0, v1, z1)], pr.horiz ? pal2[3] : pal2[2]);
+              poly(g, [SQ(t1, v0, z0), SQ(t1, v1, z0), SQ(t1, v1, z1), SQ(t1, v0, z1)], pr.horiz ? pal2[2] : pal2[3]);
+              poly(g, [SQ(t0, v0, z1), SQ(t1, v0, z1), SQ(t1, v1, z1), SQ(t0, v1, z1)], pal2[4]);
+            };
+            poly(g, [SQ(s0, ST, 0), SQ(s1, ST, 0), SQ(s1, ST + 0.6, 0), SQ(s0, ST + 0.6, 0)], 'rgba(14,11,8,.35)');
+            sslab(s0, s1, -ST, ST, 0, SH, SHEDPAL);
+            // the ribs: a lit edge and a shadowed trough, every fifth of an inch
+            var nr = Math.max(2, Math.round(SL / 0.2));
+            for (var sr = 0; sr < nr; sr++) {
+              var st = s0 + (s1 - s0) * (sr + 0.3) / nr;
+              edgeLine(g, SQ(st, ST, 1), SQ(st, ST, SH - 1), sr % 2 ? SHEDPAL[4] : SHEDPAL[1], 1);
+            }
+            // a sheet's lap, a third of the way up, and the dirt at the foot
+            edgeLine(g, SQ(s0, ST, SH * 0.36), SQ(s1, ST, SH * 0.36), 'rgba(20,26,30,.45)', 1);
+            for (var sd = 0; sd < 22; sd++) { var dq3 = SQ(s0 + wr2() * SL, ST, wr2() * wr2() * SH * 0.3); dot(g, dq3[0], dq3[1], 'rgba(46,36,26,.55)', 1); }
+            for (var su = 0; su < 3; su++) {
+              if (wr2() > 0.6) continue;
+              var ut = s0 + wr2() * SL, ul = SH * (0.2 + wr2() * 0.4);
+              for (var uz = 0; uz < ul; uz++) { var uq = SQ(ut, ST, SH * 0.36 - uz); dot(g, uq[0], uq[1], 'rgba(120,62,30,.45)', 1); }
+            }
+            // the flashing along the top, and the posts
+            sslab(s0, s1, -ST - 0.06, ST + 0.06, SH, SH + a(0.8), SHEDPAL);
+            edgeLine(g, SQ(s0, ST + 0.06, SH + a(0.8)), SQ(s1, ST + 0.06, SH + a(0.8)), SHEDPAL[5], 1);
+            // (posts only at the wall's ends: the sheets run on unbroken between them)
+            (pr.first ? [s0] : []).concat(pr.last ? [s1 - 0.25] : []).forEach(function (pt1) {
+              sslab(pt1, pt1 + 0.25, -ST - 0.1, ST + 0.1, 0, SH + a(1.2), BEAMPAL);
+            });
+            break;
+          }
           // a reinforced wall (p. 41) is thicker, and banded at the foot so it reads as one that stays up
           var L2 = pr.len, T2 = pr.reinforced ? 0.36 : 0.22, H2 = pr.height;
           function Q(t, v, z) { var q = toScreen(pr.x + ux2 * t + vx2 * v, pr.y + uy2 * t + vy2 * v); return [q.x, q.y - lf2 - z]; }
@@ -1120,6 +1356,79 @@
               g.beginPath(); g.ellipse(lc[0], lc[1], a(1.1), a(1.4), 0.5, 0, Math.PI * 2); g.stroke(); g.restore();
               dot(g, lc[0] + a(0.8), lc[1] - a(0.6), '#d0d4d8', 1);
             }
+          }
+          break;
+        }
+        /* A hangar's sliding doors, run back along the wall beside the opening
+           on its near face: two corrugated leaves, one proud of the other, hung
+           from a track, hazard-striped along their leading edges. */
+        case 'hangarleaves': {
+          var hl = lift || 0, hux = pr.horiz ? 1 : 0, huy = 1 - hux, HL = pr.len, HH = pr.height * 0.94, hd = pr.dir;
+          var HQ = function (t, v, z) { var q = toScreen(pr.x + hux * t + huy * v, pr.y + huy * t + hux * v); return [q.x, q.y - hl - z]; };
+          var DLEAF = ['#2a2620', '#4a3f30', '#6b5a40', '#87714f', '#a08a64', '#c2ad86'];
+          [[0.62, 0.15], [0.42, -0.15]].forEach(function (lv2, li) {
+            var v0 = lv2[0], v1 = v0 + 0.1, t0 = -HL / 2 + lv2[1] * hd, t1 = HL / 2 + lv2[1] * hd;
+            poly(g, [HQ(t0, v1, 0), HQ(t1, v1, 0), HQ(t1, v1, HH), HQ(t0, v1, HH)], pr.horiz ? DLEAF[3] : DLEAF[2]);
+            poly(g, [HQ(t0, v0, HH), HQ(t1, v0, HH), HQ(t1, v1, HH), HQ(t0, v1, HH)], DLEAF[4]);
+            var nrb = Math.max(4, Math.round(HL / 0.25));
+            for (var hr = 1; hr < nrb; hr++) {
+              var htt = t0 + (t1 - t0) * hr / nrb;
+              edgeLine(g, HQ(htt, v1, 1), HQ(htt, v1, HH - 1), hr % 2 ? DLEAF[4] : DLEAF[1], 1);
+            }
+            // the leading edge, striped, and a grab handle
+            var te = hd > 0 ? t1 : t0, tin = te - hd * 0.18;
+            for (var hz2 = 0; hz2 < 8; hz2++) {
+              var za = HH * hz2 / 8, zb = HH * (hz2 + 1) / 8;
+              poly(g, [HQ(tin, v1, za), HQ(te, v1, za), HQ(te, v1, zb), HQ(tin, v1, zb)], hz2 % 2 ? '#26241f' : '#d6a92c');
+            }
+            var hh3 = HQ(te - hd * 0.35, v1, HH * 0.45); rect(g, hh3[0] - 1, hh3[1] - 4, 2, 8, '#1c1c1c');
+            if (li === 0) edgeLine(g, HQ(t0, v1, HH * 0.5), HQ(t1, v1, HH * 0.5), 'rgba(30,24,18,.4)', 1);
+          });
+          break;
+        }
+        /* An opening in a warehouse wall. A hangar's: the header girder across
+           it at the wall's top, the leaves' track along it and the rails let into
+           the floor. A doorway's: steel jambs striped at the foot, the cladding
+           carried on over the door, a rolled shutter under it and a lamp. */
+        case 'shedopening': {
+          var sl2 = lift || 0, sux = pr.horiz ? 1 : 0, suy = 1 - sux, G2 = pr.gap, SH2 = pr.height;
+          var OQ = function (t, v, z) { var q = toScreen(pr.x + sux * t + suy * v, pr.y + suy * t + sux * v); return [q.x, q.y - sl2 - z]; };
+          var oslab = function (t0, t1, v0, v1, z0, z1, pal2) {
+            poly(g, [OQ(t0, v1, z0), OQ(t1, v1, z0), OQ(t1, v1, z1), OQ(t0, v1, z1)], pr.horiz ? pal2[3] : pal2[2]);
+            poly(g, [OQ(t1, v0, z0), OQ(t1, v1, z0), OQ(t1, v1, z1), OQ(t1, v0, z1)], pr.horiz ? pal2[2] : pal2[3]);
+            poly(g, [OQ(t0, v0, z1), OQ(t1, v0, z1), OQ(t1, v1, z1), OQ(t0, v1, z1)], pal2[4]);
+          };
+          if (pr.style === 'slide') {
+            // the rails in the floor across the opening
+            [0.47, 0.67].forEach(function (rv) { edgeLine(g, OQ(-G2 / 2 - G2 / 2, rv, 0), OQ(G2 / 2 + G2 / 2, rv, 0), 'rgba(20,20,20,.55)', 1); });
+            oslab(-G2 / 2 - 0.25, G2 / 2 + 0.25, -0.25, 0.3, SH2 - a(1.6), SH2 + a(0.8), BEAMPAL);
+            edgeLine(g, OQ(-G2 / 2 - 0.25, 0.3, SH2 - a(1.6)), OQ(G2 / 2 + 0.25, 0.3, SH2 - a(1.6)), BEAMPAL[5], 1);
+            // the track the leaves hang from, run on over them both ways
+            oslab(-G2, G2, 0.3, 0.75, SH2 * 0.94, SH2 * 0.94 + a(0.9), BEAMPAL);
+            for (var sb = 0; sb < 9; sb++) {
+              var sbt = -G2 / 2 + G2 * (sb + 0.5) / 9; var sq2 = OQ(sbt, 0.3, SH2 - a(0.4)); dot(g, sq2[0], sq2[1], '#d6a92c', 2);
+            }
+          } else {
+            var DH = SH2 * 0.6, JW = 0.2;
+            // the jambs
+            [[-G2 / 2, -G2 / 2 + JW], [G2 / 2 - JW, G2 / 2]].forEach(function (jt) {
+              oslab(jt[0], jt[1], -0.3, 0.3, 0, DH, BEAMPAL);
+              for (var js = 0; js < 4; js++) {
+                var jz0 = DH * 0.3 * js / 4, jz1 = DH * 0.3 * (js + 1) / 4;
+                poly(g, [OQ(jt[0], 0.3, jz0), OQ(jt[1], 0.3, jz0), OQ(jt[1], 0.3, jz1), OQ(jt[0], 0.3, jz1)], js % 2 ? '#26241f' : '#d6a92c');
+              }
+            });
+            // the wall carried over the door, ribbed like the rest
+            oslab(-G2 / 2, G2 / 2, -0.2, 0.2, DH, SH2, SHEDPAL);
+            var ndr = Math.max(4, Math.round(G2 / 0.2));
+            for (var dr2 = 1; dr2 < ndr; dr2++) {
+              var dtt = -G2 / 2 + G2 * dr2 / ndr;
+              edgeLine(g, OQ(dtt, 0.2, DH + 1), OQ(dtt, 0.2, SH2 - 1), dr2 % 2 ? SHEDPAL[4] : SHEDPAL[1], 1);
+            }
+            oslab(-G2 / 2 - 0.05, G2 / 2 + 0.05, -0.26, 0.26, SH2, SH2 + a(0.8), SHEDPAL);
+            // the shutter, rolled up under it, and the lamp over the door
+            oslab(-G2 / 2 + JW, G2 / 2 - JW, 0.2, 0.5, DH - a(1.4), DH, ['#1e2224', '#2e3438', '#40484e', '#566068', '#6e7a82', '#8e9aa2']);
+            var lmp = OQ(0, 0.25, DH + a(2.2)); rect(g, lmp[0] - 3, lmp[1] - 2, 6, 3, '#2a2a2a'); dot(g, lmp[0], lmp[1] + 1, '#ffd27a', 3);
           }
           break;
         }
@@ -1490,6 +1799,8 @@
           break;
         }
         case 'pumphouse': {
+          // (a possible location like any other: ringed, a little wide of its walls, so the ring shows round the shed)
+          siteRing(g, pr.x + pr.w / 2, pr.y + pr.h / 2, lift, pr.checked, pr.found, 3.8);
           var pl2 = lift || 0, PH = pr.height;
           box(g, pr, PREFAB, { roof: '#4a4f47', roofEdge: '#5e645a', windows: null, lift: pl2 });
           var Q = function (x, y, up) { var q = toScreen(x, y); return [q.x, q.y - pl2 - (up || 0)]; };
@@ -1543,8 +1854,19 @@
         /* A possible objective location (p. 52): a prised-open hatch. Searched and
            ruled out, it is struck through; the one found becomes an objective marker
            of its own. */
+        /* A camp's open-sided tent (a crater field skinned `marquee`): the sale
+           tent's canvas, poles, lamp and table, standing on its own. */
+        case 'marquee':
+          drawKind(cutaway, g, lift, p, Object.assign({}, pr, { kind: 'searchsite', skin: 'tent', found: false, checked: false, camp: true }));
+          break;
         case 'searchsite': {
           var sr = rng(pr.seed || 7);
+          /* Every possible location, whatever it is drawn as, is ringed on the
+             ground with a dotted circle round the 4" it covers: amber while it
+             is to be searched, grey once it is ruled out, gold where the
+             objective turned up. (Not round the open tent a camp has: that one
+             is drawn from a site, `marquee`, and is not one.) */
+          if (!pr.camp) siteRing(g, pr.x, pr.y, lift, pr.checked, pr.found);
           /* A port's possible location (a map's sites skinned 'cargo'): a cargo
              container on a pallet, its doors stencilled, a manifest tag on it. */
           if (pr.cargo) {
@@ -1559,6 +1881,181 @@
             if (pr.checked && !pr.found) {
               edgeLine(g, [p.x - a(6.5), p.y - a(3.2) - a(6)], [p.x + a(6.5), p.y + a(3.2) - a(6)], '#d0503c', 4);
               edgeLine(g, [p.x - a(6.5), p.y + a(3.2) - a(6)], [p.x + a(6.5), p.y - a(3.2) - a(6)], '#d0503c', 4);
+            }
+            break;
+          }
+          /* A private sale's possible locations (the mud bank): the Reavers'
+             skiffs run in out of the river, and the tent where the sale is
+             haggled over. Struck through when ruled out; where the log is, the
+             case on the table, or a lamp in the boats, burns bright. */
+          if (pr.skin === 'boats' || pr.skin === 'tent') {
+            var tl3 = lift || 0;
+            function TQ(dx, dy, z) { var q = toScreen(pr.x + dx, pr.y + dy); return [q.x, q.y - tl3 - (z || 0)]; }
+            if (pr.skin === 'boats') {
+              /* Two Reaver hover-skiffs, pulled up on the bank from the river:
+                 angular alloy hulls riding a hand's breadth over the mud on their repulsor
+                 fields, bows up the bank to the west, a windscreen forward, twin
+                 thrusters glowing at the stern, red chevrons on their decks, a
+                 pintle gun on one. */
+              /* One run up at the head of the bay, an eighth of a turn anticlockwise
+                 as the table is seen; the other up on the bank at the bay's
+                 north end, bow to the north-west of the screen (west on the
+                 table). Each: [across, its turn, the gun, east, south]. */
+              [[0, 0, 0, -1.1, -2.4], [0.88, -Math.PI / 4, 1, 0, 0]].forEach(function (bt) {
+                var by = bt[0], ang = bt[1], L = 3.4, Wd = 0.62, hz = a(1.6), dk = hz + a(1.7);
+                function BQ(u, v, z) { var vv = v + by, cx = u * Math.cos(ang) - vv * Math.sin(ang), cy = u * Math.sin(ang) + vv * Math.cos(ang); return TQ(cx + bt[3], cy + bt[4], z); }
+                // the repulsor field on the water under it
+                var fc = BQ(0, 0, 0);
+                ellipse(g, fc[0], fc[1], a(L * 2.1), a(1.5), 'rgba(110,210,255,.22)');
+                ellipse(g, fc[0], fc[1], a(L * 1.4), a(0.9), 'rgba(170,235,255,.3)');
+                // the hull: a flat transom east, flaring sides, a sharp bow west; and its deck, drawn in a little
+                var lo = [BQ(L / 2, -Wd, hz), BQ(L / 2, Wd, hz), BQ(-L / 6, Wd, hz), BQ(-L / 2, 0, hz + a(0.4)), BQ(-L / 6, -Wd, hz)];
+                var hi = [BQ(L / 2, -Wd * 0.85, dk), BQ(L / 2, Wd * 0.85, dk), BQ(-L / 6, Wd * 0.85, dk), BQ(-L / 2 + 0.15, 0, dk), BQ(-L / 6, -Wd * 0.85, dk)];
+                poly(g, [lo[1], lo[2], hi[2], hi[1]], '#5c646c');                  // the near side, aft
+                poly(g, [lo[2], lo[3], hi[3], hi[2]], '#4c535a');                  // and forward
+                poly(g, [lo[0], lo[1], hi[1], hi[0]], '#353a40');                  // the transom
+                poly(g, hi, '#8c959e');                                           // the deck
+                edgeLine(g, hi[1], hi[2], '#c8d0d6', 1); edgeLine(g, hi[2], hi[3], '#c8d0d6', 1);
+                edgeLine(g, BQ(L / 2, Wd, hz + a(0.8)), BQ(-L / 6, Wd, hz + a(0.8)), '#c84a2e', 2);   // the Reaver red down its side
+                // panel seams, and a red chevron on the foredeck
+                edgeLine(g, BQ(0.6, -Wd * 0.8, dk), BQ(0.6, Wd * 0.8, dk), '#6a737c', 1);
+                poly(g, [BQ(-0.6, -0.35, dk), BQ(-0.3, 0, dk), BQ(-0.6, 0.35, dk), BQ(-0.85, 0.35, dk), BQ(-0.55, 0, dk), BQ(-0.85, -0.35, dk)], '#c84a2e');
+                // the windscreen, raked back over the cockpit
+                poly(g, [BQ(-0.15, -Wd * 0.7, dk), BQ(-0.15, Wd * 0.7, dk), BQ(0.25, Wd * 0.6, dk + a(1.1)), BQ(0.25, -Wd * 0.6, dk + a(1.1))], '#16303e');
+                edgeLine(g, BQ(-0.15, Wd * 0.5, dk + a(0.2)), BQ(0.2, Wd * 0.4, dk + a(1)), 'rgba(170,230,255,.6)', 1);
+                // the twin thrusters on the transom, glowing
+                [-0.3, 0.3].forEach(function (o) {
+                  var th = BQ(L / 2 + 0.05, o, hz + a(0.9));
+                  ellipse(g, th[0], th[1], a(1.2), a(1.2), '#1c1f22'); ellipse(g, th[0], th[1], a(0.8), a(0.8), 'rgba(255,150,70,.85)'); ellipse(g, th[0], th[1], a(0.35), a(0.35), '#ffe0a0');
+                });
+                // a pintle gun on the second skiff's afterdeck
+                if (bt[2]) {
+                  var gm = BQ(1.1, 0, dk), gt = BQ(1.1, 0, dk + a(2.4));
+                  edgeLine(g, gm, gt, '#2a2e32', 2);
+                  edgeLine(g, gt, BQ(0.4, 0.1, dk + a(2.6)), '#1c1f22', 3);
+                }
+              });
+              if (pr.found) { var lm = TQ(0.85, 0.1, a(4.4)); ellipse(g, lm[0], lm[1], a(2.4), a(1.6), 'rgba(255,214,140,.5)'); dot(g, lm[0] - 2, lm[1] - 2, '#fff2c8', 4); }
+            } else {
+              /* The sale tent: four poles, a pitched canvas roof, its sides rolled
+                 up; a lamp hung from the ridge throwing a pool of light; under it
+                 a folding table with the case on it, a crate either side. */
+              var th4 = a(11), rd = a(15);
+              var lamp = TQ(0, 0, 0);
+              ellipse(g, lamp[0], lamp[1], a(9), a(4.5), 'rgba(255,214,140,.18)');
+              ellipse(g, lamp[0], lamp[1], a(5.5), a(2.8), 'rgba(255,214,140,.22)');
+              var P4 = [[-1.6, -1.2], [1.6, -1.2], [1.6, 1.2], [-1.6, 1.2]];
+              // the far poles
+              [P4[0], P4[1]].forEach(function (c) { edgeLine(g, TQ(c[0], c[1], 0), TQ(c[0], c[1], th4), '#3a3026', 2); });
+              // the table, its case, and a crate either side
+              box(g, { x: pr.x - 0.7, y: pr.y - 0.4, w: 1.4, h: 0.8, height: a(3.5), seed: pr.seed }, ['#2a2018', '#3a2c20', '#4e3c2a', '#62503a', '#7a6448', '#94805e'], { roof: '#6a5438', roofEdge: '#8a7454', windows: null, lift: tl3, noShadow: true });
+              box(g, { x: pr.x - 0.35, y: pr.y - 0.2, w: 0.7, h: 0.4, height: a(1.6), seed: pr.seed + 1 }, ['#101214', '#181a1c', '#24272a', '#30343a', '#3c4248', '#4c5258'], { roof: pr.found ? '#c9a65a' : '#2a2e32', roofEdge: '#c9a65a', windows: null, lift: tl3 + a(3.5), noShadow: true });
+              [[-1.1, 0], [1.1, 0]].forEach(function (c, ci) { box(g, { x: pr.x + c[0] - 0.25, y: pr.y + c[1] - 0.25, w: 0.5, h: 0.5, height: a(2.2), seed: pr.seed + 2 + ci }, CRATE2, { roof: CRATE2[3], roofEdge: CRATE2[4], windows: null, lift: tl3, noShadow: true }); });
+              // the near poles
+              [P4[2], P4[3]].forEach(function (c) { edgeLine(g, TQ(c[0], c[1], 0), TQ(c[0], c[1], th4), '#4a3e30', 2); });
+              // the roof: two slopes from the ridge (east to west) down to the poles' tops, canvas with a darker stripe
+              var R0 = TQ(-1.8, 0, rd), R1 = TQ(1.8, 0, rd);
+              var E0 = TQ(-1.8, -1.35, th4), E1 = TQ(1.8, -1.35, th4), S0 = TQ(-1.8, 1.35, th4), S1 = TQ(1.8, 1.35, th4);
+              poly(g, [E0, E1, R1, R0], '#9a8a6a');
+              poly(g, [S0, S1, R1, R0], '#c8b890');
+              poly(g, [E1, S1, R1], '#7a6c50');
+              for (var stp = 1; stp < 4; stp++) { var tA = stp / 4; edgeLine(g, [S0[0] + (S1[0] - S0[0]) * tA, S0[1] + (S1[1] - S0[1]) * tA], [R0[0] + (R1[0] - R0[0]) * tA, R0[1] + (R1[1] - R0[1]) * tA], 'rgba(120,60,40,.45)', 2); }
+              edgeLine(g, R0, R1, '#e0d4b0', 1);
+              // the lamp under the ridge
+              var lp = TQ(0, 0, rd - a(2.5)); edgeLine(g, TQ(0, 0, rd), lp, '#2a2420', 1);
+              dot(g, lp[0] - 2, lp[1] - 2, '#ffe6a0', 4);
+              // guy lines and pegs
+              [[-2.4, -1.7], [2.4, -1.7], [2.4, 1.7], [-2.4, 1.7]].forEach(function (c, ci) { var pg = TQ(c[0], c[1], 0); edgeLine(g, TQ(P4[ci][0], P4[ci][1], th4), pg, 'rgba(40,34,24,.7)', 1); dot(g, pg[0] - 1, pg[1] - 1, '#2a241a', 2); });
+            }
+            if (pr.checked && !pr.found) {
+              edgeLine(g, [p.x - a(6.5), p.y - a(3.2)], [p.x + a(6.5), p.y + a(3.2)], '#d0503c', 4);
+              edgeLine(g, [p.x - a(6.5), p.y + a(3.2)], [p.x + a(6.5), p.y - a(3.2)], '#d0503c', 4);
+            }
+            break;
+          }
+          /* A drowned beacon's possible locations (a map's sites skinned one by
+             one): the spire with the socket at its foot, a sunken shrine, a ring
+             of standing stones in the shallows. A faint glow in each until it is
+             searched; the one that holds the lodestone glows bright, the others
+             go dark and are struck through. */
+          if (pr.skin === 'spire' || pr.skin === 'shrine' || pr.skin === 'stones') {
+            var ol = lift || 0, glow = pr.found ? 'rgba(130,230,255,.95)' : pr.checked ? null : 'rgba(110,190,255,.45)';
+            function OP(dx, dy, z) { var q = toScreen(pr.x + dx, pr.y + dy); return [q.x, q.y - ol - (z || 0)]; }
+            // a ripple ring at the foot of something standing in the water
+            function ripple(dx, dy, r) { var q = OP(dx, dy, 0); ellipseRing(g, q[0], q[1], a(r * 4), a(r * 2), 'rgba(220,240,245,.28)'); }
+            if (pr.skin === 'spire') {
+              /* The spire: a four-sided needle of black stone on a stepped plinth,
+                 its faces lit by the light from the north-west, runes cut up the
+                 two faces in view; the socket a hollow in the plinth's south face. */
+              var SB = BASALT_PAL, sh = a(62), b0 = 0.85, b1 = 0.12;
+              shadowBlob(g, { x: p.x + a(4), y: p.y + a(2) }, a(10), a(4));
+              box(g, { x: pr.x - 1.5, y: pr.y - 1.5, w: 3, h: 3, height: a(2.5), seed: pr.seed }, MOSSY, { roof: MOSSY[3], roofEdge: MOSSY[5], windows: null, lift: ol, noShadow: true });
+              box(g, { x: pr.x - 1.1, y: pr.y - 1.1, w: 2.2, h: 2.2, height: a(2.5), seed: pr.seed + 1 }, MOSSY, { roof: MOSSY[2], roofEdge: MOSSY[4], windows: null, lift: ol + a(2.5), noShadow: true });
+              var z0 = a(5);
+              var C0 = [[-b0, -b0], [b0, -b0], [b0, b0], [-b0, b0]].map(function (c) { return OP(c[0], c[1], z0); });
+              var C1 = [[-b1, -b1], [b1, -b1], [b1, b1], [-b1, b1]].map(function (c) { return OP(c[0], c[1], z0 + sh); });
+              var tip = OP(0, 0, z0 + sh + a(6));
+              poly(g, [C0[1], C0[2], C1[2], C1[1]], SB[2]);               // the east face
+              poly(g, [C0[2], C0[3], C1[3], C1[2]], SB[4]);               // the south face, in the light
+              poly(g, [C1[1], C1[2], tip], SB[3]); poly(g, [C1[2], C1[3], tip], SB[5]);
+              edgeLine(g, C0[2], C1[2], SB[5], 1);
+              // the runes, in short cuts up the two faces, lit while the stone is there to be found
+              var rr = rng(pr.seed + 5);
+              for (var rn = 0; rn < 9; rn++) {
+                var t = 0.08 + rn * 0.09, wdt = b0 + (b1 - b0) * t, zz = z0 + sh * t, sx = (rr() - 0.5) * wdt * 1.2;
+                var A = rn % 2 ? OP(wdt, sx, zz) : OP(sx, wdt, zz), Bq = rn % 2 ? OP(wdt, sx, zz + a(2)) : OP(sx, wdt, zz + a(2));
+                edgeLine(g, A, Bq, glow || 'rgba(60,70,80,.6)', 2);
+              }
+              // the socket, a hollow in the plinth's south face
+              var s0 = OP(-0.4, 1.12, a(1.2)), s1 = OP(0.4, 1.12, a(1.2)), s2 = OP(0.4, 1.12, a(4)), s3 = OP(-0.4, 1.12, a(4));
+              poly(g, [s0, s1, s2, s3], '#0a0c10');
+              if (glow) { var sc = OP(0, 1.12, a(2.6)); ellipse(g, sc[0], sc[1], a(2.2), a(1.6), glow); ellipse(g, sc[0], sc[1], a(1), a(0.8), pr.found ? '#e8fbff' : 'rgba(170,220,255,.7)'); }
+            } else if (pr.skin === 'shrine') {
+              /* The sunken shrine: a stone floor awash, four columns round it (two
+                 broken off short), a lintel fallen across two of them, and the
+                 basin in the middle where the stone would sit. */
+              shallowPool(g, pr.x, pr.y, 2.1, ol, pr.seed);
+              // the shrine's floor, awash: flags just under the water, their edges showing
+              var F = [OP(-1.4, -1.4, 0), OP(1.4, -1.4, 0), OP(1.4, 1.4, 0), OP(-1.4, 1.4, 0)];
+              poly(g, F, 'rgba(110,120,100,.45)');
+              edgeLine(g, F[0], F[1], 'rgba(150,160,140,.6)', 1); edgeLine(g, F[3], F[0], 'rgba(150,160,140,.6)', 1);
+              var COLS = [[-1.1, -1.1, 10], [1.1, -1.1, 4], [1.1, 1.1, 10], [-1.1, 1.1, 6]];
+              function column(c) {
+                ripple(c[0], c[1], 0.6);
+                roughStone(g, pr.x + c[0], pr.y + c[1], 0.6, 0.6, a(c[2]), ol, pr.seed + c[2], 0);
+              }
+              column(COLS[0]); column(COLS[1]);
+              // the basin in the middle, and what glows in it
+              var bc = OP(0, 0, a(1));
+              ellipse(g, bc[0], bc[1] - a(1.5), a(3.4), a(1.8), STONE[3]); ellipse(g, bc[0], bc[1] - a(1.8), a(2.6), a(1.3), '#1c2a2c');
+              if (glow) ellipse(g, bc[0], bc[1] - a(1.9), a(1.6), a(0.8), glow);
+              column(COLS[3]); column(COLS[2]);
+              // the lintel, fallen from one tall column into the water
+              var L0 = OP(-1.1, -1.1, a(10)), L1 = OP(0.3, -0.5, a(0.6));
+              edgeLine(g, L0, L1, MOSSY[1], 6); edgeLine(g, L0, L1, MOSSY[4], 2);
+            } else {
+              /* The standing stones: seven grey slabs in a ring in the shallows,
+                 each leaning a little its own way, lichen on their tops, and a
+                 flat stone in the middle of the ring. Drawn far ones first. */
+              shallowPool(g, pr.x, pr.y, 2.2, ol, pr.seed);
+              var sr2 = rng(pr.seed + 3), N7 = 7, ring = [];
+              for (var si = 0; si < N7; si++) {
+                var an = si / N7 * Math.PI * 2 + 0.3;
+                ring.push({ x: Math.cos(an) * 1.45, y: Math.sin(an) * 1.45, h: 5 + sr2() * 4, wd: 0.5 + sr2() * 0.25, dp: 0.35 + sr2() * 0.1, lean: (sr2() - 0.5) * 0.3 });
+              }
+              function slab(s, i) {
+                ripple(s.x, s.y, 0.5);
+                roughStone(g, pr.x + s.x, pr.y + s.y, s.wd, s.dp, a(s.h), ol, pr.seed + i * 7, s.lean);
+              }
+              var cen = OP(0, 0, a(0.4));
+              ring.forEach(function (s, i) { if (s.x + s.y < 0) slab(s, i); });
+              ellipse(g, cen[0], cen[1], a(3), a(1.5), MOSSY[2]); ellipse(g, cen[0], cen[1] - a(0.5), a(2.6), a(1.2), MOSSY[3]);
+              if (glow) ellipse(g, cen[0], cen[1] - a(0.8), a(1.4), a(0.7), glow);
+              ring.forEach(function (s, i) { if (s.x + s.y >= 0) slab(s, i); });
+            }
+            if (pr.checked && !pr.found) {
+              edgeLine(g, [p.x - a(6.5), p.y - a(3.2)], [p.x + a(6.5), p.y + a(3.2)], '#d0503c', 4);
+              edgeLine(g, [p.x - a(6.5), p.y + a(3.2)], [p.x + a(6.5), p.y - a(3.2)], '#d0503c', 4);
             }
             break;
           }

@@ -325,7 +325,10 @@
     var fitPiece = function (p) {
       var q = JSON.parse(JSON.stringify(p));
       if (east) q.x = 48 - q.x - q.w;
-      q.x *= sx; q.w *= sx; q.y *= sy; q.h *= sy; return q;
+      q.x *= sx; q.w *= sx; q.y *= sy; q.h *= sy;
+      // a piece laid by its own outline (a river) is turned and stretched with it
+      if (q.poly) q.poly = q.poly.map(function (c) { return [(east ? 48 - c[0] : c[0]) * sx, c[1] * sy]; });
+      return q;
     };
     var terrainPlan = map && !compound ? map.pieces.map(fitPiece) : null;
     // a compound mission's own layout, where its map lays one by hand (on a table it fits; the generator's otherwise)
@@ -333,7 +336,7 @@
     var mapObjectives = map && !compound && map.objectives ? map.objectives.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) : null;
     // the map's own possible locations, for Find and secure: where, and what they are
     var mapSites = map && !compound && map.sites ? { kind: map.sites.kind || 'searchsite', skin: map.sites.skin || undefined,
-      at: map.sites.at.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) } : null;
+      at: map.sites.at.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name, skin: o.skin }; }) } : null;
     var role = lv.role || spec.role;
     var attacker = role === 'choose' ? opts.role || 'A' : ROLE[role] || null;
     var ambush = variant && variant.ambush ? (variant.ambush === 'player' ? 'A' : 'B') : null;
@@ -369,6 +372,8 @@
         // the map's look for its pieces: 'market' (a settlement: barricades are railings and planters, craters market clutter),
         // 'station' (a compound in orbit: the solid round it is open space)
         skin: map && map.skin || null,
+        // a map that lays the defender's position itself (Hostile takeover's): no sections put down besides
+        fortified: !!(map && map.fortified),
         place: place ? { system: place.system || null, planet: place.planet || null, site: place.site || null } : null,
         seed: spec.node + ':' + spec.scenario + (east ? ':east' : ''),
         variant: variant,

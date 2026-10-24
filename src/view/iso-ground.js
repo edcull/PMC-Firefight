@@ -116,7 +116,7 @@
       var TW = new Float32Array(cw * ch), TR = new Float32Array(cw * ch), TG = new Float32Array(cw * ch), TB = new Float32Array(cw * ch);
       terrain.forEach(function (r) {
         // (a market's crater field is paving, not churned earth: it pulls nothing round it)
-        var f = r.market || r.cargo || r.camp ? null : FIT[r.kind];
+        var f = r.market || r.cargo || r.camp || r.pipe ? null : FIT[r.kind];
         if (!f) return;
         var i0 = Math.max(0, Math.floor((r.x - f.r) / STEP)), i1 = Math.min(cw - 1, Math.ceil((r.x + r.w + f.r) / STEP));
         var j0 = Math.max(0, Math.floor((r.y - f.r) / STEP)), j1 = Math.min(ch - 1, Math.ceil((r.y + r.h + f.r) / STEP));
@@ -373,6 +373,10 @@
       var paved = terrain.filter(function (q) { return q.kind === 'road' && q.paved; });
       function floorOf1(r, ri, rows) {
         if (r.kind === 'hill') return;
+        // a pipeline stands on its trestles over the ground as it is: no dug-in lip under it
+        if (r.pipe) return;
+        // a drowned beacon's possible locations stand on the ground as it is, their own pieces drawn over it
+        if (r.kind === 'searchsite' && (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones' || r.skin === 'boats' || r.skin === 'tent')) return;
         // a station's solid is open space: a star field (rules.js reads it as solid all the same)
         if (r.kind === 'bulkhead' && r.space) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         var spec = roomTheme(r) || skinFloor(r) || floorOf(r.kind);
@@ -397,8 +401,8 @@
       for (var sy = cy0; sy < cy1; sy += 48) steps.push(soilRows.bind(null, sy, Math.min(cy1, sy + 48)));
       terrain.forEach(function (r, ri) {
         if (r.kind === 'hill' || (!FLOOR[r.kind] && !(r.kind === 'bulkhead' && r.space))) return;
-        // cargo stacked on open ground (not on an apron), and a camp's tents, have no floor of their own
-        if ((r.cargo && r.cargo !== 'apron') || r.camp) return;
+        // cargo stacked on open ground (not on an apron), a camp's tents and a pipeline have no floor of their own
+        if ((r.cargo && r.cargo !== 'apron') || r.camp || r.pipe) return;
         floorBands(r).forEach(function (rows) { steps.push(function () { floorOf1(r, ri, rows); }); });
       });
       steps.push(function () { floorsDone = true; });
