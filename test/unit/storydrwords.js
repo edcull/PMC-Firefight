@@ -220,7 +220,8 @@ Object.keys(MAPS).forEach((k) => {
   const sites = (m.sites && m.sites.at) || [];
   sites.forEach((s, i) => {
     const r = { x: s.x - 2, y: s.y - 2, w: 4, h: 4 };
-    ps.forEach((p) => { if (overlap({ x: r.x - 1, y: r.y - 1, w: r.w + 2, h: r.h + 2 }, p)) bad.push(s.name + ' under ' + p.kind); });
+    // (a site marked `wet` stands half in the river: the skiffs beached in its shallows)
+    ps.forEach((p) => { if (!(s.wet && p.fixed && p.poly) && overlap({ x: r.x - 1, y: r.y - 1, w: r.w + 2, h: r.h + 2 }, p)) bad.push(s.name + ' under ' + p.kind); });
     sites.forEach((t, j) => { if (j > i && Math.hypot(s.x - t.x, s.y - t.y) < 12) bad.push(s.name + ' within 12" of ' + t.name); });
     if (Math.hypot(s.x - 24, s.y - 24) > 12) bad.push(s.name + ' more than 12" from the middle');
   });

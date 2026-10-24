@@ -137,10 +137,11 @@
     },
 
     /* A mud bank on Tessaly IV, a mile from the beacon, where a deep river
-       cuts across the north-east corner of the table with a broad band of
-       shallows along its bank: Brass Ledger's ship down in the reeds with its
+       cuts across the north-east corner of the table with a narrow band of
+       shallows along its bank and an inlet where the Reavers beached: Brass Ledger's ship down in the reeds with its
        ramp down and its cargo out at the foot of it, the Reavers' hover-skiffs
-       pulled up on the bank at the edge of the shallows, the lit tent where the sale is
+       beached in an inlet of the shallows, half in the water (a site marked
+       `wet` may stand in the river), the lit tent where the sale is
        haggled over, and the three places the log could be as the sale is made
        (Find and secure, the relic): each its own piece (`skin`), the three
        of them in a clearing in the middle with the forest round the edges.
@@ -151,7 +152,7 @@
       name: 'The mud bank, Tessaly IV', planet: 'jungle',
       pieces: [
         // the river: its shallows, and the deep channel down the middle of them
-        SHAPE('water', [[14.6, -15.8], [23.5, -11.2], [32.4, -6.5], [41.2, -1.9], [50.1, 2.7], [58.9, 7.4], [66, 11.1], [57.9, 26.6], [50.6, 23.3], [42.1, 17.9], [32.7, 14.3], [24.5, 8.5], [15.1, 4.8], [6.5, -0.3]]),
+        SHAPE('water', [[14.6, -15.8], [23.5, -11.2], [32.4, -6.5], [41.2, -1.9], [50.1, 2.7], [58.9, 7.4], [66, 11.1], [59.3, 23.9], [52, 20.7], [43.4, 15.5], [37.4, 12.8], [32.2, 18.6], [29.2, 17.8], [30.3, 9.3], [25.6, 6.4], [16.6, 2], [7.9, -3]]),
         SHAPE('deep', [[12, -10.9], [20.7, -5.8], [29.8, -1.6], [38.4, 3.5], [47.5, 7.7], [56.1, 12.8], [63.4, 16], [60.6, 21.4], [53.2, 18.4], [44.6, 13.1], [35.5, 9.1], [26.9, 3.8], [17.7, -0.2], [9.2, -5.5]]),
         // the clearing in the middle: Brass Ledger's ship down in it, its ramp to the south
         R('shuttle', 10.4, 16, 10, 8),
@@ -162,7 +163,7 @@
       ],
       sites: { kind: 'searchsite', at: [
         { x: 17, y: 27, name: 'Kettering’s ship', skin: 'cargo' },
-        { x: 32.3, y: 18.6, name: 'The Reavers’ boats', skin: 'boats' },
+        { x: 30.5, y: 17, name: 'The Reavers’ boats', skin: 'boats', wet: true },
         { x: 29, y: 31, name: 'The tent where they haggle', skin: 'tent' }
       ] }
     },
