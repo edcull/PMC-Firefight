@@ -250,7 +250,7 @@
        up to both from the quay and the south edge, a doorway east and west,
        and its floor open round the objective Hostile takeover puts in the
        middle. Sable's sandbags are laid by the map (`fortified`), not by the
-       scenario, her bunker in its far corner. A cargo lifter works the
+       scenario, the strongroom (a bunker) in its far corner. A cargo lifter works the
        east stack, and the south road comes in past a gatehouse and its lifting
        gate. */
     docks: {
@@ -276,8 +276,8 @@
         // Sable's sandbags: either side of the road before each hangar door, inside each doorway, and across the south hangar door inside
         BAGS(16, 12, 4, 1), BAGS(28, 12, 4, 1), BAGS(16, 35.5, 4, 1), BAGS(28, 35.5, 4, 1), BAGS(16.5, 21.5, 1, 5), BAGS(30.5, 21.5, 1, 5),
         BAGS(20, 27.5, 8, 1),
-        // Sable's bunker, in the warehouse's far (north-west) corner, covering the north hangar door and the west doorway
-        Object.assign(R('bunker', 15, 17.2, 4, 4), { fixed: true }),
+        // the strongroom, the heading in it: a bunker in the warehouse's far (north-west) corner, covering the north hangar door and the west doorway
+        Object.assign(R('bunker', 15, 17.2, 4, 4), { fixed: true, vault: true }),
         // the broker's stock, stacked inside the north wall east of the hangar door, and in the south-east corner
         CG(28.5, 17.5, 4, 3), CG(29, 27.5, 4, 3)
       ]

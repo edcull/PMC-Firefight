@@ -909,7 +909,18 @@
           // rust, here and there
           for (var rs3 = 0; rs3 < 2; rs3++) { var tq = pr2(); dot(g, A[0] + (B2[0] - A[0]) * tq - 1, A[1] + (B2[1] - A[1]) * tq, pr2() < 0.5 ? '#7a4a2a' : '#5e3a22', 3); }
           // a flanged joint at each end of the run
-          [A, B2].forEach(function (E) { ellipse(g, E[0], E[1], a(1.4), a(2.2), '#3a4044'); ellipse(g, E[0], E[1] - 1, a(0.9), a(1.6), '#6e787e'); });
+          // (each ring stands across the pipe: in the plane of the ground's cross direction and the vertical)
+          var o0 = toScreen(pr.x, pr.y), o1 = pr.horiz ? toScreen(pr.x, pr.y + 1) : toScreen(pr.x + 1, pr.y);
+          var cvx = o1.x - o0.x, cvy = o1.y - o0.y;
+          var ring = function (E, rad, col) {
+            var pts = [];
+            for (var ri3 = 0; ri3 < 16; ri3++) {
+              var th = ri3 / 16 * Math.PI * 2, cu = Math.cos(th) * rad, su = Math.sin(th) * rad;
+              pts.push([E[0] + cvx * cu, E[1] + cvy * cu - su * K]);
+            }
+            poly(g, pts, col);
+          };
+          [A, B2].forEach(function (E) { ring(E, 0.3, '#3a4044'); ring([E[0], E[1] - 1], 0.2, '#6e787e'); });
           break;
         }
         case 'sacks': {

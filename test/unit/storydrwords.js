@@ -275,8 +275,8 @@ ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field',
     MAPS.docks.fortified && ps.filter((p) => p.kind === 'barricade' && p.fixed && !p.pipe).length === 7 && !ps.some((p) => p.kind === 'trench' || p.kind === 'wire') && ps.filter((p) => p.kind === 'bunker').length <= 1);
   ok('...with room to go all the way round it: nothing else within 3" of its walls but the road and Sable’s sandbags',
     ps.filter((p) => !p.shed && !p.slab && p.kind !== 'road' && p.kind !== 'barricade' && !overlap(p, floor)).every((p) => !overlap(p, { x: floor.x - 3, y: floor.y - 3, w: floor.w + 6, h: floor.h + 6 })));
-  ok('...Sable’s bunker inside it, off the objective, and the south road coming in past a gatehouse and its lifting gate',
-    ps.some((p) => p.kind === 'bunker' && p.fixed && overlap(p, floor) && Math.hypot(p.x + p.w / 2 - 24, p.y + p.h / 2 - 24) > 5) &&
+  ok('...the strongroom inside it, a bunker off the objective, and the south road coming in past a gatehouse and its lifting gate',
+    ps.some((p) => p.kind === 'bunker' && p.fixed && p.vault && overlap(p, floor) && Math.hypot(p.x + p.w / 2 - 24, p.y + p.h / 2 - 24) > 5 && R.terrainName(null, 'bunker', p) === 'Strongroom') &&
     ps.some((p) => p.kind === 'boomgate' && p.span >= 6) && !R.TERRAIN.boomgate.impassable && !R.TERRAIN.boomgate.blocks && !ps.some((p) => p.kind === 'ruins'));
   ok('...and the waterfront along the north: the basin, its quay, two gantry cranes, a reaction-mass tank farm on the quay, piped to the water and off the table, and a cargo lifter',
     ps.some((p) => p.kind === 'deep' && p.y === 0) && ps.filter((p) => p.kind === 'crane').length === 2 && ps.some((p) => p.kind === 'fueltanks' && p.y < 10) && ps.some((p) => p.kind === 'cargolifter') &&

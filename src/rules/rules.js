@@ -1008,6 +1008,8 @@
     if (kind === 'crater' && piece && piece.cargo) return 'Cargo stacks';
     // a warehouse's walls and floor: high walls, and a road
     if (kind === 'wall' && piece && piece.shed) return 'Warehouse wall';
+    // ...and its strongroom, a reinforced building
+    if (kind === 'bunker' && piece && piece.vault) return 'Strongroom';
     if (kind === 'road' && piece && piece.slab) return 'Concrete';
     // a map's pipeline: a low wall by the rules
     if (kind === 'barricade' && piece && piece.pipe) return 'Pipeline';
