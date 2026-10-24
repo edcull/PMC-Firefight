@@ -563,7 +563,7 @@
         var spots = sites ? sites.at : clusterAt(R.BOARD.w / 2, R.BOARD.h / 2, 3, 12, 12);
         state.sc.search = spots.map(function (p, i) {
           var piece = {
-            kind: sites ? sites.kind : 'searchsite', x: p.x - 2, y: p.y - 2, w: 4, h: 4, name: p.name || undefined, skin: (sites && sites.skin) || undefined,
+            kind: sites ? sites.kind : 'searchsite', x: p.x - 2, y: p.y - 2, w: 4, h: 4, name: p.name || undefined, skin: p.skin || (sites && sites.skin) || undefined,
             site: i, cx: p.x, cy: p.y, checked: false, found: false, cold: false
           };
           state.terrain.push(piece);

@@ -174,20 +174,30 @@
       ] }
     },
 
-    /* The Mire on Tessaly IV: drowned forest, deep channels, a mud island, and
-       the beacon's spire with the three places its lodestone could be. */
+    /* The Mire on Tessaly IV: drowned forest, deep channels, a mud island
+       ringed with shallows and rising to the east, and the three places the beacon's lodestone could
+       be, each its own piece (`skin`): the socket at the foot of the black
+       spire, the sunken shrine and the ring of standing stones, the last two
+       out in the shallows. */
     mire: {
       name: 'The Drowned Beacon, Tessaly IV', planet: 'jungle',
       pieces: [
         N('rocks', 22, 11, 4, 4, 'blob'),
         N('woods', 6, 5, 7, 7, 'lobed'), N('woods', 34, 4, 7, 6, 'blob'), N('woods', 7, 36, 6, 7, 'lobed'), N('woods', 35, 38, 6, 6, 'blob'),
         N('woods', 37, 20, 5, 6, 'long'), N('woods', 6, 20, 5, 6, 'long'),
-        N('deep', 14, 41, 9, 3, 'long'), N('water', 26, 39, 6, 5, 'kidney'), N('water', 13, 8, 5, 4, 'kidney')
+        N('deep', 14, 41, 9, 3, 'long'), N('water', 26, 39, 6, 5, 'kidney'), N('water', 13.5, 8, 5, 4, 'kidney'),
+        // the shallows round the shrine and the standing stones, and pools across the island
+        N('water', 8, 27, 4, 6, 'kidney'), N('water', 13.5, 33, 5, 2.5, 'long'), N('water', 18.2, 27.5, 3.3, 5, 'blob'),
+        N('water', 26.5, 25.5, 3.5, 7, 'lobed'), N('water', 36, 27, 3, 6, 'kidney'), N('water', 31, 32, 4, 4, 'blob'),
+        N('water', 29, 8, 4, 4, 'blob'),
+        // more of the drowned forest, and two rises on the east side
+        N('woods', 15, 1.5, 5, 4, 'blob'), N('woods', 28, 14, 4, 4, 'lobed'), N('woods', 20, 36, 4, 4, 'blob'), N('woods', 6, 13, 4, 5, 'lobed'),
+        N('hill', 38.5, 11, 5.5, 8, 'long'), N('hill', 40, 30, 4, 7, 'blob')
       ],
       sites: { kind: 'searchsite', at: [
-        { x: 24, y: 19, name: 'The socket under the spire' },
-        { x: 15, y: 30, name: 'The sunken shrine' },
-        { x: 33, y: 29, name: 'The standing stones' }
+        { x: 24, y: 19, name: 'The socket under the spire', skin: 'spire' },
+        { x: 15, y: 30, name: 'The sunken shrine', skin: 'shrine' },
+        { x: 33, y: 29, name: 'The standing stones', skin: 'stones' }
       ] }
     },
 

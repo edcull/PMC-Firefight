@@ -9,7 +9,7 @@
     var BAG = S.BAG, BARK = S.BARK, BASALTS = S.BASALTS, BRICK = S.BRICK, CHAR = S.CHAR,
         CONCRETE = S.CONCRETE, K = S.K, LEAF = S.LEAF, PIXEL = S.PIXEL, PREFAB = S.PREFAB, ROOF = S.ROOF,
         STONE = S.STONE, WALL_THEME = S.WALL_THEME, a = S.a, boulder = S.boulder, box = S.box, brokenWall = S.brokenWall,
-        conifer = S.conifer, dot = S.dot, edgeLine = S.edgeLine, ellipse = S.ellipse, lerp2 = S.lerp2,
+        conifer = S.conifer, dot = S.dot, edgeLine = S.edgeLine, ellipse = S.ellipse, ellipseRing = S.ellipseRing, lerp2 = S.lerp2,
         pebble = S.pebble, poly = S.poly, rect = S.rect, rng = S.rng, shadowBlob = S.shadowBlob,
         toScreen = S.toScreen, vgrad = S.vgrad;
 
@@ -50,6 +50,45 @@
       edgeLine(g, at(0, -0.35), at(len, -0.35), '#8a96a0', 2);
       edgeLine(g, at(0, 0.35), at(len, 0.35), '#b4c0c8', 2);
       for (var tb = 0; tb * 0.9 < len; tb++) edgeLine(g, at(tb * 0.9, -0.35), at(Math.min(len, tb * 0.9 + 0.45), 0.35), '#6a7680', 1);
+    }
+    // the drowned beacon's spire: black stone, dark to the light (BASALTS, a little lifted)
+    var BASALT_PAL = ['#0c0a09', '#161311', '#26211d', '#332c27', '#463d37', '#5a4f47'];
+    // its standing stones and the shrine's columns: old grey stone gone green with the damp
+    var MOSSY = ['#22261f', '#30352b', '#3f4538', '#525a49', '#6a725e', '#858d76'];
+    /* A rough-hewn stone (a standing stone, a column): wd x dp across at the foot,
+       h high, its top drawn in a little and leaning `lean` east, lit from the
+       north-west, a crack or two, and moss on its top. */
+    function roughStone(g, X, Y, wd, dp, h, lift, seed, lean) {
+      var r = rng(seed), k = 0.72, lx = lean || 0;
+      function Q(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - lift - z]; }
+      var x0 = X - wd / 2, x1 = X + wd / 2, y0 = Y - dp / 2, y1 = Y + dp / 2;
+      var tx0 = X + lx - wd * k / 2, tx1 = X + lx + wd * k / 2, ty0 = Y - dp * k / 2, ty1 = Y + dp * k / 2;
+      var b = [Q(x0, y0, 0), Q(x1, y0, 0), Q(x1, y1, 0), Q(x0, y1, 0)], t = [Q(tx0, ty0, h), Q(tx1, ty0, h), Q(tx1, ty1, h), Q(tx0, ty1, h)];
+      poly(g, [b[1], b[2], t[2], t[1]], MOSSY[1]);                 // the east face, in shadow
+      poly(g, [b[2], b[3], t[3], t[2]], MOSSY[3]);                 // the south face
+      poly(g, t, MOSSY[4]);                                        // the top
+      edgeLine(g, t[3], t[0], MOSSY[5], 1); edgeLine(g, b[2], t[2], MOSSY[2], 1);
+      // a crack down the south face, and moss on the top and at the foot
+      var cx = 0.3 + r() * 0.4, c0 = Q(x0 + (x1 - x0) * cx, y1, h * (0.55 + r() * 0.3)), c1 = Q(x0 + (x1 - x0) * (cx + 0.1), y1, h * 0.25);
+      edgeLine(g, c0, c1, MOSSY[0], 1);
+      for (var m = 0; m < 3; m++) { var mq = Q(tx0 + (tx1 - tx0) * r(), ty0 + (ty1 - ty0) * r(), h); dot(g, mq[0] - 1, mq[1] - 1, m % 2 ? '#5f7d3c' : '#7a9a4a', 2); }
+      var fq = Q(x0 + (x1 - x0) * r(), y1, a(0.6)); dot(g, fq[0] - 1, fq[1] - 1, '#4f6e3a', 3);
+    }
+    /* A pool round something standing in the shallows: an irregular ring of
+       water `rad` inches about (X, Y), its bank dark, its middle deeper, a glint
+       or two of light on it. */
+    function shallowPool(g, X, Y, rad, lift, seed) {
+      var r = rng(seed), n = 12, out = [], inn = [];
+      function Q(x, y) { var q = toScreen(x, y); return [q.x, q.y - lift]; }
+      for (var i = 0; i < n; i++) {
+        var an = i / n * Math.PI * 2, rr = rad * (0.85 + r() * 0.3);
+        out.push(Q(X + Math.cos(an) * rr, Y + Math.sin(an) * rr));
+        inn.push(Q(X + Math.cos(an) * rr * 0.72, Y + Math.sin(an) * rr * 0.72));
+      }
+      poly(g, out.map(function (q) { return [q[0], q[1] + 2]; }), '#3a2e22');   // the muddy bank
+      poly(g, out, '#3d7f95');
+      poly(g, inn, '#2f6a80');
+      for (var gl = 0; gl < 4; gl++) { var gq = Q(X + (r() - 0.5) * rad * 1.2, Y + (r() - 0.5) * rad * 1.2); edgeLine(g, [gq[0] - 3, gq[1]], [gq[0] + 3, gq[1]], 'rgba(200,235,245,.45)', 1); }
     }
     // a glass tower: tinted curtain wall, its mullions, and the light in it
     var GLASS = ['#0c1820', '#13283a', '#1a3a54', '#21506e', '#2b6a8a', '#3c86a8'];
@@ -1559,6 +1598,92 @@
             if (pr.checked && !pr.found) {
               edgeLine(g, [p.x - a(6.5), p.y - a(3.2) - a(6)], [p.x + a(6.5), p.y + a(3.2) - a(6)], '#d0503c', 4);
               edgeLine(g, [p.x - a(6.5), p.y + a(3.2) - a(6)], [p.x + a(6.5), p.y - a(3.2) - a(6)], '#d0503c', 4);
+            }
+            break;
+          }
+          /* A drowned beacon's possible locations (a map's sites skinned one by
+             one): the spire with the socket at its foot, a sunken shrine, a ring
+             of standing stones in the shallows. A faint glow in each until it is
+             searched; the one that holds the lodestone glows bright, the others
+             go dark and are struck through. */
+          if (pr.skin === 'spire' || pr.skin === 'shrine' || pr.skin === 'stones') {
+            var ol = lift || 0, glow = pr.found ? 'rgba(130,230,255,.95)' : pr.checked ? null : 'rgba(110,190,255,.45)';
+            function OP(dx, dy, z) { var q = toScreen(pr.x + dx, pr.y + dy); return [q.x, q.y - ol - (z || 0)]; }
+            // a ripple ring at the foot of something standing in the water
+            function ripple(dx, dy, r) { var q = OP(dx, dy, 0); ellipseRing(g, q[0], q[1], a(r * 4), a(r * 2), 'rgba(220,240,245,.28)'); }
+            if (pr.skin === 'spire') {
+              /* The spire: a four-sided needle of black stone on a stepped plinth,
+                 its faces lit by the light from the north-west, runes cut up the
+                 two faces in view; the socket a hollow in the plinth's south face. */
+              var SB = BASALT_PAL, sh = a(62), b0 = 0.85, b1 = 0.12;
+              shadowBlob(g, { x: p.x + a(4), y: p.y + a(2) }, a(10), a(4));
+              box(g, { x: pr.x - 1.5, y: pr.y - 1.5, w: 3, h: 3, height: a(2.5), seed: pr.seed }, MOSSY, { roof: MOSSY[3], roofEdge: MOSSY[5], windows: null, lift: ol, noShadow: true });
+              box(g, { x: pr.x - 1.1, y: pr.y - 1.1, w: 2.2, h: 2.2, height: a(2.5), seed: pr.seed + 1 }, MOSSY, { roof: MOSSY[2], roofEdge: MOSSY[4], windows: null, lift: ol + a(2.5), noShadow: true });
+              var z0 = a(5);
+              var C0 = [[-b0, -b0], [b0, -b0], [b0, b0], [-b0, b0]].map(function (c) { return OP(c[0], c[1], z0); });
+              var C1 = [[-b1, -b1], [b1, -b1], [b1, b1], [-b1, b1]].map(function (c) { return OP(c[0], c[1], z0 + sh); });
+              var tip = OP(0, 0, z0 + sh + a(6));
+              poly(g, [C0[1], C0[2], C1[2], C1[1]], SB[2]);               // the east face
+              poly(g, [C0[2], C0[3], C1[3], C1[2]], SB[4]);               // the south face, in the light
+              poly(g, [C1[1], C1[2], tip], SB[3]); poly(g, [C1[2], C1[3], tip], SB[5]);
+              edgeLine(g, C0[2], C1[2], SB[5], 1);
+              // the runes, in short cuts up the two faces, lit while the stone is there to be found
+              var rr = rng(pr.seed + 5);
+              for (var rn = 0; rn < 9; rn++) {
+                var t = 0.08 + rn * 0.09, wdt = b0 + (b1 - b0) * t, zz = z0 + sh * t, sx = (rr() - 0.5) * wdt * 1.2;
+                var A = rn % 2 ? OP(wdt, sx, zz) : OP(sx, wdt, zz), Bq = rn % 2 ? OP(wdt, sx, zz + a(2)) : OP(sx, wdt, zz + a(2));
+                edgeLine(g, A, Bq, glow || 'rgba(60,70,80,.6)', 2);
+              }
+              // the socket, a hollow in the plinth's south face
+              var s0 = OP(-0.4, 1.12, a(1.2)), s1 = OP(0.4, 1.12, a(1.2)), s2 = OP(0.4, 1.12, a(4)), s3 = OP(-0.4, 1.12, a(4));
+              poly(g, [s0, s1, s2, s3], '#0a0c10');
+              if (glow) { var sc = OP(0, 1.12, a(2.6)); ellipse(g, sc[0], sc[1], a(2.2), a(1.6), glow); ellipse(g, sc[0], sc[1], a(1), a(0.8), pr.found ? '#e8fbff' : 'rgba(170,220,255,.7)'); }
+            } else if (pr.skin === 'shrine') {
+              /* The sunken shrine: a stone floor awash, four columns round it (two
+                 broken off short), a lintel fallen across two of them, and the
+                 basin in the middle where the stone would sit. */
+              shallowPool(g, pr.x, pr.y, 2.1, ol, pr.seed);
+              // the shrine's floor, awash: flags just under the water, their edges showing
+              var F = [OP(-1.4, -1.4, 0), OP(1.4, -1.4, 0), OP(1.4, 1.4, 0), OP(-1.4, 1.4, 0)];
+              poly(g, F, 'rgba(110,120,100,.45)');
+              edgeLine(g, F[0], F[1], 'rgba(150,160,140,.6)', 1); edgeLine(g, F[3], F[0], 'rgba(150,160,140,.6)', 1);
+              var COLS = [[-1.1, -1.1, 10], [1.1, -1.1, 4], [1.1, 1.1, 10], [-1.1, 1.1, 6]];
+              function column(c) {
+                ripple(c[0], c[1], 0.6);
+                roughStone(g, pr.x + c[0], pr.y + c[1], 0.6, 0.6, a(c[2]), ol, pr.seed + c[2], 0);
+              }
+              column(COLS[0]); column(COLS[1]);
+              // the basin in the middle, and what glows in it
+              var bc = OP(0, 0, a(1));
+              ellipse(g, bc[0], bc[1] - a(1.5), a(3.4), a(1.8), STONE[3]); ellipse(g, bc[0], bc[1] - a(1.8), a(2.6), a(1.3), '#1c2a2c');
+              if (glow) ellipse(g, bc[0], bc[1] - a(1.9), a(1.6), a(0.8), glow);
+              column(COLS[3]); column(COLS[2]);
+              // the lintel, fallen from one tall column into the water
+              var L0 = OP(-1.1, -1.1, a(10)), L1 = OP(0.3, -0.5, a(0.6));
+              edgeLine(g, L0, L1, MOSSY[1], 6); edgeLine(g, L0, L1, MOSSY[4], 2);
+            } else {
+              /* The standing stones: seven grey slabs in a ring in the shallows,
+                 each leaning a little its own way, lichen on their tops, and a
+                 flat stone in the middle of the ring. Drawn far ones first. */
+              shallowPool(g, pr.x, pr.y, 2.2, ol, pr.seed);
+              var sr2 = rng(pr.seed + 3), N7 = 7, ring = [];
+              for (var si = 0; si < N7; si++) {
+                var an = si / N7 * Math.PI * 2 + 0.3;
+                ring.push({ x: Math.cos(an) * 1.45, y: Math.sin(an) * 1.45, h: 5 + sr2() * 4, wd: 0.5 + sr2() * 0.25, dp: 0.35 + sr2() * 0.1, lean: (sr2() - 0.5) * 0.3 });
+              }
+              function slab(s, i) {
+                ripple(s.x, s.y, 0.5);
+                roughStone(g, pr.x + s.x, pr.y + s.y, s.wd, s.dp, a(s.h), ol, pr.seed + i * 7, s.lean);
+              }
+              var cen = OP(0, 0, a(0.4));
+              ring.forEach(function (s, i) { if (s.x + s.y < 0) slab(s, i); });
+              ellipse(g, cen[0], cen[1], a(3), a(1.5), MOSSY[2]); ellipse(g, cen[0], cen[1] - a(0.5), a(2.6), a(1.2), MOSSY[3]);
+              if (glow) ellipse(g, cen[0], cen[1] - a(0.8), a(1.4), a(0.7), glow);
+              ring.forEach(function (s, i) { if (s.x + s.y >= 0) slab(s, i); });
+            }
+            if (pr.checked && !pr.found) {
+              edgeLine(g, [p.x - a(6.5), p.y - a(3.2)], [p.x + a(6.5), p.y + a(3.2)], '#d0503c', 4);
+              edgeLine(g, [p.x - a(6.5), p.y + a(3.2)], [p.x + a(6.5), p.y - a(3.2)], '#d0503c', 4);
             }
             break;
           }

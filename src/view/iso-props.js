@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   root.PMCIsoProps = function (B) {
-    var a = B.a, dot = B.dot, ellipse = B.ellipse, poly = B.poly, rect = B.rect, rng = B.rng;
+    var a = B.a, dot = B.dot, ellipse = B.ellipse, ellipseRing = B.ellipseRing, poly = B.poly, rect = B.rect, rng = B.rng;
     var toScreen = B.toScreen, BAG = B.BAG, BARK = B.BARK, BRICK = B.BRICK;
     var CHAR = B.CHAR, CONCRETE = B.CONCRETE, K = B.K, LEAF = B.LEAF, PIXEL = B.PIXEL, PREFAB = B.PREFAB;
     var ROOF = B.ROOF, STONE = B.STONE;
@@ -576,7 +576,7 @@
         if (r.kind === 'searchsite') {
           props.push({
             kind: 'searchsite', x: r.x + r.w / 2, y: r.y + r.h / 2,
-            checked: !!r.checked, found: !!r.found, cold: !!r.cold, cargo: r.skin === 'cargo',
+            checked: !!r.checked, found: !!r.found, cold: !!r.cold, cargo: r.skin === 'cargo', skin: r.skin || null,
             seed: (rr2() * 9999) | 0
           });
           // a port's possible location is a pallet of cargo, with cases set down round it
@@ -586,6 +586,8 @@
             }
             return;
           }
+          // a drowned beacon's possible locations are their own pieces, with nothing strewn round them
+          if (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones') return;
           for (var sw = 0; sw < 6; sw++) {
             props.push({
               kind: 'wreckstone',
@@ -1329,7 +1331,7 @@
     var KINDS = root.PMCIsoPropKinds({
       BAG: BAG, BARK: BARK, BASALTS: BASALTS, BRICK: BRICK, CHAR: CHAR, CONCRETE: CONCRETE, K: K, LEAF: LEAF,
       PIXEL: PIXEL, PREFAB: PREFAB, ROOF: ROOF, STONE: STONE, a: a, boulder: boulder, box: box,
-      brokenWall: brokenWall, conifer: conifer, dot: dot, edgeLine: edgeLine, ellipse: ellipse, lerp2: lerp2,
+      brokenWall: brokenWall, conifer: conifer, dot: dot, edgeLine: edgeLine, ellipse: ellipse, ellipseRing: ellipseRing, lerp2: lerp2,
       pebble: pebble, poly: poly, rect: rect, rng: rng, shadowBlob: shadowBlob, toScreen: toScreen,
       vgrad: vgrad, WALL_THEME: WALL_THEME
     });

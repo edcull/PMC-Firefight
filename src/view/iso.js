@@ -1122,7 +1122,7 @@
      and the functions and fixed values it uses. */
   var ISOPROPS = window.PMCIsoProps({
     get depthIn() { return depthIn; }, get pebble() { return pebble; }, get spotIn() { return spotIn; },
-    get vgrad() { return vgrad; }, a: a, dot: dot, ellipse: ellipse, pal2: pal2, poly: poly, rect: rect,
+    get vgrad() { return vgrad; }, a: a, dot: dot, ellipse: ellipse, ellipseRing: ellipseRing, pal2: pal2, poly: poly, rect: rect,
     rng: rng, slab: slab, toScreen: toScreen, A: A, BAG: BAG, BARK: BARK, BRICK: BRICK, CHAR: CHAR,
     CONCRETE: CONCRETE, K: K, LEAF: LEAF, PIXEL: PIXEL, PREFAB: PREFAB, ROOF: ROOF, STONE: STONE
   });
