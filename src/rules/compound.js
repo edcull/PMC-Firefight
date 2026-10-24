@@ -655,7 +655,17 @@
     // (no table here is more than 24 cells a side: a longer plan is nonsense, and is cut down to be refused)
     return { cols: p.cols | 0, rows: p.rows | 0, cells: typeof p.cells === 'string' ? p.cells.slice(0, 24 * 24 + 1).replace(/[^.cr]/g, '.') : '',
       walls: keys(p.walls).slice(0, 1200), doors: keys(p.doors).slice(0, 1200),
-      danger: Array.isArray(p.danger) ? p.danger.filter(function (c) { return typeof c === 'number' && c >= 0 && c < 24 * 24; }).slice(0, 100) : [] };
+      danger: Array.isArray(p.danger) ? p.danger.filter(function (c) { return typeof c === 'number' && c >= 0 && c < 24 * 24; }).slice(0, 100) : [],
+      names: cleanNames(p.names) };
+  }
+  // a plan's names for its rooms: a cell inside each (its index) and the name, short and plain
+  function cleanNames(m) {
+    var out = {};
+    if (!m || typeof m !== 'object') return out;
+    Object.keys(m).slice(0, 50).forEach(function (k) {
+      if (/^\d+$/.test(k) && +k < 24 * 24 && typeof m[k] === 'string' && m[k].trim()) out[k] = m[k].replace(/[<>]/g, '').trim().slice(0, 40);
+    });
+    return out;
   }
   /* The compounds a room or a campaign keeps, one for each size of table
      ('WxH'), each one that can be fought in on that table; and the one for a
@@ -689,6 +699,11 @@
     if (!checkPlan(plan, w, h).ok) return null;
     var g = gridOf(plan).g;
     var laid = piecesOf(g, { w: w, h: h });
+    // the rooms the plan names, by a cell inside each, in place of the numbers they were given
+    Object.keys(plan.names || {}).forEach(function (k) {
+      var s = g.grid[+k], p = s >= 0 && g.kindOf[s] !== 'corridor' && laid.terrain.filter(function (q) { return q.sec === s; })[0];
+      if (p) p.name = plan.names[k];
+    });
     return {
       terrain: laid.terrain,
       compound: { cell: CELL, cols: g.cols, rows: g.rows, entries: wholeEntries(g, laid.entries, w), built: true },

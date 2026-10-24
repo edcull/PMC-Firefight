@@ -163,6 +163,8 @@ ok('...and the compounds none, their seed lays them, unless the map lays the com
   const built = pl && CMP.build(pl, 48, 48), ent = built && built.compound.entries;
   const arms = ent && ['L', 'R'].map((sd) => ent[sd].map((e) => e.w + 'x' + e.h).join(',')).join(' / ');
   ok('...and both sides come in along the whole of both their docking arms', arms === '12x3,12x3 / 12x3,12x3', arms);
+  const named = built && built.terrain.filter((t) => t.name).map((t) => t.name).sort().join(', ');
+  ok('...and its rooms named for what they are: the hub, the two modules, the two labs', named === 'East lab, Hub, North module, South module, West lab', named);
 }
 {
   /* A compound's enemy (and allies) fight in its corridors: no vehicles or aircraft,
