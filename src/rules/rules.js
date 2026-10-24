@@ -1000,6 +1000,8 @@
     if (named && (!piece || piece.market || (kind === 'road' && piece.paved))) return named;
     // a map's cargo stacks: a crater field by the rules, crates with walkways between them to look at
     if (kind === 'crater' && piece && piece.cargo) return 'Cargo stacks';
+    // a map's pipeline: a high wall by the rules
+    if (kind === 'wall' && piece && piece.pipe) return 'Pipeline';
     // and a field camp's tents, the same
     if (kind === 'crater' && piece && piece.camp) return piece.camp === 'marquee' ? 'Open tent' : 'Tents';
     return TERRAIN[kind] ? TERRAIN[kind].name : kind;

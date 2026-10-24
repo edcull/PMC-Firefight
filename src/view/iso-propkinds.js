@@ -773,6 +773,28 @@
           if (near) { block(); solarTruss(g, SM, [bmm.x0, bmm.y0], face); } else { solarTruss(g, SM, [bmm.x0, bmm.y0], mid); block(); }
           break;
         }
+        /* A run of a pipeline: a fat steel pipe on a trestle, its shadow on the
+           ground under it, rust on it, and a flanged joint at either end. */
+        case 'piperun': {
+          var prl = lift || 0, ph = a(3.2), pr2 = rng(pr.seed), half = pr.len / 2;
+          function PQ(dx, dy, z) { var q = toScreen(pr.x + dx, pr.y + dy); return [q.x, q.y - prl - z]; }
+          var A = pr.horiz ? PQ(-half, 0, ph) : PQ(0, -half, ph), B2 = pr.horiz ? PQ(half, 0, ph) : PQ(0, half, ph);
+          var As = pr.horiz ? PQ(-half, 0.5, 0) : PQ(0.5, -half, 0), Bs = pr.horiz ? PQ(half, 0.5, 0) : PQ(0.5, half, 0);
+          edgeLine(g, As, Bs, 'rgba(20,16,12,.35)', a(3));                     // its shadow
+          // the trestle in the middle of the run
+          var t0 = PQ(0, 0, 0), t1 = PQ(0, 0, ph);
+          edgeLine(g, [t0[0] - a(1.2), t0[1]], [t1[0], t1[1]], '#2c2f31', 2); edgeLine(g, [t0[0] + a(1.2), t0[1]], [t1[0], t1[1]], '#2c2f31', 2);
+          // the pipe: dark under, its body, a lit band along the top
+          edgeLine(g, [A[0], A[1] + 2], [B2[0], B2[1] + 2], '#25292b', a(4.2));
+          edgeLine(g, A, B2, '#5d666c', a(3.6));
+          edgeLine(g, [A[0], A[1] - a(1)], [B2[0], B2[1] - a(1)], '#8a949a', a(1.4));
+          edgeLine(g, [A[0], A[1] - a(1.5)], [B2[0], B2[1] - a(1.5)], 'rgba(220,230,235,.45)', 1);
+          // rust, here and there
+          for (var rs3 = 0; rs3 < 2; rs3++) { var tq = pr2(); dot(g, A[0] + (B2[0] - A[0]) * tq - 1, A[1] + (B2[1] - A[1]) * tq, pr2() < 0.5 ? '#7a4a2a' : '#5e3a22', 3); }
+          // a flanged joint at each end of the run
+          [A, B2].forEach(function (E) { ellipse(g, E[0], E[1], a(1.4), a(2.2), '#3a4044'); ellipse(g, E[0], E[1] - 1, a(0.9), a(1.6), '#6e787e'); });
+          break;
+        }
         case 'sacks': {
           // grain sacks, heaped: round-shouldered bags, a tie at the neck
           var skr = rng(pr.seed), skl = lift || 0;

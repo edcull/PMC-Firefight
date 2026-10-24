@@ -603,6 +603,17 @@
           }
           return;
         }
+        if (r.kind === 'wall' && r.pipe) {
+          /* A map's pipeline (a high wall by the rules): a fat pipe on trestles,
+             laid down its length in short runs so it sorts among the models. */
+          var phz = r.w >= r.h, plen = phz ? r.w : r.h, pn = Math.max(1, Math.round(plen / 1.5)), psl = plen / pn;
+          for (var ps2 = 0; ps2 < pn; ps2++) {
+            var pm = (ps2 + 0.5) * psl;
+            props.push({ kind: 'piperun', x: phz ? r.x + pm : r.x + r.w / 2, y: phz ? r.y + r.h / 2 : r.y + pm, horiz: phz, len: psl,
+              first: ps2 === 0, last: ps2 === pn - 1, seed: (rr2() * 9999) | 0 });
+          }
+          return;
+        }
         if (r.kind === 'wall') {
           /* a high wall is a run of cast panels between posts, laid down its
              length in short runs like the sandbags so it sorts among the models */
@@ -762,7 +773,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
+      var SMALL = { piperun: 0.45, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];
