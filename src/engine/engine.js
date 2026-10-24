@@ -70,7 +70,7 @@
     return {
       log: function () { }, card: function () { }, fx: function () { },
       move: function () { }, shoot: function () { }, assault: function () { },
-      strafe: function () { }, arrive: function () { }, sound: function () { },
+      strafe: function () { }, throwAt: function () { }, arrive: function () { }, sound: function () { },
       focus: function () { }, hint: function () { }, colour: function () { },
       terrain: function () { }, newTable: function () { }, clearCards: function () { }, settle: function () { },
       look: function () { }, finished: function () { }, changed: function () { },
@@ -147,6 +147,8 @@
     function playShooting(a, t, res, deaths, done) { V.shoot(a, t, res, deaths); if (done) done(); }
     function playAssault(a, t, deaths, done) { V.assault(a, t, deaths); if (done) done(); }
     function playStrafe(u, from, to, deaths, done) { V.strafe(u, from, to, deaths); if (done) done(); }
+    // a thrown charge (Close Encounters' equipment), from the unit to the spot it lands: `key` the kit
+    function playThrow(u, at, key) { V.throwAt(u, at, key); }
     function repaintTerrain(wrecks) { V.terrain(wrecks); }
     /* How a scenario reinforcement comes on. The Invasion attacker is coming
        down from orbit, so it lands the way a Battlefield Insertion does — out of
@@ -1781,6 +1783,7 @@
       playAssault: playAssault,
       playShooting: playShooting,
       playStrafe: playStrafe,
+      playThrow: playThrow,
       pushRes: pushRes,
       queueBake: queueBake,
       relocCap: relocCap,

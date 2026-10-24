@@ -86,6 +86,7 @@ class Table {
       strafe: (u, from, to, deaths) => table.rec({
         e: 'strafe', id: u.id, from: from, to: to, deaths: table.deathsOf(deaths)
       }),
+      throwAt: (u, at, key) => table.rec({ e: 'throw', id: u.id, at: at, key: key }),
       arrive: (u, how, from, veh) => table.rec({ e: 'arrive', id: u.id, how: how, from: from || null, veh: veh ? veh.id : null }),
       sound: (what, args) => table.rec({ e: 'sound', what: what, args: args && args.length ? args : undefined }),
       focus: (u) => table.rec({ e: 'focus', id: u && u.id }),

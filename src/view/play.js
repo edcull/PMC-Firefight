@@ -302,6 +302,23 @@
       startLoop();
     }
 
+    /* A thrown charge (Close Encounters' equipment): Incendiary Grenades go
+       in as a pair of Molotovs, lobbed from the squad into the section, and
+       burst into fire where they land; the fire the section catches is drawn
+       when the rules set it, once they have. Others are not drawn. */
+    function playThrow(u, at, key, done) {
+      if (key !== 'incendiary' || !u || !at) { if (done) done(); return; }
+      var from = { x: dispX(u), y: dispY(u), up: 0 }, to = { x: at.x, y: at.y, up: 0 };
+      faceToward(u, to.x, to.y, from);
+      var spec = { p: 'molotov' };
+      window.PMCFire.troop(from, spec, ISO.muzzles(u, R.status(u)));
+      SHOTS.secondary('molotov', u, from, to, 2, 2, null);
+      // as long as playMolotovs takes: the flight by distance, the second bottle's gap, the burst
+      var ms = 560 + Math.min(420, R.unitDist(u, to) * 18) + 210 + 900;
+      holdFor(ms);
+      if (done) later(done, ms);
+    }
+
     // the aircraft runs the line, throwing fire out to either side
     /* A strafing run: the craft flies the length of it, guns going, and the
        ground walks up under it. It used to stand still while the fire appeared
@@ -430,6 +447,7 @@
       playAssault: playAssault,
       playShooting: playShooting,
       playStrafe: playStrafe,
+      playThrow: playThrow,
       streamLength: streamLength
     };
   };

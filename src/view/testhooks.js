@@ -102,6 +102,8 @@
       return false;
     };
     window.__showQueue = function () { return show.queue.length; };
+    // a thrown charge drawn from a unit to a spot, as the engine's would be (Close Encounters' equipment)
+    window.__playThrow = function (id, x, y, key) { var u = byId(id); if (u) B.playThrow(u, { x: x, y: y }, key || 'incendiary'); return !!u; };
     // the card up over the table, Continue pressed (a unit fleeing the field waits for it)
     window.__continue = function () { if (!ui.resOpen) return false; B.closeRes(); return true; };
     window.__held = function () { return Object.keys(B.held).length; };

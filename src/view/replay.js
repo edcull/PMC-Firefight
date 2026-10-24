@@ -30,6 +30,7 @@
     function playAssault() { return B.playAssault.apply(this, arguments); }
     function playShooting() { return B.playShooting.apply(this, arguments); }
     function playStrafe() { return B.playStrafe.apply(this, arguments); }
+    function playThrow() { return B.playThrow.apply(this, arguments); }
     function pushRes() { return B.pushRes.apply(this, arguments); }
     function queueBake() { return B.queueBake.apply(this, arguments); }
     function render() { return B.render.apply(this, arguments); }
@@ -340,7 +341,7 @@
     }
     // which events start something that takes time, and which land at once
     var SHOWN = {
-      move: 'wait', shoot: 'wait', assault: 'wait', strafe: 'wait', arrive: 'wait', settle: 'wait',
+      move: 'wait', shoot: 'wait', assault: 'wait', strafe: 'wait', throw: 'wait', arrive: 'wait', settle: 'wait',
       // the camera settling on the other side's unit is itself worth a moment
       focus: 'wait'
     };
@@ -427,6 +428,13 @@
           if (!su) return false;
           lookAtOther(ev.id);
           playStrafe(su, ev.from, ev.to, deathsOf(ev.deaths), done || null);
+          return !!done;
+        }
+        case 'throw': {
+          var tu = evUnit(ev.id);
+          if (!tu) return false;
+          lookAtOther(ev.id);
+          playThrow(tu, ev.at, ev.key, done || null);
           return !!done;
         }
         case 'arrive': {
