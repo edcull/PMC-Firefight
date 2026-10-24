@@ -186,7 +186,9 @@
       { ramp: ['#262d38', '#2c3441', '#323b4a', '#394354', '#404b5e'], fleck: ['#1a1f27', '#56637a', '#3c5c8a'], rim: '#141820' },    // command
       { ramp: ['#352826', '#3d2e2b', '#453430', '#4e3b36', '#57423c'], fleck: ['#241a18', '#6e534a', '#8a3a24'], rim: '#1c1412' },    // reactor
       // a brood chamber (the Hive Heart): the floor gone under the hive's resin, dark and wet
-      { ramp: ['#2a1a26', '#33202e', '#3c2636', '#462c3e', '#503346'], fleck: ['#1a0f18', '#6a3a5a', '#7a6a3a', '#3a5a3a'], rim: '#160c14' }
+      { ramp: ['#2a1a26', '#33202e', '#3c2636', '#462c3e', '#503346'], fleck: ['#1a0f18', '#6a3a5a', '#7a6a3a', '#3a5a3a'], rim: '#160c14' },
+      // the Warren: worked stone worn smooth, grit and the odd fleck lit green by the radiation in the rock
+      { ramp: ['#2b2621', '#322c26', '#39322b', '#403830', '#473f36'], fleck: ['#1c1814', '#5e5446', '#4f8a5a', '#6a5a44'], rim: '#16120f' }
     ];
     function roomTheme(r) {
       var t = root.PMCCompound ? root.PMCCompound.roomTheme(r) : null;

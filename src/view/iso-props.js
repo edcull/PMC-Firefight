@@ -53,6 +53,8 @@
          corner of the table wherever the dark is wide enough to hold one (drawn
          only: nothing stands out there). */
       var space = terrain.filter(function (q) { return q.kind === 'bulkhead' && q.space; });
+      // the Warren's solid is rock, its doors stone (a story's skin, engine.js)
+      var rocky = terrain.some(function (q) { return q.rock; });
       if (space.length) {
         var SW = 0, SH = 0;
         terrain.forEach(function (q) { SW = Math.max(SW, q.x + q.w); SH = Math.max(SH, q.y + q.h); });
@@ -531,8 +533,25 @@
           for (var dt = 0; dt < nDet; dt++) {
             var dq = spotIn(r, 0.55, rr2), dk = rr2();
             if (fits.some(function (q) { return dq.x > q.x - 0.5 && dq.x < q.x + q.w + 0.5 && dq.y > q.y - 0.5 && dq.y < q.y + q.h + 0.5; })) continue;
-            props.push({ kind: dk < 0.3 ? 'deckgrate' : dk < 0.55 ? 'cable' : dk < 0.8 ? 'smallbox' : 'litter', x: dq.x, y: dq.y,
-              horiz: r.w >= r.h, tone: rr2(), seed: (rr2() * 9999) | 0 });
+            // (the Warren's: fallen rock, the Reavers' junk, and cracks in the floor lit by what is in the rock)
+            var dkind = r.warren ? (dk < 0.35 ? 'rubble' : dk < 0.55 ? 'glowcrack' : dk < 0.75 ? 'scrap' : 'litter')
+              : dk < 0.3 ? 'deckgrate' : dk < 0.55 ? 'cable' : dk < 0.8 ? 'smallbox' : 'litter';
+            props.push({ kind: dkind, x: dq.x, y: dq.y, horiz: r.w >= r.h, tone: rr2(), seed: (rr2() * 9999) | 0 });
+          }
+          /* The Reavers' hoard (the Warren's biggest chamber on the far side):
+             relics on stone plinths in rows, kept like a library's shelves. */
+          if (r.hoard) {
+            for (var hy = r.y + 1.4; hy < r.y + r.h - 1; hy += 2.2) {
+              for (var hx = r.x + 1.4; hx < r.x + r.w - 1; hx += 1.8) {
+                if (fits.some(function (q) { return hx > q.x - 0.8 && hx < q.x + q.w + 0.8 && hy > q.y - 0.8 && hy < q.y + q.h + 0.8; })) continue;
+                props.push({ kind: 'relic', x: hx, y: hy, tone: rr2(), seed: (rr2() * 9999) | 0 });
+              }
+            }
+          }
+          // the gate the company came through, closing: a ring of light standing across the corridor at the table's edge
+          if (r.gate) {
+            var gz = r.w >= r.h;
+            props.push({ kind: 'gatering', x: gz ? r.x + 0.4 : r.x + r.w / 2, y: gz ? r.y + r.h / 2 : r.y + 0.4, horiz: gz, span: gz ? r.h : r.w, height: a(BULK_H), seed: (rr2() * 9999) | 0 });
           }
           if (r.dangerous) {
             for (var dr = 0; dr < Math.max(2, Math.round(sa / 14)); dr++) {
@@ -658,7 +677,7 @@
         // a room's fittings (compound.js fit): crates and lockers, and banks of machinery
         // a room's pillar: the walls' plating, the room's colours, the walls' height
         if (r.kind === 'pillar') {
-          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(BULK_H), thin: true, pillar: true,
+          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(BULK_H), thin: true, pillar: true, rock: rocky,
             open: [['N', r.x, r.x + r.w, themeAt(r.x + r.w / 2, r.y - 0.3)], ['S', r.x, r.x + r.w, themeAt(r.x + r.w / 2, r.y + r.h + 0.3)],
               ['W', r.y, r.y + r.h, themeAt(r.x - 0.3, r.y + r.h / 2)], ['E', r.y, r.y + r.h, themeAt(r.x + r.w + 0.3, r.y + r.h / 2)]], seed: (rr2() * 9999) | 0 });
           return;
@@ -677,7 +696,7 @@
           if (wallSet && wallSet.laid) return;          // the whole shape went down with the first wall
           wallPieces().laid = true;
           wallSet.pieces.forEach(function (q, n) {
-            props.push({ kind: 'bulkhead', x: q.x, y: q.y, w: q.w, h: q.h, height: a(BULK_H), thin: Math.min(q.w, q.h) < 0.5, open: openEdges(q), seed: (seed * 31 + n * 7919) % 9999 });
+            props.push({ kind: 'bulkhead', x: q.x, y: q.y, w: q.w, h: q.h, height: a(BULK_H), thin: Math.min(q.w, q.h) < 0.5, open: openEdges(q), rock: rocky, seed: (seed * 31 + n * 7919) % 9999 });
           });
           return;
         }
@@ -692,7 +711,7 @@
           // the frame as long as the walls at its ends leave it (wallPieces): its own thickness, its run trimmed
           var dq = (wallPieces(), r._drawn) || r;
           var drect = dhz ? { x: dq.x, y: r.y, w: dq.w, h: r.h } : { x: r.x, y: dq.y, w: r.w, h: dq.h };
-          props.push({ kind: 'door', x: drect.x, y: drect.y, w: drect.w, h: drect.h, horiz: dhz, lock: r.kind, out: areaOf(secB) <= areaOf(secA) ? 1 : -1, height: a(BULK_H),
+          props.push({ kind: 'door', x: drect.x, y: drect.y, w: drect.w, h: drect.h, horiz: dhz, lock: r.kind, out: areaOf(secB) <= areaOf(secA) ? 1 : -1, height: a(BULK_H), rock: rocky,
             // the colours of the rooms either side, for the wall faces looking into them
             themeA: themeAt(dhz ? dmx : dmx - 1, dhz ? dmy - 1 : dmy), themeB: themeAt(dhz ? dmx : dmx + 1, dhz ? dmy + 1 : dmy), seed: (rr2() * 9999) | 0 });
           return;
@@ -796,7 +815,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { piperun: 0.45, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
+      var SMALL = { piperun: 0.45, relic: 0.4, glowcrack: 0.3, gatering: 0.6, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];
@@ -857,7 +876,9 @@
       ['#1e2430', '#2e3747', '#404c61', '#53627b', '#677894', '#8495ad'],
       ['#2a1e1c', '#402d2a', '#583e39', '#714f48', '#8a6157', '#a67b6f'],
       // a brood chamber: the plating gone under the hive's growth
-      ['#22131e', '#36202f', '#4a2c40', '#5e3a52', '#734a63', '#8c5e78']
+      ['#22131e', '#36202f', '#4a2c40', '#5e3a52', '#734a63', '#8c5e78'],
+      // the Warren: rock cut smooth by something long gone, warm brown-grey
+      ['#1e1a17', '#2e2823', '#41382f', '#54493d', '#685a4b', '#80705d']
     ];
     /* A wall face from foot A to foot B, `hgt` high, shaded top to bottom. One
        gradient pinned to one end drifts along a long face, which slopes on the

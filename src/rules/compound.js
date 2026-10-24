@@ -848,10 +848,12 @@
   }
 
   /* What a room is fitted out as, for its colours (0 plain plate, 1 sick bay, 2
-     workshop, 3 hydroponics, 4 command, 5 reactor; 6 the hive's own): set as the compound is laid
+     workshop, 3 hydroponics, 4 command, 5 reactor; 6 the hive's own; 7 the Warren's stone): set as the compound is laid
      out, or for one laid out before that, drawn from where the room is. */
-  var THEMES = 6, HIVE = 6;
+  var THEMES = 6, HIVE = 6, WARREN = 7;
   function roomTheme(r) {
+    // the Warren's (a story's skin, engine.js): worked stone, corridors and all
+    if (r && r.warren && (r.kind === 'corridor' || r.kind === 'room' || r.kind === 'hall')) return WARREN;
     if (!r || (r.kind !== 'room' && r.kind !== 'hall')) return null;
     // a brood chamber (the Hive Heart): grown over, not fitted out
     if (r.hive) return HIVE;

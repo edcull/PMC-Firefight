@@ -374,6 +374,8 @@
         skin: map && map.skin || null,
         // a map that lays the defender's position itself (Hostile takeover's): no sections put down besides
         fortified: !!(map && map.fortified),
+        // a compound its seed lays, on a grid the map asks for (the Warren's tunnels: 4", not the book's 3")
+        cell: map && map.cell || null,
         place: place ? { system: place.system || null, planet: place.planet || null, site: place.site || null } : null,
         seed: spec.node + ':' + spec.scenario + (east ? ':east' : ''),
         variant: variant,

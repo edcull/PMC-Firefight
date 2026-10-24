@@ -26,6 +26,9 @@
     var MACH = ['#1a1e22', '#2a3036', '#3d454c', '#50595f', '#636d74', '#86919a'];
     var SHIELD = ['#1f2428', '#2e353b', '#46515a', '#5d6a74', '#73808a', '#94a1ab'];
     var DOOR_STEEL = ['#23282c', '#323a40', '#465058', '#58636c', '#6b7781', '#8a96a0'];
+    // the Warren's rock, its faces cut smooth (a story's skin), and its doors' worked stone
+    var ROCKWALL = ['#16130f', '#241f1a', '#352e26', '#463d33', '#5a4e41', '#726352'];
+    var ROCKDOOR = ['#2a2620', '#3a342c', '#4d453a', '#615749', '#766a59', '#8f8270'];
     // a market: the stalls' steel, their canopies (sheet, neon, holo-sign), and what is for sale
     var KIOSK = ['#181c20', '#262c32', '#363e46', '#48525c', '#5c6872', '#7a8792'];
     var CANOPY = [['#1f5866', '#6fe8ff', 'rgba(111,232,255,.28)'], ['#5e2a56', '#ff7ad8', 'rgba(255,122,216,.28)'], ['#6a5218', '#ffcf5a', 'rgba(255,207,90,.28)'],
@@ -1653,7 +1656,78 @@
         /* A compound's bulkhead: a block of steel plate, one of the many the solid
            is laid in, drawn so they read as one mass (box: solid). */
         case 'bulkhead': {
+          if (pr.rock) {
+            /* The Warren's rock: cut smooth on its faces, its top the raw rock,
+               veined here and there with the green of what is in it. */
+            box(g, pr, ROCKWALL, { roof: '#211d19', roofEdge: '#5d5042', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
+            if (!cutaway && !pr.thin && pr.w * pr.h > 2) {
+              var vr = rng(pr.seed + 17), vl = lift || 0, nv = vr() < 0.5 ? 0 : Math.min(3, Math.round(pr.w * pr.h / 40) + 1);
+              var VT = function (x, y) { var q = toScreen(x, y); return [q.x, q.y - vl - pr.height]; };
+              for (var vn = 0; vn < nv; vn++) {
+                var vx = pr.x + 0.3 + vr() * (pr.w - 0.6), vy = pr.y + 0.3 + vr() * (pr.h - 0.6), va = vr() * Math.PI * 2;
+                var last = VT(vx, vy);
+                for (var vs = 0; vs < 3; vs++) {
+                  va += (vr() - 0.5) * 1.4; vx = Math.max(pr.x + 0.2, Math.min(pr.x + pr.w - 0.2, vx + Math.cos(va) * 0.5)); vy = Math.max(pr.y + 0.2, Math.min(pr.y + pr.h - 0.2, vy + Math.sin(va) * 0.5));
+                  var nx2 = VT(vx, vy);
+                  edgeLine(g, last, nx2, 'rgba(60,170,90,.22)', 3); edgeLine(g, [last[0], last[1] + 1], [nx2[0], nx2[1] + 1], 'rgba(125,255,160,.7)', 1);
+                  last = nx2;
+                }
+              }
+            }
+            break;
+          }
           box(g, pr, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
+          break;
+        }
+        /* A relic in the Warren's hoard: a stone plinth, and on it an orb, a
+           shard or a tablet, lit from inside, in rows the way a library keeps
+           its books. */
+        case 'relic': {
+          var rl = lift || 0, rr7 = rng(pr.seed);
+          var RP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - rl - z]; };
+          box(g, { x: pr.x - 0.3, y: pr.y - 0.3, w: 0.6, h: 0.6, height: a(2), seed: pr.seed }, ROCKWALL, { roof: ROCKWALL[4], roofEdge: ROCKWALL[5], windows: null, lift: rl });
+          var top = RP(pr.x, pr.y, a(2)), glow = pr.tone < 0.4 ? ['#7dffd0', 'rgba(90,255,200,.25)'] : pr.tone < 0.75 ? ['#ffd27a', 'rgba(255,200,110,.25)'] : ['#b9a0ff', 'rgba(170,140,255,.25)'];
+          ellipse(g, top[0], top[1] - a(1.2), a(1.6), a(1.4), glow[1]);
+          var form = rr7();
+          if (form < 0.4) { ellipse(g, top[0], top[1] - a(0.9), a(0.55), a(0.55), glow[0]); dot(g, top[0] - a(0.25), top[1] - a(1.2), '#ffffff', 2); }
+          else if (form < 0.75) { poly(g, [[top[0], top[1] - a(2)], [top[0] + a(0.4), top[1] - a(0.3)], [top[0] - a(0.4), top[1] - a(0.3)]], glow[0]); edgeLine(g, [top[0], top[1] - a(2)], [top[0], top[1] - a(0.4)], '#ffffff', 1); }
+          else { rect(g, top[0] - a(0.45), top[1] - a(1.5), a(0.9), a(1.2), '#3a3330'); rect(g, top[0] - a(0.3), top[1] - a(1.35), a(0.6), a(0.9), glow[0]); }
+          break;
+        }
+        // a crack in the Warren's floor, lit by what is in the rock under it
+        case 'glowcrack': {
+          var gr7 = rng(pr.seed), gl7 = lift || 0, gx7 = pr.x, gy7 = pr.y, ga7 = gr7() * Math.PI * 2;
+          var GC = function (x, y) { var q = toScreen(x, y); return [q.x, q.y - gl7]; };
+          var gp7 = GC(gx7, gy7);
+          for (var gi7 = 0; gi7 < 4; gi7++) {
+            ga7 += (gr7() - 0.5) * 1.6; gx7 += Math.cos(ga7) * 0.35; gy7 += Math.sin(ga7) * 0.35;
+            var gq7 = GC(gx7, gy7);
+            edgeLine(g, gp7, gq7, 'rgba(60,170,90,.3)', 3); edgeLine(g, [gp7[0], gp7[1] + 1], [gq7[0], gq7[1] + 1], '#6dff96', 1);
+            gp7 = gq7;
+          }
+          break;
+        }
+        /* The gate the company came through: a ring of light standing across
+           the corridor where it meets the table's edge, closing, the rock
+           seen through it shimmering. */
+        case 'gatering': {
+          var rgl = lift || 0, R3 = pr.span * 0.42, cz = R3 + a(0.5) / K;
+          var c0 = toScreen(pr.x, pr.y), c1 = pr.horiz ? toScreen(pr.x, pr.y + 1) : toScreen(pr.x + 1, pr.y);
+          var gvx = c1.x - c0.x, gvy = c1.y - c0.y;
+          var RING = function (rad, col, fill) {
+            var pts = [];
+            for (var q7 = 0; q7 < 28; q7++) {
+              var th7 = q7 / 28 * Math.PI * 2, cu7 = Math.cos(th7) * rad, su7 = Math.sin(th7) * rad;
+              pts.push([c0.x + gvx * cu7, c0.y - rgl - (cz + su7) * K + gvy * cu7]);
+            }
+            if (fill) poly(g, pts, col);
+            else for (var q8 = 0; q8 < pts.length; q8++) edgeLine(g, pts[q8], pts[(q8 + 1) % pts.length], col, 2);
+          };
+          RING(R3 * 1.12, 'rgba(160,220,255,.12)', true);
+          RING(R3, 'rgba(20,30,46,.55)', true);
+          RING(R3 * 0.7, 'rgba(120,180,255,.18)', true);
+          RING(R3, '#bfe6ff', false);
+          RING(R3 * 0.93, 'rgba(140,200,255,.6)', false);
           break;
         }
         /* A door: a blast hatch framed in the compound's own plating — two jambs
@@ -1678,7 +1752,8 @@
             var o = { kind: 'door', x: q.x, y: q.y, w: q.w, h: q.h, height: height, seed: pr.seed,
               open: hz ? [['N', q.x, q.x + q.w, ta], ['S', q.x, q.x + q.w, tb]] : [['W', q.y, q.y + q.h, ta], ['E', q.y, q.y + q.h, tb]] };
             // the frame looks into a room on the side towards the viewer: all of it in that room's colours, the reveal of the opening too
-            box(g, o, (tb >= 0 && WALL_THEME[tb]) || BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: dl + (up || 0), solid: true });
+            box(g, o, (tb >= 0 && WALL_THEME[tb]) || (pr.rock ? ROCKWALL : BULK), pr.rock ? { roof: '#211d19', roofEdge: '#5d5042', windows: null, lift: dl + (up || 0), solid: true }
+              : { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: dl + (up || 0), solid: true });
           }
           function slab(q, height, up, palQ) {
             var o = { kind: 'door', x: q.x, y: q.y, w: q.w, h: q.h, height: height, seed: pr.seed };
@@ -1686,6 +1761,8 @@
           }
           var lamp = pr.lock === 'door' ? '#7bdc6a' : pr.lock === 'doorlock' ? '#ff4a3a' : '#ffb02e';
           var band = pr.lock === 'doorlock' ? DOOR_RED : pr.lock === 'door' ? null : DOOR_AMBER;
+          // the Warren's doors are slabs of worked stone, no hazard paint, a rune lit over each (locked: dim red)
+          if (pr.rock) { lamp = pr.lock === 'door' ? '#7dffa0' : '#b04030'; band = null; }
           var lt = Math.max(2, Math.round(H * 0.3));
           // the hatch set back in the middle of the wall, the frame's depth showing from either side
           function hatch() {
@@ -1694,10 +1771,10 @@
                p. 157): the shutter down over the doorway. Working, a band of hazard
                stripes across it; locked, a band of warning paint (red both sides, amber one). */
             var sq = part(jl, len - jl, 0.14, hoff);
-            slab(sq, H - lt, 0, DOOR_STEEL);
+            slab(sq, H - lt, 0, pr.rock ? ROCKDOOR : DOOR_STEEL);
             var bh2 = Math.max(2, Math.round(H * 0.16)), by2 = Math.round(H * 0.3);
             if (band) slab(part(jl, len - jl, 0.16, hoff), bh2, by2, band);
-            else {
+            else if (!pr.rock) {
               // the stripes on the face towards the viewer (+y, or +x)
               var f0 = hz ? toScreen(sq.x, sq.y + sq.h) : toScreen(sq.x + sq.w, sq.y);
               var f1 = hz ? toScreen(sq.x + sq.w, sq.y + sq.h) : toScreen(sq.x + sq.w, sq.y + sq.h);
@@ -2175,8 +2252,9 @@
       // the leaves, each sliding out of the opening into the frame on its own side
       var slide = w * k;
       [[u0 - slide, u0 + w - slide], [u0 + w + slide, u1 + slide]].forEach(function (L) {
-        poly(g, [P(L[0], LO, 0), P(L[1], LO, 0), P(L[1], LO, oh), P(L[0], LO, oh)], vgrad(g, P(L[0], LO, oh)[1], P(L[0], LO, 0)[1], [DOOR_STEEL[4], DOOR_STEEL[3], DOOR_STEEL[2]]));
-        var by = Math.round(H * 0.3), bh = Math.max(2, Math.round(H * 0.16)), n = 4;
+        var LP = pr.rock ? ROCKDOOR : DOOR_STEEL;
+        poly(g, [P(L[0], LO, 0), P(L[1], LO, 0), P(L[1], LO, oh), P(L[0], LO, oh)], vgrad(g, P(L[0], LO, oh)[1], P(L[0], LO, 0)[1], [LP[4], LP[3], LP[2]]));
+        var by = Math.round(H * 0.3), bh = Math.max(2, Math.round(H * 0.16)), n = pr.rock ? 0 : 4;   // (the Warren's stone carries no paint)
         for (var i = 0; i < n; i++) {
           var a0 = L[0] + (L[1] - L[0]) * i / n, a1 = L[0] + (L[1] - L[0]) * (i + 1) / n;
           poly(g, [P(a0, LO, by), P(a1, LO, by), P(a1, LO, by + bh), P(a0, LO, by + bh)], pr.lock === 'door' ? (i % 2 ? '#1b1a17' : '#c9a23c') : pr.lock === 'doorlock' ? DOOR_RED[3] : DOOR_AMBER[3]);

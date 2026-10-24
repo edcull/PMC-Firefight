@@ -385,7 +385,7 @@
       : scenDef.compound
       // (a story mission's compound is the same every time it is fought: its own seed)
       ? CMP.generate(R.BOARD.w, R.BOARD.h, cfg.story && cfg.story.seed ? K.storySeeded(cfg.story.seed) : Math.random,
-        { rooms: scenDef.rooms || 0, danger: scenDef.danger != null ? scenDef.danger : 0.15, cell: scenDef.cell || null, nest: scenDef.nest || 0, dense: scenDef.dense || 0 })
+        { rooms: scenDef.rooms || 0, danger: scenDef.danger != null ? scenDef.danger : 0.15, cell: (cfg.story && cfg.story.cell) || scenDef.cell || null, nest: scenDef.nest || 0, dense: scenDef.dense || 0 })
       : manual
       ? { terrain: [], rolls: [], generator: GEN.tableFor(cfg.planet).name }
       : GEN.generate({
@@ -396,6 +396,24 @@
        space, drawn as a star field, the floors walled by the station's hull.
        The rules read it as the solid it always was. */
     if (scenDef.compound && cfg.story && cfg.story.skin === 'station') built.terrain.forEach(function (t) { if (t.kind === 'bulkhead' && !t.thin) t.space = true; });
+    /* The Warren (a story map's 'warren' skin): tunnels cut in the rock of a
+       world nobody has charted. Its solid is rock and its floors worked stone;
+       nothing in it is fitted out as a base is (the machinery goes, the crates
+       stay: what the Reavers have dragged in); the biggest chamber on the far
+       side holds their hoard; the corridors side A comes in by end at the gate,
+       closing behind it. Drawn so only: the rules read it as any compound. */
+    if (scenDef.compound && cfg.story && cfg.story.skin === 'warren') {
+      built.terrain = built.terrain.filter(function (t) { return t.kind !== 'machinery'; });
+      built.terrain.forEach(function (t) {
+        if (t.kind === 'corridor' || t.kind === 'room' || t.kind === 'hall') { t.warren = true; t.dangerous = false; }
+        if (t.kind === 'bulkhead' || t.kind === 'pillar' || R.TERRAIN[t.kind] && R.TERRAIN[t.kind].door) t.rock = true;
+      });
+      var far = built.terrain.filter(function (t) { return (t.kind === 'room' || t.kind === 'hall') && t.x + t.w / 2 > R.BOARD.w / 2; })
+        .sort(function (a, b) { return b.w * b.h - a.w * a.h; })[0];
+      if (far) far.hoard = true;
+      var ins = built.compound && built.compound.entries ? built.compound.entries.L || [] : [];
+      built.terrain.forEach(function (t) { if (t.kind === 'corridor' && ins.some(function (e) { return e.sec != null && e.sec === t.sec; })) t.gate = true; });
+    }
     state = {
       cfg: cfg,
       terrain: built.terrain,

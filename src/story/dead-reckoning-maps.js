@@ -7,7 +7,7 @@
    where a scenario puts its own piece there. Find and secure's three places
    are where the map says (`sites`, levers.js). The compounds (Station Thule,
    the Warren, the Wreck of the Morrow, Cold Sites, the Vault, the Spire) have
-   no map: their seed lays them.
+   no map: their seed lays them (the Warren's map gives only its skin).
 
    The second half's ground (phase 5): each map keeps clear what its scenario
    puts there itself. Hostile takeover's fort, the middle 12"; Parley's flag
@@ -149,6 +149,16 @@
         // the rooms by name, a cell inside each: the three control rooms and the two labs
         names: { 22: 'North module', 102: 'Hub', 214: 'South module', 113: 'West lab', 125: 'East lab' }
       }
+    },
+
+    /* The Warren, through the gate at the Drowned Beacon: a compound its seed
+       lays, as any is, but in its own skin (`warren`, engine.js): tunnels cut
+       high and wide in the rock (a 4" grid), worked-stone floors, the rock
+       veined with the radiation in it, nothing fitted out as a base would be,
+       the Reavers' hoard in the biggest chamber on the far side, and the gate
+       closing behind the company where it came in. */
+    warren: {
+      name: 'The Warren, under an uncharted world', skin: 'warren', cell: 4
     },
 
     /* A mud bank on Tessaly IV, a mile from the beacon, where a deep river

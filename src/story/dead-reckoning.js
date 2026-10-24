@@ -549,7 +549,7 @@
             pass: [{ next: { battle: 'warren.battle', levers: { tier: 'max-1' } } }], fail: [{ next: { battle: 'warren.battle', levers: { variant: { ambush: true } } } }] }] }
         ], next: 'warren.battle' },
         // (the Reavers went through first, after the hoard; by turn 3 the tunnels' keepers come out of the walls: unknown contacts)
-        { id: 'warren.battle', type: 'battle', scenario: 'ce_clear', tier: 'max', pl: 1, planet: 'unstable', variant: { contacts: { turn: 3, keys: CONTACTS_DEEP } },
+        { id: 'warren.battle', type: 'battle', scenario: 'ce_clear', map: 'warren', tier: 'max', pl: 1, planet: 'unstable', variant: { contacts: { turn: 3, keys: CONTACTS_DEEP } },
           enemy: rival('reavers', { fill: { to: 0.7, from: ['irregulars', 'enforcers'] } }),
           on: { success: [{}], failure: [{ effects: [{ meter: 'alarm', add: 2 }] }] }, next: 'warren.debrief' },
         { id: 'warren.debrief', type: 'debrief', text: 'The company is out, the long way round.', events: ['warren.hoard'], next: 'warren.interlude' },

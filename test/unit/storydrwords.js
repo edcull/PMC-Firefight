@@ -148,7 +148,7 @@ const compound = (n) => SC.SCENARIOS[n.scenario] && SC.SCENARIOS[n.scenario].com
 const allBattles = Object.keys(dr._nodes).map((id) => dr._nodes[id]).filter((n) => n.type === 'battle' && !n.side);
 const open = allBattles.filter((n) => !compound(n));
 ok('every open-table battle of the story has its own ground, both halves', open.every((n) => n.map && MAPS[n.map]), open.map((n) => n.id + ':' + n.map).join(', '));
-ok('...and the compounds none, their seed lays them, unless the map lays the compound by hand', allBattles.filter(compound).every((n) => !n.map || (MAPS[n.map] && MAPS[n.map].compound)), allBattles.filter(compound).map((n) => n.id).join(', '));
+ok('...and the compounds none, their seed lays them, unless the map lays the compound by hand or gives its skin', allBattles.filter(compound).every((n) => !n.map || (MAPS[n.map] && (MAPS[n.map].compound || MAPS[n.map].skin))), allBattles.filter(compound).map((n) => n.id).join(', '));
 {
   // Station Thule: laid by hand, the same about both its axes, in open space
   const CMP = require('../../src/rules/compound.js');
@@ -244,6 +244,26 @@ ok('the Glass Flats and the Mire put their three places where the map says, for 
 ok('...its skin the market’s: railings for barricades, the market’s clutter for craters, by name too', MAPS.vesk.skin === 'market' &&
     MAPS.vesk.pieces.filter((p) => p.kind === 'barricade').length >= 6 && R.terrainName({ cfg: { story: { skin: 'market' } } }, 'barricade') === 'Railings and planters' &&
     R.terrainName({ cfg: { story: { skin: 'market' } } }, 'crater') === 'Market clutter' && R.terrainName({ cfg: { story: {} } }, 'crater') === 'Rubble and craters');
+}
+{
+  /* Into the Warren as its briefing has it: tunnels cut high and wide in the rock of a world nobody has charted,
+     the Reavers' hoard on the far side, the gate closing behind the company. Its seed lays it; its map gives the skin. */
+  const { C, Engine } = require('../../server/rules.js');
+  const L = require('../../src/story/levers.js');
+  const n = dr._nodes['warren.battle'];
+  const c = C.newCampaign({ mode: 'solo' });
+  C.found(c.companies.A, ['recruits', 'enforcers', 'irregulars', 'lpv', 'rookie'], 'S2'); S.begin(c, 'dead-reckoning'); c.story.leading = 'kestrel';
+  c.story.chapter = n._chapter; c.story.node = n.id;
+  const cfg = L.toCfg(c, { picks: C.pickForce(c.companies.A, 1, 1, null, { scenario: n.scenario }), role: 'A' }); cfg.mode = 'ai';
+  const e = Engine.create(); e.start(cfg); const t = e.state().terrain;
+  const floors = t.filter((p) => p.kind === 'corridor' || p.kind === 'room' || p.kind === 'hall');
+  ok('Into the Warren: its own skin — rock for the solid, worked stone for every floor, no machinery, on a 4" grid',
+    n.map === 'warren' && MAPS.warren.skin === 'warren' && floors.length && floors.every((p) => p.warren) &&
+    t.filter((p) => p.kind === 'bulkhead').every((p) => p.rock) && !t.some((p) => p.kind === 'machinery') &&
+    floors.filter((p) => p.kind === 'corridor').every((p) => Math.min(p.w, p.h) % 4 === 0));
+  ok('...the Reavers’ hoard in the biggest chamber on the far side, and the gate where the company comes in',
+    t.filter((p) => p.hoard).length === 1 && t.find((p) => p.hoard).x + t.find((p) => p.hoard).w / 2 > 24 &&
+    t.some((p) => p.gate && p.x === 0));
 }
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {
