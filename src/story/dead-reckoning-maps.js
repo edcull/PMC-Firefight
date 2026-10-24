@@ -163,7 +163,7 @@
       ],
       sites: { kind: 'searchsite', at: [
         { x: 17.6, y: 25.5, name: 'Kettering’s ship', skin: 'cargo' },
-        { x: 30.5, y: 17, name: 'The Reavers’ boats', skin: 'boats', wet: true },
+        { x: 31.6, y: 14.9, name: 'The Reavers’ boats', skin: 'boats', wet: true },
         { x: 29, y: 31, name: 'The tent where they haggle', skin: 'tent' }
       ] }
     },
