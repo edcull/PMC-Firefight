@@ -47,7 +47,7 @@
     /* ================= 2. The First Lodestone ================= */
     c2: 'Morrow’s first entry is a heading, a burn time, and a line: “Glass under me for a day and a night. Put the first stone where I could find it again.” Vane’s readers have found two places it could mean. The company can only follow one, and whoever follows the other will not be sharing.',
     'c2.brief': 'Two readings of the first heading, a day apart by jump, and both of them wrong in places. Vane leaves the choice to {commander:rank}. “You’re the one who has to dig,” says the voice on the line.',
-    'c2.readings': 'One reading puts Morrow at a dig on a desert world called Vantor III, where a meteor once turned a plain to glass. The other puts him at Station Thule, a survey relay on an airless moon, where his log stops for three days. Kettering’s people have been seen buying cold-weather kit. Somebody else has been asking about Vantor.{if ledger_has_log} Both readings are already for sale: Brass Ledger have printed them on the back of a catalogue.{/if}',
+    'c2.readings': 'One reading puts Morrow at a dig on a desert world called Vantor III, where a meteor once turned a plain to glass. The other puts him at Station Thule, a survey relay in orbit over Okoro II, where his log stops for three days. Kettering’s people have been seen buying cold-weather kit. Somebody else has been asking about Vantor.{if ledger_has_log} Both readings are already for sale: Brass Ledger have printed them on the back of a catalogue.{/if}',
     'c2.readings/flats': 'The Glass Flats. If Morrow dug, there’s something buried.',
     'c2.readings/thule': 'Station Thule. If he stopped for three days, he left something behind.',
 
@@ -67,13 +67,13 @@
     'c2f.second/chase': 'Follow their dropship’s trail while it’s fresh. The company can rest later.',
     'c2f.second/dig': 'Let it go, and dig on. Morrow may have left more than one thing here.',
 
-    'c2t.airlock': 'Station Thule is a dome on an airless moon, half buried in its own frozen breath. The main lock has been welded shut from inside, and something has been living in the station: scavengers, by the litter on the landing pad, and enough of them to have opinions about visitors.',
-    'c2t.airlock/cut': 'Cut through the main lock and go in hard.',
+    'c2t.airlock': 'Station Thule hangs in orbit over Okoro II, a cross of modules and docking arms turning slowly in the dark, its solar wings catching the sun. Every docking arm has been welded shut from inside, and something has been living aboard: scavengers, by the junk drifting round the arms, and enough of them to have opinions about visitors.',
+    'c2t.airlock/cut': 'Cut through a docking arm’s seal and go in hard.',
     'c2t.airlock/hatch': 'Find Morrow’s maintenance hatch. His log mentions it, twice.',
     'c2t.airlock/pay': 'Pay them to leave. Nobody needs to die for a relay.',
     'c2t.airlock/pay.why': 'The company can’t pay them.',
     'c2t.battle#name': 'Station Thule',
-    'c2t.battle': 'Station Thule is corridors and rooms under a dome, sealed against a vacuum outside. Its control room holds the relay’s archive, and Morrow’s three days are in it. The scavengers hold the station and know every corner of it. Take the control room and keep it: there is no air outside the walls, and nowhere to run to.',
+    'c2t.battle': 'Station Thule is corridors and modules sealed against the vacuum, a docking arm at each corner. Whoever holds its three control rooms holds the station: the hub in the middle, where the relay’s archive keeps Morrow’s three days, and the north and south modules that run its power and its air. The scavengers hold it now and know every corner of it. Take control of the station: two of the rooms at the end, or all three at once, and keep them. There is no air outside the hull, and nowhere to run to.',
     'c2t.debrief': '{if success}The station is the company’s, and so is the archive: three days of Morrow, talking to himself in an empty room.{/if}{if failure}The scavengers fired the archive on their way out. The air in the control room still smells of it.{/if}',
     'c2t.records': 'The relay kept everything Morrow said for three days. Most of it is to himself. Some of it is to the stone on the desk in front of him. He sounds frightened, and then, towards the end, he sounds happy.{if ledger_has_log} He reads his headings aloud, every one, as if he knew someone would need them. With Halloran’s photographs, it is the log again.{/if}',
     'c2t.records/listen': 'Listen to all of it, every hour, with the company.',

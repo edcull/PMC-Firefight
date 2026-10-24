@@ -21,29 +21,36 @@
   function B(x, y, w, h, plan) { return { kind: 'building', x: x, y: y, w: w, h: h, plan: plan || 'block' }; }
   function N(kind, x, y, w, h, shape) { return { kind: kind, x: x, y: y, w: w, h: h, shape: shape || 'blob' }; }
   function R(kind, x, y, w, h) { return { kind: kind, x: x, y: y, w: w, h: h }; }
+  // cargo stacked on concrete: a crater field by the rules, rows of crates with walkways between to look at
+  function CG(x, y, w, h) { return { kind: 'crater', x: x, y: y, w: w, h: h, cargo: 'apron' }; }
+  function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
 
   root.PMCStoryMaps['deep-contract'] = {
 
     /* The starport: three landing pads, each a marked pad of ferrocrete with
        its objective in the middle of it; the hangars along the north fence,
        the control tower with its comms dish, and the terminal the Front came
-       through. A bowser stands on Pad Three and a cargo lifter on Pad One,
-       and cargo is stacked on the pads and on concrete beside them, for
-       cover. */
+       through. The apron road runs edge to edge between the pads, with a
+       service road down from the hangars, a taxiway round to Pad Three and a
+       spur south to the terminal. Bowsers stand on Pads Two and Three and
+       cargo lifters on all three, and cargo is stacked on the pads and on
+       concrete beside the roads, for cover. */
     starport: {
       name: 'Kessler’s Reach starport', planet: 'industrial',
       pieces: [
         Object.assign(R('road', 7.5, 31.5, 10, 10), { pad: true }), Object.assign(R('road', 19, 19, 10, 10), { pad: true }), Object.assign(R('road', 30.5, 6.5, 10, 10), { pad: true }),
+        // the apron road, the service road from the hangars, the taxiway to Pad Three, the spur to the terminal
+        P(0, 29, 48, 2.5), P(18.4, 0, 2.6, 19), P(40.5, 9, 2.6, 20), P(28.5, 31.5, 2.5, 16.5),
         B(7, 5, 11, 7, 'block'), Object.assign(B(21, 4, 7, 6, 'annex'), { dish: true }), B(32, 33, 10, 7, 'U'),
         R('bunker', 22, 34, 5, 5),
-        R('wall', 12, 16, 7, 1), R('wall', 30, 21, 1, 6),
-        N('crater', 11, 23, 5, 4, 'blob'), N('crater', 34, 19, 4, 4, 'lobed'), N('ruins', 36, 41, 5, 4),
-        // the pads' support vehicles: a bowser on Pad Three, a cargo lifter on Pad One
-        R('fueltruck', 36.5, 14.5, 2.8, 1.4), R('cargolifter', 8, 38.5, 2.5, 2.5),
-        // cargo for cover, on the pads and on concrete beside them
-        R('crates', 19.5, 19.6, 3, 1.2), R('crates', 26, 27.5, 3, 1.2), R('crates', 31, 7, 1.2, 3), R('crates', 15.8, 37.5, 1.2, 3),
-        Object.assign(R('road', 15, 29.2, 4, 1.8), { slab: true }), R('crates', 15.3, 29.5, 3.4, 1.2),
-        Object.assign(R('road', 30, 27.5, 4, 1.8), { slab: true }), R('crates', 30.3, 27.8, 3.4, 1.2)
+        R('wall', 12, 16, 5.5, 1), R('wall', 30, 21, 1, 5),
+        N('crater', 9, 21, 5, 4, 'blob'), N('crater', 34, 19, 4, 4, 'lobed'), N('ruins', 36, 41, 5, 4),
+        // the pads' support vehicles: bowsers on Pads Two and Three with their hoses out, a cargo lifter on each pad
+        R('fueltruck', 36.5, 14.5, 2.8, 1.4), Object.assign(R('fueltruck', 20, 26.6, 2.8, 1.4), { hose: { x: 23.2, y: 24.8 } }),
+        R('cargolifter', 8, 38.5, 2.5, 2.5), Object.assign(R('cargolifter', 25.6, 20.2, 2.5, 2.5), { facing: Math.PI / 2 }), Object.assign(R('cargolifter', 32.2, 12.6, 2.5, 2.5), { facing: Math.PI }),
+        // cargo for cover, on the pads and on concrete beside the roads: stacks you can get between
+        CG(19.4, 19.4, 3.8, 1.6), CG(25.4, 27.1, 3.4, 1.6), CG(30.9, 6.9, 1.5, 3.8), CG(36.6, 6.9, 3.6, 1.5), CG(15.6, 36.6, 1.5, 3.8), CG(7.8, 31.8, 3.8, 1.5),
+        CG(13.5, 26.6, 4.5, 1.8), CG(31.5, 26.2, 4.5, 1.8), CG(8, 13, 7, 2.2), CG(23.5, 12, 4.5, 4.5), CG(18.4, 33, 2.6, 6.5)
       ],
       objectives: [{ x: 12.5, y: 36.5, name: 'Pad One' }, { x: 24, y: 24, name: 'Pad Two' }, { x: 35.5, y: 11.5, name: 'Pad Three' }]
     },

@@ -442,15 +442,16 @@
           { id: 'dig', text: 'Let it go, and dig on.', effects: [{ meter: 'intel', add: 1 }] }
         ] },
         // Station Thule
-        { id: 'c2t.airlock', type: 'event', title: 'The airlock', text: 'The scavengers have welded the station shut.', options: [
-          { id: 'cut', text: 'Cut through the main lock.', battle: { role: 'attacker' } },
+        { id: 'c2t.airlock', type: 'event', title: 'The airlock', text: 'The scavengers have welded the station’s docking arms shut.', options: [
+          { id: 'cut', text: 'Cut through a docking arm’s seal.', battle: { role: 'attacker' } },
           { id: 'hatch', text: 'Find Morrow’s maintenance hatch in the log.', effects: [{ roll: { d6: 4, meter: 'intel' },
             pass: [{ next: { battle: 'c2t.battle', levers: { role: 'choose' } } }], fail: [{ next: { battle: 'c2t.battle', levers: { readiness: 1 } } }] }] },
           { id: 'pay', text: 'Pay them to leave.', cost: { kUC: 2 }, why: 'You can’t pay them.', battle: { skip: true }, effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: 1 }] }
         ], next: 'c2t.battle' },
         { id: 'c2t.battle', type: 'battle', scenario: 'ce_control', map: 'thule', tier: 'max', pl: 1, planet: 'arctic',
           place: { system: 'Okoro', planet: 'Okoro II', kind: 'arctic', world: { atmosphere: 'none' }, site: 'Station Thule' },
-          enemy: { side: 'scavengers', faction: 'rebel', archetype: 'freespace', core: ['rridergang', 'rmilitia'], optional: { meter: 'kettle', per: 3, units: ['rmilitia', 'rtechnical'] }, fill: { to: 0.8, from: ['rmilitia', 'rridergang'] } },
+          // (the scavengers aboard: militia and salvage crews on foot, nothing that cannot fight in a corridor)
+          enemy: { side: 'scavengers', faction: 'rebel', archetype: 'freespace', core: ['rmilitia', 'rminers'], optional: { meter: 'kettle', per: 3, units: ['rmilitia', 'rlmg'] }, fill: { to: 0.8, from: ['rmilitia', 'rminers', 'rciv', 'rlmg'] } },
           on: { success: [{ effects: [{ meter: 'stones', add: 1 }] }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{}] }, next: 'c2t.debrief' },
         { id: 'c2t.debrief', type: 'debrief', text: '{if success}The station is yours.{/if}{if failure}The scavengers fired the archive.{/if}', events: ['c2t.records', 'c2t.burned'], next: 'c2.interlude' },
         { id: 'c2t.records', type: 'event', if: { grade: 'success' }, title: 'Morrow’s records', text: 'The relay kept his log entries, his voice and his fear.', options: [

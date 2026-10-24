@@ -57,11 +57,56 @@
         var SW = 0, SH = 0;
         terrain.forEach(function (q) { SW = Math.max(SW, q.x + q.w); SH = Math.max(SH, q.y + q.h); });
         var voidAt = function (x, y) { return space.some(function (q) { return x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h; }); };
-        var aw = SW * 0.33, ah = SH * 0.2;
-        [[1, 1, 1, 1], [SW - 1 - aw, 1, -1, 1], [1, SH - 1 - ah, 1, -1], [SW - 1 - aw, SH - 1 - ah, -1, -1]].forEach(function (c, ci) {
+        // (where each starts: it is slid along to line up with its room below)
+        var aw = SW * 0.22, ah = SH * 0.17, ax = SW * 0.06, an = SH * 0.06, as = SH * 0.01;
+        [[ax, an, 1, 1], [SW - ax - aw, an, -1, 1], [ax, SH - as - ah, 1, -1], [SW - ax - aw, SH - as - ah, -1, -1]].forEach(function (c, ci) {
           var r = { x: c[0], y: c[1], w: aw, h: ah }, clear = true;
           for (var sx = 0; sx <= 6 && clear; sx++) for (var sy = 0; sy <= 4 && clear; sy++) clear = voidAt(r.x + r.w * sx / 6, r.y + r.h * sy / 4);
-          if (clear) props.push({ kind: 'solar', x: r.x, y: r.y, w: r.w, h: r.h, toward: { x: c[2], y: c[3] }, seed: 4111 + ci });
+          if (!clear) return;
+          /* its boom: a truss from the middle of the array's inner edge out to
+             the hull, across the table to the end of the north or south module
+             where there is one, else down it */
+          function run(x, y, dx, dy) {
+            for (var d = 0; d < 40; d += 0.25) {
+              var px = x + dx * d, py = y + dy * d;
+              if (px < 0 || py < 0 || px > SW || py > SH) return null;
+              if (!voidAt(px, py)) {
+                // the hull's edge exactly: the side of the stretch of open space last crossed
+                var lx = px - dx * 0.25, ly = py - dy * 0.25, last = space.filter(function (q) { return lx >= q.x && lx <= q.x + q.w && ly >= q.y && ly <= q.y + q.h; })[0];
+                if (last && dx) px = dx > 0 ? last.x + last.w : last.x;
+                if (last && dy) py = dy > 0 ? last.y + last.h : last.y;
+                return { x: px, y: py, d: d };
+              }
+            }
+            return null;
+          }
+          var ex = c[2] > 0 ? r.x + r.w : r.x, ey = c[3] > 0 ? r.y + r.h : r.y;
+          var alongX = run(ex, r.y + r.h / 2, c[2], 0), alongY = run(r.x + r.w / 2, ey, 0, c[3]);
+          /* the array slid along the hull so its spine lines up with the middle
+             of the room the boom runs into, where it still has open space round it */
+          function roomAt(x, y) { return terrain.filter(function (q) { return (q.kind === 'hall' || q.kind === 'room' || q.kind === 'corridor') && x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h; })[0]; }
+          function clearAt(q) { for (var ix = 0; ix <= 6; ix++) for (var iy = 0; iy <= 4; iy++) if (!voidAt(q.x + q.w * ix / 6, q.y + q.h * iy / 4)) return false; return true; }
+          var rm = alongX && roomAt(alongX.x + c[2] * 0.6, alongX.y);
+          if (rm) {
+            var moved = { x: r.x, y: rm.y + rm.h / 2 - r.h / 2, w: r.w, h: r.h };
+            if (clearAt(moved)) { r = moved; alongX = run(ex, r.y + r.h / 2, c[2], 0); }
+          }
+          // (across the table first: into the end of the module beside it)
+          var boom = alongX ? { x0: ex, y0: r.y + r.h / 2, x1: alongX.x, y1: alongX.y, axis: 'x' }
+            : alongY ? { x0: r.x + r.w / 2, y0: ey, x1: alongY.x, y1: alongY.y, axis: 'y' } : null;
+          props.push({ kind: 'solar', x: r.x, y: r.y, w: r.w, h: r.h, toward: { x: c[2], y: c[3] }, boom: boom, seed: 4111 + ci });
+          /* its mount, outside against the hull where the boom meets it: flush
+             with the wall's face, which stands half its thickness (a fifth of
+             an inch) out into the open space, the boom running into it */
+          if (boom) {
+            var bdx = Math.sign(boom.x1 - boom.x0), bdy = Math.sign(boom.y1 - boom.y0), off = 0.2;
+            var mtx = bdx ? (bdx > 0 ? boom.x1 - off - 1 : boom.x1 + off) : boom.x1 - 0.5, mty = bdy ? (bdy > 0 ? boom.y1 - off - 1 : boom.y1 + off) : boom.y1 - 0.5;
+            // (the boom runs on through the mount to the hull, the mount drawn over its end)
+            // (its footprint takes in the boom as well, so the walls sort with all of it)
+            var fx0 = Math.min(mtx, boom.x0, boom.x1) - (bdx ? 0 : 0.4), fx1 = Math.max(mtx + 1, boom.x0, boom.x1) + (bdx ? 0 : 0.4);
+            var fy0 = Math.min(mty, boom.y0, boom.y1) - (bdy ? 0 : 0.4), fy1 = Math.max(mty + 1, boom.y0, boom.y1) + (bdy ? 0 : 0.4);
+            props.push({ kind: 'solarmount', x: fx0, y: fy0, w: fx1 - fx0, h: fy1 - fy0, box: { x: mtx, y: mty, w: 1, h: 1 }, boom: boom, seed: 4211 + ci });
+          }
         });
       }
       /* The stretches of a bulkhead's sides that face a floor, not more plating
@@ -225,6 +270,34 @@
           for (var vt = 0; vt < Math.max(1, Math.round(area / 22)); vt++) {
             var vq = spotIn(r, 1.2, rand);
             props.push({ kind: 'vent', x: vq.x, y: vq.y, tone: rand(), seed: (rand() * 9999) | 0 });
+          }
+          return;
+        }
+        if (r.kind === 'crater' && r.cargo) {
+          /* A map's cargo stacks (a crater field by the rules): stacks of crates
+             in rows, with walkways between them wide enough to get through. */
+          var CELL = 1.8, AISLE = 0.7;
+          var gcx = Math.max(1, Math.floor((r.w + AISLE) / CELL)), gcy = Math.max(1, Math.floor((r.h + AISLE) / CELL));
+          var sw = (r.w - AISLE * (gcx - 1)) / gcx, sh = (r.h - AISLE * (gcy - 1)) / gcy;
+          for (var gx = 0; gx < gcx; gx++) {
+            for (var gy = 0; gy < gcy; gy++) {
+              if (gcx * gcy > 2 && rand() < 0.15) continue;      // a gap where a stack has gone
+              props.push({ kind: 'crates', x: r.x + gx * (sw + AISLE) + 0.1, y: r.y + gy * (sh + AISLE) + 0.1, w: sw - 0.2, h: sh - 0.2,
+                height: a(5 + rand() * 6), seed: (rand() * 9999) | 0 });
+            }
+          }
+          return;
+        }
+        if (r.kind === 'crater' && r.camp) {
+          /* A field camp's tents (a crater field by the rules): rows of them,
+             spread evenly over the ground, with walkways between them. */
+          var TW = 2.4, TH = 1.8, TA = 0.8;
+          var tcx = Math.max(1, Math.floor((r.w + TA) / (TW + TA))), tcy = Math.max(1, Math.floor((r.h + TA) / (TH + TA)));
+          for (var tx2 = 0; tx2 < tcx; tx2++) {
+            for (var ty2 = 0; ty2 < tcy; ty2++) {
+              props.push({ kind: 'tent', x: r.x + (tcx > 1 ? tx2 * (r.w - TW) / (tcx - 1) : (r.w - TW) / 2), y: r.y + (tcy > 1 ? ty2 * (r.h - TH) / (tcy - 1) : (r.h - TH) / 2),
+                w: TW, h: TH, height: a(10), seed: (rand() * 9999) | 0 });
+            }
           }
           return;
         }
@@ -604,6 +677,8 @@
           if (r.hose) props.push({ kind: 'hose', x: r.x + r.w * 0.35, y: r.y + r.h - 0.1, to: r.hose, seed: (rr2() * 9999) | 0 });
           return;
         }
+        // a field camp's comms mast
+        if (r.kind === 'commsmast') { props.push({ kind: 'commsmast', x: r.x, y: r.y, w: r.w, h: r.h, height: a(80), seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'cargolifter') { props.push({ kind: 'cargolifter', x: r.x, y: r.y, w: r.w, h: r.h, height: a(15), facing: r.facing || 0, seed: (rr2() * 9999) | 0 }); return; }
         // a town square's fountain: its basin, column and statue, drawn as one block among the others
         if (r.kind === 'fountain') {
@@ -668,7 +743,7 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */

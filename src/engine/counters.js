@@ -467,6 +467,8 @@
     }
     function throwAt(u, r, key) {
       spend(u, key);
+      // the throw itself, drawn before what it does (an incendiary goes in as Molotovs)
+      E.playThrow(u, { x: r.x + r.w / 2, y: r.y + r.h / 2 }, key);
       var d = R.d6();
       if (key === 'incendiary') {
         if (d === 1) logLine('note', u.label + '’s Incendiary Grenades fizzle in ' + secName(r) + ' (D6 1).');

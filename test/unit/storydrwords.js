@@ -159,6 +159,31 @@ ok('...and the compounds none, their seed lays them, unless the map lays the com
   ok('Station Thule is laid by hand, a plan that can be fought in, with an entry on each edge', dr._nodes['c2t.battle'].map === 'thule' && chk && chk.ok && chk.entries.L > 0 && chk.entries.R > 0, JSON.stringify(chk));
   ok('...the same about both its axes', mirrored);
   ok('...and in orbit: its skin the station’s, the solid round it open space', th.skin === 'station');
+  // each side comes in along the whole of both its docking arms, not the stub of one the corridor cutter left at the edge
+  const built = pl && CMP.build(pl, 48, 48), ent = built && built.compound.entries;
+  const arms = ent && ['L', 'R'].map((sd) => ent[sd].map((e) => e.w + 'x' + e.h).join(',')).join(' / ');
+  ok('...and both sides come in along the whole of both their docking arms', arms === '12x3,12x3 / 12x3,12x3', arms);
+}
+{
+  /* A compound's enemy (and allies) fight in its corridors: no vehicles or aircraft,
+     no riders, no indirect fire or dug-in guns, at any Tier the company can be */
+  const { C } = require('../../server/rules.js');
+  const L = require('../../src/story/levers.js');
+  const bad = [];
+  Object.values(dr._nodes).filter((n) => n.type === 'battle' && SC.SCENARIOS[n.scenario] && SC.SCENARIOS[n.scenario].compound).forEach((n) => {
+    [1, 3, 5].forEach((tier) => {
+      const c = C.newCampaign({ mode: 'solo' });
+      C.found(c.companies.A, ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'], 'S2');
+      S.begin(c, 'dead-reckoning'); c.story.leading = 'kestrel'; c.story.meters.kettle = 6;
+      c.story.chapter = n._chapter; c.story.node = n.id;
+      const cfg = L.toCfg(c, { tier, picks: C.pickForce(c.companies.A, 1, 1, null, { scenario: n.scenario }), role: 'A' });
+      cfg.armyB.forEach((k) => {
+        const p = R.profile(R.splitPick(k).key);
+        if ((p.cls || 'infantry') !== 'infantry' || (p.rules || []).some((r) => /^(Riders|Indirect Fire|Stationary Artillery)/.test(r))) bad.push(n.id + ' T' + tier + ': ' + p.name);
+      });
+    });
+  });
+  ok('a compound battle’s enemy is all foot that can fight in a corridor: no vehicles, riders or indirect fire', !bad.length, bad.join('; '));
 }
 ok('...so nothing waits on maps to come', !dr.mapsPending);
 const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;

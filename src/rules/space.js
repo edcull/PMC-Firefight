@@ -335,7 +335,8 @@
     }
     function shapePiece(r, rand, family) {
       if (r.kind === 'building') return planBuilding(r, rand || Math.random, family);
-      if (!SHAPED[r.kind] || r.poly || r.w < 2 || r.h < 2) return r;
+      // (a map's cargo stacks and camp's tents, crater fields skinned, keep their square footprint)
+      if (!SHAPED[r.kind] || r.poly || r.cargo || r.camp || r.w < 2 || r.h < 2) return r;
       rand = rand || Math.random;
       var fams = FAMILIES[r.kind] || ['blob'];
       var fam = family || fams[Math.floor(rand() * fams.length)];
@@ -386,8 +387,9 @@
       });
       r.shape = fam;
       /* a big hill may rise in two steps: a second, smaller rise on its top,
-         the same outline drawn in towards the middle */
-      if (r.kind === 'hill' && r.w >= 7 && r.h >= 6 && rand() < 0.5) {
+         the same outline drawn in towards the middle (always, on a map's hill
+         marked `stepped`) */
+      if (r.kind === 'hill' && r.w >= 7 && r.h >= 6 && (rand() < 0.5 || r.stepped)) {
         var cx0 = r.x + r.w / 2, cy0 = r.y + r.h / 2, k0 = 0.45 + rand() * 0.15;
         var sx0 = (rand() - 0.5) * r.w * 0.12, sy0 = (rand() - 0.5) * r.h * 0.12;
         var top = r.poly.map(function (q) {

@@ -36,6 +36,21 @@
     var TANK = ['#4a4636', '#6a6450', '#9a9478', '#bcb698', '#d8d2b2', '#ece6c8'];
     var CAB = ['#3a2e0c', '#6a5418', '#a8842a', '#c89c32', '#e0b440', '#f0cc60'];
     var LIFT = ['#3a240c', '#6a4214', '#a8661e', '#d08428', '#e8a038', '#f4bc58'];
+    // a field camp: its tents' canvas (sand, olive, grey; each dark to light), the mast's radio box
+    var TENT = [['#4a3e26', '#7a6844', '#93805a', '#a8946a', '#c0ac80', '#d8c89c'], ['#343a24', '#55603a', '#66724a', '#788656', '#8c9a66', '#a6b47e'],
+      ['#3a3c3c', '#5c605e', '#6e7270', '#80847f', '#969a94', '#b0b4ac']];
+    var MASTBOX = ['#22262a', '#343a40', '#4a525a', '#5e6870', '#7a858f', '#9aa6b0'];
+    /* A station's truss (a solar array's spine and boom): two rails and their
+       zigzag bracing, from P0 to P1 along one axis of the table, at the height
+       the point function SO puts a bare point (x, y). */
+    function solarTruss(g, SO, P0, P1) {
+      var ax = Math.abs(P1[0] - P0[0]) >= Math.abs(P1[1] - P0[1]), len = ax ? Math.abs(P1[0] - P0[0]) : Math.abs(P1[1] - P0[1]);
+      var sg = ax ? Math.sign(P1[0] - P0[0]) : Math.sign(P1[1] - P0[1]);
+      function at(t, o) { return ax ? SO(P0[0] + sg * t, P0[1] + o) : SO(P0[0] + o, P0[1] + sg * t); }
+      edgeLine(g, at(0, -0.35), at(len, -0.35), '#8a96a0', 2);
+      edgeLine(g, at(0, 0.35), at(len, 0.35), '#b4c0c8', 2);
+      for (var tb = 0; tb * 0.9 < len; tb++) edgeLine(g, at(tb * 0.9, -0.35), at(Math.min(len, tb * 0.9 + 0.45), 0.35), '#6a7680', 1);
+    }
     // a glass tower: tinted curtain wall, its mullions, and the light in it
     var GLASS = ['#0c1820', '#13283a', '#1a3a54', '#21506e', '#2b6a8a', '#3c86a8'];
     /* A glass tower (a map's landmark, style 'glass'): a tinted curtain wall
@@ -398,57 +413,195 @@
           }
           break;
         }
-        /* A shuttle, down on its pad: a lifting body on four legs, nose to the
-           west, swept wings, a tall fin, two engines glowing in its tail, its
-           ramp down under them, and its owner's gold stripe down the side. */
+        /* A shuttle, down on its pad: a lifting body lofted through a run of
+           rounded sections, nose to the east, the cockpit's glass wrapped round
+           it, swept wings with winglets, a fin over the tail and three engine
+           bells behind, standing on four legs. Its side ramp is down towards
+           the apron with the hold lit inside, and the company's gold stripe
+           runs its length. */
         case 'shuttle': {
-          var sl = lift || 0, x0 = pr.x, w = pr.w, yc = pr.y + pr.h / 2, hb = a(6), ht = a(22), wz = a(10);
+          var sl = lift || 0, x0 = pr.x, w = pr.w, yc = pr.y + pr.h / 2;
           function SP(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sl - z]; }
+          function hx(c) { return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; }
+          var HR = HULL.map(hx);
+          function tone(l) {
+            var f = Math.max(0, Math.min(HR.length - 1.001, l * (HR.length - 1))), i = Math.floor(f), k = f - i;
+            return 'rgb(' + [0, 1, 2].map(function (c) { return Math.round(HR[i][c] + (HR[i + 1][c] - HR[i][c]) * k); }).join(',') + ')';
+          }
+          // the hull's sections, tail to nose: where along it, half its width (inches), its middle and half its height
+          var xa = x0 + 0.7, xb = x0 + w - 0.15;
+          var ST = [[0, 0.82, a(15), a(7.5)], [0.07, 1.02, a(16), a(9)], [0.5, 1.12, a(16.5), a(9.5)], [0.68, 1.04, a(16), a(8.8)],
+            [0.8, 0.86, a(15), a(7.2)], [0.9, 0.6, a(13.6), a(5)], [0.97, 0.3, a(12.4), a(2.6)], [1, 0.08, a(12), a(0.8)]];
+          var RK = 16;
+          function ring(s, k) {
+            var th = k / RK * Math.PI * 2, c = Math.cos(th), sn = Math.sin(th);
+            return { x: xa + (xb - xa) * s[0], y: yc + s[1] * Math.sign(c) * Math.pow(Math.abs(c), 0.55), z: s[2] + s[3] * Math.sign(sn) * Math.pow(Math.abs(sn), 0.7), c: c, s: sn };
+          }
+          var R = ST.map(function (s) { var out = []; for (var k = 0; k < RK; k++) out.push(ring(s, k)); return out; });
+          function S3(p, dz) { return SP(p.x, p.y, p.z + (dz || 0)); }
           var sm = SP(x0 + w / 2, yc, 0);
-          shadowBlob(g, { x: sm[0] + a(3), y: sm[1] + a(1.5) }, a(w * 4.2), a(pr.h * 2));
+          shadowBlob(g, { x: sm[0] + a(3), y: sm[1] + a(1.5) }, a(w * 4.4), a(pr.h * 2.1));
+          // the engine bells behind the tail, under the hull
+          [[-0.45, a(12.5)], [0.45, a(12.5)], [0, a(19)]].forEach(function (E) {
+            var e0 = SP(xa - 0.55, yc + E[0], E[1]), e1 = SP(xa + 0.1, yc + E[0], E[1]);
+            edgeLine(g, e0, e1, '#14171a', a(6));
+            ellipse(g, e0[0], e0[1], a(3), a(3.2), '#0e1012');
+            ellipse(g, e0[0], e0[1], a(2), a(2.2), 'rgba(255,150,70,.45)');
+          });
           // the legs, each on a foot
-          [[x0 + 2.8, yc - 1.1], [x0 + 2.8, yc + 1.1], [x0 + 8.2, yc - 1.1], [x0 + 8.2, yc + 1.1]].forEach(function (L) {
-            var f = SP(L[0], L[1], 0); ellipse(g, f[0], f[1], a(1.6), a(0.8), '#1a1d20');
-            edgeLine(g, f, SP(L[0], L[1], hb + 2), HULL[1], 4); edgeLine(g, f, SP(L[0], L[1], hb + 2), HULL[3], 1);
+          [[xa + 1.8, yc - 0.9], [xa + 1.8, yc + 0.9], [xa + 6.6, yc - 0.8], [xa + 6.6, yc + 0.8]].forEach(function (L) {
+            var f = SP(L[0], L[1] + (L[1] > yc ? 0.25 : -0.25), 0), t = SP(L[0], L[1], a(10));
+            ellipse(g, f[0], f[1], a(1.8), a(0.9), '#1a1d20');
+            edgeLine(g, f, t, HULL[1], 5); edgeLine(g, f, t, HULL[4], 1);
           });
-          // the far wing, under everything
-          var FW = [SP(x0 + 3.6, yc - 1.2, wz), SP(x0 + 7.2, pr.y + 0.3, wz + a(1)), SP(x0 + 9.0, pr.y + 0.3, wz + a(1)), SP(x0 + 9.4, yc - 1.2, wz)];
-          poly(g, FW, HULL[2]);
-          // the ramp, down from the tail, lit inside
-          poly(g, [SP(x0 + 9.5, yc - 0.8, hb + a(2)), SP(x0 + 9.5, yc + 0.8, hb + a(2)), SP(x0 + w, yc + 0.8, 0), SP(x0 + w, yc - 0.8, 0)], HULL[3]);
-          poly(g, [SP(x0 + 9.5, yc - 0.6, hb + a(2)), SP(x0 + 9.5, yc + 0.6, hb + a(2)), SP(x0 + 9.5, yc + 0.6, hb + a(7)), SP(x0 + 9.5, yc - 0.6, hb + a(7))], 'rgba(255,214,140,.55)');
-          edgeLine(g, SP(x0 + w, yc - 0.8, 0), SP(x0 + w, yc + 0.8, 0), HULL[5], 1);
-          // the fuselage, its spine catching the light, and its nose
-          box(g, { x: x0 + 2.2, y: yc - 1.2, w: 7.4, h: 2.4, height: ht - hb, seed: pr.seed }, HULL, { roof: HULL[4], roofEdge: HULL[5], windows: null, lift: sl + hb, noShadow: true });
-          edgeLine(g, SP(x0 + 2.2, yc, ht + 1), SP(x0 + 9.6, yc, ht + 1), HULL[5], 2);
-          poly(g, [SP(x0 + 2.2, yc + 1.2, hb), SP(x0 + 2.2, yc + 1.2, ht), SP(x0 + 0.1, yc, hb + a(9)), SP(x0 + 0.1, yc, hb + a(4))], HULL[3]);
-          poly(g, [SP(x0 + 2.2, yc - 1.2, ht), SP(x0 + 2.2, yc + 1.2, ht), SP(x0 + 0.1, yc, hb + a(9))], HULL[5]);
-          // the cockpit's glass, wrapped round the top of the nose
-          poly(g, [SP(x0 + 0.9, yc - 0.45, hb + a(10)), SP(x0 + 0.9, yc + 0.45, hb + a(10)), SP(x0 + 2.3, yc + 1.05, ht - a(1)), SP(x0 + 2.3, yc - 1.05, ht - a(1))], '#16303e');
-          edgeLine(g, SP(x0 + 1.1, yc + 0.35, hb + a(10.6)), SP(x0 + 2.2, yc + 0.9, ht - a(1.4)), 'rgba(170,230,255,.7)', 1);
-          // the gold stripe of the company that owns it, and a row of ports
-          edgeLine(g, SP(x0 + 2.2, yc + 1.2, hb + a(8)), SP(x0 + 9.6, yc + 1.2, hb + a(8)), '#c9a65a', 4);
-          for (var pw = 0; pw < 6; pw++) { var pq = SP(x0 + 3 + pw * 1.0, yc + 1.2, hb + a(12)); rect(g, pq[0] - 2, pq[1] - 2, 4, 3, '#9ad8f0'); }
-          // the near wing: its leading edge lit, a gold chevron on it, its trailing edge in shadow
-          var NW = [SP(x0 + 3.6, yc + 1.2, wz), SP(x0 + 7.2, pr.y + pr.h - 0.3, wz + a(1)), SP(x0 + 9.0, pr.y + pr.h - 0.3, wz + a(1)), SP(x0 + 9.4, yc + 1.2, wz)];
-          poly(g, NW.map(function (q) { return [q[0], q[1] + a(1.5)]; }), HULL[0]);
+          // the far wing and its winglet, under the hull
+          var wz = a(11.5);
+          function wing(sd) {
+            var ty = yc + sd * (pr.h / 2 - 0.25);
+            return [SP(xa + 1.0, yc + sd * 0.9, wz), SP(xa + 5.3, yc + sd * 0.9, wz + a(1)), SP(xa + 2.4, ty, wz + a(2.5)), SP(xa + 0.9, ty, wz + a(2.5))];
+          }
+          function winglet(sd) {
+            var ty = yc + sd * (pr.h / 2 - 0.25);
+            return [SP(xa + 0.9, ty, wz + a(2.5)), SP(xa + 2.4, ty, wz + a(2.5)), SP(xa + 1.6, ty, wz + a(6.5)), SP(xa + 0.8, ty, wz + a(6.5))];
+          }
+          var FW = wing(-1);
+          poly(g, FW, HULL[2]); edgeLine(g, FW[1], FW[2], HULL[4], 2);
+          poly(g, winglet(-1), HULL[2]);
+          // the hull: each panel facing the eye, lit from above and the south
+          for (var si = 0; si < R.length - 1; si++) {
+            for (var k = 0; k < RK; k++) {
+              var k2 = (k + 1) % RK, A = R[si][k], B = R[si][k2], C2 = R[si + 1][k2], D = R[si + 1][k];
+              var q = [S3(A), S3(B), S3(C2), S3(D)];
+              var ar = 0; for (var qi = 0; qi < 4; qi++) { var q1 = q[qi], q2 = q[(qi + 1) % 4]; ar += q1[0] * q2[1] - q2[0] * q1[1]; }
+              if (ar <= 0) continue;
+              var mc = (A.c + B.c) / 2, ms = (A.s + B.s) / 2, taper = (ST[si][1] - ST[si + 1][1]) * 0.6;
+              var col = tone(0.42 + 0.34 * ms + 0.18 * mc + 0.12 * Math.max(-1, taper * 2));
+              var glass = (si === 4 || si === 5) && ms > 0.3;
+              poly(g, q, glass ? (ms > 0.8 ? '#1e4256' : '#16303e') : col);
+            }
+          }
+          // a glint on the glass, and the panel seams round the hull
+          edgeLine(g, S3(R[4][2], 1), S3(R[5][2], 1), 'rgba(170,230,255,.75)', 2);
+          for (var gk = 1; gk < 7; gk++) edgeLine(g, S3(R[5][gk]), S3(R[5][gk + 1]), HULL[4], 1);
+          [1, 2, 3].forEach(function (si) {
+            for (var k = 12; k < RK + 9; k++) { var k1 = k % RK, k2 = (k + 1) % RK; if (R[si][k1].c < -0.05 || R[si][k2].c < -0.05) continue; edgeLine(g, S3(R[si][k1]), S3(R[si][k2]), 'rgba(20,24,28,.35)', 1); }
+          });
+          // the gold stripe down the near side, and the ports above it
+          for (var gs = 0; gs < 5; gs++) edgeLine(g, S3(R[gs][15]), S3(R[gs + 1][15]), '#c9a65a', 4);
+          for (var pw = 0; pw < 7; pw++) {
+            var px = xa + 1.4 + pw * 0.65; if (px > xa + 4.9 && px < xa + 6.9) continue;
+            var pq = SP(px, yc + 1.08, a(19)); rect(g, pq[0] - 2, pq[1] - 2, 4, 3, '#9ad8f0');
+          }
+          // the side ramp, down to the apron, and the hold lit behind it
+          var r0 = xa + 5.2, r1 = xa + 6.6, rz = a(9), ry = yc + 1.1;
+          poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry, a(21)), SP(r0, ry, a(21))], 'rgba(255,214,140,.85)');
+          poly(g, [SP(r0 + 0.15, ry, rz), SP(r1 - 0.15, ry, rz), SP(r1 - 0.15, ry, a(18)), SP(r0 + 0.15, ry, a(18))], 'rgba(255,236,190,.6)');
+          poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry + 1.7, 0), SP(r0, ry + 1.7, 0)], HULL[3]);
+          for (var rs = 1; rs < 5; rs++) edgeLine(g, SP(r0, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), SP(r1, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), HULL[1], 1);
+          edgeLine(g, SP(r0, ry + 1.7, 0), SP(r1, ry + 1.7, 0), '#e0b440', 2);
+          // the near wing, its leading edge lit, a gold chevron on it, and its winglet
+          var NW = wing(1);
+          poly(g, NW.map(function (p) { return [p[0], p[1] + a(1.5)]; }), HULL[0]);
           poly(g, NW, HULL[3]);
-          edgeLine(g, NW[0], NW[1], HULL[5], 2);
-          edgeLine(g, NW[2], NW[3], HULL[1], 2);
-          poly(g, [SP(x0 + 6.3, yc + 2.2, wz + a(0.6)), SP(x0 + 7.4, yc + 2.2, wz + a(0.6)), SP(x0 + 8.0, yc + 3.0, wz + a(0.8)), SP(x0 + 6.9, yc + 3.0, wz + a(0.8))], '#c9a65a');
-          dot(g, NW[1][0], NW[1][1], '#3aff7a', 4);                  // the starboard light
-          // the fin, tall over the tail, and the engines glowing in the tail
-          var F0 = SP(x0 + 6.8, yc, ht), F1 = SP(x0 + 9.6, yc, ht), F2 = SP(x0 + 9.9, yc, ht + a(16)), F3 = SP(x0 + 9.0, yc, ht + a(16));
-          poly(g, [F0, F1, F2, F3], HULL[2]);
-          edgeLine(g, F0, F3, HULL[5], 2);
-          edgeLine(g, SP(x0 + 7.6, yc, ht + a(8)), SP(x0 + 9.7, yc, ht + a(8)), '#c9a65a', 3);
-          dot(g, F2[0], F2[1], '#ff4a3a', 4);
-          [-0.6, 0.6].forEach(function (o) {
-            var e = SP(x0 + 9.6, yc + o, hb + a(9));
-            ellipse(g, e[0], e[1], a(3.2), a(3.2), '#14171a');
-            ellipse(g, e[0], e[1], a(2.4), a(2.4), 'rgba(255,150,70,.6)');
-            ellipse(g, e[0], e[1], a(1.3), a(1.3), '#ffd28a');
+          edgeLine(g, NW[1], NW[2], HULL[5], 2);
+          edgeLine(g, NW[3], NW[0], HULL[1], 2);
+          poly(g, [SP(xa + 2.6, yc + 2.0, wz + a(1.4)), SP(xa + 3.6, yc + 2.0, wz + a(1.4)), SP(xa + 2.9, yc + 3.0, wz + a(1.9)), SP(xa + 1.9, yc + 3.0, wz + a(1.9))], '#c9a65a');
+          var NL = winglet(1); poly(g, NL, HULL[3]); edgeLine(g, NL[1], NL[2], HULL[5], 2);
+          dot(g, NL[2][0], NL[2][1], '#3aff7a', 4);                  // the starboard light
+          var FL = winglet(-1); dot(g, FL[2][0], FL[2][1], '#ff4a3a', 4);   // and the port one
+          // the fin over the tail, a gold band across it, and its beacon
+          var tz = a(24);
+          var F0 = SP(xa + 0.3, yc, tz), F1 = SP(xa + 2.6, yc, tz + a(1)), F2 = SP(xa + 1.2, yc, tz + a(11)), F3 = SP(xa + 0.1, yc, tz + a(11));
+          poly(g, [F0, F1, F2, F3], HULL[3]);
+          edgeLine(g, F1, F2, HULL[5], 2);
+          edgeLine(g, SP(xa + 0.25, yc, tz + a(6)), SP(xa + 1.9, yc, tz + a(6.5)), '#c9a65a', 3);
+          dot(g, F3[0], F3[1], '#ff4a3a', 4);
+          // a light on the nose
+          var nz = SP(xb, yc, a(12)); dot(g, nz[0] - 1, nz[1] - 1, '#ffffff', 3);
+          break;
+        }
+        /* A field camp's tent: canvas walls a hand high, a ridged roof over them
+           along the tent's long side, its door flap rolled up on the near end,
+           and guy lines out to pegs at the corners. */
+        case 'tent': {
+          var tl2 = lift || 0, tr = rng(pr.seed), wide = pr.w >= pr.h;
+          var TC = TENT[(tr() * TENT.length) | 0];
+          function TN(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - tl2 - z]; }
+          var x0t = pr.x + 0.15, y0t = pr.y + 0.15, x1t = pr.x + pr.w - 0.15, y1t = pr.y + pr.h - 0.15, wz2 = a(4), rz2 = a(10);
+          var tm2 = TN((x0t + x1t) / 2, (y0t + y1t) / 2, 0);
+          shadowBlob(g, { x: tm2[0] + a(1.5), y: tm2[1] + a(0.8) }, a(pr.w * 3), a(pr.h * 1.8));
+          // the pegs and guy lines at the corners, drawn first so the canvas covers the far ones
+          [[x0t, y0t, -1, -1], [x1t, y0t, 1, -1], [x0t, y1t, -1, 1], [x1t, y1t, 1, 1]].forEach(function (c) {
+            var peg = TN(c[0] + c[2] * 0.35, c[1] + c[3] * 0.35, 0);
+            edgeLine(g, TN(c[0], c[1], wz2), peg, 'rgba(40,34,24,.8)', 1); dot(g, peg[0] - 1, peg[1] - 1, '#2a241a', 2);
           });
+          // the ridge runs along the long side; its gable ends face the short ones
+          var r0, r1;
+          if (wide) { r0 = [x0t, (y0t + y1t) / 2]; r1 = [x1t, (y0t + y1t) / 2]; } else { r0 = [(x0t + x1t) / 2, y0t]; r1 = [(x0t + x1t) / 2, y1t]; }
+          var c00 = TN(x0t, y0t, wz2), c10 = TN(x1t, y0t, wz2), c11 = TN(x1t, y1t, wz2), c01 = TN(x0t, y1t, wz2);
+          var R0 = TN(r0[0], r0[1], rz2), R1 = TN(r1[0], r1[1], rz2);
+          // the walls: the near two of them
+          poly(g, [TN(x0t, y1t, 0), TN(x1t, y1t, 0), c11, c01], TC[1]);
+          poly(g, [TN(x1t, y0t, 0), TN(x1t, y1t, 0), c11, c10], TC[2]);
+          if (wide) {
+            // the far slope, then the gable at the near (east) end, then the near slope
+            poly(g, [c00, c10, R1, R0], TC[4]);
+            poly(g, [c10, c11, R1], TC[2]);
+            poly(g, [c01, c11, R1, R0], TC[3]);
+            // the door flap rolled up on the east gable, dark inside
+            var dm = (y0t + y1t) / 2;
+            poly(g, [TN(x1t, dm - 0.35, 0), TN(x1t, dm + 0.35, 0), TN(x1t, dm + 0.2, a(6)), TN(x1t, dm - 0.2, a(6))], '#1a1610');
+            edgeLine(g, TN(x1t, dm - 0.4, a(6.4)), TN(x1t, dm + 0.4, a(6.4)), TC[0], 3);
+          } else {
+            poly(g, [c00, c01, R1, R0], TC[4]);
+            poly(g, [c01, c11, R1], TC[1]);
+            poly(g, [c10, c11, R1, R0], TC[2]);
+            var dm2 = (x0t + x1t) / 2;
+            poly(g, [TN(dm2 - 0.35, y1t, 0), TN(dm2 + 0.35, y1t, 0), TN(dm2 + 0.2, y1t, a(6)), TN(dm2 - 0.2, y1t, a(6))], '#1a1610');
+            edgeLine(g, TN(dm2 - 0.4, y1t, a(6.4)), TN(dm2 + 0.4, y1t, a(6.4)), TC[0], 3);
+          }
+          // the ridge pole catching the light, and a seam down each slope
+          edgeLine(g, R0, R1, TC[5], 2);
+          edgeLine(g, TN((r0[0] + r1[0]) / 2, (r0[1] + r1[1]) / 2, rz2), wide ? TN((x0t + x1t) / 2, y1t, wz2) : TN(x1t, (y0t + y1t) / 2, wz2), 'rgba(30,26,18,.35)', 1);
+          break;
+        }
+        /* A field camp's comms mast: a tapering lattice tower on a plinth, cross-
+           braced, with whips and a small dish at its head, a red light at the
+           top, guy wires out to three anchors, and the radio box at its foot. */
+        case 'commsmast': {
+          var ml = lift || 0, mx = pr.x + pr.w / 2, my = pr.y + pr.h / 2, mh = a(64);
+          function MS(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - ml - z]; }
+          var mb = MS(mx, my, 0);
+          shadowBlob(g, { x: mb[0] + a(1), y: mb[1] + a(0.5) }, a(5), a(2.5));
+          // the guy wires' anchors, and the far wires
+          var AN = [[mx - 2.4, my - 1.2], [mx + 2.2, my - 1.6], [mx + 0.2, my + 2.4]];
+          AN.forEach(function (an, i) { var q = MS(an[0], an[1], 0); rect(g, q[0] - 2, q[1] - 2, 4, 3, '#3a3c3e'); if (i < 2) edgeLine(g, q, MS(mx, my, mh * 0.82), 'rgba(30,32,34,.7)', 1); });
+          // the radio box at the foot
+          box(g, { x: mx + 0.25, y: my + 0.05, w: 0.7, h: 0.55, height: a(5), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: ml, noShadow: true });
+          // the tower: three legs drawn in towards the top, braced in zigzags
+          var LG = [[-0.45, -0.3], [0.45, -0.3], [0, 0.45]], top = 0.12;
+          function legAt(l, z) { var k = 1 - (1 - top) * z / mh; return MS(mx + LG[l][0] * k, my + LG[l][1] * k, z); }
+          var steps = 9;
+          for (var st2 = 0; st2 < steps; st2++) {
+            var z0 = mh * st2 / steps, z1 = mh * (st2 + 1) / steps;
+            for (var l2 = 0; l2 < 3; l2++) {
+              var l3 = (l2 + 1) % 3, far = l2 === 0;
+              edgeLine(g, legAt(l2, z0), legAt(l3, z1), far ? 'rgba(90,96,102,.7)' : '#8d969e', 1);
+              edgeLine(g, legAt(l2, z1), legAt(l3, z1), far ? 'rgba(90,96,102,.7)' : '#8d969e', 1);
+            }
+          }
+          [0, 1, 2].forEach(function (l) { edgeLine(g, legAt(l, 0), legAt(l, mh), l === 2 ? '#c8d0d6' : '#5e666e', 2); });
+          // the near wire, over the tower
+          edgeLine(g, MS(AN[2][0], AN[2][1], 0), MS(mx, my, mh * 0.82), 'rgba(30,32,34,.8)', 1);
+          // the head: whips, a crossbar with its aerials, a small dish, and the light
+          var hd = MS(mx, my, mh);
+          edgeLine(g, hd, MS(mx, my, mh + a(16)), '#2a2e32', 2);
+          edgeLine(g, MS(mx + 0.15, my - 0.1, mh), MS(mx + 0.15, my - 0.1, mh + a(10)), '#2a2e32', 1);
+          edgeLine(g, MS(mx - 0.6, my, mh - a(4)), MS(mx + 0.6, my, mh - a(4)), '#5e666e', 2);
+          [-0.6, 0.6].forEach(function (o) { edgeLine(g, MS(mx + o, my, mh - a(4)), MS(mx + o, my, mh + a(4)), '#3a3e42', 1); });
+          var dsh = MS(mx, my + 0.25, mh - a(12));
+          ellipse(g, dsh[0] + a(1.5), dsh[1], a(2.6), a(3.2), '#c8cdd2'); ellipse(g, dsh[0] + a(1.8), dsh[1], a(1.6), a(2.2), '#9aa2aa');
+          var tip = MS(mx, my, mh + a(16)); dot(g, tip[0] - 2, tip[1] - 2, '#ff4a3a', 4);
           break;
         }
         /* A fuel bowser: a long pale tank on a chassis, a yellow cab at its
@@ -509,40 +662,65 @@
           dot(g, LP(lx + 0.85, ly + 1.2, a(12.6))[0], LP(lx + 0.85, ly + 1.2, a(12.6))[1], '#ffb02e', 4);   // the beacon on the cage
           break;
         }
-        /* A station's solar array, out in open space: a truss along its middle
-           running in towards the station, and two wings of cells either side
-           of it, deep blue in a pale frame, lit along their near edges. */
+        /* A station's solar array, out in open space: a truss spine down its
+           middle and on along a boom to its mount on the hull, a rotary joint
+           where the boom leaves it, and two wings of cells either side of the
+           spine, deep blue in a pale frame, lit along their near edges. */
         case 'solar': {
-          var sz = a(9), sl3 = lift || 0;
+          // (the array, its spine and boom stand a little off the ground, at the height of the lower half of the boom's mount)
+          var sz = a(2), sl3 = lift || 0, bm = pr.boom, vert = !!(bm && bm.axis === 'y');
           function SO(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sl3 - (z == null ? sz : z)]; }
-          var ym = pr.y + pr.h / 2, tx0 = pr.x, tx1 = pr.x + pr.w;
-          // the truss: two rails and their cross-bracing, on in towards the station
-          var tin = pr.toward.x > 0 ? tx1 + pr.w * 0.12 : tx0 - pr.w * 0.12;
-          var t0 = Math.min(tx0, tin), t1 = Math.max(tx1, tin);
-          edgeLine(g, SO(t0, ym - 0.35), SO(t1, ym - 0.35), '#8a96a0', 2);
-          edgeLine(g, SO(t0, ym + 0.35), SO(t1, ym + 0.35), '#b4c0c8', 2);
-          for (var tb2 = 0; tb2 <= (t1 - t0) / 0.9; tb2++) {
-            var bx2 = t0 + tb2 * 0.9;
-            edgeLine(g, SO(bx2, ym - 0.35), SO(bx2 + 0.45, ym + 0.35), '#6a7680', 1);
-          }
-          // the two wings
-          [[pr.y + 0.2, ym - 0.7], [ym + 0.7, pr.y + pr.h - 0.2]].forEach(function (Wg) {
-            var nc = Math.max(3, Math.round(pr.w / 1.6)), nr = 2;
+          // the array in its own frame: u along its spine (the boom's way), v across it
+          var u0 = vert ? pr.y : pr.x, u1 = vert ? pr.y + pr.h : pr.x + pr.w, v0 = vert ? pr.x : pr.y, v1 = vert ? pr.x + pr.w : pr.y + pr.h, vm = (v0 + v1) / 2;
+          function UV(u, v, z) { return vert ? SO(v, u, z) : SO(u, v, z); }
+          function truss(P0, P1) { solarTruss(g, SO, P0, P1); }
+          // the two wings, either side of the spine: cells in a pale frame, an edge of shadow under each to give it thickness
+          [[v0 + 0.2, vm - 0.7], [vm + 0.7, v1 - 0.2]].forEach(function (Wg) {
+            var nc = Math.max(3, Math.round((u1 - u0) / 1.6)), nr = Math.max(2, Math.round((Wg[1] - Wg[0]) / 1.8));
+            var E = [UV(u0 + 0.15, Wg[0] - 0.05), UV(u1 - 0.15, Wg[0] - 0.05), UV(u1 - 0.15, Wg[1] + 0.05), UV(u0 + 0.15, Wg[1] + 0.05)];
+            poly(g, E.map(function (q) { return [q[0], q[1] + 3]; }), '#0a1226');
             for (var ci3 = 0; ci3 < nc; ci3++) {
               for (var rj = 0; rj < nr; rj++) {
-                var x0c = pr.x + 0.2 + (pr.w - 0.4) * ci3 / nc, x1c = pr.x + 0.2 + (pr.w - 0.4) * (ci3 + 1) / nc - 0.12;
-                var y0c = Wg[0] + (Wg[1] - Wg[0]) * rj / nr, y1c = Wg[0] + (Wg[1] - Wg[0]) * (rj + 1) / nr - 0.1;
-                var Q = [SO(x0c, y0c), SO(x1c, y0c), SO(x1c, y1c), SO(x0c, y1c)];
+                var a0 = u0 + 0.2 + (u1 - u0 - 0.4) * ci3 / nc, a1 = u0 + 0.2 + (u1 - u0 - 0.4) * (ci3 + 1) / nc - 0.12;
+                var b0 = Wg[0] + (Wg[1] - Wg[0]) * rj / nr, b1 = Wg[0] + (Wg[1] - Wg[0]) * (rj + 1) / nr - 0.1;
+                var Q = [UV(a0, b0), UV(a1, b0), UV(a1, b1), UV(a0, b1)];
                 poly(g, Q, (ci3 + rj) % 2 ? '#1c3d78' : '#20468a');
                 edgeLine(g, Q[0], Q[1], 'rgba(150,190,255,.35)', 1);
                 edgeLine(g, Q[3], Q[2], '#b4c0c8', 1);
               }
             }
-            var F = [SO(pr.x + 0.15, Wg[0] - 0.05), SO(pr.x + pr.w - 0.15, Wg[0] - 0.05), SO(pr.x + pr.w - 0.15, Wg[1] + 0.05), SO(pr.x + 0.15, Wg[1] + 0.05)];
-            edgeLine(g, F[0], F[1], '#d4dde4', 1); edgeLine(g, F[3], F[2], '#d4dde4', 1);
-            edgeLine(g, F[0], F[3], '#d4dde4', 1); edgeLine(g, F[1], F[2], '#d4dde4', 1);
+            edgeLine(g, E[0], E[1], '#d4dde4', 1); edgeLine(g, E[3], E[2], '#d4dde4', 1);
+            edgeLine(g, E[0], E[3], '#d4dde4', 1); edgeLine(g, E[1], E[2], '#d4dde4', 1);
           });
-          dot(g, SO(tin, ym)[0], SO(tin, ym)[1], '#ff4a3a', 3);
+          // the spine down the middle (the boom on from it is drawn with its mount, so the hull's walls stand right with it)
+          truss(vert ? [vm, u0] : [u0, vm], vert ? [vm, u1] : [u1, vm]);
+          if (bm) {
+            // the rotary joint where the boom leaves the array
+            var rj2 = SO(bm.x0, bm.y0);
+            ellipse(g, rj2[0], rj2[1], a(2.2), a(1.6), '#5a646c'); ellipse(g, rj2[0], rj2[1] - 1, a(1.4), a(1), '#a8b4bc');
+          }
+          break;
+        }
+        /* A solar array's mount and its boom (iso-props sets the mount outside
+           the hull where the boom meets it): a plated block standing against
+           the wall's face, a single storey with the boom run into its lower half, a
+           beacon on top, and the boom's truss run in to it from the array. A
+           piece of its own, sorted with the walls: the boom stands out from
+           the hull at the array's height, in front of the wall it meets. Where
+           the boom comes at the mount's near face, the block first and the
+           boom up to its face; at its far face, the boom in to its middle and
+           the block over it. */
+        case 'solarmount': {
+          var smz = a(2), smh = a(5.4), sml = lift || 0, mb = pr.box, bmm = pr.boom;
+          function SM(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sml - (z == null ? smz : z)]; }
+          function block() {
+            box(g, { x: mb.x, y: mb.y, w: mb.w, h: mb.h, height: Math.round(smh), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: sml, noShadow: true });
+            var smt = toScreen(mb.x + mb.w / 2, mb.y + mb.h / 2);
+            dot(g, smt.x - 1, smt.y - sml - smh - a(0.6) - 1, '#ff4a3a', 3);
+          }
+          var acrossX = bmm.x1 !== bmm.x0, near = acrossX ? bmm.x1 < bmm.x0 : bmm.y1 < bmm.y0;
+          var face = acrossX ? [mb.x + mb.w, bmm.y1] : [bmm.x1, mb.y + mb.h], mid = acrossX ? [mb.x + mb.w / 2, bmm.y1] : [bmm.x1, mb.y + mb.h / 2];
+          if (near) { block(); solarTruss(g, SM, [bmm.x0, bmm.y0], face); } else { solarTruss(g, SM, [bmm.x0, bmm.y0], mid); block(); }
           break;
         }
         case 'sacks': {

@@ -691,9 +691,41 @@
     var laid = piecesOf(g, { w: w, h: h });
     return {
       terrain: laid.terrain,
-      compound: { cell: CELL, cols: g.cols, rows: g.rows, entries: laid.entries, built: true },
+      compound: { cell: CELL, cols: g.cols, rows: g.rows, entries: wholeEntries(g, laid.entries, w), built: true },
       rolls: [], generator: 'Hand-built compound'
     };
+  }
+  /* A hand-built compound's entry points: the whole corridor that opens onto
+     the edge, from the edge in to the first cell where another corridor or
+     a room opens off it (or a door), not only the section the cutter made at
+     the edge, which can be a single cell where a long run was cut in two. */
+  function wholeEntries(g, entries, w) {
+    var cols = g.cols, rows = g.rows;
+    function idx(i, j) { return j * cols + i; }
+    function corr(c) { return g.grid[c] >= 0 && g.kindOf[g.grid[c]] === 'corridor'; }
+    function side(c, i, j) {
+      // anything opening off cell (i, j) above or below it
+      return [j - 1, j + 1].some(function (nj) { return nj >= 0 && nj < rows && g.open[ekOf(c, idx(i, nj))]; });
+    }
+    var out = { L: [], R: [] };
+    ['L', 'R'].forEach(function (sd) {
+      (g.entries[sd] || []).forEach(function (e, n) {
+        var dir = sd === 'L' ? 1 : -1, i = e.i, j = e.j, last = i;
+        for (;;) {
+          var c = idx(i, j), ni = i + dir;
+          if (side(c, i, j)) break;
+          last = i;
+          if (ni < 0 || ni >= cols) break;
+          var nc = idx(ni, j);
+          if (!corr(nc) || !g.open[ekOf(c, nc)] || (g.doors && g.doors[ekOf(c, nc)])) break;
+          i = ni;
+        }
+        var i0 = Math.min(e.i, last), i1 = Math.max(e.i, last);
+        var bx = i0 * CELL, bw = (i1 + 1 === cols ? w : (i1 + 1) * CELL) - bx;
+        out[sd].push({ x: bx, y: j * CELL, w: bw, h: CELL, sec: (entries[sd][n] || {}).sec });
+      });
+    });
+    return out;
   }
   // a generated layout as a plan, to start a hand-built one from
   function planOf(g) {
