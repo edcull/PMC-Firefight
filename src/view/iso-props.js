@@ -288,6 +288,11 @@
           }
           return;
         }
+        // a camp's open-sided tent, the sale tent's (a crater field by the rules)
+        if (r.kind === 'crater' && r.camp === 'marquee') {
+          props.push({ kind: 'marquee', x: r.x + r.w / 2, y: r.y + r.h / 2, seed: (rand() * 9999) | 0 });
+          return;
+        }
         if (r.kind === 'crater' && r.camp) {
           /* A field camp's tents (a crater field by the rules): rows of them,
              spread evenly over the ground, with walkways between them. */

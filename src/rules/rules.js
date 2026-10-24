@@ -1001,7 +1001,7 @@
     // a map's cargo stacks: a crater field by the rules, crates with walkways between them to look at
     if (kind === 'crater' && piece && piece.cargo) return 'Cargo stacks';
     // and a field camp's tents, the same
-    if (kind === 'crater' && piece && piece.camp) return 'Tents';
+    if (kind === 'crater' && piece && piece.camp) return piece.camp === 'marquee' ? 'Open tent' : 'Tents';
     return TERRAIN[kind] ? TERRAIN[kind].name : kind;
   }
   function losBatch(fn) { return (KIT_SPACE || kitSpace()).losBatch(fn); }

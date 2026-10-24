@@ -1582,6 +1582,11 @@
         /* A possible objective location (p. 52): a prised-open hatch. Searched and
            ruled out, it is struck through; the one found becomes an objective marker
            of its own. */
+        /* A camp's open-sided tent (a crater field skinned `marquee`): the sale
+           tent's canvas, poles, lamp and table, standing on its own. */
+        case 'marquee':
+          drawKind(cutaway, g, lift, p, Object.assign({}, pr, { kind: 'searchsite', skin: 'tent', found: false, checked: false }));
+          break;
         case 'searchsite': {
           var sr = rng(pr.seed || 7);
           /* A port's possible location (a map's sites skinned 'cargo'): a cargo
