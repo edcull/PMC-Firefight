@@ -269,6 +269,8 @@ ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field',
     vault.length >= 6 && vault.every((p) => p.reinforced && p.fixed) && vault.every((p) => !overlap(p, { x: 22, y: 22, w: 4, h: 4 })) &&
     gaps(vault, 'v', 20.5, 21, 27).length === 1 && gaps(vault, 'v', 27, 21, 27).length === 1 && gaps(vault, 'h', 20.5, 20.5, 27.5).length === 0 &&
     R.terrainName(null, 'wall', vault[0]) === 'Strongroom wall' && R.terrainName(null, 'wall', shed[0]) === 'Warehouse wall');
+  ok('...Sable’s position laid by the map: sandbags across the approaches to the loading bays and inside the side doors, and no sections laid at random besides',
+    MAPS.docks.fortified && ps.filter((p) => p.kind === 'barricade' && p.fixed).length === 4 && !ps.some((p) => p.kind === 'trench' || p.kind === 'wire' || p.kind === 'bunker'));
   ok('...and the waterfront along the north: the basin, its quay, two gantry cranes, and a reaction-mass tank farm',
     ps.some((p) => p.kind === 'deep' && p.y === 0) && ps.filter((p) => p.kind === 'crane').length === 2 && ps.some((p) => p.kind === 'fueltanks') &&
     !R.TERRAIN.crane.blocks && R.TERRAIN.crane.impassable && R.TERRAIN.fueltanks.blocks);

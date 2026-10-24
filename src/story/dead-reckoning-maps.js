@@ -34,6 +34,8 @@
   function SLAB(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, fixed: true }; }
   // a warehouse's steel-clad wall (a high wall), and its strongroom's (a reinforced one), laid as written
   function SHED(x, y, w, h) { return { kind: 'wall', x: x, y: y, w: w, h: h, shed: true, fixed: true }; }
+  // a sandbagged position (a low wall), laid where the map puts it
+  function BAGS(x, y, w, h) { return { kind: 'barricade', x: x, y: y, w: w, h: h, fixed: true }; }
   function VAULT(x, y, w, h) { return { kind: 'wall', x: x, y: y, w: w, h: h, reinforced: true, vault: true, fixed: true }; }
 
   root.PMCStoryMaps['dead-reckoning'] = {
@@ -238,10 +240,12 @@
        into, not round: steel-clad walls (high walls) on a concrete floor, a
        loading bay through the north and south walls and a side door east and
        west, and at its heart the strongroom, reinforced walls with a door east
-       and west, round the objective Hostile takeover puts in the middle. Sable
-       digs in round it and inside it as the scenario lets her. */
+       and west, round the objective Hostile takeover puts in the middle. Sable's
+       sandbags are laid by the map (`fortified`), not by the scenario. */
     docks: {
       name: 'The broker’s warehouse, Kerrigan docks', planet: 'industrial',
+      // Sable's position is the map's own: the sandbags below, not Hostile takeover's sections laid at random
+      fortified: true,
       pieces: [
         SHAPE('deep', [[5, 0], [43, 0], [43, 3.5], [5, 3.5]]),
         SLAB(5, 3.5, 38, 3.5), R('crane', 11, 3.8, 3, 2.4), R('crane', 31, 3.8, 3, 2.4),
@@ -253,7 +257,9 @@
         SHED(14, 16.5, 0.5, 6), SHED(14, 25.5, 0.5, 6), SHED(33.5, 16.5, 0.5, 6), SHED(33.5, 25.5, 0.5, 6),
         // the strongroom, the heading in it: a door east and west (y 22.5 to 25.5)
         VAULT(20.5, 20.5, 7, 0.5), VAULT(20.5, 27, 7, 0.5),
-        VAULT(20.5, 21, 0.5, 1.5), VAULT(20.5, 25.5, 0.5, 1.5), VAULT(27, 21, 0.5, 1.5), VAULT(27, 25.5, 0.5, 1.5)
+        VAULT(20.5, 21, 0.5, 1.5), VAULT(20.5, 25.5, 0.5, 1.5), VAULT(27, 21, 0.5, 1.5), VAULT(27, 25.5, 0.5, 1.5),
+        // Sable's sandbags: a line across the approach to each loading bay, and one inside each side door
+        BAGS(21, 12.5, 6, 1), BAGS(21, 34.5, 6, 1), BAGS(16.5, 21.5, 1, 5), BAGS(30.5, 21.5, 1, 5)
       ]
     },
 

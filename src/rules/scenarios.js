@@ -955,6 +955,8 @@
          the terrain has been settled round the objective. */
       fortify: function (state) {
         var def = state.sc.defender;
+        // a story's map that lays the position itself (levers.js `fortified`): nothing more goes down
+        if (state.cfg && state.cfg.story && state.cfg.story.fortified) return;
         if (state.manualForts && state.manualForts[def]) { state.sc.fortsByHand = true; return; }
         takeoverForts(state, def, FORT_SECTIONS, 1);
       },

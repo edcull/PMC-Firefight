@@ -372,6 +372,8 @@
         // the map's look for its pieces: 'market' (a settlement: barricades are railings and planters, craters market clutter),
         // 'station' (a compound in orbit: the solid round it is open space)
         skin: map && map.skin || null,
+        // a map that lays the defender's position itself (Hostile takeover's): no sections put down besides
+        fortified: !!(map && map.fortified),
         place: place ? { system: place.system || null, planet: place.planet || null, site: place.site || null } : null,
         seed: spec.node + ':' + spec.scenario + (east ? ':east' : ''),
         variant: variant,
