@@ -90,6 +90,17 @@
       poly(g, inn, '#2f6a80');
       for (var gl = 0; gl < 4; gl++) { var gq = Q(X + (r() - 0.5) * rad * 1.2, Y + (r() - 0.5) * rad * 1.2); edgeLine(g, [gq[0] - 3, gq[1]], [gq[0] + 3, gq[1]], 'rgba(200,235,245,.45)', 1); }
     }
+    /* A possible location's ring (Find and secure): a dotted circle on the
+       ground about (cx, cy) round the 4" it covers, amber while it is to be
+       searched, grey once ruled out, gold where the objective turned up. */
+    function siteRing(g, cx, cy, lift, checked, found, radius) {
+      var rc = found ? '#ffd860' : checked ? 'rgba(160,160,150,.7)' : '#ffb03a', ringR = radius || 2.85, rl = lift || 0, nd = Math.round(36 * ringR / 2.85);
+      for (var rd2 = 0; rd2 < nd; rd2++) {
+        var ra = rd2 / nd * Math.PI * 2, rq = toScreen(cx + Math.cos(ra) * ringR, cy + Math.sin(ra) * ringR);
+        rect(g, rq.x - 3, rq.y - rl - 2, 6, 4, 'rgba(20,14,8,.6)');
+        rect(g, rq.x - 2, rq.y - rl - 1.5, 4, 3, rc);
+      }
+    }
     // a glass tower: tinted curtain wall, its mullions, and the light in it
     var GLASS = ['#0c1820', '#13283a', '#1a3a54', '#21506e', '#2b6a8a', '#3c86a8'];
     /* A glass tower (a map's landmark, style 'glass'): a tinted curtain wall
@@ -1529,6 +1540,8 @@
           break;
         }
         case 'pumphouse': {
+          // (a possible location like any other: ringed, a little wide of its walls, so the ring shows round the shed)
+          siteRing(g, pr.x + pr.w / 2, pr.y + pr.h / 2, lift, pr.checked, pr.found, 3.8);
           var pl2 = lift || 0, PH = pr.height;
           box(g, pr, PREFAB, { roof: '#4a4f47', roofEdge: '#5e645a', windows: null, lift: pl2 });
           var Q = function (x, y, up) { var q = toScreen(x, y); return [q.x, q.y - pl2 - (up || 0)]; };
@@ -1594,14 +1607,7 @@
              is to be searched, grey once it is ruled out, gold where the
              objective turned up. (Not round the open tent a camp has: that one
              is drawn from a site, `marquee`, and is not one.) */
-          if (!pr.camp) {
-            var rc = pr.found ? '#ffd860' : pr.checked ? 'rgba(160,160,150,.7)' : '#ffb03a', ringR = 2.85, rl = lift || 0;
-            for (var rd2 = 0; rd2 < 36; rd2++) {
-              var ra = rd2 / 36 * Math.PI * 2, rq = toScreen(pr.x + Math.cos(ra) * ringR, pr.y + Math.sin(ra) * ringR);
-              rect(g, rq.x - 3, rq.y - rl - 2, 6, 4, 'rgba(20,14,8,.6)');
-              rect(g, rq.x - 2, rq.y - rl - 1.5, 4, 3, rc);
-            }
-          }
+          if (!pr.camp) siteRing(g, pr.x, pr.y, lift, pr.checked, pr.found);
           /* A port's possible location (a map's sites skinned 'cargo'): a cargo
              container on a pallet, its doors stencilled, a manifest tag on it. */
           if (pr.cargo) {
