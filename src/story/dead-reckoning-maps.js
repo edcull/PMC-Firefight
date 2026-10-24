@@ -140,7 +140,7 @@
        cuts across the north-east corner of the table with a narrow band of
        shallows along its bank and an inlet where the Reavers beached: Brass Ledger's ship down in the reeds with its
        ramp down and its cargo out at the foot of it, the Reavers' hover-skiffs
-       beached in an inlet of the shallows, half in the water (a site marked
+       in an inlet of the shallows, bows up-river on the mud at its end (a site marked
        `wet` may stand in the river), the lit tent where the sale is
        haggled over, and the three places the log could be as the sale is made
        (Find and secure, the relic): each its own piece (`skin`), the three
@@ -152,7 +152,7 @@
       name: 'The mud bank, Tessaly IV', planet: 'jungle',
       pieces: [
         // the river: its shallows, and the deep channel down the middle of them
-        SHAPE('water', [[13.7, -16.3], [27, -9.3], [40.3, -2.4], [53.6, 4.6], [64.7, 10.4], [60.4, 24], [58.3, 22.7], [55.9, 21.7], [53.4, 21.1], [51.1, 20.2], [49.1, 18.6], [47.1, 17.1], [45.1, 15.5], [42.4, 15.2], [40.1, 14.1], [37.5, 13.8], [33.8, 15.5], [31.9, 17], [30.5, 17.5], [30.2, 17], [30.1, 16], [30.6, 13], [30.8, 10.4], [28.9, 8.7], [26.9, 7.1], [24.5, 6.3], [22.9, 3.9], [20.5, 3.2], [18.4, 1.8], [15.6, 1.8], [13.6, 0.1], [11.4, -1], [9.7, -3.1], [7.2, -3.7]]),
+        SHAPE('water', [[13.7, -16.3], [27, -9.3], [40.3, -2.4], [53.6, 4.6], [64.7, 10.4], [60.4, 24], [58.3, 22.7], [55.9, 21.7], [53.4, 21.1], [51.1, 20.2], [49.1, 18.6], [47.1, 17.1], [45.1, 15.5], [42.4, 15.2], [40.2, 14.1], [38.3, 13.5], [36.9, 14.5], [35.1, 16.6], [33.5, 18], [32.4, 18.2], [31.5, 17.4], [31.3, 16.2], [31.4, 14.9], [31.5, 13.8], [31.7, 12.6], [32.3, 9], [31.8, 8.6], [28.9, 8.6], [26.9, 7.1], [24.5, 6.3], [22.9, 3.9], [20.5, 3.2], [18.4, 1.8], [15.6, 1.8], [13.6, 0.1], [11.4, -1], [9.7, -3.1], [7.2, -3.7]]),
         SHAPE('deep', [[10.2, -11.6], [12.6, -9.7], [15.4, -8.7], [18.2, -7.6], [20.6, -5.7], [23.2, -4.2], [26.2, -3.4], [28.8, -1.8], [31.2, 0], [34, 1.1], [36.8, 2.1], [39.2, 4], [41.8, 5.5], [44.8, 6.4], [47.4, 7.9], [49.8, 9.8], [52.6, 10.8], [55.4, 11.9], [57.8, 13.8], [60.4, 15.3], [63.4, 16.1], [60.7, 21.3], [57.7, 20.4], [55, 19.2], [52.5, 17.5], [49.9, 15.9], [47.1, 14.9], [44.4, 13.5], [42, 11.7], [39.3, 10.3], [36.4, 9.5], [33.6, 8.2], [31.3, 6.2], [28.9, 4.4], [25.9, 3.7], [22.9, 2.9], [20.5, 1], [18.2, -1.1], [15.5, -2.3], [12.4, -2.9], [9.7, -4.3], [7.4, -6.3]]),
         // the clearing in the middle: Brass Ledger's ship down in it, its ramp to the south
         R('shuttle', 11, 13, 10, 8),

@@ -1619,8 +1619,9 @@
                  fields, bows up the bank to the west, a windscreen forward, twin
                  thrusters glowing at the stern, red chevrons on their decks, a
                  pintle gun on one. */
+              // (turned an eighth of a turn clockwise as the table is seen: bows up-river, beached in the end of the inlet)
               [[-0.9, 0.05, 0], [0.85, 0.1, 1]].forEach(function (bt) {
-                var by = bt[0], ang = bt[1], L = 3.4, Wd = 0.62, hz = a(1.6), dk = hz + a(1.7);
+                var by = bt[0], ang = bt[1] + Math.PI / 4, L = 3.4, Wd = 0.62, hz = a(1.6), dk = hz + a(1.7);
                 function BQ(u, v, z) { var cx = u * Math.cos(ang) - v * Math.sin(ang), cy = u * Math.sin(ang) + v * Math.cos(ang); return TQ(cx, by + cy, z); }
                 // the repulsor field on the water under it
                 var fc = BQ(0, 0, 0);
