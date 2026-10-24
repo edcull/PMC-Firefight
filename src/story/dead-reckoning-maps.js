@@ -157,9 +157,9 @@
         // the clearing in the middle: Brass Ledger's ship down in it, its ramp to the south
         R('shuttle', 10.4, 16, 10, 8),
         // the drowned forest round the edges of the bank
-        N('woods', 5, 3.5, 6, 6, 'lobed'), N('woods', 4.5, 11, 5, 7, 'long'), N('woods', 4.5, 20, 5, 6.5, 'blob'), N('woods', 4.5, 28, 5, 6.5, 'lobed'),
-        N('woods', 6, 37, 6, 7, 'lobed'), N('woods', 13, 41, 6, 5, 'blob'), N('woods', 20, 42, 5, 4.5, 'lobed'), N('woods', 35, 38, 6, 6, 'blob'),
-        N('woods', 38, 23, 5, 6, 'blob'), R('ruins', 39, 31, 4, 4), R('ruins', 27, 38, 6, 4)
+        N('woods', 5.5, 2.5, 4.5, 5, 'blob'), N('woods', 12, 4.5, 3.5, 3, 'lobed'), N('woods', 4.5, 10, 6.5, 4.5, 'kidney'), N('woods', 6, 17.5, 3, 3, 'blob'),
+        N('woods', 4.2, 23, 4, 7.5, 'long'), N('woods', 9.5, 30, 3.5, 3, 'blob'), N('woods', 5, 36, 7.5, 5.5, 'lobed'), N('woods', 14, 40.5, 4, 4, 'blob'),
+        N('woods', 19.5, 43, 6.5, 3.5, 'long'), N('woods', 34, 39, 5, 4.5, 'kidney'), N('woods', 40, 40, 3.5, 5, 'blob'), N('woods', 37.5, 22.5, 4, 4.5, 'lobed'), R('ruins', 39, 31, 4, 4), R('ruins', 27, 38, 6, 4)
       ],
       sites: { kind: 'searchsite', at: [
         { x: 17, y: 27, name: 'Kettering’s ship', skin: 'cargo' },
