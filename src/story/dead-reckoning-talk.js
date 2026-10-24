@@ -71,8 +71,8 @@
         { who: 'nine', text: 'Vane doesn’t pay us. Our client does, and our client wants what’s in that ground. Turn your dropships round and nobody on your side gets shot. Come any closer and we start with your officers.' }
       ],
       'c2t.airlock': [
-        { who: 'ops', text: 'Main lock is welded. Somebody’s inside, and they’ve been inside a while: there’s a cooking vent on the north side.' },
-        { who: 'scav', text: 'You’re on our pad, ship. Thule’s taken. Lift off now, or we open up on your hull.' },
+        { who: 'ops', text: 'Every docking arm is welded. Somebody’s aboard, and they’ve been aboard a while: there’s a heat plume off the north module.' },
+        { who: 'scav', text: 'You’re on our docking arm, ship. Thule’s taken. Cast off now, or we open up on your hull.' },
         { who: 'commander', text: 'We want three days of a dead man’s records. Then we leave.' },
         { who: 'scav', text: 'Everything in this station is salvage, and salvage is ours. You want it, you pay for it, or you come through that lock and earn it. We’ve done this before.' }
       ],

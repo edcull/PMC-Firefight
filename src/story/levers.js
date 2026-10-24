@@ -104,7 +104,14 @@
     var picks = [], readiness = 0, tactics = f.tactics || null;
     // the unit groups a force goes without (the Hashamer: no craft, no teleport turrets)
     var without = arr(f.without);
-    function allowed(k) { var p = profileOf(k); return !p || without.indexOf(p.group) < 0; }
+    /* In a compound (ctx.compound) only what can fight in its corridors: no
+       vehicles or aircraft (which would only stay outside, p. 157), no
+       riders, and no guns that fire indirect or are dug in where they stand. */
+    var CRAMPED = ['Riders', 'Indirect Fire', 'Stationary Artillery'];
+    function fitsIn(p) {
+      return (p.cls || 'infantry') === 'infantry' && !(p.rules || []).some(function (r) { return CRAMPED.some(function (c) { return r.indexOf(c) === 0; }); });
+    }
+    function allowed(k) { var p = profileOf(k); return !p || (without.indexOf(p.group) < 0 && (!ctx.compound || fitsIn(p))); }
     function add(u) {
       var o = typeof u === 'string' ? { key: u } : Object.assign({}, u);
       var k = fit(o.key, tier, faction);
@@ -270,8 +277,9 @@
     var fielded = picksA.length ? picksA : co.roster;
     // (the changes held for this battle are already in spec.enemy: battleSpec put them there)
     var seed = spec.node + ':' + campaign.story.chapterNo;
-    var enemy = buildForce(spec.enemy, { campaign: campaign, tier: tier, pl: pl, allowance: allowance(co, fielded), readiness: lv.readiness || 0, seed: seed + ':B' });
-    var allies = lv.allies ? buildForce(lv.allies, { campaign: campaign, tier: tier, pl: pl, leader: false, seed: seed + ':A' }) : null;
+    var inCompound = !!(root.PMCScen && root.PMCScen.SCENARIOS[spec.scenario] && root.PMCScen.SCENARIOS[spec.scenario].compound);
+    var enemy = buildForce(spec.enemy, { campaign: campaign, tier: tier, pl: pl, allowance: allowance(co, fielded), readiness: lv.readiness || 0, seed: seed + ':B', compound: inCompound });
+    var allies = lv.allies ? buildForce(lv.allies, { campaign: campaign, tier: tier, pl: pl, leader: false, seed: seed + ':A', compound: inCompound }) : null;
     var keysA = picksA.map(function (e) { return R().entryPick(e); });
     var allyFrom = allies && allies.picks.length ? keysA.length : null;
     if (allies) allies.picks.forEach(function (p) { keysA.push(p.key); });
