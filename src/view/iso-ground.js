@@ -374,7 +374,7 @@
       function floorOf1(r, ri, rows) {
         if (r.kind === 'hill') return;
         // a drowned beacon's possible locations stand on the ground as it is, their own pieces drawn over it
-        if (r.kind === 'searchsite' && (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones')) return;
+        if (r.kind === 'searchsite' && (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones' || r.skin === 'boats' || r.skin === 'tent')) return;
         // a station's solid is open space: a star field (rules.js reads it as solid all the same)
         if (r.kind === 'bulkhead' && r.space) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         var spec = roomTheme(r) || skinFloor(r) || floorOf(r.kind);

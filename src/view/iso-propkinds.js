@@ -1601,6 +1601,82 @@
             }
             break;
           }
+          /* A private sale's possible locations (the mud bank): the Reavers'
+             boats pulled up out of the shallows, and the tent where the sale is
+             haggled over. Struck through when ruled out; where the log is, the
+             case on the table, or a lamp in the boats, burns bright. */
+          if (pr.skin === 'boats' || pr.skin === 'tent') {
+            var tl3 = lift || 0;
+            function TQ(dx, dy, z) { var q = toScreen(pr.x + dx, pr.y + dy); return [q.x, q.y - tl3 - (z || 0)]; }
+            function ripple(dx, dy, r) { var q = TQ(dx, dy, 0); ellipseRing(g, q[0], q[1], a(r * 4), a(r * 2), 'rgba(220,240,245,.28)'); }
+            if (pr.skin === 'boats') {
+              /* Two flat-bottomed skiffs, bows up the bank to the west, sterns in
+                 the water with their outboards tipped up; red Reaver paint down
+                 their sides, and gear in their bellies. */
+              shallowPool(g, pr.x + 1.5, pr.y, 2.3, tl3, pr.seed);
+              [[-0.9, 0.05, '#7a2e22'], [0.85, 0.1, '#5a5a3a']].forEach(function (bt, bi) {
+                var by = bt[0], ang = bt[1], L = 3.4, Wd = 0.62;
+                function BQ(u, v, z) { var cx = u * Math.cos(ang) - v * Math.sin(ang), cy = u * Math.sin(ang) + v * Math.cos(ang); return TQ(cx, by + cy, z); }
+                // the hull: a flat stern to the east, the bow drawn to a point to the west
+                var hb = a(0.4), ht = a(2.6);
+                var lo = [BQ(L / 2, -Wd, hb), BQ(L / 2, Wd, hb), BQ(-L / 2 + 0.6, Wd * 0.8, hb), BQ(-L / 2, 0, hb + a(0.6)), BQ(-L / 2 + 0.6, -Wd * 0.8, hb)];
+                var hi = [BQ(L / 2, -Wd, ht), BQ(L / 2, Wd, ht), BQ(-L / 2 + 0.6, Wd * 0.8, ht + a(0.3)), BQ(-L / 2 - 0.1, 0, ht + a(1)), BQ(-L / 2 + 0.6, -Wd * 0.8, ht + a(0.3))];
+                shadowBlob(g, { x: TQ(0, by)[0] + a(1), y: TQ(0, by)[1] + a(0.6) }, a(L * 4), a(1.6));
+                poly(g, [lo[1], lo[2], hi[2], hi[1]], bt[2]);                         // the near side
+                poly(g, [lo[2], lo[3], hi[3], hi[2]], bt[2]);
+                poly(g, [lo[0], lo[1], hi[1], hi[0]], '#3a2a20');                     // the transom
+                poly(g, hi, '#5a4632');                                               // the bilge, seen from above: its boards
+                for (var fb = -1; fb <= 1; fb++) edgeLine(g, BQ(L / 2 - 0.1, fb * Wd * 0.45, ht), BQ(-L / 2 + 0.7, fb * Wd * 0.4, ht), '#3e3024', 1);
+                edgeLine(g, hi[1], hi[2], '#d8c8a0', 1); edgeLine(g, hi[2], hi[3], '#d8c8a0', 1);
+                edgeLine(g, BQ(L / 2 - 0.2, Wd, a(1.5)), BQ(-L / 2 + 0.8, Wd * 0.8, a(1.7)), bi ? '#c84a2e' : '#e0b440', 2);
+                // a thwart, a jerrycan and a coil of rope in the bilge
+                edgeLine(g, BQ(0.2, -Wd * 0.9, ht), BQ(0.2, Wd * 0.9, ht), '#5a4632', 3);
+                var jc = BQ(-0.5, 0.15, ht); rect(g, jc[0] - 2, jc[1] - 4, 5, 4, '#8a3a1c');
+                var rp = BQ(0.9, -0.2, ht); ellipseRing(g, rp[0], rp[1], a(1.2), a(0.6), '#b8a070');
+                // the outboard, tipped up on the transom
+                var ob = BQ(L / 2 + 0.15, 0, ht);
+                rect(g, ob[0] - 3, ob[1] - 7, 7, 7, '#1c1e20'); rect(g, ob[0] - 2, ob[1] - 6, 5, 2, '#c84a2e');
+                edgeLine(g, [ob[0] + 1, ob[1]], [ob[0] + a(1.6), ob[1] + a(1.8)], '#2a2c2e', 2);
+                ripple(L / 2, by, 0.6);
+              });
+              if (pr.found) { var lm = TQ(0.85, 0.1, a(3.4)); ellipse(g, lm[0], lm[1], a(2.4), a(1.6), 'rgba(255,214,140,.5)'); dot(g, lm[0] - 2, lm[1] - 2, '#fff2c8', 4); }
+            } else {
+              /* The sale tent: four poles, a pitched canvas roof, its sides rolled
+                 up; a lamp hung from the ridge throwing a pool of light; under it
+                 a folding table with the case on it, a crate either side. */
+              var th4 = a(11), rd = a(15);
+              var lamp = TQ(0, 0, 0);
+              ellipse(g, lamp[0], lamp[1], a(9), a(4.5), 'rgba(255,214,140,.18)');
+              ellipse(g, lamp[0], lamp[1], a(5.5), a(2.8), 'rgba(255,214,140,.22)');
+              var P4 = [[-1.6, -1.2], [1.6, -1.2], [1.6, 1.2], [-1.6, 1.2]];
+              // the far poles
+              [P4[0], P4[1]].forEach(function (c) { edgeLine(g, TQ(c[0], c[1], 0), TQ(c[0], c[1], th4), '#3a3026', 2); });
+              // the table, its case, and a crate either side
+              box(g, { x: pr.x - 0.7, y: pr.y - 0.4, w: 1.4, h: 0.8, height: a(3.5), seed: pr.seed }, ['#2a2018', '#3a2c20', '#4e3c2a', '#62503a', '#7a6448', '#94805e'], { roof: '#6a5438', roofEdge: '#8a7454', windows: null, lift: tl3, noShadow: true });
+              box(g, { x: pr.x - 0.35, y: pr.y - 0.2, w: 0.7, h: 0.4, height: a(1.6), seed: pr.seed + 1 }, ['#101214', '#181a1c', '#24272a', '#30343a', '#3c4248', '#4c5258'], { roof: pr.found ? '#c9a65a' : '#2a2e32', roofEdge: '#c9a65a', windows: null, lift: tl3 + a(3.5), noShadow: true });
+              [[-1.1, 0], [1.1, 0]].forEach(function (c, ci) { box(g, { x: pr.x + c[0] - 0.25, y: pr.y + c[1] - 0.25, w: 0.5, h: 0.5, height: a(2.2), seed: pr.seed + 2 + ci }, CRATE2, { roof: CRATE2[3], roofEdge: CRATE2[4], windows: null, lift: tl3, noShadow: true }); });
+              // the near poles
+              [P4[2], P4[3]].forEach(function (c) { edgeLine(g, TQ(c[0], c[1], 0), TQ(c[0], c[1], th4), '#4a3e30', 2); });
+              // the roof: two slopes from the ridge (east to west) down to the poles' tops, canvas with a darker stripe
+              var R0 = TQ(-1.8, 0, rd), R1 = TQ(1.8, 0, rd);
+              var E0 = TQ(-1.8, -1.35, th4), E1 = TQ(1.8, -1.35, th4), S0 = TQ(-1.8, 1.35, th4), S1 = TQ(1.8, 1.35, th4);
+              poly(g, [E0, E1, R1, R0], '#9a8a6a');
+              poly(g, [S0, S1, R1, R0], '#c8b890');
+              poly(g, [E1, S1, R1], '#7a6c50');
+              for (var stp = 1; stp < 4; stp++) { var tA = stp / 4; edgeLine(g, [S0[0] + (S1[0] - S0[0]) * tA, S0[1] + (S1[1] - S0[1]) * tA], [R0[0] + (R1[0] - R0[0]) * tA, R0[1] + (R1[1] - R0[1]) * tA], 'rgba(120,60,40,.45)', 2); }
+              edgeLine(g, R0, R1, '#e0d4b0', 1);
+              // the lamp under the ridge
+              var lp = TQ(0, 0, rd - a(2.5)); edgeLine(g, TQ(0, 0, rd), lp, '#2a2420', 1);
+              dot(g, lp[0] - 2, lp[1] - 2, '#ffe6a0', 4);
+              // guy lines and pegs
+              [[-2.4, -1.7], [2.4, -1.7], [2.4, 1.7], [-2.4, 1.7]].forEach(function (c, ci) { var pg = TQ(c[0], c[1], 0); edgeLine(g, TQ(P4[ci][0], P4[ci][1], th4), pg, 'rgba(40,34,24,.7)', 1); dot(g, pg[0] - 1, pg[1] - 1, '#2a241a', 2); });
+            }
+            if (pr.checked && !pr.found) {
+              edgeLine(g, [p.x - a(6.5), p.y - a(3.2)], [p.x + a(6.5), p.y + a(3.2)], '#d0503c', 4);
+              edgeLine(g, [p.x - a(6.5), p.y + a(3.2)], [p.x + a(6.5), p.y - a(3.2)], '#d0503c', 4);
+            }
+            break;
+          }
           /* A drowned beacon's possible locations (a map's sites skinned one by
              one): the spire with the socket at its foot, a sunken shrine, a ring
              of standing stones in the shallows. A faint glow in each until it is

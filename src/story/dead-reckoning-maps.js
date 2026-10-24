@@ -131,18 +131,24 @@
     },
 
     /* A mud bank on Tessaly IV, a mile from the beacon: Brass Ledger's ship down
-       in the reeds, the Reavers' boats come to buy, and three places the log
-       could be as the sale is made (Find and secure, the relic). */
+       in the reeds with its ramp down and its cargo out at the foot of it, the
+       Reavers' boats pulled up out of the shallows, the lit tent where the sale
+       is haggled over, and the three places the log could be as the sale is
+       made (Find and secure, the relic): each its own piece (`skin`). */
     mudbank: {
       name: 'The mud bank, Tessaly IV', planet: 'jungle',
       pieces: [
-        N('woods', 6, 4, 7, 7, 'lobed'), N('woods', 35, 4, 6, 6, 'blob'), N('woods', 6, 37, 6, 7, 'lobed'), N('woods', 35, 38, 6, 6, 'blob'),
-        N('water', 26, 6, 6, 4, 'kidney'), N('deep', 8, 24, 5, 4, 'long'), R('ruins', 38, 22, 4, 4), B(27, 38, 6, 4, 'block')
+        // Brass Ledger's ship, down in the reeds, and the shallows behind and beside it
+        R('shuttle', 10.5, 4, 10, 8), N('water', 11, 0.6, 9, 2.9, 'long'), N('water', 6.5, 5, 3.5, 6, 'kidney'),
+        N('woods', 4.5, 13, 5, 6, 'lobed'), N('woods', 35, 4, 6, 6, 'blob'), N('woods', 6, 37, 6, 7, 'lobed'), N('woods', 35, 38, 6, 6, 'blob'),
+        N('water', 26, 6, 6, 4, 'kidney'), N('deep', 8, 24, 5, 4, 'long'), R('ruins', 39, 30, 4, 4), B(27, 38, 6, 4, 'block'),
+        // the shallows the Reavers' boats came in by
+        N('water', 34, 17.5, 4.5, 7, 'lobed'), N('deep', 39, 16, 4, 9, 'long')
       ],
       sites: { kind: 'searchsite', at: [
-        { x: 17, y: 16, name: 'Kettering’s ship' },
-        { x: 31, y: 21, name: 'The Reavers’ boats' },
-        { x: 21, y: 31, name: 'The tent where they haggle' }
+        { x: 17, y: 16, name: 'Kettering’s ship', skin: 'cargo' },
+        { x: 31, y: 21, name: 'The Reavers’ boats', skin: 'boats' },
+        { x: 21, y: 31, name: 'The tent where they haggle', skin: 'tent' }
       ] }
     },
 

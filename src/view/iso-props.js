@@ -587,7 +587,7 @@
             return;
           }
           // a drowned beacon's possible locations are their own pieces, with nothing strewn round them
-          if (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones') return;
+          if (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones' || r.skin === 'boats' || r.skin === 'tent') return;
           for (var sw = 0; sw < 6; sw++) {
             props.push({
               kind: 'wreckstone',
