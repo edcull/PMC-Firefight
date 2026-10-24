@@ -895,8 +895,9 @@
           var prl = lift || 0, ph = a(3.2), pr2 = rng(pr.seed), half = pr.len / 2;
           function PQ(dx, dy, z) { var q = toScreen(pr.x + dx, pr.y + dy); return [q.x, q.y - prl - z]; }
           var A = pr.horiz ? PQ(-half, 0, ph) : PQ(0, -half, ph), B2 = pr.horiz ? PQ(half, 0, ph) : PQ(0, half, ph);
-          var As = pr.horiz ? PQ(-half, 0.5, 0) : PQ(0.5, -half, 0), Bs = pr.horiz ? PQ(half, 0.5, 0) : PQ(0.5, half, 0);
-          edgeLine(g, As, Bs, 'rgba(20,16,12,.35)', a(3));                     // its shadow
+          // its shadow, a soft band on the ground under it, a little to the light's far side
+          var SH3 = function (t, v) { return pr.horiz ? PQ(t, v, 0) : PQ(v, t, 0); };
+          poly(g, [SH3(-half, -0.12), SH3(half, -0.12), SH3(half, 0.32), SH3(-half, 0.32)], 'rgba(20,16,12,.28)');
           // the trestle in the middle of the run
           var t0 = PQ(0, 0, 0), t1 = PQ(0, 0, ph);
           edgeLine(g, [t0[0] - a(1.2), t0[1]], [t1[0], t1[1]], '#2c2f31', 2); edgeLine(g, [t0[0] + a(1.2), t0[1]], [t1[0], t1[1]], '#2c2f31', 2);

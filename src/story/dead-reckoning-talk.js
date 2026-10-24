@@ -537,7 +537,7 @@
       },
       'c4.battle': {
         start: [{ who: 'agathe', text: 'Sable holds. If you want my warehouse, {commander:rank}, come and knock. Bring a great deal of money for the repairs.' }],
-        bhalf: [{ who: 'agathe', text: 'Pull back to the strongroom. They will have to dig us out, and pay for every shovel.' }]
+        bhalf: [{ who: 'agathe', text: 'Pull back to the bunker. They will have to dig us out, and pay for every shovel.' }]
       },
       'warren.battle': {
         start: [{ who: 'ops', text: 'Lights on. Stay together. Reavers ahead, dug in. We find a way out, or we make one.' }],
