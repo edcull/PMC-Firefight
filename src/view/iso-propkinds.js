@@ -398,57 +398,111 @@
           }
           break;
         }
-        /* A shuttle, down on its pad: a lifting body on four legs, nose to the
-           west, swept wings, a tall fin, two engines glowing in its tail, its
-           ramp down under them, and its owner's gold stripe down the side. */
+        /* A shuttle, down on its pad: a lifting body lofted through a run of
+           rounded sections, nose to the east, the cockpit's glass wrapped round
+           it, swept wings with winglets, a fin over the tail and three engine
+           bells behind, standing on four legs. Its side ramp is down towards
+           the apron with the hold lit inside, and the company's gold stripe
+           runs its length. */
         case 'shuttle': {
-          var sl = lift || 0, x0 = pr.x, w = pr.w, yc = pr.y + pr.h / 2, hb = a(6), ht = a(22), wz = a(10);
+          var sl = lift || 0, x0 = pr.x, w = pr.w, yc = pr.y + pr.h / 2;
           function SP(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sl - z]; }
+          function hx(c) { return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; }
+          var HR = HULL.map(hx);
+          function tone(l) {
+            var f = Math.max(0, Math.min(HR.length - 1.001, l * (HR.length - 1))), i = Math.floor(f), k = f - i;
+            return 'rgb(' + [0, 1, 2].map(function (c) { return Math.round(HR[i][c] + (HR[i + 1][c] - HR[i][c]) * k); }).join(',') + ')';
+          }
+          // the hull's sections, tail to nose: where along it, half its width (inches), its middle and half its height
+          var xa = x0 + 0.7, xb = x0 + w - 0.15;
+          var ST = [[0, 0.82, a(15), a(7.5)], [0.07, 1.02, a(16), a(9)], [0.5, 1.12, a(16.5), a(9.5)], [0.68, 1.04, a(16), a(8.8)],
+            [0.8, 0.86, a(15), a(7.2)], [0.9, 0.6, a(13.6), a(5)], [0.97, 0.3, a(12.4), a(2.6)], [1, 0.08, a(12), a(0.8)]];
+          var K = 16;
+          function ring(s, k) {
+            var th = k / K * Math.PI * 2, c = Math.cos(th), sn = Math.sin(th);
+            return { x: xa + (xb - xa) * s[0], y: yc + s[1] * Math.sign(c) * Math.pow(Math.abs(c), 0.55), z: s[2] + s[3] * Math.sign(sn) * Math.pow(Math.abs(sn), 0.7), c: c, s: sn };
+          }
+          var R = ST.map(function (s) { var out = []; for (var k = 0; k < K; k++) out.push(ring(s, k)); return out; });
+          function S3(p, dz) { return SP(p.x, p.y, p.z + (dz || 0)); }
           var sm = SP(x0 + w / 2, yc, 0);
-          shadowBlob(g, { x: sm[0] + a(3), y: sm[1] + a(1.5) }, a(w * 4.2), a(pr.h * 2));
+          shadowBlob(g, { x: sm[0] + a(3), y: sm[1] + a(1.5) }, a(w * 4.4), a(pr.h * 2.1));
+          // the engine bells behind the tail, under the hull
+          [[-0.45, a(12.5)], [0.45, a(12.5)], [0, a(19)]].forEach(function (E) {
+            var e0 = SP(xa - 0.55, yc + E[0], E[1]), e1 = SP(xa + 0.1, yc + E[0], E[1]);
+            edgeLine(g, e0, e1, '#14171a', a(6));
+            ellipse(g, e0[0], e0[1], a(3), a(3.2), '#0e1012');
+            ellipse(g, e0[0], e0[1], a(2), a(2.2), 'rgba(255,150,70,.45)');
+          });
           // the legs, each on a foot
-          [[x0 + 2.8, yc - 1.1], [x0 + 2.8, yc + 1.1], [x0 + 8.2, yc - 1.1], [x0 + 8.2, yc + 1.1]].forEach(function (L) {
-            var f = SP(L[0], L[1], 0); ellipse(g, f[0], f[1], a(1.6), a(0.8), '#1a1d20');
-            edgeLine(g, f, SP(L[0], L[1], hb + 2), HULL[1], 4); edgeLine(g, f, SP(L[0], L[1], hb + 2), HULL[3], 1);
+          [[xa + 1.8, yc - 0.9], [xa + 1.8, yc + 0.9], [xa + 6.6, yc - 0.8], [xa + 6.6, yc + 0.8]].forEach(function (L) {
+            var f = SP(L[0], L[1] + (L[1] > yc ? 0.25 : -0.25), 0), t = SP(L[0], L[1], a(10));
+            ellipse(g, f[0], f[1], a(1.8), a(0.9), '#1a1d20');
+            edgeLine(g, f, t, HULL[1], 5); edgeLine(g, f, t, HULL[4], 1);
           });
-          // the far wing, under everything
-          var FW = [SP(x0 + 3.6, yc - 1.2, wz), SP(x0 + 7.2, pr.y + 0.3, wz + a(1)), SP(x0 + 9.0, pr.y + 0.3, wz + a(1)), SP(x0 + 9.4, yc - 1.2, wz)];
-          poly(g, FW, HULL[2]);
-          // the ramp, down from the tail, lit inside
-          poly(g, [SP(x0 + 9.5, yc - 0.8, hb + a(2)), SP(x0 + 9.5, yc + 0.8, hb + a(2)), SP(x0 + w, yc + 0.8, 0), SP(x0 + w, yc - 0.8, 0)], HULL[3]);
-          poly(g, [SP(x0 + 9.5, yc - 0.6, hb + a(2)), SP(x0 + 9.5, yc + 0.6, hb + a(2)), SP(x0 + 9.5, yc + 0.6, hb + a(7)), SP(x0 + 9.5, yc - 0.6, hb + a(7))], 'rgba(255,214,140,.55)');
-          edgeLine(g, SP(x0 + w, yc - 0.8, 0), SP(x0 + w, yc + 0.8, 0), HULL[5], 1);
-          // the fuselage, its spine catching the light, and its nose
-          box(g, { x: x0 + 2.2, y: yc - 1.2, w: 7.4, h: 2.4, height: ht - hb, seed: pr.seed }, HULL, { roof: HULL[4], roofEdge: HULL[5], windows: null, lift: sl + hb, noShadow: true });
-          edgeLine(g, SP(x0 + 2.2, yc, ht + 1), SP(x0 + 9.6, yc, ht + 1), HULL[5], 2);
-          poly(g, [SP(x0 + 2.2, yc + 1.2, hb), SP(x0 + 2.2, yc + 1.2, ht), SP(x0 + 0.1, yc, hb + a(9)), SP(x0 + 0.1, yc, hb + a(4))], HULL[3]);
-          poly(g, [SP(x0 + 2.2, yc - 1.2, ht), SP(x0 + 2.2, yc + 1.2, ht), SP(x0 + 0.1, yc, hb + a(9))], HULL[5]);
-          // the cockpit's glass, wrapped round the top of the nose
-          poly(g, [SP(x0 + 0.9, yc - 0.45, hb + a(10)), SP(x0 + 0.9, yc + 0.45, hb + a(10)), SP(x0 + 2.3, yc + 1.05, ht - a(1)), SP(x0 + 2.3, yc - 1.05, ht - a(1))], '#16303e');
-          edgeLine(g, SP(x0 + 1.1, yc + 0.35, hb + a(10.6)), SP(x0 + 2.2, yc + 0.9, ht - a(1.4)), 'rgba(170,230,255,.7)', 1);
-          // the gold stripe of the company that owns it, and a row of ports
-          edgeLine(g, SP(x0 + 2.2, yc + 1.2, hb + a(8)), SP(x0 + 9.6, yc + 1.2, hb + a(8)), '#c9a65a', 4);
-          for (var pw = 0; pw < 6; pw++) { var pq = SP(x0 + 3 + pw * 1.0, yc + 1.2, hb + a(12)); rect(g, pq[0] - 2, pq[1] - 2, 4, 3, '#9ad8f0'); }
-          // the near wing: its leading edge lit, a gold chevron on it, its trailing edge in shadow
-          var NW = [SP(x0 + 3.6, yc + 1.2, wz), SP(x0 + 7.2, pr.y + pr.h - 0.3, wz + a(1)), SP(x0 + 9.0, pr.y + pr.h - 0.3, wz + a(1)), SP(x0 + 9.4, yc + 1.2, wz)];
-          poly(g, NW.map(function (q) { return [q[0], q[1] + a(1.5)]; }), HULL[0]);
+          // the far wing and its winglet, under the hull
+          var wz = a(11.5);
+          function wing(sd) {
+            var ty = yc + sd * (pr.h / 2 - 0.25);
+            return [SP(xa + 1.0, yc + sd * 0.9, wz), SP(xa + 5.3, yc + sd * 0.9, wz + a(1)), SP(xa + 2.4, ty, wz + a(2.5)), SP(xa + 0.9, ty, wz + a(2.5))];
+          }
+          function winglet(sd) {
+            var ty = yc + sd * (pr.h / 2 - 0.25);
+            return [SP(xa + 0.9, ty, wz + a(2.5)), SP(xa + 2.4, ty, wz + a(2.5)), SP(xa + 1.6, ty, wz + a(6.5)), SP(xa + 0.8, ty, wz + a(6.5))];
+          }
+          var FW = wing(-1);
+          poly(g, FW, HULL[2]); edgeLine(g, FW[1], FW[2], HULL[4], 2);
+          poly(g, winglet(-1), HULL[2]);
+          // the hull: each panel facing the eye, lit from above and the south
+          for (var si = 0; si < R.length - 1; si++) {
+            for (var k = 0; k < K; k++) {
+              var k2 = (k + 1) % K, A = R[si][k], B = R[si][k2], C2 = R[si + 1][k2], D = R[si + 1][k];
+              var q = [S3(A), S3(B), S3(C2), S3(D)];
+              var ar = 0; for (var qi = 0; qi < 4; qi++) { var q1 = q[qi], q2 = q[(qi + 1) % 4]; ar += q1[0] * q2[1] - q2[0] * q1[1]; }
+              if (ar <= 0) continue;
+              var mc = (A.c + B.c) / 2, ms = (A.s + B.s) / 2, taper = (ST[si][1] - ST[si + 1][1]) * 0.6;
+              var col = tone(0.42 + 0.34 * ms + 0.18 * mc + 0.12 * Math.max(-1, taper * 2));
+              var glass = (si === 4 || si === 5) && ms > 0.3;
+              poly(g, q, glass ? (ms > 0.8 ? '#1e4256' : '#16303e') : col);
+            }
+          }
+          // a glint on the glass, and the panel seams round the hull
+          edgeLine(g, S3(R[4][2], 1), S3(R[5][2], 1), 'rgba(170,230,255,.75)', 2);
+          for (var gk = 1; gk < 7; gk++) edgeLine(g, S3(R[5][gk]), S3(R[5][gk + 1]), HULL[4], 1);
+          [1, 2, 3].forEach(function (si) {
+            for (var k = 12; k < K + 9; k++) { var k1 = k % K, k2 = (k + 1) % K; if (R[si][k1].c < -0.05 || R[si][k2].c < -0.05) continue; edgeLine(g, S3(R[si][k1]), S3(R[si][k2]), 'rgba(20,24,28,.35)', 1); }
+          });
+          // the gold stripe down the near side, and the ports above it
+          for (var gs = 0; gs < 5; gs++) edgeLine(g, S3(R[gs][15]), S3(R[gs + 1][15]), '#c9a65a', 4);
+          for (var pw = 0; pw < 7; pw++) {
+            var px = xa + 1.4 + pw * 0.65; if (px > xa + 4.9 && px < xa + 6.9) continue;
+            var pq = SP(px, yc + 1.08, a(19)); rect(g, pq[0] - 2, pq[1] - 2, 4, 3, '#9ad8f0');
+          }
+          // the side ramp, down to the apron, and the hold lit behind it
+          var r0 = xa + 5.2, r1 = xa + 6.6, rz = a(9), ry = yc + 1.1;
+          poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry, a(21)), SP(r0, ry, a(21))], 'rgba(255,214,140,.85)');
+          poly(g, [SP(r0 + 0.15, ry, rz), SP(r1 - 0.15, ry, rz), SP(r1 - 0.15, ry, a(18)), SP(r0 + 0.15, ry, a(18))], 'rgba(255,236,190,.6)');
+          poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry + 1.7, 0), SP(r0, ry + 1.7, 0)], HULL[3]);
+          for (var rs = 1; rs < 5; rs++) edgeLine(g, SP(r0, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), SP(r1, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), HULL[1], 1);
+          edgeLine(g, SP(r0, ry + 1.7, 0), SP(r1, ry + 1.7, 0), '#e0b440', 2);
+          // the near wing, its leading edge lit, a gold chevron on it, and its winglet
+          var NW = wing(1);
+          poly(g, NW.map(function (p) { return [p[0], p[1] + a(1.5)]; }), HULL[0]);
           poly(g, NW, HULL[3]);
-          edgeLine(g, NW[0], NW[1], HULL[5], 2);
-          edgeLine(g, NW[2], NW[3], HULL[1], 2);
-          poly(g, [SP(x0 + 6.3, yc + 2.2, wz + a(0.6)), SP(x0 + 7.4, yc + 2.2, wz + a(0.6)), SP(x0 + 8.0, yc + 3.0, wz + a(0.8)), SP(x0 + 6.9, yc + 3.0, wz + a(0.8))], '#c9a65a');
-          dot(g, NW[1][0], NW[1][1], '#3aff7a', 4);                  // the starboard light
-          // the fin, tall over the tail, and the engines glowing in the tail
-          var F0 = SP(x0 + 6.8, yc, ht), F1 = SP(x0 + 9.6, yc, ht), F2 = SP(x0 + 9.9, yc, ht + a(16)), F3 = SP(x0 + 9.0, yc, ht + a(16));
-          poly(g, [F0, F1, F2, F3], HULL[2]);
-          edgeLine(g, F0, F3, HULL[5], 2);
-          edgeLine(g, SP(x0 + 7.6, yc, ht + a(8)), SP(x0 + 9.7, yc, ht + a(8)), '#c9a65a', 3);
-          dot(g, F2[0], F2[1], '#ff4a3a', 4);
-          [-0.6, 0.6].forEach(function (o) {
-            var e = SP(x0 + 9.6, yc + o, hb + a(9));
-            ellipse(g, e[0], e[1], a(3.2), a(3.2), '#14171a');
-            ellipse(g, e[0], e[1], a(2.4), a(2.4), 'rgba(255,150,70,.6)');
-            ellipse(g, e[0], e[1], a(1.3), a(1.3), '#ffd28a');
-          });
+          edgeLine(g, NW[1], NW[2], HULL[5], 2);
+          edgeLine(g, NW[3], NW[0], HULL[1], 2);
+          poly(g, [SP(xa + 2.6, yc + 2.0, wz + a(1.4)), SP(xa + 3.6, yc + 2.0, wz + a(1.4)), SP(xa + 2.9, yc + 3.0, wz + a(1.9)), SP(xa + 1.9, yc + 3.0, wz + a(1.9))], '#c9a65a');
+          var NL = winglet(1); poly(g, NL, HULL[3]); edgeLine(g, NL[1], NL[2], HULL[5], 2);
+          dot(g, NL[2][0], NL[2][1], '#3aff7a', 4);                  // the starboard light
+          var FL = winglet(-1); dot(g, FL[2][0], FL[2][1], '#ff4a3a', 4);   // and the port one
+          // the fin over the tail, a gold band across it, and its beacon
+          var tz = a(24);
+          var F0 = SP(xa + 0.3, yc, tz), F1 = SP(xa + 2.6, yc, tz + a(1)), F2 = SP(xa + 1.2, yc, tz + a(11)), F3 = SP(xa + 0.1, yc, tz + a(11));
+          poly(g, [F0, F1, F2, F3], HULL[3]);
+          edgeLine(g, F1, F2, HULL[5], 2);
+          edgeLine(g, SP(xa + 0.25, yc, tz + a(6)), SP(xa + 1.9, yc, tz + a(6.5)), '#c9a65a', 3);
+          dot(g, F3[0], F3[1], '#ff4a3a', 4);
+          // a light on the nose
+          var nz = SP(xb, yc, a(12)); dot(g, nz[0] - 1, nz[1] - 1, '#ffffff', 3);
           break;
         }
         /* A fuel bowser: a long pale tank on a chassis, a yellow cab at its
