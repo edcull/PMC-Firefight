@@ -1004,9 +1004,8 @@
     if (named && (!piece || piece.market || (kind === 'road' && piece.paved))) return named;
     // a map's cargo stacks: a crater field by the rules, crates with walkways between them to look at
     if (kind === 'crater' && piece && piece.cargo) return 'Cargo stacks';
-    // a warehouse's walls and floor, and its strongroom's: high and reinforced walls, and a road
+    // a warehouse's walls and floor: high walls, and a road
     if (kind === 'wall' && piece && piece.shed) return 'Warehouse wall';
-    if (kind === 'wall' && piece && piece.vault) return 'Strongroom wall';
     if (kind === 'road' && piece && piece.slab) return 'Concrete';
     // a map's pipeline: a low wall by the rules
     if (kind === 'barricade' && piece && piece.pipe) return 'Pipeline';

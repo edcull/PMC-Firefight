@@ -32,7 +32,7 @@
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
   // poured concrete (a quay, a warehouse's floor): open ground, and what stands on it stands on it
   function SLAB(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, fixed: true }; }
-  // a warehouse's steel-clad wall (a high wall), and its strongroom's (a reinforced one), laid as written
+  // a warehouse's steel-clad wall (a high wall), laid as written
   /* `opening`, where the wall ends at one: 'slide' (a hangar's sliding doors, run back
      along the wall) or 'doorway' (a framed door with the wall carried over it); `end` which
      end of the wall (+1 its far end, -1 its near one), `gap` how wide. Drawn only. */
@@ -43,7 +43,6 @@
   }
   // a sandbagged position (a low wall), laid where the map puts it
   function BAGS(x, y, w, h) { return { kind: 'barricade', x: x, y: y, w: w, h: h, fixed: true }; }
-  function VAULT(x, y, w, h) { return { kind: 'wall', x: x, y: y, w: w, h: h, reinforced: true, vault: true, fixed: true }; }
 
   root.PMCStoryMaps['dead-reckoning'] = {
 
@@ -247,9 +246,9 @@
        into, not round: steel-clad walls (high walls) on a concrete floor, big
        sliding hangar doors standing open north and south, the road running
        up to both from the quay and the south edge, a doorway east and west,
-       and at its heart the strongroom, reinforced walls with a door east and
-       west, round the objective Hostile takeover puts in the middle. Sable's
-       sandbags are laid by the map (`fortified`), not by the scenario. */
+       and its floor open round the objective Hostile takeover puts in the
+       middle. Sable's sandbags are laid by the map (`fortified`), not by the
+       scenario. A cargo lifter works the east stack. */
     docks: {
       name: 'The broker’s warehouse, Kerrigan docks', planet: 'industrial',
       // Sable's position is the map's own: the sandbags below, not Hostile takeover's sections laid at random
@@ -259,16 +258,13 @@
         SLAB(5, 3.5, 38, 3.5), R('crane', 11, 3.8, 3, 2.4), R('crane', 31, 3.8, 3, 2.4),
         // (everything stands at least 3" off the warehouse, so a squad can go all the way round it)
         B(5, 7.5, 8, 5, 'L'), B(35, 7.5, 8, 5, 'block'), B(5, 36, 9, 7, 'U'), R('fueltanks', 33.5, 36, 9, 6),
-        CG(5, 20, 6, 7), CG(37, 20, 5.5, 7), R('ruins', 15.5, 41, 4, 4),
+        CG(5, 20, 6, 7), CG(37, 20, 5.5, 7), Object.assign(R('cargolifter', 38.5, 28, 2.5, 2.5), { facing: -Math.PI / 2 }), R('ruins', 15.5, 41, 4, 4),
         // the road: off the quay to the north doors, and from the south edge of the table to the south ones
         P(21, 7, 6, 9), P(21, 32, 6, 16),
         // the warehouse: its floor, then its walls; sliding hangar doors north and south (x 20 to 28) and a doorway east and west (y 22.5 to 25.5)
         SLAB(14, 16, 20, 16),
         SHED(14, 16, 6, 0.5, 'slide', 1, 8), SHED(28, 16, 6, 0.5, 'slide', -1, 8), SHED(14, 31.5, 6, 0.5, 'slide', 1, 8), SHED(28, 31.5, 6, 0.5, 'slide', -1, 8),
         SHED(14, 16.5, 0.5, 6, 'doorway', 1, 3), SHED(14, 25.5, 0.5, 6, 'doorway', -1, 3), SHED(33.5, 16.5, 0.5, 6, 'doorway', 1, 3), SHED(33.5, 25.5, 0.5, 6, 'doorway', -1, 3),
-        // the strongroom, the heading in it: a door east and west (y 22.5 to 25.5)
-        VAULT(20.5, 20.5, 7, 0.5), VAULT(20.5, 27, 7, 0.5),
-        VAULT(20.5, 21, 0.5, 1.5), VAULT(20.5, 25.5, 0.5, 1.5), VAULT(27, 21, 0.5, 1.5), VAULT(27, 25.5, 0.5, 1.5),
         // Sable's sandbags: either side of the road before each hangar door, and inside each doorway
         BAGS(16, 12, 4, 1), BAGS(28, 12, 4, 1), BAGS(16, 35.5, 4, 1), BAGS(28, 35.5, 4, 1), BAGS(16.5, 21.5, 1, 5), BAGS(30.5, 21.5, 1, 5)
       ]

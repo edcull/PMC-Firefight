@@ -1329,15 +1329,15 @@
         case 'hangarleaves': {
           var hl = lift || 0, hux = pr.horiz ? 1 : 0, huy = 1 - hux, HL = pr.len, HH = pr.height * 0.94, hd = pr.dir;
           var HQ = function (t, v, z) { var q = toScreen(pr.x + hux * t + huy * v, pr.y + huy * t + hux * v); return [q.x, q.y - hl - z]; };
-          var LEAF = ['#2a2620', '#4a3f30', '#6b5a40', '#87714f', '#a08a64', '#c2ad86'];
+          var DLEAF = ['#2a2620', '#4a3f30', '#6b5a40', '#87714f', '#a08a64', '#c2ad86'];
           [[0.62, 0.15], [0.42, -0.15]].forEach(function (lv2, li) {
             var v0 = lv2[0], v1 = v0 + 0.1, t0 = -HL / 2 + lv2[1] * hd, t1 = HL / 2 + lv2[1] * hd;
-            poly(g, [HQ(t0, v1, 0), HQ(t1, v1, 0), HQ(t1, v1, HH), HQ(t0, v1, HH)], pr.horiz ? LEAF[3] : LEAF[2]);
-            poly(g, [HQ(t0, v0, HH), HQ(t1, v0, HH), HQ(t1, v1, HH), HQ(t0, v1, HH)], LEAF[4]);
+            poly(g, [HQ(t0, v1, 0), HQ(t1, v1, 0), HQ(t1, v1, HH), HQ(t0, v1, HH)], pr.horiz ? DLEAF[3] : DLEAF[2]);
+            poly(g, [HQ(t0, v0, HH), HQ(t1, v0, HH), HQ(t1, v1, HH), HQ(t0, v1, HH)], DLEAF[4]);
             var nrb = Math.max(4, Math.round(HL / 0.25));
             for (var hr = 1; hr < nrb; hr++) {
               var htt = t0 + (t1 - t0) * hr / nrb;
-              edgeLine(g, HQ(htt, v1, 1), HQ(htt, v1, HH - 1), hr % 2 ? LEAF[4] : LEAF[1], 1);
+              edgeLine(g, HQ(htt, v1, 1), HQ(htt, v1, HH - 1), hr % 2 ? DLEAF[4] : DLEAF[1], 1);
             }
             // the leading edge, striped, and a grab handle
             var te = hd > 0 ? t1 : t0, tin = te - hd * 0.18;
