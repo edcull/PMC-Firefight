@@ -269,7 +269,8 @@
     // what each enemy side says, where a battle has nothing of its own for the moment
     sides: {
       kettle: {
-        start: [{ who: 'kettering', if: { flag: 'beat_kettle' }, text: 'You again. Vesk cost me a quarter’s profit and six good lads, {commander:rank}. This one isn’t for the client. This one’s mine.' }, { who: 'kettleman', text: 'There they are! Five hundred to whoever brings back the slate! Shoot anything that gets in the way!' }],
+        start: [{ who: 'kettering', if: { flag: 'agent_shot' }, text: 'You shot a boy with his hands tied, {commander:rank}, and sent him back to me in a bag. There’s no invoice for that. There’s just this.' },
+          { who: 'kettering', if: { flag: 'beat_kettle' }, text: 'You again. Vesk cost me a quarter’s profit and six good lads, {commander:rank}. This one isn’t for the client. This one’s mine.' }, { who: 'kettleman', text: 'There they are! Five hundred to whoever brings back the slate! Shoot anything that gets in the way!' }],
         kill: [{ who: 'kettering', if: { flag: 'beat_kettle' }, text: 'That’s another one on your account. I’m keeping it, every line of it, and I always collect.' }, { who: 'kettleman', text: 'Man down! Keep pushing, the rate’s gone up!' }],
         loss: [{ who: 'kettleman', if: { flag: 'beat_kettle' }, text: 'That’s for Vesk!' }, { who: 'kettleman', text: 'Got one! That’s a bonus! Who else wants to stand in front of us?' }],
         bhalf: [{ who: 'kettering', if: { flag: 'beat_kettle' }, text: 'Fall back! We’ll settle this somewhere they can’t hide behind a client.' }, { who: 'kettleman', text: 'Contract’s not worth this! Fall back, fall back, we bill them for it later!' }]
@@ -497,7 +498,10 @@
         ],
         kill: [{ who: 'kettering', text: 'You’re costing me money, {commander:rank}. I don’t forgive that. I invoice it.' }],
         turn3: [{ who: 'reader', text: 'I’m in the arcade, {commander:rank}. Mr Vane is asking, rather calmly, whether I mean to reach the end of it.' }],
-        loss: [{ who: 'vane', text: 'You’re losing people, {commander:rank}. Don’t lose Halloran. He reads, and I don’t.' }]
+        loss: [{ who: 'vane', text: 'You’re losing people, {commander:rank}. Don’t lose Halloran. He reads, and I don’t.' }],
+        // Halloran brought down (hit, not killed: he gets away later, with his notes), or broken and running
+        vipdown: [{ who: 'reader', text: 'I’m hit, {commander:rank}. The leg. I can’t — they’re taking the slate. They’ve got the slate.' }],
+        vipfled: [{ who: 'reader', text: 'I am not a soldier, {commander:rank}, and I am not staying here to be shot at. I’m going back the way I came. Tell Mr Vane what you like.' }]
       },
       'c1r.battle': {
         start: [{ who: 'kettering', text: 'They’re coming for the ship! Load what you can, and hold the ramp until we’re up!' }],

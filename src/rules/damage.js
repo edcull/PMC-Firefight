@@ -156,7 +156,8 @@
       if (!target.alive) {
         target.wipedOut = true;
         credit(target, atk, 'kill');
-        log.push({ t: 'kill', text: target.label + ' is wiped out.' });
+        // (a VIP under escort is a civilian brought down, not a squad wiped out: hit, and out of the fight)
+        log.push({ t: 'kill', text: target.label + (target.escort ? ' is hit and goes down, out of the fight.' : ' is wiped out.') });
         return;
       }
       var after = status(target);
