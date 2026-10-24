@@ -23,6 +23,8 @@
   // a paved road (a settlement's, not a dirt track)
   // a field camp's tent, long side east to west
   function T(x, y) { return { kind: 'tent', x: x, y: y, w: 2.4, h: 1.8 }; }
+  // cargo stacked on concrete: a crater field by the rules, rows of crates with walkways between to look at
+  function CG(x, y, w, h) { return { kind: 'crater', x: x, y: y, w: w, h: h, cargo: 'apron' }; }
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
 
   root.PMCStoryMaps['dead-reckoning'] = {
@@ -79,16 +81,12 @@
         // the north pad, as big as Brass Ledger's, empty but for its support vehicles and cargo waiting, a spur down to the road
         Object.assign(P(5, 2, 14, 14), { pad: true }), P(6.5, 16, 3, 11.5),
         Object.assign(R('fueltruck', 6.2, 12.6, 2.8, 1.4), { facing: Math.PI / 2 }), Object.assign(R('cargolifter', 14.8, 11.6, 2.5, 2.5), { facing: Math.PI }),
-        R('crates', 6.5, 4, 4, 1.5), R('crates', 13.5, 4, 1.5, 4), R('crates', 10.5, 9.5, 3, 1.5),
+        CG(6.5, 4, 4, 1.6), CG(13.4, 4, 1.6, 4), CG(10.3, 9.4, 3.6, 1.6),
         // the comms block (its dish on the roof) and the customs shed
         Object.assign(B(5, 36, 8, 6, 'annex'), { dish: true }), R('bunker', 35, 36, 6, 5),
         B(28, 31, 6, 5, 'block'), B(26, 38, 6, 3, 'block'), R('wall', 42, 19, 1, 6),
-        // cargo, stacked on concrete across the apron
-        Object.assign(P(22, 3, 7, 9), { slab: true }), R('crates', 23, 4, 5, 1.5), R('crates', 23, 7, 1.5, 4),
-        Object.assign(P(11, 17, 8, 3.6), { slab: true }), R('crates', 12, 18.5, 6, 1.5),
-        Object.assign(P(20.5, 19.5, 3.5, 6.5), { slab: true }), R('crates', 21.5, 20, 1.5, 5),
-        Object.assign(P(10, 31.5, 7, 2.5), { slab: true }), R('crates', 11, 32, 5, 1.5),
-        Object.assign(P(32, 18.5, 2.5, 6), { slab: true }), R('crates', 32.5, 19, 1.5, 5)
+        // cargo, stacked on concrete across the apron, with walkways between the stacks
+        CG(22, 3, 7, 9), CG(11, 17, 8, 3.6), CG(20.5, 19.5, 3.5, 6.5), CG(10, 31.5, 7, 2.5), CG(32, 18.5, 2.5, 6)
       ],
       // the three places the log could be are cargo, like everything else on the apron
       sites: { kind: 'searchsite', skin: 'cargo', at: [
@@ -166,7 +164,9 @@
         // the impact crater and the smaller ones, the glass outcrops, a spill of rocks
         N('crater', 19, 3, 8, 6, 'blob'), N('crater', 7, 13, 4, 4, 'lobed'), N('crater', 10, 36, 6, 5, 'blob'), N('crater', 26, 33, 4, 4, 'lobed'),
         N('crystal', 8, 5, 5, 4, 'rift'), N('crystal', 25, 40, 5, 4, 'rift'), N('crystal', 6, 24, 4, 5, 'lobed'), N('crystal', 25, 14, 4, 3, 'rift'),
-        N('rocks', 17, 41, 5, 4, 'lobed')
+        N('rocks', 17, 41, 5, 4, 'lobed'),
+        // Wraith's kit, stacked on the sand by the places they've been digging
+        Object.assign(CG(20.2, 15, 3, 2.6), { cargo: true }), Object.assign(CG(29.4, 24.2, 3.6, 2), { cargo: true }), Object.assign(CG(15.2, 30, 2.6, 3.4), { cargo: true })
       ],
       sites: { kind: 'searchsite', at: [
         { x: 17, y: 16, name: 'The marker posts' },

@@ -21,6 +21,8 @@
   function B(x, y, w, h, plan) { return { kind: 'building', x: x, y: y, w: w, h: h, plan: plan || 'block' }; }
   function N(kind, x, y, w, h, shape) { return { kind: kind, x: x, y: y, w: w, h: h, shape: shape || 'blob' }; }
   function R(kind, x, y, w, h) { return { kind: kind, x: x, y: y, w: w, h: h }; }
+  // cargo stacked on concrete: a crater field by the rules, rows of crates with walkways between to look at
+  function CG(x, y, w, h) { return { kind: 'crater', x: x, y: y, w: w, h: h, cargo: 'apron' }; }
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
 
   root.PMCStoryMaps['deep-contract'] = {
@@ -46,14 +48,9 @@
         // the pads' support vehicles: bowsers on Pads Two and Three with their hoses out, a cargo lifter on each pad
         R('fueltruck', 36.5, 14.5, 2.8, 1.4), Object.assign(R('fueltruck', 20, 26.6, 2.8, 1.4), { hose: { x: 23.2, y: 24.8 } }),
         R('cargolifter', 8, 38.5, 2.5, 2.5), Object.assign(R('cargolifter', 25.6, 20.2, 2.5, 2.5), { facing: Math.PI / 2 }), Object.assign(R('cargolifter', 32.2, 12.6, 2.5, 2.5), { facing: Math.PI }),
-        // cargo for cover, on the pads and on concrete beside the roads
-        R('crates', 19.5, 19.6, 3, 1.2), R('crates', 26, 27.5, 3, 1.2), R('crates', 31, 7, 1.2, 3), R('crates', 15.8, 37.5, 1.2, 3),
-        R('crates', 37, 7, 3, 1.2), R('crates', 8, 32, 3, 1.2),
-        Object.assign(R('road', 13.5, 26.6, 4.5, 1.8), { slab: true }), R('crates', 13.8, 26.9, 3.9, 1.2),
-        Object.assign(R('road', 31.5, 26.2, 4.5, 1.8), { slab: true }), R('crates', 31.8, 26.5, 3.9, 1.2),
-        Object.assign(R('road', 8, 13, 7, 2.2), { slab: true }), R('crates', 8.3, 13.5, 3, 1.2), R('crates', 12, 13.5, 3, 1.2),
-        Object.assign(R('road', 23.5, 12, 4.5, 4.5), { slab: true }), R('crates', 23.8, 12.4, 1.2, 3.6), R('crates', 25.9, 12.4, 1.2, 3.6),
-        Object.assign(R('road', 18.4, 33, 2.6, 6.5), { slab: true }), R('crates', 19.1, 33.4, 1.2, 2.6), R('crates', 19.1, 36.6, 1.2, 2.6)
+        // cargo for cover, on the pads and on concrete beside the roads: stacks you can get between
+        CG(19.4, 19.4, 3.8, 1.6), CG(25.4, 27.1, 3.4, 1.6), CG(30.9, 6.9, 1.5, 3.8), CG(36.6, 6.9, 3.6, 1.5), CG(15.6, 36.6, 1.5, 3.8), CG(7.8, 31.8, 3.8, 1.5),
+        CG(13.5, 26.6, 4.5, 1.8), CG(31.5, 26.2, 4.5, 1.8), CG(8, 13, 7, 2.2), CG(23.5, 12, 4.5, 4.5), CG(18.4, 33, 2.6, 6.5)
       ],
       objectives: [{ x: 12.5, y: 36.5, name: 'Pad One' }, { x: 24, y: 24, name: 'Pad Two' }, { x: 35.5, y: 11.5, name: 'Pad Three' }]
     },

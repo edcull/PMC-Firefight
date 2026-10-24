@@ -1000,6 +1000,8 @@
     var skin = state && state.cfg && state.cfg.story && state.cfg.story.skin;
     var named = skin && SKIN_NAMES[skin] && SKIN_NAMES[skin][kind];
     if (named && (!piece || piece.market || (kind === 'road' && piece.paved))) return named;
+    // a map's cargo stacks: a crater field by the rules, crates with walkways between them to look at
+    if (kind === 'crater' && piece && piece.cargo) return 'Cargo stacks';
     return TERRAIN[kind] ? TERRAIN[kind].name : kind;
   }
   function losBatch(fn) { return (KIT_SPACE || kitSpace()).losBatch(fn); }

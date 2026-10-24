@@ -228,6 +228,21 @@
           }
           return;
         }
+        if (r.kind === 'crater' && r.cargo) {
+          /* A map's cargo stacks (a crater field by the rules): stacks of crates
+             in rows, with walkways between them wide enough to get through. */
+          var CELL = 1.8, AISLE = 0.7;
+          var gcx = Math.max(1, Math.floor((r.w + AISLE) / CELL)), gcy = Math.max(1, Math.floor((r.h + AISLE) / CELL));
+          var sw = (r.w - AISLE * (gcx - 1)) / gcx, sh = (r.h - AISLE * (gcy - 1)) / gcy;
+          for (var gx = 0; gx < gcx; gx++) {
+            for (var gy = 0; gy < gcy; gy++) {
+              if (gcx * gcy > 2 && rand() < 0.15) continue;      // a gap where a stack has gone
+              props.push({ kind: 'crates', x: r.x + gx * (sw + AISLE) + 0.1, y: r.y + gy * (sh + AISLE) + 0.1, w: sw - 0.2, h: sh - 0.2,
+                height: a(5 + rand() * 6), seed: (rand() * 9999) | 0 });
+            }
+          }
+          return;
+        }
         if (r.kind === 'crater' && r.market) {
           // a settlement's crater field (the market skin): the market's overflow, cargo cases, fuel drums and vending terminals on the paving
           for (var mk = 0; mk < Math.max(3, Math.round(area / 2.5)); mk++) {
