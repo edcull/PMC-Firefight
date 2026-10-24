@@ -272,14 +272,16 @@ ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field',
   ok('...its floor open round the objective in the middle: no wall inside it, and the walls named for what they are',
     ps.filter((p) => p.kind === 'wall').every((p) => p.shed) && R.terrainName(null, 'wall', shed[0]) === 'Warehouse wall');
   ok('...Sable’s position laid by the map: sandbags either side of the road before each hangar door, inside each doorway and inside the south hangar door, one bunker at most, and no sections laid at random besides',
-    MAPS.docks.fortified && ps.filter((p) => p.kind === 'barricade' && p.fixed).length === 7 && !ps.some((p) => p.kind === 'trench' || p.kind === 'wire') && ps.filter((p) => p.kind === 'bunker').length <= 1);
+    MAPS.docks.fortified && ps.filter((p) => p.kind === 'barricade' && p.fixed && !p.pipe).length === 7 && !ps.some((p) => p.kind === 'trench' || p.kind === 'wire') && ps.filter((p) => p.kind === 'bunker').length <= 1);
   ok('...with room to go all the way round it: nothing else within 3" of its walls but the road and Sable’s sandbags',
     ps.filter((p) => !p.shed && !p.slab && p.kind !== 'road' && p.kind !== 'barricade' && !overlap(p, floor)).every((p) => !overlap(p, { x: floor.x - 3, y: floor.y - 3, w: floor.w + 6, h: floor.h + 6 })));
   ok('...Sable’s bunker inside it, off the objective, and the south road coming in past a gatehouse and its lifting gate',
     ps.some((p) => p.kind === 'bunker' && p.fixed && overlap(p, floor) && Math.hypot(p.x + p.w / 2 - 24, p.y + p.h / 2 - 24) > 5) &&
     ps.some((p) => p.kind === 'boomgate' && p.span >= 6) && !R.TERRAIN.boomgate.impassable && !R.TERRAIN.boomgate.blocks && !ps.some((p) => p.kind === 'ruins'));
-  ok('...and the waterfront along the north: the basin, its quay, two gantry cranes, a reaction-mass tank farm on the quay and a cargo lifter',
+  ok('...and the waterfront along the north: the basin, its quay, two gantry cranes, a reaction-mass tank farm on the quay, piped to the water and off the table, and a cargo lifter',
     ps.some((p) => p.kind === 'deep' && p.y === 0) && ps.filter((p) => p.kind === 'crane').length === 2 && ps.some((p) => p.kind === 'fueltanks' && p.y < 10) && ps.some((p) => p.kind === 'cargolifter') &&
+    // its pipelines: one to the water's edge, one off the east side of the table
+    ps.some((p) => p.pipe && p.y < 4) && ps.some((p) => p.pipe && p.x + p.w === 48) &&
     !R.TERRAIN.crane.blocks && R.TERRAIN.crane.impassable && R.TERRAIN.fueltanks.blocks);
 }
 ok('the second half keeps clear what its scenarios lay themselves: the takeovers’ middle, the Parley’s, Recall’s landing zone',

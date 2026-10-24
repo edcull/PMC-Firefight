@@ -687,13 +687,13 @@
           var pv = GP(gx, gy, pz); dot(g, pv[0] - 1, pv[1] - 1, '#222', 3);
           break;
         }
-        /* A tank farm: reaction-mass tanks, white steel drums banded and
+        /* A tank farm: two reaction-mass tanks, white steel drums banded and
            stencilled, inside a low concrete bund, with a pipe rack between them. */
         case 'fueltanks': {
           var fl = lift || 0, fx = pr.x, fy = pr.y, fw = pr.w, fh = pr.h;
           var FP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - fl - z]; };
           var fmid = FP(fx + fw / 2, fy + fh / 2, 0);
-          shadowBlob(g, { x: fmid[0] + a(3), y: fmid[1] + a(1.5) }, a(fw * 3.6), a(fh * 2.4));
+          shadowBlob(g, { x: fmid[0] + a(2), y: fmid[1] + a(1) }, a(fw * 2.6), a(fh * 1.6));
           poly(g, [FP(fx, fy, 0), FP(fx + fw, fy, 0), FP(fx + fw, fy + fh, 0), FP(fx, fy + fh, 0)], '#4a4740');
           // the bund's far sides now, its near sides after the tanks
           var bund = function (x0, y0, x1, y1) { box(g, { x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.max(0.25, Math.abs(x1 - x0)), h: Math.max(0.25, Math.abs(y1 - y0)), height: a(2), seed: pr.seed }, CONCRETE, { roof: CONCRETE[4], roofEdge: CONCRETE[5], windows: null, lift: fl, noShadow: true }); };
@@ -720,16 +720,17 @@
               edgeLine(g, FP(cx3 + Math.cos(bk / N3 * 6.283) * r3, cy3 + Math.sin(bk / N3 * 6.283) * r3, bandZ), FP(cx3 + Math.cos((bk + 1) / N3 * 6.283) * r3, cy3 + Math.sin((bk + 1) / N3 * 6.283) * r3, bandZ), '#b8402e', 3);
             }
             poly(g, pts1, '#d8dcde');
-            edgeLine(g, FP(cx3 - r3 * 0.7, cy3 - r3 * 0.7, H3), FP(cx3 + r3 * 0.7, cy3 + r3 * 0.7, H3), 'rgba(120,124,128,.5)', 1);
             var vt = FP(cx3, cy3, H3); rect(g, vt[0] - 2, vt[1] - 6, 4, 6, '#6a7074');
             if (label) { var lq = FP(cx3 + r3 * 0.72, cy3 + r3 * 0.72, H3 * 0.62); rect(g, lq[0] - 7, lq[1] - 3, 14, 6, '#262626'); rect(g, lq[0] - 6, lq[1] - 2, 12, 4, '#e2b43a'); }
           };
-          var big = Math.min(fh / 2 - 0.5, fw / 4.6);
-          // the pipe rack between them, then the tanks back to front
-          edgeLine(g, FP(fx + 0.8, fy + fh / 2, a(6)), FP(fx + fw - 0.8, fy + fh / 2, a(6)), '#5d666c', 3);
-          drum(fx + fw - big - 0.6, fy + big + 0.5, big, pr.height, true);
-          drum(fx + big + 0.6, fy + fh / 2, big, pr.height, true);
-          drum(fx + fw - big * 0.6 - 0.7, fy + fh - big * 0.6 - 0.5, big * 0.6, pr.height * 0.7, false);
+          // two tanks side by side along the farm's length, clear of each other and of the bund, the pipe rack between
+          var lng = fw >= fh, span2 = lng ? fw : fh, deep2 = lng ? fh : fw, big = Math.min(deep2 / 2 - 0.45, span2 / 4 - 0.3);
+          var tc = function (u) { return lng ? [fx + u, fy + fh / 2] : [fx + fw / 2, fy + u]; };
+          var ta = tc(span2 * 0.27), tb = tc(span2 * 0.73);
+          edgeLine(g, FP(ta[0], ta[1], a(5)), FP(tb[0], tb[1], a(5)), '#5d666c', 4);
+          edgeLine(g, FP(ta[0], ta[1], a(5.6)), FP(tb[0], tb[1], a(5.6)), '#8a949a', 1);
+          drum(ta[0], ta[1], big, pr.height, true);
+          drum(tb[0], tb[1], big, pr.height, true);
           bund(fx, fy + fh - 0.25, fx + fw, fy + fh); bund(fx + fw - 0.25, fy, fx + fw, fy + fh);
           break;
         }
