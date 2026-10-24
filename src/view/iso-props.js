@@ -57,8 +57,11 @@
         var SW = 0, SH = 0;
         terrain.forEach(function (q) { SW = Math.max(SW, q.x + q.w); SH = Math.max(SH, q.y + q.h); });
         var voidAt = function (x, y) { return space.some(function (q) { return x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h; }); };
-        var aw = SW * 0.26, ah = SH * 0.2;
-        [[1, 1, 1, 1], [SW - 1 - aw, 1, -1, 1], [1, SH - 1 - ah, 1, -1], [SW - 1 - aw, SH - 1 - ah, -1, -1]].forEach(function (c, ci) {
+        /* (the arrays are drawn raised, so they stand a little up the screen
+           from their footprint: the north pair come in from the far edge to
+           sit against their module, the south pair out to the near one) */
+        var aw = SW * 0.22, ah = SH * 0.17, ax = SW * 0.06, an = SH * 0.06, as = SH * 0.01;
+        [[ax, an, 1, 1], [SW - ax - aw, an, -1, 1], [ax, SH - as - ah, 1, -1], [SW - ax - aw, SH - as - ah, -1, -1]].forEach(function (c, ci) {
           var r = { x: c[0], y: c[1], w: aw, h: ah }, clear = true;
           for (var sx = 0; sx <= 6 && clear; sx++) for (var sy = 0; sy <= 4 && clear; sy++) clear = voidAt(r.x + r.w * sx / 6, r.y + r.h * sy / 4);
           if (!clear) return;
@@ -69,7 +72,13 @@
             for (var d = 0; d < 40; d += 0.25) {
               var px = x + dx * d, py = y + dy * d;
               if (px < 0 || py < 0 || px > SW || py > SH) return null;
-              if (!voidAt(px, py)) return { x: px, y: py, d: d };
+              if (!voidAt(px, py)) {
+                // the hull's edge exactly: the side of the stretch of open space last crossed
+                var lx = px - dx * 0.25, ly = py - dy * 0.25, last = space.filter(function (q) { return lx >= q.x && lx <= q.x + q.w && ly >= q.y && ly <= q.y + q.h; })[0];
+                if (last && dx) px = dx > 0 ? last.x + last.w : last.x;
+                if (last && dy) py = dy > 0 ? last.y + last.h : last.y;
+                return { x: px, y: py, d: d };
+              }
             }
             return null;
           }
@@ -79,6 +88,16 @@
           var boom = alongX ? { x0: ex, y0: r.y + r.h / 2, x1: alongX.x, y1: alongX.y, axis: 'x' }
             : alongY ? { x0: r.x + r.w / 2, y0: ey, x1: alongY.x, y1: alongY.y, axis: 'y' } : null;
           props.push({ kind: 'solar', x: r.x, y: r.y, w: r.w, h: r.h, toward: { x: c[2], y: c[3] }, boom: boom, seed: 4111 + ci });
+          /* its mount, outside against the hull where the boom meets it: clear of
+             the wall, which stands half its thickness out into the open space,
+             and the boom stopped at the mount */
+          if (boom) {
+            var bdx = Math.sign(boom.x1 - boom.x0), bdy = Math.sign(boom.y1 - boom.y0), off = 0.25;
+            var mtx = bdx ? (bdx > 0 ? boom.x1 - off - 1 : boom.x1 + off) : boom.x1 - 0.5, mty = bdy ? (bdy > 0 ? boom.y1 - off - 1 : boom.y1 + off) : boom.y1 - 0.5;
+            if (bdx) boom.x1 = bdx > 0 ? mtx : mtx + 1;
+            if (bdy) boom.y1 = bdy > 0 ? mty : mty + 1;
+            props.push({ kind: 'solarmount', x: mtx, y: mty, w: 1, h: 1, seed: 4211 + ci });
+          }
         });
       }
       /* The stretches of a bulkhead's sides that face a floor, not more plating
@@ -715,7 +734,7 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */

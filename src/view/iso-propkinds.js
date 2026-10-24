@@ -696,10 +696,18 @@
             // the rotary joint where the boom leaves the array
             var rj2 = SO(bm.x0, bm.y0);
             ellipse(g, rj2[0], rj2[1], a(2.2), a(1.6), '#5a646c'); ellipse(g, rj2[0], rj2[1] - 1, a(1.4), a(1), '#a8b4bc');
-            // its mount on the hull, a beacon on top
-            box(g, { x: bm.x1 - 0.5, y: bm.y1 - 0.5, w: 1, h: 1, height: Math.round(sz * 0.7), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: sl3 + sz * 0.5, noShadow: true });
-            var mt = SO(bm.x1, bm.y1, sz * 1.25); dot(g, mt[0] - 1, mt[1] - 1, '#ff4a3a', 3);
           }
+          break;
+        }
+        /* A solar array's mount (iso-props sets it outside the hull where the
+           array's boom meets it): a plated block standing off the wall at the
+           height of the boom, a beacon on top. A piece of its own, so it is
+           drawn in front of the wall it stands against, and behind one in front of it. */
+        case 'solarmount': {
+          var smz = a(9), sml = lift || 0;
+          box(g, { x: pr.x, y: pr.y, w: pr.w, h: pr.h, height: Math.round(smz * 0.7), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: sml + smz * 0.5, noShadow: true });
+          var smt = toScreen(pr.x + pr.w / 2, pr.y + pr.h / 2);
+          dot(g, smt.x - 1, smt.y - sml - smz * 1.25 - 1, '#ff4a3a', 3);
           break;
         }
         case 'sacks': {
