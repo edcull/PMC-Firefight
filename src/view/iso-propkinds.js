@@ -667,7 +667,8 @@
            where the boom leaves it, and two wings of cells either side of the
            spine, deep blue in a pale frame, lit along their near edges. */
         case 'solar': {
-          var sz = a(9), sl3 = lift || 0, bm = pr.boom, vert = !!(bm && bm.axis === 'y');
+          // (the array, its spine and boom stand a little off the ground, at the height of the lower half of the boom's mount)
+          var sz = a(2), sl3 = lift || 0, bm = pr.boom, vert = !!(bm && bm.axis === 'y');
           function SO(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sl3 - (z == null ? sz : z)]; }
           // the array in its own frame: u along its spine (the boom's way), v across it
           var u0 = vert ? pr.y : pr.x, u1 = vert ? pr.y + pr.h : pr.x + pr.w, v0 = vert ? pr.x : pr.y, v1 = vert ? pr.x + pr.w : pr.y + pr.h, vm = (v0 + v1) / 2;
@@ -702,7 +703,7 @@
         }
         /* A solar array's mount and its boom (iso-props sets the mount outside
            the hull where the boom meets it): a plated block standing against
-           the wall's face from the foot of the hull to just over the boom, a
+           the wall's face, a single storey with the boom run into its lower half, a
            beacon on top, and the boom's truss run in to it from the array. A
            piece of its own, sorted with the walls: the boom stands out from
            the hull at the array's height, in front of the wall it meets. Where
@@ -710,12 +711,12 @@
            boom up to its face; at its far face, the boom in to its middle and
            the block over it. */
         case 'solarmount': {
-          var smz = a(9), sml = lift || 0, mb = pr.box, bmm = pr.boom;
+          var smz = a(2), smh = a(5.4), sml = lift || 0, mb = pr.box, bmm = pr.boom;
           function SM(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sml - (z == null ? smz : z)]; }
           function block() {
-            box(g, { x: mb.x, y: mb.y, w: mb.w, h: mb.h, height: Math.round(smz * 1.2), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: sml, noShadow: true });
+            box(g, { x: mb.x, y: mb.y, w: mb.w, h: mb.h, height: Math.round(smh), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: sml, noShadow: true });
             var smt = toScreen(mb.x + mb.w / 2, mb.y + mb.h / 2);
-            dot(g, smt.x - 1, smt.y - sml - smz * 1.25 - 1, '#ff4a3a', 3);
+            dot(g, smt.x - 1, smt.y - sml - smh - a(0.6) - 1, '#ff4a3a', 3);
           }
           var acrossX = bmm.x1 !== bmm.x0, near = acrossX ? bmm.x1 < bmm.x0 : bmm.y1 < bmm.y0;
           var face = acrossX ? [mb.x + mb.w, bmm.y1] : [bmm.x1, mb.y + mb.h], mid = acrossX ? [mb.x + mb.w / 2, bmm.y1] : [bmm.x1, mb.y + mb.h / 2];
