@@ -325,7 +325,10 @@
     var fitPiece = function (p) {
       var q = JSON.parse(JSON.stringify(p));
       if (east) q.x = 48 - q.x - q.w;
-      q.x *= sx; q.w *= sx; q.y *= sy; q.h *= sy; return q;
+      q.x *= sx; q.w *= sx; q.y *= sy; q.h *= sy;
+      // a piece laid by its own outline (a river) is turned and stretched with it
+      if (q.poly) q.poly = q.poly.map(function (c) { return [(east ? 48 - c[0] : c[0]) * sx, c[1] * sy]; });
+      return q;
     };
     var terrainPlan = map && !compound ? map.pieces.map(fitPiece) : null;
     // a compound mission's own layout, where its map lays one by hand (on a table it fits; the generator's otherwise)

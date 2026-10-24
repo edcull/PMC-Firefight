@@ -23,6 +23,12 @@
   // a paved road (a settlement's, not a dirt track)
   // cargo stacked on concrete: a crater field by the rules, rows of crates with walkways between to look at
   function CG(x, y, w, h) { return { kind: 'crater', x: x, y: y, w: w, h: h, cargo: 'apron' }; }
+  // a piece laid by its own outline, run off the table and kept as laid (a river): its box about the outline
+  function SHAPE(kind, pts) {
+    var xs = pts.map(function (q) { return q[0]; }), ys = pts.map(function (q) { return q[1]; });
+    var x0 = Math.min.apply(null, xs), y0 = Math.min.apply(null, ys);
+    return { kind: kind, x: x0, y: y0, w: Math.max.apply(null, xs) - x0, h: Math.max.apply(null, ys) - y0, poly: pts, fixed: true };
+  }
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
 
   root.PMCStoryMaps['dead-reckoning'] = {
@@ -130,25 +136,30 @@
       }
     },
 
-    /* A mud bank on Tessaly IV, a mile from the beacon: Brass Ledger's ship down
-       in the reeds with its ramp down and its cargo out at the foot of it, the
-       Reavers' boats pulled up out of the shallows, the lit tent where the sale
-       is haggled over, and the three places the log could be as the sale is
-       made (Find and secure, the relic): each its own piece (`skin`). */
+    /* A mud bank on Tessaly IV, a mile from the beacon, where a deep river
+       cuts across the north-east corner of the table with a broad band of
+       shallows along its bank: Brass Ledger's ship down in the reeds with its
+       ramp down and its cargo out at the foot of it, the Reavers' hover-skiffs
+       run in to the edge of the shallows, the lit tent where the sale is
+       haggled over, and the three places the log could be as the sale is made
+       (Find and secure, the relic): each its own piece (`skin`). The river and
+       its shallows are laid by their outlines (`poly`) and `fixed`: they run on
+       off the edges of the table. */
     mudbank: {
       name: 'The mud bank, Tessaly IV', planet: 'jungle',
       pieces: [
-        // Brass Ledger's ship, down in the reeds, and the shallows behind and beside it
-        R('shuttle', 10.5, 4, 10, 8), N('water', 11, 0.6, 9, 2.9, 'long'), N('water', 6.5, 5, 3.5, 6, 'kidney'),
-        N('woods', 4.5, 13, 5, 6, 'lobed'), N('woods', 35, 4, 6, 6, 'blob'), N('woods', 6, 37, 6, 7, 'lobed'), N('woods', 35, 38, 6, 6, 'blob'),
-        N('water', 26, 6, 6, 4, 'kidney'), N('deep', 8, 24, 5, 4, 'long'), R('ruins', 39, 30, 4, 4), B(27, 38, 6, 4, 'block'),
-        // the shallows the Reavers' boats came in by
-        N('water', 34, 17.5, 4.5, 7, 'lobed'), N('deep', 39, 16, 4, 9, 'long')
+        // the river: its shallows, and the deep channel down the middle of them
+        SHAPE('water', [[14.6, -15.8], [23.5, -11.2], [32.4, -6.5], [41.2, -1.9], [50.1, 2.7], [58.9, 7.4], [66, 11.1], [57.9, 26.6], [50.6, 23.3], [42.1, 17.9], [32.7, 14.3], [24.5, 8.5], [15.1, 4.8], [6.5, -0.3]]),
+        SHAPE('deep', [[12, -10.9], [20.7, -5.8], [29.8, -1.6], [38.4, 3.5], [47.5, 7.7], [56.1, 12.8], [63.4, 16], [60.6, 21.4], [53.2, 18.4], [44.6, 13.1], [35.5, 9.1], [26.9, 3.8], [17.7, -0.2], [9.2, -5.5]]),
+        // Brass Ledger's ship, down in the reeds on the bank
+        R('shuttle', 10.5, 11, 10, 8), N('water', 6, 12, 3.5, 6, 'kidney'),
+        N('woods', 4.5, 21, 5, 6, 'lobed'), N('woods', 6, 37, 6, 7, 'lobed'), N('woods', 35, 38, 6, 6, 'blob'), N('woods', 38, 23, 5, 6, 'blob'),
+        N('deep', 8, 30, 5, 4, 'long'), R('ruins', 39, 31, 4, 4), B(27, 38, 6, 4, 'block')
       ],
       sites: { kind: 'searchsite', at: [
-        { x: 17, y: 16, name: 'Kettering’s ship', skin: 'cargo' },
-        { x: 31, y: 21, name: 'The Reavers’ boats', skin: 'boats' },
-        { x: 21, y: 31, name: 'The tent where they haggle', skin: 'tent' }
+        { x: 17, y: 23, name: 'Kettering’s ship', skin: 'cargo' },
+        { x: 26.6, y: 15.2, name: 'The Reavers’ boats', skin: 'boats' },
+        { x: 22, y: 35, name: 'The tent where they haggle', skin: 'tent' }
       ] }
     },
 

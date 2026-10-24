@@ -734,6 +734,14 @@
         if (!onTarget) props.push({ kind: 'beacon', x: o.x, y: o.y, index: i, lz: !!o.lz, relic: !!o.relic, carried: !!o.carried });
       });
       // what lies flat on the floor goes down before anything stands on it
+      /* What a piece strews round it stays on the table: a river laid on past its
+         edge (a map's `fixed` piece) has its reeds and stones only where the
+         table is. (A station's solar arrays stand out in the dark, and are kept.) */
+      var TW = B.W || 48, TH = B.H || 48;
+      props = props.filter(function (p) {
+        if (p.kind === 'solar' || p.kind === 'solarmount') return true;
+        return p.x >= 0 && p.y >= 0 && p.x <= TW && p.y <= TH;
+      });
       var FLAT = { deckgrate: 1, cable: 1, litter: 1, padmark: 1, hose: 1, solar: 1 };
       props.forEach(function (p) {
         // the search-site hatch draws over its own scatter, so it stays readable; an objective's flag over the hatch it stands in

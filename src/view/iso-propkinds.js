@@ -1602,7 +1602,7 @@
             break;
           }
           /* A private sale's possible locations (the mud bank): the Reavers'
-             boats pulled up out of the shallows, and the tent where the sale is
+             skiffs run in out of the river, and the tent where the sale is
              haggled over. Struck through when ruled out; where the log is, the
              case on the table, or a lamp in the boats, burns bright. */
           if (pr.skin === 'boats' || pr.skin === 'tent') {
@@ -1610,36 +1610,50 @@
             function TQ(dx, dy, z) { var q = toScreen(pr.x + dx, pr.y + dy); return [q.x, q.y - tl3 - (z || 0)]; }
             function ripple(dx, dy, r) { var q = TQ(dx, dy, 0); ellipseRing(g, q[0], q[1], a(r * 4), a(r * 2), 'rgba(220,240,245,.28)'); }
             if (pr.skin === 'boats') {
-              /* Two flat-bottomed skiffs, bows up the bank to the west, sterns in
-                 the water with their outboards tipped up; red Reaver paint down
-                 their sides, and gear in their bellies. */
-              shallowPool(g, pr.x + 1.5, pr.y, 2.3, tl3, pr.seed);
-              [[-0.9, 0.05, '#7a2e22'], [0.85, 0.1, '#5a5a3a']].forEach(function (bt, bi) {
-                var by = bt[0], ang = bt[1], L = 3.4, Wd = 0.62;
+              /* Two Reaver hover-skiffs, run in from the river: angular alloy
+                 hulls riding a hand's breadth over the water on their repulsor
+                 fields, bows up the bank to the west, a windscreen forward, twin
+                 thrusters glowing at the stern, red chevrons on their decks, a
+                 pintle gun on one. */
+              // their sterns in the water, the pool run out towards the river they came in by (north-east)
+              shallowPool(g, pr.x + 2.2, pr.y - 1.6, 2.4, tl3, pr.seed + 1);
+              shallowPool(g, pr.x + 1.3, pr.y - 0.3, 2.2, tl3, pr.seed);
+              [[-0.9, 0.05, 0], [0.85, 0.1, 1]].forEach(function (bt) {
+                var by = bt[0], ang = bt[1], L = 3.4, Wd = 0.62, hz = a(1.6), dk = hz + a(1.7);
                 function BQ(u, v, z) { var cx = u * Math.cos(ang) - v * Math.sin(ang), cy = u * Math.sin(ang) + v * Math.cos(ang); return TQ(cx, by + cy, z); }
-                // the hull: a flat stern to the east, the bow drawn to a point to the west
-                var hb = a(0.4), ht = a(2.6);
-                var lo = [BQ(L / 2, -Wd, hb), BQ(L / 2, Wd, hb), BQ(-L / 2 + 0.6, Wd * 0.8, hb), BQ(-L / 2, 0, hb + a(0.6)), BQ(-L / 2 + 0.6, -Wd * 0.8, hb)];
-                var hi = [BQ(L / 2, -Wd, ht), BQ(L / 2, Wd, ht), BQ(-L / 2 + 0.6, Wd * 0.8, ht + a(0.3)), BQ(-L / 2 - 0.1, 0, ht + a(1)), BQ(-L / 2 + 0.6, -Wd * 0.8, ht + a(0.3))];
-                shadowBlob(g, { x: TQ(0, by)[0] + a(1), y: TQ(0, by)[1] + a(0.6) }, a(L * 4), a(1.6));
-                poly(g, [lo[1], lo[2], hi[2], hi[1]], bt[2]);                         // the near side
-                poly(g, [lo[2], lo[3], hi[3], hi[2]], bt[2]);
-                poly(g, [lo[0], lo[1], hi[1], hi[0]], '#3a2a20');                     // the transom
-                poly(g, hi, '#5a4632');                                               // the bilge, seen from above: its boards
-                for (var fb = -1; fb <= 1; fb++) edgeLine(g, BQ(L / 2 - 0.1, fb * Wd * 0.45, ht), BQ(-L / 2 + 0.7, fb * Wd * 0.4, ht), '#3e3024', 1);
-                edgeLine(g, hi[1], hi[2], '#d8c8a0', 1); edgeLine(g, hi[2], hi[3], '#d8c8a0', 1);
-                edgeLine(g, BQ(L / 2 - 0.2, Wd, a(1.5)), BQ(-L / 2 + 0.8, Wd * 0.8, a(1.7)), bi ? '#c84a2e' : '#e0b440', 2);
-                // a thwart, a jerrycan and a coil of rope in the bilge
-                edgeLine(g, BQ(0.2, -Wd * 0.9, ht), BQ(0.2, Wd * 0.9, ht), '#5a4632', 3);
-                var jc = BQ(-0.5, 0.15, ht); rect(g, jc[0] - 2, jc[1] - 4, 5, 4, '#8a3a1c');
-                var rp = BQ(0.9, -0.2, ht); ellipseRing(g, rp[0], rp[1], a(1.2), a(0.6), '#b8a070');
-                // the outboard, tipped up on the transom
-                var ob = BQ(L / 2 + 0.15, 0, ht);
-                rect(g, ob[0] - 3, ob[1] - 7, 7, 7, '#1c1e20'); rect(g, ob[0] - 2, ob[1] - 6, 5, 2, '#c84a2e');
-                edgeLine(g, [ob[0] + 1, ob[1]], [ob[0] + a(1.6), ob[1] + a(1.8)], '#2a2c2e', 2);
-                ripple(L / 2, by, 0.6);
+                // the repulsor field on the water under it
+                var fc = BQ(0, 0, 0);
+                ellipse(g, fc[0], fc[1], a(L * 2.1), a(1.5), 'rgba(110,210,255,.22)');
+                ellipse(g, fc[0], fc[1], a(L * 1.4), a(0.9), 'rgba(170,235,255,.3)');
+                ripple(-0.6, by, 0.7); ripple(0.8, by, 0.7);
+                // the hull: a flat transom east, flaring sides, a sharp bow west; and its deck, drawn in a little
+                var lo = [BQ(L / 2, -Wd, hz), BQ(L / 2, Wd, hz), BQ(-L / 6, Wd, hz), BQ(-L / 2, 0, hz + a(0.4)), BQ(-L / 6, -Wd, hz)];
+                var hi = [BQ(L / 2, -Wd * 0.85, dk), BQ(L / 2, Wd * 0.85, dk), BQ(-L / 6, Wd * 0.85, dk), BQ(-L / 2 + 0.15, 0, dk), BQ(-L / 6, -Wd * 0.85, dk)];
+                poly(g, [lo[1], lo[2], hi[2], hi[1]], '#5c646c');                  // the near side, aft
+                poly(g, [lo[2], lo[3], hi[3], hi[2]], '#4c535a');                  // and forward
+                poly(g, [lo[0], lo[1], hi[1], hi[0]], '#353a40');                  // the transom
+                poly(g, hi, '#8c959e');                                           // the deck
+                edgeLine(g, hi[1], hi[2], '#c8d0d6', 1); edgeLine(g, hi[2], hi[3], '#c8d0d6', 1);
+                edgeLine(g, BQ(L / 2, Wd, hz + a(0.8)), BQ(-L / 6, Wd, hz + a(0.8)), '#c84a2e', 2);   // the Reaver red down its side
+                // panel seams, and a red chevron on the foredeck
+                edgeLine(g, BQ(0.6, -Wd * 0.8, dk), BQ(0.6, Wd * 0.8, dk), '#6a737c', 1);
+                poly(g, [BQ(-0.6, -0.35, dk), BQ(-0.3, 0, dk), BQ(-0.6, 0.35, dk), BQ(-0.85, 0.35, dk), BQ(-0.55, 0, dk), BQ(-0.85, -0.35, dk)], '#c84a2e');
+                // the windscreen, raked back over the cockpit
+                poly(g, [BQ(-0.15, -Wd * 0.7, dk), BQ(-0.15, Wd * 0.7, dk), BQ(0.25, Wd * 0.6, dk + a(1.1)), BQ(0.25, -Wd * 0.6, dk + a(1.1))], '#16303e');
+                edgeLine(g, BQ(-0.15, Wd * 0.5, dk + a(0.2)), BQ(0.2, Wd * 0.4, dk + a(1)), 'rgba(170,230,255,.6)', 1);
+                // the twin thrusters on the transom, glowing
+                [-0.3, 0.3].forEach(function (o) {
+                  var th = BQ(L / 2 + 0.05, o, hz + a(0.9));
+                  ellipse(g, th[0], th[1], a(1.2), a(1.2), '#1c1f22'); ellipse(g, th[0], th[1], a(0.8), a(0.8), 'rgba(255,150,70,.85)'); ellipse(g, th[0], th[1], a(0.35), a(0.35), '#ffe0a0');
+                });
+                // a pintle gun on the second skiff's afterdeck
+                if (bt[2]) {
+                  var gm = BQ(1.1, 0, dk), gt = BQ(1.1, 0, dk + a(2.4));
+                  edgeLine(g, gm, gt, '#2a2e32', 2);
+                  edgeLine(g, gt, BQ(0.4, 0.1, dk + a(2.6)), '#1c1f22', 3);
+                }
               });
-              if (pr.found) { var lm = TQ(0.85, 0.1, a(3.4)); ellipse(g, lm[0], lm[1], a(2.4), a(1.6), 'rgba(255,214,140,.5)'); dot(g, lm[0] - 2, lm[1] - 2, '#fff2c8', 4); }
+              if (pr.found) { var lm = TQ(0.85, 0.1, a(4.4)); ellipse(g, lm[0], lm[1], a(2.4), a(1.6), 'rgba(255,214,140,.5)'); dot(g, lm[0] - 2, lm[1] - 2, '#fff2c8', 4); }
             } else {
               /* The sale tent: four poles, a pitched canvas roof, its sides rolled
                  up; a lamp hung from the ridge throwing a pool of light; under it
