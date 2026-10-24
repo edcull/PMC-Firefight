@@ -303,6 +303,15 @@
         textReads(n.text, at, ch.id);
       });
     });
+    // what is said in its battles, by the battle and by the enemy side (story.js talkFor): its `if`s read flags too
+    var said = def.talk || {};
+    [['battle', said.battles], ['side', said.sides]].forEach(function (grp) {
+      Object.keys(grp[1] || {}).forEach(function (k) {
+        Object.keys(grp[1][k] || {}).forEach(function (m) {
+          arr(grp[1][k][m]).forEach(function (l, i) { if (l && l.if) readCond(l.if, grp[0] + ' talk ' + k + '/' + m + i, 'text', null); });
+        });
+      });
+    });
 
     function textReads(text, at, chapter) {
       String(text || '').replace(/\{if (?:not )?([a-z0-9_]+)\}/g, function (m, f) {

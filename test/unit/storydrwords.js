@@ -86,7 +86,7 @@ Object.keys(TALK.sides).forEach((id) => Object.keys(TALK.sides[id]).forEach((m) 
 ok('everyone who speaks is one of the story’s people, with a face', said.every((x) => people[x.who] && people[x.who].face), said.filter((x) => !people[x.who]).map((x) => x.at + ':' + x.who).join(', '));
 ok('every conversation opens a page the story has', Object.keys(TALK.conversations).every((id) => dr._nodes[id] && dr._nodes[id].talk));
 ok('every chapter of the first half opens on one', chapters.every((c) => c.nodes[0].talk && c.nodes[0].talk.length >= 3), chapters.filter((c) => !c.nodes[0].talk).map((c) => c.id).join(', '));
-const MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard', 'contact'];
+const MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard', 'contact', 'vipdown', 'vipfled'];
 ok('every battle line is said at a moment the battle has', said.every((x) => !/\//.test(x.at) || MOMENTS.indexOf(x.at.split('/').pop()) >= 0 || TALK.conversations[x.at]));
 ok('...every battle of the first half has its own, and every enemy side its own', battles.every((n) => TALK.battles[n.id]) &&
   battles.every((n) => TALK.sides[n.enemy.side]), battles.filter((n) => !TALK.battles[n.id] || !TALK.sides[n.enemy.side]).map((n) => n.id).join(', '));

@@ -94,7 +94,7 @@
         { if: { flag: 'kestrel_filmed' }, readiness: 1 },          // they have seen how the company fights
         { if: { meter: 'lead', lte: -3 }, readiness: 1 },          // dug in before the company got there
         { if: { flag: 'beat_' + id }, readiness: 1 }               // beaten once, and waiting for the company since (a grudge)
-      ]
+      ].concat(id === 'kettle' ? [{ if: { flag: 'agent_shot' }, readiness: 1 }] : [])   // their man shot with his hands tied: they come for the company
     }, extra);
   }
   // a Xenotripod tribe: its archetype's force, scaled by Alarm
@@ -216,7 +216,7 @@
       { if: { meter: 'understanding', gte: 4 }, add: 1, side: 'shkar' }
     ],
     flagText: {
-      kettle_contact: 'Brass Ledger will deal with you.', kettle_burned: 'Brass Ledger won’t forget the port police.',
+      kettle_contact: 'Brass Ledger will deal with you.', kettle_burned: 'Brass Ledger won’t forget what you did to their man.',
       wraith_robbed: 'Wraith Section wants its copy of the log back.', thule_records: 'You heard Morrow’s own voice.',
       beacon_rubbing: 'The beacon answered your signal.', relics_returned: 'You gave back what was taken from the beacon.',
       warren_entered: 'You stepped through the gate at the beacon.', chart_sold: 'You sold a copy of the chart.',
@@ -403,8 +403,8 @@
         { id: 'c1r.debrief', type: 'debrief', text: '{if relic}The log is back.{/if}{if not relic}Brass Ledger lift off with the log.{/if}', events: [], next: 'c1.interlude' },
         { id: 'c1.agent', type: 'event', who: 'kettering', title: 'The agent', text: 'Brass Ledger’s man is in the company’s hands.', options: [
           { id: 'message', text: 'Let him go, with a message for his employer.', effects: [{ flag: 'kettle_contact' }, { meter: 'vane', add: -1 }] },
-          { id: 'pay', text: 'Pay him for what he knows.', cost: { kUC: 1 }, why: 'You can’t pay him.', effects: [{ meter: 'intel', add: 1 }, { flag: 'kettle_contact' }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank, behind three shell companies.' }] },
-          { id: 'police', text: 'Hand him to the port police.', effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: -1 }, { flag: 'kettle_burned' }] }
+          { id: 'interrogate', text: 'Interrogate him.', effects: [{ meter: 'intel', add: 1 }, { meter: 'kettle_trust', add: -1 }, { flag: 'kettle_contact' }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank, behind three shell companies.' }] },
+          { id: 'execute', text: 'Execute him.', extreme: true, effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: 1 }, { meter: 'kettle_trust', add: -3 }, { meter: 'loyalty', add: -1 }, { flag: 'kettle_burned' }, { flag: 'agent_shot' }] }
         ] },
         interlude('c1.interlude', 'c2', 'The company lifts off Vesk with the log, and Vane’s first heading.')
       ] },

@@ -127,6 +127,9 @@
     var CIV_C = { rebel: true, light: '#8a8a86', mid: '#6a6a66', dark: '#34342f', helm: '#55554f', cloth: '#7a4a3a' };
     var CIV_D = { rebel: true, light: '#8a5a58', mid: '#6a403e', dark: '#361f1e', helm: '#553432', cloth: '#5a6048' };
     var CIV_E = { rebel: true, light: '#7f8766', mid: '#61684a', dark: '#30341f', helm: '#4d543a', cloth: '#8a7a5a' };
+    // a civilian under escort (the Escort scenario's VIP): a dark town coat over a pale shirt, nobody's colours
+    var CIV_COAT = { rebel: true, light: '#5e6676', mid: '#434a58', dark: '#22262e', helm: '#3a3026', cloth: '#c8bfa6' };
+    var CIV_AIDE = { rebel: true, light: '#7a705e', mid: '#5a5242', dark: '#2e2a20', helm: '#2b2622', cloth: '#a8b0b8' };
     // holy warriors: long shirts in earth, grey-green and khaki, under dark waistcoats
     var HOLY_A = { rebel: true, light: '#a3927a', mid: '#80705a', dark: '#433a2c', helm: '#6a5c48', cloth: '#5a4c3a' };
     var HOLY_B = { rebel: true, light: '#8c9280', mid: '#6b7160', dark: '#363a2e', helm: '#565b4c', cloth: '#4a4a3c' };
@@ -210,6 +213,8 @@
       rebel: ['reblead', 'rebsaw', 'rebrifle', 'rebciv', 'rebmolotov', 'rebrifle', 'rebciv', 'rebrifle', 'rebciv', 'rebrifle'],
       // all ten different from their neighbours, the five kinds of clothes mixed through the ranks
       civilian: ['civ1', 'civ2', 'civ3', 'civ4', 'civ5', 'civ2', 'civ4', 'civ1', 'civ5', 'civ3'],
+      // a VIP under escort (the Escort scenario): a civilian, unarmed, with a data slate, and an aide carrying the bags
+      vip: ['vipciv', 'vipaide'],
       // the Space Bugs: one caste to a unit, as the book fields them
       bug_tiny: ['btiny'], bug_small: ['bsmall'], bug_attack: ['battack'], bug_oversized: ['boversized'],
       bug_under: ['bunder'], bug_hugeunder: ['bhugeunder'],
@@ -468,6 +473,8 @@
       civ3: { helm: 'bandana', gun: 'carbine', pack: 'none', armband: 'force', band: '#4a5560', tint: CIV_C },
       civ4: { helm: 'bare', gun: 'shotgun', pack: 'none', ragged: true, armband: 'force', tint: CIV_D },
       civ5: { helm: 'scarf', gun: 'huntingrifle', pack: 'none', armband: 'force', tint: CIV_E },
+      vipciv: { helm: 'bare', gun: 'slate', pack: 'none', tint: CIV_COAT },
+      vipaide: { helm: 'bare', gun: 'none', pack: 'none', tint: CIV_AIDE },
       civrider1: { mount: true, helm: 'bare', gun: 'huntingrifle', pack: 'none', ragged: true, armband: 'force', tint: CIV_A },
       civrider2: { mount: true, helm: 'cap', gun: 'pistol', pack: 'none', ragged: true, armband: 'force', tint: CIV_B },
       civrider3: { mount: true, helm: 'bandana', gun: 'carbine', pack: 'none', armband: 'force', band: '#4a5560', tint: CIV_C },

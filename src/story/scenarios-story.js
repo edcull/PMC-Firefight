@@ -305,6 +305,8 @@
       for (var k in base) p[k] = base[k];
       var who = (story(state).variant && story(state).variant.escort) || 'The VIP';
       p.key = 'escortvip'; p.code = 'VIP'; p.name = who; p.rules = []; p.command = false;
+      // a civilian, not an officer: drawn in a town coat with a slate, an aide at their side (iso-troops 'vip')
+      p.art = 'vip';
       return [{ profile: p, side: 'A', escort: true }];
     },
     entersTurn1: true,
@@ -329,7 +331,8 @@
       var vip = escortOf(state);
       if (!vip) return null;
       if (vip.extracted) { state.storyOutcome = Object.assign({}, state.storyOutcome || {}, { escort: 'through' }); return { winner: 'A', text: vip.name + ' is through.' }; }
-      if (!vip.alive) { state.storyOutcome = Object.assign({}, state.storyOutcome || {}, { escort: 'killed' }); return { winner: 'B', text: vip.name + ' is dead.', routed: ['A'] }; }
+      // brought down: hit, not killed (the story goes on with them), and what they carried is the enemy's
+      if (!vip.alive) { state.storyOutcome = Object.assign({}, state.storyOutcome || {}, { escort: 'down' }); return { winner: 'B', text: vip.name + ' is hit and down, and the enemy has what they carried.', routed: ['A'] }; }
       if (SC.routed(state, 'B')) return { winner: 'A', text: 'A routs the enemy, and ' + vip.name + ' walks on unhurt.', routed: ['B'] };
       if (SC.routed(state, 'A')) return { winner: 'B', text: 'B routs the escort: ' + vip.name + ' is left alone in the open.', routed: ['A'] };
       if (state.turn >= 10) return { winner: 'B', text: vip.name + ' is still on the table at the end of turn 10.', timeout: true };

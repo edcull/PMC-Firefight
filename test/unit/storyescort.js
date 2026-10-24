@@ -71,7 +71,7 @@ console.log('\nThrough, or not');
   const { st: s } = started();
   s.units.find((u) => u.escort).alive = false;
   const r = SC.SCENARIOS.escort.check(s);
-  ok('killed: B has the log', r && r.winner === 'B' && s.storyOutcome.escort === 'killed', r && r.text);
+  ok('brought down: hit, not killed, and B has the log', r && r.winner === 'B' && s.storyOutcome.escort === 'down' && /hit and down/.test(r.text), r && r.text);
 }
 {
   const { st: s } = started();

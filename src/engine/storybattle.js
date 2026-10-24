@@ -567,6 +567,9 @@
       if (on === 'bhalf' || on === 'ahalf') { var l = lostOf(on === 'bhalf' ? 'B' : 'A'); return l.n > 1 && l.lost * 2 >= l.n; }
       if (on === 'wave') return !!(state.sc && state.sc.waves && state.sc.waves.n);
       if (on === 'contact') return !!(state.sc && state.sc.contacts);
+      // an Escort's VIP: brought down, or broken and running
+      if (on === 'vipdown') return state.units.some(function (u) { return u.escort && !u.alive && !u.extracted; });
+      if (on === 'vipfled') return state.units.some(function (u) { return u.escort && u.alive && R.status(u) === 'broken'; });
       // (talks that broke down in the conversation said so there; this is for talks broken by a shot)
       if (on === 'parley') return !!(state.sc && state.sc.parley && state.sc.parley.broken && state.sc.parley.by !== 'talks');
       // Find and secure: a location searched and empty, and the one that holds the objective (`guard` its holders' answer)
