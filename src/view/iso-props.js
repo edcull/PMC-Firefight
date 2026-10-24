@@ -632,6 +632,22 @@
               reinforced: !!r.reinforced, shed: !!r.shed, seed: (wr() * 9999) | 0
             });
           }
+          /* A warehouse wall that ends at an opening (a story map's `opening`): a
+             hangar's sliding leaves run back along it, or a doorway's jamb; the
+             header across the opening, or the wall carried over the doorway,
+             from the wall on its near side (`end` +1), so it goes down once. */
+          if (r.shed && r.opening) {
+            var oe = r.end > 0 ? (whz ? r.x + r.w : r.y + r.h) : (whz ? r.x : r.y), ol = whz ? r.y + r.h / 2 : r.x + r.w / 2;
+            var oat = function (t) { return whz ? { x: oe + t, y: ol } : { x: ol, y: oe + t }; };
+            if (r.opening === 'slide') {
+              var lq = oat(-r.end * (r.gap / 4 + 0.15));
+              props.push({ kind: 'hangarleaves', x: lq.x, y: lq.y, horiz: whz, dir: r.end, len: r.gap / 2, height: wh3, seed: (wr() * 9999) | 0 });
+            }
+            if (r.end > 0) {
+              var mq = oat(r.gap / 2);
+              props.push({ kind: 'shedopening', style: r.opening, x: mq.x, y: mq.y, horiz: whz, gap: r.gap, height: wh3, seed: (wr() * 9999) | 0 });
+            }
+          }
           return;
         }
         /* A compound (Close Encounters): the solid between the floors as blocks

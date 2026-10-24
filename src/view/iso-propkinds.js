@@ -1323,6 +1323,79 @@
           }
           break;
         }
+        /* A hangar's sliding doors, run back along the wall beside the opening
+           on its near face: two corrugated leaves, one proud of the other, hung
+           from a track, hazard-striped along their leading edges. */
+        case 'hangarleaves': {
+          var hl = lift || 0, hux = pr.horiz ? 1 : 0, huy = 1 - hux, HL = pr.len, HH = pr.height * 0.94, hd = pr.dir;
+          var HQ = function (t, v, z) { var q = toScreen(pr.x + hux * t + huy * v, pr.y + huy * t + hux * v); return [q.x, q.y - hl - z]; };
+          var LEAF = ['#2a2620', '#4a3f30', '#6b5a40', '#87714f', '#a08a64', '#c2ad86'];
+          [[0.62, 0.15], [0.42, -0.15]].forEach(function (lv2, li) {
+            var v0 = lv2[0], v1 = v0 + 0.1, t0 = -HL / 2 + lv2[1] * hd, t1 = HL / 2 + lv2[1] * hd;
+            poly(g, [HQ(t0, v1, 0), HQ(t1, v1, 0), HQ(t1, v1, HH), HQ(t0, v1, HH)], pr.horiz ? LEAF[3] : LEAF[2]);
+            poly(g, [HQ(t0, v0, HH), HQ(t1, v0, HH), HQ(t1, v1, HH), HQ(t0, v1, HH)], LEAF[4]);
+            var nrb = Math.max(4, Math.round(HL / 0.25));
+            for (var hr = 1; hr < nrb; hr++) {
+              var htt = t0 + (t1 - t0) * hr / nrb;
+              edgeLine(g, HQ(htt, v1, 1), HQ(htt, v1, HH - 1), hr % 2 ? LEAF[4] : LEAF[1], 1);
+            }
+            // the leading edge, striped, and a grab handle
+            var te = hd > 0 ? t1 : t0, tin = te - hd * 0.18;
+            for (var hz2 = 0; hz2 < 8; hz2++) {
+              var za = HH * hz2 / 8, zb = HH * (hz2 + 1) / 8;
+              poly(g, [HQ(tin, v1, za), HQ(te, v1, za), HQ(te, v1, zb), HQ(tin, v1, zb)], hz2 % 2 ? '#26241f' : '#d6a92c');
+            }
+            var hh3 = HQ(te - hd * 0.35, v1, HH * 0.45); rect(g, hh3[0] - 1, hh3[1] - 4, 2, 8, '#1c1c1c');
+            if (li === 0) edgeLine(g, HQ(t0, v1, HH * 0.5), HQ(t1, v1, HH * 0.5), 'rgba(30,24,18,.4)', 1);
+          });
+          break;
+        }
+        /* An opening in a warehouse wall. A hangar's: the header girder across
+           it at the wall's top, the leaves' track along it and the rails let into
+           the floor. A doorway's: steel jambs striped at the foot, the cladding
+           carried on over the door, a rolled shutter under it and a lamp. */
+        case 'shedopening': {
+          var sl2 = lift || 0, sux = pr.horiz ? 1 : 0, suy = 1 - sux, G2 = pr.gap, SH2 = pr.height;
+          var OQ = function (t, v, z) { var q = toScreen(pr.x + sux * t + suy * v, pr.y + suy * t + sux * v); return [q.x, q.y - sl2 - z]; };
+          var oslab = function (t0, t1, v0, v1, z0, z1, pal2) {
+            poly(g, [OQ(t0, v1, z0), OQ(t1, v1, z0), OQ(t1, v1, z1), OQ(t0, v1, z1)], pr.horiz ? pal2[3] : pal2[2]);
+            poly(g, [OQ(t1, v0, z0), OQ(t1, v1, z0), OQ(t1, v1, z1), OQ(t1, v0, z1)], pr.horiz ? pal2[2] : pal2[3]);
+            poly(g, [OQ(t0, v0, z1), OQ(t1, v0, z1), OQ(t1, v1, z1), OQ(t0, v1, z1)], pal2[4]);
+          };
+          if (pr.style === 'slide') {
+            // the rails in the floor across the opening
+            [0.47, 0.67].forEach(function (rv) { edgeLine(g, OQ(-G2 / 2 - G2 / 2, rv, 0), OQ(G2 / 2 + G2 / 2, rv, 0), 'rgba(20,20,20,.55)', 1); });
+            oslab(-G2 / 2 - 0.25, G2 / 2 + 0.25, -0.25, 0.3, SH2 - a(1.6), SH2 + a(0.8), BEAMPAL);
+            edgeLine(g, OQ(-G2 / 2 - 0.25, 0.3, SH2 - a(1.6)), OQ(G2 / 2 + 0.25, 0.3, SH2 - a(1.6)), BEAMPAL[5], 1);
+            // the track the leaves hang from, run on over them both ways
+            oslab(-G2, G2, 0.3, 0.75, SH2 * 0.94, SH2 * 0.94 + a(0.9), BEAMPAL);
+            for (var sb = 0; sb < 9; sb++) {
+              var sbt = -G2 / 2 + G2 * (sb + 0.5) / 9; var sq2 = OQ(sbt, 0.3, SH2 - a(0.4)); dot(g, sq2[0], sq2[1], '#d6a92c', 2);
+            }
+          } else {
+            var DH = SH2 * 0.6, JW = 0.2;
+            // the jambs
+            [[-G2 / 2, -G2 / 2 + JW], [G2 / 2 - JW, G2 / 2]].forEach(function (jt) {
+              oslab(jt[0], jt[1], -0.3, 0.3, 0, DH, BEAMPAL);
+              for (var js = 0; js < 4; js++) {
+                var jz0 = DH * 0.3 * js / 4, jz1 = DH * 0.3 * (js + 1) / 4;
+                poly(g, [OQ(jt[0], 0.3, jz0), OQ(jt[1], 0.3, jz0), OQ(jt[1], 0.3, jz1), OQ(jt[0], 0.3, jz1)], js % 2 ? '#26241f' : '#d6a92c');
+              }
+            });
+            // the wall carried over the door, ribbed like the rest
+            oslab(-G2 / 2, G2 / 2, -0.2, 0.2, DH, SH2, SHEDPAL);
+            var ndr = Math.max(4, Math.round(G2 / 0.2));
+            for (var dr2 = 1; dr2 < ndr; dr2++) {
+              var dtt = -G2 / 2 + G2 * dr2 / ndr;
+              edgeLine(g, OQ(dtt, 0.2, DH + 1), OQ(dtt, 0.2, SH2 - 1), dr2 % 2 ? SHEDPAL[4] : SHEDPAL[1], 1);
+            }
+            oslab(-G2 / 2 - 0.05, G2 / 2 + 0.05, -0.26, 0.26, SH2, SH2 + a(0.8), SHEDPAL);
+            // the shutter, rolled up under it, and the lamp over the door
+            oslab(-G2 / 2 + JW, G2 / 2 - JW, 0.2, 0.5, DH - a(1.4), DH, ['#1e2224', '#2e3438', '#40484e', '#566068', '#6e7a82', '#8e9aa2']);
+            var lmp = OQ(0, 0.25, DH + a(2.2)); rect(g, lmp[0] - 3, lmp[1] - 2, 6, 3, '#2a2a2a'); dot(g, lmp[0], lmp[1] + 1, '#ffd27a', 3);
+          }
+          break;
+        }
         case 'rubble': {
           var rr = rng(pr.seed), nch = 3 + (rr() * 4 | 0);
           for (var ch = 0; ch < nch; ch++) {

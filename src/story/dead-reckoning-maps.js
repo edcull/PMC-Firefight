@@ -33,7 +33,14 @@
   // poured concrete (a quay, a warehouse's floor): open ground, and what stands on it stands on it
   function SLAB(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, fixed: true }; }
   // a warehouse's steel-clad wall (a high wall), and its strongroom's (a reinforced one), laid as written
-  function SHED(x, y, w, h) { return { kind: 'wall', x: x, y: y, w: w, h: h, shed: true, fixed: true }; }
+  /* `opening`, where the wall ends at one: 'slide' (a hangar's sliding doors, run back
+     along the wall) or 'doorway' (a framed door with the wall carried over it); `end` which
+     end of the wall (+1 its far end, -1 its near one), `gap` how wide. Drawn only. */
+  function SHED(x, y, w, h, door, end, gap) {
+    var p = { kind: 'wall', x: x, y: y, w: w, h: h, shed: true, fixed: true };
+    if (door) { p.opening = door; p.end = end; p.gap = gap; }
+    return p;
+  }
   // a sandbagged position (a low wall), laid where the map puts it
   function BAGS(x, y, w, h) { return { kind: 'barricade', x: x, y: y, w: w, h: h, fixed: true }; }
   function VAULT(x, y, w, h) { return { kind: 'wall', x: x, y: y, w: w, h: h, reinforced: true, vault: true, fixed: true }; }
@@ -237,10 +244,11 @@
        with its quay and two gantry cranes, the broker's office and the sheds
        round a yard, cargo stacked either side, the reaction-mass tank farm in
        the south-east, and in the middle the warehouse itself. It is walked
-       into, not round: steel-clad walls (high walls) on a concrete floor, a
-       loading bay through the north and south walls and a side door east and
-       west, and at its heart the strongroom, reinforced walls with a door east
-       and west, round the objective Hostile takeover puts in the middle. Sable's
+       into, not round: steel-clad walls (high walls) on a concrete floor, big
+       sliding hangar doors standing open north and south, the road running
+       up to both from the quay and the south edge, a doorway east and west,
+       and at its heart the strongroom, reinforced walls with a door east and
+       west, round the objective Hostile takeover puts in the middle. Sable's
        sandbags are laid by the map (`fortified`), not by the scenario. */
     docks: {
       name: 'The broker’s warehouse, Kerrigan docks', planet: 'industrial',
@@ -249,17 +257,20 @@
       pieces: [
         SHAPE('deep', [[5, 0], [43, 0], [43, 3.5], [5, 3.5]]),
         SLAB(5, 3.5, 38, 3.5), R('crane', 11, 3.8, 3, 2.4), R('crane', 31, 3.8, 3, 2.4),
-        B(6, 9, 9, 6, 'L'), B(33, 9, 9, 6, 'block'), B(6, 35, 9, 7, 'U'), R('fueltanks', 33.5, 35, 9, 6),
-        CG(6, 20, 6, 7), CG(36.5, 20, 5.5, 7), R('ruins', 20, 38, 4, 5),
-        // the warehouse: its floor, then its walls, the loading bays (x 22 to 26) and side doors (y 22.5 to 25.5) left open
+        // (everything stands at least 3" off the warehouse, so a squad can go all the way round it)
+        B(5, 7.5, 8, 5, 'L'), B(35, 7.5, 8, 5, 'block'), B(5, 36, 9, 7, 'U'), R('fueltanks', 33.5, 36, 9, 6),
+        CG(5, 20, 6, 7), CG(37, 20, 5.5, 7), R('ruins', 15.5, 41, 4, 4),
+        // the road: off the quay to the north doors, and from the south edge of the table to the south ones
+        P(21, 7, 6, 9), P(21, 32, 6, 16),
+        // the warehouse: its floor, then its walls; sliding hangar doors north and south (x 20 to 28) and a doorway east and west (y 22.5 to 25.5)
         SLAB(14, 16, 20, 16),
-        SHED(14, 16, 8, 0.5), SHED(26, 16, 8, 0.5), SHED(14, 31.5, 8, 0.5), SHED(26, 31.5, 8, 0.5),
-        SHED(14, 16.5, 0.5, 6), SHED(14, 25.5, 0.5, 6), SHED(33.5, 16.5, 0.5, 6), SHED(33.5, 25.5, 0.5, 6),
+        SHED(14, 16, 6, 0.5, 'slide', 1, 8), SHED(28, 16, 6, 0.5, 'slide', -1, 8), SHED(14, 31.5, 6, 0.5, 'slide', 1, 8), SHED(28, 31.5, 6, 0.5, 'slide', -1, 8),
+        SHED(14, 16.5, 0.5, 6, 'doorway', 1, 3), SHED(14, 25.5, 0.5, 6, 'doorway', -1, 3), SHED(33.5, 16.5, 0.5, 6, 'doorway', 1, 3), SHED(33.5, 25.5, 0.5, 6, 'doorway', -1, 3),
         // the strongroom, the heading in it: a door east and west (y 22.5 to 25.5)
         VAULT(20.5, 20.5, 7, 0.5), VAULT(20.5, 27, 7, 0.5),
         VAULT(20.5, 21, 0.5, 1.5), VAULT(20.5, 25.5, 0.5, 1.5), VAULT(27, 21, 0.5, 1.5), VAULT(27, 25.5, 0.5, 1.5),
-        // Sable's sandbags: a line across the approach to each loading bay, and one inside each side door
-        BAGS(21, 12.5, 6, 1), BAGS(21, 34.5, 6, 1), BAGS(16.5, 21.5, 1, 5), BAGS(30.5, 21.5, 1, 5)
+        // Sable's sandbags: either side of the road before each hangar door, and inside each doorway
+        BAGS(16, 12, 4, 1), BAGS(28, 12, 4, 1), BAGS(16, 35.5, 4, 1), BAGS(28, 35.5, 4, 1), BAGS(16.5, 21.5, 1, 5), BAGS(30.5, 21.5, 1, 5)
       ]
     },
 

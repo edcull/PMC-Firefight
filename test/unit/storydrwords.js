@@ -260,17 +260,23 @@ ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field',
     if (to > c + 0.01) out.push(to - c);
     return out;
   };
-  ok('the docks: Sable’s warehouse in the middle, walked into — steel walls on a concrete floor, a loading bay north and south, a door east and west, each wide enough for a 2" base',
+  ok('the docks: Sable’s warehouse in the middle, walked into — steel walls on a concrete floor, sliding hangar doors north and south, a doorway east and west, each wide enough for a 2" base',
     !!floor && shed.length >= 8 && shed.every((p) => p.fixed && R.TERRAIN.wall.blocks) &&
     [gaps(shed, 'h', floor.y, floor.x, floor.x + floor.w), gaps(shed, 'h', floor.y + floor.h - 0.5, floor.x, floor.x + floor.w),
       gaps(shed, 'v', floor.x, floor.y + 0.5, floor.y + floor.h - 0.5), gaps(shed, 'v', floor.x + floor.w - 0.5, floor.y + 0.5, floor.y + floor.h - 0.5)].every((g) => g.length === 1 && g[0] >= 3) &&
+    // (the walls beside each opening say what it is, for the drawing: the hangar doors, the doorways)
+    shed.filter((p) => p.opening === 'slide' && p.gap === 8).length === 4 && shed.filter((p) => p.opening === 'doorway' && p.gap === 3).length === 4 &&
+    // and the road runs up to the hangar doors, off the quay and in from the south edge
+    ps.some((p) => p.kind === 'road' && p.paved && p.y + p.h === floor.y) && ps.some((p) => p.kind === 'road' && p.paved && p.y === floor.y + floor.h && p.y + p.h === 48) &&
     used('docks').every((n) => n.scenario === 'takeover'));
   ok('...the strongroom round the objective in the middle: reinforced walls, a door east and west, room inside to stand on it',
     vault.length >= 6 && vault.every((p) => p.reinforced && p.fixed) && vault.every((p) => !overlap(p, { x: 22, y: 22, w: 4, h: 4 })) &&
     gaps(vault, 'v', 20.5, 21, 27).length === 1 && gaps(vault, 'v', 27, 21, 27).length === 1 && gaps(vault, 'h', 20.5, 20.5, 27.5).length === 0 &&
     R.terrainName(null, 'wall', vault[0]) === 'Strongroom wall' && R.terrainName(null, 'wall', shed[0]) === 'Warehouse wall');
-  ok('...Sable’s position laid by the map: sandbags across the approaches to the loading bays and inside the side doors, and no sections laid at random besides',
-    MAPS.docks.fortified && ps.filter((p) => p.kind === 'barricade' && p.fixed).length === 4 && !ps.some((p) => p.kind === 'trench' || p.kind === 'wire' || p.kind === 'bunker'));
+  ok('...Sable’s position laid by the map: sandbags either side of the road before each hangar door and inside each doorway, and no sections laid at random besides',
+    MAPS.docks.fortified && ps.filter((p) => p.kind === 'barricade' && p.fixed).length === 6 && !ps.some((p) => p.kind === 'trench' || p.kind === 'wire' || p.kind === 'bunker'));
+  ok('...with room to go all the way round it: nothing else within 3" of its walls but the road and Sable’s sandbags',
+    ps.filter((p) => !p.shed && !p.vault && !p.slab && p.kind !== 'road' && p.kind !== 'barricade').every((p) => !overlap(p, { x: floor.x - 3, y: floor.y - 3, w: floor.w + 6, h: floor.h + 6 })));
   ok('...and the waterfront along the north: the basin, its quay, two gantry cranes, and a reaction-mass tank farm',
     ps.some((p) => p.kind === 'deep' && p.y === 0) && ps.filter((p) => p.kind === 'crane').length === 2 && ps.some((p) => p.kind === 'fueltanks') &&
     !R.TERRAIN.crane.blocks && R.TERRAIN.crane.impassable && R.TERRAIN.fueltanks.blocks);
