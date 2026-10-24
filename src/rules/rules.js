@@ -908,6 +908,10 @@
     /* A field camp's comms mast (a story's map; its tents are a crater field,
        below): a thin lattice on guy wires that blocks nothing but can't be crossed. */
     commsmast: { name: 'Comms mast', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
+    /* A dock's gantry crane (a story's map): legs and a boom, seen through but not
+       walked through; and a tank farm's reaction-mass tanks, too big to see past. */
+    crane: { name: 'Gantry crane', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
+    fueltanks: { name: 'Fuel tanks', blocks: true, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
     parleyflag: { name: 'The meeting point', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     // Ambush! (p. 156): the road the enemy column is on — open ground, and nothing stands on it
     road: { name: 'Road', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
@@ -1000,6 +1004,10 @@
     if (named && (!piece || piece.market || (kind === 'road' && piece.paved))) return named;
     // a map's cargo stacks: a crater field by the rules, crates with walkways between them to look at
     if (kind === 'crater' && piece && piece.cargo) return 'Cargo stacks';
+    // a warehouse's walls and floor, and its strongroom's: high and reinforced walls, and a road
+    if (kind === 'wall' && piece && piece.shed) return 'Warehouse wall';
+    if (kind === 'wall' && piece && piece.vault) return 'Strongroom wall';
+    if (kind === 'road' && piece && piece.slab) return 'Concrete';
     // a map's pipeline: a low wall by the rules
     if (kind === 'barricade' && piece && piece.pipe) return 'Pipeline';
     // and a field camp's tents, the same

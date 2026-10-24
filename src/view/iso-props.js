@@ -621,12 +621,15 @@
           var whz = r.w >= r.h, wlen = whz ? r.w : r.h, WSEG = 1.5;
           var wn = Math.max(1, Math.round(wlen / WSEG)), wsl = wlen / wn;
           var wire = wr() < 0.45, wh3 = a(10 + wr() * 2.5);
+          // a warehouse's steel cladding stands taller, and neither it nor a strongroom's wall is wired
+          if (r.shed) wh3 = a(15);
+          if (r.shed || r.vault) wire = false;
           for (var ws = 0; ws < wn; ws++) {
             var wm = (ws + 0.5) * wsl;
             props.push({
               kind: 'wallrun', x: whz ? r.x + wm : r.x + r.w / 2, y: whz ? r.y + r.h / 2 : r.y + wm,
               horiz: whz, len: wsl, first: ws === 0, last: ws === wn - 1, wire: wire, height: wh3,
-              reinforced: !!r.reinforced, seed: (wr() * 9999) | 0
+              reinforced: !!r.reinforced, shed: !!r.shed, seed: (wr() * 9999) | 0
             });
           }
           return;
@@ -697,6 +700,9 @@
         }
         // a field camp's comms mast
         if (r.kind === 'commsmast') { props.push({ kind: 'commsmast', x: r.x, y: r.y, w: r.w, h: r.h, height: a(80), seed: (rr2() * 9999) | 0 }); return; }
+        // a dock's gantry crane, its boom out over the basin; a tank farm's reaction-mass tanks
+        if (r.kind === 'crane') { props.push({ kind: 'crane', x: r.x, y: r.y, w: r.w, h: r.h, height: a(24), seed: (rr2() * 9999) | 0 }); return; }
+        if (r.kind === 'fueltanks') { props.push({ kind: 'fueltanks', x: r.x, y: r.y, w: r.w, h: r.h, height: a(20), seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'cargolifter') { props.push({ kind: 'cargolifter', x: r.x, y: r.y, w: r.w, h: r.h, height: a(15), facing: r.facing || 0, seed: (rr2() * 9999) | 0 }); return; }
         // a town square's fountain: its basin, column and statue, drawn as one block among the others
         if (r.kind === 'fountain') {
@@ -769,7 +775,7 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, crane: 1, fueltanks: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */

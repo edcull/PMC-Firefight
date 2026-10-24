@@ -30,6 +30,11 @@
     return { kind: kind, x: x0, y: y0, w: Math.max.apply(null, xs) - x0, h: Math.max.apply(null, ys) - y0, poly: pts, fixed: true };
   }
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
+  // poured concrete (a quay, a warehouse's floor): open ground, and what stands on it stands on it
+  function SLAB(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, fixed: true }; }
+  // a warehouse's steel-clad wall (a high wall), and its strongroom's (a reinforced one), laid as written
+  function SHED(x, y, w, h) { return { kind: 'wall', x: x, y: y, w: w, h: h, shed: true, fixed: true }; }
+  function VAULT(x, y, w, h) { return { kind: 'wall', x: x, y: y, w: w, h: h, reinforced: true, vault: true, fixed: true }; }
 
   root.PMCStoryMaps['dead-reckoning'] = {
 
@@ -226,15 +231,29 @@
       ] }
     },
 
-    /* Sable's warehouse on Kerrigan's docks: the basin to the north, sheds and
-       cranes round a yard, and the middle clear for the warehouse Sable holds. */
+    /* Sable's warehouse on Kerrigan's docks: the basin along the north edge
+       with its quay and two gantry cranes, the broker's office and the sheds
+       round a yard, cargo stacked either side, the reaction-mass tank farm in
+       the south-east, and in the middle the warehouse itself. It is walked
+       into, not round: steel-clad walls (high walls) on a concrete floor, a
+       loading bay through the north and south walls and a side door east and
+       west, and at its heart the strongroom, reinforced walls with a door east
+       and west, round the objective Hostile takeover puts in the middle. Sable
+       digs in round it and inside it as the scenario lets her. */
     docks: {
       name: 'The broker’s warehouse, Kerrigan docks', planet: 'industrial',
       pieces: [
-        N('deep', 14, 2, 20, 4, 'long'),
-        B(6, 8, 9, 6, 'L'), B(33, 8, 9, 6, 'block'), B(6, 35, 9, 7, 'U'), B(33, 35, 9, 7, 'annex'),
-        R('ruins', 20, 38, 4, 5), R('wall', 17, 30, 6, 1), R('wall', 26, 17, 6, 1),
-        R('barricade', 10, 22, 1, 5), R('barricade', 37, 22, 1, 5)
+        SHAPE('deep', [[5, 0], [43, 0], [43, 3.5], [5, 3.5]]),
+        SLAB(5, 3.5, 38, 3.5), R('crane', 11, 3.8, 3, 2.4), R('crane', 31, 3.8, 3, 2.4),
+        B(6, 9, 9, 6, 'L'), B(33, 9, 9, 6, 'block'), B(6, 35, 9, 7, 'U'), R('fueltanks', 33.5, 35, 9, 6),
+        CG(6, 20, 6, 7), CG(36.5, 20, 5.5, 7), R('ruins', 20, 38, 4, 5),
+        // the warehouse: its floor, then its walls, the loading bays (x 22 to 26) and side doors (y 22.5 to 25.5) left open
+        SLAB(14, 16, 20, 16),
+        SHED(14, 16, 8, 0.5), SHED(26, 16, 8, 0.5), SHED(14, 31.5, 8, 0.5), SHED(26, 31.5, 8, 0.5),
+        SHED(14, 16.5, 0.5, 6), SHED(14, 25.5, 0.5, 6), SHED(33.5, 16.5, 0.5, 6), SHED(33.5, 25.5, 0.5, 6),
+        // the strongroom, the heading in it: a door east and west (y 22.5 to 25.5)
+        VAULT(20.5, 20.5, 7, 0.5), VAULT(20.5, 27, 7, 0.5),
+        VAULT(20.5, 21, 0.5, 1.5), VAULT(20.5, 25.5, 0.5, 1.5), VAULT(27, 21, 0.5, 1.5), VAULT(27, 25.5, 0.5, 1.5)
       ]
     },
 

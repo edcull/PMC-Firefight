@@ -13,6 +13,10 @@
         pebble = S.pebble, poly = S.poly, rect = S.rect, rng = S.rng, shadowBlob = S.shadowBlob,
         toScreen = S.toScreen, vgrad = S.vgrad;
 
+    // a warehouse's steel cladding, blue-grey, and the darker steel of its posts
+    var SHEDPAL = ['#1f2a30', '#33424a', '#4a5c66', '#61757f', '#7d919a', '#a3b4bc'];
+    var BEAMPAL = ['#14181a', '#22292c', '#30393d', '#3e494e', '#56626a', '#76848c'];
+
     // a compound's plating, and its doors (Close Encounters)
     var BULK = ['#1d2124', '#2a2f33', '#3a4146', '#4a535a', '#5c666e', '#76818a'];
     var DOOR_RED = ['#2a1412', '#4a1d18', '#7a2a22', '#9c352a', '#b8473a', '#d0675a'];
@@ -618,6 +622,94 @@
         /* A field camp's comms mast: a tapering lattice tower on a plinth, cross-
            braced, with whips and a small dish at its head, a red light at the
            top, guy wires out to three anchors, and the radio box at its foot. */
+        /* A dock's gantry crane: four legs straddling the quay, braced, a girder
+           frame across their heads with the cab on it, and the boom run out
+           north over the basin with a hook hanging off its end, in dock yellow. */
+        case 'crane': {
+          var cl = lift || 0, cx0 = pr.x, cy0 = pr.y, cw = pr.w, ch2 = pr.h, CH = pr.height;
+          var CP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - cl - z]; };
+          var YEL = ['#3a2c0c', '#6a5016', '#a07a1e', '#c99a28', '#e2b43a', '#f2d06a'];
+          var cm = CP(cx0 + cw / 2, cy0 + ch2 / 2, 0);
+          shadowBlob(g, { x: cm[0] + a(3), y: cm[1] + a(1.5) }, a(cw * 4), a(ch2 * 2.2));
+          // the rails along the quay
+          edgeLine(g, CP(cx0 - 0.6, cy0 + 0.2, 0), CP(cx0 + cw + 0.6, cy0 + 0.2, 0), '#2a2a28', 2);
+          edgeLine(g, CP(cx0 - 0.6, cy0 + ch2 - 0.2, 0), CP(cx0 + cw + 0.6, cy0 + ch2 - 0.2, 0), '#2a2a28', 2);
+          var LEGS = [[cx0 + 0.2, cy0 + 0.2], [cx0 + cw - 0.2, cy0 + 0.2], [cx0 + 0.2, cy0 + ch2 - 0.2], [cx0 + cw - 0.2, cy0 + ch2 - 0.2]];
+          var leg = function (l, near) {
+            var b0 = CP(l[0], l[1], 0), t0 = CP(l[0], l[1], CH);
+            edgeLine(g, b0, t0, near ? YEL[3] : YEL[2], 7); edgeLine(g, [b0[0] + 3, b0[1]], [t0[0] + 3, t0[1]], YEL[1], 2);
+            box(g, { x: l[0] - 0.3, y: l[1] - 0.25, w: 0.6, h: 0.5, height: a(2.2), seed: pr.seed }, YEL, { roof: YEL[4], roofEdge: YEL[5], windows: null, lift: cl, noShadow: true });
+          };
+          // the boom first where it runs away north, behind the legs
+          var bz = CH + a(3), by0 = Math.max(0.4, cy0 - 4.2), bmx = cx0 + cw / 2;
+          edgeLine(g, CP(bmx - 0.35, cy0 + ch2 / 2, bz), CP(bmx - 0.35, by0, bz), YEL[2], 5);
+          edgeLine(g, CP(bmx + 0.35, cy0 + ch2 / 2, bz), CP(bmx + 0.35, by0, bz), YEL[3], 5);
+          for (var bt = 0; bt < 7; bt++) {
+            var y1b = cy0 + ch2 / 2 - (cy0 + ch2 / 2 - by0) * bt / 7, y2b = cy0 + ch2 / 2 - (cy0 + ch2 / 2 - by0) * (bt + 1) / 7;
+            edgeLine(g, CP(bmx - 0.35, y1b, bz), CP(bmx + 0.35, y2b, bz), YEL[1], 1);
+          }
+          // the hook, on its cable, over the water
+          var hk0 = CP(bmx, by0 + 0.4, bz), hk1 = CP(bmx, by0 + 0.4, CH * 0.35);
+          edgeLine(g, hk0, hk1, '#1e1e1e', 1); rect(g, hk1[0] - 3, hk1[1], 6, 4, '#2c2c2c'); dot(g, hk1[0], hk1[1] + 5, '#d0a030', 2);
+          leg(LEGS[0], false); leg(LEGS[1], false);
+          // cross-bracing between the far legs and the near ones
+          edgeLine(g, CP(LEGS[0][0], LEGS[0][1], 0), CP(LEGS[1][0], LEGS[1][1], CH * 0.6), YEL[1], 1);
+          edgeLine(g, CP(LEGS[2][0], LEGS[2][1], CH * 0.6), CP(LEGS[3][0], LEGS[3][1], 0), YEL[2], 2);
+          leg(LEGS[2], true); leg(LEGS[3], true);
+          // the frame across the leg heads, and the cab on it
+          box(g, { x: cx0, y: cy0, w: cw, h: ch2, height: a(3), seed: pr.seed + 1 }, YEL, { roof: YEL[4], roofEdge: YEL[5], windows: null, lift: cl + CH, noShadow: true });
+          box(g, { x: cx0 + cw * 0.55, y: cy0 + 0.3, w: cw * 0.4, h: ch2 - 0.6, height: a(6), seed: pr.seed + 2 }, ['#2a3034', '#3c464c', '#55626a', '#6e7c84', '#8a98a0', '#b0bcc2'],
+            { roof: '#8a98a0', roofEdge: '#b0bcc2', windows: null, lift: cl + CH + a(3), noShadow: true });
+          var cwq = CP(cx0 + cw * 0.95, cy0 + ch2 * 0.5, CH + a(6.5)); rect(g, cwq[0] - 6, cwq[1] - 4, 6, 3, '#9fd2e0');
+          var bcn = CP(cx0 + cw * 0.75, cy0 + ch2 * 0.5, CH + a(10)); dot(g, bcn[0], bcn[1], '#ffb02e', 3);
+          break;
+        }
+        /* A tank farm: reaction-mass tanks, white steel drums banded and
+           stencilled, inside a low concrete bund, with a pipe rack between them. */
+        case 'fueltanks': {
+          var fl = lift || 0, fx = pr.x, fy = pr.y, fw = pr.w, fh = pr.h;
+          var FP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - fl - z]; };
+          var fmid = FP(fx + fw / 2, fy + fh / 2, 0);
+          shadowBlob(g, { x: fmid[0] + a(3), y: fmid[1] + a(1.5) }, a(fw * 3.6), a(fh * 2.4));
+          poly(g, [FP(fx, fy, 0), FP(fx + fw, fy, 0), FP(fx + fw, fy + fh, 0), FP(fx, fy + fh, 0)], '#4a4740');
+          // the bund's far sides now, its near sides after the tanks
+          var bund = function (x0, y0, x1, y1) { box(g, { x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.max(0.25, Math.abs(x1 - x0)), h: Math.max(0.25, Math.abs(y1 - y0)), height: a(2), seed: pr.seed }, CONCRETE, { roof: CONCRETE[4], roofEdge: CONCRETE[5], windows: null, lift: fl, noShadow: true }); };
+          bund(fx, fy, fx + fw, fy + 0.25); bund(fx, fy, fx + 0.25, fy + fh);
+          var drum = function (cx3, cy3, r3, H3, label) {
+            var N3 = 28, pts0 = [], pts1 = [];
+            for (var di = 0; di < N3; di++) {
+              var t3 = di / N3 * Math.PI * 2;
+              pts0.push(FP(cx3 + Math.cos(t3) * r3, cy3 + Math.sin(t3) * r3, 0)); pts1.push(FP(cx3 + Math.cos(t3) * r3, cy3 + Math.sin(t3) * r3, H3));
+            }
+            // the walls, far ones first, each strip shaded by which way it faces
+            var order = []; for (var dj = 0; dj < N3; dj++) order.push(dj);
+            order.sort(function (p1, p2) { return (Math.cos(p1 / N3 * 6.283) + Math.sin(p1 / N3 * 6.283)) - (Math.cos(p2 / N3 * 6.283) + Math.sin(p2 / N3 * 6.283)); });
+            order.forEach(function (dk) {
+              var dn = (dk + 1) % N3, ang = (dk + 0.5) / N3 * Math.PI * 2;
+              var lit = 0.5 + 0.5 * Math.cos(ang - 2.4), v3 = Math.round(150 + lit * 80);
+              poly(g, [pts0[dk], pts0[dn], pts1[dn], pts1[dk]], 'rgb(' + v3 + ',' + (v3 + 2) + ',' + (v3 + 4) + ')');
+            });
+            // a band round it, red, and the top, lit, with its vent
+            var bandZ = H3 * 0.3;
+            for (var bk = 0; bk < N3; bk++) {
+              var ab = (bk + 0.5) / N3 * Math.PI * 2;
+              if (Math.cos(ab) + Math.sin(ab) < 0) continue;
+              edgeLine(g, FP(cx3 + Math.cos(bk / N3 * 6.283) * r3, cy3 + Math.sin(bk / N3 * 6.283) * r3, bandZ), FP(cx3 + Math.cos((bk + 1) / N3 * 6.283) * r3, cy3 + Math.sin((bk + 1) / N3 * 6.283) * r3, bandZ), '#b8402e', 3);
+            }
+            poly(g, pts1, '#d8dcde');
+            edgeLine(g, FP(cx3 - r3 * 0.7, cy3 - r3 * 0.7, H3), FP(cx3 + r3 * 0.7, cy3 + r3 * 0.7, H3), 'rgba(120,124,128,.5)', 1);
+            var vt = FP(cx3, cy3, H3); rect(g, vt[0] - 2, vt[1] - 6, 4, 6, '#6a7074');
+            if (label) { var lq = FP(cx3 + r3 * 0.72, cy3 + r3 * 0.72, H3 * 0.62); rect(g, lq[0] - 7, lq[1] - 3, 14, 6, '#262626'); rect(g, lq[0] - 6, lq[1] - 2, 12, 4, '#e2b43a'); }
+          };
+          var big = Math.min(fh / 2 - 0.5, fw / 4.6);
+          // the pipe rack between them, then the tanks back to front
+          edgeLine(g, FP(fx + 0.8, fy + fh / 2, a(6)), FP(fx + fw - 0.8, fy + fh / 2, a(6)), '#5d666c', 3);
+          drum(fx + fw - big - 0.6, fy + big + 0.5, big, pr.height, true);
+          drum(fx + big + 0.6, fy + fh / 2, big, pr.height, true);
+          drum(fx + fw - big * 0.6 - 0.7, fy + fh - big * 0.6 - 0.5, big * 0.6, pr.height * 0.7, false);
+          bund(fx, fy + fh - 0.25, fx + fw, fy + fh); bund(fx + fw - 0.25, fy, fx + fw, fy + fh);
+          break;
+        }
         case 'commsmast': {
           var ml = lift || 0, mx = pr.x + pr.w / 2, my = pr.y + pr.h / 2, mh = a(64);
           function MS(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - ml - z]; }
@@ -1130,6 +1222,42 @@
              odd crack and bullet pock, and on some walls a coil of razor wire. */
           var wr2 = rng(pr.seed), lf2 = lift || 0;
           var ux2 = pr.horiz ? 1 : 0, uy2 = pr.horiz ? 0 : 1, vx2 = 1 - ux2, vy2 = 1 - uy2;
+          if (pr.shed) {
+            /* A warehouse's wall: corrugated steel cladding on I-beam posts, the
+               ribs catching the light, a flashing along the top, rust weeping
+               from the fixings and dirt splashed up the foot. */
+            var SL = pr.len, ST = 0.2, SH = pr.height, s0 = -SL / 2, s1 = SL / 2;
+            var SQ = function (t, v, z) { var q = toScreen(pr.x + ux2 * t + vx2 * v, pr.y + uy2 * t + vy2 * v); return [q.x, q.y - lf2 - z]; };
+            var sslab = function (t0, t1, v0, v1, z0, z1, pal2) {
+              poly(g, [SQ(t0, v1, z0), SQ(t1, v1, z0), SQ(t1, v1, z1), SQ(t0, v1, z1)], pr.horiz ? pal2[3] : pal2[2]);
+              poly(g, [SQ(t1, v0, z0), SQ(t1, v1, z0), SQ(t1, v1, z1), SQ(t1, v0, z1)], pr.horiz ? pal2[2] : pal2[3]);
+              poly(g, [SQ(t0, v0, z1), SQ(t1, v0, z1), SQ(t1, v1, z1), SQ(t0, v1, z1)], pal2[4]);
+            };
+            poly(g, [SQ(s0, ST, 0), SQ(s1, ST, 0), SQ(s1, ST + 0.6, 0), SQ(s0, ST + 0.6, 0)], 'rgba(14,11,8,.35)');
+            sslab(s0, s1, -ST, ST, 0, SH, SHEDPAL);
+            // the ribs: a lit edge and a shadowed trough, every fifth of an inch
+            var nr = Math.max(2, Math.round(SL / 0.2));
+            for (var sr = 0; sr < nr; sr++) {
+              var st = s0 + (s1 - s0) * (sr + 0.3) / nr;
+              edgeLine(g, SQ(st, ST, 1), SQ(st, ST, SH - 1), sr % 2 ? SHEDPAL[4] : SHEDPAL[1], 1);
+            }
+            // a sheet's lap, a third of the way up, and the dirt at the foot
+            edgeLine(g, SQ(s0, ST, SH * 0.36), SQ(s1, ST, SH * 0.36), 'rgba(20,26,30,.45)', 1);
+            for (var sd = 0; sd < 22; sd++) { var dq3 = SQ(s0 + wr2() * SL, ST, wr2() * wr2() * SH * 0.3); dot(g, dq3[0], dq3[1], 'rgba(46,36,26,.55)', 1); }
+            for (var su = 0; su < 3; su++) {
+              if (wr2() > 0.6) continue;
+              var ut = s0 + wr2() * SL, ul = SH * (0.2 + wr2() * 0.4);
+              for (var uz = 0; uz < ul; uz++) { var uq = SQ(ut, ST, SH * 0.36 - uz); dot(g, uq[0], uq[1], 'rgba(120,62,30,.45)', 1); }
+            }
+            // the flashing along the top, and the posts
+            sslab(s0, s1, -ST - 0.06, ST + 0.06, SH, SH + a(0.8), SHEDPAL);
+            edgeLine(g, SQ(s0, ST + 0.06, SH + a(0.8)), SQ(s1, ST + 0.06, SH + a(0.8)), SHEDPAL[5], 1);
+            // (posts only at the wall's ends: the sheets run on unbroken between them)
+            (pr.first ? [s0] : []).concat(pr.last ? [s1 - 0.25] : []).forEach(function (pt1) {
+              sslab(pt1, pt1 + 0.25, -ST - 0.1, ST + 0.1, 0, SH + a(1.2), BEAMPAL);
+            });
+            break;
+          }
           // a reinforced wall (p. 41) is thicker, and banded at the foot so it reads as one that stays up
           var L2 = pr.len, T2 = pr.reinforced ? 0.36 : 0.22, H2 = pr.height;
           function Q(t, v, z) { var q = toScreen(pr.x + ux2 * t + vx2 * v, pr.y + uy2 * t + vy2 * v); return [q.x, q.y - lf2 - z]; }
