@@ -1619,10 +1619,13 @@
                  fields, bows up the bank to the west, a windscreen forward, twin
                  thrusters glowing at the stern, red chevrons on their decks, a
                  pintle gun on one. */
-              // (turned an eighth of a turn anticlockwise as the table is seen, side by side: bows run up on the bank, sterns in the water)
-              [[-0.88, 0, 0], [0.88, 0, 1]].forEach(function (bt) {
-                var by = bt[0], ang = -Math.PI / 4, L = 3.4, Wd = 0.62, hz = a(1.6), dk = hz + a(1.7);
-                function BQ(u, v, z) { var vv = v + by, cx = u * Math.cos(ang) - vv * Math.sin(ang), cy = u * Math.sin(ang) + vv * Math.cos(ang); return TQ(cx, cy, z); }
+              /* One run up at the head of the bay, an eighth of a turn anticlockwise
+                 as the table is seen; the other up on the bank at the bay's
+                 north end, bow to the north-west of the screen (west on the
+                 table). Each: [across, its turn, the gun, east, south]. */
+              [[0, 0, 0, -1.1, -4.1], [0.88, -Math.PI / 4, 1, 0, 0]].forEach(function (bt) {
+                var by = bt[0], ang = bt[1], L = 3.4, Wd = 0.62, hz = a(1.6), dk = hz + a(1.7);
+                function BQ(u, v, z) { var vv = v + by, cx = u * Math.cos(ang) - vv * Math.sin(ang), cy = u * Math.sin(ang) + vv * Math.cos(ang); return TQ(cx + bt[3], cy + bt[4], z); }
                 // the repulsor field on the water under it
                 var fc = BQ(0, 0, 0);
                 ellipse(g, fc[0], fc[1], a(L * 2.1), a(1.5), 'rgba(110,210,255,.22)');
