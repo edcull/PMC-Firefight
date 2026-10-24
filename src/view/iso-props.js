@@ -57,11 +57,28 @@
         var SW = 0, SH = 0;
         terrain.forEach(function (q) { SW = Math.max(SW, q.x + q.w); SH = Math.max(SH, q.y + q.h); });
         var voidAt = function (x, y) { return space.some(function (q) { return x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h; }); };
-        var aw = SW * 0.33, ah = SH * 0.2;
+        var aw = SW * 0.3, ah = SH * 0.2;
         [[1, 1, 1, 1], [SW - 1 - aw, 1, -1, 1], [1, SH - 1 - ah, 1, -1], [SW - 1 - aw, SH - 1 - ah, -1, -1]].forEach(function (c, ci) {
           var r = { x: c[0], y: c[1], w: aw, h: ah }, clear = true;
           for (var sx = 0; sx <= 6 && clear; sx++) for (var sy = 0; sy <= 4 && clear; sy++) clear = voidAt(r.x + r.w * sx / 6, r.y + r.h * sy / 4);
-          if (clear) props.push({ kind: 'solar', x: r.x, y: r.y, w: r.w, h: r.h, toward: { x: c[2], y: c[3] }, seed: 4111 + ci });
+          if (!clear) return;
+          /* its boom: a truss from the middle of the array's inner edge out to
+             the hull, down the table to the docking arm where there is one,
+             else across it */
+          function run(x, y, dx, dy) {
+            for (var d = 0; d < 40; d += 0.25) {
+              var px = x + dx * d, py = y + dy * d;
+              if (px < 0 || py < 0 || px > SW || py > SH) return null;
+              if (!voidAt(px, py)) return { x: px, y: py, d: d };
+            }
+            return null;
+          }
+          var ex = c[2] > 0 ? r.x + r.w : r.x, ey = c[3] > 0 ? r.y + r.h : r.y;
+          var alongX = run(ex, r.y + r.h / 2, c[2], 0), alongY = run(r.x + r.w / 2, ey, 0, c[3]);
+          // (down the table first: into the docking arm beside it)
+          var boom = alongY ? { x0: r.x + r.w / 2, y0: ey, x1: alongY.x, y1: alongY.y, axis: 'y' }
+            : alongX ? { x0: ex, y0: r.y + r.h / 2, x1: alongX.x, y1: alongX.y, axis: 'x' } : null;
+          props.push({ kind: 'solar', x: r.x, y: r.y, w: r.w, h: r.h, toward: { x: c[2], y: c[3] }, boom: boom, seed: 4111 + ci });
         });
       }
       /* The stretches of a bulkhead's sides that face a floor, not more plating

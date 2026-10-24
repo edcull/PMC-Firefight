@@ -651,40 +651,55 @@
           dot(g, LP(lx + 0.85, ly + 1.2, a(12.6))[0], LP(lx + 0.85, ly + 1.2, a(12.6))[1], '#ffb02e', 4);   // the beacon on the cage
           break;
         }
-        /* A station's solar array, out in open space: a truss along its middle
-           running in towards the station, and two wings of cells either side
-           of it, deep blue in a pale frame, lit along their near edges. */
+        /* A station's solar array, out in open space: a truss spine down its
+           middle and on along a boom to its mount on the hull, a rotary joint
+           where the boom leaves it, and two wings of cells either side of the
+           spine, deep blue in a pale frame, lit along their near edges. */
         case 'solar': {
-          var sz = a(9), sl3 = lift || 0;
+          var sz = a(9), sl3 = lift || 0, bm = pr.boom, vert = !!(bm && bm.axis === 'y');
           function SO(x, y, z) { var q = toScreen(x, y); return [q.x, q.y - sl3 - (z == null ? sz : z)]; }
-          var ym = pr.y + pr.h / 2, tx0 = pr.x, tx1 = pr.x + pr.w;
-          // the truss: two rails and their cross-bracing, on in towards the station
-          var tin = pr.toward.x > 0 ? tx1 + pr.w * 0.12 : tx0 - pr.w * 0.12;
-          var t0 = Math.min(tx0, tin), t1 = Math.max(tx1, tin);
-          edgeLine(g, SO(t0, ym - 0.35), SO(t1, ym - 0.35), '#8a96a0', 2);
-          edgeLine(g, SO(t0, ym + 0.35), SO(t1, ym + 0.35), '#b4c0c8', 2);
-          for (var tb2 = 0; tb2 <= (t1 - t0) / 0.9; tb2++) {
-            var bx2 = t0 + tb2 * 0.9;
-            edgeLine(g, SO(bx2, ym - 0.35), SO(bx2 + 0.45, ym + 0.35), '#6a7680', 1);
+          // the array in its own frame: u along its spine (the boom's way), v across it
+          var u0 = vert ? pr.y : pr.x, u1 = vert ? pr.y + pr.h : pr.x + pr.w, v0 = vert ? pr.x : pr.y, v1 = vert ? pr.x + pr.w : pr.y + pr.h, vm = (v0 + v1) / 2;
+          function UV(u, v, z) { return vert ? SO(v, u, z) : SO(u, v, z); }
+          /* A truss: two rails and their zigzag bracing, from u = ua to ub at v = vc
+             (in the array's frame), or along the boom. */
+          function truss(P0, P1) {
+            var ax = Math.abs(P1[0] - P0[0]) >= Math.abs(P1[1] - P0[1]), len = ax ? Math.abs(P1[0] - P0[0]) : Math.abs(P1[1] - P0[1]);
+            var sg = ax ? Math.sign(P1[0] - P0[0]) : Math.sign(P1[1] - P0[1]);
+            function at(t, o) { return ax ? SO(P0[0] + sg * t, P0[1] + o) : SO(P0[0] + o, P0[1] + sg * t); }
+            edgeLine(g, at(0, -0.35), at(len, -0.35), '#8a96a0', 2);
+            edgeLine(g, at(0, 0.35), at(len, 0.35), '#b4c0c8', 2);
+            for (var tb2 = 0; tb2 * 0.9 < len; tb2++) edgeLine(g, at(tb2 * 0.9, -0.35), at(Math.min(len, tb2 * 0.9 + 0.45), 0.35), '#6a7680', 1);
           }
-          // the two wings
-          [[pr.y + 0.2, ym - 0.7], [ym + 0.7, pr.y + pr.h - 0.2]].forEach(function (Wg) {
-            var nc = Math.max(3, Math.round(pr.w / 1.6)), nr = 2;
+          // the two wings, either side of the spine: cells in a pale frame, an edge of shadow under each to give it thickness
+          [[v0 + 0.2, vm - 0.7], [vm + 0.7, v1 - 0.2]].forEach(function (Wg) {
+            var nc = Math.max(3, Math.round((u1 - u0) / 1.6)), nr = Math.max(2, Math.round((Wg[1] - Wg[0]) / 1.8));
+            var E = [UV(u0 + 0.15, Wg[0] - 0.05), UV(u1 - 0.15, Wg[0] - 0.05), UV(u1 - 0.15, Wg[1] + 0.05), UV(u0 + 0.15, Wg[1] + 0.05)];
+            poly(g, E.map(function (q) { return [q[0], q[1] + 3]; }), '#0a1226');
             for (var ci3 = 0; ci3 < nc; ci3++) {
               for (var rj = 0; rj < nr; rj++) {
-                var x0c = pr.x + 0.2 + (pr.w - 0.4) * ci3 / nc, x1c = pr.x + 0.2 + (pr.w - 0.4) * (ci3 + 1) / nc - 0.12;
-                var y0c = Wg[0] + (Wg[1] - Wg[0]) * rj / nr, y1c = Wg[0] + (Wg[1] - Wg[0]) * (rj + 1) / nr - 0.1;
-                var Q = [SO(x0c, y0c), SO(x1c, y0c), SO(x1c, y1c), SO(x0c, y1c)];
+                var a0 = u0 + 0.2 + (u1 - u0 - 0.4) * ci3 / nc, a1 = u0 + 0.2 + (u1 - u0 - 0.4) * (ci3 + 1) / nc - 0.12;
+                var b0 = Wg[0] + (Wg[1] - Wg[0]) * rj / nr, b1 = Wg[0] + (Wg[1] - Wg[0]) * (rj + 1) / nr - 0.1;
+                var Q = [UV(a0, b0), UV(a1, b0), UV(a1, b1), UV(a0, b1)];
                 poly(g, Q, (ci3 + rj) % 2 ? '#1c3d78' : '#20468a');
                 edgeLine(g, Q[0], Q[1], 'rgba(150,190,255,.35)', 1);
                 edgeLine(g, Q[3], Q[2], '#b4c0c8', 1);
               }
             }
-            var F = [SO(pr.x + 0.15, Wg[0] - 0.05), SO(pr.x + pr.w - 0.15, Wg[0] - 0.05), SO(pr.x + pr.w - 0.15, Wg[1] + 0.05), SO(pr.x + 0.15, Wg[1] + 0.05)];
-            edgeLine(g, F[0], F[1], '#d4dde4', 1); edgeLine(g, F[3], F[2], '#d4dde4', 1);
-            edgeLine(g, F[0], F[3], '#d4dde4', 1); edgeLine(g, F[1], F[2], '#d4dde4', 1);
+            edgeLine(g, E[0], E[1], '#d4dde4', 1); edgeLine(g, E[3], E[2], '#d4dde4', 1);
+            edgeLine(g, E[0], E[3], '#d4dde4', 1); edgeLine(g, E[1], E[2], '#d4dde4', 1);
           });
-          dot(g, SO(tin, ym)[0], SO(tin, ym)[1], '#ff4a3a', 3);
+          // the spine down the middle, and the boom on from it to the hull
+          truss(vert ? [vm, u0] : [u0, vm], vert ? [vm, u1] : [u1, vm]);
+          if (bm) {
+            truss([bm.x0, bm.y0], [bm.x1, bm.y1]);
+            // the rotary joint where the boom leaves the array
+            var rj2 = SO(bm.x0, bm.y0);
+            ellipse(g, rj2[0], rj2[1], a(2.2), a(1.6), '#5a646c'); ellipse(g, rj2[0], rj2[1] - 1, a(1.4), a(1), '#a8b4bc');
+            // its mount on the hull, a beacon on top
+            box(g, { x: bm.x1 - 0.5, y: bm.y1 - 0.5, w: 1, h: 1, height: Math.round(sz * 0.7), seed: pr.seed }, MASTBOX, { roof: MASTBOX[4], roofEdge: MASTBOX[5], windows: null, lift: sl3 + sz * 0.5, noShadow: true });
+            var mt = SO(bm.x1, bm.y1, sz * 1.25); dot(g, mt[0] - 1, mt[1] - 1, '#ff4a3a', 3);
+          }
           break;
         }
         case 'sacks': {
