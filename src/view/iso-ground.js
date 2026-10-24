@@ -116,7 +116,7 @@
       var TW = new Float32Array(cw * ch), TR = new Float32Array(cw * ch), TG = new Float32Array(cw * ch), TB = new Float32Array(cw * ch);
       terrain.forEach(function (r) {
         // (a market's crater field is paving, not churned earth: it pulls nothing round it)
-        var f = r.market || r.cargo || r.camp ? null : FIT[r.kind];
+        var f = r.market || r.cargo || r.camp || r.pipe ? null : FIT[r.kind];
         if (!f) return;
         var i0 = Math.max(0, Math.floor((r.x - f.r) / STEP)), i1 = Math.min(cw - 1, Math.ceil((r.x + r.w + f.r) / STEP));
         var j0 = Math.max(0, Math.floor((r.y - f.r) / STEP)), j1 = Math.min(ch - 1, Math.ceil((r.y + r.h + f.r) / STEP));
@@ -399,8 +399,8 @@
       for (var sy = cy0; sy < cy1; sy += 48) steps.push(soilRows.bind(null, sy, Math.min(cy1, sy + 48)));
       terrain.forEach(function (r, ri) {
         if (r.kind === 'hill' || (!FLOOR[r.kind] && !(r.kind === 'bulkhead' && r.space))) return;
-        // cargo stacked on open ground (not on an apron), and a camp's tents, have no floor of their own
-        if ((r.cargo && r.cargo !== 'apron') || r.camp) return;
+        // cargo stacked on open ground (not on an apron), a camp's tents and a pipeline have no floor of their own
+        if ((r.cargo && r.cargo !== 'apron') || r.camp || r.pipe) return;
         floorBands(r).forEach(function (rows) { steps.push(function () { floorOf1(r, ri, rows); }); });
       });
       steps.push(function () { floorsDone = true; });

@@ -23,8 +23,8 @@
   function R(kind, x, y, w, h) { return { kind: kind, x: x, y: y, w: w, h: h }; }
   // cargo stacked on concrete: a crater field by the rules, rows of crates with walkways between to look at
   function CG(x, y, w, h) { return { kind: 'crater', x: x, y: y, w: w, h: h, cargo: 'apron' }; }
-  // a pipeline: a high wall by the rules, laid as written (it meets the pump houses it runs from)
-  function PIPE(x, y, w, h) { return { kind: 'wall', x: x, y: y, w: w, h: h, pipe: true, fixed: true }; }
+  // a pipeline: a low wall by the rules, laid as written (it meets the pump houses it runs from)
+  function PIPE(x, y, w, h) { return { kind: 'barricade', x: x, y: y, w: w, h: h, pipe: true, fixed: true }; }
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
 
   root.PMCStoryMaps['deep-contract'] = {

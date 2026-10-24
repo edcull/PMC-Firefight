@@ -326,6 +326,17 @@
           }
           return;
         }
+        if (r.pipe) {
+          /* A map's pipeline (a low wall by the rules): a fat pipe on trestles,
+             laid down its length in short runs so it sorts among the models. */
+          var phz = r.w >= r.h, plen = phz ? r.w : r.h, pn = Math.max(1, Math.round(plen / 1.5)), psl = plen / pn;
+          for (var ps2 = 0; ps2 < pn; ps2++) {
+            var pm = (ps2 + 0.5) * psl;
+            props.push({ kind: 'piperun', x: phz ? r.x + pm : r.x + r.w / 2, y: phz ? r.y + r.h / 2 : r.y + pm, horiz: phz, len: psl,
+              first: ps2 === 0, last: ps2 === pn - 1, seed: (rand() * 9999) | 0 });
+          }
+          return;
+        }
         if (r.kind === 'woods') {
           // the floor of a wood: fallen trunks, stumps and ferns under the canopy
           for (var lg = 0; lg < Math.max(1, Math.round(area / 16)); lg++) {
@@ -600,17 +611,6 @@
               y: r.y + 0.4 + rr2() * (r.h - 0.8),
               tone: rr2(), seed: (rr2() * 9999) | 0
             });
-          }
-          return;
-        }
-        if (r.kind === 'wall' && r.pipe) {
-          /* A map's pipeline (a high wall by the rules): a fat pipe on trestles,
-             laid down its length in short runs so it sorts among the models. */
-          var phz = r.w >= r.h, plen = phz ? r.w : r.h, pn = Math.max(1, Math.round(plen / 1.5)), psl = plen / pn;
-          for (var ps2 = 0; ps2 < pn; ps2++) {
-            var pm = (ps2 + 0.5) * psl;
-            props.push({ kind: 'piperun', x: phz ? r.x + pm : r.x + r.w / 2, y: phz ? r.y + r.h / 2 : r.y + pm, horiz: phz, len: psl,
-              first: ps2 === 0, last: ps2 === pn - 1, seed: (rr2() * 9999) | 0 });
           }
           return;
         }
