@@ -118,7 +118,7 @@
       var TW = new Float32Array(cw * ch), TR = new Float32Array(cw * ch), TG = new Float32Array(cw * ch), TB = new Float32Array(cw * ch);
       terrain.forEach(function (r) {
         // (a market's crater field is paving, not churned earth: it pulls nothing round it)
-        var f = r.market || r.cargo || r.camp || r.pipe || r.blast ? null : FIT[r.kind];
+        var f = r.market || r.cargo || r.camp || r.pipe || r.blast || r.space ? null : FIT[r.kind];
         if (!f) return;
         var i0 = Math.max(0, Math.floor((r.x - f.r) / STEP)), i1 = Math.min(cw - 1, Math.ceil((r.x + r.w + f.r) / STEP));
         var j0 = Math.max(0, Math.floor((r.y - f.r) / STEP)), j1 = Math.min(ch - 1, Math.ceil((r.y + r.h + f.r) / STEP));
@@ -387,7 +387,7 @@
         // a drowned beacon's possible locations stand on the ground as it is, their own pieces drawn over it
         if (r.kind === 'searchsite' && (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones' || r.skin === 'boats' || r.skin === 'tent')) return;
         // a station's solid is open space, black (rules.js reads it as solid all the same)
-        if (r.kind === 'bulkhead' && r.space) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
+        if (r.space) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         var spec = roomTheme(r) || skinFloor(r) || floorOf(r.kind);
         if (r.kind === 'road' && r.paved && paved.length > 1) spec = Object.assign({}, spec, { joins: paved.filter(function (q) { return q !== r; }) });
         // ...and the Warren's tunnels and chambers are one floor of rock: no lip where one section meets the next
@@ -411,7 +411,7 @@
       for (var ly = gy0; ly < gy1; ly += 24) steps.push(latRows.bind(null, ly, Math.min(gy1, ly + 24)));
       for (var sy = cy0; sy < cy1; sy += 48) steps.push(soilRows.bind(null, sy, Math.min(cy1, sy + 48)));
       terrain.forEach(function (r, ri) {
-        if (r.kind === 'hill' || (!FLOOR[r.kind] && !(r.kind === 'bulkhead' && r.space) && !r.docked)) return;
+        if (r.kind === 'hill' || (!FLOOR[r.kind] && !r.space && !r.docked)) return;
         // cargo stacked on open ground (not on an apron), a camp's tents and a pipeline have no floor of their own
         if ((r.cargo && r.cargo !== 'apron') || r.camp || r.pipe || r.blast) return;
         floorBands(r).forEach(function (rows) { steps.push(function () { floorOf1(r, ri, rows); }); });
@@ -479,7 +479,7 @@
       function base() {
       g.putImageData(img, 0, 0);
       // lava lies at the bottom of cracks: the rock walls go in over the melt
-      terrain.forEach(function (r, ri) { if (r.kind === 'lava' || r.kind === 'ravine') lavaWalls(g, r, seed + ri * 131, r.kind); });
+      terrain.forEach(function (r, ri) { if ((r.kind === 'lava' || r.kind === 'ravine') && !r.space) lavaWalls(g, r, seed + ri * 131, r.kind); });
 
       // the board itself: a slab with a lit top edge and a shadowed lip (not round a station: open space has no edge)
       var nE = toScreen(B.W, 0), nS = toScreen(B.W, B.H), nWt = toScreen(0, B.H);

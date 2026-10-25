@@ -47,11 +47,37 @@
     sp.space = true; sp.ring = { cx: cx, cy: cy, r: r, a0: a0, a1: a1 };
     return sp;
   }
+  /* The open gap between a station's outer and inner rings: a band of the
+     circle (centre cx, cy) between radii r0 and r1, from angle a0 to a1. An
+     ice ravine to the rules (nothing crosses it but by a bridge, and it hides
+     nothing), drawn black, a rail along each rim and at each end. */
+  function ANNULUS(cx, cy, r0, r1, a0, a1) {
+    var pts = [], k;
+    for (k = 0; k <= 12; k++) { var t = a0 + (a1 - a0) * k / 12; pts.push([+(cx + r1 * Math.cos(t)).toFixed(2), +(cy + r1 * Math.sin(t)).toFixed(2)]); }
+    for (k = 12; k >= 0; k--) { var u = a0 + (a1 - a0) * k / 12; pts.push([+(cx + r0 * Math.cos(u)).toFixed(2), +(cy + r0 * Math.sin(u)).toFixed(2)]); }
+    var sp = SHAPE('ravine', pts);
+    sp.space = true; sp.gap = { cx: cx, cy: cy, r0: r0, r1: r1, a0: a0, a1: a1 };
+    return sp;
+  }
+  /* The gap between a station's two rings, round the centre cx, cy, between radii
+     r0 and r1, crossed by bridges `w` wide at the given x along its middle: the
+     bands of open space between them, each an ANNULUS. */
+  function RINGGAP(cx, cy, r0, r1, bridges, w) {
+    var rm = (r0 + r1) / 2, half = w / 2 / rm;
+    var at = function (x, r) { return Math.atan2(-Math.sqrt(r * r - (x - cx) * (x - cx)), x - cx); };
+    var cuts = [at(-1, r1)];
+    bridges.forEach(function (x) { var a = at(x, rm); cuts.push(a - half, a + half); });
+    cuts.push(at(49, r1));
+    var out = [];
+    for (var i = 0; i < cuts.length; i += 2) out.push(ANNULUS(cx, cy, r0, r1, cuts[i], cuts[i + 1]));
+    return out;
+  }
   /* A ship docked outside the ring: laid by its own outline (its box) over the
      space, its boarding bridge clamped on where along it `clamps` says (a
-     fraction of its length), a bulkhead door in the hull where it lands. */
+     fraction of its length: 0.66, its side hatch), a bulkhead door in the
+     hull where it lands. */
   function DOCKED(x, y, w, h, clamps) {
-    return { kind: 'shuttle', x: x, y: y, w: w, h: h, poly: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], fixed: true, docked: true, clamps: clamps || [0.45] };
+    return { kind: 'shuttle', x: x, y: y, w: w, h: h, poly: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], fixed: true, docked: true, clamps: clamps || [0.66] };
   }
   // poured concrete (a quay, a warehouse's floor): open ground, and what stands on it stands on it
   function SLAB(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, fixed: true }; }
@@ -317,39 +343,43 @@
     },
 
     /* The docking ring of Kerrigan's orbital, as the briefing has it: cranes,
-       cargo stacks and open deck, inside the ring's hull (no gantry cranes: those are a sea port's). The hull is the
-       ring's own curve, gentle and the same both ways, along the north: it
-       bows up nearly to the north edge in the middle (4" from it) and comes
-       down to meet the west and east edges 11" down, the least open space
-       beyond it that holds a ship docked in each corner (the shuttle the
-       other maps have, 10" long) with room for its clamp; the deck takes the
-       rest, and both sides keep the same 37" of their edges to come on by. Beyond the hull open space, black, that
-       nothing enters: the two ships, the Ninth Lance's and the company's,
-       each held by a docking clamp, a great enclosed bridge run level from its
-       flank to the hull, meeting it square opposite a bulkhead door in the
-       hull's face on the deck side; the hull itself stands twice a wall's
-       height. Inside, steel deck plate; rows
-       of cargo stacks with lanes between them, lifters working them; the deck
-       open across the middle, blast barriers on it; the dock offices and the
-       traffic tower along the south. Heavy spin gravity (the chapter's). */
+       cargo stacks and open deck, laid as a wheel's rim and hub. Along the
+       north, the outer ring: its hull a gentle curve the same both ways (4"
+       from the north edge in the middle, meeting the side edges 11" down),
+       twice a wall's height, the two ships docked beyond it in the corners
+       (the shuttle the other maps have), each held by a docking clamp, an
+       enclosed bridge run from a bulkhead door in the hull's face up to the
+       ship's side hatch. Inside the hull the outer ring's deck, 7.6" across,
+       cargo on it. Then the open gap between the rings (5" of space,
+       impassable but seen across), crossed by three bridges, the spokes, 4"
+       wide; and inside it the inner ring, the rest of the table: rows of
+       cargo stacks with lanes between, a lifter working them, the deck open
+       across the middle with blast barriers on it, the dock offices and the
+       traffic tower along the south. No gantry cranes: those are a sea
+       port's. Heavy spin gravity (the chapter's). */
     dockring: {
       name: 'The docking ring, Kerrigan orbital', planet: 'industrial',
       pieces: [
         DECK(0, 0, 48, 48),
-        // open space beyond the ring's hull, and the ships docked out in it
+        // open space beyond the outer ring's hull, and the ships docked out in it
         RINGSPACE(24, 50, 45.6),
         DOCKED(0.4, 0.4, 10, 4.5), DOCKED(37.6, 0.4, 10, 4.5),
-        Object.assign(R('fueltruck', 16.5, 11, 2.8, 1.4), { facing: Math.PI }),
-        // the cargo, in rows, lanes between
-        CG(21.5, 5.5, 5, 4), CG(6, 14, 5, 4), CG(14, 14, 5, 4), CG(24, 13, 5, 4),
-        CG(9, 22, 4, 5), CG(35, 22, 4, 5),
+        // the outer ring's deck: a fuel bowser, a lifter, cargo
+        Object.assign(R('fueltruck', 13, 9, 2.8, 1.4), { facing: Math.PI }), Object.assign(R('cargolifter', 28, 7, 2.5, 2.5), { facing: 0 }),
+        CG(4.5, 10, 4, 4), CG(21.5, 5.5, 5, 4), CG(39.5, 10, 4, 4)
+      ].concat(
+        // the gap between the rings, and its three bridges
+        RINGGAP(24, 50, 33, 38, [8, 24, 40], 4)
+      ).concat([
+        // the inner ring: cargo in rows, lanes between
+        CG(9, 22, 4, 5), CG(35, 22, 4, 5), CG(15, 25, 4, 4), CG(30, 25, 4, 4),
         CG(6, 31, 5, 4), CG(14, 31, 5, 4), CG(29, 31, 5, 4), CG(37, 31, 5, 4),
-        Object.assign(R('cargolifter', 20.5, 15, 2.5, 2.5), { facing: Math.PI }), Object.assign(R('cargolifter', 25.5, 32, 2.5, 2.5), { facing: 0 }),
+        Object.assign(R('cargolifter', 25.5, 32, 2.5, 2.5), { facing: 0 }),
         // blast barriers across the open deck (low walls, steel plates stood on edge)
         Object.assign(R('barricade', 19, 21, 4, 1), { shield: true, blast: true }), Object.assign(R('barricade', 25, 26, 4, 1), { shield: true, blast: true }),
         // the dock offices and the traffic tower
         B(7, 39, 7, 5, 'L'), B(21, 39, 5, 5, 'tower'), B(33, 39, 7, 5, 'block')
-      ]
+      ])
     },
 
     /* ================= the second half ================= */

@@ -278,6 +278,13 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
     ps.filter((p) => p.kind === 'shuttle' && p.docked).length === 2 && ps.some((p) => p.kind === 'shuttle' && p.x < 4) && ps.some((p) => p.kind === 'shuttle' && p.x + p.w > 44) &&
     ps.filter((p) => p.kind === 'shuttle').every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => outside(c[0], c[1]))) &&
     ps.filter((p) => p.kind !== 'shuttle' && !p.space && !p.deck).every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => !outside(c[0], c[1]))));
+  const gaps = ps.filter((p) => p.gap);
+  ok('...laid as a wheel: an outer ring and an inner one, the open gap between them crossed by three bridges, impassable but seen across',
+    gaps.length === 4 && gaps.every((p) => p.kind === 'ravine' && p.space && p.fixed) && R.TERRAIN.ravine.impassable && !R.TERRAIN.ravine.blocks &&
+    [8, 24, 40].every((x) => { const y = 50 - Math.sqrt(35.5 * 35.5 - (x - 24) * (x - 24)); return !gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
+    [16, 32].every((x) => { const y = 50 - Math.sqrt(35.5 * 35.5 - (x - 24) * (x - 24)); return gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
+    R.terrainName(null, 'ravine', gaps[0]) === 'Open space' &&
+    ps.filter((p) => !p.space && !p.deck && p.kind !== 'shuttle').every((p) => !gaps.some((q) => overlap(p, q))));
   ok('the docking ring: steel deck inside the hull, no gantry cranes (a sea port’s), the shuttle the other maps have, rows of cargo, open deck across the middle',
     ps.some((p) => p.deck && p.x === 0 && p.y === 0 && p.w === 48 && p.h === 48) && R.terrainName(null, 'road', ps.find((p) => p.deck)) === 'Deck' &&
     !ps.some((p) => p.kind === 'crane') && ps.filter((p) => p.kind === 'shuttle').every((p) => p.w === 10) && ps.filter((p) => p.kind === 'crater' && p.cargo).length >= 8 && !ps.some((p) => p.kind === 'ruins') &&

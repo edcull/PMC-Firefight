@@ -267,6 +267,30 @@
           }
           return;
         }
+        /* The open gap between a station's two rings: a rail along each rim and
+           across each end, where a bridge leaves it, laid in short runs. */
+        if (r.gap) {
+          var gg = r.gap, rail = function (x0, y0, x1, y1, nx, ny) {
+            var len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.round(len / 1.4));
+            for (var rs = 0; rs < n; rs++) {
+              var mx = x0 + (x1 - x0) * (rs + 0.5) / n, my = y0 + (y1 - y0) * (rs + 0.5) / n;
+              props.push({ kind: 'hullseg', x: mx, y: my, ang: Math.atan2(y1 - y0, x1 - x0), len: len / n + 0.04, nx: nx, ny: ny, height: a(4), seed: (rand() * 9999) | 0 });
+            }
+          };
+          var NG = 12;
+          for (var gi = 0; gi < NG; gi++) {
+            var ga = gg.a0 + (gg.a1 - gg.a0) * gi / NG, gb = gg.a0 + (gg.a1 - gg.a0) * (gi + 1) / NG, gm = (ga + gb) / 2;
+            // the outer ring's rim (its deck outside the gap), and the inner ring's (its deck inside)
+            rail(gg.cx + gg.r1 * Math.cos(ga), gg.cy + gg.r1 * Math.sin(ga), gg.cx + gg.r1 * Math.cos(gb), gg.cy + gg.r1 * Math.sin(gb), Math.cos(gm), Math.sin(gm));
+            rail(gg.cx + gg.r0 * Math.cos(ga), gg.cy + gg.r0 * Math.sin(ga), gg.cx + gg.r0 * Math.cos(gb), gg.cy + gg.r0 * Math.sin(gb), -Math.cos(gm), -Math.sin(gm));
+          }
+          // across each end, square to the rims, facing the bridge beside it
+          [[gg.a0, -1], [gg.a1, 1]].forEach(function (e) {
+            var c = Math.cos(e[0]), sn = Math.sin(e[0]);
+            rail(gg.cx + gg.r0 * c, gg.cy + gg.r0 * sn, gg.cx + gg.r1 * c, gg.cy + gg.r1 * sn, -sn * e[1], c * e[1]);
+          });
+          return;
+        }
         if (r.kind === 'ravine') return;               // nothing stands in a crevasse
         if (r.kind === 'lava') {
           // smoke and heat rising out of the crack
@@ -793,10 +817,10 @@
              in the hull's face on the deck's side, the bridge's width. */
           var ringP = r.docked && terrain.filter(function (q) { return q.ring; })[0];
           if (ringP) (r.clamps || [0.3, 0.7]).forEach(function (f, ci) {
-            var rg = ringP.ring, px = r.x + r.w * f, pyc = r.y + r.h / 2;
-            var dx = px - rg.cx, dy = pyc - rg.cy, dl = Math.hypot(dx, dy);
-            // the flank: from the ship's middle, 1.1" towards the ring's centre
-            var fx = px - dx / dl * 1.1, fy = pyc - dy / dl * 1.1;
+            var rg = ringP.ring;
+            // the ship's side hatch, on its flank towards the ring (the shuttle's own: f along it, 1.1" off its middle)
+            var fx = r.x + r.w * f, fy = r.y + r.h / 2 + 1.1;
+            var dx = fx - rg.cx, dy = fy - rg.cy, dl = Math.hypot(dx, dy);
             var hx = rg.cx + dx / dl * rg.r, hy = rg.cy + dy / dl * rg.r;
             // the bridge runs from the hull's outer face (the hull is 0.7" thick about its curve) to the ship
             var inx = -dx / dl, iny = -dy / dl, ox = hx - inx * 0.35, oy = hy - iny * 0.35;
