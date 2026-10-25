@@ -1788,29 +1788,44 @@
            jaws closed on the ship's flank, and, on one of each ship's pair, the
            boarding tube alongside it. */
         case 'dockclamp': {
-          var kl = lift || 0, KZ = a(15), kx = pr.x;
-          var KP = function (y, z, dx) { var q = toScreen(kx + (dx || 0), y); return [q.x, q.y - kl - z]; };
-          var y0 = pr.from, y1 = pr.to;
+          var kl = lift || 0, KZ = a(15), kdx = pr.x1 - pr.x0, kdy = pr.y1 - pr.y0, kln = Math.hypot(kdx, kdy) || 1;
+          var kux = kdx / kln, kuy = kdy / kln, kpx = -kuy, kpy = kux;
+          // a point t of the way out from the hull (0) to the ship (1), off to one side by s inches, z up
+          var KP = function (t, z, sOff) { var q = toScreen(pr.x0 + kdx * t + kpx * (sOff || 0), pr.y0 + kdy * t + kpy * (sOff || 0)); return [q.x, q.y - kl - z]; };
           if (pr.tube) {
             // the boarding tube: a ribbed, flexible tunnel beside the truss
-            for (var tb = 0; tb <= 8; tb++) {
-              var ty = y0 + (y1 - y0) * tb / 8, tq = KP(ty, KZ * 0.6, 0.9);
-              ellipse(g, tq[0], tq[1], a(1.3), a(1.5), tb % 2 ? '#8a9298' : '#6e767c');
-            }
-            edgeLine(g, KP(y0, KZ * 0.6 + a(1.2), 0.9), KP(y1, KZ * 0.6 + a(1.2), 0.9), '#aab2b8', 1);
+            for (var tb = 0; tb <= 8; tb++) { var tq = KP(tb / 8, KZ * 0.6, 0.9); ellipse(g, tq[0], tq[1], a(1.3), a(1.5), tb % 2 ? '#8a9298' : '#6e767c'); }
+            edgeLine(g, KP(0, KZ * 0.6 + a(1.2), 0.9), KP(1, KZ * 0.6 + a(1.2), 0.9), '#aab2b8', 1);
           }
           // the truss: two chords and their bracing
-          var c0a = KP(y0, KZ), c0b = KP(y1, KZ), c1a = KP(y0, KZ - a(2)), c1b = KP(y1, KZ - a(2));
-          edgeLine(g, c1a, c1b, '#3a4046', 3); edgeLine(g, c0a, c0b, '#5e676e', 3);
-          for (var kb = 0; kb < 5; kb++) {
-            var ka = y0 + (y1 - y0) * kb / 5, kc = y0 + (y1 - y0) * (kb + 1) / 5;
-            edgeLine(g, KP(ka, KZ - a(2)), KP(kc, KZ), '#4a5258', 1);
-          }
-          // its root on the hull, and the jaws on the ship
-          box(g, { x: kx - 0.5, y: y0 - 0.3, w: 1, h: 0.6, height: KZ + a(1), seed: pr.seed }, BULK, { roof: BULK[4], roofEdge: BULK[5], windows: null, lift: kl, noShadow: true });
-          box(g, { x: kx - 0.6, y: y1 - 0.2, w: 1.2, h: 0.5, height: a(2.4), seed: pr.seed + 1 }, ['#3a2c0c', '#6a5016', '#a07a1e', '#c99a28', '#e2b43a', '#f2d06a'],
+          edgeLine(g, KP(0, KZ - a(2)), KP(1, KZ - a(2)), '#3a4046', 3); edgeLine(g, KP(0, KZ), KP(1, KZ), '#5e676e', 3);
+          for (var kb = 0; kb < 5; kb++) edgeLine(g, KP(kb / 5, KZ - a(2)), KP((kb + 1) / 5, KZ), '#4a5258', 1);
+          // its root on the hull, and the jaws closed on the ship
+          box(g, { x: pr.x0 - 0.5, y: pr.y0 - 0.5, w: 1, h: 1, height: KZ + a(1), seed: pr.seed }, BULK, { roof: BULK[4], roofEdge: BULK[5], windows: null, lift: kl, noShadow: true });
+          box(g, { x: pr.x1 - 0.5, y: pr.y1 - 0.5, w: 1, h: 1, height: a(2.4), seed: pr.seed + 1 }, ['#3a2c0c', '#6a5016', '#a07a1e', '#c99a28', '#e2b43a', '#f2d06a'],
             { roof: '#e2b43a', roofEdge: '#f2d06a', windows: null, lift: kl + KZ - a(2.4), noShadow: true });
-          var kl2 = KP(y1, KZ + a(0.6)); dot(g, kl2[0], kl2[1], '#7bdc6a', 2);
+          var kl2 = KP(1, KZ + a(0.6)); dot(g, kl2[0], kl2[1], '#7bdc6a', 2);
+          break;
+        }
+        /* A run of a station ring's hull, along its curve: thick plate, its face
+           to the deck lit, hazard paint at its foot, a lamp now and then. */
+        case 'hullseg': {
+          var gl8 = lift || 0, gux = Math.cos(pr.ang), guy = Math.sin(pr.ang), GT = 0.35, GH = pr.height, GL = pr.len / 2;
+          var GQ = function (t, v, z) { var q = toScreen(pr.x + gux * t + pr.nx * v, pr.y + guy * t + pr.ny * v); return [q.x, q.y - gl8 - z]; };
+          // the face towards the deck (the ring's inside, v > 0) and the one towards space
+          var faceIn = [GQ(-GL, GT, 0), GQ(GL, GT, 0), GQ(GL, GT, GH), GQ(-GL, GT, GH)];
+          var faceOut = [GQ(-GL, -GT, 0), GQ(GL, -GT, 0), GQ(GL, -GT, GH), GQ(-GL, -GT, GH)];
+          var inSeen = pr.nx + pr.ny > 0;
+          poly(g, inSeen ? faceOut : faceIn, BULK[1]);
+          poly(g, inSeen ? faceIn : faceOut, inSeen ? BULK[3] : BULK[2]);
+          if (inSeen) for (var hz8 = 0; hz8 < 3; hz8++) {
+            var ha8 = -GL + 2 * GL * hz8 / 3, hb8 = -GL + 2 * GL * (hz8 + 1) / 3;
+            poly(g, [GQ(ha8, GT, 0), GQ(hb8, GT, 0), GQ(hb8, GT, GH * 0.14), GQ(ha8, GT, GH * 0.14)], hz8 % 2 ? '#1b1a17' : '#c9a23c');
+          }
+          poly(g, [GQ(-GL, -GT, GH), GQ(GL, -GT, GH), GQ(GL, GT, GH), GQ(-GL, GT, GH)], BULK[4]);
+          edgeLine(g, GQ(-GL, GT, GH), GQ(GL, GT, GH), BULK[5], 1);
+          edgeLine(g, GQ(-GL, inSeen ? GT : -GT, 1), GQ(-GL, inSeen ? GT : -GT, GH - 1), BULK[1], 1);
+          if (rng(pr.seed)() < 0.35) { var lp8 = GQ(0, inSeen ? GT : -GT, GH * 0.8); dot(g, lp8[0] - 1, lp8[1] - 1, '#ffb02e', 3); }
           break;
         }
         /* An outcrop of the Warren's rock bulging from a wall face: a lump of

@@ -271,13 +271,15 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
 {
   /* The Double-Cross on the orbital's docking ring, as its briefing has it: cranes, cargo stacks and open deck. */
   const ps = MAPS.dockring.pieces;
-  ok('...the ring’s hull along the north, open space beyond it that nothing enters, and the two ships docked out there, clamped to the hull',
-    ps.some((p) => p.hull && p.kind === 'wall' && p.reinforced && p.w === 48) && ps.filter((p) => p.space).every((p) => R.TERRAIN[p.kind].impassable && p.y + p.h <= 9) &&
-    ps.filter((p) => p.kind === 'shuttle').every((p) => p.y + p.h <= p.docked && p.docked === ps.find((q) => q.hull).y));
-  ok('the docking ring: steel deck inside the hull, two ships docked with a gantry crane each, rows of cargo, open deck across the middle',
-    ps.some((p) => p.deck && p.x === 0 && p.w === 48 && p.y + p.h === 48) && R.terrainName(null, 'road', ps.find((p) => p.deck)) === 'Deck' &&
-    ps.filter((p) => p.kind === 'shuttle' && p.fixed && p.docked).length === 2 && ps.filter((p) => p.kind === 'crane').length === 2 &&
-    ps.filter((p) => p.kind === 'crater' && p.cargo).length >= 8 && !ps.some((p) => p.kind === 'ruins') &&
+  const sp = ps.find((p) => p.space && p.ring), rg = sp && sp.ring, outside = (x, y) => Math.hypot(x - rg.cx, y - rg.cy) >= rg.r;
+  ok('...the ring’s hull a curve across the north-east corner, open space beyond it that nothing enters, the two ships docked out there',
+    !!sp && sp.kind === 'bulkhead' && R.TERRAIN.bulkhead.impassable && R.inPoly(47, 1, sp.poly) && !R.inPoly(24, 24, sp.poly) && !R.inPoly(47, 40, sp.poly) &&
+    ps.filter((p) => p.kind === 'shuttle' && p.docked).length === 2 &&
+    ps.filter((p) => p.kind === 'shuttle').every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => outside(c[0], c[1]))) &&
+    ps.filter((p) => p.kind !== 'shuttle' && !p.space && !p.deck).every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => !outside(c[0], c[1]))));
+  ok('the docking ring: steel deck inside the hull, a gantry crane by each ship, rows of cargo, open deck across the middle',
+    ps.some((p) => p.deck && p.x === 0 && p.y === 0 && p.w === 48 && p.h === 48) && R.terrainName(null, 'road', ps.find((p) => p.deck)) === 'Deck' &&
+    ps.filter((p) => p.kind === 'crane').length === 2 && ps.filter((p) => p.kind === 'crater' && p.cargo).length >= 8 && !ps.some((p) => p.kind === 'ruins') &&
     ps.filter((p) => p.kind !== 'road').every((p) => !overlap(p, { x: 19, y: 18, w: 10, h: 2.5 })));
 }
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));

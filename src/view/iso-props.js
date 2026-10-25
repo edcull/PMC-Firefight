@@ -52,7 +52,8 @@
       /* A station's solar arrays: out in the open space round it, one off each
          corner of the table wherever the dark is wide enough to hold one (drawn
          only: nothing stands out there). */
-      var space = terrain.filter(function (q) { return q.kind === 'bulkhead' && q.space; });
+      // (only round a station laid as a compound: a docking ring's open space, `ring`, has its ships out there instead)
+      var space = terrain.filter(function (q) { return q.kind === 'bulkhead' && q.space && !q.ring; });
       // the Warren's solid is rock, its doors stone (a story's skin, engine.js)
       var rocky = terrain.some(function (q) { return q.rock; });
       if (space.length) {
@@ -709,6 +710,17 @@
           props.push({ kind: r.kind, x: r.x, y: r.y, w: r.w, h: r.h, height: a(r.kind === 'machinery' ? 5.2 : 2.4), seed: r.seed || (rr2() * 9999) | 0 });
           return;
         }
+        /* A station ring's hull, along the curve where its deck meets open space:
+           laid in short straight runs so it sorts among the models. */
+        if (r.kind === 'bulkhead' && r.ring) {
+          var rg2 = r.ring, nseg = Math.max(4, Math.round(Math.abs(rg2.a1 - rg2.a0) * rg2.r / 1.4));
+          for (var hs = 0; hs < nseg; hs++) {
+            var ta = rg2.a0 + (rg2.a1 - rg2.a0) * hs / nseg, tb = rg2.a0 + (rg2.a1 - rg2.a0) * (hs + 1) / nseg, tm = (ta + tb) / 2;
+            props.push({ kind: 'hullseg', x: rg2.cx + rg2.r * Math.cos(tm), y: rg2.cy + rg2.r * Math.sin(tm), ang: tm + Math.PI / 2,
+              len: rg2.r * Math.abs(tb - ta) + 0.05, nx: -Math.cos(tm), ny: -Math.sin(tm), height: a(7), first: hs === 0, seed: (rr2() * 9999) | 0 });
+          }
+          return;
+        }
         if (r.kind === 'bulkhead') {
           /* Every wall drawn about the grid line it stands on: a wall between two
              sections is already half its thickness either side of the line, so a
@@ -774,11 +786,18 @@
         if (r.kind === 'road' && r.pad) { props.push({ kind: 'padmark', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'shuttle') {
           props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), docked: !!r.docked, seed: (rr2() * 9999) | 0 });
-          // a ship docked outside a station's hull: two clamps run out from the hull to hold it, a boarding tube between
-          if (r.docked) [0.25, 0.75].forEach(function (f, ci) {
-            var cx = r.x + r.w * f;
-            // (the clamp runs to the ship's flank: its hull is narrower than its footprint)
-            props.push({ kind: 'dockclamp', x: cx, y: (r.y + r.h + r.docked) / 2, from: r.docked, to: r.y + r.h / 2 + 1.15, tube: ci === 0, seed: (rr2() * 9999) | 0 });
+          /* A ship docked outside a station ring's hull: two clamps run out to it
+             from the hull, square to the curve, a boarding tube beside one. Each
+             meets the ship's flank on the side towards the ring (its hull is
+             narrower than its footprint). */
+          var ringP = r.docked && terrain.filter(function (q) { return q.ring; })[0];
+          if (ringP) [0.3, 0.7].forEach(function (f, ci) {
+            var rg = ringP.ring, px = r.x + r.w * f, pyc = r.y + r.h / 2;
+            var dx = px - rg.cx, dy = pyc - rg.cy, dl = Math.hypot(dx, dy);
+            // the flank: from the ship's middle, 1.1" towards the ring's centre
+            var fx = px - dx / dl * 1.1, fy = pyc - dy / dl * 1.1;
+            var hx = rg.cx + dx / dl * rg.r, hy = rg.cy + dy / dl * rg.r;
+            props.push({ kind: 'dockclamp', x: (fx + hx) / 2, y: (fy + hy) / 2, x0: hx, y0: hy, x1: fx, y1: fy, tube: ci === 0, seed: (rr2() * 9999) | 0 });
           });
           return;
         }
@@ -869,7 +888,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, outcrop: 0.25, dockclamp: 0.6, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
+      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, outcrop: 0.25, dockclamp: 0.6, hullseg: 0.6, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];
