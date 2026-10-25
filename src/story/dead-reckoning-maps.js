@@ -361,7 +361,9 @@
        (the shuttle the other maps have), each held by a docking clamp, an
        enclosed bridge run from a bulkhead door in the hull's face up to the
        ship's side hatch. Inside the hull the outer ring's deck, about 13.5"
-       across, where the cargo comes in: most of it is stacked here. Then the rings part: two stretches of space
+       across, where the cargo comes in: most of it is stacked here, and just
+       inboard of each docking collar's door a tank of reaction mass for the
+       ships. Then the rings part: two stretches of space
        between them, 9" across, walled all round by the hull (they are the
        outside of the station: nothing goes there, nor sees through), and
        either side of them and between, the three broad spokes that join the
@@ -379,9 +381,11 @@
         // open space beyond the outer ring's hull, and the ships docked out in it
         RINGSPACE(24, 50, 45.6),
         DOCKED(0.4, 0.4, 10, 4.5), DOCKED(37.6, 0.4, 10, 4.5),
-        // the outer ring's deck, where the cargo comes in: stacks of it, a lifter working them, a fuel bowser, a blast barrier before the middle spoke
-        Object.assign(R('fueltruck', 13, 9, 2.8, 1.4), { facing: Math.PI }), Object.assign(R('cargolifter', 28, 7, 2.5, 2.5), { facing: 0 }),
-        CG(4.5, 10, 4, 4), CG(16.5, 6, 4, 3.5), CG(21.5, 5.5, 5, 4), CG(35, 8, 3.5, 3), CG(39.5, 10, 4, 4),
+        // the outer ring's deck, where the cargo comes in: stacks of it, a lifter working them, a fuel bowser, a blast barrier before the middle spoke,
+        // and by each docking collar's bulkhead door a tank of reaction mass to fuel the ship from
+        Object.assign(R('fueltruck', 17, 11, 2.8, 1.4), { facing: Math.PI }), Object.assign(R('cargolifter', 28, 7, 2.5, 2.5), { facing: 0 }),
+        R('fueltanks', 13, 7.5, 3.5, 3), R('fueltanks', 31.5, 7.5, 3.5, 3),
+        CG(4.5, 10, 4, 4), CG(17.5, 6, 3.5, 3.5), CG(21.5, 5.5, 5, 4), CG(39.5, 10, 4, 4),
         CG(12, 13, 5, 4), CG(26, 10, 4, 3.5), CG(31, 13, 5, 4),
         Object.assign(R('barricade', 21, 14, 4, 1), { shield: true, blast: true })
       ].concat(
