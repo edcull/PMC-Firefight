@@ -357,7 +357,7 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
   const stones = c.story.meters.stones;
   S.choose(c, 'follow');
   v = S.view(c);
-  ok('...letting Sable keep the heading at Kerrigan gives no lodestone, and says so', c.story.meters.stones === stones && /Sable takes the heading/.test(S.render(c, v.text)));
+  ok('...letting Sable keep the heading at Kerrigan gives no lodestone, and says so', c.story.meters.stones === stones && /Sable takes the stone/.test(S.render(c, v.text)));
   const land = dr._nodes['landing.field'].options;
   c = fresh(); c.story.flags.kettle_contact = true; c.story.flags.reavers_spared = true; c.story.chapter = 'landing'; c.story.node = 'landing.field';
   c.story.leading = 'kettle';

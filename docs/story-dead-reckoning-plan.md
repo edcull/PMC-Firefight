@@ -54,6 +54,26 @@ beside its name. Something in the story reveals each one
 | The Red Reavers | nobody: claim jumpers | Hal says so at the beacon |
 | The Ninth Lance | Lucan Vane | Daw says so (*The Double-Cross*) |
 
+**Morrow, his backer, and the proxies** (settled after the dialogue pass).
+Morrow flew his first voyage on a backer's money and came home with a hold
+of stones, which the backer took. Together, the stones warmed, turned the same
+way and began to call: Morrow understood he had been carrying them home, and
+that enough of them in one place would wake whatever they belong to. He stole
+them back, went out again alone, and put them down one at a time along the
+route ("never two in one hold"), each stone pointing to the next, so the log
+and the stones are a lock as much as a map. He sold one on Kerrigan for fuel
+(*The Broker*'s lot), and died on Pell with one in his hand.
+
+**The backer was Lucan Vane**, and Vane is the **true client** behind most of
+the race: through proxies he funds Brass Ledger (the Orrin Mercantile Bank's
+shell companies), Sable Armour Group (the Halvorsen Mining Combine) and Kestrel
+Air Cavalry (the Meridian newsfeed, bought last year), and seeds them stones
+so many hands dig up the rest. The first half only hints: each of those
+clients' money runs through **Halcyon**, where Vane's banks are; Vane waves off
+the question of who paid for Morrow's first trip. Wraith Section (the Navy)
+and the Red Reavers are the only rivals he does not own. The second half
+reveals it (*The Vault*'s receipts, *The Wreck*'s last entry).
+
 **Business until somebody loses** (settled after the rework). The rival
 companies are confrontational, and they make it business: clients, invoices,
 contracts, prices. The first time the company beats one (`grudges`; the flag

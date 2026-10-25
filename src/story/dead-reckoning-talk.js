@@ -36,10 +36,12 @@
       'c1.brief': [
         { who: 'vane', text: '{commander:rank}. This is Lucan Vane. No, you won’t see me; nobody does, and I find that keeps things simple. I’ve read your company’s file, and I don’t mind it. That’s rarer than you’d think.' },
         { who: 'commander', text: 'Your agent said an auction. He didn’t say why an auction needs a company.' },
-        { who: 'vane', text: 'Because everyone else in that room has brought one. Lot 47 is a dead man’s log, {commander:rank}, and the dead man found something nobody else ever has.' },
+        { who: 'vane', text: 'Because everyone else in that room has brought one. Lot 47 is a dead man’s log, {commander:rank}, and the dead man found something nobody else ever has. I have waited a long time for it to come up.' },
         { who: 'reader', text: 'Elias Morrow. Surveyor. He wrote in dead reckoning: headings and burn times, no fixes. Without his stones it’s gibberish. With them, it’s a road.' },
         { who: 'commander', text: 'And the stones? Whose are they?' },
-        { who: 'reader', text: 'Nobody’s, now. He took them back out with him and put them down along the way, one at a time, and the log says where. That’s rather the point.' },
+        { who: 'reader', text: 'Nobody’s, now. He stole them back from whoever paid for his first trip, took them out again, and put them down along the way, one at a time. Each one points to the next. The log says where to start.' },
+        { who: 'commander', text: 'Who paid for his first trip?' },
+        { who: 'vane', text: 'Ancient history, {commander:rank}. The catalogue doesn’t say, and the dead don’t sue.' },
         { who: 'vane', text: 'A road to a world he called the Quiet. I want Halloran out of that room with the log, and alive. After that you follow the road, and whoever files the first claim at the end owns everything there. Shall we begin?' }
       ],
       'c1.agent': [
@@ -84,6 +86,7 @@
         { who: 'commander', text: 'Reavers?' },
         { who: 'ops', text: 'Not Reavers. Reavers don’t stop all at once, like somebody told them to.' },
         { who: 'reader', text: 'Morrow’s entry for this world is one line: “They let me in. I don’t know why. I took the stone and they watched me take it.” He never says who they were.' },
+        { who: 'reader', text: 'One more thing. He wrote that the stones were louder together. He never says louder to whom. I’ve started keeping ours in separate lockers, {commander:rank}, and I’d rather you didn’t ask me why.' },
         { who: 'unknown', text: '[a pressure behind the eyes, like a hand on the back of the neck: you are seen]' }
       ],
       'c3.contact': [
@@ -103,9 +106,9 @@
       'c4.brief': [
         { who: 'kettering', if: { not: { flag: 'beat_kettle' } }, text: 'Kerrigan, {commander:rank}. My broker, my rules: anyone starts shooting before the hammer falls, Brass Ledger finishes it, and sends the bill to whoever’s left.' },
         { who: 'kettering', if: { flag: 'beat_kettle' }, text: 'Kerrigan, {commander:rank}. My broker, my rules. And after Vesk, you’re the first name on my list: anyone starts shooting before the hammer falls, Brass Ledger finishes it. I’d very much like it to be you.' },
-        { who: 'agathe', text: 'The heading is in my warehouse. My warehouse has my tanks in front of it. That is the whole of the auction.' },
+        { who: 'agathe', text: 'The stone and its heading are in my warehouse. My warehouse has my tanks in front of it. That is the whole of the auction.' },
         { who: 'commander', text: 'You bought the building to stop the sale?' },
-        { who: 'agathe', text: 'My client bought it, and my client pays me to keep it. You can buy the heading from the broker, at the broker’s price, and I will see it delivered. Or you can try my front door, and I will put every one of your vehicles in the harbour. Choose before the tide turns.' }
+        { who: 'agathe', text: 'My client bought it, and my client pays me to keep it. You can buy the lot from the broker, at the broker’s price, and I will see it delivered. Or you can try my front door, and I will put every one of your vehicles in the harbour. Choose before the tide turns.' }
       ],
 
       // ---- Into the Warren ----
