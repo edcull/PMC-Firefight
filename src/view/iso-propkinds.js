@@ -1657,8 +1657,7 @@
            is laid in, drawn so they read as one mass (box: solid). */
         case 'bulkhead': {
           if (pr.rock) {
-            /* The Warren's rock: cut smooth on its faces, its top the raw rock,
-               veined here and there with the green of what is in it. */
+            // the Warren's rock: cut smooth on its faces, its top the raw rock
             box(g, pr, ROCKWALL, { roof: '#211d19', roofEdge: '#5d5042', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
             /* Where the Reavers have been firing at the walls: on the faces that look
                onto a floor, scorched blotches with a pale chipped heart, pocked
@@ -1691,20 +1690,6 @@
                 }
               });
             }
-            if (!cutaway && !pr.thin && pr.w * pr.h > 2) {
-              var vr = rng(pr.seed + 17), vl = lift || 0, nv = vr() < 0.5 ? 0 : Math.min(3, Math.round(pr.w * pr.h / 40) + 1);
-              var VT = function (x, y) { var q = toScreen(x, y); return [q.x, q.y - vl - pr.height]; };
-              for (var vn = 0; vn < nv; vn++) {
-                var vx = pr.x + 0.3 + vr() * (pr.w - 0.6), vy = pr.y + 0.3 + vr() * (pr.h - 0.6), va = vr() * Math.PI * 2;
-                var last = VT(vx, vy);
-                for (var vs = 0; vs < 3; vs++) {
-                  va += (vr() - 0.5) * 1.4; vx = Math.max(pr.x + 0.2, Math.min(pr.x + pr.w - 0.2, vx + Math.cos(va) * 0.5)); vy = Math.max(pr.y + 0.2, Math.min(pr.y + pr.h - 0.2, vy + Math.sin(va) * 0.5));
-                  var nx2 = VT(vx, vy);
-                  edgeLine(g, last, nx2, 'rgba(60,170,90,.22)', 3); edgeLine(g, [last[0], last[1] + 1], [nx2[0], nx2[1] + 1], 'rgba(125,255,160,.7)', 1);
-                  last = nx2;
-                }
-              }
-            }
             break;
           }
           box(g, pr, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
@@ -1723,19 +1708,6 @@
           if (form < 0.4) { ellipse(g, top[0], top[1] - a(0.9), a(0.55), a(0.55), glow[0]); dot(g, top[0] - a(0.25), top[1] - a(1.2), '#ffffff', 2); }
           else if (form < 0.75) { poly(g, [[top[0], top[1] - a(2)], [top[0] + a(0.4), top[1] - a(0.3)], [top[0] - a(0.4), top[1] - a(0.3)]], glow[0]); edgeLine(g, [top[0], top[1] - a(2)], [top[0], top[1] - a(0.4)], '#ffffff', 1); }
           else { rect(g, top[0] - a(0.45), top[1] - a(1.5), a(0.9), a(1.2), '#3a3330'); rect(g, top[0] - a(0.3), top[1] - a(1.35), a(0.6), a(0.9), glow[0]); }
-          break;
-        }
-        // a crack in the Warren's floor, lit by what is in the rock under it
-        case 'glowcrack': {
-          var gr7 = rng(pr.seed), gl7 = lift || 0, gx7 = pr.x, gy7 = pr.y, ga7 = gr7() * Math.PI * 2;
-          var GC = function (x, y) { var q = toScreen(x, y); return [q.x, q.y - gl7]; };
-          var gp7 = GC(gx7, gy7);
-          for (var gi7 = 0; gi7 < 4; gi7++) {
-            ga7 += (gr7() - 0.5) * 1.6; gx7 += Math.cos(ga7) * 0.35; gy7 += Math.sin(ga7) * 0.35;
-            var gq7 = GC(gx7, gy7);
-            edgeLine(g, gp7, gq7, 'rgba(60,170,90,.3)', 3); edgeLine(g, [gp7[0], gp7[1] + 1], [gq7[0], gq7[1] + 1], '#6dff96', 1);
-            gp7 = gq7;
-          }
           break;
         }
         /* The gate the company came through: a ring of light standing across

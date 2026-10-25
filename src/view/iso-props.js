@@ -533,8 +533,8 @@
           for (var dt = 0; dt < nDet; dt++) {
             var dq = spotIn(r, 0.55, rr2), dk = rr2();
             if (fits.some(function (q) { return dq.x > q.x - 0.5 && dq.x < q.x + q.w + 0.5 && dq.y > q.y - 0.5 && dq.y < q.y + q.h + 0.5; })) continue;
-            // (the Warren's: fallen rock, the Reavers' junk, and cracks in the floor lit by what is in the rock)
-            var dkind = r.warren ? (dk < 0.35 ? 'rubble' : dk < 0.55 ? 'glowcrack' : dk < 0.75 ? 'scrap' : 'litter')
+            // (the Warren's: fallen rock and the Reavers' junk)
+            var dkind = r.warren ? (dk < 0.45 ? 'rubble' : dk < 0.7 ? 'scrap' : 'litter')
               : dk < 0.3 ? 'deckgrate' : dk < 0.55 ? 'cable' : dk < 0.8 ? 'smallbox' : 'litter';
             props.push({ kind: dkind, x: dq.x, y: dq.y, horiz: r.w >= r.h, tone: rr2(), seed: (rr2() * 9999) | 0 });
           }
@@ -815,7 +815,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { piperun: 0.45, relic: 0.4, glowcrack: 0.3, gatering: 0.6, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
+      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];
