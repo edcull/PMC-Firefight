@@ -382,6 +382,8 @@
         if (r.kind === 'hill') return;
         // a pipeline stands on its trestles over the ground as it is, a blast barrier on a station's deck: no dug-in lip under either
         if (r.pipe || r.blast) return;
+        // ...and a ship docked outside a station floats over open space: black under it, as round it
+        if (r.docked) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         // a drowned beacon's possible locations stand on the ground as it is, their own pieces drawn over it
         if (r.kind === 'searchsite' && (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones' || r.skin === 'boats' || r.skin === 'tent')) return;
         // a station's solid is open space, black (rules.js reads it as solid all the same)
@@ -409,7 +411,7 @@
       for (var ly = gy0; ly < gy1; ly += 24) steps.push(latRows.bind(null, ly, Math.min(gy1, ly + 24)));
       for (var sy = cy0; sy < cy1; sy += 48) steps.push(soilRows.bind(null, sy, Math.min(cy1, sy + 48)));
       terrain.forEach(function (r, ri) {
-        if (r.kind === 'hill' || (!FLOOR[r.kind] && !(r.kind === 'bulkhead' && r.space))) return;
+        if (r.kind === 'hill' || (!FLOOR[r.kind] && !(r.kind === 'bulkhead' && r.space) && !r.docked)) return;
         // cargo stacked on open ground (not on an apron), a camp's tents and a pipeline have no floor of their own
         if ((r.cargo && r.cargo !== 'apron') || r.camp || r.pipe || r.blast) return;
         floorBands(r).forEach(function (rows) { steps.push(function () { floorOf1(r, ri, rows); }); });

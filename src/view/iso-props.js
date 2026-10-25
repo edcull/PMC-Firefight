@@ -663,13 +663,15 @@
           var wire = wr() < 0.45, wh3 = a(10 + wr() * 2.5);
           // a warehouse's steel cladding stands taller, and neither it nor a strongroom's wall is wired
           if (r.shed) wh3 = a(15);
-          if (r.shed || r.vault) wire = false;
+          // (a station's hull, seen from inside the ring: a low rim, so the ships docked beyond it show over it)
+          if (r.hull) wh3 = a(7);
+          if (r.shed || r.vault || r.hull) wire = false;
           for (var ws = 0; ws < wn; ws++) {
             var wm = (ws + 0.5) * wsl;
             props.push({
               kind: 'wallrun', x: whz ? r.x + wm : r.x + r.w / 2, y: whz ? r.y + r.h / 2 : r.y + wm,
               horiz: whz, len: wsl, first: ws === 0, last: ws === wn - 1, wire: wire, height: wh3,
-              reinforced: !!r.reinforced, shed: !!r.shed, seed: (wr() * 9999) | 0
+              reinforced: !!r.reinforced, shed: !!r.shed, hull: !!r.hull, seed: (wr() * 9999) | 0
             });
           }
           /* A warehouse wall that ends at an opening (a story map's `opening`): a
@@ -770,7 +772,16 @@
         // a station's deck: its plates' seams and bolts, laid flat
         if (r.kind === 'road' && r.deck) { props.push({ kind: 'deckplate', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'road' && r.pad) { props.push({ kind: 'padmark', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
-        if (r.kind === 'shuttle') { props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), seed: (rr2() * 9999) | 0 }); return; }
+        if (r.kind === 'shuttle') {
+          props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), docked: !!r.docked, seed: (rr2() * 9999) | 0 });
+          // a ship docked outside a station's hull: two clamps run out from the hull to hold it, a boarding tube between
+          if (r.docked) [0.25, 0.75].forEach(function (f, ci) {
+            var cx = r.x + r.w * f;
+            // (the clamp runs to the ship's flank: its hull is narrower than its footprint)
+            props.push({ kind: 'dockclamp', x: cx, y: (r.y + r.h + r.docked) / 2, from: r.docked, to: r.y + r.h / 2 + 1.15, tube: ci === 0, seed: (rr2() * 9999) | 0 });
+          });
+          return;
+        }
         if (r.kind === 'fueltruck') {
           props.push({ kind: 'fueltruck', x: r.x, y: r.y, w: r.w, h: r.h, height: a(13), facing: r.facing || 0, seed: (rr2() * 9999) | 0 });
           if (r.hose) props.push({ kind: 'hose', x: r.x + r.w * 0.35, y: r.y + r.h - 0.1, to: r.hose, seed: (rr2() * 9999) | 0 });
@@ -858,7 +869,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, outcrop: 0.25, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
+      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, outcrop: 0.25, dockclamp: 0.6, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];

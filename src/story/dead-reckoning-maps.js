@@ -32,6 +32,9 @@
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
   // a station's steel deck plate: a floor like a slab, drawn in plates
   function DECK(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, deck: true, fixed: true }; }
+  // open space beyond a station's hull (solid to the rules, drawn black), and the hull itself (a reinforced high wall)
+  function SPACE(x, y, w, h) { return { kind: 'bulkhead', x: x, y: y, w: w, h: h, space: true, fixed: true }; }
+  function HULL(x, y, w, h) { return { kind: 'wall', x: x, y: y, w: w, h: h, hull: true, reinforced: true, fixed: true }; }
   // poured concrete (a quay, a warehouse's floor): open ground, and what stands on it stands on it
   function SLAB(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, fixed: true }; }
   // a warehouse's steel-clad wall (a high wall), laid as written
@@ -296,22 +299,23 @@
     },
 
     /* The docking ring of Kerrigan's orbital, as the briefing has it: cranes,
-       cargo stacks and open deck. Steel deck plate over the whole table; two
-       ships docked at their berths along the north side (the Ninth Lance's and
-       the company's), a gantry crane over each, a fuel bowser at the first;
-       rows of cargo stacks either side with lanes between them, lifters
-       working them; the deck open across the middle, blast barriers on it;
-       the dock offices and the traffic tower along the south. Heavy spin
-       gravity (the chapter's). */
+       cargo stacks and open deck, inside the ring's hull. Along the north the
+       hull, and beyond it open space (black, and nothing goes there): the two
+       ships docked outside it, the Ninth Lance's and the company's, each held
+       by docking clamps run out from the hull, a gantry crane's boom reaching
+       out over each. Inside, steel deck plate; rows of cargo stacks either
+       side with lanes between them, lifters working them; the deck open
+       across the middle, blast barriers on it; the dock offices and the
+       traffic tower along the south. Heavy spin gravity (the chapter's). */
     dockring: {
       name: 'The docking ring, Kerrigan orbital', planet: 'industrial',
       pieces: [
-        DECK(0, 0, 48, 48),
-        // the berths and the ships in them
-        Object.assign(R('road', 7, 0.5, 12, 8), { pad: true }), Object.assign(R('road', 28, 0.5, 12, 8), { pad: true }),
-        Object.assign(R('shuttle', 8, 0.8, 10, 7), { fixed: true }), Object.assign(R('shuttle', 29, 0.8, 10, 7), { fixed: true }),
-        R('crane', 20, 8.6, 3, 2.4), R('crane', 41, 8.6, 3, 2.4),
-        Object.assign(R('fueltruck', 20.2, 4, 2.8, 1.4), { hose: { x: 17, y: 5 } }),
+        // open space beyond the hull, round the two ships
+        SPACE(0, 0, 48, 0.5), SPACE(0, 6.5, 48, 2.5), SPACE(0, 0.5, 8, 6), SPACE(18, 0.5, 11, 6), SPACE(39, 0.5, 9, 6),
+        Object.assign(R('shuttle', 8, 0.5, 10, 6), { fixed: true, docked: 9 }), Object.assign(R('shuttle', 29, 0.5, 10, 6), { fixed: true, docked: 9 }),
+        // the ring's hull, and the deck inside it
+        HULL(0, 9, 48, 0.6), DECK(0, 9.6, 48, 38.4),
+        R('crane', 20, 10.2, 3, 2.4), R('crane', 41, 10.2, 3, 2.4), Object.assign(R('fueltruck', 14, 10.4, 2.8, 1.4), { facing: Math.PI }),
         // the cargo, in rows, lanes between
         CG(6, 14, 5, 4), CG(14, 14, 5, 4), CG(29, 14, 5, 4), CG(37, 14, 5, 4),
         CG(9, 22, 4, 5), CG(35, 22, 4, 5),

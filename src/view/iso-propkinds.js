@@ -497,7 +497,8 @@
           var R = ST.map(function (s) { var out = []; for (var k = 0; k < RK; k++) out.push(ring(s, k)); return out; });
           function S3(p, dz) { return SP(p.x, p.y, p.z + (dz || 0)); }
           var sm = SP(x0 + w / 2, yc, 0);
-          shadowBlob(g, { x: sm[0] + a(3), y: sm[1] + a(1.5) }, a(w * 4.4), a(pr.h * 2.1));
+          // (docked outside a station's hull it floats: no shadow, no legs, its ramp shut)
+          if (!pr.docked) shadowBlob(g, { x: sm[0] + a(3), y: sm[1] + a(1.5) }, a(w * 4.4), a(pr.h * 2.1));
           // the engine bells behind the tail, under the hull
           [[-0.45, a(12.5)], [0.45, a(12.5)], [0, a(19)]].forEach(function (E) {
             var e0 = SP(xa - 0.55, yc + E[0], E[1]), e1 = SP(xa + 0.1, yc + E[0], E[1]);
@@ -506,7 +507,7 @@
             ellipse(g, e0[0], e0[1], a(2), a(2.2), 'rgba(255,150,70,.45)');
           });
           // the legs, each on a foot
-          [[xa + 1.8, yc - 0.9], [xa + 1.8, yc + 0.9], [xa + 6.6, yc - 0.8], [xa + 6.6, yc + 0.8]].forEach(function (L) {
+          if (!pr.docked) [[xa + 1.8, yc - 0.9], [xa + 1.8, yc + 0.9], [xa + 6.6, yc - 0.8], [xa + 6.6, yc + 0.8]].forEach(function (L) {
             var f = SP(L[0], L[1] + (L[1] > yc ? 0.25 : -0.25), 0), t = SP(L[0], L[1], a(10));
             ellipse(g, f[0], f[1], a(1.8), a(0.9), '#1a1d20');
             edgeLine(g, f, t, HULL[1], 5); edgeLine(g, f, t, HULL[4], 1);
@@ -551,11 +552,18 @@
           }
           // the side ramp, down to the apron, and the hold lit behind it
           var r0 = xa + 5.2, r1 = xa + 6.6, rz = a(9), ry = yc + 1.1;
-          poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry, a(21)), SP(r0, ry, a(21))], 'rgba(255,214,140,.85)');
-          poly(g, [SP(r0 + 0.15, ry, rz), SP(r1 - 0.15, ry, rz), SP(r1 - 0.15, ry, a(18)), SP(r0 + 0.15, ry, a(18))], 'rgba(255,236,190,.6)');
-          poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry + 1.7, 0), SP(r0, ry + 1.7, 0)], HULL[3]);
-          for (var rs = 1; rs < 5; rs++) edgeLine(g, SP(r0, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), SP(r1, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), HULL[1], 1);
-          edgeLine(g, SP(r0, ry + 1.7, 0), SP(r1, ry + 1.7, 0), '#e0b440', 2);
+          if (pr.docked) {
+            // docked: the side hatch shut, its outline and a lamp by it
+            edgeLine(g, SP(r0, ry, a(11)), SP(r1, ry, a(11)), HULL[1], 1); edgeLine(g, SP(r0, ry, a(20)), SP(r1, ry, a(20)), HULL[1], 1);
+            edgeLine(g, SP(r0, ry, a(11)), SP(r0, ry, a(20)), HULL[1], 1); edgeLine(g, SP(r1, ry, a(11)), SP(r1, ry, a(20)), HULL[1], 1);
+            var hl3 = SP(r1 + 0.2, ry, a(19)); dot(g, hl3[0], hl3[1], '#7bdc6a', 2);
+          } else {
+            poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry, a(21)), SP(r0, ry, a(21))], 'rgba(255,214,140,.85)');
+            poly(g, [SP(r0 + 0.15, ry, rz), SP(r1 - 0.15, ry, rz), SP(r1 - 0.15, ry, a(18)), SP(r0 + 0.15, ry, a(18))], 'rgba(255,236,190,.6)');
+            poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry + 1.7, 0), SP(r0, ry + 1.7, 0)], HULL[3]);
+            for (var rs = 1; rs < 5; rs++) edgeLine(g, SP(r0, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), SP(r1, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), HULL[1], 1);
+            edgeLine(g, SP(r0, ry + 1.7, 0), SP(r1, ry + 1.7, 0), '#e0b440', 2);
+          }
           // the near wing, its leading edge lit, a gold chevron on it, and its winglet
           var NW = wing(1);
           poly(g, NW.map(function (p) { return [p[0], p[1] + a(1.5)]; }), HULL[0]);
@@ -1261,6 +1269,30 @@
              odd crack and bullet pock, and on some walls a coil of razor wire. */
           var wr2 = rng(pr.seed), lf2 = lift || 0;
           var ux2 = pr.horiz ? 1 : 0, uy2 = pr.horiz ? 0 : 1, vx2 = 1 - ux2, vy2 = 1 - uy2;
+          if (pr.hull) {
+            /* A station's hull, seen from inside the ring: thick plate in big
+               panels, a band of ribbing along it, hazard paint at the foot and a
+               row of amber lamps along the top. */
+            var HL2 = pr.len, HT = 0.3, HH2 = pr.height, h0b = -HL2 / 2, h1b = HL2 / 2;
+            var HQ2 = function (t, v, z) { var q = toScreen(pr.x + ux2 * t + vx2 * v, pr.y + uy2 * t + vy2 * v); return [q.x, q.y - lf2 - z]; };
+            var hslab = function (t0, t1, v0, v1, z0, z1, pal2) {
+              poly(g, [HQ2(t0, v1, z0), HQ2(t1, v1, z0), HQ2(t1, v1, z1), HQ2(t0, v1, z1)], pr.horiz ? pal2[3] : pal2[2]);
+              poly(g, [HQ2(t1, v0, z0), HQ2(t1, v1, z0), HQ2(t1, v1, z1), HQ2(t1, v0, z1)], pr.horiz ? pal2[2] : pal2[3]);
+              poly(g, [HQ2(t0, v0, z1), HQ2(t1, v0, z1), HQ2(t1, v1, z1), HQ2(t0, v1, z1)], pal2[4]);
+            };
+            hslab(h0b, h1b, -HT, HT, 0, HH2, BULK);
+            // the panels' joints, a band of ribbing across them, and the hazard paint at the foot
+            edgeLine(g, HQ2(h0b, HT, 1), HQ2(h0b, HT, HH2 - 1), BULK[1], 1);
+            edgeLine(g, HQ2(h0b, HT, HH2 * 0.55), HQ2(h1b, HT, HH2 * 0.55), BULK[1], 2);
+            edgeLine(g, HQ2(h0b, HT, HH2 * 0.55 - 2), HQ2(h1b, HT, HH2 * 0.55 - 2), BULK[5], 1);
+            for (var hz3 = 0; hz3 < 6; hz3++) {
+              var ha3 = h0b + HL2 * hz3 / 6, hb3 = h0b + HL2 * (hz3 + 1) / 6;
+              poly(g, [HQ2(ha3, HT, 0), HQ2(hb3, HT, 0), HQ2(hb3, HT, HH2 * 0.1), HQ2(ha3, HT, HH2 * 0.1)], hz3 % 2 ? '#1b1a17' : '#c9a23c');
+            }
+            hslab(h0b, h1b, -HT - 0.05, HT + 0.05, HH2, HH2 + a(1), BULK);
+            var lamp3 = HQ2(0, HT, HH2 * 0.85); dot(g, lamp3[0] - 1, lamp3[1] - 1, '#ffb02e', 3);
+            break;
+          }
           if (pr.shed) {
             /* A warehouse's wall: corrugated steel cladding on I-beam posts, the
                ribs catching the light, a flashing along the top, rust weeping
@@ -1749,6 +1781,36 @@
             var wq9 = DP(pr.x + dr9() * pr.w, pr.y + dr9() * pr.h);
             ellipse(g, wq9[0], wq9[1], a(1 + dr9() * 2), a(0.5 + dr9()), dr9() < 0.5 ? 'rgba(12,14,16,.22)' : 'rgba(120,128,136,.12)');
           }
+          break;
+        }
+        /* A docking clamp, run out from a station's hull over open space to a
+           ship docked outside it: a box truss on the hull's side, the clamp's
+           jaws closed on the ship's flank, and, on one of each ship's pair, the
+           boarding tube alongside it. */
+        case 'dockclamp': {
+          var kl = lift || 0, KZ = a(15), kx = pr.x;
+          var KP = function (y, z, dx) { var q = toScreen(kx + (dx || 0), y); return [q.x, q.y - kl - z]; };
+          var y0 = pr.from, y1 = pr.to;
+          if (pr.tube) {
+            // the boarding tube: a ribbed, flexible tunnel beside the truss
+            for (var tb = 0; tb <= 8; tb++) {
+              var ty = y0 + (y1 - y0) * tb / 8, tq = KP(ty, KZ * 0.6, 0.9);
+              ellipse(g, tq[0], tq[1], a(1.3), a(1.5), tb % 2 ? '#8a9298' : '#6e767c');
+            }
+            edgeLine(g, KP(y0, KZ * 0.6 + a(1.2), 0.9), KP(y1, KZ * 0.6 + a(1.2), 0.9), '#aab2b8', 1);
+          }
+          // the truss: two chords and their bracing
+          var c0a = KP(y0, KZ), c0b = KP(y1, KZ), c1a = KP(y0, KZ - a(2)), c1b = KP(y1, KZ - a(2));
+          edgeLine(g, c1a, c1b, '#3a4046', 3); edgeLine(g, c0a, c0b, '#5e676e', 3);
+          for (var kb = 0; kb < 5; kb++) {
+            var ka = y0 + (y1 - y0) * kb / 5, kc = y0 + (y1 - y0) * (kb + 1) / 5;
+            edgeLine(g, KP(ka, KZ - a(2)), KP(kc, KZ), '#4a5258', 1);
+          }
+          // its root on the hull, and the jaws on the ship
+          box(g, { x: kx - 0.5, y: y0 - 0.3, w: 1, h: 0.6, height: KZ + a(1), seed: pr.seed }, BULK, { roof: BULK[4], roofEdge: BULK[5], windows: null, lift: kl, noShadow: true });
+          box(g, { x: kx - 0.6, y: y1 - 0.2, w: 1.2, h: 0.5, height: a(2.4), seed: pr.seed + 1 }, ['#3a2c0c', '#6a5016', '#a07a1e', '#c99a28', '#e2b43a', '#f2d06a'],
+            { roof: '#e2b43a', roofEdge: '#f2d06a', windows: null, lift: kl + KZ - a(2.4), noShadow: true });
+          var kl2 = KP(y1, KZ + a(0.6)); dot(g, kl2[0], kl2[1], '#7bdc6a', 2);
           break;
         }
         /* An outcrop of the Warren's rock bulging from a wall face: a lump of

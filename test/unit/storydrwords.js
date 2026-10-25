@@ -271,9 +271,12 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
 {
   /* The Double-Cross on the orbital's docking ring, as its briefing has it: cranes, cargo stacks and open deck. */
   const ps = MAPS.dockring.pieces;
-  ok('the docking ring: steel deck over the whole table, two ships at their berths with a gantry crane each, rows of cargo, open deck across the middle',
-    ps.some((p) => p.deck && p.x === 0 && p.y === 0 && p.w === 48 && p.h === 48) && R.terrainName(null, 'road', ps[0]) === 'Deck' &&
-    ps.filter((p) => p.kind === 'shuttle' && p.fixed).length === 2 && ps.filter((p) => p.kind === 'road' && p.pad).length === 2 && ps.filter((p) => p.kind === 'crane').length === 2 &&
+  ok('...the ring’s hull along the north, open space beyond it that nothing enters, and the two ships docked out there, clamped to the hull',
+    ps.some((p) => p.hull && p.kind === 'wall' && p.reinforced && p.w === 48) && ps.filter((p) => p.space).every((p) => R.TERRAIN[p.kind].impassable && p.y + p.h <= 9) &&
+    ps.filter((p) => p.kind === 'shuttle').every((p) => p.y + p.h <= p.docked && p.docked === ps.find((q) => q.hull).y));
+  ok('the docking ring: steel deck inside the hull, two ships docked with a gantry crane each, rows of cargo, open deck across the middle',
+    ps.some((p) => p.deck && p.x === 0 && p.w === 48 && p.y + p.h === 48) && R.terrainName(null, 'road', ps.find((p) => p.deck)) === 'Deck' &&
+    ps.filter((p) => p.kind === 'shuttle' && p.fixed && p.docked).length === 2 && ps.filter((p) => p.kind === 'crane').length === 2 &&
     ps.filter((p) => p.kind === 'crater' && p.cargo).length >= 8 && !ps.some((p) => p.kind === 'ruins') &&
     ps.filter((p) => p.kind !== 'road').every((p) => !overlap(p, { x: 19, y: 18, w: 10, h: 2.5 })));
 }
