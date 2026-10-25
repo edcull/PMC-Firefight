@@ -368,9 +368,8 @@
        between them, 9" across, walled all round by the hull (they are the
        outside of the station: nothing goes there, nor sees through), and
        either side of them and between, the three broad spokes that join the
-       rings, spoke, space, spoke, space, spoke, with banks of plant and
-       reaction-mass tanks on them. Inside, the inner ring: plant and tanks in
-       its corners, a little cargo, a lifter, the deck open across the middle
+       rings, spoke, space, spoke, space, spoke, with banks of plant on the
+       side ones. Inside, the inner ring: plant in a corner, a little cargo, a lifter, the deck open across the middle
        with a blast barrier on it, conduits on the deck, and along the south
        the dock offices and between them the traffic control, a ring of
        connected buildings round a tall reinforced tower. No gantry cranes: those are a sea
@@ -396,11 +395,10 @@
         // the space between the rings: two stretches of it, the three spokes either side and between
         RINGGAP(24, 50, 23, 32, [[10.5, 19], [29, 37.5]])
       ).concat([
-        // the spokes: a cargo stack and a bank of plant on each side spoke, reaction-mass tanks on the middle one
+        // the spokes: a cargo stack and a bank of plant on each side spoke
         CG(4.2, 25, 3, 3), CG(40.8, 25, 3, 3), R('machinery', 5, 29, 3, 2), R('machinery', 40, 29, 3, 2),
-        R('fueltanks', 21, 21.5, 6, 3.5),
-        // the inner ring: plant and tanks in its corners, a little cargo, a lifter, a blast barrier, conduits either side of the traffic control
-        R('machinery', 6.5, 32.5, 4, 2.5), R('fueltanks', 36.5, 32, 5, 4), CG(12.5, 33, 5, 4), CG(30.5, 33, 5, 4),
+        // the inner ring: plant in a corner, a little cargo, a lifter, a blast barrier, conduits either side of the traffic control
+        R('machinery', 6.5, 32.5, 4, 2.5), CG(12.5, 33, 5, 4), CG(30.5, 33, 5, 4),
         Object.assign(R('cargolifter', 25.5, 32, 2.5, 2.5), { facing: 0 }),
         Object.assign(R('barricade', 21, 28.5, 4, 1), { shield: true, blast: true }),
         PIPE(15.5, 37.5, 0.6, 6), PIPE(31.9, 37.5, 0.6, 6),
