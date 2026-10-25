@@ -1784,10 +1784,11 @@
           break;
         }
         /* A ring of connected buildings round a tower: a round drum, its outer
-           wall in panels with a lit window in each, the seams between the
+           wall in panels with a window in each, the seams between the
            buildings, a flat roof round the hole; the tower a taller drum out of
-           the middle, reinforced (banded at its foot, slit windows), a dish and
-           a mast on top, a beacon. */
+           the middle, reinforced (banded at its foot), two rows of windows and
+           the control room's glass all round near the top, a dish and a mast on
+           top, a beacon. */
         case 'hubring': {
           var hl = lift || 0, HC = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - hl - z]; };
           var NS = 36, pt = function (r, k, z) { var t = k / NS * Math.PI * 2; return HC(pr.cx + Math.cos(t) * r, pr.cy + Math.sin(t) * r, z); };
@@ -1799,13 +1800,17 @@
               var f = facing(k); if (f <= -0.2) continue;
               var ang = (k + 0.5) / NS * Math.PI * 2, lit = 0.5 + 0.5 * Math.cos(ang - 2.3);
               poly(g, [pt(r, k, z0), pt(r, k + 1, z0), pt(r, k + 1, z1), pt(r, k, z1)], pal[Math.max(1, Math.min(4, Math.round(1 + lit * 3)))]);
-              if (windows && k % 2 === 0) { var w0 = pt(r, k + 0.5, z0 + (z1 - z0) * 0.55); rect(g, w0[0] - 2, w0[1] - 2, 4, 3, windows); }
+              // windows: a row (or rows) of them round it, `windows` the heights (fractions up the wall) of each row, most lit
+              if (windows) windows.forEach(function (wz, wi) {
+                var w0 = pt(r, k + 0.5, z0 + (z1 - z0) * wz), lit2 = ((k * 7 + wi * 3) % 5) !== 0;
+                rect(g, w0[0] - 3, w0[1] - 4, 6, 5, '#1a2026'); rect(g, w0[0] - 2, w0[1] - 3, 4, 3, lit2 ? '#ffd88a' : '#3a4a58');
+              });
               if (bands) { var b0 = pt(r, k, z0 + (z1 - z0) * 0.12), b1 = pt(r, k + 1, z0 + (z1 - z0) * 0.12); edgeLine(g, b0, b1, k % 2 ? '#1b1a17' : '#c9a23c', 2); }
             }
           };
           shadowBlob(g, (function () { var q = HC(pr.cx, pr.cy, 0); return { x: q[0] + a(3), y: q[1] + a(1.5) }; })(), a(pr.r1 * 6), a(pr.r1 * 3));
           // the ring: its outer wall, the seams between its buildings, its roof round the hole
-          drum(pr.r1, 0, pr.height, PREFAB, '#ffd88a', false);
+          drum(pr.r1, 0, pr.height, PREFAB, [0.5], false);
           for (var sk = 0; sk < NS; sk += 6) if (facing(sk) > -0.2) edgeLine(g, pt(pr.r1, sk, 1), pt(pr.r1, sk, pr.height - 1), PREFAB[0], 2);
           g.beginPath();
           for (var k1 = 0; k1 <= NS; k1++) { var o1 = pt(pr.r1, k1, pr.height); if (k1) g.lineTo(o1[0], o1[1]); else g.moveTo(o1[0], o1[1]); }
@@ -1815,8 +1820,14 @@
           for (var k3 = 0; k3 < NS; k3++) edgeLine(g, pt(pr.r1, k3, pr.height), pt(pr.r1, k3 + 1, pr.height), PREFAB[5], 1);
           // the tower out of the middle, reinforced, and what stands on it
           var tr = pr.r0 - 0.2;
-          drum(tr, pr.height * 0.6, pr.tower, WALLC, null, false);
-          for (var sl = 0; sl < NS; sl += 3) { if (facing(sl) <= 0) continue; var s0 = pt(tr, sl + 1, pr.tower * 0.82); rect(g, s0[0] - 2, s0[1] - 1, 4, 2, '#9fd2e0'); }
+          drum(tr, pr.height * 0.6, pr.tower, WALLC, [0.38, 0.6], false);
+          // the control room's glass, all the way round near the top, the sky catching it
+          for (var gk = 0; gk < NS; gk++) {
+            if (facing(gk) <= -0.2) continue;
+            poly(g, [pt(tr, gk, pr.tower * 0.8), pt(tr, gk + 1, pr.tower * 0.8), pt(tr, gk + 1, pr.tower * 0.93), pt(tr, gk, pr.tower * 0.93)], gk % 4 ? '#1f3a4a' : '#3d6a80');
+            edgeLine(g, pt(tr, gk, pr.tower * 0.93), pt(tr, gk + 1, pr.tower * 0.93), '#9fd2e0', 1);
+            if (gk % 3 === 0) edgeLine(g, pt(tr, gk, pr.tower * 0.8), pt(tr, gk, pr.tower * 0.93), '#2a3034', 1);
+          }
           for (var bk = 0; bk < NS; bk++) if (facing(bk) > -0.2) edgeLine(g, pt(tr, bk, pr.height + a(1)), pt(tr, bk + 1, pr.height + a(1)), bk % 2 ? '#1b1a17' : '#c9a23c', 2);
           var top = []; for (var k4 = 0; k4 < NS; k4++) top.push(pt(tr, k4, pr.tower));
           poly(g, top, WALLC[4]);
