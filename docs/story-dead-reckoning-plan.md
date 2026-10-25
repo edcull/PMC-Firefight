@@ -82,6 +82,29 @@ Daw, if the Double-Cross comes. Wraith Section (the Navy)
 and the Red Reavers are the only rivals he does not own. The second half
 reveals it (*The Vault*'s receipts, *The Wreck*'s last entry).
 
+**Vane's intent, and Morrow's end** (settled after the dialogue pass). Vane
+is the only one alive who has seen the stones together: in his vault, forty
+years ago, they warmed, turned and began to call. He took the wrong lesson.
+To him they are a **key**: whoever brings enough of them to the Quiet opens it
+and owns what answers to it, the network, the shields, the towers and the
+tribes. Morrow understood they are a **summons**: brought together they wake
+the Quiet, and it calls all that serves it home, the Esh-Aven included, and
+nobody commands that. Recall proves Morrow right. Only the Navy (Wraith
+Section's client) suspects as much.
+
+Vane **hunted Morrow** when he stole the stones back: the Ninth Lance was
+founded for it, forty years ago (Daw is too young to have been there). Morrow
+ran, scattering the stones, sold one on Kerrigan for fuel, and, damaged and
+still followed, came down on Pell and sealed himself in his cabin, where he
+died with a stone in his fist that the hunters never got. His last entry
+says who was behind him. The first half seeds it: the opening (the backer's
+people a jump or two behind), Thule's records ("the same ship, two jumps
+behind me now"), and the Lance's founding date.
+
+**Halloran is a reader**: a forensic navigator, who takes a lost ship's log
+(no fixes, only headings, burn times and what the pilot saw) and works out
+where she went. Insurers and salvage firms hire him to find wrecks.
+
 **Business until somebody loses** (settled after the rework). The rival
 companies are confrontational, and they make it business: clients, invoices,
 contracts, prices. The first time the company beats one (`grudges`; the flag
