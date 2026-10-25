@@ -268,14 +268,15 @@
           return;
         }
         /* The space between a station's two rings: the hull round it, along each
-           rim and across each end where a spoke meets it, as tall as the outer
-           hull but without its hazard paint, laid in short runs. */
+           rim and across each end where a spoke meets it, a single wall's
+           height (the outer hull is twice that) and without its hazard paint,
+           laid in short runs. (The space itself blocks sight, not the wall.) */
         if (r.gap) {
           var gg = r.gap, rail = function (x0, y0, x1, y1, nx, ny) {
             var len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.round(len / 1.4));
             for (var rs = 0; rs < n; rs++) {
               var mx = x0 + (x1 - x0) * (rs + 0.5) / n, my = y0 + (y1 - y0) * (rs + 0.5) / n;
-              props.push({ kind: 'hullseg', x: mx, y: my, ang: Math.atan2(y1 - y0, x1 - x0), len: len / n + 0.04, nx: nx, ny: ny, height: a(14), plain: true, seed: (rand() * 9999) | 0 });
+              props.push({ kind: 'hullseg', x: mx, y: my, ang: Math.atan2(y1 - y0, x1 - x0), len: len / n + 0.04, nx: nx, ny: ny, height: a(7), plain: true, seed: (rand() * 9999) | 0 });
             }
           };
           var NG = 12;
