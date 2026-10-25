@@ -791,7 +791,7 @@
              meets the ship's flank on the side towards the ring (its hull is
              narrower than its footprint). */
           var ringP = r.docked && terrain.filter(function (q) { return q.ring; })[0];
-          if (ringP) [0.3, 0.7].forEach(function (f, ci) {
+          if (ringP) (r.clamps || [0.3, 0.7]).forEach(function (f, ci) {
             var rg = ringP.ring, px = r.x + r.w * f, pyc = r.y + r.h / 2;
             var dx = px - rg.cx, dy = pyc - rg.cy, dl = Math.hypot(dx, dy);
             // the flank: from the ship's middle, 1.1" towards the ring's centre
