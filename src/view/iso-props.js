@@ -114,7 +114,7 @@
       /* The stretches of a bulkhead's sides that face a floor, not more plating
          or a door: [side, from, to], the side 'N', 'S', 'W' or 'E' and the run
          along it in inches of the table. */
-      var solids = terrain.filter(function (q) { return q.kind === 'bulkhead' || /^door/.test(q.kind); });
+      var solids = terrain.filter(function (q) { return q.kind === 'bulkhead' || /^door/.test(q.kind) || q.kind === 'arch'; });
       var floors = terrain.filter(function (q) { return q.kind === 'corridor' || q.kind === 'room' || q.kind === 'hall' || q.kind === 'breached'; });
       function inAny(list, x, y) {
         for (var i = 0; i < list.length; i++) { var q = list[i]; if (x > q.x && x < q.x + q.w && y > q.y && y < q.y + q.h) return true; }
@@ -721,6 +721,13 @@
           });
           return;
         }
+        // an archway in the Warren's rock: drawn in the doorway's place, its frame trimmed to the walls as a door's is
+        if (r.kind === 'arch') {
+          var ahz = r.w >= r.h, aq = (wallPieces(), r._drawn) || r, amx = r.x + r.w / 2, amy = r.y + r.h / 2;
+          props.push({ kind: 'arch', x: ahz ? aq.x : r.x, y: ahz ? r.y : aq.y, w: ahz ? aq.w : r.w, h: ahz ? r.h : aq.h, horiz: ahz, height: a(BULK_H),
+            themeB: themeAt(ahz ? amx : amx + 1, ahz ? amy + 1 : amy), seed: (rr2() * 9999) | 0 });
+          return;
+        }
         if (r.kind === 'door' || r.kind === 'doorlock' || r.kind === 'doorlockA' || r.kind === 'doorlockB') {
           /* which side of the wall line is outside the room — the corridor (or the
              smaller section) — so the hatch is hung on that side and the room's own
@@ -832,7 +839,7 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, crane: 1, fueltanks: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, crane: 1, fueltanks: 1, solarmount: 1, bulkhead: 1, door: 1, arch: 1, crates: 1, machinery: 1 };
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */

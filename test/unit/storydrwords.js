@@ -265,8 +265,8 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
     t.filter((p) => p.hoard).length === 1 && t.find((p) => p.hoard).x + t.find((p) => p.hoard).w / 2 > 24 &&
     t.some((p) => p.gate && p.x === 0));
   const hoard = t.find((p) => p.hoard), doors = t.filter((p) => R.TERRAIN[p.kind] && R.TERRAIN[p.kind].door);
-  ok('...its ways open rock to rock: the only doors are the hoard chamber’s',
-    doors.length > 0 && doors.every((p) => p.x <= hoard.x + hoard.w + 0.5 && p.x + p.w >= hoard.x - 0.5 && p.y <= hoard.y + hoard.h + 0.5 && p.y + p.h >= hoard.y - 0.5));
+  ok('...its ways open, archways in the rock: the only doors are the hoard chamber’s',
+    doors.length > 0 && t.some((p) => p.kind === 'arch') && !R.TERRAIN.arch.blocks && !R.TERRAIN.arch.impassable && doors.every((p) => p.x <= hoard.x + hoard.w + 0.5 && p.x + p.w >= hoard.x - 0.5 && p.y <= hoard.y + hoard.h + 0.5 && p.y + p.h >= hoard.y - 0.5));
 }
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {

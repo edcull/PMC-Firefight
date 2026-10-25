@@ -1761,6 +1761,43 @@
           RING(R3 * 0.93, 'rgba(140,200,255,.6)', false);
           break;
         }
+        /* An archway in the Warren's rock: a jamb of the rock either side, the
+           rock carried over the opening, its underside cut in a round arch,
+           the opening left open. */
+        case 'arch': {
+          var al = lift || 0, AH = pr.height, ahz2 = pr.horiz, alen = ahz2 ? pr.w : pr.h;
+          var ajl = Math.min(0.6, alen * 0.15), AT = 0.4, acen = ahz2 ? pr.y + pr.h / 2 : pr.x + pr.w / 2, abase = ahz2 ? pr.x : pr.y;
+          var apart = function (u0, u1) { return ahz2 ? { x: pr.x + u0, y: acen - AT / 2, w: u1 - u0, h: AT } : { x: acen - AT / 2, y: pr.y + u0, w: AT, h: u1 - u0 }; };
+          var AP = function (u, off, z) { var q = ahz2 ? toScreen(abase + u, acen + off) : toScreen(acen + off, abase + u); return [q.x, q.y - al - z]; };
+          var tbA = pr.themeB == null ? -1 : pr.themeB, APAL = (tbA >= 0 && WALL_THEME[tbA]) || ROCKWALL;
+          var rockBox = function (q, h, up) {
+            box(g, { kind: 'arch', x: q.x, y: q.y, w: q.w, h: q.h, height: h, seed: pr.seed }, APAL, { roof: '#211d19', roofEdge: '#5d5042', windows: null, lift: al + (up || 0), solid: true });
+          };
+          var spring = AH * 0.45, crown = AH * 0.72;
+          // the lintel's block over the whole opening, from the arch's crown up
+          rockBox(apart(ajl, alen - ajl), AH - crown, crown);
+          // the arch's haunches on the face towards the viewer and the one away: rock from the springing up to the crown, cut round
+          [AT / 2, -AT / 2].forEach(function (off, fi) {
+            var pts = [AP(ajl, off, crown), AP(ajl, off, spring)];
+            for (var ak = 1; ak < 12; ak++) {
+              var th = ak / 12 * Math.PI, uu = ajl + (alen - 2 * ajl) * (1 - Math.cos(th)) / 2;
+              pts.push(AP(uu, off, spring + (crown - spring) * Math.sin(th)));
+            }
+            pts.push(AP(alen - ajl, off, spring), AP(alen - ajl, off, crown));
+            poly(g, pts, fi === 0 ? (ahz2 ? APAL[3] : APAL[2]) : APAL[1]);
+          });
+          // the arch's edge, catching the light
+          var ae = [];
+          for (var ak2 = 0; ak2 <= 12; ak2++) {
+            var th2 = ak2 / 12 * Math.PI, uu2 = ajl + (alen - 2 * ajl) * (1 - Math.cos(th2)) / 2;
+            ae.push(AP(uu2, AT / 2, spring + (crown - spring) * Math.sin(th2)));
+          }
+          for (var ak3 = 0; ak3 < ae.length - 1; ak3++) edgeLine(g, ae[ak3], ae[ak3 + 1], APAL[5], 1);
+          // the jambs, the full height of the rock
+          rockBox(apart(0, ajl), AH, 0);
+          rockBox(apart(alen - ajl, alen), AH, 0);
+          break;
+        }
         /* A door: a blast hatch framed in the compound's own plating — two jambs
            and a lintel the height of the walls, the shutter down (a door blocks
            sight). Working, the shutter is banded in hazard stripes, its lamp green;
