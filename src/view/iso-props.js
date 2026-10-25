@@ -538,6 +538,27 @@
               : dk < 0.3 ? 'deckgrate' : dk < 0.55 ? 'cable' : dk < 0.8 ? 'smallbox' : 'litter';
             props.push({ kind: dkind, x: dq.x, y: dq.y, horiz: r.w >= r.h, tone: rr2(), seed: (rr2() * 9999) | 0 });
           }
+          /* The Warren's fallen rock, heaped against the walls in a patch or two,
+             and the Reavers' floodlights on their stands, aimed into the room. */
+          if (r.warren) {
+            var clearOf = function (q2) { return !fits.some(function (q) { return q2.x > q.x - 1 && q2.x < q.x + q.w + 1 && q2.y > q.y - 1 && q2.y < q.y + q.h + 1; }); };
+            var nRock = r.kind === 'corridor' ? (rr2() < 0.4 ? 1 : 0) : 1 + (rr2() < 0.6 ? 1 : 0);
+            for (var fr = 0; fr < nRock; fr++) {
+              var fq = edgeSpot(r, rr2);
+              if (!clearOf(fq)) continue;
+              for (var fs = 0; fs < 5 + (rr2() * 4 | 0); fs++) {
+                var fx = Math.max(r.x + 0.4, Math.min(r.x + r.w - 0.4, fq.x + (rr2() - 0.5) * 2.4)), fy = Math.max(r.y + 0.4, Math.min(r.y + r.h - 0.4, fq.y + (rr2() - 0.5) * 2.4));
+                props.push({ kind: rr2() < 0.65 ? 'wreckstone' : 'rubble', x: fx, y: fy, tone: rr2() * 0.4, seed: (rr2() * 9999) | 0 });
+              }
+            }
+            var nLamp = r.hoard ? 2 : r.kind === 'corridor' ? (rr2() < 0.3 ? 1 : 0) : 1;
+            for (var fl = 0; fl < nLamp; fl++) {
+              var lq2 = edgeSpot(r, rr2);
+              if (!clearOf(lq2)) continue;
+              var cxl = r.x + r.w / 2, cyl = r.y + r.h / 2;
+              props.push({ kind: 'floodlight', x: lq2.x, y: lq2.y, aim: Math.atan2(cyl - lq2.y, cxl - lq2.x), seed: (rr2() * 9999) | 0 });
+            }
+          }
           /* The Reavers' hoard (the Warren's biggest chamber on the far side):
              relics on stone plinths in rows, kept like a library's shelves. */
           if (r.hoard) {
@@ -815,7 +836,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
+      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];

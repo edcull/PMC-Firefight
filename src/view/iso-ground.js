@@ -65,10 +65,9 @@
     var PAVING = { ramp: ['#4a4640', '#57524a', '#635e55', '#706a60', '#7d776c'], fleck: ['#3a3631', '#8c857a', '#2e2b27'], rim: '#2a2723' };
     var COBBLE = { ramp: ['#3e3b37', '#48443f', '#524e48', '#5c5751', '#66615a'], fleck: ['#2c2a27', '#7a746b', '#34312d'], rim: '#24221f' };
     FLOOR.fountain = PAVING;
-    /* Open space, round a station: near black, a faint nebula through it, and
-       stars, mostly white, a few blue or gold. No lip at its edge: the hull
-       stands there. */
-    var STARS = { ramp: ['#03040a', '#05070f', '#070a16', '#0a0e1d', '#0d1226'], fleck: ['#ffffff', '#dfe8ff', '#9ab8ff', '#ffe2a8', '#c8d4ff'], rim: '#05070f', stars: true };
+    /* Open space, round a station: plain black, so the station stands out
+       against it. No lip at its edge: the hull stands there. */
+    var STARS = { ramp: ['#040506', '#040506', '#040506', '#040506', '#040506'], fleck: ['#040506'], rim: '#040506', stars: true };
     // a landing pad: poured ferrocrete, pale and scorched
     var PADC = { ramp: ['#55595a', '#5f6364', '#6a6e6f', '#75797a', '#808485'], fleck: ['#3c3f40', '#2a2c2d', '#8e9293'], rim: '#2e3132' };
     function skinFloor(r) {
@@ -379,7 +378,7 @@
         if (r.pipe) return;
         // a drowned beacon's possible locations stand on the ground as it is, their own pieces drawn over it
         if (r.kind === 'searchsite' && (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones' || r.skin === 'boats' || r.skin === 'tent')) return;
-        // a station's solid is open space: a star field (rules.js reads it as solid all the same)
+        // a station's solid is open space, black (rules.js reads it as solid all the same)
         if (r.kind === 'bulkhead' && r.space) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         var spec = roomTheme(r) || skinFloor(r) || floorOf(r.kind);
         if (r.kind === 'road' && r.paved && paved.length > 1) spec = Object.assign({}, spec, { joins: paved.filter(function (q) { return q !== r; }) });

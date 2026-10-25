@@ -1710,6 +1710,34 @@
           else { rect(g, top[0] - a(0.45), top[1] - a(1.5), a(0.9), a(1.2), '#3a3330'); rect(g, top[0] - a(0.3), top[1] - a(1.35), a(0.6), a(0.9), glow[0]); }
           break;
         }
+        /* A work light on a tripod (the Reavers', in the Warren): splayed legs,
+           a pole, a lamp head aimed down into the room, its pool of light on
+           the floor, and its cable trailing off to the wall. */
+        case 'floodlight': {
+          var fll = lift || 0, fr9 = rng(pr.seed), FH = a(10);
+          var FL = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - fll - (z || 0)]; };
+          var ax = Math.cos(pr.aim), ay = Math.sin(pr.aim);
+          // the pool of light where it falls
+          var pool = FL(pr.x + ax * 2.2, pr.y + ay * 2.2, 0);
+          ellipse(g, pool[0], pool[1], a(5), a(2.9), 'rgba(255,236,170,.10)');
+          ellipse(g, pool[0], pool[1], a(3.2), a(1.9), 'rgba(255,236,170,.14)');
+          ellipse(g, pool[0], pool[1], a(1.8), a(1.1), 'rgba(255,240,190,.12)');
+          // the beam, faint, from the lamp down to the pool
+          poly(g, [FL(pr.x, pr.y, FH), [pool[0] - a(2.6), pool[1]], [pool[0] + a(2.6), pool[1]]], 'rgba(255,240,190,.06)');
+          // the cable, back to the wall
+          var cb = FL(pr.x - ax * 0.6 + (fr9() - 0.5) * 0.4, pr.y - ay * 0.6 + (fr9() - 0.5) * 0.4, 0);
+          edgeLine(g, FL(pr.x, pr.y, 0), cb, '#151515', 1);
+          // the legs and the pole
+          var head = FL(pr.x, pr.y, FH);
+          [0, 2.1, 4.2].forEach(function (la) { var ft = FL(pr.x + Math.cos(la + pr.aim) * 0.35, pr.y + Math.sin(la + pr.aim) * 0.35, 0); edgeLine(g, ft, FL(pr.x, pr.y, FH * 0.45), '#3a3d40', 2); });
+          edgeLine(g, FL(pr.x, pr.y, FH * 0.45), head, '#55595d', 2);
+          // the lamp head, its lit face turned towards the room
+          var face = FL(pr.x + ax * 0.22, pr.y + ay * 0.22, FH);
+          rect(g, head[0] - a(1.1), head[1] - a(0.9), a(2.2), a(1.6), '#2b2b2b'); rect(g, head[0] - a(1.1), head[1] - a(0.9), a(2.2), a(0.3), '#c9a23c');
+          ellipse(g, face[0], face[1] - a(0.1), a(0.85), a(0.65), '#fff4c8');
+          ellipse(g, face[0], face[1] - a(0.1), a(2), a(1.6), 'rgba(255,240,190,.25)');
+          break;
+        }
         /* The gate the company came through: a ring of light standing across
            the corridor where it meets the table's edge, closing, the rock
            seen through it shimmering. */
