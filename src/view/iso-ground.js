@@ -70,8 +70,11 @@
     var STARS = { ramp: ['#040506', '#040506', '#040506', '#040506', '#040506'], fleck: ['#040506'], rim: '#040506', stars: true };
     // a landing pad: poured ferrocrete, pale and scorched
     var PADC = { ramp: ['#55595a', '#5f6364', '#6a6e6f', '#75797a', '#808485'], fleck: ['#3c3f40', '#2a2c2d', '#8e9293'], rim: '#2e3132' };
+    // a station's deck: steel plate, blue-grey, scuffed
+    var DECKF = { ramp: ['#2c3236', '#31383c', '#363d42', '#3b4348', '#40484e'], fleck: ['#22282c', '#4c555c', '#5a4a2a'], rim: '#1c2125' };
     function skinFloor(r) {
       if (r.market) return PAVING;
+      if (r.kind === 'road' && r.deck) return DECKF;
       if (r.kind === 'road' && (r.pad || r.slab)) return PADC;
       if (r.kind === 'searchsite' && r.skin === 'cargo') return PADC;
       if (r.kind === 'crater' && r.cargo === 'apron') return PADC;
@@ -115,7 +118,7 @@
       var TW = new Float32Array(cw * ch), TR = new Float32Array(cw * ch), TG = new Float32Array(cw * ch), TB = new Float32Array(cw * ch);
       terrain.forEach(function (r) {
         // (a market's crater field is paving, not churned earth: it pulls nothing round it)
-        var f = r.market || r.cargo || r.camp || r.pipe ? null : FIT[r.kind];
+        var f = r.market || r.cargo || r.camp || r.pipe || r.blast ? null : FIT[r.kind];
         if (!f) return;
         var i0 = Math.max(0, Math.floor((r.x - f.r) / STEP)), i1 = Math.min(cw - 1, Math.ceil((r.x + r.w + f.r) / STEP));
         var j0 = Math.max(0, Math.floor((r.y - f.r) / STEP)), j1 = Math.min(ch - 1, Math.ceil((r.y + r.h + f.r) / STEP));
@@ -377,8 +380,8 @@
       var warrenFloors = terrain.filter(function (q) { return q.warren; });
       function floorOf1(r, ri, rows) {
         if (r.kind === 'hill') return;
-        // a pipeline stands on its trestles over the ground as it is: no dug-in lip under it
-        if (r.pipe) return;
+        // a pipeline stands on its trestles over the ground as it is, a blast barrier on a station's deck: no dug-in lip under either
+        if (r.pipe || r.blast) return;
         // a drowned beacon's possible locations stand on the ground as it is, their own pieces drawn over it
         if (r.kind === 'searchsite' && (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones' || r.skin === 'boats' || r.skin === 'tent')) return;
         // a station's solid is open space, black (rules.js reads it as solid all the same)
@@ -408,7 +411,7 @@
       terrain.forEach(function (r, ri) {
         if (r.kind === 'hill' || (!FLOOR[r.kind] && !(r.kind === 'bulkhead' && r.space))) return;
         // cargo stacked on open ground (not on an apron), a camp's tents and a pipeline have no floor of their own
-        if ((r.cargo && r.cargo !== 'apron') || r.camp || r.pipe) return;
+        if ((r.cargo && r.cargo !== 'apron') || r.camp || r.pipe || r.blast) return;
         floorBands(r).forEach(function (rows) { steps.push(function () { floorOf1(r, ri, rows); }); });
       });
       steps.push(function () { floorsDone = true; });

@@ -767,6 +767,8 @@
         }
         /* A spaceport's apron: the pad's markings painted on it, a shuttle down on
            it, a fuel bowser with its hoses run out to the shuttle, a cargo lifter. */
+        // a station's deck: its plates' seams and bolts, laid flat
+        if (r.kind === 'road' && r.deck) { props.push({ kind: 'deckplate', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'road' && r.pad) { props.push({ kind: 'padmark', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'shuttle') { props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'fueltruck') {
@@ -841,7 +843,7 @@
         if (p.kind === 'solar' || p.kind === 'solarmount') return true;
         return p.x >= 0 && p.y >= 0 && p.x <= TW && p.y <= TH;
       });
-      var FLAT = { deckgrate: 1, cable: 1, litter: 1, padmark: 1, hose: 1, solar: 1 };
+      var FLAT = { deckgrate: 1, cable: 1, litter: 1, padmark: 1, hose: 1, solar: 1, deckplate: 1 };
       props.forEach(function (p) {
         // the search-site hatch draws over its own scatter, so it stays readable; an objective's flag over the hatch it stands in
         p.depth = (p.w ? p.x + p.w / 2 + p.y + p.h / 2 : p.x + p.y) +

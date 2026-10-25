@@ -30,6 +30,8 @@
     return { kind: kind, x: x0, y: y0, w: Math.max.apply(null, xs) - x0, h: Math.max.apply(null, ys) - y0, poly: pts, fixed: true };
   }
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
+  // a station's steel deck plate: a floor like a slab, drawn in plates
+  function DECK(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, deck: true, fixed: true }; }
   // poured concrete (a quay, a warehouse's floor): open ground, and what stands on it stands on it
   function SLAB(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, fixed: true }; }
   // a warehouse's steel-clad wall (a high wall), laid as written
@@ -293,15 +295,32 @@
       ]
     },
 
-    /* The docking ring of Kerrigan's orbital: cargo stacks in rows, the cranes'
-       footings, and open deck between. Heavy spin gravity (the chapter's). */
+    /* The docking ring of Kerrigan's orbital, as the briefing has it: cranes,
+       cargo stacks and open deck. Steel deck plate over the whole table; two
+       ships docked at their berths along the north side (the Ninth Lance's and
+       the company's), a gantry crane over each, a fuel bowser at the first;
+       rows of cargo stacks either side with lanes between them, lifters
+       working them; the deck open across the middle, blast barriers on it;
+       the dock offices and the traffic tower along the south. Heavy spin
+       gravity (the chapter's). */
     dockring: {
       name: 'The docking ring, Kerrigan orbital', planet: 'industrial',
       pieces: [
-        B(10, 6, 5, 4, 'block'), B(18, 6, 5, 4, 'block'), B(27, 38, 5, 4, 'block'), B(35, 38, 5, 4, 'block'),
-        B(21, 21, 6, 6, 'tower'),
-        R('wall', 9, 17, 1, 6), R('wall', 38, 25, 1, 6), R('wall', 30, 12, 6, 1), R('wall', 12, 34, 6, 1),
-        R('barricade', 15, 27, 4, 1), R('barricade', 29, 20, 4, 1), R('ruins', 34, 6, 4, 4), R('ruins', 9, 39, 4, 4)
+        DECK(0, 0, 48, 48),
+        // the berths and the ships in them
+        Object.assign(R('road', 7, 0.5, 12, 8), { pad: true }), Object.assign(R('road', 28, 0.5, 12, 8), { pad: true }),
+        Object.assign(R('shuttle', 8, 0.8, 10, 7), { fixed: true }), Object.assign(R('shuttle', 29, 0.8, 10, 7), { fixed: true }),
+        R('crane', 20, 8.6, 3, 2.4), R('crane', 41, 8.6, 3, 2.4),
+        Object.assign(R('fueltruck', 20.2, 4, 2.8, 1.4), { hose: { x: 17, y: 5 } }),
+        // the cargo, in rows, lanes between
+        CG(6, 14, 5, 4), CG(14, 14, 5, 4), CG(29, 14, 5, 4), CG(37, 14, 5, 4),
+        CG(9, 22, 4, 5), CG(35, 22, 4, 5),
+        CG(6, 31, 5, 4), CG(14, 31, 5, 4), CG(29, 31, 5, 4), CG(37, 31, 5, 4),
+        Object.assign(R('cargolifter', 20.5, 15, 2.5, 2.5), { facing: Math.PI }), Object.assign(R('cargolifter', 25.5, 32, 2.5, 2.5), { facing: 0 }),
+        // blast barriers across the open deck (low walls, steel plates stood on edge)
+        Object.assign(R('barricade', 19, 21, 4, 1), { shield: true, blast: true }), Object.assign(R('barricade', 25, 26, 4, 1), { shield: true, blast: true }),
+        // the dock offices and the traffic tower
+        B(7, 39, 7, 5, 'L'), B(21, 39, 5, 5, 'tower'), B(33, 39, 7, 5, 'block')
       ]
     },
 

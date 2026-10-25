@@ -1728,6 +1728,29 @@
           box(g, pr, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
           break;
         }
+        /* A station's deck plate: the seams between the plates in a 4" grid,
+           a bevel of light along each, a bolt at every corner, and the odd
+           scuff and weld patch. */
+        case 'deckplate': {
+          var dl9 = lift || 0, dr9 = rng(pr.seed);
+          var DP = function (x, y) { var q = toScreen(x, y); return [q.x, q.y - dl9]; };
+          for (var gx9 = pr.x + 4; gx9 < pr.x + pr.w - 0.01; gx9 += 4) {
+            edgeLine(g, DP(gx9, pr.y), DP(gx9, pr.y + pr.h), 'rgba(10,12,14,.55)', 1);
+            edgeLine(g, DP(gx9 + 0.06, pr.y), DP(gx9 + 0.06, pr.y + pr.h), 'rgba(150,160,170,.1)', 1);
+          }
+          for (var gy9 = pr.y + 4; gy9 < pr.y + pr.h - 0.01; gy9 += 4) {
+            edgeLine(g, DP(pr.x, gy9), DP(pr.x + pr.w, gy9), 'rgba(10,12,14,.55)', 1);
+            edgeLine(g, DP(pr.x, gy9 + 0.06), DP(pr.x + pr.w, gy9 + 0.06), 'rgba(150,160,170,.1)', 1);
+          }
+          for (var bx9 = pr.x + 4; bx9 < pr.x + pr.w; bx9 += 4) for (var by9 = pr.y + 4; by9 < pr.y + pr.h; by9 += 4) {
+            var bq9 = DP(bx9, by9); dot(g, bq9[0] - 1, bq9[1] - 1, '#5e676e', 2);
+          }
+          for (var wp9 = 0; wp9 < Math.round(pr.w * pr.h / 60); wp9++) {
+            var wq9 = DP(pr.x + dr9() * pr.w, pr.y + dr9() * pr.h);
+            ellipse(g, wq9[0], wq9[1], a(1 + dr9() * 2), a(0.5 + dr9()), dr9() < 0.5 ? 'rgba(12,14,16,.22)' : 'rgba(120,128,136,.12)');
+          }
+          break;
+        }
         /* An outcrop of the Warren's rock bulging from a wall face: a lump of
            rock half in the wall, its outline irregular, its sides shaded by the
            way they face, its top broken and dark. */

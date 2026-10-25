@@ -268,6 +268,15 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
   ok('...its ways open rock to rock: the only doors are the hoard chamber’s',
     doors.length > 0 && doors.every((p) => p.x <= hoard.x + hoard.w + 0.5 && p.x + p.w >= hoard.x - 0.5 && p.y <= hoard.y + hoard.h + 0.5 && p.y + p.h >= hoard.y - 0.5));
 }
+{
+  /* The Double-Cross on the orbital's docking ring, as its briefing has it: cranes, cargo stacks and open deck. */
+  const ps = MAPS.dockring.pieces;
+  ok('the docking ring: steel deck over the whole table, two ships at their berths with a gantry crane each, rows of cargo, open deck across the middle',
+    ps.some((p) => p.deck && p.x === 0 && p.y === 0 && p.w === 48 && p.h === 48) && R.terrainName(null, 'road', ps[0]) === 'Deck' &&
+    ps.filter((p) => p.kind === 'shuttle' && p.fixed).length === 2 && ps.filter((p) => p.kind === 'road' && p.pad).length === 2 && ps.filter((p) => p.kind === 'crane').length === 2 &&
+    ps.filter((p) => p.kind === 'crater' && p.cargo).length >= 8 && !ps.some((p) => p.kind === 'ruins') &&
+    ps.filter((p) => p.kind !== 'road').every((p) => !overlap(p, { x: 19, y: 18, w: 10, h: 2.5 })));
+}
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {
   /* The docks as the briefing has them: Sable's warehouse walked into in the middle of the table,
