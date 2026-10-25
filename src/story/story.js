@@ -562,6 +562,8 @@
     // the node's own adjustments, by what has happened: { if, levers }
     var ctx = ctxOf(campaign);
     arr(node.adjust).forEach(function (a) { if (test(ctx, a.if)) spec.levers = mergeLevers(spec.levers, a.levers); });
+    // (a choice that changes who is fought: a hired rival's enemy in its place)
+    if (spec.levers.enemy) spec.enemy = clone(spec.levers.enemy);
     if (spec.levers.scenario) spec.scenario = spec.levers.scenario;
     if (spec.levers.variant) spec.variant = mergeLevers(spec.variant, spec.levers.variant);
     if (spec.levers.tier) spec.tier = spec.levers.tier;
@@ -1175,8 +1177,9 @@
       if (f === 'relic') return st.lastRelic === 'A';
       return !!st.flags[f];
     };
-    var s = text.replace(/\{if (not )?([a-z0-9_]+)\}([\s\S]*?)\{\/if\}/g, function (m, not, f, body) {
-      return holds(f) !== !!not ? body : '';
+    // ({if a+!b}: all of them, a `!` one not; a `not` before turns the whole round)
+    var s = text.replace(/\{if (not )?([a-z0-9_+!]+)\}([\s\S]*?)\{\/if\}/g, function (m, not, f, body) {
+      return f.split('+').every(function (t) { return t[0] === '!' ? !holds(t.slice(1)) : holds(t); }) !== !!not ? body : '';
     });
     return s.replace(/\{(name|commander(?::rank)?|meter:[a-z0-9_]+|unit:[a-z]+|soldier:[a-z]+|(?:fallen|dead):[a-z]+)\}/g, function (m, k) {
       if (k === 'name') return co ? co.name : 'the company';

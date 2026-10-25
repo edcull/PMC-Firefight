@@ -546,14 +546,18 @@
       },
       // ---- the second half ----
       'claim.battle': {
-        start: [{ who: 'rook', text: 'Convoy’s rolling! Kestrel, keep them off the trucks, and somebody keep a camera on their commander!' }],
+        start: [{ who: 'rook', if: { not: { flag: 'claim_escort' } }, text: 'Convoy’s rolling! Kestrel, keep them off the trucks, and somebody keep a camera on their commander!' },
+          { who: 'hal', if: { flag: 'claim_escort' }, text: 'There’s the trucks, and Kestrel’s pet company riding along! Reavers, the cache is ours! Jump ’em!' }],
         turn3: [{ who: 'ops', text: 'Thin air up here. Everyone’s jumping further than they mean to. Watch your footing.' }],
-        bhalf: [{ who: 'rook', text: 'This isn’t worth the footage! Kestrel, dust off!' }]
+        bhalf: [{ who: 'rook', if: { not: { flag: 'claim_escort' } }, text: 'This isn’t worth the footage! Kestrel, dust off!' },
+          { who: 'rook', if: { flag: 'claim_escort' }, text: 'They’re breaking! Keep rolling, keep rolling, and somebody get me that shot!' }]
       },
       'wreck.battle': {
-        start: [{ who: 'agathe', text: 'Sable holds the ship. Every bulkhead, every hold. Let them come in through the hull and find out.' }],
+        start: [{ who: 'agathe', if: { not: { flag: 'wreck_together' } }, text: 'Sable holds the ship. Every bulkhead, every hold. Let them come in through the hull and find out.' },
+          { who: 'agathe', if: { flag: 'wreck_together' }, text: 'Brass Ledger came in through the split while I was cutting the hatch. My people take the port holds, yours the starboard. Try to keep up.' }],
         turn3: [{ who: 'ops', text: 'Seals holding, but the air in here’s bad. Keep your masks on.' }],
-        sighted: [{ who: 'ops', text: 'Contact! Sable armour, in the hold, dug in behind the cargo!' }]
+        sighted: [{ who: 'ops', if: { not: { flag: 'wreck_together' } }, text: 'Contact! Sable armour, in the hold, dug in behind the cargo!' },
+          { who: 'ops', if: { flag: 'wreck_together' }, text: 'Contact! Brass Ledger salvage crew, in the hold, cutting gear and guns!' }]
       },
       'bounty.battle': {
         start: [{ who: 'nine', text: 'Wraith, weapons free. Officers first. They don’t leave Ilya.' }],

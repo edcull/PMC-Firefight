@@ -304,6 +304,38 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
     ps.some((p) => p.kind === 'ravine' && p.x < 32 && p.x + p.w > 30 && p.y > 24 && p.y < 28) && ps.some((p) => p.kind === 'rocks' && p.x < 32 && p.x + p.w > 30 && p.y + p.h > 18 && p.y + p.h < 21) &&
     !ps.some((p) => p.kind === 'ruins' || p.kind === 'building' || p.pad));
 }
+{
+  /* Hiring the rival a battle is fought against changes who is fought, not just who stands beside the company. */
+  const opt = (ev, id) => dr._nodes[ev].options.find((o) => o.id === id);
+  const k = opt('claim.scoop', 'hire_kestrel'), sb = opt('wreck.hatch', 'hire_sable');
+  ok('Claim Jumpers, Kestrel hired: the company rides shotgun on Kestrel’s cars (a Convoy), and the Red Reavers jump the claim',
+    k.hire === 'kestrel' && k.battle.allies.side === 'kestrel' && k.battle.scenario === 'convoy' && k.battle.variant.convoy === 'allies' && k.battle.enemy.side === 'reavers' &&
+    k.effects.some((e) => e.flag === 'claim_escort' && e.local) && k.effects.some((e) => e.flag === 'kestrel_hired'));
+  ok('The Wreck, Sable called in: in together, against a Brass Ledger salvage crew already inside',
+    sb.hire === 'sable' && sb.battle.allies.side === 'sable' && sb.battle.enemy.side === 'kettle' && sb.effects.some((e) => e.flag === 'wreck_together' && e.local));
+  const c = { companies: { A: { name: 'T', kUC: 9, tier: 1, roster: [] } } };
+  S.begin(c, 'dead-reckoning', {});
+  c.story.chapter = 'claim'; c.story.node = 'claim.battle'; c.story.pending = JSON.parse(JSON.stringify(k.battle)); c.story.flags.claim_escort = 'local';
+  const spec = S.battleSpec(c);
+  ok('...the battle is set as chosen: a Convoy against the Reavers, Kestrel’s column the convoy', spec.scenario === 'convoy' && spec.enemy.side === 'reavers' && spec.variant.convoy === 'allies');
+  const orders = S.render(c, TEXT['claim.battle']), talk = S.talkFor(c, spec);
+  ok('...its orders and its talk are the escort’s: get Kestrel’s cars across, the Reavers waiting, no Kestrel dusting off',
+    /Get Kestrel’s cars across/.test(orders) && !/Stop the convoy/.test(orders) && talk.some((l) => l.who === 'hal') && !talk.some((l) => /dust off/.test(l.text)));
+  c.story.lastGrade = 'victory';
+  const won = S.render(c, TEXT['claim.debrief']);
+  c.story.lastGrade = 'defeat';
+  const lost = S.render(c, TEXT['claim.debrief']);
+  delete c.story.flags.claim_escort;
+  const plain = S.render(c, TEXT['claim.debrief']);
+  ok('...and the debrief says what came of it, one way or the other',
+    /Rook keeps her side of the deal/.test(won) && !/Rook waves|Reavers have/.test(won) && /Reavers have the cache/.test(lost) && !/Rook waves|side of the deal/.test(lost) &&
+    /Rook waves/.test(plain) && !/Reavers/.test(plain));
+  c.story.flags.claim_escort = 'local';
+  c.story.chapter = 'wreck'; c.story.node = 'wreck.battle'; c.story.pending = JSON.parse(JSON.stringify(sb.battle)); c.story.flags.wreck_together = 'local';
+  const ws = S.battleSpec(c);
+  ok('...the Wreck likewise: Brass Ledger the enemy, its orders and talk of going in with Sable',
+    ws.enemy.side === 'kettle' && /Brass Ledger already inside/.test(S.render(c, TEXT['wreck.battle'])) && S.talkFor(c, ws).some((l) => /port holds/.test(l.text)) && !S.talkFor(c, ws).some((l) => /Sable holds the ship/.test(l.text)));
+}
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {
   /* The docks as the briefing has them: Sable's warehouse walked into in the middle of the table,

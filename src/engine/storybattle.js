@@ -402,8 +402,8 @@
       var ex = state.sc && state.sc.extract;
       if (!ex || state.turn < (ex.from || 1)) return;
       state.units.forEach(function (u) {
-        if (u.side !== ex.side || !u.alive || u.reserve || u.aboard || u.x < 0 || u.ally) return;
-        if (ex.only && ex.only.indexOf(u.id) < 0) return;
+        if (u.side !== ex.side || !u.alive || u.reserve || u.aboard || u.x < 0) return;
+        if (ex.only ? ex.only.indexOf(u.id) < 0 : u.ally) return;
         if (ex.rectX != null ? (ex.west ? u.x > ex.rectX : u.x < ex.rectX) : R.inches(u.x, u.y, ex.x, ex.y) > ex.r) return;
         u.alive = false; u.extracted = true; u.activated = true;
         (u.cargo || []).forEach(function (cid) {

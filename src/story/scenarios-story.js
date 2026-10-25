@@ -119,9 +119,12 @@
      crosses from its own edge to the far one; a unit of it standing within 3"
      of the far edge at the End phase is through. */
   function convoyOf(state, side) {
-    var a = state.units.filter(function (u) { return u.side === side && !u.ally; });
+    /* (a story's `variant.convoy` of 'allies': the hired company's column, the
+       company's own vehicles riding in it; with no vehicles, the hired company) */
+    var allies = story(state).variant && story(state).variant.convoy === 'allies';
+    var a = state.units.filter(function (u) { return u.side === side && (allies || !u.ally); });
     var hulls = a.filter(function (u) { return R.isMachine(u) && !R.isFlying(u); });
-    return hulls.length ? hulls : a;
+    return hulls.length ? hulls : allies ? a.filter(function (u) { return u.ally; }) : a;
   }
   /* Convoy, and Intercept the other way round: side B's column crossing for
      side A's edge, and side A (the player in a story) out to stop it. */
@@ -147,7 +150,19 @@
       // the hunters go for the convoy; the convoy, and its escort, for the far edge
       goals: function (state, u) {
         if (!u) return [];          // (asked for no unit in particular: there are no places to hold)
-        if (u.side === foe) return state.units.filter(function (c) { return c.alive && (state.sc.convoy || []).indexOf(c.id) >= 0 && c.x >= 0; });
+        var ids = state.sc.convoy || [];
+        if (u.side === foe) return state.units.filter(function (c) { return c.alive && ids.indexOf(c.id) >= 0 && c.x >= 0; });
+        /* the column keeps behind its escort's front until turn 8, then runs for it;
+           the escort goes on ahead to clear the way */
+        var all = state.turn < 8 && ids.indexOf(u.id) >= 0 ? state.units.filter(function (c) { return c.side === side && c.alive && ids.indexOf(c.id) < 0; }) : [];
+        var esc = all.filter(function (c) { return !c.reserve && c.x >= 0; });
+        // (its escort not on the table yet: it waits at its own edge for them)
+        if (all.length && !esc.length) return [{ x: u.x, y: u.y }];
+        if (esc.length) {
+          var xs = esc.map(function (c) { return c.x; });
+          var x = side === 'A' ? Math.min(Math.max.apply(null, xs) - 2, edgeX()) : Math.max(Math.min.apply(null, xs) + 2, edgeX());
+          return [{ x: x, y: u.y }];
+        }
         return [{ x: edgeX(), y: u.y }];
       },
       groundTaking: true,

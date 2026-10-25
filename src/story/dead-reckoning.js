@@ -655,11 +655,17 @@
         before: { id: 'claim.scoop', who: 'rook', title: 'The scoop', text: 'Kestrel got there first.', options: [
           { id: 'race', text: 'Race them in.', battle: { role: 'attacker', readiness: -1 } },
           { id: 'pictures', text: 'Offer them the pictures.', battle: { intel: 1 }, effects: [{ flag: 'kestrel_scooped' }, { meter: 'lead', add: -1 }] },
-          hireOption('kestrel', 'Hire Kestrel against whoever else is there.')
+          // hired, Kestrel's cars are the company's to get across, and the Reavers are the ones jumping the claim
+          Object.assign(hireOption('kestrel', 'Ride shotgun for Kestrel, for a share.'), { battle: { allies: HIRE.kestrel, scenario: 'convoy', variant: { convoy: 'allies' }, enemy: rival('reavers') },
+            effects: hireOption('kestrel').effects.concat([{ flag: 'claim_escort', local: true }]) })
         ] },
         battle: { scenario: 'intercept', map: 'hollin', planet: 'mountain', enemy: rival('kestrel'),
-          on: { success: [{ effects: [{ meter: 'theirs', add: -1 }, { meter: 'stones', add: 1 }, { meter: 'kestrel', add: -1 }, { meter: 'lead', add: 2 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] } },
-        after: { id: 'claim.footage', who: 'rook', title: 'The footage', text: 'Kestrel filmed all of it.', options: [
+          on: {
+            success: [{ if: { flag: 'claim_escort' }, effects: [{ meter: 'stones', add: 1 }, { meter: 'kestrel_trust', add: 1 }, { meter: 'reavers', add: -1 }, { meter: 'lead', add: 1 }] },
+              { effects: [{ meter: 'theirs', add: -1 }, { meter: 'stones', add: 1 }, { meter: 'kestrel', add: -1 }, { meter: 'lead', add: 2 }] }],
+            failure: [{ if: { flag: 'claim_escort' }, effects: [{ meter: 'theirs', add: 1 }, { meter: 'reavers', add: 1 }] },
+              { effects: [{ meter: 'theirs', add: 1 }] }] } },
+        after: { id: 'claim.footage', who: 'rook', if: { not: { flag: 'claim_escort' } }, title: 'The footage', text: 'Kestrel filmed all of it.', options: [
           { id: 'run', text: 'Let them run it.', effects: [{ meter: 'vane', add: -1 }, { flag: 'kestrel_filmed' }] },
           { id: 'buy', text: 'Buy it from them.', cost: { kUC: 2 }, why: 'You can’t afford it.', effects: [{ meter: 'kestrel_trust', add: 1 }] }
         ] } }),
@@ -670,10 +676,16 @@
         before: { id: 'wreck.hatch', who: 'agathe', title: 'The hatch', text: 'Sable is already cutting in.', options: [
           { id: 'cut', text: 'Cut a second way in.', battle: { strikes: 'D3', role: 'attacker' }, effects: [{ meter: 'alarm', add: 1 }] },
           { id: 'wait', text: 'Wait for Sable to open it.', battle: { readiness: -1, edge: 'choose' }, effects: [{ meter: 'lead', add: -1 }] },
-          hireOption('sable', 'Call in what Sable owes you.')
+          // in with Sable, the ship is cleared of the salvage crew that beat everyone to it
+          Object.assign(hireOption('sable', 'Call in what Sable owes you.'), { battle: { allies: HIRE.sable, enemy: rival('kettle') },
+            effects: hireOption('sable').effects.concat([{ flag: 'wreck_together', local: true }]) })
         ] },
         battle: { scenario: 'ce_clear', planet: 'unstable', enemy: rival('sable'),
-          on: { success: [{ effects: [{ meter: 'sable', add: -1 }, { meter: 'theirs', add: -1 }, { meter: 'lead', add: 1 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] } },
+          on: {
+            success: [{ if: { flag: 'wreck_together' }, effects: [{ meter: 'kettle', add: -1 }, { meter: 'sable_trust', add: 1 }, { meter: 'theirs', add: -1 }, { meter: 'lead', add: 1 }] },
+              { effects: [{ meter: 'sable', add: -1 }, { meter: 'theirs', add: -1 }, { meter: 'lead', add: 1 }] }],
+            failure: [{ if: { flag: 'wreck_together' }, effects: [{ meter: 'theirs', add: 1 }, { meter: 'kettle', add: 1 }] },
+              { effects: [{ meter: 'theirs', add: 1 }] }] } },
         after: { id: 'wreck.morrow', if: { grade: 'success' }, title: 'Morrow', text: 'His body, his last entry, and a lodestone in his fist.', options: [
           { id: 'take', text: 'Take it.', effects: [{ meter: 'stones', add: 1 }, { flag: 'morrow_found' }] },
           { id: 'bury', text: 'Bury him with it.', effects: [{ meter: 'understanding', add: 1 }, { meter: 'loyalty', add: 1 }, { flag: 'relics_returned' }] }
