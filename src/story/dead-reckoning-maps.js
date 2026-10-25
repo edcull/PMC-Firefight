@@ -47,30 +47,26 @@
     sp.space = true; sp.ring = { cx: cx, cy: cy, r: r, a0: a0, a1: a1 };
     return sp;
   }
-  /* The open gap between a station's outer and inner rings: a band of the
-     circle (centre cx, cy) between radii r0 and r1, from angle a0 to a1. An
-     ice ravine to the rules (nothing crosses it but by a bridge, and it hides
-     nothing), drawn black, a rail along each rim and at each end. */
+  /* Open space between a station's outer and inner rings: a band of the circle
+     (centre cx, cy) between radii r0 and r1, from angle a0 to a1, walled all
+     round by the hull. Solid to the rules (it is the outside of the hull: it
+     blocks sight as well as the way), drawn black, the hull standing round it. */
   function ANNULUS(cx, cy, r0, r1, a0, a1) {
     var pts = [], k;
     for (k = 0; k <= 12; k++) { var t = a0 + (a1 - a0) * k / 12; pts.push([+(cx + r1 * Math.cos(t)).toFixed(2), +(cy + r1 * Math.sin(t)).toFixed(2)]); }
     for (k = 12; k >= 0; k--) { var u = a0 + (a1 - a0) * k / 12; pts.push([+(cx + r0 * Math.cos(u)).toFixed(2), +(cy + r0 * Math.sin(u)).toFixed(2)]); }
-    var sp = SHAPE('ravine', pts);
+    var sp = SHAPE('bulkhead', pts);
     sp.space = true; sp.gap = { cx: cx, cy: cy, r0: r0, r1: r1, a0: a0, a1: a1 };
     return sp;
   }
-  /* The gap between a station's two rings, round the centre cx, cy, between radii
-     r0 and r1, crossed by bridges `w` wide at the given x along its middle: the
-     bands of open space between them, each an ANNULUS. */
-  function RINGGAP(cx, cy, r0, r1, bridges, w) {
-    var rm = (r0 + r1) / 2, half = w / 2 / rm;
-    var at = function (x, r) { return Math.atan2(-Math.sqrt(r * r - (x - cx) * (x - cx)), x - cx); };
-    var cuts = [at(-1, r1)];
-    bridges.forEach(function (x) { var a = at(x, rm); cuts.push(a - half, a + half); });
-    cuts.push(at(49, r1));
-    var out = [];
-    for (var i = 0; i < cuts.length; i += 2) out.push(ANNULUS(cx, cy, r0, r1, cuts[i], cuts[i + 1]));
-    return out;
+  /* The space between a station's two rings, round the centre cx, cy, between
+     radii r0 and r1: one ANNULUS for each stretch of it, [x0, x1] where it
+     crosses the middle of the band; the deck between them (and either side)
+     the spokes that join the rings. */
+  function RINGGAP(cx, cy, r0, r1, spans) {
+    var rm = (r0 + r1) / 2;
+    var at = function (x) { return Math.atan2(-Math.sqrt(rm * rm - (x - cx) * (x - cx)), x - cx); };
+    return spans.map(function (sp) { return ANNULUS(cx, cy, r0, r1, at(sp[0]), at(sp[1])); });
   }
   /* A ship docked outside the ring: laid by its own outline (its box) over the
      space, its boarding bridge clamped on where along it `clamps` says (a
@@ -350,12 +346,14 @@
        (the shuttle the other maps have), each held by a docking clamp, an
        enclosed bridge run from a bulkhead door in the hull's face up to the
        ship's side hatch. Inside the hull the outer ring's deck, about 13.5"
-       across, cargo on it. Then the open gap between the rings (5" of space,
-       impassable but seen across), crossed by three bridges, the spokes, 4"
-       wide; and inside it the inner ring, the rest of the table: rows of
-       cargo stacks with lanes between, a lifter working them, the deck open
-       across the middle with blast barriers on it, the dock offices and the
-       traffic tower along the south. No gantry cranes: those are a sea
+       across, cargo on it. Then the rings part: two stretches of space
+       between them, 9" across, walled all round by the hull (they are the
+       outside of the station: nothing goes there, nor sees through), and
+       either side of them and between, the three broad spokes that join the
+       rings, spoke, space, spoke, space, spoke. Inside, the inner ring: rows
+       of cargo stacks with lanes between, a lifter working them, the deck
+       open across the middle with a blast barrier on it, the dock offices
+       and the traffic tower along the south. No gantry cranes: those are a sea
        port's. Heavy spin gravity (the chapter's). */
     dockring: {
       name: 'The docking ring, Kerrigan orbital', planet: 'industrial',
@@ -364,19 +362,20 @@
         // open space beyond the outer ring's hull, and the ships docked out in it
         RINGSPACE(24, 50, 45.6),
         DOCKED(0.4, 0.4, 10, 4.5), DOCKED(37.6, 0.4, 10, 4.5),
-        // the outer ring's deck: a fuel bowser, a lifter, cargo, blast barriers before the middle bridge
+        // the outer ring's deck: a fuel bowser, a lifter, cargo, a blast barrier before the middle spoke
         Object.assign(R('fueltruck', 13, 9, 2.8, 1.4), { facing: Math.PI }), Object.assign(R('cargolifter', 28, 7, 2.5, 2.5), { facing: 0 }),
         CG(4.5, 10, 4, 4), CG(21.5, 5.5, 5, 4), CG(39.5, 10, 4, 4), CG(12, 13, 5, 4), CG(31, 13, 5, 4),
         Object.assign(R('barricade', 21, 14, 4, 1), { shield: true, blast: true })
       ].concat(
-        // the gap between the rings, and its three bridges
-        RINGGAP(24, 50, 27, 32, [8, 24, 40], 4)
+        // the space between the rings: two stretches of it, the three spokes either side and between
+        RINGGAP(24, 50, 23, 32, [[10.5, 19], [29, 37.5]])
       ).concat([
-        // the inner ring: cargo in rows, lanes between, a blast barrier or two
-        CG(15, 26.5, 4, 3.5), CG(31, 26.5, 4, 3.5),
-        CG(6.5, 32, 5, 4), CG(14, 31, 5, 4), CG(29, 31, 5, 4), CG(36.5, 32, 5, 4),
+        // the spokes: cargo on them
+        CG(4.2, 25, 3, 3), CG(40.8, 25, 3, 3), CG(21, 22, 6, 3),
+        // the inner ring: cargo in rows, lanes between, a lifter, a blast barrier
+        CG(6.5, 32, 5, 4), CG(14, 33, 5, 4), CG(29, 33, 5, 4), CG(36.5, 32, 5, 4),
         Object.assign(R('cargolifter', 25.5, 32, 2.5, 2.5), { facing: 0 }),
-        Object.assign(R('barricade', 25, 26, 4, 1), { shield: true, blast: true }), Object.assign(R('barricade', 20, 29.3, 4, 1), { shield: true, blast: true }),
+        Object.assign(R('barricade', 21, 28.5, 4, 1), { shield: true, blast: true }),
         // the dock offices and the traffic tower
         B(7, 39, 7, 5, 'L'), B(21, 39, 5, 5, 'tower'), B(33, 39, 7, 5, 'block')
       ])

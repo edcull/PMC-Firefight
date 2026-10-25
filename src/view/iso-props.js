@@ -267,14 +267,15 @@
           }
           return;
         }
-        /* The open gap between a station's two rings: a rail along each rim and
-           across each end, where a bridge leaves it, laid in short runs. */
+        /* The space between a station's two rings: the hull round it, along each
+           rim and across each end where a spoke meets it, as tall as the outer
+           hull but without its hazard paint, laid in short runs. */
         if (r.gap) {
           var gg = r.gap, rail = function (x0, y0, x1, y1, nx, ny) {
             var len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.round(len / 1.4));
             for (var rs = 0; rs < n; rs++) {
               var mx = x0 + (x1 - x0) * (rs + 0.5) / n, my = y0 + (y1 - y0) * (rs + 0.5) / n;
-              props.push({ kind: 'hullseg', x: mx, y: my, ang: Math.atan2(y1 - y0, x1 - x0), len: len / n + 0.04, nx: nx, ny: ny, height: a(4), seed: (rand() * 9999) | 0 });
+              props.push({ kind: 'hullseg', x: mx, y: my, ang: Math.atan2(y1 - y0, x1 - x0), len: len / n + 0.04, nx: nx, ny: ny, height: a(14), plain: true, seed: (rand() * 9999) | 0 });
             }
           };
           var NG = 12;
@@ -284,7 +285,7 @@
             rail(gg.cx + gg.r1 * Math.cos(ga), gg.cy + gg.r1 * Math.sin(ga), gg.cx + gg.r1 * Math.cos(gb), gg.cy + gg.r1 * Math.sin(gb), Math.cos(gm), Math.sin(gm));
             rail(gg.cx + gg.r0 * Math.cos(ga), gg.cy + gg.r0 * Math.sin(ga), gg.cx + gg.r0 * Math.cos(gb), gg.cy + gg.r0 * Math.sin(gb), -Math.cos(gm), -Math.sin(gm));
           }
-          // across each end, square to the rims, facing the bridge beside it
+          // across each end, square to the rims, facing the spoke beside it
           [[gg.a0, -1], [gg.a1, 1]].forEach(function (e) {
             var c = Math.cos(e[0]), sn = Math.sin(e[0]);
             rail(gg.cx + gg.r0 * c, gg.cy + gg.r0 * sn, gg.cx + gg.r1 * c, gg.cy + gg.r1 * sn, -sn * e[1], c * e[1]);

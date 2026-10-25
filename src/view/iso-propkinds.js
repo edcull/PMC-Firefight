@@ -1854,7 +1854,8 @@
           var inSeen = pr.nx + pr.ny > 0;
           poly(g, inSeen ? faceOut : faceIn, BULK[1]);
           poly(g, inSeen ? faceIn : faceOut, inSeen ? BULK[3] : BULK[2]);
-          if (inSeen) for (var hz8 = 0; hz8 < 3; hz8++) {
+          // (the hull round the space between the rings, inside the station, carries no hazard paint)
+          if (inSeen && !pr.plain) for (var hz8 = 0; hz8 < 3; hz8++) {
             var ha8 = -GL + 2 * GL * hz8 / 3, hb8 = -GL + 2 * GL * (hz8 + 1) / 3;
             poly(g, [GQ(ha8, GT, 0), GQ(hb8, GT, 0), GQ(hb8, GT, GH * 0.14), GQ(ha8, GT, GH * 0.14)], hz8 % 2 ? '#1b1a17' : '#c9a23c');
           }

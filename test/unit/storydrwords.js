@@ -279,11 +279,11 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
     ps.filter((p) => p.kind === 'shuttle').every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => outside(c[0], c[1]))) &&
     ps.filter((p) => p.kind !== 'shuttle' && !p.space && !p.deck).every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => !outside(c[0], c[1]))));
   const gaps = ps.filter((p) => p.gap);
-  ok('...laid as a wheel: an outer ring and an inner one, the open gap between them crossed by three bridges, impassable but seen across',
-    gaps.length === 4 && gaps.every((p) => p.kind === 'ravine' && p.space && p.fixed) && R.TERRAIN.ravine.impassable && !R.TERRAIN.ravine.blocks &&
-    [8, 24, 40].every((x) => { const y = 50 - Math.sqrt(29.5 * 29.5 - (x - 24) * (x - 24)); return !gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
-    [16, 32].every((x) => { const y = 50 - Math.sqrt(29.5 * 29.5 - (x - 24) * (x - 24)); return gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
-    R.terrainName(null, 'ravine', gaps[0]) === 'Open space' &&
+  ok('...laid as a wheel: an outer ring and an inner one, spoke, space, spoke, space, spoke between them, the space walled by the hull and blocking sight',
+    gaps.length === 2 && gaps.every((p) => p.kind === 'bulkhead' && p.space && p.fixed) && R.TERRAIN.bulkhead.impassable && R.TERRAIN.bulkhead.blocks &&
+    [3, 24, 45].every((x) => { const y = 50 - Math.sqrt(27.5 * 27.5 - (x - 24) * (x - 24)); return !gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
+    [14.5, 33.5].every((x) => { const y = 50 - Math.sqrt(27.5 * 27.5 - (x - 24) * (x - 24)); return gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
+    gaps.every((p) => p.gap.r1 - p.gap.r0 >= 8) && R.terrainName(null, 'bulkhead', gaps[0]) === 'Open space' &&
     ps.filter((p) => !p.space && !p.deck && p.kind !== 'shuttle').every((p) => !gaps.some((q) => overlap(p, q))));
   ok('the docking ring: steel deck inside the hull, no gantry cranes (a sea port’s), the shuttle the other maps have, rows of cargo, open deck across the middle',
     ps.some((p) => p.deck && p.x === 0 && p.y === 0 && p.w === 48 && p.h === 48) && R.terrainName(null, 'road', ps.find((p) => p.deck)) === 'Deck' &&
