@@ -148,7 +148,7 @@ const compound = (n) => SC.SCENARIOS[n.scenario] && SC.SCENARIOS[n.scenario].com
 const allBattles = Object.keys(dr._nodes).map((id) => dr._nodes[id]).filter((n) => n.type === 'battle' && !n.side);
 const open = allBattles.filter((n) => !compound(n));
 ok('every open-table battle of the story has its own ground, both halves', open.every((n) => n.map && MAPS[n.map]), open.map((n) => n.id + ':' + n.map).join(', '));
-ok('...and the compounds none, their seed lays them, unless the map lays the compound by hand', allBattles.filter(compound).every((n) => !n.map || (MAPS[n.map] && MAPS[n.map].compound)), allBattles.filter(compound).map((n) => n.id).join(', '));
+ok('...and the compounds none, their seed lays them, unless the map lays the compound by hand or gives its skin', allBattles.filter(compound).every((n) => !n.map || (MAPS[n.map] && (MAPS[n.map].compound || MAPS[n.map].skin))), allBattles.filter(compound).map((n) => n.id).join(', '));
 {
   // Station Thule: laid by hand, the same about both its axes, in open space
   const CMP = require('../../src/rules/compound.js');
@@ -244,6 +244,55 @@ ok('the Glass Flats and the Mire put their three places where the map says, for 
 ok('...its skin the market’s: railings for barricades, the market’s clutter for craters, by name too', MAPS.vesk.skin === 'market' &&
     MAPS.vesk.pieces.filter((p) => p.kind === 'barricade').length >= 6 && R.terrainName({ cfg: { story: { skin: 'market' } } }, 'barricade') === 'Railings and planters' &&
     R.terrainName({ cfg: { story: { skin: 'market' } } }, 'crater') === 'Market clutter' && R.terrainName({ cfg: { story: {} } }, 'crater') === 'Rubble and craters');
+}
+{
+  /* Into the Warren as its briefing has it: tunnels cut high and wide in the rock of a world nobody has charted,
+     the Reavers' hoard on the far side, the gate closing behind the company. Its seed lays it; its map gives the skin. */
+  const { C, Engine } = require('../../server/rules.js');
+  const L = require('../../src/story/levers.js');
+  const n = dr._nodes['warren.battle'];
+  const c = C.newCampaign({ mode: 'solo' });
+  C.found(c.companies.A, ['recruits', 'enforcers', 'irregulars', 'lpv', 'rookie'], 'S2'); S.begin(c, 'dead-reckoning'); c.story.leading = 'kestrel';
+  c.story.chapter = n._chapter; c.story.node = n.id;
+  const cfg = L.toCfg(c, { picks: C.pickForce(c.companies.A, 1, 1, null, { scenario: n.scenario }), role: 'A' }); cfg.mode = 'ai';
+  const e = Engine.create(); e.start(cfg); const t = e.state().terrain;
+  const floors = t.filter((p) => p.kind === 'corridor' || p.kind === 'room' || p.kind === 'hall');
+  ok('Into the Warren: its own skin — rock for the solid, worked stone for every floor, crates where a base has machinery, on a 4" grid',
+    n.map === 'warren' && MAPS.warren.skin === 'warren' && floors.length && floors.every((p) => p.warren) &&
+    t.filter((p) => p.kind === 'bulkhead').every((p) => p.rock) && !t.some((p) => p.kind === 'machinery') &&
+    floors.filter((p) => p.kind === 'corridor').every((p) => Math.min(p.w, p.h) % 4 === 0));
+  ok('...the Reavers’ hoard in the biggest chamber on the far side, and the gate where the company comes in',
+    t.filter((p) => p.hoard).length === 1 && t.find((p) => p.hoard).x + t.find((p) => p.hoard).w / 2 > 24 &&
+    t.some((p) => p.gate && p.x === 0));
+  const hoard = t.find((p) => p.hoard), doors = t.filter((p) => R.TERRAIN[p.kind] && R.TERRAIN[p.kind].door);
+  ok('...its ways open rock to rock: the only doors are the hoard chamber’s',
+    doors.length > 0 && doors.every((p) => p.x <= hoard.x + hoard.w + 0.5 && p.x + p.w >= hoard.x - 0.5 && p.y <= hoard.y + hoard.h + 0.5 && p.y + p.h >= hoard.y - 0.5));
+}
+{
+  /* The Double-Cross on the orbital's docking ring, as its briefing has it: cranes, cargo stacks and open deck. */
+  const ps = MAPS.dockring.pieces;
+  const sp = ps.find((p) => p.space && p.ring), rg = sp && sp.ring, outside = (x, y) => Math.hypot(x - rg.cx, y - rg.cy) >= rg.r;
+  ok('...the ring’s hull a gentle curve along the north, the same both ways, open space beyond it that nothing enters, a ship docked in each corner',
+    !!sp && sp.kind === 'bulkhead' && R.TERRAIN.bulkhead.impassable && R.inPoly(47, 1, sp.poly) && R.inPoly(1, 1, sp.poly) && !R.inPoly(24, 24, sp.poly) && !R.inPoly(47, 40, sp.poly) &&
+    rg.cx === 24 && !R.inPoly(24, 6, sp.poly) &&
+    ps.filter((p) => p.kind === 'shuttle' && p.docked).length === 2 && ps.some((p) => p.kind === 'shuttle' && p.x < 4) && ps.some((p) => p.kind === 'shuttle' && p.x + p.w > 44) &&
+    ps.filter((p) => p.kind === 'shuttle').every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => outside(c[0], c[1]))) &&
+    ps.filter((p) => p.kind !== 'shuttle' && !p.space && !p.deck).every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => !outside(c[0], c[1]))));
+  const gaps = ps.filter((p) => p.gap);
+  ok('...laid as a wheel: an outer ring and an inner one, spoke, space, spoke, space, spoke between them, the space walled by the hull and blocking sight',
+    gaps.length === 2 && gaps.every((p) => p.kind === 'bulkhead' && p.space && p.fixed) && R.TERRAIN.bulkhead.impassable && R.TERRAIN.bulkhead.blocks &&
+    [3, 24, 45].every((x) => { const y = 50 - Math.sqrt(27.5 * 27.5 - (x - 24) * (x - 24)); return !gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
+    [14.5, 33.5].every((x) => { const y = 50 - Math.sqrt(27.5 * 27.5 - (x - 24) * (x - 24)); return gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
+    gaps.every((p) => p.gap.r1 - p.gap.r0 >= 8) && R.terrainName(null, 'bulkhead', gaps[0]) === 'Open space' &&
+    ps.filter((p) => !p.space && !p.deck && p.kind !== 'shuttle').every((p) => !gaps.some((q) => overlap(p, q))));
+  ok('the docking ring: steel deck inside the hull, no gantry cranes (a sea port’s), the shuttle the other maps have, rows of cargo, open deck across the middle',
+    ps.some((p) => p.deck && p.x === 0 && p.y === 0 && p.w === 48 && p.h === 48) && R.terrainName(null, 'road', ps.find((p) => p.deck)) === 'Deck' &&
+    !ps.some((p) => p.kind === 'crane') && ps.filter((p) => p.kind === 'shuttle').every((p) => p.w === 10) && ps.filter((p) => p.kind === 'crater' && p.cargo).length >= 8 && !ps.some((p) => p.kind === 'ruins') &&
+    ps.filter((p) => p.kind !== 'road' && !p.space).every((p) => !overlap(p, { x: 19.5, y: 30, w: 5.5, h: 2.5 })) &&
+    // and the traffic control: a reinforced tower in a ring of buildings, drawn as one
+    // a tank of reaction mass by each docking collar's door, in the outer ring
+    ps.filter((p) => p.kind === 'fueltanks' && p.y < 12).length === 2 &&
+    ps.filter((p) => p.hub).length === 5 && ps.some((p) => p.hub && p.kind === 'bunker' && p.tower) && ps.filter((p) => p.hub && p.kind === 'building').length === 4);
 }
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {

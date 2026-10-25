@@ -26,6 +26,9 @@
     var MACH = ['#1a1e22', '#2a3036', '#3d454c', '#50595f', '#636d74', '#86919a'];
     var SHIELD = ['#1f2428', '#2e353b', '#46515a', '#5d6a74', '#73808a', '#94a1ab'];
     var DOOR_STEEL = ['#23282c', '#323a40', '#465058', '#58636c', '#6b7781', '#8a96a0'];
+    // the Warren's rock, its faces cut smooth (a story's skin), and its doors' worked stone
+    var ROCKWALL = ['#16130f', '#241f1a', '#352e26', '#463d33', '#5a4e41', '#726352'];
+    var ROCKDOOR = ['#2a2620', '#3a342c', '#4d453a', '#615749', '#766a59', '#8f8270'];
     // a market: the stalls' steel, their canopies (sheet, neon, holo-sign), and what is for sale
     var KIOSK = ['#181c20', '#262c32', '#363e46', '#48525c', '#5c6872', '#7a8792'];
     var CANOPY = [['#1f5866', '#6fe8ff', 'rgba(111,232,255,.28)'], ['#5e2a56', '#ff7ad8', 'rgba(255,122,216,.28)'], ['#6a5218', '#ffcf5a', 'rgba(255,207,90,.28)'],
@@ -494,7 +497,8 @@
           var R = ST.map(function (s) { var out = []; for (var k = 0; k < RK; k++) out.push(ring(s, k)); return out; });
           function S3(p, dz) { return SP(p.x, p.y, p.z + (dz || 0)); }
           var sm = SP(x0 + w / 2, yc, 0);
-          shadowBlob(g, { x: sm[0] + a(3), y: sm[1] + a(1.5) }, a(w * 4.4), a(pr.h * 2.1));
+          // (docked outside a station's hull it floats: no shadow, no legs, its ramp shut)
+          if (!pr.docked) shadowBlob(g, { x: sm[0] + a(3), y: sm[1] + a(1.5) }, a(w * 4.4), a(pr.h * 2.1));
           // the engine bells behind the tail, under the hull
           [[-0.45, a(12.5)], [0.45, a(12.5)], [0, a(19)]].forEach(function (E) {
             var e0 = SP(xa - 0.55, yc + E[0], E[1]), e1 = SP(xa + 0.1, yc + E[0], E[1]);
@@ -503,7 +507,7 @@
             ellipse(g, e0[0], e0[1], a(2), a(2.2), 'rgba(255,150,70,.45)');
           });
           // the legs, each on a foot
-          [[xa + 1.8, yc - 0.9], [xa + 1.8, yc + 0.9], [xa + 6.6, yc - 0.8], [xa + 6.6, yc + 0.8]].forEach(function (L) {
+          if (!pr.docked) [[xa + 1.8, yc - 0.9], [xa + 1.8, yc + 0.9], [xa + 6.6, yc - 0.8], [xa + 6.6, yc + 0.8]].forEach(function (L) {
             var f = SP(L[0], L[1] + (L[1] > yc ? 0.25 : -0.25), 0), t = SP(L[0], L[1], a(10));
             ellipse(g, f[0], f[1], a(1.8), a(0.9), '#1a1d20');
             edgeLine(g, f, t, HULL[1], 5); edgeLine(g, f, t, HULL[4], 1);
@@ -548,11 +552,18 @@
           }
           // the side ramp, down to the apron, and the hold lit behind it
           var r0 = xa + 5.2, r1 = xa + 6.6, rz = a(9), ry = yc + 1.1;
-          poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry, a(21)), SP(r0, ry, a(21))], 'rgba(255,214,140,.85)');
-          poly(g, [SP(r0 + 0.15, ry, rz), SP(r1 - 0.15, ry, rz), SP(r1 - 0.15, ry, a(18)), SP(r0 + 0.15, ry, a(18))], 'rgba(255,236,190,.6)');
-          poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry + 1.7, 0), SP(r0, ry + 1.7, 0)], HULL[3]);
-          for (var rs = 1; rs < 5; rs++) edgeLine(g, SP(r0, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), SP(r1, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), HULL[1], 1);
-          edgeLine(g, SP(r0, ry + 1.7, 0), SP(r1, ry + 1.7, 0), '#e0b440', 2);
+          if (pr.docked) {
+            // docked: the side hatch shut, its outline and a lamp by it
+            edgeLine(g, SP(r0, ry, a(11)), SP(r1, ry, a(11)), HULL[1], 1); edgeLine(g, SP(r0, ry, a(20)), SP(r1, ry, a(20)), HULL[1], 1);
+            edgeLine(g, SP(r0, ry, a(11)), SP(r0, ry, a(20)), HULL[1], 1); edgeLine(g, SP(r1, ry, a(11)), SP(r1, ry, a(20)), HULL[1], 1);
+            var hl3 = SP(r1 + 0.2, ry, a(19)); dot(g, hl3[0], hl3[1], '#7bdc6a', 2);
+          } else {
+            poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry, a(21)), SP(r0, ry, a(21))], 'rgba(255,214,140,.85)');
+            poly(g, [SP(r0 + 0.15, ry, rz), SP(r1 - 0.15, ry, rz), SP(r1 - 0.15, ry, a(18)), SP(r0 + 0.15, ry, a(18))], 'rgba(255,236,190,.6)');
+            poly(g, [SP(r0, ry, rz), SP(r1, ry, rz), SP(r1, ry + 1.7, 0), SP(r0, ry + 1.7, 0)], HULL[3]);
+            for (var rs = 1; rs < 5; rs++) edgeLine(g, SP(r0, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), SP(r1, ry + 1.7 * rs / 5, rz * (1 - rs / 5)), HULL[1], 1);
+            edgeLine(g, SP(r0, ry + 1.7, 0), SP(r1, ry + 1.7, 0), '#e0b440', 2);
+          }
           // the near wing, its leading edge lit, a gold chevron on it, and its winglet
           var NW = wing(1);
           poly(g, NW.map(function (p) { return [p[0], p[1] + a(1.5)]; }), HULL[0]);
@@ -1258,6 +1269,30 @@
              odd crack and bullet pock, and on some walls a coil of razor wire. */
           var wr2 = rng(pr.seed), lf2 = lift || 0;
           var ux2 = pr.horiz ? 1 : 0, uy2 = pr.horiz ? 0 : 1, vx2 = 1 - ux2, vy2 = 1 - uy2;
+          if (pr.hull) {
+            /* A station's hull, seen from inside the ring: thick plate in big
+               panels, a band of ribbing along it, hazard paint at the foot and a
+               row of amber lamps along the top. */
+            var HL2 = pr.len, HT = 0.3, HH2 = pr.height, h0b = -HL2 / 2, h1b = HL2 / 2;
+            var HQ2 = function (t, v, z) { var q = toScreen(pr.x + ux2 * t + vx2 * v, pr.y + uy2 * t + vy2 * v); return [q.x, q.y - lf2 - z]; };
+            var hslab = function (t0, t1, v0, v1, z0, z1, pal2) {
+              poly(g, [HQ2(t0, v1, z0), HQ2(t1, v1, z0), HQ2(t1, v1, z1), HQ2(t0, v1, z1)], pr.horiz ? pal2[3] : pal2[2]);
+              poly(g, [HQ2(t1, v0, z0), HQ2(t1, v1, z0), HQ2(t1, v1, z1), HQ2(t1, v0, z1)], pr.horiz ? pal2[2] : pal2[3]);
+              poly(g, [HQ2(t0, v0, z1), HQ2(t1, v0, z1), HQ2(t1, v1, z1), HQ2(t0, v1, z1)], pal2[4]);
+            };
+            hslab(h0b, h1b, -HT, HT, 0, HH2, BULK);
+            // the panels' joints, a band of ribbing across them, and the hazard paint at the foot
+            edgeLine(g, HQ2(h0b, HT, 1), HQ2(h0b, HT, HH2 - 1), BULK[1], 1);
+            edgeLine(g, HQ2(h0b, HT, HH2 * 0.55), HQ2(h1b, HT, HH2 * 0.55), BULK[1], 2);
+            edgeLine(g, HQ2(h0b, HT, HH2 * 0.55 - 2), HQ2(h1b, HT, HH2 * 0.55 - 2), BULK[5], 1);
+            for (var hz3 = 0; hz3 < 6; hz3++) {
+              var ha3 = h0b + HL2 * hz3 / 6, hb3 = h0b + HL2 * (hz3 + 1) / 6;
+              poly(g, [HQ2(ha3, HT, 0), HQ2(hb3, HT, 0), HQ2(hb3, HT, HH2 * 0.1), HQ2(ha3, HT, HH2 * 0.1)], hz3 % 2 ? '#1b1a17' : '#c9a23c');
+            }
+            hslab(h0b, h1b, -HT - 0.05, HT + 0.05, HH2, HH2 + a(1), BULK);
+            var lamp3 = HQ2(0, HT, HH2 * 0.85); dot(g, lamp3[0] - 1, lamp3[1] - 1, '#ffb02e', 3);
+            break;
+          }
           if (pr.shed) {
             /* A warehouse's wall: corrugated steel cladding on I-beam posts, the
                ribs catching the light, a flashing along the top, rust weeping
@@ -1653,7 +1688,378 @@
         /* A compound's bulkhead: a block of steel plate, one of the many the solid
            is laid in, drawn so they read as one mass (box: solid). */
         case 'bulkhead': {
+          if (pr.rock) {
+            // the Warren's rock: raw and hewn rough on its faces, its hoard chamber's walls worked smooth
+            box(g, pr, ROCKWALL, { roof: '#211d19', roofEdge: '#5d5042', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
+            /* Raw rock where a face looks onto the Warren's tunnels (not its hoard
+               chamber, worked smooth): bands of strata, chips lit and shadowed,
+               a broken edge along the top, scree at the foot. */
+            if (!cutaway) {
+              var rk9 = rng(pr.seed + 73), rl9 = lift || 0;
+              (pr.open || []).forEach(function (o) {
+                if ((o[0] !== 'S' && o[0] !== 'E') || o[3] !== 7) return;
+                var RP9 = function (t, z) { var q = o[0] === 'S' ? toScreen(t, pr.y + pr.h) : toScreen(pr.x + pr.w, t); return [q.x, q.y - rl9 - z]; };
+                var t0 = o[1], t1 = o[2], ln9 = t1 - t0, H9 = pr.height, lit = o[0] === 'S';
+                // strata: a few wavering bands along the face
+                for (var b9 = 0; b9 < 3; b9++) {
+                  var bz = H9 * (0.22 + b9 * 0.26 + (rk9() - 0.5) * 0.08), last9 = RP9(t0, bz);
+                  for (var s9 = 1; s9 <= Math.ceil(ln9 / 0.5); s9++) {
+                    var nt = Math.min(t1, t0 + s9 * 0.5), nz = bz + (rk9() - 0.5) * H9 * 0.07, nq = RP9(nt, nz);
+                    edgeLine(g, last9, nq, lit ? ROCKWALL[2] : ROCKWALL[1], 1); last9 = nq;
+                  }
+                }
+                // chips: small facets catching the light, or in shadow
+                for (var c9 = 0; c9 < Math.round(ln9 * 2); c9++) {
+                  var ct = t0 + rk9() * ln9, cz = rk9() * H9 * 0.9, cw9 = 0.15 + rk9() * 0.3, ch9 = H9 * (0.05 + rk9() * 0.08);
+                  // an irregular facet: four corners jittered, a shade lighter or darker than the face
+                  var fc = [RP9(ct, cz + ch9 * rk9() * 0.3), RP9(ct + cw9 * (0.5 + rk9() * 0.3), cz + ch9), RP9(ct + cw9, cz + ch9 * rk9() * 0.4), RP9(ct + cw9 * (0.3 + rk9() * 0.4), cz - ch9 * 0.3)];
+                  poly(g, fc, rk9() < 0.5 ? (lit ? 'rgba(128,112,93,.55)' : 'rgba(104,90,75,.5)') : 'rgba(20,17,14,.45)');
+                }
+                // the broken top edge: the rock above it uneven, in the roof's dark
+                var top9 = [RP9(t0, H9)];
+                for (var e9 = 0; e9 <= Math.ceil(ln9 / 0.3); e9++) top9.push(RP9(Math.min(t1, t0 + e9 * 0.3), H9 - rk9() * a(1.4)));
+                top9.push(RP9(t1, H9));
+                poly(g, top9, '#211d19');
+                // scree at the foot
+                for (var f9 = 0; f9 < Math.round(ln9 * 2); f9++) { var fq9 = RP9(t0 + rk9() * ln9, 0); dot(g, fq9[0] + (rk9() - 0.5) * 3, fq9[1] + rk9() * 3, rk9() < 0.5 ? ROCKWALL[3] : ROCKWALL[1], 2); }
+              });
+            }
+            /* Where the Reavers have been firing at the walls: on the faces that look
+               onto a floor, scorched blotches with a pale chipped heart, pocked
+               round with shot, and now and then a blast's spray of soot up the rock. */
+            if (!cutaway) {
+              var sr8 = rng(pr.seed + 41), sl8 = lift || 0;
+              (pr.open || []).forEach(function (o) {
+                if ((o[0] !== 'S' && o[0] !== 'E') || o[3] == null || o[3] < 0) return;
+                var len8 = o[2] - o[1], n8 = Math.floor(len8 / 3 + sr8());
+                var FP8 = function (t, z) { var q = o[0] === 'S' ? toScreen(t, pr.y + pr.h) : toScreen(pr.x + pr.w, t); return [q.x, q.y - sl8 - z]; };
+                for (var k8 = 0; k8 < n8; k8++) {
+                  var t8 = o[1] + 0.4 + sr8() * Math.max(0, len8 - 0.8), z8 = pr.height * (0.25 + sr8() * 0.5), c8 = FP8(t8, z8);
+                  var big8 = sr8() < 0.3, rx8 = a(big8 ? 1.5 : 0.9), ry8 = a(big8 ? 1.2 : 0.7);
+                  // the soot: ragged, built of overlapping smudges, rising up the rock above the hit
+                  for (var u8 = 0; u8 < (big8 ? 14 : 8); u8++) {
+                    var ua8 = sr8() * Math.PI * 2, ud8 = Math.sqrt(sr8()), rise8 = sr8() * sr8() * (big8 ? 2.6 : 1.6);
+                    var ux8 = c8[0] + Math.cos(ua8) * rx8 * ud8, uy8 = c8[1] + Math.sin(ua8) * ry8 * ud8 - rise8 * ry8;
+                    ellipse(g, ux8, uy8, rx8 * (0.25 + sr8() * 0.35), ry8 * (0.25 + sr8() * 0.35), 'rgba(8,6,4,' + (0.3 + sr8() * 0.25).toFixed(2) + ')');
+                  }
+                  // the hit itself: a dark pit, the rock chipped pale round its lip
+                  ellipse(g, c8[0], c8[1], rx8 * 0.3, ry8 * 0.3, 'rgba(4,3,2,.75)');
+                  for (var h8 = 0; h8 < 4; h8++) {
+                    var ha8 = sr8() * Math.PI * 2;
+                    dot(g, c8[0] + Math.cos(ha8) * rx8 * 0.4, c8[1] + Math.sin(ha8) * ry8 * 0.4, '#8a7a64', 1);
+                  }
+                  for (var p8 = 0; p8 < (big8 ? 7 : 3); p8++) {                            // stray shot round it
+                    var pa8 = sr8() * Math.PI * 2, pd8 = (1.1 + sr8() * 1.2) * rx8;
+                    dot(g, c8[0] + Math.cos(pa8) * pd8, c8[1] + Math.sin(pa8) * pd8 * 0.8, sr8() < 0.6 ? '#14110e' : '#7a6c58', 1 + (sr8() < 0.3 ? 1 : 0));
+                  }
+                }
+              });
+            }
+            break;
+          }
           box(g, pr, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
+          break;
+        }
+        /* A station's deck plate: the seams between the plates in a 4" grid,
+           a bevel of light along each, a bolt at every corner, and the odd
+           scuff and weld patch. */
+        case 'deckplate': {
+          var dl9 = lift || 0, dr9 = rng(pr.seed);
+          var DP = function (x, y) { var q = toScreen(x, y); return [q.x, q.y - dl9]; };
+          for (var gx9 = pr.x + 4; gx9 < pr.x + pr.w - 0.01; gx9 += 4) {
+            edgeLine(g, DP(gx9, pr.y), DP(gx9, pr.y + pr.h), 'rgba(10,12,14,.55)', 1);
+            edgeLine(g, DP(gx9 + 0.06, pr.y), DP(gx9 + 0.06, pr.y + pr.h), 'rgba(150,160,170,.1)', 1);
+          }
+          for (var gy9 = pr.y + 4; gy9 < pr.y + pr.h - 0.01; gy9 += 4) {
+            edgeLine(g, DP(pr.x, gy9), DP(pr.x + pr.w, gy9), 'rgba(10,12,14,.55)', 1);
+            edgeLine(g, DP(pr.x, gy9 + 0.06), DP(pr.x + pr.w, gy9 + 0.06), 'rgba(150,160,170,.1)', 1);
+          }
+          for (var bx9 = pr.x + 4; bx9 < pr.x + pr.w; bx9 += 4) for (var by9 = pr.y + 4; by9 < pr.y + pr.h; by9 += 4) {
+            var bq9 = DP(bx9, by9); dot(g, bq9[0] - 1, bq9[1] - 1, '#5e676e', 2);
+          }
+          for (var wp9 = 0; wp9 < Math.round(pr.w * pr.h / 60); wp9++) {
+            var wq9 = DP(pr.x + dr9() * pr.w, pr.y + dr9() * pr.h);
+            ellipse(g, wq9[0], wq9[1], a(1 + dr9() * 2), a(0.5 + dr9()), dr9() < 0.5 ? 'rgba(12,14,16,.22)' : 'rgba(120,128,136,.12)');
+          }
+          break;
+        }
+        /* A fuel line's end at a station's hull: a fat pipe up the hull's face
+           through the points it is given (x, y and height), a red valve wheel
+           at its foot, and the coupling plate where it goes into the hull. */
+        case 'fuelline': {
+          var fl8 = lift || 0, FPt = function (q) { var s8 = toScreen(q[0], q[1]); return [s8.x, s8.y - fl8 - a(3.2) - q[2]]; };
+          var P8 = pr.pts.map(FPt);
+          for (var fi = 0; fi < P8.length - 1; fi++) {
+            var A8 = P8[fi], B8 = P8[fi + 1];
+            if (Math.abs(B8[1] - A8[1]) > Math.abs(B8[0] - A8[0])) {
+              // a run that climbs: drawn as a band across, its lit side towards the light
+              var pw8 = Math.max(2, Math.round(a(1.1)));
+              for (var ox8 = -pw8; ox8 <= pw8; ox8++) edgeLine(g, [A8[0] + ox8, A8[1]], [B8[0] + ox8, B8[1]], ox8 < -pw8 / 2 ? '#8a949a' : ox8 > pw8 / 2 ? '#25292b' : '#5d666c', 1);
+              continue;
+            }
+            edgeLine(g, [A8[0], A8[1] + 2], [B8[0], B8[1] + 2], '#25292b', a(2.6));
+            edgeLine(g, A8, B8, '#5d666c', a(2.2));
+            edgeLine(g, [A8[0], A8[1] - a(0.6)], [B8[0], B8[1] - a(0.6)], '#8a949a', 1);
+          }
+          // the coupling plate at its top, bolted to the hull, hazard-banded
+          var cp = P8[P8.length - 1];
+          rect(g, cp[0] - a(1.6), cp[1] - a(1.4), a(3.2), a(2.6), '#3a4044'); rect(g, cp[0] - a(1.6), cp[1] + a(0.9), a(3.2), a(0.4), '#c9a23c');
+          [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (b) { dot(g, cp[0] + b[0] * a(1.1), cp[1] + b[1] * a(0.8), '#8a949a', 1); });
+          // the valve at its foot: a red wheel
+          var vq = P8[0]; ellipse(g, vq[0], vq[1] - a(2), a(1.2), a(0.8), '#b8402e'); dot(g, vq[0] - 1, vq[1] - a(2) - 1, '#e0e0e0', 2);
+          break;
+        }
+        /* A ring of connected buildings round a tower: a round drum, its outer
+           wall in panels with a window in each, the seams between the
+           buildings, a flat roof round the hole; the tower a taller drum out of
+           the middle, reinforced (banded at its foot), two rows of windows and
+           the control room's glass all round near the top, a dish and a mast on
+           top, a beacon. */
+        case 'hubring': {
+          var hl = lift || 0, HC = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - hl - z]; };
+          var NS = 36, pt = function (r, k, z) { var t = k / NS * Math.PI * 2; return HC(pr.cx + Math.cos(t) * r, pr.cy + Math.sin(t) * r, z); };
+          var facing = function (k) { var t = (k + 0.5) / NS * Math.PI * 2; return Math.cos(t) + Math.sin(t); };
+          var WALLC = ['#2a3034', '#3a4248', '#4c565e', '#5e6a74', '#74818a', '#9aa6ae'];
+          var drum = function (r, z0, z1, pal, windows, bands) {
+            // the walls that face the viewer, each strip shaded by which way it faces
+            for (var k = 0; k < NS; k++) {
+              var f = facing(k); if (f <= -0.2) continue;
+              var ang = (k + 0.5) / NS * Math.PI * 2, lit = 0.5 + 0.5 * Math.cos(ang - 2.3);
+              poly(g, [pt(r, k, z0), pt(r, k + 1, z0), pt(r, k + 1, z1), pt(r, k, z1)], pal[Math.max(1, Math.min(4, Math.round(1 + lit * 3)))]);
+              // windows: a row (or rows) of them round it, `windows` the heights (fractions up the wall) of each row, most lit
+              if (windows) windows.forEach(function (wz, wi) {
+                var w0 = pt(r, k + 0.5, z0 + (z1 - z0) * wz), lit2 = ((k * 7 + wi * 3) % 5) !== 0;
+                rect(g, w0[0] - 3, w0[1] - 4, 6, 5, '#1a2026'); rect(g, w0[0] - 2, w0[1] - 3, 4, 3, lit2 ? '#ffd88a' : '#3a4a58');
+              });
+              if (bands) { var b0 = pt(r, k, z0 + (z1 - z0) * 0.12), b1 = pt(r, k + 1, z0 + (z1 - z0) * 0.12); edgeLine(g, b0, b1, k % 2 ? '#1b1a17' : '#c9a23c', 2); }
+            }
+          };
+          shadowBlob(g, (function () { var q = HC(pr.cx, pr.cy, 0); return { x: q[0] + a(3), y: q[1] + a(1.5) }; })(), a(pr.r1 * 6), a(pr.r1 * 3));
+          // the ring: its outer wall, the seams between its buildings, its roof round the hole
+          drum(pr.r1, 0, pr.height, PREFAB, [0.5], false);
+          for (var sk = 0; sk < NS; sk += 6) if (facing(sk) > -0.2) edgeLine(g, pt(pr.r1, sk, 1), pt(pr.r1, sk, pr.height - 1), PREFAB[0], 2);
+          g.beginPath();
+          for (var k1 = 0; k1 <= NS; k1++) { var o1 = pt(pr.r1, k1, pr.height); if (k1) g.lineTo(o1[0], o1[1]); else g.moveTo(o1[0], o1[1]); }
+          for (var k2 = NS; k2 >= 0; k2--) { var o2 = pt(pr.r0, k2, pr.height); g.lineTo(o2[0], o2[1]); }
+          g.closePath(); g.fillStyle = PREFAB[4]; g.fill();
+          for (var sr2 = 0; sr2 < NS; sr2 += 6) edgeLine(g, pt(pr.r0, sr2, pr.height), pt(pr.r1, sr2, pr.height), PREFAB[2], 1);
+          for (var k3 = 0; k3 < NS; k3++) edgeLine(g, pt(pr.r1, k3, pr.height), pt(pr.r1, k3 + 1, pr.height), PREFAB[5], 1);
+          // the tower out of the middle, reinforced, and what stands on it
+          var tr = pr.r0 - 0.2;
+          drum(tr, pr.height * 0.6, pr.tower, WALLC, [0.38, 0.6], false);
+          // the control room's glass, all the way round near the top, the sky catching it
+          for (var gk = 0; gk < NS; gk++) {
+            if (facing(gk) <= -0.2) continue;
+            poly(g, [pt(tr, gk, pr.tower * 0.8), pt(tr, gk + 1, pr.tower * 0.8), pt(tr, gk + 1, pr.tower * 0.93), pt(tr, gk, pr.tower * 0.93)], gk % 4 ? '#1f3a4a' : '#3d6a80');
+            edgeLine(g, pt(tr, gk, pr.tower * 0.93), pt(tr, gk + 1, pr.tower * 0.93), '#9fd2e0', 1);
+            if (gk % 3 === 0) edgeLine(g, pt(tr, gk, pr.tower * 0.8), pt(tr, gk, pr.tower * 0.93), '#2a3034', 1);
+          }
+          for (var bk = 0; bk < NS; bk++) if (facing(bk) > -0.2) edgeLine(g, pt(tr, bk, pr.height + a(1)), pt(tr, bk + 1, pr.height + a(1)), bk % 2 ? '#1b1a17' : '#c9a23c', 2);
+          var top = []; for (var k4 = 0; k4 < NS; k4++) top.push(pt(tr, k4, pr.tower));
+          poly(g, top, WALLC[4]);
+          var tc = HC(pr.cx, pr.cy, pr.tower);
+          edgeLine(g, tc, [tc[0], tc[1] - a(12)], '#2a2e32', 2);
+          ellipse(g, tc[0] + a(3), tc[1] - a(4), a(2.4), a(3), '#c8cdd2'); ellipse(g, tc[0] + a(3.3), tc[1] - a(4), a(1.5), a(2), '#9aa2aa');
+          dot(g, tc[0] - 1, tc[1] - a(12) - 2, '#ff4a3a', 4);
+          break;
+        }
+        /* A docking clamp: a great enclosed bridge from a station ring's hull,
+           at the height of the bulkhead door behind it, climbing over open
+           space to a docked ship's side hatch, its sides ribbed, a row of lit ports
+           along it, its roof arched, a yellow collar clamped on at each end. */
+        case 'dockclamp': {
+          var kl = lift || 0, kdx = pr.x1 - pr.x0, kdy = pr.y1 - pr.y0, kln = Math.hypot(kdx, kdy) || 1;
+          var kpx = -kdy / kln, kpy = kdx / kln, KW = 0.9, KF = a(1.5), KT = a(10), KA = a(2.5);
+          // which side of it faces the viewer (towards +x+y)
+          var ksv = kpx + kpy > 0 ? 1 : -1;
+          // (it climbs from the bulkhead door's height at the hull to the ship's hatch, KR higher)
+          var KR = a(9.5);
+          var KP = function (t, sOff, z) { var q = toScreen(pr.x0 + kdx * t + kpx * sOff, pr.y0 + kdy * t + kpy * sOff); return [q.x, q.y - kl - z - KR * t]; };
+          var BR = ['#2a3034', '#3a4248', '#4c565e', '#5e6a74', '#74818a', '#9aa6ae'];
+          // the far side, the underside, then the near side
+          poly(g, [KP(0, -ksv * KW, KF), KP(1, -ksv * KW, KF), KP(1, -ksv * KW, KT), KP(0, -ksv * KW, KT)], BR[1]);
+          poly(g, [KP(0, -KW, KF), KP(1, -KW, KF), KP(1, KW, KF), KP(0, KW, KF)], BR[0]);
+          poly(g, [KP(0, ksv * KW, KF), KP(1, ksv * KW, KF), KP(1, ksv * KW, KT), KP(0, ksv * KW, KT)], BR[3]);
+          // the arched roof, in bands across it
+          var NA = 6, roofZ = function (k) { return KT + KA * Math.sin(Math.PI * k / NA); }, roofS = function (k) { return -KW + 2 * KW * k / NA; };
+          for (var ka = 0; ka < NA; ka++) {
+            var lit9 = 2 + Math.round(3 * (1 - Math.abs((ka + 0.5) / NA - 0.35) * 1.4));
+            poly(g, [KP(0, roofS(ka), roofZ(ka)), KP(1, roofS(ka), roofZ(ka)), KP(1, roofS(ka + 1), roofZ(ka + 1)), KP(0, roofS(ka + 1), roofZ(ka + 1))], BR[Math.max(2, Math.min(5, lit9))]);
+          }
+          // ribs round it, and the ports along its near side
+          var nrib = Math.max(3, Math.round(kln / 0.7));
+          for (var kr = 0; kr <= nrib; kr++) {
+            var tr = kr / nrib;
+            edgeLine(g, KP(tr, ksv * KW, KF), KP(tr, ksv * KW, KT), BR[1], 1);
+            for (var kq = 0; kq < NA; kq++) edgeLine(g, KP(tr, roofS(kq), roofZ(kq)), KP(tr, roofS(kq + 1), roofZ(kq + 1)), BR[1], 1);
+            if (kr < nrib) { var wq = KP((kr + 0.5) / nrib, ksv * KW, (KF + KT) / 2); rect(g, wq[0] - 2, wq[1] - 2, 4, 3, '#ffe2a0'); }
+          }
+          // the collar on the ship, clamped round its hatch: a yellow band round the bridge's end, and one where it leaves the hull
+          [[0.9, 1], [0, 0.07]].forEach(function (bnd) {
+            var Y = ['#a07a1e', '#c99a28', '#e2b43a', '#f2d06a'];
+            poly(g, [KP(bnd[0], ksv * KW * 1.08, KF - a(0.4)), KP(bnd[1], ksv * KW * 1.08, KF - a(0.4)), KP(bnd[1], ksv * KW * 1.08, KT), KP(bnd[0], ksv * KW * 1.08, KT)], Y[1]);
+            for (var kc = 0; kc < NA; kc++) poly(g, [KP(bnd[0], roofS(kc) * 1.08, roofZ(kc) + a(0.4)), KP(bnd[1], roofS(kc) * 1.08, roofZ(kc) + a(0.4)), KP(bnd[1], roofS(kc + 1) * 1.08, roofZ(kc + 1) + a(0.4)), KP(bnd[0], roofS(kc + 1) * 1.08, roofZ(kc + 1) + a(0.4))], Y[2 + (kc < NA / 2 ? 1 : 0)]);
+          });
+          var kl2 = KP(1, 0, KT + KA + a(2.2)); dot(g, kl2[0], kl2[1], '#7bdc6a', 3);
+          break;
+        }
+        /* A bulkhead door in a station ring's hull, on the deck's side, below
+           where a docking clamp lands: a heavy frame in hazard paint, the two
+           leaves shut, a lamp over it. */
+        case 'hulldoor': {
+          var hl9 = lift || 0, HW9 = 0.9, HD9 = pr.height;
+          var HP = function (t, z, out) { var q = toScreen(pr.fx + pr.tx * t + pr.nx * (out || 0), pr.fy + pr.ty * t + pr.ny * (out || 0)); return [q.x, q.y - hl9 - z]; };
+          // the frame, standing a little proud of the hull, striped
+          poly(g, [HP(-HW9 - 0.25, 0, 0.08), HP(HW9 + 0.25, 0, 0.08), HP(HW9 + 0.25, HD9 + a(1.2), 0.08), HP(-HW9 - 0.25, HD9 + a(1.2), 0.08)], '#2b2f33');
+          for (var fs9 = 0; fs9 < 10; fs9++) {
+            var za9 = (HD9 + a(1.2)) * fs9 / 10, zb9 = (HD9 + a(1.2)) * (fs9 + 1) / 10, c9 = fs9 % 2 ? '#1b1a17' : '#c9a23c';
+            poly(g, [HP(-HW9 - 0.25, za9, 0.09), HP(-HW9, za9, 0.09), HP(-HW9, zb9, 0.09), HP(-HW9 - 0.25, zb9, 0.09)], c9);
+            poly(g, [HP(HW9, za9, 0.09), HP(HW9 + 0.25, za9, 0.09), HP(HW9 + 0.25, zb9, 0.09), HP(HW9, zb9, 0.09)], c9);
+          }
+          // the leaves, shut, their seam, and the lamp
+          poly(g, [HP(-HW9, 0, 0.1), HP(HW9, 0, 0.1), HP(HW9, HD9, 0.1), HP(-HW9, HD9, 0.1)], '#5e676e');
+          edgeLine(g, HP(0, 1, 0.11), HP(0, HD9 - 1, 0.11), '#1a1e22', 1);
+          edgeLine(g, HP(-HW9, HD9 * 0.5, 0.11), HP(HW9, HD9 * 0.5, 0.11), '#3a4248', 2);
+          var lp9 = HP(0, HD9 + a(2.2), 0.1); dot(g, lp9[0] - 1, lp9[1] - 1, '#ffb02e', 3);
+          break;
+        }
+        /* A run of a station ring's hull, along its curve: thick plate, its face
+           to the deck lit, hazard paint at its foot, a lamp now and then. */
+        case 'hullseg': {
+          var gl8 = lift || 0, gux = Math.cos(pr.ang), guy = Math.sin(pr.ang), GT = 0.35, GH = pr.height, GL = pr.len / 2;
+          var GQ = function (t, v, z) { var q = toScreen(pr.x + gux * t + pr.nx * v, pr.y + guy * t + pr.ny * v); return [q.x, q.y - gl8 - z]; };
+          // the face towards the deck (the ring's inside, v > 0) and the one towards space
+          var faceIn = [GQ(-GL, GT, 0), GQ(GL, GT, 0), GQ(GL, GT, GH), GQ(-GL, GT, GH)];
+          var faceOut = [GQ(-GL, -GT, 0), GQ(GL, -GT, 0), GQ(GL, -GT, GH), GQ(-GL, -GT, GH)];
+          var inSeen = pr.nx + pr.ny > 0;
+          poly(g, inSeen ? faceOut : faceIn, BULK[1]);
+          poly(g, inSeen ? faceIn : faceOut, inSeen ? BULK[3] : BULK[2]);
+          // (the hull round the space between the rings, inside the station, carries no hazard paint)
+          if (inSeen && !pr.plain) for (var hz8 = 0; hz8 < 3; hz8++) {
+            var ha8 = -GL + 2 * GL * hz8 / 3, hb8 = -GL + 2 * GL * (hz8 + 1) / 3;
+            poly(g, [GQ(ha8, GT, 0), GQ(hb8, GT, 0), GQ(hb8, GT, GH * 0.14), GQ(ha8, GT, GH * 0.14)], hz8 % 2 ? '#1b1a17' : '#c9a23c');
+          }
+          poly(g, [GQ(-GL, -GT, GH), GQ(GL, -GT, GH), GQ(GL, GT, GH), GQ(-GL, GT, GH)], BULK[4]);
+          edgeLine(g, GQ(-GL, GT, GH), GQ(GL, GT, GH), BULK[5], 1);
+          edgeLine(g, GQ(-GL, inSeen ? GT : -GT, 1), GQ(-GL, inSeen ? GT : -GT, GH - 1), BULK[1], 1);
+          if (rng(pr.seed)() < 0.35) { var lp8 = GQ(0, inSeen ? GT : -GT, GH * 0.8); dot(g, lp8[0] - 1, lp8[1] - 1, '#ffb02e', 3); }
+          break;
+        }
+        /* An outcrop of the Warren's rock bulging from a wall face: a lump of
+           rock half in the wall, its outline irregular, its sides shaded by the
+           way they face, its top broken and dark. */
+        case 'outcrop': {
+          var ol = lift || 0, orx = rng(pr.seed), alongX2 = pr.side === 'N' || pr.side === 'S', osg = pr.side === 'S' || pr.side === 'E' ? 1 : -1;
+          var OP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - ol - z]; };
+          // the outline: an ellipse about the wall's line, half of it buried in the wall, its edge jittered
+          var NPT = 9, base = [], topP = [];
+          for (var oi = 0; oi < NPT; oi++) {
+            var th = oi / (NPT - 1) * Math.PI, jr = 0.8 + orx() * 0.35;
+            var u = -Math.cos(th) * pr.len / 2 * jr, v = Math.sin(th) * pr.jut * jr;
+            var bx = alongX2 ? pr.ex + u : pr.ex + osg * v, by = alongX2 ? pr.ey + osg * v : pr.ey + u;
+            base.push([bx, by]);
+            var sh2 = 0.7 + orx() * 0.2;
+            topP.push([pr.ex + (bx - pr.ex) * sh2, pr.ey + (by - pr.ey) * sh2, pr.height * (0.85 + orx() * 0.15)]);
+          }
+          // the sides, the ones facing away first: each strip shaded by which way it faces
+          var strips = [];
+          for (var si2 = 0; si2 < NPT - 1; si2++) {
+            var mx = (base[si2][0] + base[si2 + 1][0]) / 2 - pr.ex, my = (base[si2][1] + base[si2 + 1][1]) / 2 - pr.ey;
+            strips.push({ i: si2, d: mx + my, nx: mx, ny: my });
+          }
+          strips.sort(function (m, n) { return m.d - n.d; });
+          strips.forEach(function (st) {
+            var b0 = base[st.i], b1 = base[st.i + 1], t0 = topP[st.i], t1 = topP[st.i + 1];
+            var ang = Math.atan2(st.ny, st.nx), litv = 0.5 + 0.5 * Math.cos(ang - 2.3);
+            var col = ROCKWALL[Math.max(1, Math.min(4, Math.round(1 + litv * 3)))];
+            poly(g, [OP(b0[0], b0[1], 0), OP(b1[0], b1[1], 0), OP(t1[0], t1[1], t1[2]), OP(t0[0], t0[1], t0[2])], col);
+          });
+          // the top, broken and dark, with a lit lip on its near edge
+          poly(g, topP.map(function (t) { return OP(t[0], t[1], t[2]); }), '#2a241f');
+          for (var ti = 0; ti < NPT - 1; ti++) {
+            var tm = (topP[ti][0] + topP[ti + 1][0]) / 2 - pr.ex + (topP[ti][1] + topP[ti + 1][1]) / 2 - pr.ey;
+            if (tm > 0) edgeLine(g, OP(topP[ti][0], topP[ti][1], topP[ti][2]), OP(topP[ti + 1][0], topP[ti + 1][1], topP[ti + 1][2]), ROCKWALL[4], 1);
+          }
+          break;
+        }
+        /* A relic in the Warren's hoard: a stone plinth, and on it an orb, a
+           shard or a tablet, lit from inside, in rows the way a library keeps
+           its books. Some plinths stand empty; on some the crystal lies shattered. */
+        case 'relic': {
+          var rl = lift || 0, rr7 = rng(pr.seed);
+          var RP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - rl - z]; };
+          box(g, { x: pr.x - 0.3, y: pr.y - 0.3, w: 0.6, h: 0.6, height: a(2), seed: pr.seed }, ROCKWALL, { roof: ROCKWALL[4], roofEdge: ROCKWALL[5], windows: null, lift: rl });
+          var top = RP(pr.x, pr.y, a(2)), glow = pr.tone < 0.4 ? ['#7dffd0', 'rgba(90,255,200,.25)'] : pr.tone < 0.75 ? ['#ffd27a', 'rgba(255,200,110,.25)'] : ['#b9a0ff', 'rgba(170,140,255,.25)'];
+          // not every plinth still holds its relic: some stand empty, some hold a crystal shattered where it stood
+          var state = rr7();
+          if (state < 0.25) { edgeLine(g, [top[0] - a(0.4), top[1] - a(0.1)], [top[0] + a(0.4), top[1] - a(0.1)], 'rgba(10,8,6,.5)', 1); break; }
+          if (state < 0.45) {
+            // shards on the plinth's top and the floor at its foot, their light nearly gone
+            for (var sh7 = 0; sh7 < 6; sh7++) {
+              var onTop = sh7 < 3, sx7 = (rr7() - 0.5) * (onTop ? 0.5 : 1.4), sy7 = (rr7() - 0.5) * (onTop ? 0.5 : 1.4);
+              var sp7 = onTop ? RP(pr.x + sx7, pr.y + sy7, a(2)) : RP(pr.x + sx7 + 0.2, pr.y + sy7 + 0.4, 0), ss7 = a(0.25 + rr7() * 0.35);
+              poly(g, [[sp7[0], sp7[1] - ss7 * 1.6], [sp7[0] + ss7 * 0.6, sp7[1]], [sp7[0] - ss7 * 0.6, sp7[1]]], glow[0]);
+              poly(g, [[sp7[0], sp7[1] - ss7 * 1.6], [sp7[0] + ss7 * 0.6, sp7[1]], [sp7[0] - ss7 * 0.6, sp7[1]]], 'rgba(20,16,12,.45)');
+            }
+            ellipse(g, top[0], top[1] - a(0.3), a(0.9), a(0.6), glow[1].replace('.25)', '.1)'));
+            break;
+          }
+          ellipse(g, top[0], top[1] - a(1.2), a(1.6), a(1.4), glow[1]);
+          var form = rr7();
+          if (form < 0.4) { ellipse(g, top[0], top[1] - a(0.9), a(0.55), a(0.55), glow[0]); dot(g, top[0] - a(0.25), top[1] - a(1.2), '#ffffff', 2); }
+          else if (form < 0.75) { poly(g, [[top[0], top[1] - a(2)], [top[0] + a(0.4), top[1] - a(0.3)], [top[0] - a(0.4), top[1] - a(0.3)]], glow[0]); edgeLine(g, [top[0], top[1] - a(2)], [top[0], top[1] - a(0.4)], '#ffffff', 1); }
+          else { rect(g, top[0] - a(0.45), top[1] - a(1.5), a(0.9), a(1.2), '#3a3330'); rect(g, top[0] - a(0.3), top[1] - a(1.35), a(0.6), a(0.9), glow[0]); }
+          break;
+        }
+        /* A work light on a tripod (the Reavers', in the Warren): splayed legs,
+           a pole, a lamp head aimed down into the room, its pool of light on
+           the floor, and its cable trailing off to the wall. */
+        case 'floodlight': {
+          var fll = lift || 0, fr9 = rng(pr.seed), FH = a(10);
+          var FL = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - fll - (z || 0)]; };
+          var ax = Math.cos(pr.aim), ay = Math.sin(pr.aim);
+          // the pool of light where it falls
+          var pool = FL(pr.x + ax * 2.2, pr.y + ay * 2.2, 0);
+          ellipse(g, pool[0], pool[1], a(5), a(2.9), 'rgba(255,236,170,.10)');
+          ellipse(g, pool[0], pool[1], a(3.2), a(1.9), 'rgba(255,236,170,.14)');
+          ellipse(g, pool[0], pool[1], a(1.8), a(1.1), 'rgba(255,240,190,.12)');
+          // the beam, faint, from the lamp down to the pool
+          poly(g, [FL(pr.x, pr.y, FH), [pool[0] - a(2.6), pool[1]], [pool[0] + a(2.6), pool[1]]], 'rgba(255,240,190,.06)');
+          // the cable, back to the wall
+          var cb = FL(pr.x - ax * 0.6 + (fr9() - 0.5) * 0.4, pr.y - ay * 0.6 + (fr9() - 0.5) * 0.4, 0);
+          edgeLine(g, FL(pr.x, pr.y, 0), cb, '#151515', 1);
+          // the legs and the pole
+          var head = FL(pr.x, pr.y, FH);
+          [0, 2.1, 4.2].forEach(function (la) { var ft = FL(pr.x + Math.cos(la + pr.aim) * 0.35, pr.y + Math.sin(la + pr.aim) * 0.35, 0); edgeLine(g, ft, FL(pr.x, pr.y, FH * 0.45), '#3a3d40', 2); });
+          edgeLine(g, FL(pr.x, pr.y, FH * 0.45), head, '#55595d', 2);
+          // the lamp head, its lit face turned towards the room
+          var face = FL(pr.x + ax * 0.22, pr.y + ay * 0.22, FH);
+          rect(g, head[0] - a(1.1), head[1] - a(0.9), a(2.2), a(1.6), '#2b2b2b'); rect(g, head[0] - a(1.1), head[1] - a(0.9), a(2.2), a(0.3), '#c9a23c');
+          ellipse(g, face[0], face[1] - a(0.1), a(0.85), a(0.65), '#fff4c8');
+          ellipse(g, face[0], face[1] - a(0.1), a(2), a(1.6), 'rgba(255,240,190,.25)');
+          break;
+        }
+        /* The gate the company came through: a ring of light standing across
+           the corridor where it meets the table's edge, closing, the rock
+           seen through it shimmering. */
+        case 'gatering': {
+          var rgl = lift || 0, R3 = pr.span * 0.42, cz = R3 + a(0.5) / K;
+          var c0 = toScreen(pr.x, pr.y), c1 = pr.horiz ? toScreen(pr.x, pr.y + 1) : toScreen(pr.x + 1, pr.y);
+          var gvx = c1.x - c0.x, gvy = c1.y - c0.y;
+          var RING = function (rad, col, fill) {
+            var pts = [];
+            for (var q7 = 0; q7 < 28; q7++) {
+              var th7 = q7 / 28 * Math.PI * 2, cu7 = Math.cos(th7) * rad, su7 = Math.sin(th7) * rad;
+              pts.push([c0.x + gvx * cu7, c0.y - rgl - (cz + su7) * K + gvy * cu7]);
+            }
+            if (fill) poly(g, pts, col);
+            else for (var q8 = 0; q8 < pts.length; q8++) edgeLine(g, pts[q8], pts[(q8 + 1) % pts.length], col, 2);
+          };
+          RING(R3 * 1.12, 'rgba(160,220,255,.12)', true);
+          RING(R3, 'rgba(20,30,46,.55)', true);
+          RING(R3 * 0.7, 'rgba(120,180,255,.18)', true);
+          RING(R3, '#bfe6ff', false);
+          RING(R3 * 0.93, 'rgba(140,200,255,.6)', false);
           break;
         }
         /* A door: a blast hatch framed in the compound's own plating — two jambs
@@ -1678,7 +2084,8 @@
             var o = { kind: 'door', x: q.x, y: q.y, w: q.w, h: q.h, height: height, seed: pr.seed,
               open: hz ? [['N', q.x, q.x + q.w, ta], ['S', q.x, q.x + q.w, tb]] : [['W', q.y, q.y + q.h, ta], ['E', q.y, q.y + q.h, tb]] };
             // the frame looks into a room on the side towards the viewer: all of it in that room's colours, the reveal of the opening too
-            box(g, o, (tb >= 0 && WALL_THEME[tb]) || BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: dl + (up || 0), solid: true });
+            box(g, o, (tb >= 0 && WALL_THEME[tb]) || (pr.rock ? ROCKWALL : BULK), pr.rock ? { roof: '#211d19', roofEdge: '#5d5042', windows: null, lift: dl + (up || 0), solid: true }
+              : { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: dl + (up || 0), solid: true });
           }
           function slab(q, height, up, palQ) {
             var o = { kind: 'door', x: q.x, y: q.y, w: q.w, h: q.h, height: height, seed: pr.seed };
@@ -1686,6 +2093,8 @@
           }
           var lamp = pr.lock === 'door' ? '#7bdc6a' : pr.lock === 'doorlock' ? '#ff4a3a' : '#ffb02e';
           var band = pr.lock === 'doorlock' ? DOOR_RED : pr.lock === 'door' ? null : DOOR_AMBER;
+          // the Warren's doors are slabs of worked stone, no hazard paint, a rune lit over each (locked: dim red)
+          if (pr.rock) { lamp = pr.lock === 'door' ? '#7dffa0' : '#b04030'; band = null; }
           var lt = Math.max(2, Math.round(H * 0.3));
           // the hatch set back in the middle of the wall, the frame's depth showing from either side
           function hatch() {
@@ -1694,10 +2103,10 @@
                p. 157): the shutter down over the doorway. Working, a band of hazard
                stripes across it; locked, a band of warning paint (red both sides, amber one). */
             var sq = part(jl, len - jl, 0.14, hoff);
-            slab(sq, H - lt, 0, DOOR_STEEL);
+            slab(sq, H - lt, 0, pr.rock ? ROCKDOOR : DOOR_STEEL);
             var bh2 = Math.max(2, Math.round(H * 0.16)), by2 = Math.round(H * 0.3);
             if (band) slab(part(jl, len - jl, 0.16, hoff), bh2, by2, band);
-            else {
+            else if (!pr.rock) {
               // the stripes on the face towards the viewer (+y, or +x)
               var f0 = hz ? toScreen(sq.x, sq.y + sq.h) : toScreen(sq.x + sq.w, sq.y);
               var f1 = hz ? toScreen(sq.x + sq.w, sq.y + sq.h) : toScreen(sq.x + sq.w, sq.y + sq.h);
@@ -2175,8 +2584,9 @@
       // the leaves, each sliding out of the opening into the frame on its own side
       var slide = w * k;
       [[u0 - slide, u0 + w - slide], [u0 + w + slide, u1 + slide]].forEach(function (L) {
-        poly(g, [P(L[0], LO, 0), P(L[1], LO, 0), P(L[1], LO, oh), P(L[0], LO, oh)], vgrad(g, P(L[0], LO, oh)[1], P(L[0], LO, 0)[1], [DOOR_STEEL[4], DOOR_STEEL[3], DOOR_STEEL[2]]));
-        var by = Math.round(H * 0.3), bh = Math.max(2, Math.round(H * 0.16)), n = 4;
+        var LP = pr.rock ? ROCKDOOR : DOOR_STEEL;
+        poly(g, [P(L[0], LO, 0), P(L[1], LO, 0), P(L[1], LO, oh), P(L[0], LO, oh)], vgrad(g, P(L[0], LO, oh)[1], P(L[0], LO, 0)[1], [LP[4], LP[3], LP[2]]));
+        var by = Math.round(H * 0.3), bh = Math.max(2, Math.round(H * 0.16)), n = pr.rock ? 0 : 4;   // (the Warren's stone carries no paint)
         for (var i = 0; i < n; i++) {
           var a0 = L[0] + (L[1] - L[0]) * i / n, a1 = L[0] + (L[1] - L[0]) * (i + 1) / n;
           poly(g, [P(a0, LO, by), P(a1, LO, by), P(a1, LO, by + bh), P(a0, LO, by + bh)], pr.lock === 'door' ? (i % 2 ? '#1b1a17' : '#c9a23c') : pr.lock === 'doorlock' ? DOOR_RED[3] : DOOR_AMBER[3]);

@@ -65,14 +65,16 @@
     var PAVING = { ramp: ['#4a4640', '#57524a', '#635e55', '#706a60', '#7d776c'], fleck: ['#3a3631', '#8c857a', '#2e2b27'], rim: '#2a2723' };
     var COBBLE = { ramp: ['#3e3b37', '#48443f', '#524e48', '#5c5751', '#66615a'], fleck: ['#2c2a27', '#7a746b', '#34312d'], rim: '#24221f' };
     FLOOR.fountain = PAVING;
-    /* Open space, round a station: near black, a faint nebula through it, and
-       stars, mostly white, a few blue or gold. No lip at its edge: the hull
-       stands there. */
-    var STARS = { ramp: ['#03040a', '#05070f', '#070a16', '#0a0e1d', '#0d1226'], fleck: ['#ffffff', '#dfe8ff', '#9ab8ff', '#ffe2a8', '#c8d4ff'], rim: '#05070f', stars: true };
+    /* Open space, round a station: plain black, so the station stands out
+       against it. No lip at its edge: the hull stands there. */
+    var STARS = { ramp: ['#040506', '#040506', '#040506', '#040506', '#040506'], fleck: ['#040506'], rim: '#040506', stars: true };
     // a landing pad: poured ferrocrete, pale and scorched
     var PADC = { ramp: ['#55595a', '#5f6364', '#6a6e6f', '#75797a', '#808485'], fleck: ['#3c3f40', '#2a2c2d', '#8e9293'], rim: '#2e3132' };
+    // a station's deck: steel plate, blue-grey, scuffed
+    var DECKF = { ramp: ['#2c3236', '#31383c', '#363d42', '#3b4348', '#40484e'], fleck: ['#22282c', '#4c555c', '#5a4a2a'], rim: '#1c2125' };
     function skinFloor(r) {
       if (r.market) return PAVING;
+      if (r.kind === 'road' && r.deck) return DECKF;
       if (r.kind === 'road' && (r.pad || r.slab)) return PADC;
       if (r.kind === 'searchsite' && r.skin === 'cargo') return PADC;
       if (r.kind === 'crater' && r.cargo === 'apron') return PADC;
@@ -116,7 +118,7 @@
       var TW = new Float32Array(cw * ch), TR = new Float32Array(cw * ch), TG = new Float32Array(cw * ch), TB = new Float32Array(cw * ch);
       terrain.forEach(function (r) {
         // (a market's crater field is paving, not churned earth: it pulls nothing round it)
-        var f = r.market || r.cargo || r.camp || r.pipe ? null : FIT[r.kind];
+        var f = r.market || r.cargo || r.camp || r.pipe || r.blast || r.space || r.hub ? null : FIT[r.kind];
         if (!f) return;
         var i0 = Math.max(0, Math.floor((r.x - f.r) / STEP)), i1 = Math.min(cw - 1, Math.ceil((r.x + r.w + f.r) / STEP));
         var j0 = Math.max(0, Math.floor((r.y - f.r) / STEP)), j1 = Math.min(ch - 1, Math.ceil((r.y + r.h + f.r) / STEP));
@@ -186,7 +188,11 @@
       { ramp: ['#262d38', '#2c3441', '#323b4a', '#394354', '#404b5e'], fleck: ['#1a1f27', '#56637a', '#3c5c8a'], rim: '#141820' },    // command
       { ramp: ['#352826', '#3d2e2b', '#453430', '#4e3b36', '#57423c'], fleck: ['#241a18', '#6e534a', '#8a3a24'], rim: '#1c1412' },    // reactor
       // a brood chamber (the Hive Heart): the floor gone under the hive's resin, dark and wet
-      { ramp: ['#2a1a26', '#33202e', '#3c2636', '#462c3e', '#503346'], fleck: ['#1a0f18', '#6a3a5a', '#7a6a3a', '#3a5a3a'], rim: '#160c14' }
+      { ramp: ['#2a1a26', '#33202e', '#3c2636', '#462c3e', '#503346'], fleck: ['#1a0f18', '#6a3a5a', '#7a6a3a', '#3a5a3a'], rim: '#160c14' },
+      // the Warren: worked stone worn smooth, grit and the odd fleck lit green by the radiation in the rock
+      { ramp: ['#2b2621', '#322c26', '#39322b', '#403830', '#473f36'], fleck: ['#1c1814', '#5e5446', '#4f8a5a', '#6a5a44'], rim: '#16120f' },
+      // its hoard chamber: the same stone, swept, a shade paler
+      { ramp: ['#332d27', '#3a332c', '#413a32', '#484037', '#4f473d'], fleck: ['#221d18', '#6a604f', '#5a8a64'], rim: '#1a1612' }
     ];
     function roomTheme(r) {
       var t = root.PMCCompound ? root.PMCCompound.roomTheme(r) : null;
@@ -371,16 +377,23 @@
       /* A settlement's paved roads are one surface: where one piece meets
          another, neither draws its lip, so the joins don't show as lines. */
       var paved = terrain.filter(function (q) { return q.kind === 'road' && q.paved; });
+      var warrenFloors = terrain.filter(function (q) { return q.warren; });
       function floorOf1(r, ri, rows) {
         if (r.kind === 'hill') return;
-        // a pipeline stands on its trestles over the ground as it is: no dug-in lip under it
-        if (r.pipe) return;
+        // a pipeline stands on its trestles over the ground as it is, a blast barrier on a station's deck: no dug-in lip under either
+        if (r.pipe || r.blast) return;
+        // ...nor under a ring of buildings drawn round (a map's `hub`): its squared pieces would show at the corners
+        if (r.hub) return;
+        // ...and a ship docked outside a station floats over open space: black under it, as round it
+        if (r.docked) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         // a drowned beacon's possible locations stand on the ground as it is, their own pieces drawn over it
         if (r.kind === 'searchsite' && (r.skin === 'spire' || r.skin === 'shrine' || r.skin === 'stones' || r.skin === 'boats' || r.skin === 'tent')) return;
-        // a station's solid is open space: a star field (rules.js reads it as solid all the same)
-        if (r.kind === 'bulkhead' && r.space) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
+        // a station's solid is open space, black (rules.js reads it as solid all the same)
+        if (r.space) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         var spec = roomTheme(r) || skinFloor(r) || floorOf(r.kind);
         if (r.kind === 'road' && r.paved && paved.length > 1) spec = Object.assign({}, spec, { joins: paved.filter(function (q) { return q !== r; }) });
+        // ...and the Warren's tunnels and chambers are one floor of rock: no lip where one section meets the next
+        if (r.warren) spec = Object.assign({}, spec, { joins: warrenFloors.filter(function (q) { return q !== r; }) });
         if (FLOOR[r.kind]) paintFloor(d, r, spec, seed + ri * 131, lat, fN, fD, 0, null, null, rows);
       }
       // the rows a piece's floor can paint, in bands of a few dozen: a step of a sliced bake each
@@ -400,9 +413,9 @@
       for (var ly = gy0; ly < gy1; ly += 24) steps.push(latRows.bind(null, ly, Math.min(gy1, ly + 24)));
       for (var sy = cy0; sy < cy1; sy += 48) steps.push(soilRows.bind(null, sy, Math.min(cy1, sy + 48)));
       terrain.forEach(function (r, ri) {
-        if (r.kind === 'hill' || (!FLOOR[r.kind] && !(r.kind === 'bulkhead' && r.space))) return;
+        if (r.kind === 'hill' || (!FLOOR[r.kind] && !r.space && !r.docked)) return;
         // cargo stacked on open ground (not on an apron), a camp's tents and a pipeline have no floor of their own
-        if ((r.cargo && r.cargo !== 'apron') || r.camp || r.pipe) return;
+        if ((r.cargo && r.cargo !== 'apron') || r.camp || r.pipe || r.blast) return;
         floorBands(r).forEach(function (rows) { steps.push(function () { floorOf1(r, ri, rows); }); });
       });
       steps.push(function () { floorsDone = true; });
@@ -468,7 +481,7 @@
       function base() {
       g.putImageData(img, 0, 0);
       // lava lies at the bottom of cracks: the rock walls go in over the melt
-      terrain.forEach(function (r, ri) { if (r.kind === 'lava' || r.kind === 'ravine') lavaWalls(g, r, seed + ri * 131, r.kind); });
+      terrain.forEach(function (r, ri) { if ((r.kind === 'lava' || r.kind === 'ravine') && !r.space) lavaWalls(g, r, seed + ri * 131, r.kind); });
 
       // the board itself: a slab with a lit top edge and a shadowed lip (not round a station: open space has no edge)
       var nE = toScreen(B.W, 0), nS = toScreen(B.W, B.H), nWt = toScreen(0, B.H);

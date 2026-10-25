@@ -52,7 +52,10 @@
       /* A station's solar arrays: out in the open space round it, one off each
          corner of the table wherever the dark is wide enough to hold one (drawn
          only: nothing stands out there). */
-      var space = terrain.filter(function (q) { return q.kind === 'bulkhead' && q.space; });
+      // (only round a station laid as a compound: a docking ring's open space, `ring`, has its ships out there instead)
+      var space = terrain.filter(function (q) { return q.kind === 'bulkhead' && q.space && !q.ring; });
+      // the Warren's solid is rock, its doors stone (a story's skin, engine.js)
+      var rocky = terrain.some(function (q) { return q.rock; });
       if (space.length) {
         var SW = 0, SH = 0;
         terrain.forEach(function (q) { SW = Math.max(SW, q.x + q.w); SH = Math.max(SH, q.y + q.h); });
@@ -264,6 +267,32 @@
           }
           return;
         }
+        /* The space between a station's two rings: the hull round it, along each
+           rim and across each end where a spoke meets it, a single wall's
+           height (the outer hull is twice that) and without its hazard paint,
+           laid in short runs. (The space itself blocks sight, not the wall.) */
+        if (r.gap) {
+          var gg = r.gap, rail = function (x0, y0, x1, y1, nx, ny) {
+            var len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.round(len / 1.4));
+            for (var rs = 0; rs < n; rs++) {
+              var mx = x0 + (x1 - x0) * (rs + 0.5) / n, my = y0 + (y1 - y0) * (rs + 0.5) / n;
+              props.push({ kind: 'hullseg', x: mx, y: my, ang: Math.atan2(y1 - y0, x1 - x0), len: len / n + 0.04, nx: nx, ny: ny, height: a(7), plain: true, seed: (rand() * 9999) | 0 });
+            }
+          };
+          var NG = 12;
+          for (var gi = 0; gi < NG; gi++) {
+            var ga = gg.a0 + (gg.a1 - gg.a0) * gi / NG, gb = gg.a0 + (gg.a1 - gg.a0) * (gi + 1) / NG, gm = (ga + gb) / 2;
+            // the outer ring's rim (its deck outside the gap), and the inner ring's (its deck inside)
+            rail(gg.cx + gg.r1 * Math.cos(ga), gg.cy + gg.r1 * Math.sin(ga), gg.cx + gg.r1 * Math.cos(gb), gg.cy + gg.r1 * Math.sin(gb), Math.cos(gm), Math.sin(gm));
+            rail(gg.cx + gg.r0 * Math.cos(ga), gg.cy + gg.r0 * Math.sin(ga), gg.cx + gg.r0 * Math.cos(gb), gg.cy + gg.r0 * Math.sin(gb), -Math.cos(gm), -Math.sin(gm));
+          }
+          // across each end, square to the rims, facing the spoke beside it
+          [[gg.a0, -1], [gg.a1, 1]].forEach(function (e) {
+            var c = Math.cos(e[0]), sn = Math.sin(e[0]);
+            rail(gg.cx + gg.r0 * c, gg.cy + gg.r0 * sn, gg.cx + gg.r1 * c, gg.cy + gg.r1 * sn, -sn * e[1], c * e[1]);
+          });
+          return;
+        }
         if (r.kind === 'ravine') return;               // nothing stands in a crevasse
         if (r.kind === 'lava') {
           // smoke and heat rising out of the crack
@@ -335,6 +364,9 @@
             props.push({ kind: 'piperun', x: phz ? r.x + pm : r.x + r.w / 2, y: phz ? r.y + r.h / 2 : r.y + pm, horiz: phz, len: psl,
               first: ps2 === 0, last: ps2 === pn - 1, seed: (rand() * 9999) | 0 });
           }
+          /* A fuel line's end at a station's hull (`feed`): it climbs the hull's
+             face from the deck and goes into it at a coupling. Drawn only. */
+          if (r.feed) props.push({ kind: 'fuelline', x: r.x + r.w / 2, y: r.y + 0.3, pts: [[r.x + r.w / 2, r.y + 0.05, 0], [r.x + r.w / 2, r.y + 0.05, a(8)]], seed: (rand() * 9999) | 0 });
           return;
         }
         if (r.kind === 'woods') {
@@ -531,8 +563,46 @@
           for (var dt = 0; dt < nDet; dt++) {
             var dq = spotIn(r, 0.55, rr2), dk = rr2();
             if (fits.some(function (q) { return dq.x > q.x - 0.5 && dq.x < q.x + q.w + 0.5 && dq.y > q.y - 0.5 && dq.y < q.y + q.h + 0.5; })) continue;
-            props.push({ kind: dk < 0.3 ? 'deckgrate' : dk < 0.55 ? 'cable' : dk < 0.8 ? 'smallbox' : 'litter', x: dq.x, y: dq.y,
-              horiz: r.w >= r.h, tone: rr2(), seed: (rr2() * 9999) | 0 });
+            // (the Warren's: fallen rock and the Reavers' junk)
+            var dkind = r.warren ? (dk < 0.45 ? 'rubble' : dk < 0.7 ? 'scrap' : 'litter')
+              : dk < 0.3 ? 'deckgrate' : dk < 0.55 ? 'cable' : dk < 0.8 ? 'smallbox' : 'litter';
+            props.push({ kind: dkind, x: dq.x, y: dq.y, horiz: r.w >= r.h, tone: rr2(), seed: (rr2() * 9999) | 0 });
+          }
+          /* The Warren's fallen rock, heaped against the walls in a patch or two,
+             and the Reavers' floodlights on their stands, aimed into the room. */
+          if (r.warren) {
+            var clearOf = function (q2) { return !fits.some(function (q) { return q2.x > q.x - 1 && q2.x < q.x + q.w + 1 && q2.y > q.y - 1 && q2.y < q.y + q.h + 1; }); };
+            var nRock = r.kind === 'corridor' ? (rr2() < 0.4 ? 1 : 0) : 1 + (rr2() < 0.6 ? 1 : 0);
+            for (var fr = 0; fr < nRock; fr++) {
+              var fq = edgeSpot(r, rr2);
+              if (!clearOf(fq)) continue;
+              for (var fs = 0; fs < 5 + (rr2() * 4 | 0); fs++) {
+                var fx = Math.max(r.x + 0.4, Math.min(r.x + r.w - 0.4, fq.x + (rr2() - 0.5) * 2.4)), fy = Math.max(r.y + 0.4, Math.min(r.y + r.h - 0.4, fq.y + (rr2() - 0.5) * 2.4));
+                props.push({ kind: rr2() < 0.65 ? 'wreckstone' : 'rubble', x: fx, y: fy, tone: rr2() * 0.4, seed: (rr2() * 9999) | 0 });
+              }
+            }
+            var nLamp = r.hoard ? 2 : r.kind === 'corridor' ? (rr2() < 0.3 ? 1 : 0) : 1;
+            for (var fl = 0; fl < nLamp; fl++) {
+              var lq2 = edgeSpot(r, rr2);
+              if (!clearOf(lq2)) continue;
+              var cxl = r.x + r.w / 2, cyl = r.y + r.h / 2;
+              props.push({ kind: 'floodlight', x: lq2.x, y: lq2.y, aim: Math.atan2(cyl - lq2.y, cxl - lq2.x), seed: (rr2() * 9999) | 0 });
+            }
+          }
+          /* The Reavers' hoard (the Warren's biggest chamber on the far side):
+             relics on stone plinths in rows, kept like a library's shelves. */
+          if (r.hoard) {
+            for (var hy = r.y + 1.4; hy < r.y + r.h - 1; hy += 2.2) {
+              for (var hx = r.x + 1.4; hx < r.x + r.w - 1; hx += 1.8) {
+                if (fits.some(function (q) { return hx > q.x - 0.8 && hx < q.x + q.w + 0.8 && hy > q.y - 0.8 && hy < q.y + q.h + 0.8; })) continue;
+                props.push({ kind: 'relic', x: hx, y: hy, tone: rr2(), seed: (rr2() * 9999) | 0 });
+              }
+            }
+          }
+          // the gate the company came through, closing: a ring of light standing across the corridor at the table's edge
+          if (r.gate) {
+            var gz = r.w >= r.h;
+            props.push({ kind: 'gatering', x: gz ? r.x + 0.4 : r.x + r.w / 2, y: gz ? r.y + r.h / 2 : r.y + 0.4, horiz: gz, span: gz ? r.h : r.w, height: a(BULK_H), seed: (rr2() * 9999) | 0 });
           }
           if (r.dangerous) {
             for (var dr = 0; dr < Math.max(2, Math.round(sa / 14)); dr++) {
@@ -623,13 +693,15 @@
           var wire = wr() < 0.45, wh3 = a(10 + wr() * 2.5);
           // a warehouse's steel cladding stands taller, and neither it nor a strongroom's wall is wired
           if (r.shed) wh3 = a(15);
-          if (r.shed || r.vault) wire = false;
+          // (a station's hull, seen from inside the ring: a low rim, so the ships docked beyond it show over it)
+          if (r.hull) wh3 = a(14);
+          if (r.shed || r.vault || r.hull) wire = false;
           for (var ws = 0; ws < wn; ws++) {
             var wm = (ws + 0.5) * wsl;
             props.push({
               kind: 'wallrun', x: whz ? r.x + wm : r.x + r.w / 2, y: whz ? r.y + r.h / 2 : r.y + wm,
               horiz: whz, len: wsl, first: ws === 0, last: ws === wn - 1, wire: wire, height: wh3,
-              reinforced: !!r.reinforced, shed: !!r.shed, seed: (wr() * 9999) | 0
+              reinforced: !!r.reinforced, shed: !!r.shed, hull: !!r.hull, seed: (wr() * 9999) | 0
             });
           }
           /* A warehouse wall that ends at an opening (a story map's `opening`): a
@@ -658,13 +730,24 @@
         // a room's fittings (compound.js fit): crates and lockers, and banks of machinery
         // a room's pillar: the walls' plating, the room's colours, the walls' height
         if (r.kind === 'pillar') {
-          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(BULK_H), thin: true, pillar: true,
+          props.push({ kind: 'bulkhead', x: r.x, y: r.y, w: r.w, h: r.h, height: a(BULK_H), thin: true, pillar: true, rock: rocky,
             open: [['N', r.x, r.x + r.w, themeAt(r.x + r.w / 2, r.y - 0.3)], ['S', r.x, r.x + r.w, themeAt(r.x + r.w / 2, r.y + r.h + 0.3)],
               ['W', r.y, r.y + r.h, themeAt(r.x - 0.3, r.y + r.h / 2)], ['E', r.y, r.y + r.h, themeAt(r.x + r.w + 0.3, r.y + r.h / 2)]], seed: (rr2() * 9999) | 0 });
           return;
         }
         if (r.kind === 'crates' || r.kind === 'machinery') {
           props.push({ kind: r.kind, x: r.x, y: r.y, w: r.w, h: r.h, height: a(r.kind === 'machinery' ? 5.2 : 2.4), seed: r.seed || (rr2() * 9999) | 0 });
+          return;
+        }
+        /* A station ring's hull, along the curve where its deck meets open space:
+           laid in short straight runs so it sorts among the models. */
+        if (r.kind === 'bulkhead' && r.ring) {
+          var rg2 = r.ring, nseg = Math.max(4, Math.round(Math.abs(rg2.a1 - rg2.a0) * rg2.r / 1.4));
+          for (var hs = 0; hs < nseg; hs++) {
+            var ta = rg2.a0 + (rg2.a1 - rg2.a0) * hs / nseg, tb = rg2.a0 + (rg2.a1 - rg2.a0) * (hs + 1) / nseg, tm = (ta + tb) / 2;
+            props.push({ kind: 'hullseg', x: rg2.cx + rg2.r * Math.cos(tm), y: rg2.cy + rg2.r * Math.sin(tm), ang: tm + Math.PI / 2,
+              len: rg2.r * Math.abs(tb - ta) + 0.05, nx: -Math.cos(tm), ny: -Math.sin(tm), height: a(14), first: hs === 0, seed: (rr2() * 9999) | 0 });
+          }
           return;
         }
         if (r.kind === 'bulkhead') {
@@ -677,7 +760,27 @@
           if (wallSet && wallSet.laid) return;          // the whole shape went down with the first wall
           wallPieces().laid = true;
           wallSet.pieces.forEach(function (q, n) {
-            props.push({ kind: 'bulkhead', x: q.x, y: q.y, w: q.w, h: q.h, height: a(BULK_H), thin: Math.min(q.w, q.h) < 0.5, open: openEdges(q), seed: (seed * 31 + n * 7919) % 9999 });
+            var oe = openEdges(q);
+            props.push({ kind: 'bulkhead', x: q.x, y: q.y, w: q.w, h: q.h, height: a(BULK_H), thin: Math.min(q.w, q.h) < 0.5, open: oe, rock: rocky, seed: (seed * 31 + n * 7919) % 9999 });
+            /* The Warren's rock (not its hoard chamber's worked walls): outcrops
+               bulging from the face along every tunnel and chamber, shallow and
+               deep, low and full height, so its edges wander as a cave's do.
+               Drawn only: the rules keep the wall where it is. */
+            if (rocky) {
+              var orr = rng(seed * 7 + n * 131 + 5);
+              oe.forEach(function (o) {
+                if (o[3] !== 7) return;
+                var out = o[0] === 'S' || o[0] === 'E' ? 1 : -1, alongX = o[0] === 'N' || o[0] === 'S';
+                var line = o[0] === 'N' ? q.y : o[0] === 'S' ? q.y + q.h : o[0] === 'W' ? q.x : q.x + q.w;
+                for (var ot = o[1] + 0.4 + orr() * 1.2; ot < o[2] - 0.5; ot += 1.1 + orr() * 1.8) {
+                  var ow = 0.6 + orr() * 1.3, od = 0.2 + orr() * 0.5, oh = a(BULK_H) * (0.45 + orr() * 0.55);
+                  var oc = Math.min(o[2] - ow / 2 - 0.1, ot + ow / 2);
+                  var ex = alongX ? oc : line, ey = alongX ? line : oc;
+                  props.push({ kind: 'outcrop', x: alongX ? ex : ex + out * od * 0.5, y: alongX ? ey + out * od * 0.5 : ey,
+                    ex: ex, ey: ey, side: o[0], len: ow, jut: od, height: oh, seed: (orr() * 9999) | 0 });
+                }
+              });
+            }
           });
           return;
         }
@@ -692,7 +795,7 @@
           // the frame as long as the walls at its ends leave it (wallPieces): its own thickness, its run trimmed
           var dq = (wallPieces(), r._drawn) || r;
           var drect = dhz ? { x: dq.x, y: r.y, w: dq.w, h: r.h } : { x: r.x, y: dq.y, w: r.w, h: dq.h };
-          props.push({ kind: 'door', x: drect.x, y: drect.y, w: drect.w, h: drect.h, horiz: dhz, lock: r.kind, out: areaOf(secB) <= areaOf(secA) ? 1 : -1, height: a(BULK_H),
+          props.push({ kind: 'door', x: drect.x, y: drect.y, w: drect.w, h: drect.h, horiz: dhz, lock: r.kind, out: areaOf(secB) <= areaOf(secA) ? 1 : -1, height: a(BULK_H), rock: rocky,
             // the colours of the rooms either side, for the wall faces looking into them
             themeA: themeAt(dhz ? dmx : dmx - 1, dhz ? dmy - 1 : dmy), themeB: themeAt(dhz ? dmx : dmx + 1, dhz ? dmy + 1 : dmy), seed: (rr2() * 9999) | 0 });
           return;
@@ -707,8 +810,42 @@
         }
         /* A spaceport's apron: the pad's markings painted on it, a shuttle down on
            it, a fuel bowser with its hoses run out to the shuttle, a cargo lifter. */
+        // a station's deck: its plates' seams and bolts, laid flat
+        if (r.kind === 'road' && r.deck) { props.push({ kind: 'deckplate', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'road' && r.pad) { props.push({ kind: 'padmark', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
-        if (r.kind === 'shuttle') { props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), seed: (rr2() * 9999) | 0 }); return; }
+        /* A ring of connected buildings round a tower (a map's `hub`): its
+           pieces drawn as one, a round drum and the tower out of its middle,
+           from the first of them; the rest draw nothing of their own. */
+        if (r.hub) {
+          if (r.hub.drawn) return;
+          r.hub.drawn = true;
+          var hb = r.hub;
+          props.push({ kind: 'hubring', x: hb.cx - hb.r1, y: hb.cy - hb.r1, w: hb.r1 * 2, h: hb.r1 * 2, cx: hb.cx, cy: hb.cy, r0: hb.r0, r1: hb.r1,
+            height: a(9), tower: a(26), seed: (rr2() * 9999) | 0 });
+          return;
+        }
+        if (r.kind === 'shuttle') {
+          props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), docked: !!r.docked, seed: (rr2() * 9999) | 0 });
+          /* A ship docked outside a station ring's hull: its docking clamp, a
+             great enclosed bridge run level from the hull's outer face square to
+             the curve, meets the ship's flank on the side towards the ring (its
+             hull is narrower than its footprint); opposite it, the bulkhead door
+             in the hull's face on the deck's side, the bridge's width. */
+          var ringP = r.docked && terrain.filter(function (q) { return q.ring; })[0];
+          if (ringP) (r.clamps || [0.3, 0.7]).forEach(function (f, ci) {
+            var rg = ringP.ring;
+            // the ship's side hatch, on its flank towards the ring (the shuttle's own: f along it, 1.1" off its middle)
+            var fx = r.x + r.w * f, fy = r.y + r.h / 2 + 1.1;
+            var dx = fx - rg.cx, dy = fy - rg.cy, dl = Math.hypot(dx, dy);
+            var hx = rg.cx + dx / dl * rg.r, hy = rg.cy + dy / dl * rg.r;
+            // the bridge runs from the hull's outer face (the hull is 0.7" thick about its curve) to the ship
+            var inx = -dx / dl, iny = -dy / dl, ox = hx - inx * 0.35, oy = hy - iny * 0.35;
+            props.push({ kind: 'dockclamp', x: (fx + ox) / 2, y: (fy + oy) / 2, x0: ox, y0: oy, x1: fx, y1: fy, seed: (rr2() * 9999) | 0 });
+            // and the bulkhead door it meets, square opposite it in the hull's face on the deck's side
+            props.push({ kind: 'hulldoor', x: hx + inx * 0.7, y: hy + iny * 0.7, fx: hx + inx * 0.36, fy: hy + iny * 0.36, tx: -iny, ty: inx, nx: inx, ny: iny, height: a(10), seed: (rr2() * 9999) | 0 });
+          });
+          return;
+        }
         if (r.kind === 'fueltruck') {
           props.push({ kind: 'fueltruck', x: r.x, y: r.y, w: r.w, h: r.h, height: a(13), facing: r.facing || 0, seed: (rr2() * 9999) | 0 });
           if (r.hose) props.push({ kind: 'hose', x: r.x + r.w * 0.35, y: r.y + r.h - 0.1, to: r.hose, seed: (rr2() * 9999) | 0 });
@@ -781,7 +918,7 @@
         if (p.kind === 'solar' || p.kind === 'solarmount') return true;
         return p.x >= 0 && p.y >= 0 && p.x <= TW && p.y <= TH;
       });
-      var FLAT = { deckgrate: 1, cable: 1, litter: 1, padmark: 1, hose: 1, solar: 1 };
+      var FLAT = { deckgrate: 1, cable: 1, litter: 1, padmark: 1, hose: 1, solar: 1, deckplate: 1 };
       props.forEach(function (p) {
         // the search-site hatch draws over its own scatter, so it stays readable; an objective's flag over the hatch it stands in
         p.depth = (p.w ? p.x + p.w / 2 + p.y + p.h / 2 : p.x + p.y) +
@@ -792,11 +929,11 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, crane: 1, fueltanks: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      var BOX = { hubring: 1, building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, crane: 1, fueltanks: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { piperun: 0.45, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
+      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, outcrop: 0.25, fuelline: 0.3, dockclamp: 0.6, hullseg: 0.6, hulldoor: 0.4, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];
@@ -857,7 +994,11 @@
       ['#1e2430', '#2e3747', '#404c61', '#53627b', '#677894', '#8495ad'],
       ['#2a1e1c', '#402d2a', '#583e39', '#714f48', '#8a6157', '#a67b6f'],
       // a brood chamber: the plating gone under the hive's growth
-      ['#22131e', '#36202f', '#4a2c40', '#5e3a52', '#734a63', '#8c5e78']
+      ['#22131e', '#36202f', '#4a2c40', '#5e3a52', '#734a63', '#8c5e78'],
+      // the Warren: raw rock, hewn rough, warm brown-grey
+      ['#1e1a17', '#2e2823', '#41382f', '#54493d', '#685a4b', '#80705d'],
+      // the Warren's hoard chamber: its walls worked smooth and squared, paler
+      ['#2a2520', '#3d362e', '#524a3f', '#685e50', '#7f7462', '#9a8e7a']
     ];
     /* A wall face from foot A to foot B, `hgt` high, shaded top to bottom. One
        gradient pinned to one end drifts along a long face, which slopes on the
@@ -1002,7 +1143,8 @@
         var A3 = o[0] === 'S' ? [o[1], pr.y + pr.h] : [pr.x + pr.w, o[1]], B3 = o[0] === 'S' ? [o[2], pr.y + pr.h] : [pr.x + pr.w, o[2]];
         var a0 = pt(A3[0], A3[1]), b0 = pt(B3[0], B3[1]), a1 = pt(A3[0], A3[1], hgt), b1 = pt(B3[0], B3[1], hgt);
         shadeFace(g, a0, b0, hgt, o[0] === 'S' ? [tp[5], tp[4], tp[4], tp[3]] : [tp[2], tp[2], tp[1]]);
-        var segs = Math.max(1, Math.round(Math.hypot(b0[0] - a0[0], b0[1] - a0[1]) / (K * 1.7)));
+        // (the Warren's raw rock has no panel joints: it is roughened over in its own drawing)
+        var segs = o[3] === 7 ? 1 : Math.max(1, Math.round(Math.hypot(b0[0] - a0[0], b0[1] - a0[1]) / (K * 1.7)));
         for (var si = 1; si < segs; si++) { var sq = lerp2(a0, b0, si / segs); edgeLine(g, [sq[0], sq[1] - hgt + 1], [sq[0], sq[1] - 1], tp[o[0] === 'S' ? 3 : 1], 1); }
         edgeLine(g, [a0[0], a0[1] - 1], [b0[0], b0[1] - 1], tp[0], 1);      // the skirting, where it meets the floor
       });

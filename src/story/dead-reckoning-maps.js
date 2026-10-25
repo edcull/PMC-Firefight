@@ -7,7 +7,7 @@
    where a scenario puts its own piece there. Find and secure's three places
    are where the map says (`sites`, levers.js). The compounds (Station Thule,
    the Warren, the Wreck of the Morrow, Cold Sites, the Vault, the Spire) have
-   no map: their seed lays them.
+   no map: their seed lays them (the Warren's map gives only its skin).
 
    The second half's ground (phase 5): each map keeps clear what its scenario
    puts there itself. Hostile takeover's fort, the middle 12"; Parley's flag
@@ -30,6 +30,66 @@
     return { kind: kind, x: x0, y: y0, w: Math.max.apply(null, xs) - x0, h: Math.max.apply(null, ys) - y0, poly: pts, fixed: true };
   }
   function P(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, paved: true }; }
+  // a station's steel deck plate: a floor like a slab, drawn in plates
+  function DECK(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, deck: true, fixed: true }; }
+  // open space beyond a station's hull (solid to the rules, drawn black), and the hull itself (a reinforced high wall)
+  /* Open space beyond a station ring's curved hull, along the table's north
+     edge: the outside of a circle (centre cx, cy, radius r, the centre well
+     south of the table) between where it meets the west and east edges.
+     Solid to the rules, drawn black; its `ring` lets the hull be drawn along
+     the curve and the docking clamps run out to it. */
+  function RINGSPACE(cx, cy, r) {
+    var yw = cy - Math.sqrt(r * r - cx * cx), ye = cy - Math.sqrt(r * r - (48 - cx) * (48 - cx));
+    var a0 = Math.atan2(yw - cy, 0 - cx), a1 = Math.atan2(ye - cy, 48 - cx), pts = [[0, 0]];
+    for (var k = 0; k <= 32; k++) { var t = a0 + (a1 - a0) * k / 32; pts.push([+(cx + r * Math.cos(t)).toFixed(2), +(cy + r * Math.sin(t)).toFixed(2)]); }
+    pts.push([48, 0]);
+    var sp = SHAPE('bulkhead', pts);
+    sp.space = true; sp.ring = { cx: cx, cy: cy, r: r, a0: a0, a1: a1 };
+    return sp;
+  }
+  /* Open space between a station's outer and inner rings: a band of the circle
+     (centre cx, cy) between radii r0 and r1, from angle a0 to a1, walled all
+     round by the hull. Solid to the rules (it is the outside of the hull: it
+     blocks sight as well as the way), drawn black, the hull standing round it. */
+  function ANNULUS(cx, cy, r0, r1, a0, a1) {
+    var pts = [], k;
+    for (k = 0; k <= 12; k++) { var t = a0 + (a1 - a0) * k / 12; pts.push([+(cx + r1 * Math.cos(t)).toFixed(2), +(cy + r1 * Math.sin(t)).toFixed(2)]); }
+    for (k = 12; k >= 0; k--) { var u = a0 + (a1 - a0) * k / 12; pts.push([+(cx + r0 * Math.cos(u)).toFixed(2), +(cy + r0 * Math.sin(u)).toFixed(2)]); }
+    var sp = SHAPE('bulkhead', pts);
+    sp.space = true; sp.gap = { cx: cx, cy: cy, r0: r0, r1: r1, a0: a0, a1: a1 };
+    return sp;
+  }
+  /* The space between a station's two rings, round the centre cx, cy, between
+     radii r0 and r1: one ANNULUS for each stretch of it, [x0, x1] where it
+     crosses the middle of the band; the deck between them (and either side)
+     the spokes that join the rings. */
+  function RINGGAP(cx, cy, r0, r1, spans) {
+    var rm = (r0 + r1) / 2;
+    var at = function (x) { return Math.atan2(-Math.sqrt(rm * rm - (x - cx) * (x - cx)), x - cx); };
+    return spans.map(function (sp) { return ANNULUS(cx, cy, r0, r1, at(sp[0]), at(sp[1])); });
+  }
+  /* A ring of connected buildings round a tall tower (a station's traffic
+     control): to the rules a reinforced building in the middle, the tower,
+     and four buildings close round it laid as a pinwheel, the ring; drawn as
+     one round drum with the tower standing out of it (`hub`). Centre cx, cy,
+     the ring's outer radius R, the tower's half-width t. */
+  function HUB(cx, cy, R, t) {
+    var hub = { cx: cx, cy: cy, r1: R, r0: t + 0.2 }, x0 = cx - R, x1 = cx + R, y0 = cy - R, y1 = cy + R;
+    var ix0 = cx - t - 0.2, ix1 = cx + t + 0.2, iy0 = cy - t - 0.2, iy1 = cy + t + 0.2;
+    var seg = function (x, y, w, h) { return { kind: 'building', x: x, y: y, w: w, h: h, plan: 'block', fixed: true, hub: hub }; };
+    // the ring as a pinwheel round the tower: north, east, south and west, each to the next's corner
+    return [
+      seg(x0, y0, ix1 - x0, iy0 - y0), seg(ix1, y0, x1 - ix1, iy1 - y0), seg(ix0, iy1, x1 - ix0, y1 - iy1), seg(x0, iy0, ix0 - x0, y1 - iy0),
+      { kind: 'bunker', x: ix0, y: iy0, w: ix1 - ix0, h: iy1 - iy0, fixed: true, hub: hub, tower: true }
+    ];
+  }
+  /* A ship docked outside the ring: laid by its own outline (its box) over the
+     space, its boarding bridge clamped on where along it `clamps` says (a
+     fraction of its length: 0.66, its side hatch), a bulkhead door in the
+     hull where it lands. */
+  function DOCKED(x, y, w, h, clamps) {
+    return { kind: 'shuttle', x: x, y: y, w: w, h: h, poly: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], fixed: true, docked: true, clamps: clamps || [0.66] };
+  }
   // poured concrete (a quay, a warehouse's floor): open ground, and what stands on it stands on it
   function SLAB(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, fixed: true }; }
   // a warehouse's steel-clad wall (a high wall), laid as written
@@ -149,6 +209,16 @@
         // the rooms by name, a cell inside each: the three control rooms and the two labs
         names: { 22: 'North module', 102: 'Hub', 214: 'South module', 113: 'West lab', 125: 'East lab' }
       }
+    },
+
+    /* The Warren, through the gate at the Drowned Beacon: a compound its seed
+       lays, as any is, but in its own skin (`warren`, engine.js): tunnels cut
+       high and wide in the rock (a 4" grid), worked-stone floors, the rock
+       veined with the radiation in it, nothing fitted out as a base would be,
+       the Reavers' hoard in the biggest chamber on the far side, and the gate
+       closing behind the company where it came in. */
+    warren: {
+      name: 'The Warren, under an uncharted world', skin: 'warren', cell: 4
     },
 
     /* A mud bank on Tessaly IV, a mile from the beacon, where a deep river
@@ -283,16 +353,58 @@
       ]
     },
 
-    /* The docking ring of Kerrigan's orbital: cargo stacks in rows, the cranes'
-       footings, and open deck between. Heavy spin gravity (the chapter's). */
+    /* The docking ring of Kerrigan's orbital, as the briefing has it: cranes,
+       cargo stacks and open deck, laid as a wheel's rim and hub. Along the
+       north, the outer ring: its hull a gentle curve the same both ways (4"
+       from the north edge in the middle, meeting the side edges 11" down),
+       twice a wall's height, the two ships docked beyond it in the corners
+       (the shuttle the other maps have), each held by a docking clamp, an
+       enclosed bridge run from a bulkhead door in the hull's face up to the
+       ship's side hatch. Inside the hull the outer ring's deck, about 13.5"
+       across, where the cargo comes in: most of it is stacked here, and just
+       inboard of each docking collar's door a tank of reaction mass for the
+       ships, its fuel line run to the hull beside the collar, clear of its
+       door, and into the hull at a coupling. Then the rings part: two stretches of space
+       between them, 9" across, walled all round by the hull (they are the
+       outside of the station: nothing goes there, nor sees through), and
+       either side of them and between, the three broad spokes that join the
+       rings, spoke, space, spoke, space, spoke, with banks of plant on the
+       side ones. Inside, the inner ring: plant in a corner, a little cargo, a lifter, the deck open across the middle
+       with a blast barrier on it, conduits on the deck, and along the south
+       the dock offices and between them the traffic control, a ring of
+       connected buildings round a tall reinforced tower. No gantry cranes: those are a sea
+       port's. Heavy spin gravity (the chapter's). */
     dockring: {
       name: 'The docking ring, Kerrigan orbital', planet: 'industrial',
       pieces: [
-        B(10, 6, 5, 4, 'block'), B(18, 6, 5, 4, 'block'), B(27, 38, 5, 4, 'block'), B(35, 38, 5, 4, 'block'),
-        B(21, 21, 6, 6, 'tower'),
-        R('wall', 9, 17, 1, 6), R('wall', 38, 25, 1, 6), R('wall', 30, 12, 6, 1), R('wall', 12, 34, 6, 1),
-        R('barricade', 15, 27, 4, 1), R('barricade', 29, 20, 4, 1), R('ruins', 34, 6, 4, 4), R('ruins', 9, 39, 4, 4)
-      ]
+        DECK(0, 0, 48, 48),
+        // open space beyond the outer ring's hull, and the ships docked out in it
+        RINGSPACE(24, 50, 45.6),
+        DOCKED(0.4, 0.4, 10, 4.5), DOCKED(37.6, 0.4, 10, 4.5),
+        // the outer ring's deck, where the cargo comes in: stacks of it, a lifter working them, a fuel bowser, a blast barrier before the middle spoke,
+        // and by each docking collar's bulkhead door a tank of reaction mass to fuel the ship from
+        Object.assign(R('fueltruck', 17, 11, 2.8, 1.4), { facing: Math.PI }), Object.assign(R('cargolifter', 28, 7, 2.5, 2.5), { facing: 0 }),
+        R('fueltanks', 13, 7.5, 3.5, 3), R('fueltanks', 31.5, 7.5, 3.5, 3),
+        // and the fuel lines from them (low walls) to the hull beside the collar, clear of its door, into the hull at a coupling (`feed`)
+        PIPE(11.2, 8.7, 1.8, 0.6), Object.assign(PIPE(11.2, 6.9, 0.6, 1.75), { feed: true }),
+        PIPE(35, 8.7, 1.8, 0.6), Object.assign(PIPE(36.2, 6.9, 0.6, 1.75), { feed: true }),
+        CG(4.5, 10, 4, 4), CG(17.5, 6, 3.5, 3.5), CG(21.5, 5.5, 5, 4), CG(39.5, 10, 4, 4),
+        CG(12, 13, 5, 4), CG(26, 10, 4, 3.5), CG(31, 13, 5, 4),
+        Object.assign(R('barricade', 21, 14, 4, 1), { shield: true, blast: true })
+      ].concat(
+        // the space between the rings: two stretches of it, the three spokes either side and between
+        RINGGAP(24, 50, 23, 32, [[10.5, 19], [29, 37.5]])
+      ).concat([
+        // the spokes: a cargo stack and a bank of plant on each side spoke
+        CG(4.2, 25, 3, 3), CG(40.8, 25, 3, 3), R('machinery', 5, 29, 3, 2), R('machinery', 40, 29, 3, 2),
+        // the inner ring: plant in a corner, a little cargo, a lifter, a blast barrier, conduits either side of the traffic control
+        R('machinery', 6.5, 32.5, 4, 2.5), CG(12.5, 33, 5, 4), CG(30.5, 33, 5, 4),
+        Object.assign(R('cargolifter', 25.5, 32, 2.5, 2.5), { facing: 0 }),
+        Object.assign(R('barricade', 21, 28.5, 4, 1), { shield: true, blast: true }),
+        PIPE(15.5, 37.5, 0.6, 6), PIPE(31.9, 37.5, 0.6, 6),
+        // the dock offices, and between them the traffic control: a ring of buildings round a tower
+        B(7, 39, 7, 5, 'L'), B(33, 39, 7, 5, 'block')
+      ]).concat(HUB(24, 41, 5.5, 2.4))
     },
 
     /* ================= the second half ================= */
