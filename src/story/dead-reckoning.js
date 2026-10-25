@@ -657,7 +657,7 @@
           { id: 'pictures', text: 'Offer them the pictures.', battle: { intel: 1 }, effects: [{ flag: 'kestrel_scooped' }, { meter: 'lead', add: -1 }] },
           hireOption('kestrel', 'Hire Kestrel against whoever else is there.')
         ] },
-        battle: { scenario: 'convoy', map: 'hollin', planet: 'mountain', enemy: rival('kestrel'),
+        battle: { scenario: 'intercept', map: 'hollin', planet: 'mountain', enemy: rival('kestrel'),
           on: { success: [{ effects: [{ meter: 'theirs', add: -1 }, { meter: 'stones', add: 1 }, { meter: 'kestrel', add: -1 }, { meter: 'lead', add: 2 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] } },
         after: { id: 'claim.footage', who: 'rook', title: 'The footage', text: 'Kestrel filmed all of it.', options: [
           { id: 'run', text: 'Let them run it.', effects: [{ meter: 'vane', add: -1 }, { flag: 'kestrel_filmed' }] },

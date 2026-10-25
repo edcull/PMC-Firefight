@@ -294,6 +294,16 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
     ps.filter((p) => p.kind === 'fueltanks' && p.y < 12).length === 2 &&
     ps.filter((p) => p.hub).length === 5 && ps.some((p) => p.hub && p.kind === 'bunker' && p.tower) && ps.filter((p) => p.hub && p.kind === 'building').length === 4);
 }
+{
+  /* Claim Jumpers as its briefing has it: Kestrel's convoy caught halfway over the Hollin Shelf, and the company out to stop it. */
+  const ps = MAPS.hollin.pieces, road = ps.find((p) => p.kind === 'road' && p.poly);
+  ok('Claim Jumpers: an Intercept, Kestrel’s cars the convoy, making for the company’s own edge',
+    used('hollin').every((n) => n.scenario === 'intercept') && SC.SCENARIOS.intercept.story);
+  ok('...a dirt track winding over the shelf from edge to edge, between a boulder field and a ravine, and no cache shelter or landing pad at either end',
+    !!road && !road.paved && R.inPoly(1, 28, road.poly) && R.inPoly(47, 20.5, road.poly) && R.inPoly(24, 20.5, road.poly) &&
+    ps.some((p) => p.kind === 'ravine' && p.x < 32 && p.x + p.w > 30 && p.y > 24 && p.y < 28) && ps.some((p) => p.kind === 'rocks' && p.x < 32 && p.x + p.w > 30 && p.y + p.h > 18 && p.y + p.h < 21) &&
+    !ps.some((p) => p.kind === 'ruins' || p.kind === 'building' || p.pad));
+}
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {
   /* The docks as the briefing has them: Sable's warehouse walked into in the middle of the table,

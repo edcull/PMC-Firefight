@@ -16,7 +16,7 @@ function ok(name, cond, note) {
 const FOUNDING = ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'];
 const BUGS = ['bwatchlarva', 'btiny', 'bsmall', 'bspitlarva'], FRONT = ['rinstigators', 'rciv', 'rciv', 'rmilitia'];
 const HIVE = { hive_heart: 1, breakout: 1, holdline: 1 };
-const ALL = ['hive_heart', 'convoy', 'breakout', 'holdline', 'strike', 'parley'];
+const ALL = ['hive_heart', 'convoy', 'intercept', 'breakout', 'holdline', 'strike', 'parley'];
 
 function cfgFor(scen, mode, story) {
   const co = C.newCompany('X'); C.found(co, FOUNDING, 'S2');
@@ -50,6 +50,11 @@ s = started('convoy');
 const hulls = s.units.filter((u) => u.side === 'A' && R.isMachine(u)).length;
 ok('Convoy: the convoy is the company\u2019s vehicles (all of it, if it brought none), and it leaves by the far edge',
   s.sc.convoy.length === (hulls || s.units.filter((u) => u.side === 'A').length) && s.sc.extract.rectX > R.BOARD.w / 2, hulls + ' vehicles');
+s = started('intercept');
+const theirs = s.units.filter((u) => u.side === 'B' && R.isMachine(u) && !R.isFlying(u)).length;
+ok('Intercept: the convoy is the enemy\u2019s vehicles (all of it, if it brought none), and it leaves by the company\u2019s own edge',
+  s.sc.convoy.length === (theirs || s.units.filter((u) => u.side === 'B').length) && s.sc.convoy.every((id) => s.units.some((u) => u.id === id && u.side === 'B')) &&
+  s.sc.extract.side === 'B' && s.sc.extract.west && s.sc.extract.rectX < R.BOARD.w / 2, theirs + ' vehicles');
 s = started('strike');
 ok('Strike: three targets, one or two of them real, and half the garrison asleep until turn 3',
   s.objectives.length === 3 && [1, 2].indexOf(s.objectives.filter((o) => o.real).length) >= 0 && s.units.some((u) => u.side === 'B' && u.wave === 2 && u.reserve));
@@ -108,6 +113,17 @@ s = started('convoy');
 s.units.filter((u) => s.sc.convoy.indexOf(u.id) >= 0).forEach((u) => { u.alive = false; });
 r = SC.SCENARIOS.convoy.check(s);
 ok('...the convoy burning, B wins', r && r.winner === 'B');
+s = started('intercept');
+s.units.filter((u) => s.sc.convoy.indexOf(u.id) >= 0).forEach((u) => { u.alive = false; u.extracted = true; });
+r = SC.SCENARIOS.intercept.check(s);
+ok('Intercept: the enemy\u2019s convoy through, B wins', r && r.winner === 'B');
+s = started('intercept');
+s.units.filter((u) => s.sc.convoy.indexOf(u.id) >= 0).forEach((u) => { u.alive = false; });
+r = SC.SCENARIOS.intercept.check(s);
+ok('...the enemy\u2019s convoy burning, A wins', r && r.winner === 'A');
+s = started('intercept'); s.turn = 12;
+r = SC.SCENARIOS.intercept.check(s);
+ok('...still on the road at the end of turn 12, A wins', r && r.winner === 'A');
 s = started('breakout');
 s.sc.extract.out = s.sc.startA;
 r = SC.SCENARIOS.breakout.check(s);
@@ -191,6 +207,7 @@ const SAW = {
   holdline: (st) => (st.units.some((u) => u.spawned) || st.turn < 2 ? 'the waves came' : null),
   breakout: (st) => (st.sc.countdown.areas.some((a) => a.struck) || (st.sc.extract.out || 0) > 0 || st.turn < 3 ? 'the strikes fell, or somebody got out' : null),
   convoy: () => 'the convoy ran',
+  intercept: (st) => (st.sc.convoy.length ? 'the enemy\u2019s convoy ran' : null),
   strike: (st) => (st.objectives.some((o) => o.wrecked || o.decoy) || st.turn >= 10 || (st.over && st.over.winner === 'B') ? 'the targets were gone for' : null),
   parley: (st) => (st.sc.parley.broken ? 'the talks broke (' + st.sc.parley.by + ')' : st.turn >= 6 ? 'the talks held' : null)
 };

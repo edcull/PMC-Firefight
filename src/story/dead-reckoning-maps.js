@@ -409,15 +409,22 @@
 
     /* ================= the second half ================= */
 
-    /* The Hollin Shelf on Corvin: a high plateau in thin air, boulders and
-       ridges, the shelter where Morrow cached his notes, and a ravine. Kestrel's
-       convoy crosses it east to west. */
+    /* The Hollin Shelf on Corvin: a high plateau in thin air, and Kestrel's
+       convoy caught halfway over it (Intercept: Claim Jumpers). A dirt track
+       winds across from the east edge to the west, between the outcrops; at
+       its middle it squeezes between a boulder field and a ravine, and a
+       ridge stands over its western end. */
     hollin: {
       name: 'The Hollin Shelf, Corvin', planet: 'mountain',
       pieces: [
-        N('hill', 8, 5, 8, 6, 'long'), N('rocks', 22, 3, 6, 5, 'lobed'), N('rocks', 34, 8, 7, 6, 'blob'),
-        N('hill', 10, 36, 9, 7, 'lobed'), N('rocks', 27, 38, 6, 6, 'blob'), N('crater', 36, 30, 5, 5, 'blob'),
-        R('ruins', 20, 22, 5, 4), N('ravine', 30, 17, 2, 9, 'rift')
+        // the track, east to west, the way the convoy is going
+        SHAPE('road', [[-1, 29.6], [8.3, 29.6], [14.8, 26.4], [19.6, 23], [25.8, 22.1], [31.7, 24.6], [40.3, 25.1], [49, 21.7], [49, 18.3], [39.7, 21.9], [32.3, 21.4], [26.2, 18.9], [18.4, 20], [13.2, 23.6], [7.7, 26.4], [-1, 26.4]]),
+        // the squeeze: boulders north of the track, the ravine south of it
+        N('rocks', 28, 15, 6, 4.5, 'lobed'), N('ravine', 27, 26, 10, 2, 'rift'),
+        // the ridge over the western end, and outcrops along the way
+        N('hill', 4, 16, 9, 6, 'long'), N('rocks', 17, 9, 5, 5, 'blob'), N('rocks', 37, 9, 6, 5, 'blob'),
+        N('hill', 8, 36, 9, 7, 'lobed'), N('crater', 18, 31, 5, 4, 'blob'), N('rocks', 38, 31, 6, 6, 'lobed'),
+        N('rocks', 26, 39, 5, 5, 'blob')
       ]
     },
 

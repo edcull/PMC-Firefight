@@ -118,47 +118,70 @@
   /* The convoy is side A's vehicles, or, if it brought none, all of side A. It
      crosses from its own edge to the far one; a unit of it standing within 3"
      of the far edge at the End phase is through. */
-  function convoyOf(state) {
-    var a = state.units.filter(function (u) { return u.side === 'A' && !u.ally; });
+  function convoyOf(state, side) {
+    var a = state.units.filter(function (u) { return u.side === side && !u.ally; });
     var hulls = a.filter(function (u) { return R.isMachine(u) && !R.isFlying(u); });
     return hulls.length ? hulls : a;
   }
-  SCENARIOS.convoy = {
-    story: true, edges: true,
-    id: 'convoy', name: 'Convoy', page: null,
+  /* Convoy, and Intercept the other way round: side B's column crossing for
+     side A's edge, and side A (the player in a story) out to stop it. */
+  function convoyScenario(side, o) {
+    var foe = side === 'A' ? 'B' : 'A';
+    function edgeX() { return side === 'A' ? R.BOARD.w - 1.5 : 1.5; }
+    return {
+      story: true, edges: true,
+      id: o.id, name: o.name, page: null,
+      blurb: o.blurb, win: o.win, hint: o.hint,
+      turns: 12,
+      objectives: function () { return []; },
+      entersTurn1: true,
+      deploy: function (state) {
+        K.entryEdges(state);
+        state.sc.convoy = convoyOf(state, side).map(function (u) { return u.id; });
+        state.sc.extract = side === 'A' ? { side: 'A', rectX: R.BOARD.w - 3, from: 2, only: state.sc.convoy }
+          : { side: 'B', rectX: 3, west: true, from: 2, only: state.sc.convoy };
+      },
+      reserves: function (state, s) { return K.entering(state, s); },
+      deployText: function () { return K.ENTRY_TEXT; },
+      zoneFor: function (state, s) { return state.sc.zones[s]; },
+      // the hunters go for the convoy; the convoy, and its escort, for the far edge
+      goals: function (state, u) {
+        if (!u) return [];          // (asked for no unit in particular: there are no places to hold)
+        if (u.side === foe) return state.units.filter(function (c) { return c.alive && (state.sc.convoy || []).indexOf(c.id) >= 0 && c.x >= 0; });
+        return [{ x: edgeX(), y: u.y }];
+      },
+      groundTaking: true,
+      check: function (state) {
+        var ids = state.sc.convoy || [], pts = 0, out = 0, lost = 0;
+        state.units.forEach(function (u) {
+          if (ids.indexOf(u.id) < 0) return;
+          pts += u.tier || 1;
+          if (u.extracted) out += u.tier || 1;
+          else if (!u.alive) lost += u.tier || 1;
+        });
+        if (out * 2 >= pts) return { winner: side, text: o.through };
+        if (lost * 2 > pts) return { winner: foe, text: o.burning, routed: [side] };
+        if (state.turn >= 12) return { winner: foe, text: o.late, timeout: true };
+      }
+    };
+  }
+  SCENARIOS.convoy = convoyScenario('A', {
+    id: 'convoy', name: 'Convoy',
     blurb: 'A column has to cross the table. The other side has to stop it.',
     win: 'A wins with half the convoy (by its units’ Tiers) through to the far edge by the end of turn 12. B wins by destroying more than half of it, or if it is not through in time.',
-    turns: 12,
-    objectives: function () { return []; },
-    entersTurn1: true,
-    deploy: function (state) {
-      K.entryEdges(state);
-      state.sc.convoy = convoyOf(state).map(function (u) { return u.id; });
-      state.sc.extract = { side: 'A', rectX: R.BOARD.w - 3, from: 2, only: state.sc.convoy };
-    },
-    reserves: function (state, side) { return K.entering(state, side); },
-    deployText: function () { return K.ENTRY_TEXT; },
-    zoneFor: function (state, side) { return state.sc.zones[side]; },
     hint: 'Your vehicles are the convoy (or everyone, if you brought none). Get them to the far edge; anything of the convoy within 3″ of it at the End phase is through.',
-    // the enemy goes for the convoy; the convoy goes for the far edge
-    goals: function (state, u) {
-      if (u.side === 'B') return state.units.filter(function (c) { return c.alive && (state.sc.convoy || []).indexOf(c.id) >= 0 && c.x >= 0; });
-      return [{ x: R.BOARD.w - 1.5, y: u.y }];
-    },
-    groundTaking: true,
-    check: function (state) {
-      var ids = state.sc.convoy || [], pts = 0, out = 0, lost = 0;
-      state.units.forEach(function (u) {
-        if (ids.indexOf(u.id) < 0) return;
-        pts += u.tier || 1;
-        if (u.extracted) out += u.tier || 1;
-        else if (!u.alive) lost += u.tier || 1;
-      });
-      if (out * 2 >= pts) return { winner: 'A', text: 'Half the convoy is through.' };
-      if (lost * 2 > pts) return { winner: 'B', text: 'More than half the convoy is burning on the road.', routed: ['A'] };
-      if (state.turn >= 12) return { winner: 'B', text: 'The convoy is still on the road at the end of turn 12.', timeout: true };
-    }
-  };
+    through: 'Half the convoy is through.', burning: 'More than half the convoy is burning on the road.', late: 'The convoy is still on the road at the end of turn 12.'
+  });
+  /* The enemy's convoy is side B's vehicles, or all of side B if it brought
+     none, crossing for side A's own edge; within 3" of it at the End phase, it
+     is through. */
+  SCENARIOS.intercept = convoyScenario('B', {
+    id: 'intercept', name: 'Intercept',
+    blurb: 'The enemy’s column is crossing the table. Stop it before it gets across.',
+    win: 'A wins by destroying more than half of B’s convoy (by its units’ Tiers), or if it is not through by the end of turn 12. B wins with half of it through to A’s edge.',
+    hint: 'The enemy’s vehicles are the convoy (or everyone, if they brought none). It is making for your own edge; anything of it within 3″ of that edge at the End phase is through. Stop it.',
+    through: 'Half the enemy’s convoy is through.', burning: 'More than half the enemy’s convoy is burning on the road.', late: 'The enemy’s convoy is still on the road at the end of turn 12.'
+  });
 
   /* ------------------------------------------------ Breakout */
   /* The landing zone sits in the enemy's half; the table is cut into six areas,

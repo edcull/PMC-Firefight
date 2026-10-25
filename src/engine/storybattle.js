@@ -396,7 +396,7 @@
     }
 
     /* Extraction: a unit of `side` standing in the landing zone (a circle, or
-       everything past `rectX`: the far edge) at the End phase leaves the table,
+       everything past `rectX`: the far edge, or short of it with `west`) at the End phase leaves the table,
        safe. It is out of the battle, and no loss. `only`: the units that may. */
     function extraction(state, lines) {
       var ex = state.sc && state.sc.extract;
@@ -404,7 +404,7 @@
       state.units.forEach(function (u) {
         if (u.side !== ex.side || !u.alive || u.reserve || u.aboard || u.x < 0 || u.ally) return;
         if (ex.only && ex.only.indexOf(u.id) < 0) return;
-        if (ex.rectX != null ? u.x < ex.rectX : R.inches(u.x, u.y, ex.x, ex.y) > ex.r) return;
+        if (ex.rectX != null ? (ex.west ? u.x > ex.rectX : u.x < ex.rectX) : R.inches(u.x, u.y, ex.x, ex.y) > ex.r) return;
         u.alive = false; u.extracted = true; u.activated = true;
         (u.cargo || []).forEach(function (cid) {
           var c = state.units.filter(function (x) { return x.id === cid; })[0];
