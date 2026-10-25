@@ -132,7 +132,7 @@
 
   /* ================= conditions ================= */
 
-  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped', 'target', 'more', 'relic'];
+  var COND_KEYS = ['flag', 'meter', 'grade', 'roster', 'kUC', 'chance', 'all', 'any', 'not', 'chapter', 'played', 'revealed', 'ironman', 'wiped', 'target', 'more', 'relic', 'leading'];
   var CMP = ['gte', 'lte', 'gt', 'lt', 'eq'];
 
   function cmp(v, c) {
@@ -161,7 +161,7 @@
     if (c.grade) {
       var g = ctx.grade;
       if (c.grade === 'success') return !!SUCCESS[g];
-      if (c.grade === 'failure') return !!g && !SUCCESS[g];
+      if (c.grade === 'failure') return !!g && g !== 'skip' && !SUCCESS[g];
       return arr(c.grade).indexOf(g) >= 0;
     }
     if (c.wiped) return cmp(st.lastWiped || 0, c.wiped);
@@ -171,6 +171,8 @@
     if (c.relic) return (st.lastRelic || 'none') === c.relic;
     if (c.chapter != null) return cmp(st.chapterNo, typeof c.chapter === 'number' ? { eq: c.chapter } : c.chapter);
     if (c.played) return !!st.played[c.played];
+    // the rival leading the race, as its chapter named it when it began
+    if (c.leading) return st.leading === c.leading;
     if (c.revealed) return !!st.revealed[c.revealed];
     if (c.ironman != null) return !!st.ironman === !!c.ironman;
     var co = company(ctx);
@@ -496,6 +498,9 @@
      a meter), the first written winning a tie. */
   function leadingRival(campaign) {
     var def = storyOf(campaign), st = campaign.story, from = arr(def.leading && def.leading.from);
+    // (a rival out of the race while a flag holds: a partner does not race the company)
+    var unless = (def.leading && def.leading.unless) || {};
+    from = from.filter(function (id) { return !(unless[id] && st.flags[unless[id]]); });
     var best = null;
     from.forEach(function (id) { if (best == null || (st.meters[id] || 0) > (st.meters[best] || 0)) best = id; });
     return best;
@@ -561,7 +566,13 @@
     });
     // the node's own adjustments, by what has happened: { if, levers }
     var ctx = ctxOf(campaign);
-    arr(node.adjust).forEach(function (a) { if (test(ctx, a.if)) spec.levers = mergeLevers(spec.levers, a.levers); });
+    arr(node.adjust).forEach(function (a) {
+      if (!test(ctx, a.if)) return;
+      // (allies already there, hired and paid for or named first, are not sent home for others)
+      var lv = a.levers;
+      if (lv && lv.allies && spec.levers.allies) { lv = clone(lv); delete lv.allies; }
+      spec.levers = mergeLevers(spec.levers, lv);
+    });
     // (a choice that changes who is fought: a hired rival's enemy in its place)
     if (spec.levers.enemy) spec.enemy = clone(spec.levers.enemy);
     if (spec.levers.scenario) spec.scenario = spec.levers.scenario;
@@ -840,6 +851,8 @@
   function skipTo(campaign, node, depth) {
     var st = campaign.story, def = storyOf(campaign);
     var on = node.on || {}, ctx = ctxOf(campaign), lines = [], to = node.next;
+    // (no fight, no result: the debrief and its events answer `skip`, not the last battle's grade)
+    st.lastGrade = 'skip'; st.lastRelic = null; st.lastTarget = null; st.lastWiped = 0;
     arr(on.skip).some(function (b) {
       if (!test(ctx, b.if)) return false;
       apply(ctx, b.effects, lines);
@@ -1174,7 +1187,9 @@
     // (`success` and `failure` are the last battle's, not flags)
     var holds = function (f) {
       if (f === 'success') return st.lastGrade === 'decisive' || st.lastGrade === 'victory';
-      if (f === 'failure') return !!st.lastGrade && st.lastGrade !== 'decisive' && st.lastGrade !== 'victory';
+      if (f === 'failure') return !!st.lastGrade && st.lastGrade !== 'skip' && st.lastGrade !== 'decisive' && st.lastGrade !== 'victory';
+      // (`skip`: the battle was not fought, bought off or gone round)
+      if (f === 'skip') return st.lastGrade === 'skip';
       // (`relic`: the last battle's relic is the company's)
       if (f === 'relic') return st.lastRelic === 'A';
       return !!st.flags[f];

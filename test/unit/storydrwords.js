@@ -343,6 +343,41 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
   ok('...the Wreck likewise: Brass Ledger the enemy, its orders and talk of going in with Sable',
     ws.enemy.side === 'kettle' && /Brass Ledger already inside/.test(S.render(c, TEXT['wreck.battle'])) && S.talkFor(c, ws).some((l) => /port holds/.test(l.text)) && !S.talkFor(c, ws).some((l) => /Sable holds the ship/.test(l.text)));
 }
+{
+  /* The audit's fixes: a battle not fought, the Landing's hires, allies kept, the c4 follow, Vane's cut-off. */
+  const fresh = (kUC) => { const c = { companies: { A: { name: 'F', kUC: kUC || 20, tier: 1, roster: [] } } }; S.begin(c, 'dead-reckoning', {}); return c; };
+  let c = fresh();
+  c.story.chapter = 'c2'; c.story.node = 'c2t.airlock'; c.story.lastGrade = 'defeat';
+  S.choose(c, 'pay');
+  let v = S.view(c);
+  ok('a battle bought off is not the last battle lost: Thule paid off, the archive is whole, nothing burned',
+    c.story.lastGrade === 'skip' && v.type === 'debrief' && /count the money twice/.test(S.render(c, v.text)) && !/fired the archive/.test(S.render(c, v.text)));
+  c = fresh();
+  c.story.chapter = 'c4'; c.story.node = 'c4.lot';
+  const stones = c.story.meters.stones;
+  S.choose(c, 'follow');
+  v = S.view(c);
+  ok('...letting Sable keep the heading at Kerrigan gives no lodestone, and says so', c.story.meters.stones === stones && /Sable takes the heading/.test(S.render(c, v.text)));
+  const land = dr._nodes['landing.field'].options;
+  c = fresh(); c.story.flags.kettle_contact = true; c.story.flags.reavers_spared = true; c.story.chapter = 'landing'; c.story.node = 'landing.field';
+  c.story.leading = 'kettle';
+  const open = (id) => S.test(S.ctxOf(c), land.find((o) => o.id === id).if);
+  ok('the Landing never offers to hire the company holding the field', !open('hire_kettle') && open('hire_reavers'));
+  c.story.leading = 'reavers';
+  ok('...either of them', open('hire_kettle') && !open('hire_reavers'));
+  c = fresh(); c.story.flags.kettle_partner = true;
+  ok('...and a partner is out of the race: Brass Ledger never lead it while partners in the claim', (c.story.meters.kettle = 10, S.leadingRival(c) !== 'kettle'));
+  c.story.chapter = 'landing'; c.story.node = 'landing.battle'; c.story.leading = 'sable';
+  c.story.pending = JSON.parse(JSON.stringify(land.find((o) => o.id === 'hire_reavers').battle));
+  ok('...allies hired and paid for are not sent home for a partner', S.battleSpec(c).levers.allies.side === 'reavers');
+  ok('the endings no longer contradict a won finale: claim jumped needs the Landing lost or no finale won, repossessed only the Collector lost',
+    JSON.stringify(dr.endings.find((e) => e.id === 'claimjumped').if).indexOf('finale_won') >= 0 && JSON.stringify(dr.endings.find((e) => e.id === 'repossessed').if) === '{"flag":"collector_lost"}');
+  ok('Vane cut off: no Escort for him, and nothing more to sell him',
+    JSON.stringify(dr._chapters.escort.when).indexOf('vane_cut_off') >= 0 &&
+    ['bounty.paymaster/hand', 'cold.child/vane'].every((k) => { const [ev, id] = k.split('/'); return JSON.stringify(dr._nodes[ev].options.find((o) => o.id === id).if).indexOf('vane_cut_off') >= 0; }));
+  ok('the log handed back: no terms to pay for it, and the company jumps on without it',
+    JSON.stringify(dr._nodes['dx.terms'].if).indexOf('log_handed') >= 0 && /without the log/.test(TEXT['dx.interlude']));
+}
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {
   /* The docks as the briefing has them: Sable's warehouse walked into in the middle of the table,

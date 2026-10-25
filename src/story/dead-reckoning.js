@@ -144,6 +144,8 @@
       id: 'hire_' + id, hire: id, text: text, if: HIRE_IF[id], why: HIRE_WHY[id], cost: { kUC: id + '_price' },
       battle: { allies: HIRE[id] },
       effects: [{ flag: id + '_hired' }, { meter: id + '_price', add: 1 }].concat(id === 'reavers' ? [{ meter: 'loyalty', add: -1 }] : [])
+        // (worked for the company once: the two that sell out can be bought away from it after)
+        .concat(id === 'kettle' || id === 'reavers' ? [{ flag: id + '_worked' }] : [])
     };
   }
   // the hired guns' own events after a battle they fought in
@@ -187,9 +189,9 @@
       { if: { flag: 'ledger_has_log' }, meter: 'lead', add: 1 }, { if: { flag: 'ledger_has_log' }, flag: 'ledger_has_log', set: false }];
   }
   var LATE_TIME = { if: { chapter: { gte: 5 } }, meter: 'lead', add: -1 };
+  // (each finale lost says how: the claim jumped, the Quiet woken, Vane repossessing)
   var FINALE_ON = {
-    success: [{ effects: [{ flag: 'finale_won' }] }],
-    failure: [{ effects: [{ flag: 'finale_lost' }] }]
+    success: [{ effects: [{ flag: 'finale_won' }] }]
   };
   // the Quiet, where every finale is fought
   var QUIET = { system: 'the end of the log', planet: 'the Quiet', kind: 'dense', world: { gravity: 'low', atmosphere: 'foggy', anomaly: 'none' } };
@@ -317,7 +319,7 @@
     /* The Race is run against the leading rival: the strongest of these when a
        chapter that asks for one begins (story.js leadingRival), Kestrel first on a
        tie (it always gets there first), each fielding its own force. */
-    leading: { from: ['kestrel', 'kettle', 'wraith', 'sable', 'reavers'] },
+    leading: { from: ['kestrel', 'kettle', 'wraith', 'sable', 'reavers'], unless: { kettle: 'kettle_partner' } },
     /* Who each rival company works for. Every one is a secret at the start: the
        star chart says "client unknown" until something reveals it
        ({ reveal: 'client_<id>' }, with the journal's line for it). */
@@ -453,8 +455,8 @@
           // (the scavengers aboard: militia and salvage crews on foot, nothing that cannot fight in a corridor)
           enemy: { side: 'scavengers', faction: 'rebel', archetype: 'freespace', core: ['rmilitia', 'rminers'], optional: { meter: 'kettle', per: 3, units: ['rmilitia', 'rlmg'] }, fill: { to: 0.8, from: ['rmilitia', 'rminers', 'rciv', 'rlmg'] } },
           on: { success: [{ effects: [{ meter: 'stones', add: 1 }] }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{}] }, next: 'c2t.debrief' },
-        { id: 'c2t.debrief', type: 'debrief', text: '{if success}The station is yours.{/if}{if failure}The scavengers fired the archive.{/if}', events: ['c2t.records', 'c2t.burned'], next: 'c2.interlude' },
-        { id: 'c2t.records', type: 'event', if: { grade: 'success' }, title: 'Morrow’s records', text: 'The relay kept his log entries, his voice and his fear.', options: [
+        { id: 'c2t.debrief', type: 'debrief', text: '{if success}The station is yours.{/if}{if skip}The scavengers take the money and go.{/if}{if failure}The scavengers fired the archive.{/if}', events: ['c2t.records', 'c2t.burned'], next: 'c2.interlude' },
+        { id: 'c2t.records', type: 'event', if: { grade: ['decisive', 'victory', 'skip'] }, title: 'Morrow’s records', text: 'The relay kept his log entries, his voice and his fear.', options: [
           { id: 'listen', text: 'Listen to all of it.', effects: [{ meter: 'understanding', add: 1 }, { flag: 'thule_records' }].concat(rebuilt('Morrow’s own records at Thule')) },
           { id: 'send', text: 'Send the records to Vane.', effects: [{ meter: 'vane', add: 1 }].concat(rebuilt('Morrow’s own records at Thule, with Vane’s readers')) },
           { id: 'sell', text: 'Sell a copy to a newsfeed.', effects: [{ kUC: 2 }, { flag: 'kestrel_deal' }, { meter: 'vane', add: -1 }] }
@@ -493,7 +495,7 @@
           enemy: rival('reavers', { fill: { to: 0.7, from: ['irregulars', 'enforcers'] } }),
           on: { success: [{ if: { relic: 'A' }, effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 1 }] }, {}],
                 failure: [{ if: { relic: 'A' }, effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 2 }] }, { effects: [{ meter: 'alarm', add: 1 }] }] }, next: 'c3.debrief' },
-        { id: 'c3.debrief', type: 'debrief', pick: 2, text: '{if success}The beacon is quiet.{/if}{if failure}Whatever they were, they drove you off.{/if}', events: ['c3.left', 'c3.copy'], next: 'c3.end' },
+        { id: 'c3.debrief', type: 'debrief', pick: 2, text: '{if success}The beacon is quiet.{/if}{if skip}The beacon answers, and lets you go.{/if}{if failure}Whatever they were, they drove you off.{/if}', events: ['c3.left', 'c3.copy'], next: 'c3.end' },
         { id: 'c3.left', type: 'event', if: { all: [{ not: { flag: 'beacon_rubbing' } }, { not: { relic: 'A' } }] }, title: 'What they left', text: 'One of them, hurt, and the lodestone still in its socket.', options: [
           { id: 'stone', text: 'Take the lodestone.', effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 1 }] },
           { id: 'leave', text: 'Leave the stone, and the hurt one, where they are.', effects: [{ meter: 'understanding', add: 2 }, { meter: 'lead', add: -1 }, { meter: 'vane', add: -1 }, { flag: 'relics_returned' }] },
@@ -525,11 +527,11 @@
           // (the heading can be bought; the log cannot: it comes back only with the warehouse taken)
           { id: 'buy', text: 'Buy it.', cost: { kUC: 3 }, why: 'You can’t afford it.', battle: { skip: true }, effects: [{ meter: 'vane', add: 1 }] },
           { id: 'take', text: 'Take it.', battle: { role: 'attacker', tier: 'max' } },
-          { id: 'follow', text: 'Let Sable have it, and follow Sable.', battle: { skip: true, intel: 2 }, effects: [{ meter: 'lead', add: -1 }, { meter: 'intel', add: 2 }, { meter: 'vane', add: -1 }, { meter: 'sable', add: 1 }, { flag: 'sable_owed' }, { reveal: 'client_sable', journal: 'Sable Armour Group belongs to the Halvorsen Mining Combine, bought and paid for.' }] },
-          hireOption('kettle', 'Hire Brass Ledger for the takeover.')
+          { id: 'follow', text: 'Let Sable have it, and follow Sable.', battle: { skip: true, intel: 2 }, effects: [{ flag: 'c4_followed', local: true }, { meter: 'lead', add: -1 }, { meter: 'intel', add: 2 }, { meter: 'vane', add: -1 }, { meter: 'sable', add: 1 }, { flag: 'sable_owed' }, { reveal: 'client_sable', journal: 'Sable Armour Group belongs to the Halvorsen Mining Combine, bought and paid for.' }] },
+          Object.assign(hireOption('kettle', 'Hire Brass Ledger for the takeover.'), { if: { all: [HIRE_IF.kettle, { not: { flag: 'ledger_has_log' } }] }, why: 'Brass Ledger won’t fight for you while they hold the log.' })
         ], next: 'c4.battle' },
         { id: 'c4.battle', type: 'battle', scenario: 'takeover', map: 'docks', role: 'attacker', tier: 'max', pl: 1, planet: 'industrial', enemy: rival('sable'),
-          on: { success: [{ effects: [{ meter: 'stones', add: 1 }, { meter: 'sable', add: -1 }, { meter: 'lead', add: 1 }, { reveal: 'client_sable', journal: 'Sable Armour Group belongs to the Halvorsen Mining Combine, bought and paid for.' }].concat(LOG_BACK) }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] }, next: 'c4.debrief' },
+          on: { success: [{ effects: [{ meter: 'stones', add: 1 }, { meter: 'sable', add: -1 }, { meter: 'lead', add: 1 }, { reveal: 'client_sable', journal: 'Sable Armour Group belongs to the Halvorsen Mining Combine, bought and paid for.' }].concat(LOG_BACK) }], skip: [{ if: { flag: 'c4_followed' }, effects: [{ meter: 'theirs', add: 1 }] }, { effects: [{ meter: 'stones', add: 1 }] }], failure: [{ effects: [{ meter: 'theirs', add: 1 }] }] }, next: 'c4.debrief' },
         { id: 'c4.debrief', type: 'debrief', pick: 3, text: 'The heading is out, one way or another.', events: ['c4.copies'].concat(HIRED_EVENTS), next: 'c4.interlude' },
         { id: 'c4.copies', type: 'event', title: 'The broker’s copies', text: 'Everybody bought one.', options: [
           { id: 'burn', text: 'Burn his stock.', effects: [{ meter: 'lead', add: 1 }, { meter: 'kettle', add: -1 }] },
@@ -565,14 +567,14 @@
         intro: 'Vane’s own company docks beside the company’s, with a court order.', nodes: [
         { id: 'dx.brief', type: 'brief', text: 'The Ninth Lance, and a repossession.', next: 'dx.repo' },
         { id: 'dx.repo', type: 'event', who: 'daw', title: 'The repossession', text: 'Commander Daw wants the log.', options: [
-          { id: 'hand', text: 'Hand back the log.', battle: { skip: true }, effects: [{ meter: 'lead', add: -2 }, { meter: 'intel', add: -2 }, { flag: 'vane_cut_off' }, { reveal: 'client_lance', journal: 'The Ninth Lance is Lucan Vane’s own company.' }] },
+          { id: 'hand', text: 'Hand back the log.', battle: { skip: true }, effects: [{ meter: 'lead', add: -2 }, { meter: 'intel', add: -2 }, { flag: 'vane_cut_off' }, { flag: 'log_handed' }, { reveal: 'client_lance', journal: 'The Ninth Lance is Lucan Vane’s own company.' }] },
           { id: 'refuse', text: 'Refuse.', battle: { role: 'choose', edge: 'choose' }, effects: [{ reveal: 'client_lance', journal: 'The Ninth Lance is Lucan Vane’s own company.' }] },
           { id: 'fire', text: 'Fire first.', battle: { strikes: 'D3+PL' }, effects: [{ meter: 'vane', add: -2 }, { flag: 'lance_burned' }, { reveal: 'client_lance', journal: 'The Ninth Lance is Lucan Vane’s own company.' }] }
         ], next: 'dx.battle' },
         { id: 'dx.battle', type: 'battle', scenario: 'meeting', map: 'dockring', tier: 'max', pl: 1, planet: 'industrial', enemy: rival('lance'),
           on: { success: [{ effects: [{ meter: 'lance', add: -1 }] }], skip: [{}], failure: [{ effects: [{ meter: 'lance', add: 1 }, { meter: 'stones', add: -1 }] }] }, next: 'dx.debrief' },
-        { id: 'dx.debrief', type: 'debrief', text: 'The Lance pulls back.', events: ['dx.terms'], next: 'dx.interlude' },
-        { id: 'dx.terms', type: 'event', who: 'vane', title: 'Vane’s terms', text: 'His lawyer calls before the smoke clears.', options: [
+        { id: 'dx.debrief', type: 'debrief', text: '{if skip}Daw takes the log.{/if}{if not skip}The Lance pulls back.{/if}', events: ['dx.terms'], next: 'dx.interlude' },
+        { id: 'dx.terms', type: 'event', who: 'vane', if: { not: { flag: 'log_handed' } }, title: 'Vane’s terms', text: 'His lawyer calls before the smoke clears.', options: [
           { id: 'pay', text: 'Pay him for the log.', cost: { kUC: 4 }, why: 'You can’t pay him.', effects: [{ meter: 'vane', set: 0 }, { flag: 'vane_cut_off', set: false }, { flag: 'vane_suspects' }] },
           { id: 'tell', text: 'Tell him where to put it.', effects: [{ flag: 'vane_cut_off' }] },
           { id: 'offer', text: 'Offer him the next lodestone.', effects: [{ flag: 'vane_suspects' }, { meter: 'vane', add: -1 }, { flag: 'owed_vane' }] }
@@ -589,7 +591,7 @@
         { id: 'i.sendahead', type: 'event', once: true, who: 'vane', if: { all: [{ not: { flag: 'vane_cut_off' } }, { meter: 'stones', gte: 2 }, { any: [{ meter: 'vane', gte: 1 }, { flag: 'owed_vane' }] }] },
           title: 'Send one ahead', text: 'Vane wants a lodestone sent to him now.', options: [
           { id: 'send', text: 'Send it.', effects: [{ meter: 'stones', add: -1 }, { meter: 'vane', add: 1 }, { flag: 'owed_vane', set: false }, breaks()] },
-          { id: 'refuse', text: 'Refuse.', effects: [{ meter: 'vane', add: -1 }, { if: { flag: 'owed_vane' }, flag: 'vane_cut_off' }, { if: { flag: 'vane_suspects' }, flag: 'vane_suspects' }] }
+          { id: 'refuse', text: 'Refuse.', effects: [{ meter: 'vane', add: -1 }, { if: { flag: 'owed_vane' }, flag: 'vane_cut_off' }, { if: { flag: 'vane_suspects' }, flag: 'vane_cut_off' }, { flag: 'vane_suspects' }] }
         ] },
         { id: 'i.voices', type: 'event', once: true, if: { meter: 'understanding', gte: 2 }, title: 'Voices', text: '{soldier:veteran} has started hearing them.', options: [
           { id: 'listen', text: 'Listen with them.', effects: [{ meter: 'understanding', add: 1 }, { meter: 'loyalty', add: -1 }] },
@@ -631,11 +633,11 @@
           { id: 'thank', text: 'Thank them.', effects: [{ meter: 'sable_trust', add: 1 }, { meter: 'sable_price', set: 2 }, { flag: 'sable_owed', set: false }, { flag: 'sable_hired', set: false }] },
           { id: 'again', text: 'Ask for another.', effects: [{ meter: 'sable_trust', add: -1 }, { meter: 'sable_price', set: 3 }, { flag: 'sable_hired', set: false }] }
         ] },
-        { id: 'hired.kettleoffer', type: 'event', who: 'kettering', if: { all: [{ meter: 'kettle_trust', lte: -2 }, { not: { flag: 'kettle_turned' } }] }, title: 'A better offer', text: 'Brass Ledger have been offered more.', options: [
+        { id: 'hired.kettleoffer', type: 'event', who: 'kettering', if: { all: [{ flag: 'kettle_worked' }, { meter: 'kettle_trust', lte: -2 }, { not: { flag: 'kettle_turned' } }] }, title: 'A better offer', text: 'Brass Ledger have been offered more.', options: [
           { id: 'match', text: 'Match it.', cost: { kUC: 'kettle_price' }, why: 'You can’t match it.', effects: [{ meter: 'kettle_trust', set: 0 }] },
           { id: 'let', text: 'Let them go.', effects: [{ flag: 'kettle_turned' }, { meter: 'kettle', add: 1 }] }
         ] },
-        { id: 'hired.reaversoffer', type: 'event', who: 'hal', if: { all: [{ meter: 'reavers_trust', lte: -2 }, { not: { flag: 'reavers_turned' } }] }, title: 'Hal’s other friends', text: 'The Reavers have had a better offer.', options: [
+        { id: 'hired.reaversoffer', type: 'event', who: 'hal', if: { all: [{ flag: 'reavers_worked' }, { meter: 'reavers_trust', lte: -2 }, { not: { flag: 'reavers_turned' } }] }, title: 'Hal’s other friends', text: 'The Reavers have had a better offer.', options: [
           { id: 'match', text: 'Match it.', cost: { kUC: 'reavers_price' }, why: 'You can’t match it.', effects: [{ meter: 'reavers_trust', set: 0 }] },
           { id: 'let', text: 'Let them go.', effects: [{ flag: 'reavers_turned' }, { meter: 'reavers', add: 1 }] }
         ] }
@@ -703,27 +705,28 @@
         battle: { scenario: 'meeting', map: 'ilya', planet: 'sparse', enemy: rival('wraith', { changes: [{ if: { flag: 'wraith_robbed' }, readiness: 1 }] }),
           on: { success: [{ effects: [{ meter: 'wraith', add: -1 }, { meter: 'stones', add: 1 }, { meter: 'theirs', add: -1 }] }], skip: [{}], failure: [{ effects: [{ meter: 'stones', add: -1 }, { meter: 'theirs', add: 1 }] }] } },
         after: { id: 'bounty.paymaster', if: { grade: 'success' }, title: 'The paymaster', text: 'The bounty hunters’ paymaster, taken.', options: [
-          { id: 'hand', text: 'Hand them in.', effects: [{ meter: 'vane', add: 1 }] },
+          { id: 'hand', text: 'Hand them in.', if: { not: { flag: 'vane_cut_off' } }, why: 'Vane has cut you off.', effects: [{ meter: 'vane', add: 1 }] },
           { id: 'turn', text: 'Turn them.', effects: [{ meter: 'intel', add: 2 }, { flag: 'wraith_turned' }] }
         ] } }),
       poolChapter({ id: 'landing', thread: 'race', finale: true, rival: 'leading', title: 'The Landing', place: Object.assign({ site: 'the landing field' }, QUIET),
         brief: 'The leading rival holds the only landing field on the Quiet.',
         before: { id: 'landing.field', title: 'The field', text: 'They are dug in.', options: [
           { id: 'alone', text: 'Go in alone.', battle: { role: 'attacker' } },
-          hireOption('kettle', 'Hire Brass Ledger for the landing.'),
-          hireOption('reavers', 'Hire the Reavers for the landing.')
+          // (never the company holding the field)
+          Object.assign(hireOption('kettle', 'Hire Brass Ledger for the landing.'), { if: { all: [HIRE_IF.kettle, { not: { leading: 'kettle' } }] }, why: 'Brass Ledger won’t fight for you here.' }),
+          Object.assign(hireOption('reavers', 'Hire the Reavers for the landing.'), { if: { all: [HIRE_IF.reavers, { not: { leading: 'reavers' } }] }, why: 'The Reavers won’t fight for you here.' })
         ] },
         // the leading rival, whoever it is, its commander the target; the more lodestones it holds, the readier it is
         battle: { scenario: 'takeover', map: 'quietfield', role: 'attacker', tier: 'max', pl: 'max', planet: 'dense', variant: { target: 'leading' },
           enemy: { rival: 'leading', changes: [{ if: { meter: 'theirs', gte: 4 }, readiness: 1 }] },
           adjust: [
-            { if: { flag: 'kettle_partner' }, levers: { allies: HIRE.kettle } },
+            { if: { all: [{ flag: 'kettle_partner' }, { not: { leading: 'kettle' } }] }, levers: { allies: HIRE.kettle } },
             { if: { all: [{ flag: 'contact' }, ESHAVEN_WITH_YOU] }, levers: { allies: ESHAVEN_ALLIES } },
             { if: { flag: 'wraith_turned' }, levers: { intel: 2 } },
             { if: { any: [{ flag: 'kettle_turned' }, { flag: 'reavers_turned' }] }, levers: { readiness: 1 } },
             { if: { meter: 'stones', lt: 5 }, levers: { readiness: 1 } }
           ],
-          on: { success: FINALE_ON.success, failure: [{ effects: [{ flag: 'finale_lost' }, { flag: 'landing_lost' }] }] } } }),
+          on: { success: FINALE_ON.success, failure: [{ effects: [{ flag: 'landing_lost' }] }] } } }),
 
       // the Tribes
       poolChapter({ id: 'watchers', thread: 'tribes', title: 'The Watchers', when: { meter: 'alarm', gte: 2 }, passed: [{ meter: 'alarm', add: 1 }],
@@ -750,7 +753,7 @@
         ] },
         battle: { scenario: 'invasion', map: 'sedra', role: 'defender', planet: 'sparse', enemy: tribe('shkar', { changes: [{ if: { flag: 'beacon_stormed' }, readiness: 1 }] }),
           on: { success: [{ effects: [{ meter: 'alarm', add: -1 }] }], failure: [{ effects: [{ meter: 'stones', add: -1 }, { meter: 'alarm', add: 1 }] }] } },
-        after: { id: 'storm.what', title: 'What they came for', text: 'They came for the lodestones.', options: [
+        after: { id: 'storm.what', if: { meter: 'stones', gte: 1 }, title: 'What they came for', text: 'They came for the lodestones.', options: [
           { id: 'return', text: 'Return one.', if: { meter: 'stones', gte: 1 }, why: 'You have none to return.', effects: [{ meter: 'stones', add: -1 }, { meter: 'alarm', add: -2 }, { flag: 'relics_returned' }] },
           { id: 'keep', text: 'Keep them all.', effects: [{ meter: 'alarm', add: 1 }] }
         ] } }),
@@ -765,7 +768,7 @@
           on: { success: [{ effects: [{ meter: 'stones', add: 1 }] }], skip: [{}], failure: [{ effects: [{ meter: 'alarm', add: 1 }] }] } },
         after: { id: 'cold.child', if: { grade: 'success' }, title: 'A Mithdu child', text: 'It hasn’t run.', options: [
           { id: 'let', text: 'Let it go.', effects: [{ meter: 'understanding', add: 1 }] },
-          { id: 'vane', text: 'Take it to Vane.', effects: [{ meter: 'vane', add: 2 }, { meter: 'alarm', add: 2 }, { flag: 'child_taken' }, breaks()] }
+          { id: 'vane', text: 'Take it to Vane.', if: { not: { flag: 'vane_cut_off' } }, why: 'Vane has cut you off.', effects: [{ meter: 'vane', add: 2 }, { meter: 'alarm', add: 2 }, { flag: 'child_taken' }, breaks()] }
         ] } }),
       poolChapter({ id: 'spire', thread: 'tribes', finale: true, title: 'The Spire', place: Object.assign({ site: 'an Amt spire' }, QUIET),
         brief: 'Into the towers of the Amt.',
@@ -778,10 +781,10 @@
         battle: { scenario: 'hive_heart', tier: 'max', pl: 'max', planet: 'dense', waves: { meter: 'alarm', base: 1, per: 3 },
           enemy: tribe('amt', { changes: [{ if: { flag: 'hoard_taken' }, readiness: 2 }, { if: { flag: 'child_taken' }, readiness: 2 }, { if: { flag: 'alpha_taken' }, readiness: 1 }] }),
           adjust: [{ if: { all: [{ flag: 'contact' }, ESHAVEN_WITH_YOU] }, levers: { allies: ESHAVEN_ALLIES } }, { if: { meter: 'stones', lt: 5 }, levers: { readiness: 1 } }],
-          on: FINALE_ON } }),
+          on: { success: FINALE_ON.success, failure: [{ effects: [{ flag: 'spire_lost' }] }] } } }),
 
       // First Contact: allies, no finale of its own
-      poolChapter({ id: 'mimics', thread: 'contact', title: 'The Mimics', when: { meter: 'understanding', gte: 1 }, passed: [{ meter: 'understanding', add: -1 }, { meter: 'kettle', add: 1 }],
+      poolChapter({ id: 'mimics', thread: 'contact', title: 'The Mimics', when: { all: [{ meter: 'understanding', gte: 1 }, { not: { flag: 'kettle_partner' } }] }, passed: [{ meter: 'understanding', add: -1 }, { meter: 'kettle', add: 1 }],
         place: { system: 'Hashamer', planet: 'Hashamer I', kind: 'desert' },
         brief: 'Nine million Esh-Aven, and not a Crock among them.',
         before: { id: 'mimics.ask', who: 'seven', title: 'A village asks', text: 'Brass Ledger are taking Esh-Aven for a buyer.', options: [
@@ -829,14 +832,14 @@
           { id: 'publish', text: 'Publish them.', effects: [{ flag: 'vane_exposed' }, { meter: 'vane', add: -5 }, { flag: 'vane_cut_off' }] },
           { id: 'use', text: 'Use them.', effects: [{ flag: 'vane_owes' }, { meter: 'vane', add: 1 }] }
         ] } }),
-      poolChapter({ id: 'escort', thread: 'patron', title: 'The Escort', when: { meter: 'stones', gte: 1 }, passed: [{ meter: 'vane', add: -1 }],
+      poolChapter({ id: 'escort', thread: 'patron', title: 'The Escort', when: { all: [{ meter: 'stones', gte: 1 }, { not: { flag: 'vane_cut_off' } }] }, passed: [{ meter: 'vane', add: -1 }],
         place: { system: 'Umber', planet: 'Umber', kind: 'industrial', world: { atmosphere: 'toxic' } },
         brief: 'Vane’s relics, across a contested world.',
         before: { id: 'escort.road', title: 'The convoy', text: 'Two roads to the field.', options: [
           { id: 'fast', text: 'The fast road.', battle: { role: 'attacker', tier: 'max' } },
           { id: 'long', text: 'The long road.', battle: { readiness: 0, turns: 8 }, effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: 1 }] }
         ] },
-        battle: { scenario: 'convoy', map: 'umber', planet: 'industrial', enemy: rival('lance'),
+        battle: { scenario: 'convoy', map: 'umber', variant: { cars: 'Relic truck' }, planet: 'industrial', enemy: rival('lance'),
           on: { success: [{ effects: [{ meter: 'lance', add: -1 }] }], failure: [{ effects: [{ meter: 'vane', add: -1 }] }] } },
         after: { id: 'escort.cargo', if: { grade: 'success' }, title: 'The cargo', text: 'Vane’s relics, safe.', options: [
           { id: 'deliver', text: 'Deliver it.', effects: [{ meter: 'vane', add: 2 }] },
@@ -865,19 +868,19 @@
             { if: { flag: 'vault_seen' }, levers: { intel: 2 } },
             { if: { meter: 'stones', lt: 5 }, levers: { readiness: 1 } }
           ],
-          on: { success: FINALE_ON.success, failure: [{ effects: [{ flag: 'finale_lost' }, { flag: 'collector_lost' }] }] } } }),
+          on: { success: FINALE_ON.success, failure: [{ effects: [{ flag: 'collector_lost' }] }] } } }),
 
       // the override: the Quiet wakes
       { id: 'recall', half: 2, title: 'Recall', onStart: [{ flag: 'recalled' }], place: Object.assign({ site: 'the landing field' }, QUIET),
         intro: 'Every teleport turret on the Quiet opens at once.', nodes: [
         { id: 'recall.brief', type: 'brief', text: 'The towers wake.', next: 'recall.run' },
         { id: 'recall.run', type: 'event', title: 'Run', text: 'The field, and the last way off.', options: [
-          { id: 'stones', text: 'Run with the stones.', battle: { turns: 6 } },
+          { id: 'stones', text: 'Run with the stones.', if: { meter: 'stones', gte: 1 }, why: 'You have no stones to carry.', battle: { turns: 6 } },
           { id: 'leave', text: 'Run, and leave the stones.', battle: { turns: 8, readiness: -1 }, effects: [{ meter: 'alarm', add: -3 }, { meter: 'stones', set: 0 }] }
         ], next: 'recall.battle' },
         { id: 'recall.battle', type: 'battle', scenario: 'breakout', map: 'quietfog', tier: 'max', pl: 'max', planet: 'dense', waves: { meter: 'alarm', base: 1, per: 3 }, enemy: tribe('amt'),
           adjust: [{ if: { all: [{ flag: 'eshaven_promise' }, ESHAVEN_WITH_YOU] }, levers: { allies: ESHAVEN_ALLIES } }],
-          on: FINALE_ON, next: 'recall.debrief' },
+          on: { success: FINALE_ON.success, failure: [{}] }, next: 'recall.debrief' },
         { id: 'recall.debrief', type: 'debrief', text: 'The company is off the Quiet, with what it could carry.', events: [], next: 'end' }
       ] },
 
@@ -886,12 +889,12 @@
 
     endings: [
       { id: 'broken', broken: true, title: 'Broken Company', text: 'There is not enough of {name} left to field an army.' },
-      { id: 'lostsignal', title: 'Lost Signal', if: { flag: 'recalled' }, text: 'The Quiet woke, and {name} got off it with what it could carry. Nobody will find the way again.' },
-      { id: 'claimjumped', title: 'Claim Jumped', if: { any: [{ flag: 'landing_lost' }, { all: [{ meter: 'theirs', gte: 4 }, { more: ['theirs', 'stones'] }] }] }, text: 'Another company’s name is on the claim.' },
-      { id: 'repossessed', title: 'Repossessed', if: { any: [{ flag: 'collector_lost' }, { all: [{ flag: 'vane_cut_off' }, { flag: 'finale_lost' }] }] }, text: 'Vane has the Quiet, and {name} has nothing.' },
-      { id: 'firstcontact', title: 'First Contact', if: { all: [{ any: [{ flag: 'contact' }, { flag: 'relics_returned' }] }, { flag: 'finale_won' }, { meter: 'alarm', lt: 8 },
-        { not: { flag: 'child_taken' } }, { not: { flag: 'promise_broken' } }] }, text: '{name} is the first company to speak with the Amt, and walks away with no salvage at all.' },
-      { id: 'findersfee', title: 'Finder’s Fee', if: { all: [{ not: { flag: 'contact' } }, { not: { flag: 'vane_cut_off' } }, { not: { flag: 'vane_exposed' } }, { flag: 'finale_won' }, { meter: 'vane', gte: 2 }] },
+      { id: 'lostsignal', title: 'Lost Signal', if: { any: [{ flag: 'recalled' }, { all: [{ flag: 'spire_lost' }, { meter: 'alarm', gte: 5 }] }] }, text: 'The Quiet woke, and {name} got off it with what it could carry. Nobody will find the way again.' },
+      { id: 'claimjumped', title: 'Claim Jumped', if: { any: [{ flag: 'landing_lost' }, { all: [{ not: { flag: 'finale_won' } }, { meter: 'theirs', gte: 4 }, { more: ['theirs', 'stones'] }] }] }, text: 'Another company’s name is on the claim.' },
+      { id: 'repossessed', title: 'Repossessed', if: { flag: 'collector_lost' }, text: 'Vane has the Quiet, and {name} has nothing.' },
+      { id: 'firstcontact', title: 'First Contact', if: { all: [{ any: [{ flag: 'contact' }, { all: [{ flag: 'relics_returned' }, { meter: 'understanding', gte: 3 }] }] }, { flag: 'finale_won' }, { meter: 'alarm', lt: 8 },
+        { not: { flag: 'child_taken' } }, { not: { flag: 'promise_broken' } }] }, text: '{name} is the first company the Amt answer, and walks away with no salvage at all.' },
+      { id: 'findersfee', title: 'Finder’s Fee', if: { all: [{ not: { flag: 'contact' } }, { not: { flag: 'vane_cut_off' } }, { not: { flag: 'vane_exposed' } }, { not: { played: 'collector' } }, { flag: 'finale_won' }, { meter: 'vane', gte: 2 }] },
         text: 'The claim is filed in Vane’s name.{if kettle_partner} Brass Ledger take their share.{/if} {name} is rich, and the Quiet will be stripped.' },
       { id: 'deadreckoning', title: 'Dead Reckoning', text: '{name} reached the end of the log, and what it did there decided nothing.' }
     ],
@@ -901,6 +904,7 @@
       { about: 'quiet', if: { flag: 'contact' }, text: 'The Amt sleep again, by their own choice, and send a word to {name} now and then.' },
       { about: 'quiet', text: 'The Quiet is on every chart now.' },
       { about: 'eshaven', if: { flag: 'promise_broken' }, text: 'The Hashamer remember the company that broke its word.' },
+      { about: 'eshaven', if: { all: [{ flag: 'eshaven_promise' }, { flag: 'recalled' }] }, text: 'The Quiet called, and the Hashamer went to it, as they said they would. Their village stands empty.' },
       { about: 'eshaven', if: { flag: 'eshaven_promise' }, text: 'The Hashamer are still on their world, free, and they say the names of their dead.' },
       { about: 'vane', if: { flag: 'vane_exposed' }, text: 'Lucan Vane’s receipts are public, and so, at last, is his face.' },
       { about: 'vane', text: 'Lucan Vane has another lot in the catalogue, bought by telephone, from nowhere.' },

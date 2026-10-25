@@ -317,7 +317,7 @@
       String(text || '').replace(/\{if (?:not )?([a-z0-9_+!]+)\}/g, function (m, fs) {
         fs.split('+').forEach(function (f) {
           f = f.replace(/^!/, '');
-          if (f !== 'success' && f !== 'failure' && f !== 'relic') F(f).read.push({ at: at, kind: 'text', chapter: chapter });
+          if (f !== 'success' && f !== 'failure' && f !== 'relic' && f !== 'skip') F(f).read.push({ at: at, kind: 'text', chapter: chapter });
         });
         return m;
       });

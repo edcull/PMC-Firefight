@@ -131,8 +131,11 @@
       else if (v.type === 'event') h += eventView(v);
       else if (v.type === 'battle') h += battleView(v);
       else if (v.type === 'debrief') {
-        if (!(st.lastGrade === 'decisive' || st.lastGrade === 'victory')) cue('lost:' + st.chapterNo + ':' + v.id, 'storyGrim');
-        h += '<div class="story-grade ' + (st.lastGrade === 'decisive' || st.lastGrade === 'victory' ? 'good' : 'bad') + '">' + esc(GRADE[st.lastGrade] || '') + '</div>';
+        // (a battle not fought, bought off or gone round, has no grade to show)
+        if (st.lastGrade !== 'skip') {
+          if (!(st.lastGrade === 'decisive' || st.lastGrade === 'victory')) cue('lost:' + st.chapterNo + ':' + v.id, 'storyGrim');
+          h += '<div class="story-grade ' + (st.lastGrade === 'decisive' || st.lastGrade === 'victory' ? 'good' : 'bad') + '">' + esc(GRADE[st.lastGrade] || '') + '</div>';
+        }
         h += para(v.text) + '<div class="story-go"><button class="start" data-go="storyon">Go on</button></div>';
       } else if (v.type === 'interlude') {
         h += para(v.text);
