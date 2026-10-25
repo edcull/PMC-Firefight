@@ -101,9 +101,10 @@ says who was behind him. The first half seeds it: the opening (the backer's
 people a jump or two behind), Thule's records ("the same ship, two jumps
 behind me now"), and the Lance's founding date.
 
-**Halloran is a reader**: a forensic navigator, who takes a lost ship's log
-(no fixes, only headings, burn times and what the pilot saw) and works out
-where she went. Insurers and salvage firms hire him to find wrecks.
+**Halloran** is a scientist with a general background, a little of
+everything, who has spent years on the scraps of Morrow's writing that have
+surfaced and proved better at reading the man than anyone alive. "Reader" is
+what people call him for it, not a trade.
 
 **Business until somebody loses** (settled after the rework). The rival
 companies are confrontational, and they make it business: clients, invoices,
