@@ -1657,8 +1657,41 @@
            is laid in, drawn so they read as one mass (box: solid). */
         case 'bulkhead': {
           if (pr.rock) {
-            // the Warren's rock: cut smooth on its faces, its top the raw rock
+            // the Warren's rock: raw and hewn rough on its faces, its hoard chamber's walls worked smooth
             box(g, pr, ROCKWALL, { roof: '#211d19', roofEdge: '#5d5042', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
+            /* Raw rock where a face looks onto the Warren's tunnels (not its hoard
+               chamber, worked smooth): bands of strata, chips lit and shadowed,
+               a broken edge along the top, scree at the foot. */
+            if (!cutaway) {
+              var rk9 = rng(pr.seed + 73), rl9 = lift || 0;
+              (pr.open || []).forEach(function (o) {
+                if ((o[0] !== 'S' && o[0] !== 'E') || o[3] !== 7) return;
+                var RP9 = function (t, z) { var q = o[0] === 'S' ? toScreen(t, pr.y + pr.h) : toScreen(pr.x + pr.w, t); return [q.x, q.y - rl9 - z]; };
+                var t0 = o[1], t1 = o[2], ln9 = t1 - t0, H9 = pr.height, lit = o[0] === 'S';
+                // strata: a few wavering bands along the face
+                for (var b9 = 0; b9 < 3; b9++) {
+                  var bz = H9 * (0.22 + b9 * 0.26 + (rk9() - 0.5) * 0.08), last9 = RP9(t0, bz);
+                  for (var s9 = 1; s9 <= Math.ceil(ln9 / 0.5); s9++) {
+                    var nt = Math.min(t1, t0 + s9 * 0.5), nz = bz + (rk9() - 0.5) * H9 * 0.07, nq = RP9(nt, nz);
+                    edgeLine(g, last9, nq, lit ? ROCKWALL[2] : ROCKWALL[1], 1); last9 = nq;
+                  }
+                }
+                // chips: small facets catching the light, or in shadow
+                for (var c9 = 0; c9 < Math.round(ln9 * 2); c9++) {
+                  var ct = t0 + rk9() * ln9, cz = rk9() * H9 * 0.9, cw9 = 0.15 + rk9() * 0.3, ch9 = H9 * (0.05 + rk9() * 0.08);
+                  // an irregular facet: four corners jittered, a shade lighter or darker than the face
+                  var fc = [RP9(ct, cz + ch9 * rk9() * 0.3), RP9(ct + cw9 * (0.5 + rk9() * 0.3), cz + ch9), RP9(ct + cw9, cz + ch9 * rk9() * 0.4), RP9(ct + cw9 * (0.3 + rk9() * 0.4), cz - ch9 * 0.3)];
+                  poly(g, fc, rk9() < 0.5 ? (lit ? 'rgba(128,112,93,.55)' : 'rgba(104,90,75,.5)') : 'rgba(20,17,14,.45)');
+                }
+                // the broken top edge: the rock above it uneven, in the roof's dark
+                var top9 = [RP9(t0, H9)];
+                for (var e9 = 0; e9 <= Math.ceil(ln9 / 0.3); e9++) top9.push(RP9(Math.min(t1, t0 + e9 * 0.3), H9 - rk9() * a(1.4)));
+                top9.push(RP9(t1, H9));
+                poly(g, top9, '#211d19');
+                // scree at the foot
+                for (var f9 = 0; f9 < Math.round(ln9 * 2); f9++) { var fq9 = RP9(t0 + rk9() * ln9, 0); dot(g, fq9[0] + (rk9() - 0.5) * 3, fq9[1] + rk9() * 3, rk9() < 0.5 ? ROCKWALL[3] : ROCKWALL[1], 2); }
+              });
+            }
             /* Where the Reavers have been firing at the walls: on the faces that look
                onto a floor, scorched blotches with a pale chipped heart, pocked
                round with shot, and now and then a blast's spray of soot up the rock. */
@@ -1759,43 +1792,6 @@
           RING(R3 * 0.7, 'rgba(120,180,255,.18)', true);
           RING(R3, '#bfe6ff', false);
           RING(R3 * 0.93, 'rgba(140,200,255,.6)', false);
-          break;
-        }
-        /* An archway in the Warren's rock: a jamb of the rock either side, the
-           rock carried over the opening, its underside cut in a round arch,
-           the opening left open. */
-        case 'arch': {
-          var al = lift || 0, AH = pr.height, ahz2 = pr.horiz, alen = ahz2 ? pr.w : pr.h;
-          var ajl = Math.min(0.6, alen * 0.15), AT = 0.4, acen = ahz2 ? pr.y + pr.h / 2 : pr.x + pr.w / 2, abase = ahz2 ? pr.x : pr.y;
-          var apart = function (u0, u1) { return ahz2 ? { x: pr.x + u0, y: acen - AT / 2, w: u1 - u0, h: AT } : { x: acen - AT / 2, y: pr.y + u0, w: AT, h: u1 - u0 }; };
-          var AP = function (u, off, z) { var q = ahz2 ? toScreen(abase + u, acen + off) : toScreen(acen + off, abase + u); return [q.x, q.y - al - z]; };
-          var tbA = pr.themeB == null ? -1 : pr.themeB, APAL = (tbA >= 0 && WALL_THEME[tbA]) || ROCKWALL;
-          var rockBox = function (q, h, up) {
-            box(g, { kind: 'arch', x: q.x, y: q.y, w: q.w, h: q.h, height: h, seed: pr.seed }, APAL, { roof: '#211d19', roofEdge: '#5d5042', windows: null, lift: al + (up || 0), solid: true });
-          };
-          var spring = AH * 0.45, crown = AH * 0.72;
-          // the lintel's block over the whole opening, from the arch's crown up
-          rockBox(apart(ajl, alen - ajl), AH - crown, crown);
-          // the arch's haunches on the face towards the viewer and the one away: rock from the springing up to the crown, cut round
-          [AT / 2, -AT / 2].forEach(function (off, fi) {
-            var pts = [AP(ajl, off, crown), AP(ajl, off, spring)];
-            for (var ak = 1; ak < 12; ak++) {
-              var th = ak / 12 * Math.PI, uu = ajl + (alen - 2 * ajl) * (1 - Math.cos(th)) / 2;
-              pts.push(AP(uu, off, spring + (crown - spring) * Math.sin(th)));
-            }
-            pts.push(AP(alen - ajl, off, spring), AP(alen - ajl, off, crown));
-            poly(g, pts, fi === 0 ? (ahz2 ? APAL[3] : APAL[2]) : APAL[1]);
-          });
-          // the arch's edge, catching the light
-          var ae = [];
-          for (var ak2 = 0; ak2 <= 12; ak2++) {
-            var th2 = ak2 / 12 * Math.PI, uu2 = ajl + (alen - 2 * ajl) * (1 - Math.cos(th2)) / 2;
-            ae.push(AP(uu2, AT / 2, spring + (crown - spring) * Math.sin(th2)));
-          }
-          for (var ak3 = 0; ak3 < ae.length - 1; ak3++) edgeLine(g, ae[ak3], ae[ak3 + 1], APAL[5], 1);
-          // the jambs, the full height of the rock
-          rockBox(apart(0, ajl), AH, 0);
-          rockBox(apart(alen - ajl, alen), AH, 0);
           break;
         }
         /* A door: a blast hatch framed in the compound's own plating — two jambs

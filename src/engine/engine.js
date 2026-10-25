@@ -401,8 +401,8 @@
        nothing in it is fitted out as a base is (the machinery goes, the crates
        stay: what the Reavers have dragged in); the biggest chamber on the far
        side holds their hoard; the corridors side A comes in by end at the gate,
-       closing behind it. Its ways are open, archways in the rock: the only
-       doors are the hoard chamber's. */
+       closing behind it. Its ways are open, rock to rock: the only doors are
+       the hoard chamber's. */
     if (scenDef.compound && cfg.story && cfg.story.skin === 'warren') {
       // where a base would have machinery, the Reavers have stacked crates
       built.terrain.forEach(function (t) { if (t.kind === 'machinery') t.kind = 'crates'; });
@@ -413,10 +413,9 @@
       var far = built.terrain.filter(function (t) { return (t.kind === 'room' || t.kind === 'hall') && t.x + t.w / 2 > R.BOARD.w / 2; })
         .sort(function (a, b) { return b.w * b.h - a.w * a.h; })[0];
       if (far) far.hoard = true;
-      // every other doorway an archway in the rock: open ground, seen and walked through
-      built.terrain.forEach(function (t) {
-        if (!(R.TERRAIN[t.kind] && R.TERRAIN[t.kind].door)) return;
-        if (!(far && t.x <= far.x + far.w + 0.5 && t.x + t.w >= far.x - 0.5 && t.y <= far.y + far.h + 0.5 && t.y + t.h >= far.y - 0.5)) { t.kind = 'arch'; delete t.rock; }
+      built.terrain = built.terrain.filter(function (t) {
+        if (!(R.TERRAIN[t.kind] && R.TERRAIN[t.kind].door)) return true;
+        return !!far && t.x <= far.x + far.w + 0.5 && t.x + t.w >= far.x - 0.5 && t.y <= far.y + far.h + 0.5 && t.y + t.h >= far.y - 0.5;
       });
       var ins = built.compound && built.compound.entries ? built.compound.entries.L || [] : [];
       built.terrain.forEach(function (t) { if (t.kind === 'corridor' && ins.some(function (e) { return e.sec != null && e.sec === t.sec; })) t.gate = true; });

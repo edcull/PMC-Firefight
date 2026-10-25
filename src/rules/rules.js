@@ -913,8 +913,6 @@
     crane: { name: 'Gantry crane', blocks: false, impassable: true, movePenalty: 0, cover: 0, fp: 0 },
     fueltanks: { name: 'Fuel tanks', blocks: true, impassable: true, movePenalty: 0, cover: 2, fp: 0 },
     // a yard's lifting gate: a striped arm on a post, ducked under or driven through (only its post is laid)
-    // an archway in the Warren's rock (a story's skin): its doorways without the doors, open ground
-    arch: { name: 'Archway', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     boomgate: { name: 'Lifting gate', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     parleyflag: { name: 'The meeting point', blocks: false, impassable: false, movePenalty: 0, cover: 0, fp: 0 },
     // Ambush! (p. 156): the road the enemy column is on — open ground, and nothing stands on it

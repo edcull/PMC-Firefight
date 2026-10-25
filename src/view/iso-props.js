@@ -114,7 +114,7 @@
       /* The stretches of a bulkhead's sides that face a floor, not more plating
          or a door: [side, from, to], the side 'N', 'S', 'W' or 'E' and the run
          along it in inches of the table. */
-      var solids = terrain.filter(function (q) { return q.kind === 'bulkhead' || /^door/.test(q.kind) || q.kind === 'arch'; });
+      var solids = terrain.filter(function (q) { return q.kind === 'bulkhead' || /^door/.test(q.kind); });
       var floors = terrain.filter(function (q) { return q.kind === 'corridor' || q.kind === 'room' || q.kind === 'hall' || q.kind === 'breached'; });
       function inAny(list, x, y) {
         for (var i = 0; i < list.length; i++) { var q = list[i]; if (x > q.x && x < q.x + q.w && y > q.y && y < q.y + q.h) return true; }
@@ -721,13 +721,6 @@
           });
           return;
         }
-        // an archway in the Warren's rock: drawn in the doorway's place, its frame trimmed to the walls as a door's is
-        if (r.kind === 'arch') {
-          var ahz = r.w >= r.h, aq = (wallPieces(), r._drawn) || r, amx = r.x + r.w / 2, amy = r.y + r.h / 2;
-          props.push({ kind: 'arch', x: ahz ? aq.x : r.x, y: ahz ? r.y : aq.y, w: ahz ? aq.w : r.w, h: ahz ? r.h : aq.h, horiz: ahz, height: a(BULK_H),
-            themeB: themeAt(ahz ? amx : amx + 1, ahz ? amy + 1 : amy), seed: (rr2() * 9999) | 0 });
-          return;
-        }
         if (r.kind === 'door' || r.kind === 'doorlock' || r.kind === 'doorlockA' || r.kind === 'doorlockB') {
           /* which side of the wall line is outside the room — the corridor (or the
              smaller section) — so the hatch is hung on that side and the room's own
@@ -839,7 +832,7 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, crane: 1, fueltanks: 1, solarmount: 1, bulkhead: 1, door: 1, arch: 1, crates: 1, machinery: 1 };
+      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, crane: 1, fueltanks: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
@@ -905,8 +898,10 @@
       ['#2a1e1c', '#402d2a', '#583e39', '#714f48', '#8a6157', '#a67b6f'],
       // a brood chamber: the plating gone under the hive's growth
       ['#22131e', '#36202f', '#4a2c40', '#5e3a52', '#734a63', '#8c5e78'],
-      // the Warren: rock cut smooth by something long gone, warm brown-grey
-      ['#1e1a17', '#2e2823', '#41382f', '#54493d', '#685a4b', '#80705d']
+      // the Warren: raw rock, hewn rough, warm brown-grey
+      ['#1e1a17', '#2e2823', '#41382f', '#54493d', '#685a4b', '#80705d'],
+      // the Warren's hoard chamber: its walls worked smooth and squared, paler
+      ['#2a2520', '#3d362e', '#524a3f', '#685e50', '#7f7462', '#9a8e7a']
     ];
     /* A wall face from foot A to foot B, `hgt` high, shaded top to bottom. One
        gradient pinned to one end drifts along a long face, which slopes on the
@@ -1051,7 +1046,8 @@
         var A3 = o[0] === 'S' ? [o[1], pr.y + pr.h] : [pr.x + pr.w, o[1]], B3 = o[0] === 'S' ? [o[2], pr.y + pr.h] : [pr.x + pr.w, o[2]];
         var a0 = pt(A3[0], A3[1]), b0 = pt(B3[0], B3[1]), a1 = pt(A3[0], A3[1], hgt), b1 = pt(B3[0], B3[1], hgt);
         shadeFace(g, a0, b0, hgt, o[0] === 'S' ? [tp[5], tp[4], tp[4], tp[3]] : [tp[2], tp[2], tp[1]]);
-        var segs = Math.max(1, Math.round(Math.hypot(b0[0] - a0[0], b0[1] - a0[1]) / (K * 1.7)));
+        // (the Warren's raw rock has no panel joints: it is roughened over in its own drawing)
+        var segs = o[3] === 7 ? 1 : Math.max(1, Math.round(Math.hypot(b0[0] - a0[0], b0[1] - a0[1]) / (K * 1.7)));
         for (var si = 1; si < segs; si++) { var sq = lerp2(a0, b0, si / segs); edgeLine(g, [sq[0], sq[1] - hgt + 1], [sq[0], sq[1] - 1], tp[o[0] === 'S' ? 3 : 1], 1); }
         edgeLine(g, [a0[0], a0[1] - 1], [b0[0], b0[1] - 1], tp[0], 1);      // the skirting, where it meets the floor
       });

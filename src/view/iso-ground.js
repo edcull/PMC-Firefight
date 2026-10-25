@@ -187,7 +187,9 @@
       // a brood chamber (the Hive Heart): the floor gone under the hive's resin, dark and wet
       { ramp: ['#2a1a26', '#33202e', '#3c2636', '#462c3e', '#503346'], fleck: ['#1a0f18', '#6a3a5a', '#7a6a3a', '#3a5a3a'], rim: '#160c14' },
       // the Warren: worked stone worn smooth, grit and the odd fleck lit green by the radiation in the rock
-      { ramp: ['#2b2621', '#322c26', '#39322b', '#403830', '#473f36'], fleck: ['#1c1814', '#5e5446', '#4f8a5a', '#6a5a44'], rim: '#16120f' }
+      { ramp: ['#2b2621', '#322c26', '#39322b', '#403830', '#473f36'], fleck: ['#1c1814', '#5e5446', '#4f8a5a', '#6a5a44'], rim: '#16120f' },
+      // its hoard chamber: the same stone, swept, a shade paler
+      { ramp: ['#332d27', '#3a332c', '#413a32', '#484037', '#4f473d'], fleck: ['#221d18', '#6a604f', '#5a8a64'], rim: '#1a1612' }
     ];
     function roomTheme(r) {
       var t = root.PMCCompound ? root.PMCCompound.roomTheme(r) : null;
@@ -372,6 +374,7 @@
       /* A settlement's paved roads are one surface: where one piece meets
          another, neither draws its lip, so the joins don't show as lines. */
       var paved = terrain.filter(function (q) { return q.kind === 'road' && q.paved; });
+      var warrenFloors = terrain.filter(function (q) { return q.warren; });
       function floorOf1(r, ri, rows) {
         if (r.kind === 'hill') return;
         // a pipeline stands on its trestles over the ground as it is: no dug-in lip under it
@@ -382,6 +385,8 @@
         if (r.kind === 'bulkhead' && r.space) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         var spec = roomTheme(r) || skinFloor(r) || floorOf(r.kind);
         if (r.kind === 'road' && r.paved && paved.length > 1) spec = Object.assign({}, spec, { joins: paved.filter(function (q) { return q !== r; }) });
+        // ...and the Warren's tunnels and chambers are one floor of rock: no lip where one section meets the next
+        if (r.warren) spec = Object.assign({}, spec, { joins: warrenFloors.filter(function (q) { return q !== r; }) });
         if (FLOOR[r.kind]) paintFloor(d, r, spec, seed + ri * 131, lat, fN, fD, 0, null, null, rows);
       }
       // the rows a piece's floor can paint, in bands of a few dozen: a step of a sliced bake each
