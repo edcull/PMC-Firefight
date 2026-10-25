@@ -364,6 +364,24 @@
             props.push({ kind: 'piperun', x: phz ? r.x + pm : r.x + r.w / 2, y: phz ? r.y + r.h / 2 : r.y + pm, horiz: phz, len: psl,
               first: ps2 === 0, last: ps2 === pn - 1, seed: (rand() * 9999) | 0 });
           }
+          /* A fuel line (`feed`: the end towards its ship): from that end of the
+             run up over a station ring's hull and out beside the docking clamp's
+             bridge to the nearest docked ship's flank. Drawn only. */
+          var feedRing = r.feed && terrain.filter(function (q) { return q.ring; })[0];
+          if (feedRing) {
+            var sx = r.feed === 'west' ? r.x : r.x + r.w, sy = r.y + r.h / 2;
+            var ship = terrain.filter(function (q) { return q.kind === 'shuttle' && q.docked; })
+              .sort(function (m, n) { return Math.hypot(m.x + m.w / 2 - sx, m.y - sy) - Math.hypot(n.x + n.w / 2 - sx, n.y - sy); })[0];
+            if (ship) {
+              var rg3 = feedRing.ring, fh = (ship.clamps || [0.66])[0];
+              // beside the bridge: its far side from the deck, offset along the ship 1.4" towards where the pipe comes from
+              var side = sx < ship.x + ship.w * fh ? -1 : 1;
+              var shx = ship.x + ship.w * fh + side * 1.4, shy = ship.y + ship.h / 2 + 1.1;
+              var ddx = shx - rg3.cx, ddy = shy - rg3.cy, ddl = Math.hypot(ddx, ddy);
+              var hx3 = rg3.cx + ddx / ddl * rg3.r, hy3 = rg3.cy + ddy / ddl * rg3.r;
+              props.push({ kind: 'fuelline', x: sx, y: sy, pts: [[sx, sy, 0], [hx3 - ddx / ddl * 0.6, hy3 - ddy / ddl * 0.6, 0], [hx3, hy3, a(15.5)], [shx, shy, a(13)]], seed: (rand() * 9999) | 0 });
+            }
+          }
           return;
         }
         if (r.kind === 'woods') {
@@ -930,7 +948,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, outcrop: 0.25, dockclamp: 0.6, hullseg: 0.6, hulldoor: 0.4, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
+      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, outcrop: 0.25, fuelline: 0.3, dockclamp: 0.6, hullseg: 0.6, hulldoor: 0.4, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];
