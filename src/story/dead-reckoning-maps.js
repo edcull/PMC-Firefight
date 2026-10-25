@@ -33,15 +33,15 @@
   // a station's steel deck plate: a floor like a slab, drawn in plates
   function DECK(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, deck: true, fixed: true }; }
   // open space beyond a station's hull (solid to the rules, drawn black), and the hull itself (a reinforced high wall)
-  /* Open space beyond a station ring's curved hull, round the table's north-east
-     corner: the outside of a circle (centre cx, cy, radius r) from where it
-     crosses the north edge to where it crosses the east edge. Solid to the
-     rules, drawn black; its `ring` lets the hull be drawn along the curve and
-     the docking clamps run out to it. */
+  /* Open space beyond a station ring's curved hull, along the table's north
+     edge: the outside of a circle (centre cx, cy, radius r, the centre well
+     south of the table) between where it meets the west and east edges.
+     Solid to the rules, drawn black; its `ring` lets the hull be drawn along
+     the curve and the docking clamps run out to it. */
   function RINGSPACE(cx, cy, r) {
-    var x0 = cx + Math.sqrt(r * r - cy * cy), y1 = cy - Math.sqrt(r * r - (48 - cx) * (48 - cx));
-    var a0 = Math.atan2(0 - cy, x0 - cx), a1 = Math.atan2(y1 - cy, 48 - cx), pts = [];
-    for (var k = 0; k <= 24; k++) { var t = a0 + (a1 - a0) * k / 24; pts.push([+(cx + r * Math.cos(t)).toFixed(2), +(cy + r * Math.sin(t)).toFixed(2)]); }
+    var yw = cy - Math.sqrt(r * r - cx * cx), ye = cy - Math.sqrt(r * r - (48 - cx) * (48 - cx));
+    var a0 = Math.atan2(yw - cy, 0 - cx), a1 = Math.atan2(ye - cy, 48 - cx), pts = [[0, 0]];
+    for (var k = 0; k <= 32; k++) { var t = a0 + (a1 - a0) * k / 32; pts.push([+(cx + r * Math.cos(t)).toFixed(2), +(cy + r * Math.sin(t)).toFixed(2)]); }
     pts.push([48, 0]);
     var sp = SHAPE('bulkhead', pts);
     sp.space = true; sp.ring = { cx: cx, cy: cy, r: r, a0: a0, a1: a1 };
@@ -318,26 +318,28 @@
 
     /* The docking ring of Kerrigan's orbital, as the briefing has it: cranes,
        cargo stacks and open deck, inside the ring's hull. The hull is the
-       ring's own curve, cutting off just the north-east corner (from the north
-       edge 24" in to the east edge 26" down), and beyond it open space, black,
-       that nothing enters: room for the two ships docked out there, stacked in
-       the corner, the Ninth Lance's and the company's, each held by clamps run
-       out to it from the hull (the upper one by one, at its inboard end, so it
-       crosses nothing). Gantry cranes inside the hull, their booms out over
-       it. Inside, steel deck plate; rows of cargo stacks with lanes between
-       them, lifters working them; the deck open across the middle, blast
-       barriers on it; the dock offices and the traffic tower along the south.
-       Heavy spin gravity (the chapter's). */
+       ring's own curve, gentle and the same both ways, along the north: it
+       bows up nearly to the north edge in the middle (4" from it) and comes
+       down to meet the west and east edges 10.5" down, the least open space
+       beyond it that holds a ship docked in each corner with room for its
+       clamps; the deck takes the rest, and both sides keep the same 37.5" of
+       their edges to come on by. Beyond the hull open space, black, that
+       nothing enters: the two ships, the Ninth Lance's and the company's,
+       each held by clamps run out to it from the hull, a gantry crane inside
+       the hull by each, its boom out over it. Inside, steel deck plate; rows
+       of cargo stacks with lanes between them, lifters working them; the deck
+       open across the middle, blast barriers on it; the dock offices and the
+       traffic tower along the south. Heavy spin gravity (the chapter's). */
     dockring: {
       name: 'The docking ring, Kerrigan orbital', planet: 'industrial',
       pieces: [
         DECK(0, 0, 48, 48),
         // open space beyond the ring's hull, and the ships docked out in it
-        RINGSPACE(-2.35, 48.63, 55.39),
-        DOCKED(39.5, 0.3, 8, 4.5, [0.12]), DOCKED(39.5, 5.6, 8, 4.5),
-        R('crane', 29, 7, 3, 2.4), R('crane', 37, 13.5, 3, 2.4), Object.assign(R('fueltruck', 14, 10.4, 2.8, 1.4), { facing: Math.PI }),
+        RINGSPACE(24, 50, 46.22),
+        DOCKED(0.4, 0.4, 8, 4.5), DOCKED(39.6, 0.4, 8, 4.5),
+        R('crane', 9, 9, 3, 2.4), R('crane', 36, 9, 3, 2.4), Object.assign(R('fueltruck', 14, 10.4, 2.8, 1.4), { facing: Math.PI }),
         // the cargo, in rows, lanes between
-        CG(22.5, 3.5, 5, 4), CG(6, 14, 5, 4), CG(14, 14, 5, 4), CG(24, 13, 5, 4),
+        CG(21.5, 5.5, 5, 4), CG(6, 14, 5, 4), CG(14, 14, 5, 4), CG(24, 13, 5, 4),
         CG(9, 22, 4, 5), CG(35, 22, 4, 5),
         CG(6, 31, 5, 4), CG(14, 31, 5, 4), CG(29, 31, 5, 4), CG(37, 31, 5, 4),
         Object.assign(R('cargolifter', 20.5, 15, 2.5, 2.5), { facing: Math.PI }), Object.assign(R('cargolifter', 25.5, 32, 2.5, 2.5), { facing: 0 }),

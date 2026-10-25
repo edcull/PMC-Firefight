@@ -272,9 +272,10 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
   /* The Double-Cross on the orbital's docking ring, as its briefing has it: cranes, cargo stacks and open deck. */
   const ps = MAPS.dockring.pieces;
   const sp = ps.find((p) => p.space && p.ring), rg = sp && sp.ring, outside = (x, y) => Math.hypot(x - rg.cx, y - rg.cy) >= rg.r;
-  ok('...the ring’s hull a curve across the north-east corner, open space beyond it that nothing enters, the two ships docked out there',
-    !!sp && sp.kind === 'bulkhead' && R.TERRAIN.bulkhead.impassable && R.inPoly(47, 1, sp.poly) && !R.inPoly(24, 24, sp.poly) && !R.inPoly(47, 40, sp.poly) &&
-    ps.filter((p) => p.kind === 'shuttle' && p.docked).length === 2 &&
+  ok('...the ring’s hull a gentle curve along the north, the same both ways, open space beyond it that nothing enters, a ship docked in each corner',
+    !!sp && sp.kind === 'bulkhead' && R.TERRAIN.bulkhead.impassable && R.inPoly(47, 1, sp.poly) && R.inPoly(1, 1, sp.poly) && !R.inPoly(24, 24, sp.poly) && !R.inPoly(47, 40, sp.poly) &&
+    rg.cx === 24 && !R.inPoly(24, 6, sp.poly) &&
+    ps.filter((p) => p.kind === 'shuttle' && p.docked).length === 2 && ps.some((p) => p.kind === 'shuttle' && p.x < 4) && ps.some((p) => p.kind === 'shuttle' && p.x + p.w > 44) &&
     ps.filter((p) => p.kind === 'shuttle').every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => outside(c[0], c[1]))) &&
     ps.filter((p) => p.kind !== 'shuttle' && !p.space && !p.deck).every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => !outside(c[0], c[1]))));
   ok('the docking ring: steel deck inside the hull, a gantry crane by each ship, rows of cargo, open deck across the middle',
