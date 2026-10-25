@@ -810,6 +810,17 @@
         // a station's deck: its plates' seams and bolts, laid flat
         if (r.kind === 'road' && r.deck) { props.push({ kind: 'deckplate', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'road' && r.pad) { props.push({ kind: 'padmark', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
+        /* A ring of connected buildings round a tower (a map's `hub`): its
+           pieces drawn as one, a round drum and the tower out of its middle,
+           from the first of them; the rest draw nothing of their own. */
+        if (r.hub) {
+          if (r.hub.drawn) return;
+          r.hub.drawn = true;
+          var hb = r.hub;
+          props.push({ kind: 'hubring', x: hb.cx - hb.r1, y: hb.cy - hb.r1, w: hb.r1 * 2, h: hb.r1 * 2, cx: hb.cx, cy: hb.cy, r0: hb.r0, r1: hb.r1,
+            height: a(9), tower: a(26), seed: (rr2() * 9999) | 0 });
+          return;
+        }
         if (r.kind === 'shuttle') {
           props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), docked: !!r.docked, seed: (rr2() * 9999) | 0 });
           /* A ship docked outside a station ring's hull: its docking clamp, a
@@ -915,7 +926,7 @@
          the end of a long building can have its middle nearer the viewer and still
          stand wholly behind it. A block that lies entirely behind another along
          either axis is drawn first — put right, pass by pass, among the tall ones. */
-      var BOX = { building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, crane: 1, fueltanks: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
+      var BOX = { hubring: 1, building: 1, bunker: 1, highwall: 1, objective: 1, pumphouse: 1, fountain: 1, shuttle: 1, fueltruck: 1, cargolifter: 1, tent: 1, commsmast: 1, crane: 1, fueltanks: 1, solarmount: 1, bulkhead: 1, door: 1, crates: 1, machinery: 1 };
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */

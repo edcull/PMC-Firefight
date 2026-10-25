@@ -68,6 +68,21 @@
     var at = function (x) { return Math.atan2(-Math.sqrt(rm * rm - (x - cx) * (x - cx)), x - cx); };
     return spans.map(function (sp) { return ANNULUS(cx, cy, r0, r1, at(sp[0]), at(sp[1])); });
   }
+  /* A ring of connected buildings round a tall tower (a station's traffic
+     control): to the rules a reinforced building in the middle, the tower,
+     and four buildings close round it laid as a pinwheel, the ring; drawn as
+     one round drum with the tower standing out of it (`hub`). Centre cx, cy,
+     the ring's outer radius R, the tower's half-width t. */
+  function HUB(cx, cy, R, t) {
+    var hub = { cx: cx, cy: cy, r1: R, r0: t + 0.2 }, x0 = cx - R, x1 = cx + R, y0 = cy - R, y1 = cy + R;
+    var ix0 = cx - t - 0.2, ix1 = cx + t + 0.2, iy0 = cy - t - 0.2, iy1 = cy + t + 0.2;
+    var seg = function (x, y, w, h) { return { kind: 'building', x: x, y: y, w: w, h: h, plan: 'block', fixed: true, hub: hub }; };
+    // the ring as a pinwheel round the tower: north, east, south and west, each to the next's corner
+    return [
+      seg(x0, y0, ix1 - x0, iy0 - y0), seg(ix1, y0, x1 - ix1, iy1 - y0), seg(ix0, iy1, x1 - ix0, y1 - iy1), seg(x0, iy0, ix0 - x0, y1 - iy0),
+      { kind: 'bunker', x: ix0, y: iy0, w: ix1 - ix0, h: iy1 - iy0, fixed: true, hub: hub, tower: true }
+    ];
+  }
   /* A ship docked outside the ring: laid by its own outline (its box) over the
      space, its boarding bridge clamped on where along it `clamps` says (a
      fraction of its length: 0.66, its side hatch), a bulkhead door in the
@@ -352,8 +367,9 @@
        either side of them and between, the three broad spokes that join the
        rings, spoke, space, spoke, space, spoke. Inside, the inner ring: rows
        of cargo stacks with lanes between, a lifter working them, the deck
-       open across the middle with a blast barrier on it, the dock offices
-       and the traffic tower along the south. No gantry cranes: those are a sea
+       open across the middle with a blast barrier on it, and along the south
+       the dock offices and between them the traffic control, a ring of
+       connected buildings round a tall reinforced tower. No gantry cranes: those are a sea
        port's. Heavy spin gravity (the chapter's). */
     dockring: {
       name: 'The docking ring, Kerrigan orbital', planet: 'industrial',
@@ -373,12 +389,12 @@
         // the spokes: cargo on them
         CG(4.2, 25, 3, 3), CG(40.8, 25, 3, 3), CG(21, 22, 6, 3),
         // the inner ring: cargo in rows, lanes between, a lifter, a blast barrier
-        CG(6.5, 32, 5, 4), CG(14, 33, 5, 4), CG(29, 33, 5, 4), CG(36.5, 32, 5, 4),
+        CG(6.5, 32, 5, 4), CG(12.5, 33, 5, 4), CG(30.5, 33, 5, 4), CG(36.5, 32, 5, 4),
         Object.assign(R('cargolifter', 25.5, 32, 2.5, 2.5), { facing: 0 }),
         Object.assign(R('barricade', 21, 28.5, 4, 1), { shield: true, blast: true }),
-        // the dock offices and the traffic tower
-        B(7, 39, 7, 5, 'L'), B(21, 39, 5, 5, 'tower'), B(33, 39, 7, 5, 'block')
-      ])
+        // the dock offices, and between them the traffic control: a ring of buildings round a tower
+        B(7, 39, 7, 5, 'L'), B(33, 39, 7, 5, 'block')
+      ]).concat(HUB(24, 41, 5.5, 2.4))
     },
 
     /* ================= the second half ================= */

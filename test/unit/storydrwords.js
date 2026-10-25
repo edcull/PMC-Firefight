@@ -288,7 +288,9 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
   ok('the docking ring: steel deck inside the hull, no gantry cranes (a sea port’s), the shuttle the other maps have, rows of cargo, open deck across the middle',
     ps.some((p) => p.deck && p.x === 0 && p.y === 0 && p.w === 48 && p.h === 48) && R.terrainName(null, 'road', ps.find((p) => p.deck)) === 'Deck' &&
     !ps.some((p) => p.kind === 'crane') && ps.filter((p) => p.kind === 'shuttle').every((p) => p.w === 10) && ps.filter((p) => p.kind === 'crater' && p.cargo).length >= 8 && !ps.some((p) => p.kind === 'ruins') &&
-    ps.filter((p) => p.kind !== 'road' && !p.space).every((p) => !overlap(p, { x: 19.2, y: 33.5, w: 6, h: 5 })));
+    ps.filter((p) => p.kind !== 'road' && !p.space).every((p) => !overlap(p, { x: 19.5, y: 30, w: 5.5, h: 2.5 })) &&
+    // and the traffic control: a reinforced tower in a ring of buildings, drawn as one
+    ps.filter((p) => p.hub).length === 5 && ps.some((p) => p.hub && p.kind === 'bunker' && p.tower) && ps.filter((p) => p.hub && p.kind === 'building').length === 4);
 }
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {

@@ -118,7 +118,7 @@
       var TW = new Float32Array(cw * ch), TR = new Float32Array(cw * ch), TG = new Float32Array(cw * ch), TB = new Float32Array(cw * ch);
       terrain.forEach(function (r) {
         // (a market's crater field is paving, not churned earth: it pulls nothing round it)
-        var f = r.market || r.cargo || r.camp || r.pipe || r.blast || r.space ? null : FIT[r.kind];
+        var f = r.market || r.cargo || r.camp || r.pipe || r.blast || r.space || r.hub ? null : FIT[r.kind];
         if (!f) return;
         var i0 = Math.max(0, Math.floor((r.x - f.r) / STEP)), i1 = Math.min(cw - 1, Math.ceil((r.x + r.w + f.r) / STEP));
         var j0 = Math.max(0, Math.floor((r.y - f.r) / STEP)), j1 = Math.min(ch - 1, Math.ceil((r.y + r.h + f.r) / STEP));
@@ -382,6 +382,8 @@
         if (r.kind === 'hill') return;
         // a pipeline stands on its trestles over the ground as it is, a blast barrier on a station's deck: no dug-in lip under either
         if (r.pipe || r.blast) return;
+        // ...nor under a ring of buildings drawn round (a map's `hub`): its squared pieces would show at the corners
+        if (r.hub) return;
         // ...and a ship docked outside a station floats over open space: black under it, as round it
         if (r.docked) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         // a drowned beacon's possible locations stand on the ground as it is, their own pieces drawn over it

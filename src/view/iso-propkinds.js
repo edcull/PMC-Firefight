@@ -1783,6 +1783,49 @@
           }
           break;
         }
+        /* A ring of connected buildings round a tower: a round drum, its outer
+           wall in panels with a lit window in each, the seams between the
+           buildings, a flat roof round the hole; the tower a taller drum out of
+           the middle, reinforced (banded at its foot, slit windows), a dish and
+           a mast on top, a beacon. */
+        case 'hubring': {
+          var hl = lift || 0, HC = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - hl - z]; };
+          var NS = 36, pt = function (r, k, z) { var t = k / NS * Math.PI * 2; return HC(pr.cx + Math.cos(t) * r, pr.cy + Math.sin(t) * r, z); };
+          var facing = function (k) { var t = (k + 0.5) / NS * Math.PI * 2; return Math.cos(t) + Math.sin(t); };
+          var WALLC = ['#2a3034', '#3a4248', '#4c565e', '#5e6a74', '#74818a', '#9aa6ae'];
+          var drum = function (r, z0, z1, pal, windows, bands) {
+            // the walls that face the viewer, each strip shaded by which way it faces
+            for (var k = 0; k < NS; k++) {
+              var f = facing(k); if (f <= -0.2) continue;
+              var ang = (k + 0.5) / NS * Math.PI * 2, lit = 0.5 + 0.5 * Math.cos(ang - 2.3);
+              poly(g, [pt(r, k, z0), pt(r, k + 1, z0), pt(r, k + 1, z1), pt(r, k, z1)], pal[Math.max(1, Math.min(4, Math.round(1 + lit * 3)))]);
+              if (windows && k % 2 === 0) { var w0 = pt(r, k + 0.5, z0 + (z1 - z0) * 0.55); rect(g, w0[0] - 2, w0[1] - 2, 4, 3, windows); }
+              if (bands) { var b0 = pt(r, k, z0 + (z1 - z0) * 0.12), b1 = pt(r, k + 1, z0 + (z1 - z0) * 0.12); edgeLine(g, b0, b1, k % 2 ? '#1b1a17' : '#c9a23c', 2); }
+            }
+          };
+          shadowBlob(g, (function () { var q = HC(pr.cx, pr.cy, 0); return { x: q[0] + a(3), y: q[1] + a(1.5) }; })(), a(pr.r1 * 6), a(pr.r1 * 3));
+          // the ring: its outer wall, the seams between its buildings, its roof round the hole
+          drum(pr.r1, 0, pr.height, PREFAB, '#ffd88a', false);
+          for (var sk = 0; sk < NS; sk += 6) if (facing(sk) > -0.2) edgeLine(g, pt(pr.r1, sk, 1), pt(pr.r1, sk, pr.height - 1), PREFAB[0], 2);
+          g.beginPath();
+          for (var k1 = 0; k1 <= NS; k1++) { var o1 = pt(pr.r1, k1, pr.height); if (k1) g.lineTo(o1[0], o1[1]); else g.moveTo(o1[0], o1[1]); }
+          for (var k2 = NS; k2 >= 0; k2--) { var o2 = pt(pr.r0, k2, pr.height); g.lineTo(o2[0], o2[1]); }
+          g.closePath(); g.fillStyle = PREFAB[4]; g.fill();
+          for (var sr2 = 0; sr2 < NS; sr2 += 6) edgeLine(g, pt(pr.r0, sr2, pr.height), pt(pr.r1, sr2, pr.height), PREFAB[2], 1);
+          for (var k3 = 0; k3 < NS; k3++) edgeLine(g, pt(pr.r1, k3, pr.height), pt(pr.r1, k3 + 1, pr.height), PREFAB[5], 1);
+          // the tower out of the middle, reinforced, and what stands on it
+          var tr = pr.r0 - 0.2;
+          drum(tr, pr.height * 0.6, pr.tower, WALLC, null, false);
+          for (var sl = 0; sl < NS; sl += 3) { if (facing(sl) <= 0) continue; var s0 = pt(tr, sl + 1, pr.tower * 0.82); rect(g, s0[0] - 2, s0[1] - 1, 4, 2, '#9fd2e0'); }
+          for (var bk = 0; bk < NS; bk++) if (facing(bk) > -0.2) edgeLine(g, pt(tr, bk, pr.height + a(1)), pt(tr, bk + 1, pr.height + a(1)), bk % 2 ? '#1b1a17' : '#c9a23c', 2);
+          var top = []; for (var k4 = 0; k4 < NS; k4++) top.push(pt(tr, k4, pr.tower));
+          poly(g, top, WALLC[4]);
+          var tc = HC(pr.cx, pr.cy, pr.tower);
+          edgeLine(g, tc, [tc[0], tc[1] - a(12)], '#2a2e32', 2);
+          ellipse(g, tc[0] + a(3), tc[1] - a(4), a(2.4), a(3), '#c8cdd2'); ellipse(g, tc[0] + a(3.3), tc[1] - a(4), a(1.5), a(2), '#9aa2aa');
+          dot(g, tc[0] - 1, tc[1] - a(12) - 2, '#ff4a3a', 4);
+          break;
+        }
         /* A docking clamp: a great enclosed bridge from a station ring's hull,
            at the height of the bulkhead door behind it, climbing over open
            space to a docked ship's side hatch, its sides ribbed, a row of lit ports
