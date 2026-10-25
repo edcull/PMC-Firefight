@@ -1660,6 +1660,37 @@
             /* The Warren's rock: cut smooth on its faces, its top the raw rock,
                veined here and there with the green of what is in it. */
             box(g, pr, ROCKWALL, { roof: '#211d19', roofEdge: '#5d5042', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
+            /* Where the Reavers have been firing at the walls: on the faces that look
+               onto a floor, scorched blotches with a pale chipped heart, pocked
+               round with shot, and now and then a blast's spray of soot up the rock. */
+            if (!cutaway) {
+              var sr8 = rng(pr.seed + 41), sl8 = lift || 0;
+              (pr.open || []).forEach(function (o) {
+                if ((o[0] !== 'S' && o[0] !== 'E') || o[3] == null || o[3] < 0) return;
+                var len8 = o[2] - o[1], n8 = Math.floor(len8 / 3 + sr8());
+                var FP8 = function (t, z) { var q = o[0] === 'S' ? toScreen(t, pr.y + pr.h) : toScreen(pr.x + pr.w, t); return [q.x, q.y - sl8 - z]; };
+                for (var k8 = 0; k8 < n8; k8++) {
+                  var t8 = o[1] + 0.4 + sr8() * Math.max(0, len8 - 0.8), z8 = pr.height * (0.25 + sr8() * 0.5), c8 = FP8(t8, z8);
+                  var big8 = sr8() < 0.3, rx8 = a(big8 ? 1.5 : 0.9), ry8 = a(big8 ? 1.2 : 0.7);
+                  // the soot: ragged, built of overlapping smudges, rising up the rock above the hit
+                  for (var u8 = 0; u8 < (big8 ? 14 : 8); u8++) {
+                    var ua8 = sr8() * Math.PI * 2, ud8 = Math.sqrt(sr8()), rise8 = sr8() * sr8() * (big8 ? 2.6 : 1.6);
+                    var ux8 = c8[0] + Math.cos(ua8) * rx8 * ud8, uy8 = c8[1] + Math.sin(ua8) * ry8 * ud8 - rise8 * ry8;
+                    ellipse(g, ux8, uy8, rx8 * (0.25 + sr8() * 0.35), ry8 * (0.25 + sr8() * 0.35), 'rgba(8,6,4,' + (0.3 + sr8() * 0.25).toFixed(2) + ')');
+                  }
+                  // the hit itself: a dark pit, the rock chipped pale round its lip
+                  ellipse(g, c8[0], c8[1], rx8 * 0.3, ry8 * 0.3, 'rgba(4,3,2,.75)');
+                  for (var h8 = 0; h8 < 4; h8++) {
+                    var ha8 = sr8() * Math.PI * 2;
+                    dot(g, c8[0] + Math.cos(ha8) * rx8 * 0.4, c8[1] + Math.sin(ha8) * ry8 * 0.4, '#8a7a64', 1);
+                  }
+                  for (var p8 = 0; p8 < (big8 ? 7 : 3); p8++) {                            // stray shot round it
+                    var pa8 = sr8() * Math.PI * 2, pd8 = (1.1 + sr8() * 1.2) * rx8;
+                    dot(g, c8[0] + Math.cos(pa8) * pd8, c8[1] + Math.sin(pa8) * pd8 * 0.8, sr8() < 0.6 ? '#14110e' : '#7a6c58', 1 + (sr8() < 0.3 ? 1 : 0));
+                  }
+                }
+              });
+            }
             if (!cutaway && !pr.thin && pr.w * pr.h > 2) {
               var vr = rng(pr.seed + 17), vl = lift || 0, nv = vr() < 0.5 ? 0 : Math.min(3, Math.round(pr.w * pr.h / 40) + 1);
               var VT = function (x, y) { var q = toScreen(x, y); return [q.x, q.y - vl - pr.height]; };
