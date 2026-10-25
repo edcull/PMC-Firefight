@@ -717,7 +717,27 @@
           if (wallSet && wallSet.laid) return;          // the whole shape went down with the first wall
           wallPieces().laid = true;
           wallSet.pieces.forEach(function (q, n) {
-            props.push({ kind: 'bulkhead', x: q.x, y: q.y, w: q.w, h: q.h, height: a(BULK_H), thin: Math.min(q.w, q.h) < 0.5, open: openEdges(q), rock: rocky, seed: (seed * 31 + n * 7919) % 9999 });
+            var oe = openEdges(q);
+            props.push({ kind: 'bulkhead', x: q.x, y: q.y, w: q.w, h: q.h, height: a(BULK_H), thin: Math.min(q.w, q.h) < 0.5, open: oe, rock: rocky, seed: (seed * 31 + n * 7919) % 9999 });
+            /* The Warren's rock (not its hoard chamber's worked walls): outcrops
+               bulging from the face along every tunnel and chamber, shallow and
+               deep, low and full height, so its edges wander as a cave's do.
+               Drawn only: the rules keep the wall where it is. */
+            if (rocky) {
+              var orr = rng(seed * 7 + n * 131 + 5);
+              oe.forEach(function (o) {
+                if (o[3] !== 7) return;
+                var out = o[0] === 'S' || o[0] === 'E' ? 1 : -1, alongX = o[0] === 'N' || o[0] === 'S';
+                var line = o[0] === 'N' ? q.y : o[0] === 'S' ? q.y + q.h : o[0] === 'W' ? q.x : q.x + q.w;
+                for (var ot = o[1] + 0.4 + orr() * 1.2; ot < o[2] - 0.5; ot += 1.1 + orr() * 1.8) {
+                  var ow = 0.6 + orr() * 1.3, od = 0.2 + orr() * 0.5, oh = a(BULK_H) * (0.45 + orr() * 0.55);
+                  var oc = Math.min(o[2] - ow / 2 - 0.1, ot + ow / 2);
+                  var ex = alongX ? oc : line, ey = alongX ? line : oc;
+                  props.push({ kind: 'outcrop', x: alongX ? ex : ex + out * od * 0.5, y: alongX ? ey + out * od * 0.5 : ey,
+                    ex: ex, ey: ey, side: o[0], len: ow, jut: od, height: oh, seed: (orr() * 9999) | 0 });
+                }
+              });
+            }
           });
           return;
         }
@@ -836,7 +856,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
+      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, outcrop: 0.25, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];

@@ -1728,14 +1728,65 @@
           box(g, pr, BULK, { roof: '#2b3034', roofEdge: '#59626a', windows: null, lift: lift || 0, cutaway: !!cutaway, solid: true });
           break;
         }
+        /* An outcrop of the Warren's rock bulging from a wall face: a lump of
+           rock half in the wall, its outline irregular, its sides shaded by the
+           way they face, its top broken and dark. */
+        case 'outcrop': {
+          var ol = lift || 0, orx = rng(pr.seed), alongX2 = pr.side === 'N' || pr.side === 'S', osg = pr.side === 'S' || pr.side === 'E' ? 1 : -1;
+          var OP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - ol - z]; };
+          // the outline: an ellipse about the wall's line, half of it buried in the wall, its edge jittered
+          var NPT = 9, base = [], topP = [];
+          for (var oi = 0; oi < NPT; oi++) {
+            var th = oi / (NPT - 1) * Math.PI, jr = 0.8 + orx() * 0.35;
+            var u = -Math.cos(th) * pr.len / 2 * jr, v = Math.sin(th) * pr.jut * jr;
+            var bx = alongX2 ? pr.ex + u : pr.ex + osg * v, by = alongX2 ? pr.ey + osg * v : pr.ey + u;
+            base.push([bx, by]);
+            var sh2 = 0.7 + orx() * 0.2;
+            topP.push([pr.ex + (bx - pr.ex) * sh2, pr.ey + (by - pr.ey) * sh2, pr.height * (0.85 + orx() * 0.15)]);
+          }
+          // the sides, the ones facing away first: each strip shaded by which way it faces
+          var strips = [];
+          for (var si2 = 0; si2 < NPT - 1; si2++) {
+            var mx = (base[si2][0] + base[si2 + 1][0]) / 2 - pr.ex, my = (base[si2][1] + base[si2 + 1][1]) / 2 - pr.ey;
+            strips.push({ i: si2, d: mx + my, nx: mx, ny: my });
+          }
+          strips.sort(function (m, n) { return m.d - n.d; });
+          strips.forEach(function (st) {
+            var b0 = base[st.i], b1 = base[st.i + 1], t0 = topP[st.i], t1 = topP[st.i + 1];
+            var ang = Math.atan2(st.ny, st.nx), litv = 0.5 + 0.5 * Math.cos(ang - 2.3);
+            var col = ROCKWALL[Math.max(1, Math.min(4, Math.round(1 + litv * 3)))];
+            poly(g, [OP(b0[0], b0[1], 0), OP(b1[0], b1[1], 0), OP(t1[0], t1[1], t1[2]), OP(t0[0], t0[1], t0[2])], col);
+          });
+          // the top, broken and dark, with a lit lip on its near edge
+          poly(g, topP.map(function (t) { return OP(t[0], t[1], t[2]); }), '#2a241f');
+          for (var ti = 0; ti < NPT - 1; ti++) {
+            var tm = (topP[ti][0] + topP[ti + 1][0]) / 2 - pr.ex + (topP[ti][1] + topP[ti + 1][1]) / 2 - pr.ey;
+            if (tm > 0) edgeLine(g, OP(topP[ti][0], topP[ti][1], topP[ti][2]), OP(topP[ti + 1][0], topP[ti + 1][1], topP[ti + 1][2]), ROCKWALL[4], 1);
+          }
+          break;
+        }
         /* A relic in the Warren's hoard: a stone plinth, and on it an orb, a
            shard or a tablet, lit from inside, in rows the way a library keeps
-           its books. */
+           its books. Some plinths stand empty; on some the crystal lies shattered. */
         case 'relic': {
           var rl = lift || 0, rr7 = rng(pr.seed);
           var RP = function (x, y, z) { var q = toScreen(x, y); return [q.x, q.y - rl - z]; };
           box(g, { x: pr.x - 0.3, y: pr.y - 0.3, w: 0.6, h: 0.6, height: a(2), seed: pr.seed }, ROCKWALL, { roof: ROCKWALL[4], roofEdge: ROCKWALL[5], windows: null, lift: rl });
           var top = RP(pr.x, pr.y, a(2)), glow = pr.tone < 0.4 ? ['#7dffd0', 'rgba(90,255,200,.25)'] : pr.tone < 0.75 ? ['#ffd27a', 'rgba(255,200,110,.25)'] : ['#b9a0ff', 'rgba(170,140,255,.25)'];
+          // not every plinth still holds its relic: some stand empty, some hold a crystal shattered where it stood
+          var state = rr7();
+          if (state < 0.25) { edgeLine(g, [top[0] - a(0.4), top[1] - a(0.1)], [top[0] + a(0.4), top[1] - a(0.1)], 'rgba(10,8,6,.5)', 1); break; }
+          if (state < 0.45) {
+            // shards on the plinth's top and the floor at its foot, their light nearly gone
+            for (var sh7 = 0; sh7 < 6; sh7++) {
+              var onTop = sh7 < 3, sx7 = (rr7() - 0.5) * (onTop ? 0.5 : 1.4), sy7 = (rr7() - 0.5) * (onTop ? 0.5 : 1.4);
+              var sp7 = onTop ? RP(pr.x + sx7, pr.y + sy7, a(2)) : RP(pr.x + sx7 + 0.2, pr.y + sy7 + 0.4, 0), ss7 = a(0.25 + rr7() * 0.35);
+              poly(g, [[sp7[0], sp7[1] - ss7 * 1.6], [sp7[0] + ss7 * 0.6, sp7[1]], [sp7[0] - ss7 * 0.6, sp7[1]]], glow[0]);
+              poly(g, [[sp7[0], sp7[1] - ss7 * 1.6], [sp7[0] + ss7 * 0.6, sp7[1]], [sp7[0] - ss7 * 0.6, sp7[1]]], 'rgba(20,16,12,.45)');
+            }
+            ellipse(g, top[0], top[1] - a(0.3), a(0.9), a(0.6), glow[1].replace('.25)', '.1)'));
+            break;
+          }
           ellipse(g, top[0], top[1] - a(1.2), a(1.6), a(1.4), glow[1]);
           var form = rr7();
           if (form < 0.4) { ellipse(g, top[0], top[1] - a(0.9), a(0.55), a(0.55), glow[0]); dot(g, top[0] - a(0.25), top[1] - a(1.2), '#ffffff', 2); }
