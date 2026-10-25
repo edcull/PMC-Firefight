@@ -39,7 +39,7 @@
         { who: 'vane', text: 'Because everyone else in that room has brought one. Lot 47 is a dead man’s log, {commander:rank}, and the dead man found something nobody else ever has.' },
         { who: 'reader', text: 'Elias Morrow. Surveyor. He wrote in dead reckoning: headings and burn times, no fixes. Without his stones it’s gibberish. With them, it’s a road.' },
         { who: 'commander', text: 'And the stones? Whose are they?' },
-        { who: 'reader', text: 'Nobody’s that we know of. That’s rather the point.' },
+        { who: 'reader', text: 'Nobody’s, now. He took them back out with him and put them down along the way, one at a time, and the log says where. That’s rather the point.' },
         { who: 'vane', text: 'A road to a world he called the Quiet. I want Halloran out of that room with the log, and alive. After that you follow the road, and whoever files the first claim at the end owns everything there. Shall we begin?' }
       ],
       'c1.agent': [
@@ -62,11 +62,12 @@
         { who: 'vane', text: 'Somebody will be at whichever one you don’t choose. Somebody may be at both. I pay for results, {commander:rank}, not for reasons.' },
         { who: 'commander', text: 'What’s at Thule?' },
         { who: 'reader', text: 'A survey relay. Morrow stopped there for three days. Nobody stops at a relay for three days unless something is wrong, or something is right.' },
-        { who: 'reader', text: 'And the Flats is where he dug. Mr Vane leaves it to you, {commander:rank}. You’re the one who has to dig.' }
+        { who: 'reader', text: 'And the Flats is where he dug. Whatever he buried, it’s still in the ground.' },
+        { who: 'vane', text: 'Your choice, {commander:rank}. You’re the one who has to dig.' }
       ],
       'c2f.dig': [
         { who: 'ops', text: 'Tents by the dig. A mast. No sentries I can see, which means they’re there and I can’t see them.' },
-        { who: 'nine', text: 'Company on the flats. This is Nine. We read your copy. We were here first, and we have the high ground and every approach covered.' },
+        { who: 'nine', text: 'Company on the flats. This is Nine, Wraith Section. We’ve read Morrow’s log too; copies get around. We were here first, and we have the high ground and every approach covered.' },
         { who: 'commander', text: 'The dig is Vane’s, Nine. Pack up and go home.' },
         { who: 'nine', text: 'Vane doesn’t pay us. Our client does, and our client wants what’s in that ground. Turn your dropships round and nobody on your side gets shot. Come any closer and we start with your officers.' }
       ],
@@ -104,7 +105,7 @@
         { who: 'kettering', if: { flag: 'beat_kettle' }, text: 'Kerrigan, {commander:rank}. My broker, my rules. And after Vesk, you’re the first name on my list: anyone starts shooting before the hammer falls, Brass Ledger finishes it. I’d very much like it to be you.' },
         { who: 'agathe', text: 'The heading is in my warehouse. My warehouse has my tanks in front of it. That is the whole of the auction.' },
         { who: 'commander', text: 'You bought the building to stop the sale?' },
-        { who: 'agathe', text: 'My client bought it, and my client pays me to keep it. You can buy a seat at the broker’s table at the broker’s price. Or you can try my front door, and I will put every one of your vehicles in the harbour. Choose before the tide turns.' }
+        { who: 'agathe', text: 'My client bought it, and my client pays me to keep it. You can buy the heading from the broker, at the broker’s price, and I will see it delivered. Or you can try my front door, and I will put every one of your vehicles in the harbour. Choose before the tide turns.' }
       ],
 
       // ---- Into the Warren ----
@@ -218,7 +219,8 @@
       'dx.brief': [
         { who: 'daw', text: 'Commander Iselin Daw, the Ninth Lance. You’ll have heard of us. You won’t have heard that we work for Lucan Vane, because he doesn’t tell people anything.' },
         { who: 'commander', text: 'He didn’t tell me.' },
-        { who: 'daw', text: 'No. He thought you’d stay bought. You haven’t, or he thinks you haven’t, which comes to the same thing on a court order.' },
+        { who: 'daw', if: { flag: 'chart_sold' }, text: 'No. He thought you’d stay bought. Then a copy of his chart turned up in Brass Ledger’s catalogue, and he knows who sold it and what it fetched.' },
+        { who: 'daw', if: { not: { flag: 'chart_sold' } }, text: 'No. He thought you’d stay bought. He has been adding up what you’ve cost him, and he’s decided you haven’t, which comes to the same thing on a court order.' },
         { who: 'commander', text: 'And if I hand you the log?' },
         { who: 'daw', text: 'Then you go home with your pay to date, and nobody on either deck gets hurt. Refuse, and I take it by force, at your expense. This is a contract dispute, {commander:rank}. I settle them for a living.' }
       ]
@@ -285,11 +287,11 @@
         start: [{ who: 'agathe', if: { flag: 'beat_sable' }, text: 'Sable Armour Group. You took my warehouse, {commander:rank}. I have been looking forward to this for some time.' }, { who: 'agathe', text: 'Sable Armour Group holds. Anything that crosses the line, destroy it.' }],
         kill: [{ who: 'agathe', if: { flag: 'beat_sable' }, text: 'Another hull. I will collect for Kerrigan and for this one together.' }, { who: 'agathe', text: 'A hull lost. It is insured; the ground is not. Close the gap. Nobody steps back.' }],
         loss: [{ who: 'agathe', if: { flag: 'beat_sable' }, text: 'That is one back for the warehouse.' }, { who: 'agathe', text: 'Target destroyed. Next one. They are paying for every metre of this.' }],
-        bhalf: [{ who: 'agathe', if: { flag: 'beat_sable' }, text: 'Hold! We did not hold at Kerrigan, and I will not have it said twice.' }, { who: 'agathe', text: 'We are not finished while one of us is standing in that warehouse.' }]
+        bhalf: [{ who: 'agathe', if: { flag: 'beat_sable' }, text: 'Hold! We did not hold at Kerrigan, and I will not have it said twice.' }, { who: 'agathe', text: 'We are not finished while one of us is still standing.' }]
       },
       scavengers: {
         start: [{ who: 'scav', text: 'Lights out, everyone. They don’t know the station. We do. Nobody takes our salvage.' }],
-        kill: [{ who: 'scav', text: 'They got Pell! Make them pay for Pell!' }],
+        kill: [{ who: 'scav', text: 'They got Dobbs! Make them pay for Dobbs!' }],
         bhalf: [{ who: 'scav', text: 'Grab what you can carry and get to the hatch!' }]
       },
       shkar: {
@@ -498,7 +500,7 @@
         ],
         kill: [{ who: 'kettering', text: 'You’re costing me money, {commander:rank}. I don’t forgive that. I invoice it.' }],
         turn3: [{ who: 'reader', text: 'I’m in the arcade, {commander:rank}. Mr Vane is asking, rather calmly, whether I mean to reach the end of it.' }],
-        loss: [{ who: 'vane', text: 'You’re losing people, {commander:rank}. Don’t lose Halloran. He reads, and I don’t.' }],
+        loss: [{ who: 'vane', text: 'You’re losing people, {commander:rank}. Don’t lose Halloran. He can read that log, and nobody else I own can.' }],
         // Halloran brought down (hit, not killed: he gets away later, with his notes), or broken and running
         vipdown: [{ who: 'reader', text: 'I’m hit, {commander:rank}. The leg. I can’t — they’re taking the slate. They’ve got the slate.' }],
         vipfled: [{ who: 'reader', text: 'I am not a soldier, {commander:rank}, and I am not staying here to be shot at. I’m going back the way I came. Tell Mr Vane what you like.' }]
