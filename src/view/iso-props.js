@@ -787,10 +787,10 @@
         if (r.kind === 'shuttle') {
           props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), docked: !!r.docked, seed: (rr2() * 9999) | 0 });
           /* A ship docked outside a station ring's hull: its docking clamp, a
-             great enclosed bridge run out to it from the hull square to the
-             curve, meets the ship's flank on the side towards the ring (its hull
-             is narrower than its footprint); a bulkhead door below it in the
-             hull's face. */
+             great enclosed bridge run level from the hull's outer face square to
+             the curve, meets the ship's flank on the side towards the ring (its
+             hull is narrower than its footprint); opposite it, the bulkhead door
+             in the hull's face on the deck's side, the bridge's width. */
           var ringP = r.docked && terrain.filter(function (q) { return q.ring; })[0];
           if (ringP) (r.clamps || [0.3, 0.7]).forEach(function (f, ci) {
             var rg = ringP.ring, px = r.x + r.w * f, pyc = r.y + r.h / 2;
@@ -798,10 +798,11 @@
             // the flank: from the ship's middle, 1.1" towards the ring's centre
             var fx = px - dx / dl * 1.1, fy = pyc - dy / dl * 1.1;
             var hx = rg.cx + dx / dl * rg.r, hy = rg.cy + dy / dl * rg.r;
-            props.push({ kind: 'dockclamp', x: (fx + hx) / 2, y: (fy + hy) / 2, x0: hx, y0: hy, x1: fx, y1: fy, seed: (rr2() * 9999) | 0 });
-            // the bulkhead door it lands over, in the hull's face on the deck's side
-            var inx = -dx / dl, iny = -dy / dl;
-            props.push({ kind: 'hulldoor', x: hx + inx * 0.7, y: hy + iny * 0.7, fx: hx + inx * 0.36, fy: hy + iny * 0.36, tx: -iny, ty: inx, nx: inx, ny: iny, height: a(9), seed: (rr2() * 9999) | 0 });
+            // the bridge runs from the hull's outer face (the hull is 0.7" thick about its curve) to the ship
+            var inx = -dx / dl, iny = -dy / dl, ox = hx - inx * 0.35, oy = hy - iny * 0.35;
+            props.push({ kind: 'dockclamp', x: (fx + ox) / 2, y: (fy + oy) / 2, x0: ox, y0: oy, x1: fx, y1: fy, seed: (rr2() * 9999) | 0 });
+            // and the bulkhead door it meets, square opposite it in the hull's face on the deck's side
+            props.push({ kind: 'hulldoor', x: hx + inx * 0.7, y: hy + iny * 0.7, fx: hx + inx * 0.36, fy: hy + iny * 0.36, tx: -iny, ty: inx, nx: inx, ny: iny, height: a(10), seed: (rr2() * 9999) | 0 });
           });
           return;
         }

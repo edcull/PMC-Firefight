@@ -1783,13 +1783,13 @@
           }
           break;
         }
-        /* A docking clamp: a great enclosed bridge from the top of a station
-           ring's hull over open space to a docked ship's hatch, its sides
-           ribbed, a row of lit ports along it, its roof arched, and at the ship
-           a yellow collar clamped round the hatch. */
+        /* A docking clamp: a great enclosed bridge run level from a station
+           ring's hull, at the height of the bulkhead door behind it, over open
+           space to a docked ship's flank, its sides ribbed, a row of lit ports
+           along it, its roof arched, a yellow collar clamped on at each end. */
         case 'dockclamp': {
           var kl = lift || 0, kdx = pr.x1 - pr.x0, kdy = pr.y1 - pr.y0, kln = Math.hypot(kdx, kdy) || 1;
-          var kpx = -kdy / kln, kpy = kdx / kln, KW = 0.9, KF = a(11), KT = a(17), KA = a(3);
+          var kpx = -kdy / kln, kpy = kdx / kln, KW = 0.9, KF = a(1.5), KT = a(10), KA = a(2.5);
           // which side of it faces the viewer (towards +x+y)
           var ksv = kpx + kpy > 0 ? 1 : -1;
           var KP = function (t, sOff, z) { var q = toScreen(pr.x0 + kdx * t + kpx * sOff, pr.y0 + kdy * t + kpy * sOff); return [q.x, q.y - kl - z]; };
@@ -1825,7 +1825,7 @@
            where a docking clamp lands: a heavy frame in hazard paint, the two
            leaves shut, a lamp over it. */
         case 'hulldoor': {
-          var hl9 = lift || 0, HW9 = 1.1, HD9 = pr.height;
+          var hl9 = lift || 0, HW9 = 0.9, HD9 = pr.height;
           var HP = function (t, z, out) { var q = toScreen(pr.fx + pr.tx * t + pr.nx * (out || 0), pr.fy + pr.ty * t + pr.ny * (out || 0)); return [q.x, q.y - hl9 - z]; };
           // the frame, standing a little proud of the hull, striped
           poly(g, [HP(-HW9 - 0.25, 0, 0.08), HP(HW9 + 0.25, 0, 0.08), HP(HW9 + 0.25, HD9 + a(1.2), 0.08), HP(-HW9 - 0.25, HD9 + a(1.2), 0.08)], '#2b2f33');

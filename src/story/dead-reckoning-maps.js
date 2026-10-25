@@ -317,18 +317,18 @@
     },
 
     /* The docking ring of Kerrigan's orbital, as the briefing has it: cranes,
-       cargo stacks and open deck, inside the ring's hull. The hull is the
+       cargo stacks and open deck, inside the ring's hull (no gantry cranes: those are a sea port's). The hull is the
        ring's own curve, gentle and the same both ways, along the north: it
        bows up nearly to the north edge in the middle (4" from it) and comes
-       down to meet the west and east edges 10.5" down, the least open space
-       beyond it that holds a ship docked in each corner with room for its
-       clamps; the deck takes the rest, and both sides keep the same 37.5" of
-       their edges to come on by. Beyond the hull open space, black, that
+       down to meet the west and east edges 11" down, the least open space
+       beyond it that holds a ship docked in each corner (the shuttle the
+       other maps have, 10" long) with room for its clamp; the deck takes the
+       rest, and both sides keep the same 37" of their edges to come on by. Beyond the hull open space, black, that
        nothing enters: the two ships, the Ninth Lance's and the company's,
-       each held by a docking clamp, a great enclosed bridge from its hatch
-       over to the hull's top and a bulkhead door in the hull's face below it
-       on the deck side; the hull itself stands twice a wall's height; a
-       gantry crane inside the hull by each, its boom out over it. Inside, steel deck plate; rows
+       each held by a docking clamp, a great enclosed bridge run level from its
+       flank to the hull, meeting it square opposite a bulkhead door in the
+       hull's face on the deck side; the hull itself stands twice a wall's
+       height. Inside, steel deck plate; rows
        of cargo stacks with lanes between them, lifters working them; the deck
        open across the middle, blast barriers on it; the dock offices and the
        traffic tower along the south. Heavy spin gravity (the chapter's). */
@@ -337,9 +337,9 @@
       pieces: [
         DECK(0, 0, 48, 48),
         // open space beyond the ring's hull, and the ships docked out in it
-        RINGSPACE(24, 50, 46.22),
-        DOCKED(0.4, 0.4, 8, 4.5), DOCKED(39.6, 0.4, 8, 4.5),
-        R('crane', 12, 8.5, 3, 2.4), R('crane', 33, 8.5, 3, 2.4), Object.assign(R('fueltruck', 16.5, 11, 2.8, 1.4), { facing: Math.PI }),
+        RINGSPACE(24, 50, 45.6),
+        DOCKED(0.4, 0.4, 10, 4.5), DOCKED(37.6, 0.4, 10, 4.5),
+        Object.assign(R('fueltruck', 16.5, 11, 2.8, 1.4), { facing: Math.PI }),
         // the cargo, in rows, lanes between
         CG(21.5, 5.5, 5, 4), CG(6, 14, 5, 4), CG(14, 14, 5, 4), CG(24, 13, 5, 4),
         CG(9, 22, 4, 5), CG(35, 22, 4, 5),

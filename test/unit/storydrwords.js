@@ -278,9 +278,9 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
     ps.filter((p) => p.kind === 'shuttle' && p.docked).length === 2 && ps.some((p) => p.kind === 'shuttle' && p.x < 4) && ps.some((p) => p.kind === 'shuttle' && p.x + p.w > 44) &&
     ps.filter((p) => p.kind === 'shuttle').every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => outside(c[0], c[1]))) &&
     ps.filter((p) => p.kind !== 'shuttle' && !p.space && !p.deck).every((p) => [[p.x, p.y], [p.x + p.w, p.y], [p.x, p.y + p.h], [p.x + p.w, p.y + p.h]].every((c) => !outside(c[0], c[1]))));
-  ok('the docking ring: steel deck inside the hull, a gantry crane by each ship, rows of cargo, open deck across the middle',
+  ok('the docking ring: steel deck inside the hull, no gantry cranes (a sea port’s), the shuttle the other maps have, rows of cargo, open deck across the middle',
     ps.some((p) => p.deck && p.x === 0 && p.y === 0 && p.w === 48 && p.h === 48) && R.terrainName(null, 'road', ps.find((p) => p.deck)) === 'Deck' &&
-    ps.filter((p) => p.kind === 'crane').length === 2 && ps.filter((p) => p.kind === 'crater' && p.cargo).length >= 8 && !ps.some((p) => p.kind === 'ruins') &&
+    !ps.some((p) => p.kind === 'crane') && ps.filter((p) => p.kind === 'shuttle').every((p) => p.w === 10) && ps.filter((p) => p.kind === 'crater' && p.cargo).length >= 8 && !ps.some((p) => p.kind === 'ruins') &&
     ps.filter((p) => p.kind !== 'road').every((p) => !overlap(p, { x: 19, y: 18, w: 10, h: 2.5 })));
 }
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
