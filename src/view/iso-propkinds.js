@@ -1783,9 +1783,9 @@
           }
           break;
         }
-        /* A fuel line: on from a pipeline's end over a station's hull to a docked
-           ship, a fat pipe through the points it is given (x, y and height),
-           flanged at each bend, a valve where it leaves the deck. */
+        /* A fuel line's end at a station's hull: a fat pipe up the hull's face
+           through the points it is given (x, y and height), a red valve wheel
+           at its foot, and the coupling plate where it goes into the hull. */
         case 'fuelline': {
           var fl8 = lift || 0, FPt = function (q) { var s8 = toScreen(q[0], q[1]); return [s8.x, s8.y - fl8 - a(3.2) - q[2]]; };
           var P8 = pr.pts.map(FPt);
@@ -1801,9 +1801,12 @@
             edgeLine(g, A8, B8, '#5d666c', a(2.2));
             edgeLine(g, [A8[0], A8[1] - a(0.6)], [B8[0], B8[1] - a(0.6)], '#8a949a', 1);
           }
-          P8.slice(1).forEach(function (q) { ellipse(g, q[0], q[1], a(1.3), a(1.3), '#3a4044'); ellipse(g, q[0], q[1] - 1, a(0.8), a(0.8), '#6e787e'); });
-          // the valve where it leaves the deck: a red wheel
-          ellipse(g, P8[0][0], P8[0][1] - a(1.6), a(1.2), a(0.8), '#b8402e'); dot(g, P8[0][0] - 1, P8[0][1] - a(1.6) - 1, '#e0e0e0', 2);
+          // the coupling plate at its top, bolted to the hull, hazard-banded
+          var cp = P8[P8.length - 1];
+          rect(g, cp[0] - a(1.6), cp[1] - a(1.4), a(3.2), a(2.6), '#3a4044'); rect(g, cp[0] - a(1.6), cp[1] + a(0.9), a(3.2), a(0.4), '#c9a23c');
+          [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (b) { dot(g, cp[0] + b[0] * a(1.1), cp[1] + b[1] * a(0.8), '#8a949a', 1); });
+          // the valve at its foot: a red wheel
+          var vq = P8[0]; ellipse(g, vq[0], vq[1] - a(2), a(1.2), a(0.8), '#b8402e'); dot(g, vq[0] - 1, vq[1] - a(2) - 1, '#e0e0e0', 2);
           break;
         }
         /* A ring of connected buildings round a tower: a round drum, its outer

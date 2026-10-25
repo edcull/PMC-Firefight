@@ -364,24 +364,9 @@
             props.push({ kind: 'piperun', x: phz ? r.x + pm : r.x + r.w / 2, y: phz ? r.y + r.h / 2 : r.y + pm, horiz: phz, len: psl,
               first: ps2 === 0, last: ps2 === pn - 1, seed: (rand() * 9999) | 0 });
           }
-          /* A fuel line (`feed`: the end towards its ship): from that end of the
-             run up over a station ring's hull and out beside the docking clamp's
-             bridge to the nearest docked ship's flank. Drawn only. */
-          var feedRing = r.feed && terrain.filter(function (q) { return q.ring; })[0];
-          if (feedRing) {
-            var sx = r.feed === 'west' ? r.x : r.x + r.w, sy = r.y + r.h / 2;
-            var ship = terrain.filter(function (q) { return q.kind === 'shuttle' && q.docked; })
-              .sort(function (m, n) { return Math.hypot(m.x + m.w / 2 - sx, m.y - sy) - Math.hypot(n.x + n.w / 2 - sx, n.y - sy); })[0];
-            if (ship) {
-              var rg3 = feedRing.ring, fh = (ship.clamps || [0.66])[0];
-              // beside the bridge: its far side from the deck, offset along the ship 1.4" towards where the pipe comes from
-              var side = sx < ship.x + ship.w * fh ? -1 : 1;
-              var shx = ship.x + ship.w * fh + side * 1.4, shy = ship.y + ship.h / 2 + 1.1;
-              var ddx = shx - rg3.cx, ddy = shy - rg3.cy, ddl = Math.hypot(ddx, ddy);
-              var hx3 = rg3.cx + ddx / ddl * rg3.r, hy3 = rg3.cy + ddy / ddl * rg3.r;
-              props.push({ kind: 'fuelline', x: sx, y: sy, pts: [[sx, sy, 0], [hx3 - ddx / ddl * 0.6, hy3 - ddy / ddl * 0.6, 0], [hx3, hy3, a(15.5)], [shx, shy, a(13)]], seed: (rand() * 9999) | 0 });
-            }
-          }
+          /* A fuel line's end at a station's hull (`feed`): it climbs the hull's
+             face from the deck and goes into it at a coupling. Drawn only. */
+          if (r.feed) props.push({ kind: 'fuelline', x: r.x + r.w / 2, y: r.y + 0.3, pts: [[r.x + r.w / 2, r.y + 0.05, 0], [r.x + r.w / 2, r.y + 0.05, a(8)]], seed: (rand() * 9999) | 0 });
           return;
         }
         if (r.kind === 'woods') {
