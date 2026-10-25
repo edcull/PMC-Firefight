@@ -106,6 +106,22 @@ everything, who has spent years on the scraps of Morrow's writing that have
 surfaced and proved better at reading the man than anyone alive. "Reader" is
 what people call him for it, not a trade.
 
+**The two companies that are never for hire** (settled after the dialogue
+pass). The Ninth Lance and Wraith Section are not hired guns; each fights
+beside the company only as a side taken:
+
+- **The Ninth Lance**, only with the company fully Vane's: the client's Trust
+  high (3 or more), never suspected, cut off or exposed. Vane sends it to see
+  his claim filed (*The Landing*, *The Escort*), and its help seals the claim
+  in his name (*Finder's Fee*).
+- **Wraith Section**, only with the company against Vane: cut off or his
+  receipts published, and the door to Nine opened (a message left in the
+  Glass Flats dead drop, `wraith_warned`, or their paymaster turned). The Navy
+  wants the Quiet shut, not sold, and sends Nine against the Lance (*The
+  Collector*) or to the Spire.
+
+Neither is offered in the first half; the Glass Flats' dead drop is the seed.
+
 **Business until somebody loses** (settled after the rework). The rival
 companies are confrontational, and they make it business: clients, invoices,
 contracts, prices. The first time the company beats one (`grudges`; the flag
