@@ -101,8 +101,9 @@ says who was behind him. The first half seeds it: the opening (the backer's
 people a jump or two behind), Thule's records ("the same ship, two jumps
 behind me now"), and the Lance's founding date.
 
-**Halloran** is a scientist with a general background, a little of
-everything, who has spent years on the scraps of Morrow's writing that have
+**Halloran** is an archaeologist of the library kind (archives, catalogues,
+dead men's handwriting; the research half of an adventurer and none of the
+action), who has spent years on the scraps of Morrow's writing that have
 surfaced and proved better at reading the man than anyone alive. "Reader" is
 what people call him for it, not a trade.
 

@@ -206,7 +206,7 @@
     chart: true,
     // the two halves, as the chapter cards name them, and those who were there from the start
     halves: ['The Chart', 'The Long Jump'], firstDay: 'on the trail from Vesk',
-    blurb: 'A dead surveyor’s log, and the strange stones he left behind, lead across the stars to a world nobody has charted. Halloran, a scientist who reads Morrow’s writing better than anyone alive, hires your company to follow them for a client who gives no name and pays through a bank on Halcyon. Every other company on the trail was hired to get there first, and none of them has met its client either. Nobody has asked who made the stones.',
+    blurb: 'A dead surveyor’s log, and the strange stones he left behind, lead across the stars to a world nobody has charted. Halloran, an archaeologist of archives who reads Morrow’s writing better than anyone alive, hires your company to follow them for a client who gives no name and pays through a bank on Halcyon. Every other company on the trail was hired to get there first, and none of them has met its client either. Nobody has asked who made the stones.',
     start: { faction: 'pmc', found: 'standard' },
 
     // what the company knows of the enemy before a battle (story.js `intel`)
