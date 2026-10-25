@@ -349,8 +349,8 @@
        twice a wall's height, the two ships docked beyond it in the corners
        (the shuttle the other maps have), each held by a docking clamp, an
        enclosed bridge run from a bulkhead door in the hull's face up to the
-       ship's side hatch. Inside the hull the outer ring's deck, 7.6" across,
-       cargo on it. Then the open gap between the rings (5" of space,
+       ship's side hatch. Inside the hull the outer ring's deck, about 13.5"
+       across, cargo on it. Then the open gap between the rings (5" of space,
        impassable but seen across), crossed by three bridges, the spokes, 4"
        wide; and inside it the inner ring, the rest of the table: rows of
        cargo stacks with lanes between, a lifter working them, the deck open
@@ -364,19 +364,19 @@
         // open space beyond the outer ring's hull, and the ships docked out in it
         RINGSPACE(24, 50, 45.6),
         DOCKED(0.4, 0.4, 10, 4.5), DOCKED(37.6, 0.4, 10, 4.5),
-        // the outer ring's deck: a fuel bowser, a lifter, cargo
+        // the outer ring's deck: a fuel bowser, a lifter, cargo, blast barriers before the middle bridge
         Object.assign(R('fueltruck', 13, 9, 2.8, 1.4), { facing: Math.PI }), Object.assign(R('cargolifter', 28, 7, 2.5, 2.5), { facing: 0 }),
-        CG(4.5, 10, 4, 4), CG(21.5, 5.5, 5, 4), CG(39.5, 10, 4, 4)
+        CG(4.5, 10, 4, 4), CG(21.5, 5.5, 5, 4), CG(39.5, 10, 4, 4), CG(12, 13, 5, 4), CG(31, 13, 5, 4),
+        Object.assign(R('barricade', 21, 14, 4, 1), { shield: true, blast: true })
       ].concat(
         // the gap between the rings, and its three bridges
-        RINGGAP(24, 50, 33, 38, [8, 24, 40], 4)
+        RINGGAP(24, 50, 27, 32, [8, 24, 40], 4)
       ).concat([
-        // the inner ring: cargo in rows, lanes between
-        CG(9, 22, 4, 5), CG(35, 22, 4, 5), CG(15, 25, 4, 4), CG(30, 25, 4, 4),
-        CG(6, 31, 5, 4), CG(14, 31, 5, 4), CG(29, 31, 5, 4), CG(37, 31, 5, 4),
+        // the inner ring: cargo in rows, lanes between, a blast barrier or two
+        CG(15, 26.5, 4, 3.5), CG(31, 26.5, 4, 3.5),
+        CG(6.5, 32, 5, 4), CG(14, 31, 5, 4), CG(29, 31, 5, 4), CG(36.5, 32, 5, 4),
         Object.assign(R('cargolifter', 25.5, 32, 2.5, 2.5), { facing: 0 }),
-        // blast barriers across the open deck (low walls, steel plates stood on edge)
-        Object.assign(R('barricade', 19, 21, 4, 1), { shield: true, blast: true }), Object.assign(R('barricade', 25, 26, 4, 1), { shield: true, blast: true }),
+        Object.assign(R('barricade', 25, 26, 4, 1), { shield: true, blast: true }), Object.assign(R('barricade', 20, 29.3, 4, 1), { shield: true, blast: true }),
         // the dock offices and the traffic tower
         B(7, 39, 7, 5, 'L'), B(21, 39, 5, 5, 'tower'), B(33, 39, 7, 5, 'block')
       ])

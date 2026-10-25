@@ -281,14 +281,14 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
   const gaps = ps.filter((p) => p.gap);
   ok('...laid as a wheel: an outer ring and an inner one, the open gap between them crossed by three bridges, impassable but seen across',
     gaps.length === 4 && gaps.every((p) => p.kind === 'ravine' && p.space && p.fixed) && R.TERRAIN.ravine.impassable && !R.TERRAIN.ravine.blocks &&
-    [8, 24, 40].every((x) => { const y = 50 - Math.sqrt(35.5 * 35.5 - (x - 24) * (x - 24)); return !gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
-    [16, 32].every((x) => { const y = 50 - Math.sqrt(35.5 * 35.5 - (x - 24) * (x - 24)); return gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
+    [8, 24, 40].every((x) => { const y = 50 - Math.sqrt(29.5 * 29.5 - (x - 24) * (x - 24)); return !gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
+    [16, 32].every((x) => { const y = 50 - Math.sqrt(29.5 * 29.5 - (x - 24) * (x - 24)); return gaps.some((p) => R.inPoly(x, y, p.poly)); }) &&
     R.terrainName(null, 'ravine', gaps[0]) === 'Open space' &&
     ps.filter((p) => !p.space && !p.deck && p.kind !== 'shuttle').every((p) => !gaps.some((q) => overlap(p, q))));
   ok('the docking ring: steel deck inside the hull, no gantry cranes (a sea port’s), the shuttle the other maps have, rows of cargo, open deck across the middle',
     ps.some((p) => p.deck && p.x === 0 && p.y === 0 && p.w === 48 && p.h === 48) && R.terrainName(null, 'road', ps.find((p) => p.deck)) === 'Deck' &&
     !ps.some((p) => p.kind === 'crane') && ps.filter((p) => p.kind === 'shuttle').every((p) => p.w === 10) && ps.filter((p) => p.kind === 'crater' && p.cargo).length >= 8 && !ps.some((p) => p.kind === 'ruins') &&
-    ps.filter((p) => p.kind !== 'road').every((p) => !overlap(p, { x: 19, y: 18, w: 10, h: 2.5 })));
+    ps.filter((p) => p.kind !== 'road' && !p.space).every((p) => !overlap(p, { x: 19.2, y: 33.5, w: 6, h: 5 })));
 }
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {
