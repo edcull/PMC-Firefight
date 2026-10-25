@@ -47,14 +47,13 @@ s = started('breakout');
 ok('Breakout: the countdown from turn 3 over six areas, the landing zone’s spared, the zone in the enemy’s half',
   s.sc.countdown.from === 3 && s.sc.countdown.areas.length === 6 && s.sc.countdown.areas.filter((a) => a.safe).length === 1 && s.sc.lz.x > R.BOARD.w / 2);
 s = started('convoy');
-const hulls = s.units.filter((u) => u.side === 'A' && R.isMachine(u)).length;
-ok('Convoy: the convoy is the company\u2019s vehicles (all of it, if it brought none), and it leaves by the far edge',
-  s.sc.convoy.length === (hulls || s.units.filter((u) => u.side === 'A').length) && s.sc.extract.rectX > R.BOARD.w / 2, hulls + ' vehicles');
+const cars = (st, side) => st.units.filter((u) => u.convoyCar && u.side === side);
+ok('Convoy: the convoy is a column of three cargo cars, side A\u2019s, and it leaves by the far edge',
+  cars(s, 'A').length === 3 && !cars(s, 'B').length && s.sc.convoy.length === 3 && s.sc.convoy.every((id) => cars(s, 'A').some((u) => u.id === id)) && s.sc.extract.rectX > R.BOARD.w / 2);
 s = started('intercept');
-const theirs = s.units.filter((u) => u.side === 'B' && R.isMachine(u) && !R.isFlying(u)).length;
-ok('Intercept: the convoy is the enemy\u2019s vehicles (all of it, if it brought none), and it leaves by the company\u2019s own edge',
-  s.sc.convoy.length === (theirs || s.units.filter((u) => u.side === 'B').length) && s.sc.convoy.every((id) => s.units.some((u) => u.id === id && u.side === 'B')) &&
-  s.sc.extract.side === 'B' && s.sc.extract.west && s.sc.extract.rectX < R.BOARD.w / 2, theirs + ' vehicles');
+ok('Intercept: the convoy is the enemy\u2019s column of three cargo cars, and it leaves by the company\u2019s own edge',
+  cars(s, 'B').length === 3 && !cars(s, 'A').length && s.sc.convoy.every((id) => cars(s, 'B').some((u) => u.id === id)) &&
+  s.sc.extract.side === 'B' && s.sc.extract.west && s.sc.extract.rectX < R.BOARD.w / 2);
 s = started('strike');
 ok('Strike: three targets, one or two of them real, and half the garrison asleep until turn 3',
   s.objectives.length === 3 && [1, 2].indexOf(s.objectives.filter((o) => o.real).length) >= 0 && s.units.some((u) => u.side === 'B' && u.wave === 2 && u.reserve));

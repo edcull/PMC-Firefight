@@ -700,7 +700,7 @@
           { id: 'fast', text: 'The fast road.', battle: { role: 'attacker' } },
           { id: 'mine', text: 'The mine road.', battle: { readiness: 0 }, effects: [{ meter: 'hive', add: 1 }, { meter: 'loyalty', add: -1 }] }
         ] },
-        battle: { map: 'haulroad', scenario: 'convoy', enemy: lantern(), adjust: [{ if: { flag: 'driver_taken' }, levers: { readiness: 1 } }],
+        battle: { map: 'haulroad', scenario: 'convoy', variant: { cars: 'HTX ore hauler' }, enemy: lantern(), adjust: [{ if: { flag: 'driver_taken' }, levers: { readiness: 1 } }],
           on: { success: [{ effects: [{ meter: 'lantern', add: -1 }] }], failure: [{ effects: [{ meter: 'htx', add: -1 }] }] } },
         after: { id: 'convoy.cargo', title: 'The cargo', text: 'It got through.', if: { grade: 'success' }, options: [
           { id: 'deliver', text: 'Deliver it as ordered.', effects: [{ meter: 'htx', add: 1 }] },

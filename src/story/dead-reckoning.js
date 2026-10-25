@@ -656,10 +656,10 @@
           { id: 'race', text: 'Race them in.', battle: { role: 'attacker', readiness: -1 } },
           { id: 'pictures', text: 'Offer them the pictures.', battle: { intel: 1 }, effects: [{ flag: 'kestrel_scooped' }, { meter: 'lead', add: -1 }] },
           // hired, Kestrel's cars are the company's to get across, and the Reavers are the ones jumping the claim
-          Object.assign(hireOption('kestrel', 'Ride shotgun for Kestrel, for a share.'), { battle: { allies: HIRE.kestrel, scenario: 'convoy', variant: { convoy: 'allies' }, enemy: rival('reavers') },
+          Object.assign(hireOption('kestrel', 'Ride shotgun for Kestrel, for a share.'), { battle: { allies: HIRE.kestrel, scenario: 'convoy', enemy: rival('reavers') },
             effects: hireOption('kestrel').effects.concat([{ flag: 'claim_escort', local: true }]) })
         ] },
-        battle: { scenario: 'intercept', map: 'hollin', planet: 'mountain', enemy: rival('kestrel'),
+        battle: { scenario: 'intercept', map: 'hollin', planet: 'mountain', variant: { cars: 'Kestrel ground car' }, enemy: rival('kestrel'),
           on: {
             success: [{ if: { flag: 'claim_escort' }, effects: [{ meter: 'stones', add: 1 }, { meter: 'kestrel_trust', add: 1 }, { meter: 'reavers', add: -1 }, { meter: 'lead', add: 1 }] },
               { effects: [{ meter: 'theirs', add: -1 }, { meter: 'stones', add: 1 }, { meter: 'kestrel', add: -1 }, { meter: 'lead', add: 2 }] }],

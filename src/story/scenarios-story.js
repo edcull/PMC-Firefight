@@ -115,16 +115,22 @@
   };
 
   /* ------------------------------------------------ Convoy */
-  /* The convoy is side A's vehicles, or, if it brought none, all of side A. It
-     crosses from its own edge to the far one; a unit of it standing within 3"
-     of the far edge at the End phase is through. */
+  /* The convoy is a column of cargo cars the scenario brings for side A: three,
+     four from Battle Tier III, named by the story (`variant.cars`). Side A's
+     own force is their escort. It crosses from its own edge to the far one; a
+     car standing within 3" of the far edge at the End phase is through. */
+  function convoyCars(state, side) {
+    var base = R.profile('unarmoured'), p = {};
+    for (var k in base) p[k] = base[k];
+    p.key = 'convoycar'; p.code = 'CAR'; p.name = (story(state).variant && story(state).variant.cars) || 'Cargo hauler';
+    // an armoured hauler: the lorry, plated, loaded with cargo, not troops, and nothing to shoot back with
+    p.def = 10; p.str = 5; p.fp = 0; p.assault = 0; p.transport = 0; p.rules = ['Ground vehicle'];
+    var n = (state.cfg.tier || 1) >= 3 ? 4 : 3, out = [];
+    for (var i = 0; i < n; i++) out.push({ profile: p, side: side, convoy: true });
+    return out;
+  }
   function convoyOf(state, side) {
-    /* (a story's `variant.convoy` of 'allies': the hired company's column, the
-       company's own vehicles riding in it; with no vehicles, the hired company) */
-    var allies = story(state).variant && story(state).variant.convoy === 'allies';
-    var a = state.units.filter(function (u) { return u.side === side && (allies || !u.ally); });
-    var hulls = a.filter(function (u) { return R.isMachine(u) && !R.isFlying(u); });
-    return hulls.length ? hulls : allies ? a.filter(function (u) { return u.ally; }) : a;
+    return state.units.filter(function (u) { return u.side === side && u.convoyCar; });
   }
   /* Convoy, and Intercept the other way round: side B's column crossing for
      side A's edge, and side A (the player in a story) out to stop it. */
@@ -137,6 +143,7 @@
       blurb: o.blurb, win: o.win, hint: o.hint,
       turns: 12,
       objectives: function () { return []; },
+      extraUnits: function (state) { return convoyCars(state, side); },
       entersTurn1: true,
       deploy: function (state) {
         K.entryEdges(state);
@@ -183,18 +190,18 @@
   SCENARIOS.convoy = convoyScenario('A', {
     id: 'convoy', name: 'Convoy',
     blurb: 'A column has to cross the table. The other side has to stop it.',
-    win: 'A wins with half the convoy (by its units’ Tiers) through to the far edge by the end of turn 12. B wins by destroying more than half of it, or if it is not through in time.',
-    hint: 'Your vehicles are the convoy (or everyone, if you brought none). Get them to the far edge; anything of the convoy within 3″ of it at the End phase is through.',
+    win: 'A wins with half the convoy’s cars through to the far edge by the end of turn 12. B wins by destroying more than half of them, or if they are not through in time.',
+    hint: 'The convoy is a column of cargo cars, three of them (four from Battle Tier III), and your force is its escort. Get the cars to the far edge; a car within 3″ of it at the End phase is through.',
     through: 'Half the convoy is through.', burning: 'More than half the convoy is burning on the road.', late: 'The convoy is still on the road at the end of turn 12.'
   });
-  /* The enemy's convoy is side B's vehicles, or all of side B if it brought
-     none, crossing for side A's own edge; within 3" of it at the End phase, it
-     is through. */
+  /* The enemy's convoy is a column of cargo cars for side B, its force their
+     escort, crossing for side A's own edge; within 3" of it at the End phase, a
+     car is through. */
   SCENARIOS.intercept = convoyScenario('B', {
     id: 'intercept', name: 'Intercept',
     blurb: 'The enemy’s column is crossing the table. Stop it before it gets across.',
-    win: 'A wins by destroying more than half of B’s convoy (by its units’ Tiers), or if it is not through by the end of turn 12. B wins with half of it through to A’s edge.',
-    hint: 'The enemy’s vehicles are the convoy (or everyone, if they brought none). It is making for your own edge; anything of it within 3″ of that edge at the End phase is through. Stop it.',
+    win: 'A wins by destroying more than half of B’s convoy cars, or if they are not through by the end of turn 12. B wins with half of them through to A’s edge.',
+    hint: 'The enemy’s convoy is a column of cargo cars, three of them (four from Battle Tier III), with its force as escort. It is making for your own edge; a car within 3″ of that edge at the End phase is through. Stop it.',
     through: 'Half the enemy’s convoy is through.', burning: 'More than half the enemy’s convoy is burning on the road.', late: 'The enemy’s convoy is still on the road at the end of turn 12.'
   });
 

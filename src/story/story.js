@@ -816,7 +816,9 @@
     /* A rival the company has beaten bears a grudge (the story's `grudges`):
        `beat_<side>`, set the first time, and read by its words and its forces
        from then on. It is business until somebody loses. */
-    var foe = node.enemy && (node.enemy.rival === 'leading' ? st.leading : node.enemy.side);
+    // (the enemy a choice put in the battle's place, if it did: a hired rival is not the one beaten)
+    var fought = st.pending && st.pending.enemy || node.enemy;
+    var foe = fought && (fought.rival === 'leading' ? st.leading : fought.side);
     if (SUCCESS[g] && foe && arr(def.grudges).indexOf(foe) >= 0 && !st.flags['beat_' + foe]) {
       st.flags['beat_' + foe] = true;
       lines.push({ flag: 'beat_' + foe, set: true });
