@@ -1783,28 +1783,62 @@
           }
           break;
         }
-        /* A docking clamp, run out from a station's hull over open space to a
-           ship docked outside it: a box truss on the hull's side, the clamp's
-           jaws closed on the ship's flank, and, on one of each ship's pair, the
-           boarding tube alongside it. */
+        /* A docking clamp: a great enclosed bridge from the top of a station
+           ring's hull over open space to a docked ship's hatch, its sides
+           ribbed, a row of lit ports along it, its roof arched, and at the ship
+           a yellow collar clamped round the hatch. */
         case 'dockclamp': {
-          var kl = lift || 0, KZ = a(15), kdx = pr.x1 - pr.x0, kdy = pr.y1 - pr.y0, kln = Math.hypot(kdx, kdy) || 1;
-          var kux = kdx / kln, kuy = kdy / kln, kpx = -kuy, kpy = kux;
-          // a point t of the way out from the hull (0) to the ship (1), off to one side by s inches, z up
-          var KP = function (t, z, sOff) { var q = toScreen(pr.x0 + kdx * t + kpx * (sOff || 0), pr.y0 + kdy * t + kpy * (sOff || 0)); return [q.x, q.y - kl - z]; };
-          if (pr.tube) {
-            // the boarding tube: a ribbed, flexible tunnel beside the truss
-            for (var tb = 0; tb <= 8; tb++) { var tq = KP(tb / 8, KZ * 0.6, 0.9); ellipse(g, tq[0], tq[1], a(1.3), a(1.5), tb % 2 ? '#8a9298' : '#6e767c'); }
-            edgeLine(g, KP(0, KZ * 0.6 + a(1.2), 0.9), KP(1, KZ * 0.6 + a(1.2), 0.9), '#aab2b8', 1);
+          var kl = lift || 0, kdx = pr.x1 - pr.x0, kdy = pr.y1 - pr.y0, kln = Math.hypot(kdx, kdy) || 1;
+          var kpx = -kdy / kln, kpy = kdx / kln, KW = 0.9, KF = a(11), KT = a(17), KA = a(3);
+          // which side of it faces the viewer (towards +x+y)
+          var ksv = kpx + kpy > 0 ? 1 : -1;
+          var KP = function (t, sOff, z) { var q = toScreen(pr.x0 + kdx * t + kpx * sOff, pr.y0 + kdy * t + kpy * sOff); return [q.x, q.y - kl - z]; };
+          var BR = ['#2a3034', '#3a4248', '#4c565e', '#5e6a74', '#74818a', '#9aa6ae'];
+          // the far side, the underside, then the near side
+          poly(g, [KP(0, -ksv * KW, KF), KP(1, -ksv * KW, KF), KP(1, -ksv * KW, KT), KP(0, -ksv * KW, KT)], BR[1]);
+          poly(g, [KP(0, -KW, KF), KP(1, -KW, KF), KP(1, KW, KF), KP(0, KW, KF)], BR[0]);
+          poly(g, [KP(0, ksv * KW, KF), KP(1, ksv * KW, KF), KP(1, ksv * KW, KT), KP(0, ksv * KW, KT)], BR[3]);
+          // the arched roof, in bands across it
+          var NA = 6, roofZ = function (k) { return KT + KA * Math.sin(Math.PI * k / NA); }, roofS = function (k) { return -KW + 2 * KW * k / NA; };
+          for (var ka = 0; ka < NA; ka++) {
+            var lit9 = 2 + Math.round(3 * (1 - Math.abs((ka + 0.5) / NA - 0.35) * 1.4));
+            poly(g, [KP(0, roofS(ka), roofZ(ka)), KP(1, roofS(ka), roofZ(ka)), KP(1, roofS(ka + 1), roofZ(ka + 1)), KP(0, roofS(ka + 1), roofZ(ka + 1))], BR[Math.max(2, Math.min(5, lit9))]);
           }
-          // the truss: two chords and their bracing
-          edgeLine(g, KP(0, KZ - a(2)), KP(1, KZ - a(2)), '#3a4046', 3); edgeLine(g, KP(0, KZ), KP(1, KZ), '#5e676e', 3);
-          for (var kb = 0; kb < 5; kb++) edgeLine(g, KP(kb / 5, KZ - a(2)), KP((kb + 1) / 5, KZ), '#4a5258', 1);
-          // its root on the hull, and the jaws closed on the ship
-          box(g, { x: pr.x0 - 0.5, y: pr.y0 - 0.5, w: 1, h: 1, height: KZ + a(1), seed: pr.seed }, BULK, { roof: BULK[4], roofEdge: BULK[5], windows: null, lift: kl, noShadow: true });
-          box(g, { x: pr.x1 - 0.5, y: pr.y1 - 0.5, w: 1, h: 1, height: a(2.4), seed: pr.seed + 1 }, ['#3a2c0c', '#6a5016', '#a07a1e', '#c99a28', '#e2b43a', '#f2d06a'],
-            { roof: '#e2b43a', roofEdge: '#f2d06a', windows: null, lift: kl + KZ - a(2.4), noShadow: true });
-          var kl2 = KP(1, KZ + a(0.6)); dot(g, kl2[0], kl2[1], '#7bdc6a', 2);
+          // ribs round it, and the ports along its near side
+          var nrib = Math.max(3, Math.round(kln / 0.7));
+          for (var kr = 0; kr <= nrib; kr++) {
+            var tr = kr / nrib;
+            edgeLine(g, KP(tr, ksv * KW, KF), KP(tr, ksv * KW, KT), BR[1], 1);
+            for (var kq = 0; kq < NA; kq++) edgeLine(g, KP(tr, roofS(kq), roofZ(kq)), KP(tr, roofS(kq + 1), roofZ(kq + 1)), BR[1], 1);
+            if (kr < nrib) { var wq = KP((kr + 0.5) / nrib, ksv * KW, (KF + KT) / 2); rect(g, wq[0] - 2, wq[1] - 2, 4, 3, '#ffe2a0'); }
+          }
+          // the collar on the ship, clamped round its hatch: a yellow band round the bridge's end, and one where it leaves the hull
+          [[0.9, 1], [0, 0.07]].forEach(function (bnd) {
+            var Y = ['#a07a1e', '#c99a28', '#e2b43a', '#f2d06a'];
+            poly(g, [KP(bnd[0], ksv * KW * 1.08, KF - a(0.4)), KP(bnd[1], ksv * KW * 1.08, KF - a(0.4)), KP(bnd[1], ksv * KW * 1.08, KT), KP(bnd[0], ksv * KW * 1.08, KT)], Y[1]);
+            for (var kc = 0; kc < NA; kc++) poly(g, [KP(bnd[0], roofS(kc) * 1.08, roofZ(kc) + a(0.4)), KP(bnd[1], roofS(kc) * 1.08, roofZ(kc) + a(0.4)), KP(bnd[1], roofS(kc + 1) * 1.08, roofZ(kc + 1) + a(0.4)), KP(bnd[0], roofS(kc + 1) * 1.08, roofZ(kc + 1) + a(0.4))], Y[2 + (kc < NA / 2 ? 1 : 0)]);
+          });
+          var kl2 = KP(1, 0, KT + KA + a(2.2)); dot(g, kl2[0], kl2[1], '#7bdc6a', 3);
+          break;
+        }
+        /* A bulkhead door in a station ring's hull, on the deck's side, below
+           where a docking clamp lands: a heavy frame in hazard paint, the two
+           leaves shut, a lamp over it. */
+        case 'hulldoor': {
+          var hl9 = lift || 0, HW9 = 1.1, HD9 = pr.height;
+          var HP = function (t, z, out) { var q = toScreen(pr.fx + pr.tx * t + pr.nx * (out || 0), pr.fy + pr.ty * t + pr.ny * (out || 0)); return [q.x, q.y - hl9 - z]; };
+          // the frame, standing a little proud of the hull, striped
+          poly(g, [HP(-HW9 - 0.25, 0, 0.08), HP(HW9 + 0.25, 0, 0.08), HP(HW9 + 0.25, HD9 + a(1.2), 0.08), HP(-HW9 - 0.25, HD9 + a(1.2), 0.08)], '#2b2f33');
+          for (var fs9 = 0; fs9 < 10; fs9++) {
+            var za9 = (HD9 + a(1.2)) * fs9 / 10, zb9 = (HD9 + a(1.2)) * (fs9 + 1) / 10, c9 = fs9 % 2 ? '#1b1a17' : '#c9a23c';
+            poly(g, [HP(-HW9 - 0.25, za9, 0.09), HP(-HW9, za9, 0.09), HP(-HW9, zb9, 0.09), HP(-HW9 - 0.25, zb9, 0.09)], c9);
+            poly(g, [HP(HW9, za9, 0.09), HP(HW9 + 0.25, za9, 0.09), HP(HW9 + 0.25, zb9, 0.09), HP(HW9, zb9, 0.09)], c9);
+          }
+          // the leaves, shut, their seam, and the lamp
+          poly(g, [HP(-HW9, 0, 0.1), HP(HW9, 0, 0.1), HP(HW9, HD9, 0.1), HP(-HW9, HD9, 0.1)], '#5e676e');
+          edgeLine(g, HP(0, 1, 0.11), HP(0, HD9 - 1, 0.11), '#1a1e22', 1);
+          edgeLine(g, HP(-HW9, HD9 * 0.5, 0.11), HP(HW9, HD9 * 0.5, 0.11), '#3a4248', 2);
+          var lp9 = HP(0, HD9 + a(2.2), 0.1); dot(g, lp9[0] - 1, lp9[1] - 1, '#ffb02e', 3);
           break;
         }
         /* A run of a station ring's hull, along its curve: thick plate, its face

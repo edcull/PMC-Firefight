@@ -48,10 +48,10 @@
     return sp;
   }
   /* A ship docked outside the ring: laid by its own outline (its box) over the
-     space, clamped to the hull where along it `clamps` says (fractions of its
-     length, the first with the boarding tube). */
+     space, its boarding bridge clamped on where along it `clamps` says (a
+     fraction of its length), a bulkhead door in the hull where it lands. */
   function DOCKED(x, y, w, h, clamps) {
-    return { kind: 'shuttle', x: x, y: y, w: w, h: h, poly: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], fixed: true, docked: true, clamps: clamps || [0.3, 0.7] };
+    return { kind: 'shuttle', x: x, y: y, w: w, h: h, poly: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], fixed: true, docked: true, clamps: clamps || [0.45] };
   }
   // poured concrete (a quay, a warehouse's floor): open ground, and what stands on it stands on it
   function SLAB(x, y, w, h) { return { kind: 'road', x: x, y: y, w: w, h: h, slab: true, fixed: true }; }
@@ -325,8 +325,10 @@
        clamps; the deck takes the rest, and both sides keep the same 37.5" of
        their edges to come on by. Beyond the hull open space, black, that
        nothing enters: the two ships, the Ninth Lance's and the company's,
-       each held by clamps run out to it from the hull, a gantry crane inside
-       the hull by each, its boom out over it. Inside, steel deck plate; rows
+       each held by a docking clamp, a great enclosed bridge from its hatch
+       over to the hull's top and a bulkhead door in the hull's face below it
+       on the deck side; the hull itself stands twice a wall's height; a
+       gantry crane inside the hull by each, its boom out over it. Inside, steel deck plate; rows
        of cargo stacks with lanes between them, lifters working them; the deck
        open across the middle, blast barriers on it; the dock offices and the
        traffic tower along the south. Heavy spin gravity (the chapter's). */
@@ -337,7 +339,7 @@
         // open space beyond the ring's hull, and the ships docked out in it
         RINGSPACE(24, 50, 46.22),
         DOCKED(0.4, 0.4, 8, 4.5), DOCKED(39.6, 0.4, 8, 4.5),
-        R('crane', 9, 9, 3, 2.4), R('crane', 36, 9, 3, 2.4), Object.assign(R('fueltruck', 14, 10.4, 2.8, 1.4), { facing: Math.PI }),
+        R('crane', 12, 8.5, 3, 2.4), R('crane', 33, 8.5, 3, 2.4), Object.assign(R('fueltruck', 16.5, 11, 2.8, 1.4), { facing: Math.PI }),
         // the cargo, in rows, lanes between
         CG(21.5, 5.5, 5, 4), CG(6, 14, 5, 4), CG(14, 14, 5, 4), CG(24, 13, 5, 4),
         CG(9, 22, 4, 5), CG(35, 22, 4, 5),

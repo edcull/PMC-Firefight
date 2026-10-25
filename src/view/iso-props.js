@@ -665,7 +665,7 @@
           // a warehouse's steel cladding stands taller, and neither it nor a strongroom's wall is wired
           if (r.shed) wh3 = a(15);
           // (a station's hull, seen from inside the ring: a low rim, so the ships docked beyond it show over it)
-          if (r.hull) wh3 = a(7);
+          if (r.hull) wh3 = a(14);
           if (r.shed || r.vault || r.hull) wire = false;
           for (var ws = 0; ws < wn; ws++) {
             var wm = (ws + 0.5) * wsl;
@@ -717,7 +717,7 @@
           for (var hs = 0; hs < nseg; hs++) {
             var ta = rg2.a0 + (rg2.a1 - rg2.a0) * hs / nseg, tb = rg2.a0 + (rg2.a1 - rg2.a0) * (hs + 1) / nseg, tm = (ta + tb) / 2;
             props.push({ kind: 'hullseg', x: rg2.cx + rg2.r * Math.cos(tm), y: rg2.cy + rg2.r * Math.sin(tm), ang: tm + Math.PI / 2,
-              len: rg2.r * Math.abs(tb - ta) + 0.05, nx: -Math.cos(tm), ny: -Math.sin(tm), height: a(7), first: hs === 0, seed: (rr2() * 9999) | 0 });
+              len: rg2.r * Math.abs(tb - ta) + 0.05, nx: -Math.cos(tm), ny: -Math.sin(tm), height: a(14), first: hs === 0, seed: (rr2() * 9999) | 0 });
           }
           return;
         }
@@ -786,10 +786,11 @@
         if (r.kind === 'road' && r.pad) { props.push({ kind: 'padmark', x: r.x, y: r.y, w: r.w, h: r.h, seed: (rr2() * 9999) | 0 }); return; }
         if (r.kind === 'shuttle') {
           props.push({ kind: 'shuttle', x: r.x, y: r.y, w: r.w, h: r.h, height: a(38), docked: !!r.docked, seed: (rr2() * 9999) | 0 });
-          /* A ship docked outside a station ring's hull: two clamps run out to it
-             from the hull, square to the curve, a boarding tube beside one. Each
-             meets the ship's flank on the side towards the ring (its hull is
-             narrower than its footprint). */
+          /* A ship docked outside a station ring's hull: its docking clamp, a
+             great enclosed bridge run out to it from the hull square to the
+             curve, meets the ship's flank on the side towards the ring (its hull
+             is narrower than its footprint); a bulkhead door below it in the
+             hull's face. */
           var ringP = r.docked && terrain.filter(function (q) { return q.ring; })[0];
           if (ringP) (r.clamps || [0.3, 0.7]).forEach(function (f, ci) {
             var rg = ringP.ring, px = r.x + r.w * f, pyc = r.y + r.h / 2;
@@ -797,7 +798,10 @@
             // the flank: from the ship's middle, 1.1" towards the ring's centre
             var fx = px - dx / dl * 1.1, fy = pyc - dy / dl * 1.1;
             var hx = rg.cx + dx / dl * rg.r, hy = rg.cy + dy / dl * rg.r;
-            props.push({ kind: 'dockclamp', x: (fx + hx) / 2, y: (fy + hy) / 2, x0: hx, y0: hy, x1: fx, y1: fy, tube: ci === 0, seed: (rr2() * 9999) | 0 });
+            props.push({ kind: 'dockclamp', x: (fx + hx) / 2, y: (fy + hy) / 2, x0: hx, y0: hy, x1: fx, y1: fy, seed: (rr2() * 9999) | 0 });
+            // the bulkhead door it lands over, in the hull's face on the deck's side
+            var inx = -dx / dl, iny = -dy / dl;
+            props.push({ kind: 'hulldoor', x: hx + inx * 0.7, y: hy + iny * 0.7, fx: hx + inx * 0.36, fy: hy + iny * 0.36, tx: -iny, ty: inx, nx: inx, ny: iny, height: a(9), seed: (rr2() * 9999) | 0 });
           });
           return;
         }
@@ -888,7 +892,7 @@
       /* The small things set down on a compound's floor (a box, drums, a console,
          wreckage) take a footprint of their own in this, so one standing behind a
          wall is drawn before the wall, and the wall hides it. */
-      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, outcrop: 0.25, dockclamp: 0.6, hullseg: 0.6, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
+      var SMALL = { piperun: 0.45, relic: 0.4, gatering: 0.6, floodlight: 0.35, outcrop: 0.25, dockclamp: 0.6, hullseg: 0.6, hulldoor: 0.4, smallbox: 0.25, drums: 0.4, console: 0.5, scrap: 0.3, wreckstone: 0.3, shield: 0.4, carapace: 0.45, hivegrowth: 0.5, eggs: 0.5, stall: 0.8, railing: 0.6, sacks: 0.3 };
       function rectOf(p) {
         if (BOX[p.kind] && p.w) return p;
         var r2 = SMALL[p.kind];
