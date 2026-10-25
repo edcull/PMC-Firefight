@@ -90,8 +90,19 @@ const MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 
 ok('every battle line is said at a moment the battle has', said.every((x) => !/\//.test(x.at) || MOMENTS.indexOf(x.at.split('/').pop()) >= 0 || TALK.conversations[x.at]));
 ok('...every battle of the first half has its own, and every enemy side its own', battles.every((n) => TALK.battles[n.id]) &&
   battles.every((n) => TALK.sides[n.enemy.side]), battles.filter((n) => !TALK.battles[n.id] || !TALK.sides[n.enemy.side]).map((n) => n.id).join(', '));
-ok('the patron is a man nobody sees: Lucan Vane, on the line, half his face in shadow', people.vane.name === 'Lucan Vane' && people.vane.face.shadow === true &&
-  /seen by almost nobody/.test(dr.blurb) && /nobody does/.test(TALK.conversations['c1.brief'][0].text));
+ok('the patron is a man nobody sees: Lucan Vane, on the line, half his face in shadow', people.vane.name === 'Lucan Vane' && people.vane.face.shadow === true);
+{
+  /* Halloran hires the company; the client behind him is a voice with no name until the second half opens (or the Lance says it). */
+  const firstHalf = ['c1', 'c2', 'c3', 'c4', 'warren'].map((id) => dr._chapters[id]).reduce((a, ch) => a.concat(ch.nodes), []);
+  const c1talk = ['c1.brief', 'c1.lost', 'c2.brief', 'c2f.dig', 'c2t.airlock', 'c3.brief', 'c3.contact', 'c3.sale', 'c4.brief', 'warren.brief'].map((k) => TALK.conversations[k] || []).reduce((a, x) => a.concat(x), []);
+  const words = firstHalf.map((n) => [TEXT[n.id] || ''].concat(Object.keys(TEXT).filter((k) => k.indexOf(n.id + '/') === 0).map((k) => TEXT[k])).join(' ')).join(' ') + ' ' + TEXT.c1 + TEXT.c2 + TEXT.c3 + TEXT.c4 + TEXT.warren;
+  ok('the client behind Halloran has no name in the first half: the same face as Vane, and no Vane in its words or its talk',
+    people.client && people.client.face.shadow === true && JSON.stringify(people.client.face) === JSON.stringify(people.vane.face) &&
+    !/Vane/.test(words) && !/Vane/.test(dr.blurb) && !c1talk.some((l) => l.who === 'vane' || /Vane/.test(l.text)) && /Halloran/.test(dr.blurb) && /Halcyon/.test(TEXT.c1));
+  ok('...named when the second half opens, by Halloran following the money, unless the Lance said it first',
+    TALK.conversations['fault.brief'].some((l) => l.who === 'reader' && /Lucan Vane/.test(l.text) && l.if && l.if.not && l.if.not.revealed === 'client_lance') &&
+    /work for Lucan Vane/.test(TALK.conversations['dx.brief'][0].text));
+}
 {
   /* First contact: in the first half nobody knows what the Xenotripods are. No
      word names them or a tribe, no tribe speaks, and no battle is fought

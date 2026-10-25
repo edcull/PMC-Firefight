@@ -206,7 +206,7 @@
     chart: true,
     // the two halves, as the chapter cards name them, and those who were there from the start
     halves: ['The Chart', 'The Long Jump'], firstDay: 'on the trail from Vesk',
-    blurb: 'A dead surveyor’s log, and the strange stones he left behind, lead across the stars to a world nobody has charted. Lucan Vane, who owns more than most governments and is seen by almost nobody, hires your company to follow them. Every other company on the trail was hired to get there first. Nobody has asked who made the stones.',
+    blurb: 'A dead surveyor’s log, and the strange stones he left behind, lead across the stars to a world nobody has charted. Halloran, a reader of old logs, hires your company to follow them for a client who gives no name and pays through a bank on Halcyon. Every other company on the trail was hired to get there first, and none of them has met its client either. Nobody has asked who made the stones.',
     start: { faction: 'pmc', found: 'standard' },
 
     // what the company knows of the enemy before a battle (story.js `intel`)
@@ -222,7 +222,7 @@
       wraith_robbed: 'Wraith Section wants its copy of the log back.', thule_records: 'You heard Morrow’s own voice.',
       beacon_rubbing: 'The beacon answered your signal.', relics_returned: 'You gave back what was taken from the beacon.',
       warren_entered: 'You stepped through the gate at the beacon.', chart_sold: 'You sold a copy of the chart.',
-      vane_suspects: 'Vane suspects you.', vane_cut_off: 'Vane has cut you off.', eshaven_freed: 'The Hashamer guide you.',
+      vane_suspects: 'Your client suspects you.', vane_cut_off: 'Your client has cut you off.', eshaven_freed: 'The Hashamer guide you.',
       eshaven_promise: 'You promised the Hashamer the Quiet would stay asleep.', promise_broken: 'You broke your promise to the Hashamer.',
       contact: 'You have spoken with the Amt.', morrow_found: 'You found Morrow.',
       log_lost: 'Brass Ledger have the log.', ledger_has_log: 'Brass Ledger have the log, and are selling what it says.',
@@ -238,7 +238,7 @@
     },
 
     meters: {
-      vane: { start: 0, shown: true, name: 'Vane’s Trust', uses: ['pay'], thresholds: [{ gte: 2 }, { lte: -3 }] },
+      vane: { start: 0, shown: true, name: 'The client’s Trust', uses: ['pay'], thresholds: [{ gte: 2 }, { lte: -3 }] },
       loyalty: { start: 1, shown: true, name: 'Loyalty', uses: ['reroll', 'suppression'], thresholds: [{ gte: 2 }, { lte: -2 }] },
       intel: { start: 1, min: 0, max: 6, shown: true, name: 'Intel', uses: ['reveal', 'intel'], thresholds: [{ gte: 3 }, { gte: 6 }] },
       lead: { start: 0, shown: true, name: 'Lead', thresholds: [{ gte: 3 }, { lte: -3 }] },
@@ -266,6 +266,8 @@
 
     people: {
       // the patron: never in the room, only on the line, and half his face in shadow when he is
+      // the client on Halloran's line: Vane, before anyone knows it (the same face, in shadow)
+      client: { name: 'The client', role: 'A voice on Halloran’s line', face: { bg: '#2a2238', skin: '#e2b48f', hair: '#c8c8c8', hairStyle: 'short', clothes: '#141218', clothesStyle: 'suit', accent: '#c8a040', extras: ['beard'], shadow: true } },
       vane: { name: 'Lucan Vane', role: 'The patron', face: { bg: '#2a2238', skin: '#e2b48f', hair: '#c8c8c8', hairStyle: 'short', clothes: '#141218', clothesStyle: 'suit', accent: '#c8a040', extras: ['beard'], shadow: true } },
       // what stepped out of the air at the beacon: nothing in anybody's files (the first half's unknown contacts)
       unknown: { name: 'Unknown', role: 'No match on any file', face: { tripod: true, bg: '#0e1214', shell: '#5a6a66', glow: '#7ae0c8', shadow: 'full' } },
@@ -356,8 +358,8 @@
         { id: 'survey', title: 'Survey Cover', pay: 3, if: { chapter: { gte: 5 } }, text: 'A survey team on a quiet world, and the ground moving under them.',
           scenario: 'ce_clear', tier: 'max-1', enemy: tribe('mithdu', { fill: { to: 0.6, from: ['xeps1'] } }),
           cost: [LATE_TIME, { meter: 'alarm', add: 1 }], on: { success: [{}], failure: [{ effects: [{ meter: 'alarm', add: 1 }] }] } },
-        { id: 'errand', title: 'Vane’s Errand', pay: 4, if: { all: [{ meter: 'vane', gte: 1 }, { not: { flag: 'vane_cut_off' } }] },
-          text: 'Vane wants something collected, and someone is sitting on it.',
+        { id: 'errand', title: 'The Client’s Errand', pay: 4, if: { all: [{ meter: 'vane', gte: 1 }, { not: { flag: 'vane_cut_off' } }] },
+          text: 'Halloran’s client wants something collected, and someone is sitting on it.',
           scenario: 'find', tier: 'max-1', enemy: rival('wraith', { fill: { to: 0.7, from: ['irregulars', 'observers'] } }),
           cost: [LATE_TIME], on: { success: [{ effects: [{ meter: 'vane', add: 1 }] }], failure: [{ effects: [{ meter: 'vane', add: -1 }] }] } },
         { id: 'creditor', title: 'Any Port in a Storm', pay: 4, if: { flag: 'vane_cut_off' },
@@ -370,21 +372,21 @@
     chapters: [
       /* ================= the first half: The Chart ================= */
       { id: 'c1', half: 1, title: 'Lot 47', place: { system: 'Hadley', planet: 'Vesk', kind: 'dense', site: 'Vesk Free Port' },
-        intro: 'A dead surveyor’s log comes up for auction, and Lucan Vane hires the company to make sure his reader leaves with it.', nodes: [
+        intro: 'A dead surveyor’s log comes up for auction, and a reader called Halloran hires the company to make sure he leaves with it.', nodes: [
         { id: 'c1.brief', type: 'brief', text: 'Vesk Free Port. Lot 47 is on the block tonight.', next: 'c1.bidding' },
-        { id: 'c1.bidding', type: 'event', who: 'vane', title: 'The bidding', text: 'Half the room is bidding for somebody else.', options: [
-          // (Vane's money, not the company's: the company has none yet)
+        { id: 'c1.bidding', type: 'event', who: 'client', title: 'The bidding', text: 'Half the room is bidding for somebody else.', options: [
+          // (the client's money, not the company's: the company has none yet)
           { id: 'outbid', text: 'Outbid them in the open.', battle: { readiness: 1 }, effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: 1 }] },
-          { id: 'watch', text: 'Let Vane bid while the company watches the room.', battle: { intel: 1 }, effects: [{ meter: 'intel', add: 1 }] },
+          { id: 'watch', text: 'Let Halloran bid while the company watches the room.', battle: { intel: 1 }, effects: [{ meter: 'intel', add: 1 }] },
           { id: 'follow', text: 'Have Brass Ledger’s agent followed out of the room.', battle: { role: 'choose' }, effects: [{ flag: 'kettle_marked', local: true }] }
         ], next: 'c1.battle' },
-        // Vane's reader across the market square to the landing field, with the log, and Brass Ledger in the way
+        // Halloran across the market square to the landing field, with the log, and Brass Ledger in the way
         { id: 'c1.battle', type: 'battle', scenario: 'escort', variant: { escort: 'Halloran' }, map: 'vesk', tier: 1, pl: 1, planet: 'dense',
           enemy: rival('kettle', { core: [{ key: 'recruits', name: 'Kettering’s Own' }], optional: { meter: 'kettle', per: 3, units: ['irregulars', 'recruits'] }, fill: { to: 0.6, from: ['recruits', 'irregulars'], meter: 'kettle', step: 0.05 },
             changes: [{ if: { flag: 'kettle_marked' }, readiness: -1 }] }),
           // lost, Brass Ledger have the log, and what the company does next is about getting it back, or following it
           on: { success: [{ effects: [{ meter: 'kettle', add: -1 }, { meter: 'lead', add: 1 }] }], failure: [{ effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: -1 }, { flag: 'log_lost' }] }] }, next: 'c1.debrief' },
-        { id: 'c1.debrief', type: 'debrief', text: '{if success}The log is Vane’s.{/if}{if failure}Brass Ledger have the log.{/if}', events: ['c1.agent'], next: 'c1.route' },
+        { id: 'c1.debrief', type: 'debrief', text: '{if success}The log is safe.{/if}{if failure}Brass Ledger have the log.{/if}', events: ['c1.agent'], next: 'c1.route' },
         { id: 'c1.route', type: 'branch', when: [{ if: { flag: 'log_lost' }, next: 'c1.lost' }, { next: 'c1.interlude' }] },
         /* The log lost: Brass Ledger's ship is on the landing field, and the company
            can hit it before it lifts, have Vane buy the log back, or let it go and
@@ -408,12 +410,12 @@
           { id: 'interrogate', text: 'Interrogate him.', effects: [{ meter: 'intel', add: 1 }, { meter: 'kettle_trust', add: -1 }, { flag: 'kettle_contact' }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank, behind three shell companies, all registered on Halcyon.' }] },
           { id: 'authorities', text: 'Hand him to the port authorities.', effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: -1 }, { meter: 'kettle_trust', add: -2 }, { flag: 'kettle_burned' }, { flag: 'agent_jailed' }] }
         ] },
-        interlude('c1.interlude', 'c2', 'The company lifts off Vesk with the log, and Vane’s first heading.')
+        interlude('c1.interlude', 'c2', 'The company lifts off Vesk with the log, and Morrow’s first heading.')
       ] },
 
       { id: 'c2', half: 1, title: 'The First Lodestone', intro: 'Morrow’s first heading can be read two ways, and the company can only follow one.', nodes: [
         { id: 'c2.brief', type: 'brief', text: 'Two readings of the first heading.', next: 'c2.readings' },
-        { id: 'c2.readings', type: 'event', who: 'vane', title: 'Two readings', text: 'The Glass Flats, or Station Thule. A rival will take the other.', options: [
+        { id: 'c2.readings', type: 'event', who: 'reader', title: 'Two readings', text: 'The Glass Flats, or Station Thule. A rival will take the other.', options: [
           { id: 'flats', text: 'The Glass Flats: Morrow’s dig.', effects: [{ meter: 'theirs', add: 1 }, { meter: 'sable', add: 1 }], next: 'c2f.dig' },
           { id: 'thule', text: 'Station Thule: the relay he stopped at.', effects: [{ meter: 'theirs', add: 1 }, { meter: 'wraith', add: 1 }, { meter: 'lead', add: -1 }], next: 'c2t.airlock' }
         ] },
@@ -458,7 +460,7 @@
         { id: 'c2t.debrief', type: 'debrief', text: '{if success}The station is yours.{/if}{if skip}The scavengers take the money and go.{/if}{if failure}The scavengers fired the archive.{/if}', events: ['c2t.records', 'c2t.burned'], next: 'c2.interlude' },
         { id: 'c2t.records', type: 'event', if: { grade: ['decisive', 'victory', 'skip'] }, title: 'Morrow’s records', text: 'The relay kept his log entries, his voice and his fear.', options: [
           { id: 'listen', text: 'Listen to all of it.', effects: [{ meter: 'understanding', add: 1 }, { flag: 'thule_records' }].concat(rebuilt('Morrow’s own records at Thule')) },
-          { id: 'send', text: 'Send the records to Vane.', effects: [{ meter: 'vane', add: 1 }].concat(rebuilt('Morrow’s own records at Thule, with Vane’s readers')) },
+          { id: 'send', text: 'Send the records to the client.', effects: [{ meter: 'vane', add: 1 }].concat(rebuilt('Morrow’s own records at Thule, with his client’s readers')) },
           { id: 'sell', text: 'Sell a copy to a newsfeed.', effects: [{ kUC: 2 }, { flag: 'kestrel_deal' }, { meter: 'vane', add: -1 }] }
         ] },
         { id: 'c2t.burned', type: 'event', if: { grade: 'failure' }, title: 'Burned', text: 'The scavengers fired the archive.', options: [
@@ -499,14 +501,14 @@
         { id: 'c3.left', type: 'event', if: { all: [{ not: { flag: 'beacon_rubbing' } }, { not: { relic: 'A' } }] }, title: 'What they left', text: 'One of them, hurt, and the lodestone still in its socket.', options: [
           { id: 'stone', text: 'Take the lodestone.', effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 1 }] },
           { id: 'leave', text: 'Leave the stone, and the hurt one, where they are.', effects: [{ meter: 'understanding', add: 2 }, { meter: 'lead', add: -1 }, { meter: 'vane', add: -1 }, { flag: 'relics_returned' }] },
-          { id: 'both', text: 'Take both, for Vane.', effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 2 }, { meter: 'vane', add: 1 }, { meter: 'understanding', add: -1 }, { flag: 'alpha_taken' }] },
+          { id: 'both', text: 'Take both, for the client.', effects: [{ meter: 'stones', add: 1 }, { meter: 'alarm', add: 2 }, { meter: 'vane', add: 1 }, { meter: 'understanding', add: -1 }, { flag: 'alpha_taken' }] },
           { id: 'gate', text: 'The gate is still open. Step through after them.', extreme: true, if: { any: [{ flag: 'beacon_stormed' }, { flag: 'signal_failed' }] },
             why: 'The air closed behind them.', effects: [{ flag: 'warren_entered' }, { meter: 'alarm', add: 2 }] }
         ] },
         { id: 'c3.copy', type: 'event', who: 'kettering', title: 'A buyer for a copy', text: 'Someone wants a copy of the chart, and names a price.', options: [
-          { id: 'sell', text: 'Sell them a copy.', extreme: true, if: { meter: 'vane', lte: -1 }, why: 'You still work for Vane.', effects: [{ kUC: 4 }, { meter: 'theirs', add: 1 }, { flag: 'chart_sold' }] },
+          { id: 'sell', text: 'Sell them a copy.', extreme: true, if: { meter: 'vane', lte: -1 }, why: 'You still work for the client.', effects: [{ kUC: 4 }, { meter: 'theirs', add: 1 }, { flag: 'chart_sold' }] },
           { id: 'refuse', text: 'Refuse.', effects: [{ meter: 'vane', add: 1 }] },
-          { id: 'report', text: 'Tell Vane who asked.', effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: -1 }] }
+          { id: 'report', text: 'Tell the client who asked.', effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: -1 }] }
         ] },
         // both one-offs triggered: the Warren wins, and Vane only suspects
         { id: 'c3.end', type: 'happening', effects: [
@@ -564,7 +566,7 @@
       ] },
 
       { id: 'doublecross', half: 1, oneOff: true, title: 'The Double-Cross', place: { system: 'Marrick', planet: 'Kerrigan orbital', kind: 'industrial', world: { gravity: 'high' } },
-        intro: 'Vane’s own company docks beside the company’s, with a court order.', nodes: [
+        intro: 'A company called the Ninth Lance docks beside the company’s, with a court order.', nodes: [
         { id: 'dx.brief', type: 'brief', text: 'The Ninth Lance, and a repossession.', next: 'dx.repo' },
         { id: 'dx.repo', type: 'event', who: 'daw', title: 'The repossession', text: 'Commander Daw wants the log.', options: [
           { id: 'hand', text: 'Hand back the log.', battle: { skip: true }, effects: [{ meter: 'lead', add: -2 }, { meter: 'intel', add: -2 }, { flag: 'vane_cut_off' }, { flag: 'log_handed' }, { reveal: 'client_lance', journal: 'The Ninth Lance is Lucan Vane’s own company.' }] },
@@ -588,8 +590,8 @@
           { id: 'pay', text: 'Pay the death benefits.', cost: { kUC: 1 }, why: 'You can’t pay them.', effects: [{ meter: 'loyalty', add: 1 }] },
           { id: 'dont', text: 'Don’t.', effects: [{ meter: 'loyalty', add: -1 }] }
         ] },
-        { id: 'i.sendahead', type: 'event', once: true, who: 'vane', if: { all: [{ not: { flag: 'vane_cut_off' } }, { meter: 'stones', gte: 2 }, { any: [{ meter: 'vane', gte: 1 }, { flag: 'owed_vane' }] }] },
-          title: 'Send one ahead', text: 'Vane wants a lodestone sent to him now.', options: [
+        { id: 'i.sendahead', type: 'event', once: true, who: 'client', if: { all: [{ not: { flag: 'vane_cut_off' } }, { meter: 'stones', gte: 2 }, { any: [{ meter: 'vane', gte: 1 }, { flag: 'owed_vane' }] }] },
+          title: 'Send one ahead', text: 'Your client wants a lodestone sent to him now.', options: [
           { id: 'send', text: 'Send it.', effects: [{ meter: 'stones', add: -1 }, { meter: 'vane', add: 1 }, { flag: 'owed_vane', set: false }, breaks()] },
           { id: 'refuse', text: 'Refuse.', effects: [{ meter: 'vane', add: -1 }, { if: { flag: 'owed_vane' }, flag: 'vane_cut_off' }, { if: { flag: 'vane_suspects' }, flag: 'vane_cut_off' }, { flag: 'vane_suspects' }] }
         ] },

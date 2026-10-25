@@ -68,9 +68,17 @@ and the stones are a lock as much as a map. He sold one on Kerrigan for fuel
 the race: through proxies he funds Brass Ledger (the Orrin Mercantile Bank's
 shell companies), Sable Armour Group (the Halvorsen Mining Combine) and Kestrel
 Air Cavalry (the Meridian newsfeed, bought last year), and seeds them stones
-so many hands dig up the rest. The first half only hints: each of those
-clients' money runs through **Halcyon**, where Vane's banks are; Vane waves off
-the question of who paid for Morrow's first trip. Wraith Section (the Navy)
+so many hands dig up the rest. **The company is hired by Halloran**, a reader of
+old logs, for a client neither of them has met: a voice on a scrambled line
+(`client`, Vane's face in shadow) whose money clears through a bank on
+Halcyon. So every company on the trail, the player's included, works for a
+client it cannot name, and when it comes out that most of them are the same
+man, each has reason to question its own contract and, perhaps, to trust the
+others. The first half only hints: Brass Ledger's, Sable's and Kestrel's
+clients' money also runs through **Halcyon**, and the voice waves off the
+question of who paid for Morrow's first trip. The company learns its client's
+name when the second half opens (Halloran follows the money), or earlier from
+Daw, if the Double-Cross comes. Wraith Section (the Navy)
 and the Red Reavers are the only rivals he does not own. The second half
 reveals it (*The Vault*'s receipts, *The Wreck*'s last entry).
 
