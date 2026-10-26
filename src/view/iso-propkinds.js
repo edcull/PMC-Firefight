@@ -1540,6 +1540,38 @@
           }
           break;
         }
+        /* A wreck's damage, on her decks (iso-props.js): a scorch where a fire burned
+           out, plating torn up and lying askew, the odd girder come down from
+           above, and loose rubble — drawn only. */
+        case 'debris': {
+          var dbr = rng(pr.seed), dsz = pr.size || 1;
+          if (pr.scorch) {
+            g.save(); g.translate(p.x, p.y); g.scale(1, 0.5);
+            var sgr = g.createRadialGradient(0, 0, 0, 0, 0, 2.2 * dsz * K);
+            sgr.addColorStop(0, 'rgba(8,6,5,.6)'); sgr.addColorStop(0.55, 'rgba(18,12,8,.32)'); sgr.addColorStop(1, 'rgba(18,12,8,0)');
+            g.fillStyle = sgr; g.beginPath(); g.arc(0, 0, a(2.2 * dsz), 0, Math.PI * 2); g.fill(); g.restore();
+          }
+          var PLATE = ['#5d646b', '#474d53', '#737b83', '#3d4247'];
+          for (var dp = 0, ndp = pr.plates || 0; dp < ndp; dp++) {
+            var dcx = p.x + (dbr() - 0.5) * 2.4 * dsz * K, dcy = p.y + (dbr() - 0.5) * 1.2 * dsz * K, dw = (0.35 + dbr() * 0.45) * K, dh = (0.2 + dbr() * 0.3) * K, dan = dbr() * Math.PI, lift2 = dbr() * 0.35 * K;
+            var dc = Math.cos(dan), ds = Math.sin(dan) * 0.5;
+            var dq = [[-dw, -dh], [dw, -dh], [dw, dh], [-dw, dh]].map(function (q, qi) { return [dcx + q[0] * dc - q[1] * Math.sin(dan), dcy + q[0] * ds + q[1] * Math.cos(dan) * 0.5 - (qi < 2 ? lift2 : 0)]; });
+            poly(g, dq, PLATE[(dbr() * PLATE.length) | 0]);
+            edgeLine(g, dq[0], dq[1], '#8a939b', 1);
+          }
+          if (pr.beam) {
+            var bl = (1.8 + dbr() * 1.6) * K, bang = dbr() * Math.PI, bx0 = p.x - Math.cos(bang) * bl / 2, by0 = p.y - Math.sin(bang) * bl / 4;
+            var bx1 = p.x + Math.cos(bang) * bl / 2, by1 = p.y + Math.sin(bang) * bl / 4 - (0.4 + dbr() * 0.6) * K;
+            edgeLine(g, [bx0, by0 + 2], [bx1, by1 + 2], 'rgba(0,0,0,.35)', 4);
+            edgeLine(g, [bx0, by0], [bx1, by1], '#33373c', 4);
+            edgeLine(g, [bx0, by0 - 1], [bx1, by1 - 1], '#6b7279', 1);
+          }
+          for (var dpb = 0, ndb = pr.rubble || 0; dpb < ndb; dpb++) {
+            pebble(g, p.x + (dbr() - 0.5) * 2.6 * dsz * K, p.y + (dbr() - 0.5) * 1.3 * dsz * K, 2 + (dbr() * 4 | 0), dbr);
+          }
+          if (pr.spark) { dot(g, p.x + 0.2 * K, p.y - 0.3 * K, '#ffd27a', 3); dot(g, p.x + 0.35 * K, p.y - 0.5 * K, '#ff9a3a', 2); dot(g, p.x + 0.1 * K, p.y - 0.6 * K, '#fff1c2', 1); }
+          break;
+        }
         case 'rubble': {
           var rr = rng(pr.seed), nch = 3 + (rr() * 4 | 0);
           for (var ch = 0; ch < nch; ch++) {

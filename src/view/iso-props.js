@@ -117,6 +117,25 @@
           }
         }
       }
+      /* Her damage, inside: on her decks, scorches where fires burned out, plating torn up,
+         girders down and rubble, more of it in the bigger rooms; never under her cargo or her
+         machinery (drawn only: none of it is terrain). */
+      if (hullOf) {
+        var dmr = rng(seed + 9133);
+        var held2 = terrain.filter(function (q) { return ['crates', 'machinery', 'pillar', 'barricade'].indexOf(q.kind) >= 0; });
+        terrain.forEach(function (q) {
+          if ((q.kind !== 'room' && q.kind !== 'corridor' && q.kind !== 'hall') || q.outdoors || q.w < 1.5 || q.h < 1.5) return;
+          var nd = Math.max(1, Math.round(q.w * q.h / 14 + dmr() * 1.5));
+          for (var d = 0, tries2 = 0; d < nd && tries2 < nd * 8; tries2++) {
+            var dx = q.x + 0.8 + dmr() * (q.w - 1.6), dy = q.y + 0.8 + dmr() * (q.h - 1.6);
+            if (held2.some(function (h) { return dx > h.x - 0.6 && dx < h.x + h.w + 0.6 && dy > h.y - 0.6 && dy < h.y + h.h + 0.6; })) continue;
+            d++;
+            var big = q.w * q.h > 40;
+            props.push({ kind: 'debris', x: dx, y: dy, size: 0.7 + dmr() * 0.6, scorch: dmr() < 0.55, plates: dmr() < 0.6 ? 1 + (dmr() * 3 | 0) : 0,
+              beam: dmr() < (big ? 0.35 : 0.15), rubble: 2 + (dmr() * 5 | 0), spark: dmr() < 0.15, seed: (dmr() * 9999) | 0 });
+          }
+        });
+      }
       var yards = terrain.filter(function (q) { return q.outdoors; });
       if (yards.length) terrain.forEach(function (r, ri) {
         if (r.kind !== 'breached') return;
