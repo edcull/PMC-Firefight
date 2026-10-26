@@ -43,7 +43,8 @@
         var TW = 0, spawn = [];
         terrain.forEach(function (q) { TW = Math.max(TW, q.x + q.w); });
         terrain.forEach(function (q) {
-          if (q.kind !== 'corridor' || q.h > 3.01) return;
+          // (the ground outside a wreck's breach is open ground: nothing stands across it)
+          if (q.kind !== 'corridor' || q.h > 3.01 || q.outdoors) return;
           if (q.x <= 0.01) spawn.push({ kind: 'door', x: 0, y: q.y, w: 0.5, h: q.h, spawn: true });
           if (q.x + q.w >= TW - 0.01) spawn.push({ kind: 'door', x: TW - 0.5, y: q.y, w: 0.5, h: q.h, spawn: true });
         });
@@ -116,7 +117,8 @@
          or a door: [side, from, to], the side 'N', 'S', 'W' or 'E' and the run
          along it in inches of the table. */
       var solids = terrain.filter(function (q) { return q.kind === 'bulkhead' || /^door/.test(q.kind); });
-      var floors = terrain.filter(function (q) { return q.kind === 'corridor' || q.kind === 'room' || q.kind === 'hall' || q.kind === 'breached'; });
+      // (the ground outside a wreck's breach is no floor of hers: no hull wall about it)
+      var floors = terrain.filter(function (q) { return !q.outdoors && (q.kind === 'corridor' || q.kind === 'room' || q.kind === 'hall' || q.kind === 'breached'); });
       function inAny(list, x, y) {
         for (var i = 0; i < list.length; i++) { var q = list[i]; if (x > q.x && x < q.x + q.w && y > q.y && y < q.y + q.h) return true; }
         return false;
@@ -553,7 +555,7 @@
           }
           return;
         }
-        if (r.kind === 'corridor' || r.kind === 'room' || r.kind === 'hall') {
+        if ((r.kind === 'corridor' || r.kind === 'room' || r.kind === 'hall') && !r.outdoors) {
           var sa = r.w * r.h;
           /* The small clutter of a lived-in compound, drawn only (nothing a rule
              reads): deck grates, cable runs, the odd box, litter. A long corridor

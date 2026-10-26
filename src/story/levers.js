@@ -365,6 +365,10 @@
     /* who comes in where, on a compound map that says (its `entries`, picked by the battle's
        `variant.entry`): rectangles of its 3" cells, the doorways or the rooms a side already holds */
     var entrySet = map && compound && map.entries ? map.entries[(spec.variant && spec.variant.entry) || 'cut'] || null : null;
+    // (and the ground outside the ship by its breaches, and the breaches themselves: a wreck's, engine.js)
+    var cellRect = function (c) { return { x: c.i * 3 * sx, y: c.j * 3 * sy, w: (c.w || 1) * 3 * sx, h: (c.h || 1) * 3 * sy }; };
+    var outdoors = map && compound && map.compound && map.compound.outdoors ? map.compound.outdoors.map(cellRect) : null;
+    var breaches = map && compound && map.compound && map.compound.breaches ? map.compound.breaches.map(function (b) { return { x: b.i * 3 * sx, y: b.j * 3 * sy }; }) : null;
     var compoundEntries = entrySet ? { A: entrySet.A.map(function (c) { return { x: c.i * 3 * sx, y: c.j * 3 * sy, w: c.w * 3 * sx, h: c.h * 3 * sy }; }),
       B: entrySet.B.map(function (c) { return { x: c.i * 3 * sx, y: c.j * 3 * sy, w: c.w * 3 * sx, h: c.h * 3 * sy }; }) } : null;
     var mapObjectives = map && !compound && map.objectives ? map.objectives.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) : null;
@@ -424,6 +428,8 @@
         ambushExpected: !!(ambush && variant.expected),
         ambushZones: ambushZones,
         entries: compoundEntries,
+        outdoors: outdoors,
+        breaches: breaches,
         readiness: rd,
         barricades: rd >= 1 ? { B: 2 * pl } : null,
         intel: S.intel(campaign, spec),

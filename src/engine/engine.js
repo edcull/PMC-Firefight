@@ -399,7 +399,18 @@
     /* A wreck on a world's surface (a story map's 'wreck' skin): its solid is
        the ground outside her hull, drawn as the world's, the floors walled by
        the hull where they meet it. The rules read it as solid all the same. */
-    if (scenDef.compound && cfg.story && cfg.story.skin === 'wreck') built.terrain.forEach(function (t) { if (t.kind === 'bulkhead' && !t.thin) t.outside = true; });
+    if (scenDef.compound && cfg.story && cfg.story.skin === 'wreck') {
+      var inRects = function (rs, x, y) { return (rs || []).some(function (r) { return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h; }); };
+      built.terrain.forEach(function (t) {
+        if (t.kind === 'bulkhead' && !t.thin) t.outside = true;
+        // the ground just outside a breach, walkable: drawn as the world's, nothing fitted out on it
+        if (t.kind === 'corridor' && inRects(cfg.story.outdoors, t.x + t.w / 2, t.y + t.h / 2)) { t.outdoors = true; t.dangerous = false; }
+        // and the breach itself: a door blown open, nothing left to shut
+        if (R.TERRAIN[t.kind] && R.TERRAIN[t.kind].door && (cfg.story.breaches || []).some(function (b) {
+          return b.x >= t.x - 0.6 && b.x <= t.x + t.w + 0.6 && b.y >= t.y - 0.6 && b.y <= t.y + t.h + 0.6;
+        })) t.kind = 'breached';
+      });
+    }
     /* The Warren (a story map's 'warren' skin): tunnels cut in the rock of a
        world nobody has charted. Its solid is rock and its floors worked stone;
        nothing in it is fitted out as a base is (the machinery goes, the crates

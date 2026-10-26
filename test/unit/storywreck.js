@@ -46,9 +46,11 @@ const inBox = (u, bx) => bx.some((b) => u.x >= b.x - 0.05 && u.x <= b.x + b.w + 
 console.log('\nThe ship');
 {
   const chk = CMP.checkPlan(MAP.compound, 48, 48);
-  ok('her plan can be fought in: rooms and halls, two ways in at the stern, a hatch at the bow', chk.ok && chk.entries.L === 2 && chk.entries.R === 1 && chk.rooms + chk.halls >= 8, JSON.stringify(chk));
-  // every cell inside her outline is a room or a passage: nothing hollow inside her
-  const cells = MAP.compound.cells, cols = 16;
+  ok('her plan can be fought in: rooms and halls, her two nacelles among them', chk.ok && chk.rooms + chk.halls >= 8 &&
+    ['Port nacelle', 'Starboard nacelle'].every((n) => Object.values(MAP.compound.names).indexOf(n) >= 0), JSON.stringify(chk));
+  // every cell inside her outline is a room or a passage: nothing hollow inside her (the ground outside her breaches is outside her)
+  const out = new Set(MAP.compound.outdoors.map((c) => c.j * 16 + c.i));
+  const cells = MAP.compound.cells.split('').map((ch, i) => (out.has(i) ? '.' : ch)).join(''), cols = 16;
   let hollow = 0;
   for (let j = 0; j < 16; j++) {
     const row = cells.slice(j * cols, j * cols + cols), a = row.search(/[rc]/), b = row.length - 1 - row.split('').reverse().join('').search(/[rc]/);
@@ -60,14 +62,19 @@ console.log('\nThe ship');
   const { s } = started(at('cut'));
   ok('the battle is fought in her, on the map, Pell’s ground outside her hull', s.compound && s.cfg.story.skin === 'wreck' &&
     s.terrain.some((t) => t.outside) && s.terrain.filter((t) => t.outside).every((t) => t.kind === 'bulkhead' && R.terrainName(s, 'bulkhead', t) !== 'Bulkhead'));
+  ok('...two breaches in her hull, blown open: the main hatch near the bow, and the split in the starboard nacelle', s.terrain.filter((t) => t.kind === 'breached').length === 2 &&
+    MAP.compound.breaches.length === 2);
+  ok('...and the ground just outside each breach walkable, open ground, not her floor', s.terrain.filter((t) => t.outdoors).length >= 2 && s.terrain.filter((t) => t.outdoors).every((t) => t.kind === 'corridor' && !t.dangerous));
 }
 
 console.log('\nWho comes in where');
 for (const [opt, n, why] of [['cut', 2, 'cutting a second way in: the main hatch and the split'], ['wait', 1, 'following Sable in: her hatch only'], ['hire_sable', 1, 'in together, by the main hatch']]) {
   const { cfg, s } = started(at(opt));
   const A = s.sc.entry.A, B = s.sc.entry.B;
-  ok(why + ' (' + n + ' way' + (n > 1 ? 's' : '') + ' in)', A.length === n && A.every((b) => b.x === 0));
-  ok('...and the other side already inside her: its ground her rooms, not a doorway', B.every((b) => b.x >= 15 && b.w * b.h >= 9) &&
+  // (a box is outside her when its middle is on the ground by a breach)
+  const outside = (b) => s.terrain.some((t) => t.outdoors && b.x + b.w / 2 >= t.x && b.x + b.w / 2 <= t.x + t.w && b.y + b.h / 2 >= t.y && b.y + b.h / 2 <= t.y + t.h);
+  ok(why + ' (' + n + ' way' + (n > 1 ? 's' : '') + ' in): the company sets up outside her, by the breach, 6" deep', A.length === n && A.every((b) => outside(b) && Math.min(b.w, b.h) <= 6.01));
+  ok('...and the other side already inside her: its ground her rooms, not the ground outside', B.every((b) => !outside(b) && b.w * b.h >= 9) &&
     // (any that has had its first activation already, the other side having the initiative, has moved off)
     s.units.filter((u) => u.side === 'B' && u.x >= 0 && !u.activated).every((u) => inBox(u, B)), cfg.story.hired ? 'Brass Ledger' : 'Sable');
 }

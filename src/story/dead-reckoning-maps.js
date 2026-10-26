@@ -18,9 +18,11 @@
   root.PMCStoryMaps = root.PMCStoryMaps || {};
 
   /* A ship laid as a compound plan, a lettered grid: each letter a room, `c`
-     a passage, `.` outside her hull. Walls go between rooms, and between a room
-     and a passage, but for the doors given and the openings cut through (each
-     [i, j, i2, j2], the cells either side); the rooms are named by letter. */
+     a passage, `o` the ground just outside a breach (walkable, outside her),
+     `.` outside her hull. Walls go between rooms, and between a room and a
+     passage or the ground outside, but for the doors given and the breaches
+     cut through (each [i, j, i2, j2], the cells either side; a breach is a
+     door blown open, engine.js); the rooms are named by letter. */
   function shipPlan(rows, doors, open, names) {
     var cols = rows[0].length, n = rows.length;
     function at(i, j) { return rows[j].charAt(i); }
@@ -28,7 +30,8 @@
     function ek(a, b) { return a < b ? a + '|' + b : b + '|' + a; }
     var dset = {}, oset = {}, walls = [], named = {};
     doors.forEach(function (d) { dset[ek(idx(d[0], d[1]), idx(d[2], d[3]))] = true; });
-    open.forEach(function (d) { oset[ek(idx(d[0], d[1]), idx(d[2], d[3]))] = true; });
+    // (a breach is a door to the plan: the ground outside and the passage in stay two sections)
+    open.forEach(function (d) { dset[ek(idx(d[0], d[1]), idx(d[2], d[3]))] = true; });
     for (var j = 0; j < n; j++) for (var i = 0; i < cols; i++) {
       var A = at(i, j);
       if (A === '.') continue;
@@ -40,9 +43,12 @@
         walls.push(k);
       });
     }
-    var out = {};
+    var out = {}, yard = [];
     Object.keys(named).forEach(function (L) { out[named[L]] = names[L]; });
-    return { cols: cols, rows: n, cells: rows.join('').replace(/[^.c]/g, 'r'), walls: walls, doors: Object.keys(dset), danger: [], names: out };
+    for (var jj = 0; jj < n; jj++) for (var ii = 0; ii < cols; ii++) if (at(ii, jj) === 'o') yard.push({ i: ii, j: jj, w: 1, h: 1 });
+    return { cols: cols, rows: n, cells: rows.join('').replace(/o/g, 'c').replace(/[^.c]/g, 'r'), walls: walls, doors: Object.keys(dset), danger: [], names: out,
+      // (the ground outside, and where each breach is: in cells, the middle of the edge it is cut through)
+      outdoors: yard, breaches: open.map(function (d) { return { i: (d[0] + d[2] + 1) / 2, j: (d[1] + d[3] + 1) / 2 }; }) };
   }
   function B(x, y, w, h, plan) { return { kind: 'building', x: x, y: y, w: w, h: h, plan: plan || 'block' }; }
   function N(kind, x, y, w, h, shape) { return { kind: kind, x: x, y: y, w: w, h: h, shape: shape || 'blob' }; }
@@ -256,41 +262,45 @@
        nacelle out on a pylon to either side of her stern, every cell inside her
        a room or a passage. Its skin is the wreck's (`wreck`, engine.js): the
        solid round her is Pell's ground, outside, the floors walled in by her
-       hull where they meet it. Two ways in at the stern, the main hatch Sable cut
-       and the split in the hull, and who comes in where (`entries`, a battle's
-       `variant.entry`): cutting a second way in, the company has both; following
-       Sable in, only her hatch; either way Sable's people are already inside,
-       through the hold and the rooms forward. Gone in together, Brass Ledger's
-       salvage crew are in the hold and the stores. */
+       hull where they meet it. Two breaches: the main hatch Sable cut, through the top
+       of her hull near the bow, and the split, through the starboard nacelle's
+       outer side. Who comes in where (`entries`, a battle's `variant.entry`): the
+       company sets up on the ground outside a breach, 6" deep, and nowhere else;
+       cutting a second way in, it has both, following Sable in only her hatch,
+       and either way Sable's people are already inside, in the hold, the engine
+       room and the infirmary. Gone in together, by the hatch, Brass Ledger's
+       salvage crew came in by the split: the starboard nacelle, the engine room
+       and the hold. */
     wreck: {
       name: 'The wreck of Morrow’s ship, Pell', skin: 'wreck',
       compound: shipPlan([
         '................',
         '.NNNN...........',
-        '.NNNN...........',
-        '...c............',
+        '.NNNN....ooo....',
+        '...c.....ooo....',
         '.cccccccccccc...',
-        'cEEEcHHHHGGcFF..',
+        '.EEEcHHHHGGcFF..',
         '.EEEcHHHHGGccccc',
         '.EEEcHHHHMMcBB..',
-        'cEEEcHHHHMMcBB..',
+        '.EEEcHHHHMMcBB..',
         '.cccccccccccc...',
         '...c............',
         '.nnnn...........',
         '.nnnn...........',
-        '................',
-        '................',
+        'oooo............',
+        'oooo............',
         '................'
       ], [[2, 4, 2, 5], [2, 8, 2, 9], [3, 6, 4, 6], [4, 7, 5, 7], [6, 8, 6, 9], [10, 4, 10, 5], [11, 6, 10, 6], [11, 7, 10, 7], [9, 9, 9, 8],
         [12, 4, 12, 5], [13, 5, 13, 6], [12, 6, 12, 7], [11, 8, 12, 8], [3, 2, 3, 3], [3, 10, 3, 11]],
-      // (the main hatch and the split: cut through, no door left in either)
-      [[0, 5, 1, 5], [0, 8, 1, 8]],
+      // the breaches: the main hatch, through the top of her hull near the bow, and the split, through the starboard nacelle's outer side
+      [[10, 3, 10, 4], [2, 12, 2, 13]],
       { E: 'Engine room', H: 'Cargo hold', G: 'Galley', M: 'Infirmary', F: 'Forward store', B: 'Bridge', N: 'Port nacelle', n: 'Starboard nacelle' }),
-      // who comes in where, in cells (a 3" grid): the main hatch, the split, and the rooms a side already holds
+      /* who comes in where, in cells (a 3" grid): the company on the ground outside a breach,
+         6" deep, and nowhere else; the other side already in the rooms it holds */
       entries: {
-        cut: { A: [{ i: 0, j: 5, w: 1, h: 1 }, { i: 0, j: 8, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 4 }, { i: 9, j: 5, w: 2, h: 2 }, { i: 9, j: 7, w: 2, h: 2 }, { i: 12, j: 7, w: 2, h: 2 }] },
-        follow: { A: [{ i: 0, j: 5, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 4 }, { i: 9, j: 5, w: 2, h: 2 }, { i: 9, j: 7, w: 2, h: 2 }, { i: 12, j: 7, w: 2, h: 2 }] },
-        together: { A: [{ i: 0, j: 5, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 4 }, { i: 9, j: 5, w: 2, h: 2 }, { i: 9, j: 7, w: 2, h: 2 }] }
+        cut: { A: [{ i: 9, j: 2, w: 3, h: 2 }, { i: 0, j: 13, w: 4, h: 2 }], B: [{ i: 5, j: 5, w: 4, h: 4 }, { i: 1, j: 5, w: 3, h: 4 }, { i: 9, j: 7, w: 2, h: 2 }] },
+        follow: { A: [{ i: 9, j: 2, w: 3, h: 2 }], B: [{ i: 5, j: 5, w: 4, h: 4 }, { i: 1, j: 5, w: 3, h: 4 }, { i: 9, j: 7, w: 2, h: 2 }] },
+        together: { A: [{ i: 9, j: 2, w: 3, h: 2 }], B: [{ i: 1, j: 11, w: 4, h: 2 }, { i: 1, j: 5, w: 3, h: 4 }, { i: 5, j: 5, w: 4, h: 4 }] }
       }
     },
 

@@ -269,7 +269,7 @@
     'wreck': 'The stones point at Pell, a poisoned world with a toxic sky, and at a wreck in a gully that matches nothing on any register: Elias Morrow’s survey ship, where he brought her down for the last time. Sable Armour Group got there first, because Sable always digs in first.',
     'wreck.brief': 'Morrow’s ship lies on her side in a gully under a yellow sky, hull split, half full of drifted ash. Sable’s vehicles ring her. Somewhere inside is the end of Morrow’s story, and possibly Morrow.',
     'wreck.hatch': 'Colonel Sable is cutting into the wreck through the main hatch, slowly, by the book. {if beat_sable}She has seen the company’s ship come down, and has doubled her pickets. Kerrigan, she says on the open channel, will not happen twice.{/if}{if not beat_sable}Her message to the company is short: the wreck is her client’s salvage, and anyone who comes within a kilometre of it will be fired on.{/if}',
-    'wreck.hatch/cut': 'Cut a second way in, through the split in the hull: in by the hatch and the split both.',
+    'wreck.hatch/cut': 'Cut a second way in, through the split in her starboard nacelle: in by the hatch and the split both.',
     'wreck.hatch/wait': 'Wait for Sable to open her up, and follow her in through her hatch.',
     'wreck.hatch/hire_sable': 'Call in what Sable owes the company, and go in together.',
     'wreck.battle#name': 'The Wreck of the Morrow',

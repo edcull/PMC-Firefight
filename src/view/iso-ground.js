@@ -118,7 +118,7 @@
       var TW = new Float32Array(cw * ch), TR = new Float32Array(cw * ch), TG = new Float32Array(cw * ch), TB = new Float32Array(cw * ch);
       terrain.forEach(function (r) {
         // (a market's crater field is paving, not churned earth: it pulls nothing round it)
-        var f = r.market || r.cargo || r.camp || r.pipe || r.blast || r.space || r.outside || r.hub ? null : FIT[r.kind];
+        var f = r.market || r.cargo || r.camp || r.pipe || r.blast || r.space || r.outside || r.outdoors || r.hub ? null : FIT[r.kind];
         if (!f) return;
         var i0 = Math.max(0, Math.floor((r.x - f.r) / STEP)), i1 = Math.min(cw - 1, Math.ceil((r.x + r.w + f.r) / STEP));
         var j0 = Math.max(0, Math.floor((r.y - f.r) / STEP)), j1 = Math.min(ch - 1, Math.ceil((r.y + r.h + f.r) / STEP));
@@ -391,7 +391,7 @@
         // a station's solid is open space, black (rules.js reads it as solid all the same)
         if (r.space) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         // ...and a wreck's is the ground outside her hull: the world's own, as the table lies under it
-        if (r.outside) return;
+        if (r.outside || r.outdoors) return;
         var spec = roomTheme(r) || skinFloor(r) || floorOf(r.kind);
         if (r.kind === 'road' && r.paved && paved.length > 1) spec = Object.assign({}, spec, { joins: paved.filter(function (q) { return q !== r; }) });
         // ...and the Warren's tunnels and chambers are one floor of rock: no lip where one section meets the next
