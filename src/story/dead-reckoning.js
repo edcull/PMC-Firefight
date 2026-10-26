@@ -657,10 +657,13 @@
           { id: 'refuse', text: 'Refuse.', effects: [{ meter: 'lead', add: 1 }, { reveal: 'client_kestrel', journal: 'Kestrel Air Cavalry flies for the Meridian newsfeed, which wants the first pictures of whatever is at the end. The Meridian changed hands last year, to a buyer on Halcyon.' }] }
         ] },
         { id: 'i.catalogue', type: 'event', once: true, who: 'kettering', if: { all: [{ flag: 'kettle_contact' }, { not: { flag: 'kettle_burned' } }] }, title: 'Brass Ledger’s catalogue', text: 'They are selling what they know.', options: [
-          { id: 'buy', text: 'Buy.', cost: { kUC: 2 }, why: 'You can’t afford it.', effects: [{ meter: 'intel', add: 1 }, { meter: 'kettle_trust', add: 1 }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank of Kerrigan, behind three shell companies. Next time it will be whoever pays.' }] },
+          /* (what it is worth depends on who has the log: without it Brass Ledger are guessing, and some of it
+             is true; with it, they are selling pages copied out of it. Page one, who pays them, either way) */
+          { id: 'buy', text: 'Buy it anyway.', hidden: true, if: { not: { flag: 'ledger_has_log' } }, cost: { kUC: 2 }, why: 'You can’t afford it.', effects: [{ meter: 'kettle_trust', add: 1 }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank of Kerrigan, behind three shell companies. Next time it will be whoever pays.' },
+            { roll: { d6: 4 }, pass: [{ meter: 'intel', add: 1, journal: 'Some of Brass Ledger’s catalogue checks out: where the other companies are, and who they work for.' }], fail: [{ journal: 'Brass Ledger’s catalogue is mostly guesswork. Nothing in it checks out.' }] }] },
+          { id: 'pages', text: 'Buy the pages they copied from the log.', hidden: true, if: { flag: 'ledger_has_log' }, cost: { kUC: 2 }, why: 'You can’t afford it.', effects: [{ meter: 'intel', add: 1 }, { meter: 'lead', add: 1 }, { meter: 'kettle_trust', add: 1 }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank of Kerrigan, behind three shell companies. Next time it will be whoever pays.' }] },
           { id: 'sell', text: 'Sell them yours.', effects: [{ kUC: 2 }, { meter: 'lead', add: -1 }, { meter: 'vane', add: -1 }] },
-          // (left alone, it sells to everyone else instead)
-          { id: 'ignore', text: 'Ignore it.', effects: [{ meter: 'theirs', add: 1 }] }
+          { id: 'ignore', text: 'Ignore it.' }
         ] },
         { id: 'i.jump', type: 'event', title: 'The jump', text: 'The drive is failing.', options: [
           { id: 'yard', text: 'Pay for the yard.', cost: { kUC: 1 }, why: 'You can’t afford it.', effects: [{ meter: 'fatigue', add: -1 }] },

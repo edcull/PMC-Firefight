@@ -533,9 +533,24 @@ console.log('\nThe star chart');
     ok('...and the epilogue remembers', dr.epilogue.filter((l) => l.about === 'company' && l.if && l.if.meter === 'fatigue').length === 2);
   }
   {
+    // Brass Ledger's catalogue: worth what they know, and that depends on who has the log
+    const c7 = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+    S.begin(c7, 'dead-reckoning', {});
+    c7.story.chapter = 'c2'; c7.story.node = 'i.catalogue';
+    const ids = () => S.view(c7).options.map((o) => o.id).join(',');
+    const without = ids(), txt0 = S.render(c7, TEXT['i.catalogue']);
+    c7.story.flags.ledger_has_log = true;
+    const withLog = ids(), txt1 = S.render(c7, TEXT['i.catalogue']);
+    ok('the catalogue: with the log, Brass Ledger are guessing, and buying it is a gamble on whether any of it is true',
+      without === 'buy,sell,ignore' && /guesswork/.test(txt0) && dr._nodes['i.catalogue'].options.find((o) => o.id === 'buy').effects.some((e) => e.roll), without);
+    ok('...without it, they are selling pages of it, and buying them catches the company up', withLog === 'pages,sell,ignore' && /copied out of the log/.test(txt1) &&
+      dr._nodes['i.catalogue'].options.find((o) => o.id === 'pages').effects.some((e) => e.meter === 'lead' && e.add > 0), withLog);
+    ok('...and leaving it alone costs nothing', !(dr._nodes['i.catalogue'].options.find((o) => o.id === 'ignore').effects || []).length);
+  }
+  {
     // a client found out is said aloud, not only written in the journal
     const words = (id) => JSON.stringify([TALK.conversations[id] || [], TEXT[id] || '']);
-    const aloud = { kettle: ['c1.agent/interrogate', 'i.catalogue/buy'], wraith: ['c2f.drop/read'], reavers: ['c3.contact'], sable: ['c4.debrief'], kestrel: ['i.newsfeed'], lance: ['dx.brief'] };
+    const aloud = { kettle: ['c1.agent/interrogate', 'i.catalogue/buy', 'i.catalogue/pages'], wraith: ['c2f.drop/read'], reavers: ['c3.contact'], sable: ['c4.debrief'], kestrel: ['i.newsfeed'], lance: ['dx.brief'] };
     const names = { kettle: /Orrin Mercantile/, wraith: /Naval Intelligence/, reavers: /Nobody hired us/, sable: /Halvorsen Mining Combine/, kestrel: /Meridian.*Halcyon/, lance: /work for Lucan Vane/ };
     ok('every rival’s client is said aloud where it is found out', Object.keys(dr.clients).every((id) => aloud[id] && aloud[id].every((k) => names[id].test(words(k)))),
       Object.keys(dr.clients).filter((id) => !aloud[id] || !aloud[id].every((k) => names[id].test(words(k)))).join(' '));

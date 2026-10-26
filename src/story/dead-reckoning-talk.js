@@ -250,6 +250,11 @@
         { who: 'commander', text: 'You’re selling out your own client?' },
         { who: 'kettering', text: 'I’m selling a catalogue. The bank bought this trip, not the next one. Next time it will be whoever pays.' }
       ],
+      'i.catalogue/pages': [
+        { who: 'kettering', text: 'Page one, free with every copy: who’s paying us. The Orrin Mercantile Bank, on Kerrigan, behind three shell companies. The rest is Morrow, in his own hand. Copied, not the original. I’m not daft.' },
+        { who: 'commander', text: 'You’re selling out your own client?' },
+        { who: 'kettering', text: 'I’m selling pages. The bank bought this trip, not the next one. Next time it will be whoever pays.' }
+      ],
 
       // ---- The Double-Cross ----
       'dx.brief': [
