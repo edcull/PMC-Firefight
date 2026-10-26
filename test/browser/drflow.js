@@ -80,7 +80,7 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   await go(p, '[data-go="storyopt"][data-o="watch"]');
   txt = await body(p);
   check('watching the room: the mission’s briefing, Lot 47 in the market square, an Escort: Halloran to the landing field', /Lot 47/.test(txt) && /market square/.test(txt) && /landing field/.test(txt) && /Escort/.test(txt), txt.slice(0, 300));
-  check('...Halloran’s “get me out of here”, and what watching the room showed: places for an ambush', /Now get me out of here/.test(txt) && /places for an ambush/.test(txt) && !/Expect an ambush/.test(txt), txt.slice(0, 600));
+  check('...Halloran’s “get me out of here”, and what watching the room showed: an ambush, known', /Now get me out of here/.test(txt) && /knows where it is/.test(txt) && !/walking into it\./.test(txt), txt.slice(0, 600));
   await go(p, '[data-go="storymuster"]');
   await go(p, '[data-go="storyfight"]');
   await p.waitForTimeout(1200);

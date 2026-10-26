@@ -398,6 +398,8 @@
         strikes: lv.strikes || null,
         suppressOwn: lv.suppressOwn || null,
         ambush: ambush,
+        // (an ambush the side caught out saw coming: set up as one, but nobody pinned, and the first turn rolled for)
+        ambushExpected: !!(ambush && variant.expected),
         readiness: rd,
         barricades: rd >= 1 ? { B: 2 * pl } : null,
         intel: S.intel(campaign, spec),

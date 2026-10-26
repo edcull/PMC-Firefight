@@ -532,7 +532,9 @@
       'c1.battle': {
         start: [
           { who: 'kettering', text: 'Nothing personal, {commander:rank}. Hand over the reader and the slate and everyone goes home. Otherwise my lads go through you, and I don’t care how much it costs.' },
-          { who: 'kettering', if: { flag: 'kettle_marked' }, text: 'You marked my lads in the room? Clever. Not clever enough.' }
+          { who: 'kettering', if: { flag: 'kettle_marked' }, text: 'You marked my lads in the room? Clever. Not clever enough.' },
+          { who: 'kettering', if: { flag: 'room_watched' }, text: 'You watched us set up, and walked in anyway. Brave, {commander:rank}, or cheap. We’ll find out which.' },
+          { who: 'kettering', if: { all: [{ not: { flag: 'room_watched' } }, { not: { flag: 'kettle_marked' } }] }, text: 'You stood next to him all evening, {commander:rank}. Very loyal. It made it very easy to know who to wait for.' }
         ],
         kill: [{ who: 'kettering', text: 'You’re costing me money, {commander:rank}. I don’t forgive that. I invoice it.' }],
         turn3: [{ who: 'reader', text: 'I’m in the arcade, {commander:rank}. My backer is asking, rather calmly, whether I mean to reach the end of it.' }],

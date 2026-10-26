@@ -403,10 +403,12 @@
         intro: 'A dead surveyor’s log comes up for auction, and a reader called Halloran hires the company to make sure he leaves with it.', nodes: [
         { id: 'c1.brief', type: 'brief', text: 'Vesk Free Port. Lot 47 is on the block tonight.', next: 'c1.bidding' },
         { id: 'c1.bidding', type: 'event', who: 'reader', title: 'The bidding', text: 'Half the room is bidding for somebody else.', options: [
-          // (the backer's money, not the company's: the company has none yet)
-          { id: 'outbid', text: 'Stand with Halloran.', battle: { readiness: 1 }, effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: 1 }] },
-          { id: 'watch', text: 'Stay in the background and observe.', effects: [{ meter: 'intel', add: 1 }, { flag: 'room_watched', local: true }] },
-          { id: 'follow', text: 'Focus on Kettering, and mark his men.', battle: { role: 'choose' }, effects: [{ flag: 'kettle_marked', local: true }] }
+          /* (the backer's money, not the company's: the company has none yet)
+             Three ways out across the square: seen at Halloran's side all evening, the company walks into Brass Ledger's
+             ambush; watching the room, it sees the ambush laid and walks into it ready; marking Kettering's men, it hits them first. */
+          { id: 'outbid', text: 'Stand with Halloran.', battle: { variant: { ambush: 'enemy' } }, effects: [{ meter: 'vane', add: 1 }] },
+          { id: 'watch', text: 'Stay in the background and observe.', battle: { variant: { ambush: 'enemy', expected: true } }, effects: [{ meter: 'intel', add: 1 }, { flag: 'room_watched', local: true }] },
+          { id: 'follow', text: 'Focus on Kettering, and mark his men.', battle: { strikes: 'D3' }, effects: [{ flag: 'kettle_marked', local: true }] }
         ], next: 'c1.battle' },
         // Halloran across the market square to the landing field, with the log, and Brass Ledger in the way
         { id: 'c1.battle', type: 'battle', scenario: 'escort', variant: { escort: 'Halloran' }, map: 'vesk', tier: 1, pl: 1, planet: 'dense',

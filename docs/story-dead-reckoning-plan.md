@@ -547,7 +547,7 @@ the systems in the order the company reaches them.
 
 | Chapter | The event | Options (and the levers under them) |
 |---|---|---|
-| 1. Lot 47 | *The bidding.* Lot 47 comes up, and half the room is bidding for somebody else. | Stand with Halloran, in plain sight (the backer's Trust +1, Brass Ledger +1, their Readiness +1). Stay in the background and observe (Intel +1). Focus on Moss Kettering and mark his men (the company chooses its role; `kettle_marked`, their Readiness −1). |
+| 1. Lot 47 | *The bidding.* Lot 47 comes up, and half the room is bidding for somebody else. | Each is a different Escort across the square. Stand with Halloran, in plain sight (the backer's Trust +1): Brass Ledger saw who to wait for, and the company walks into their ambush (they set up mid-table, the company starts pinned, they go first). Stay in the background and observe (Intel +1, `room_watched`: their force seen on the briefing): an ambush the company saw laid (they set up mid-table, but nobody is pinned and the first turn is rolled). Focus on Moss Kettering and mark his men (`kettle_marked`): the company hits them first (D3 strikes as they come on, their Readiness −1). |
 | 2. (the choice) | *Two readings.* Morrow's first heading could mean the Glass Flats or Station Thule. | The Glass Flats (Find and secure + relic, vs Wraith Section). Station Thule (Critical control, vs scavengers). The other site goes to a rival: `theirs` +1, Lead −1, and that rival's strength +1. |
 | 2. The Glass Flats | *The dig.* Wraith Section's camp is already on the flats. | Dig at night (one Battle Tier down, enemy Readiness 0). Jam their comms first (`cost: { intel: 1 }`: Wraith's drones start Suppressed). Go straight for the dig (you attack; `glassflats_rushed`: the lodestone is easier to find, one search site fewer). |
 | 2. Station Thule | *The airlock.* The scavengers have welded the station shut. | Cut through the main lock (you attack, the role is set). Find Morrow's maintenance hatch in the log (a roll on Intel: success, you choose where to come in; failure, enemy Readiness +1). Pay them to leave (kUC −2, no battle: Lead −1, and the records are half burned: no Intel). |
@@ -742,7 +742,7 @@ validator checks both, as for *Deep Contract*.
 
 | Flag | Set by | Read by |
 |---|---|---|
-| `kettle_marked` | *The bidding* (follow the agent) | The Lot 47 battle (Brass Ledger start Suppressed: they were followed) |
+| `kettle_marked` | *The bidding* (mark his men) | The Lot 47 battle (D3 strikes on Brass Ledger as they come on, their Readiness −1: they were followed) |
 | `kettle_contact` | *The agent* (let go, pay) | Hiring Brass Ledger; *The Mimics* (pay them to leave); *Brass Ledger's catalogue* |
 | `kettle_burned` | *The agent* (police) | Brass Ledger never hire out; their forces Readiness +1 |
 | `kettle_partner` | *The invoice* (a share) | *The Landing* (allies), *Finder's Fee* (split) |

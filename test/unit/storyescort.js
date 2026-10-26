@@ -51,6 +51,33 @@ ok('Vesk’s market on the table: every barricade a railing and every crater fie
   st.terrain.filter((t) => t.kind === 'road').every((t) => t.paved) && R.terrainName(st, 'barricade') === 'Railings and planters');
 ok('the bidding’s first answer no longer asks the company for money it has not got', !dr._nodes['c1.bidding'].options[0].cost);
 {
+  // the bidding sets the crossing: walked into an ambush, an ambush seen laid, or Brass Ledger hit first
+  const chosen = (opt) => {
+    const c = C.newCampaign({ mode: 'solo' });
+    C.found(c.companies.A, FOUNDING, 'S2');
+    S.begin(c, 'dead-reckoning', {});
+    c.story.chapter = 'c1'; c.story.node = 'c1.bidding';
+    S.choose(c, opt);
+    const cf = L.toCfg(c, { picks: C.pickForce(c.companies.A, 1, 1, null, { scenario: 'escort' }), role: 'A' });
+    return { c, cf, text: S.render(c, cf.story.blurb || '') };
+  };
+  const a = chosen('outbid'), b = chosen('watch'), f = chosen('follow');
+  ok('standing with Halloran: an Escort still, walked into Brass Ledger’s ambush', a.c.story.node === 'c1.battle' && a.cf.scenario === 'escort' && a.cf.story.ambush === 'B' && !a.cf.story.ambushExpected && !a.cf.story.strikes &&
+    /walking into it\./.test(a.text) && !/knows where it is/.test(a.text), JSON.stringify({ am: a.cf.story.ambush, ex: a.cf.story.ambushExpected }));
+  ok('...watching the room: the same ambush, seen laid (nobody pinned, the first turn rolled for), and their force seen', b.cf.story.ambush === 'B' && b.cf.story.ambushExpected === true &&
+    JSON.stringify(b.cf.story.intel) !== JSON.stringify(a.cf.story.intel) && /knows where it is/.test(b.text) && !/walking into it\./.test(b.text));
+  ok('...marking Kettering’s men: no ambush, the company strikes first as they come on', !f.cf.story.ambush && f.cf.story.strikes === 'D3' && /opens fire/.test(f.text));
+  // and the ambushed crossing starts: Halloran with the company on its edge, Brass Ledger lying in wait
+  const e = Engine.create(); const cf = Object.assign({}, a.cf, { mode: 'ai' }); e.start(cf);
+  for (let i = 0; i < 8 && e.state().phase !== 'battle'; i++) {
+    const s2 = e.state();
+    if (s2.swapAsk) e.intent(s2.swapAsk.side, { k: 'swapdone' });
+    e.intent('A', { k: 'autosplit' }); e.intent('A', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+  }
+  const s3 = e.state(), h = s3.units.find((u) => u.escort);
+  ok('...and the ambushed crossing begins: Halloran on the company’s edge, Brass Ledger lying in wait', s3.phase === 'battle' && h && h.x >= 0 && h.x <= 6.5 && s3.log.some((l) => /lying in wait/.test(l.text || '')), h && h.x);
+}
+{
   const s = st, g = SC.SCENARIOS.escort.goals;
   const b = s.units.find((u) => u.side === 'B' && u.alive);
   ok('the enemy goes for her and nothing else; side A’s own for the far edge', g(s, b).length === 1 && g(s, b)[0] === vane && g(s, s.units.find((u) => u.side === 'A' && !u.escort)).every((p) => p.x > R.BOARD.w - 3));
