@@ -84,6 +84,39 @@
           if (best) best.lamp = true;
         });
       }
+      /* Pell's rocks, strewn about the ground round the wreck: clusters of boulders, none
+         against her hull, on the ground outside her breaches (where each side sets up), or
+         across her gangway (drawn only: the ground out there is solid to the rules). */
+      if (hullOf) {
+        var rkr = rng(seed + 4271), clear = terrain.filter(function (q) { return !q.outside; });
+        var nearHull = function (x, y, m) {
+          return hullOf.hull.shapes.some(function (pts) {
+            var inside = false;
+            for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+              var p0 = pts[i], p1 = pts[j];
+              if ((p0[1] > y) !== (p1[1] > y) && x < (p1[0] - p0[0]) * (y - p0[1]) / (p1[1] - p0[1]) + p0[0]) inside = !inside;
+              var dx = p1[0] - p0[0], dy = p1[1] - p0[1], t = Math.max(0, Math.min(1, ((x - p0[0]) * dx + (y - p0[1]) * dy) / (dx * dx + dy * dy || 1)));
+              if (Math.hypot(x - p0[0] - t * dx, y - p0[1] - t * dy) < m) return true;
+            }
+            return inside;
+          });
+        };
+        var rockOk = function (x, y, m) {
+          return x > m && y > m && x < TW - m && y < TW - m && !nearHull(x, y, m) &&
+            !clear.some(function (q) { return x > q.x - m && x < q.x + q.w + m && y > q.y - m && y < q.y + q.h + m; }) &&
+            !props.some(function (q) { return q.kind === 'rock' && Math.hypot(q.x - x, q.y - y) < (q.rad || 1) * 0.7 + m * 0.5; });
+        };
+        for (var rc = 0, tries = 0; rc < 30 && tries < 900; tries++) {
+          var rcx = 1 + rkr() * (TW - 2), rcy = 1 + rkr() * (TW - 2);
+          if (!rockOk(rcx, rcy, 1.6)) continue;
+          rc++;
+          for (var rk = 0, nk = 2 + (rkr() * 5 | 0); rk < nk; rk++) {
+            var rx = rcx + (rkr() - 0.5) * 2.8, ry = rcy + (rkr() - 0.5) * 2.8, rad = rk === 0 ? 1.0 + rkr() * 1.2 : 0.35 + rkr() * 0.7;
+            if (rk && !rockOk(rx, ry, 1.1)) continue;
+            props.push({ kind: 'rock', x: rk ? rx : rcx, y: rk ? ry : rcy, rad: rad, h: a(1.2 + rad * 1.6 + rkr() * 1.4), seed: (rkr() * 9999) | 0 });
+          }
+        }
+      }
       var yards = terrain.filter(function (q) { return q.outdoors; });
       if (yards.length) terrain.forEach(function (r, ri) {
         if (r.kind !== 'breached') return;
