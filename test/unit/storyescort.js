@@ -66,7 +66,7 @@ ok('the bidding’s first answer no longer asks the company for money it has not
     /Ambush!/.test(a.text) && !/knows where it is/.test(a.text), JSON.stringify({ am: a.cf.story.ambush, ex: a.cf.story.ambushExpected }));
   ok('...watching the room: the same ambush, seen laid (nobody pinned, the first turn rolled for), and their force seen', b.cf.story.ambush === 'B' && b.cf.story.ambushExpected === true &&
     JSON.stringify(b.cf.story.intel) !== JSON.stringify(a.cf.story.intel) && /knows where it is/.test(b.text) && !/Ambush!/.test(b.text));
-  ok('...marking Kettering’s men: no ambush, the company strikes first as they come on', !f.cf.story.ambush && f.cf.story.strikes === 'D3' && /opens fire/.test(f.text));
+  ok('...marking Kettering’s men: the company springs it on them instead, Brass Ledger caught gathering', f.cf.story.ambush === 'A' && !f.cf.story.strikes && /opens fire/.test(f.text));
   // and the ambushed crossing starts: Halloran with the company on its edge, Brass Ledger lying in wait
   const e = Engine.create(); const cf = Object.assign({}, a.cf, { mode: 'ai' }); e.start(cf);
   for (let i = 0; i < 8 && e.state().phase !== 'battle'; i++) {
@@ -75,7 +75,27 @@ ok('the bidding’s first answer no longer asks the company for money it has not
     e.intent('A', { k: 'autosplit' }); e.intent('A', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
   }
   const s3 = e.state(), h = s3.units.find((u) => u.escort);
-  ok('...and the ambushed crossing begins: Halloran on the company’s edge, Brass Ledger lying in wait', s3.phase === 'battle' && h && h.x >= 0 && h.x <= 6.5 && s3.log.some((l) => /lying in wait/.test(l.text || '')), h && h.x);
+  // (Vesk's own ambush ground: the company strung out along the west road, Brass Ledger in the far half and the south side)
+  const z = a.cf.story.ambushZones, inZ = (u, bx) => bx.some((b) => u.x >= b.x - 0.01 && u.x <= b.x + b.w + 0.01 && u.y >= b.y - 0.01 && u.y <= b.y + b.h + 0.01);
+  const onA = s3.units.filter((u) => u.side === 'A' && u.alive && u.x >= 0 && !u.aboard), onB = s3.units.filter((u) => u.side === 'B' && u.alive && u.x >= 0 && !u.aboard);
+  ok('...and the ambushed crossing begins: the company and Halloran strung out along the west road, a column caught on the move',
+    s3.phase === 'battle' && z && h && inZ(h, z.A) && onA.length > 2 && onA.every((u) => inZ(u, z.A)) && Math.max(...onA.map((u) => u.x)) > 8,
+    onA.map((u) => u.x.toFixed(0) + ',' + u.y.toFixed(0)).join(' '));
+  ok('...Brass Ledger lying in wait across the far half of the square and its south side', onB.length > 0 && onB.every((u) => inZ(u, z.B)) && s3.log.some((l) => /lying in wait/.test(l.text || '')),
+    onB.map((u) => u.x.toFixed(0) + ',' + u.y.toFixed(0)).join(' '));
+  // each choice its own ground: the company's side of the square, and Brass Ledger's
+  const ground = (cf, side) => cf.story.ambushZones[side];
+  const westOf = (bx, x) => bx.every((r) => r.x + r.w <= x), eastOf = (bx, x) => bx.every((r) => r.x >= x);
+  ok('...watching the room: the company holds the west side, Brass Ledger the east, past the south road and the fountain', westOf(ground(b.cf, 'A'), 14.01) && ground(b.cf, 'A')[0].h >= 47 && eastOf(ground(b.cf, 'B'), 25));
+  ok('...marking his men: Brass Ledger caught still gathering in the far corner', westOf(ground(f.cf, 'A'), 14.01) && eastOf(ground(f.cf, 'B'), 35));
+  // and a win when caught out pays extra
+  {
+    const c = a.c; c.story.node = 'c1.battle';
+    S.resolveBattle(c, 'victory');
+    const k0 = b.c.companies.A.kUC; b.c.story.node = 'c1.battle'; S.resolveBattle(b.c, 'victory');
+    const bonus = c.story.journal.some((j) => (j.effects || []).some((e) => /extra for the way it dealt with the ambush/.test(e.journal || '')));
+    ok('...and won through after walking into it, the backer pays extra, and says so', bonus && /something extra/.test(S.render(c, dr._nodes['c1.debrief'].text)) && !/something extra/.test(S.render(b.c, dr._nodes['c1.debrief'].text)), k0);
+  }
 }
 {
   const s = st, g = SC.SCENARIOS.escort.goals;

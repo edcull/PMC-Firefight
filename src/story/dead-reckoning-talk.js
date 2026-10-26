@@ -532,9 +532,9 @@
       'c1.battle': {
         start: [
           { who: 'kettering', text: 'Hand over the slate, {commander:rank}, and everyone goes home. Otherwise we take it.' },
-          { who: 'kettering', if: { flag: 'kettle_marked' }, text: 'So you spotted my lads. Doesn’t matter. Get the slate!' },
+          { who: 'kettering', if: { flag: 'kettle_marked' }, text: 'They’re on us already! Who told them? Get up, all of you, and get that slate!' },
           { who: 'kettering', if: { flag: 'room_watched' }, text: 'You knew we were here and you came out anyway? Fine. Get the slate!' },
-          { who: 'kettering', if: { all: [{ not: { flag: 'room_watched' } }, { not: { flag: 'kettle_marked' } }] }, text: 'There he is! Get the slate, lads!' }
+          { who: 'kettering', if: { flag: 'caught_out' }, text: 'There he is! Get the slate, lads!' }
         ],
         kill: [{ who: 'kettering', text: 'That’s another one down. This job is costing me a fortune.' }],
         turn3: [{ who: 'reader', text: 'I’m in the arcade, {commander:rank}! Which way? Tell me which way!' }],

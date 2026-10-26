@@ -343,6 +343,9 @@
       return q;
     };
     var terrainPlan = map && !compound ? map.pieces.map(fitPiece) : null;
+    // an ambush laid out on the map's own ground (the battle's `variant.ground`, of the map's `grounds`): where each side sets up
+    var ground = map && !compound && map.grounds && spec.variant && spec.variant.ambush && spec.variant.ground ? map.grounds[spec.variant.ground] : null;
+    var ambushZones = ground ? { A: ground.A.map(fitPiece), B: ground.B.map(fitPiece) } : null;
     // a compound mission's own layout, where its map lays one by hand (on a table it fits; the generator's otherwise)
     var compoundPlan = map && compound && map.compound ? JSON.parse(JSON.stringify(map.compound)) : null;
     var mapObjectives = map && !compound && map.objectives ? map.objectives.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) : null;
@@ -400,6 +403,7 @@
         ambush: ambush,
         // (an ambush the side caught out saw coming: set up as one, but nobody pinned, and the first turn rolled for)
         ambushExpected: !!(ambush && variant.expected),
+        ambushZones: ambushZones,
         readiness: rd,
         barricades: rd >= 1 ? { B: 2 * pl } : null,
         intel: S.intel(campaign, spec),
