@@ -288,7 +288,8 @@
        pointed bow to the far one, a gangway down from the bridge at its tip; an
        engine nacelle out on a pair of pylons to either side of her stern, her
        lines drawn long and narrow to the point. A corridor runs her whole
-       length, from the engine control room at her stern to the bridge: either
+       length, from the engine control room at her stern to the bridge, through a
+       bulkhead lock where her after section meets her forward one: either
        side of it aft, the engine rooms and the cargo holds, the biggest rooms
        on her, stacked with crates; forward, the crew quarters and forward store off one side of it,
        the mess and infirmary off the other, her rooms narrowing to the bow.
@@ -314,7 +315,7 @@
         '..c.c....ooo....',
         '.EEHHHHQQQSS....',
         '.EEHHHHQQQSSBBB.',
-        '.KccccccccccBBBc',
+        '.KcccccLccccBBBc',
         '.RRGGGGMMMIIBBB.',
         '.RRGGGGMMMII....',
         '..c.c...........',
@@ -323,11 +324,11 @@
         '.nnnn...........',
         'oooo............',
         'oooo............'
-      ], [[1, 7, 2, 7], [1, 6, 1, 7], [1, 8, 1, 7], [4, 6, 4, 7], [4, 8, 4, 7], [8, 6, 8, 7], [11, 6, 11, 7], [8, 8, 8, 7], [11, 8, 11, 7], [11, 7, 12, 7], [14, 7, 15, 7], [9, 5, 10, 5],
+      ], [[1, 7, 2, 7], [1, 6, 1, 7], [1, 8, 1, 7], [4, 6, 4, 7], [4, 8, 4, 7], [6, 8, 6, 7], [6, 7, 7, 7], [7, 7, 8, 7], [11, 8, 12, 8], [8, 6, 8, 7], [11, 6, 11, 7], [8, 8, 8, 7], [11, 8, 11, 7], [11, 7, 12, 7], [14, 7, 15, 7], [9, 5, 10, 5],
         [2, 2, 2, 3], [4, 2, 4, 3], [2, 4, 2, 5], [4, 4, 4, 5], [2, 9, 2, 10], [4, 9, 4, 10], [2, 11, 2, 12], [4, 11, 4, 12]],
       // the breaches: the main hatch, through the top of her hull into the forward store, and the split, through the starboard nacelle's outer side
       [[10, 4, 10, 5], [2, 13, 2, 14]],
-      { E: 'Port engine room', R: 'Starboard engine room', K: 'Engine control', H: 'Port hold', G: 'Starboard hold', Q: 'Crew quarters', S: 'Forward store', M: 'Mess', I: 'Infirmary', B: 'Bridge', N: 'Port nacelle', n: 'Starboard nacelle' }),
+      { E: 'Port engine room', R: 'Starboard engine room', K: 'Engine control', L: 'Bulkhead lock', H: 'Port hold', G: 'Starboard hold', Q: 'Crew quarters', S: 'Forward store', M: 'Mess', I: 'Infirmary', B: 'Bridge', N: 'Port nacelle', n: 'Starboard nacelle' }),
       /* Her outer hull, curved about the rooms (in inches): her body, its stern rounded and
          its bow drawn out to a long point, and each nacelle; the plating between the hull and
          the rooms is her deck, not walked on. No hull where her breaches are, where her

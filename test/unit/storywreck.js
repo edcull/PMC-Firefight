@@ -66,8 +66,8 @@ console.log('\nThe ship');
     MAP.compound.breaches.length === 2);
   ok('...and the ground just outside each breach walkable, open ground, not her floor', s.terrain.filter((t) => t.outdoors).length >= 2 && s.terrain.filter((t) => t.outdoors).every((t) => t.kind === 'corridor' && !t.dangerous));
   // her spine: one corridor running stern to bow through her middle, the hold the biggest room on her, stacked with crates
-  const rows = MAP.compound.cells.match(/.{16}/g), spine = rows.findIndex((r) => /c{5}/.test(r));
-  ok('...a central corridor down her whole length, from the engine control room to the bridge', spine === 7 && /^\.rc{10}r{3}c$/.test(rows[spine]), 'row ' + spine);
+  const rows = MAP.compound.cells.match(/.{16}/g), spine = rows.findIndex((r) => /c{4}/.test(r));
+  ok('...a central corridor down her whole length, from the engine control room to the bridge, through a bulkhead lock amidships', spine === 7 && /^\.rc{5}rc{4}r{3}c$/.test(rows[spine]), 'row ' + spine);
   ok('...the holds aft, by the engine rooms', Object.entries(MAP.compound.names).some(([k, n]) => /hold$/.test(n) && +k % 16 <= 3));
   const hold = s.terrain.filter((t) => t.cargo === 'hold');
   ok('...and a big cargo hold amidships, stacked with crates in rows', hold.length >= 12 && hold.every((t) => t.kind === 'crates'), hold.length + ' stacks');
