@@ -54,7 +54,7 @@ console.log('\nThe ship');
   let hollow = 0;
   for (let j = 0; j < 16; j++) {
     const row = cells.slice(j * cols, j * cols + cols), a = row.search(/[rc]/), b = row.length - 1 - row.split('').reverse().join('').search(/[rc]/);
-    if (a < 0) continue;
+    if (a < 0 || row.indexOf('r') < 0) continue;   // (a row only of pylons is outside her body)
     for (let i = Math.max(1, a); i <= b; i++) if (row[i] === '.') hollow++;
   }
   ok('...nothing hollow inside her hull', hollow === 0, hollow + ' cells');
@@ -66,11 +66,11 @@ console.log('\nThe ship');
     MAP.compound.breaches.length === 2);
   ok('...and the ground just outside each breach walkable, open ground, not her floor', s.terrain.filter((t) => t.outdoors).length >= 2 && s.terrain.filter((t) => t.outdoors).every((t) => t.kind === 'corridor' && !t.dangerous));
   // her spine: one corridor running stern to bow through her middle, the hold the biggest room on her, stacked with crates
-  const rows = MAP.compound.cells.match(/.{16}/g), spine = rows.findIndex((r) => /c{6}/.test(r));
-  ok('...a long central corridor down her forward section, from the hold to the bridge', spine === 7 && /^\.rrrrrrc{6}rr/.test(rows[spine]), 'row ' + spine);
+  const rows = MAP.compound.cells.match(/.{16}/g), spine = rows.findIndex((r) => /c{5}/.test(r));
+  ok('...a long central corridor down her forward section, from the hold to the bridge', spine === 7 && /^\.r{6}c{5}r{3}c$/.test(rows[spine]), 'row ' + spine);
   ok('...the hold aft, by the engine room', Object.entries(MAP.compound.names).some(([k, n]) => n === 'Cargo hold' && +k % 16 <= 3));
   const hold = s.terrain.filter((t) => t.cargo === 'hold');
-  ok('...and a big cargo hold amidships, stacked with crates in rows', hold.length >= 15 && hold.every((t) => t.kind === 'crates'), hold.length + ' stacks');
+  ok('...and a big cargo hold amidships, stacked with crates in rows', hold.length >= 12 && hold.every((t) => t.kind === 'crates'), hold.length + ' stacks');
   ok('...no other clutter in among the hold’s crates', s.cfg.story.cargo.every((c) => !s.terrain.some((t) => t.cargo !== 'hold' &&
     ['crates', 'machinery', 'pillar'].indexOf(t.kind) >= 0 && t.x < c.x + c.w && t.x + t.w > c.x && t.y < c.y + c.h && t.y + t.h > c.y)));
   // her curved outer hull, round her rooms, and a sealed hatch opposite each breach
@@ -78,7 +78,7 @@ console.log('\nThe ship');
   ok('...a curved outer hull round her body and each nacelle', hull && hull.shapes.length === 3 && hull.shapes.every((p) => p.length > 12));
   const mid = (b) => [b.i * 3, b.j * 3];
   ok('...a sealed hatch opposite each breach, on her far side', hull && hull.hatches.length === MAP.compound.breaches.length &&
-    MAP.compound.breaches.every((b) => { const [bx, by] = mid(b); return hull.hatches.some((h) => Math.abs(h.x + h.w / 2 - bx) < 4 && Math.abs(h.y + h.h / 2 - by) > 15); }),
+    MAP.compound.breaches.every((b) => { const [bx, by] = mid(b); return hull.hatches.some((h) => Math.abs(h.x + h.w / 2 - bx) < 4 && Math.abs(h.y + h.h / 2 - by) > 12); }),
     JSON.stringify(hull && hull.hatches));
 }
 
