@@ -608,7 +608,7 @@
         start: [{ who: 'agathe', if: { not: { flag: 'wreck_together' } }, text: 'Sable holds the ship. Every bulkhead, every hold. Let them come in through the hull and find out.' },
           { who: 'agathe', if: { flag: 'wreck_together' }, text: 'Brass Ledger came in through the split while I was cutting the hatch. My people take the port holds, yours the starboard. Try to keep up.' }],
         turn3: [{ who: 'ops', text: 'Seals holding, but the air in here’s bad. Keep your masks on.' }],
-        sighted: [{ who: 'ops', if: { not: { flag: 'wreck_together' } }, text: 'Contact! Sable armour, in the hold, dug in behind the cargo!' },
+        sighted: [{ who: 'ops', if: { not: { flag: 'wreck_together' } }, text: 'Contact! Sable armour, dug in at the bulkheads!' },
           { who: 'ops', if: { flag: 'wreck_together' }, text: 'Contact! Brass Ledger salvage crew, in the hold, cutting gear and guns!' }]
       },
       'bounty.battle': {

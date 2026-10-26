@@ -65,7 +65,17 @@
     for (var jj = 0; jj < n; jj++) for (var ii = 0; ii < cols; ii++) if (at(ii, jj) === 'o') yard.push({ i: ii, j: jj, w: 1, h: 1 });
     return { cols: cols, rows: n, cells: rows.join('').replace(/o/g, 'c').replace(/[^.c]/g, 'r'), walls: walls, doors: Object.keys(dset), danger: [], names: out,
       // (the ground outside, and where each breach is: in cells, the middle of the edge it is cut through)
-      outdoors: yard, breaches: open.map(function (d) { return { i: (d[0] + d[2] + 1) / 2, j: (d[1] + d[3] + 1) / 2 }; }) };
+      // (each with its edge, and the ground outside it: for a battle that leaves it sealed, levers.js)
+      outdoors: yard, breaches: open.map(function (d) {
+        var o = at(d[0], d[1]) === 'o' ? [d[0], d[1]] : [d[2], d[3]], seen = {}, todo = [o], own = [];
+        while (todo.length) {
+          var c = todo.pop(), k = idx(c[0], c[1]);
+          if (seen[k] || c[0] < 0 || c[1] < 0 || c[0] >= cols || c[1] >= n || at(c[0], c[1]) !== 'o') continue;
+          seen[k] = true; own.push({ i: c[0], j: c[1] });
+          todo.push([c[0] + 1, c[1]], [c[0] - 1, c[1]], [c[0], c[1] + 1], [c[0], c[1] - 1]);
+        }
+        return { i: (d[0] + d[2] + 1) / 2, j: (d[1] + d[3] + 1) / 2, edge: ek(idx(d[0], d[1]), idx(d[2], d[3])), yard: own };
+      }) };
   }
   function B(x, y, w, h, plan) { return { kind: 'building', x: x, y: y, w: w, h: h, plan: plan || 'block' }; }
   function N(kind, x, y, w, h, shape) { return { kind: kind, x: x, y: y, w: w, h: h, shape: shape || 'blob' }; }
@@ -287,11 +297,11 @@
        floors walled in by her hull where they meet it. Two breaches: the main
        hatch Sable cut, through the top of her hull forward into the forward
        store, and the split, through the starboard nacelle's outer side. Who
-       comes in where (`entries`, a battle's `variant.entry`): the company sets
-       up on the ground outside a breach, 6" deep, and nowhere else; cutting a
-       second way in, it has both, following Sable in only her hatch, and
-       either way Sable's people are already inside, in the hold, the infirmary
-       and on the bridge. Gone in together, by the hatch, Brass Ledger's salvage
+       comes in where (`entries`, a battle's `variant.entry`): cutting a second
+       way in, the company sets up outside the split it cut, 6" deep, and Sable
+       at her main hatch and in the rooms inside it; following Sable in, the
+       company comes in by the split behind her, the main hatch still sealed,
+       and her people anywhere aboard. Gone in together, by the hatch, Brass Ledger's salvage
        crew came in by the split: the starboard nacelle, the engine room and
        the hold. */
     wreck: {
@@ -308,15 +318,15 @@
         '.RRGGGGMMMIIBBB.',
         '.RRGGGGMMMII....',
         '..c.c...........',
+        '..c.c...........',
         '.nnnn...........',
         '.nnnn...........',
         'oooo............',
-        'oooo............',
-        '................'
+        'oooo............'
       ], [[1, 7, 2, 7], [1, 6, 1, 7], [1, 8, 1, 7], [4, 6, 4, 7], [4, 8, 4, 7], [8, 6, 8, 7], [11, 6, 11, 7], [8, 8, 8, 7], [11, 8, 11, 7], [11, 7, 12, 7], [14, 7, 15, 7], [9, 5, 10, 5],
-        [2, 2, 2, 3], [4, 2, 4, 3], [2, 4, 2, 5], [4, 4, 4, 5], [2, 9, 2, 10], [4, 9, 4, 10], [2, 10, 2, 11], [4, 10, 4, 11]],
+        [2, 2, 2, 3], [4, 2, 4, 3], [2, 4, 2, 5], [4, 4, 4, 5], [2, 9, 2, 10], [4, 9, 4, 10], [2, 11, 2, 12], [4, 11, 4, 12]],
       // the breaches: the main hatch, through the top of her hull into the forward store, and the split, through the starboard nacelle's outer side
-      [[10, 4, 10, 5], [2, 12, 2, 13]],
+      [[10, 4, 10, 5], [2, 13, 2, 14]],
       { E: 'Port engine room', R: 'Starboard engine room', K: 'Engine control', H: 'Port hold', G: 'Starboard hold', Q: 'Crew quarters', S: 'Forward store', M: 'Mess', I: 'Infirmary', B: 'Bridge', N: 'Port nacelle', n: 'Starboard nacelle' }),
       /* Her outer hull, curved about the rooms (in inches): her body, its stern rounded and
          its bow drawn out to a long point, and each nacelle; the plating between the hull and
@@ -324,10 +334,12 @@
          pylons or the gangway at her bow run through it; a sealed hatch opposite each breach. */
       hull: {
         shapes: [hullOutline(1, 14.5, 33, 30.5, 4, [[33, 14.5], [39, 15.3], [42, 16.2], [44.5, 17.3], [46.7, 19.6], [47.6, 22.5]]),
-          hullOutline(1.25, 2.7, 17.75, 9.5, 3), hullOutline(1.25, 32.7, 17.75, 39.3, 3)],
-        gaps: [{ x: 30, y: 13, w: 3, h: 3 }, { x: 6, y: 38, w: 3, h: 3 }, { x: 6, y: 8.5, w: 3, h: 7 }, { x: 12, y: 8.5, w: 3, h: 7 },
-          { x: 6, y: 29.5, w: 3, h: 4 }, { x: 12, y: 29.5, w: 3, h: 4 }, { x: 44, y: 20.5, w: 4.5, h: 4 }],
-        hatches: [{ x: 30, y: 29.5, w: 3, h: 2 }, { x: 6, y: 1.7, w: 3, h: 2 }]
+          hullOutline(1.25, 2.7, 17.75, 9.5, 3), hullOutline(1.25, 35.5, 17.75, 42.3, 3)],
+        gaps: [{ x: 30, y: 13, w: 3, h: 3 }, { x: 6, y: 41, w: 3, h: 3 }, { x: 6, y: 8.5, w: 3, h: 7 }, { x: 12, y: 8.5, w: 3, h: 7 },
+          { x: 6, y: 29.5, w: 3, h: 7 }, { x: 12, y: 29.5, w: 3, h: 7 }, { x: 44, y: 20.5, w: 4.5, h: 4 }],
+        hatches: [{ x: 30, y: 29.5, w: 3, h: 2 }, { x: 6, y: 1.7, w: 3, h: 2 }],
+        // (each breach, where a battle leaves it sealed: the gap closed, and a hatch shut in the hull there)
+        sealing: [{ gap: 0, hatch: { x: 30, y: 13.5, w: 3, h: 2 } }, { gap: 1, hatch: { x: 6, y: 41.3, w: 3, h: 2 } }]
       },
       // the hold's cargo, stacked with aisles between (in inches): the way across from the engine room to the corridor, and in from the pylons, kept clear
       cargo: [9.5, 15.4, 18.3].reduce(function (a, x) {
@@ -336,9 +348,11 @@
       /* who comes in where, in cells (a 3" grid): the company on the ground outside a breach,
          6" deep, and nowhere else; the other side already in the rooms it holds */
       entries: {
-        cut: { A: [{ i: 9, j: 3, w: 3, h: 2 }, { i: 0, j: 13, w: 4, h: 2 }], B: [{ i: 3, j: 5, w: 4, h: 5 }, { i: 10, j: 8, w: 2, h: 2 }, { i: 12, j: 6, w: 3, h: 3 }] },
-        follow: { A: [{ i: 9, j: 3, w: 3, h: 2 }], B: [{ i: 3, j: 5, w: 4, h: 5 }, { i: 10, j: 8, w: 2, h: 2 }, { i: 12, j: 6, w: 3, h: 3 }] },
-        together: { A: [{ i: 9, j: 3, w: 3, h: 2 }], B: [{ i: 1, j: 11, w: 4, h: 2 }, { i: 1, j: 5, w: 2, h: 5 }, { i: 3, j: 5, w: 4, h: 5 }] }
+        // cutting a second way in: the company by the split it cut, Sable at the main hatch she cut, forward
+        cut: { A: [{ i: 0, j: 14, w: 4, h: 2 }], B: [{ i: 9, j: 3, w: 3, h: 2 }, { i: 7, j: 5, w: 5, h: 2 }] },
+        // following Sable in by the split: the main hatch never cut through, and her people anywhere aboard
+        follow: { A: [{ i: 0, j: 14, w: 4, h: 2 }], B: [{ i: 1, j: 5, w: 11, h: 2 }, { i: 1, j: 8, w: 11, h: 2 }, { i: 12, j: 6, w: 3, h: 3 }], sealed: [0] },
+        together: { A: [{ i: 9, j: 3, w: 3, h: 2 }], B: [{ i: 1, j: 12, w: 4, h: 2 }, { i: 1, j: 8, w: 2, h: 2 }, { i: 3, j: 8, w: 4, h: 2 }] }
       }
     },
 

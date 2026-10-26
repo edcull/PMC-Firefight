@@ -367,12 +367,25 @@
     var entrySet = map && compound && map.entries ? map.entries[(spec.variant && spec.variant.entry) || 'cut'] || null : null;
     // (and the ground outside the ship by its breaches, and the breaches themselves: a wreck's, engine.js)
     var cellRect = function (c) { return { x: c.i * 3 * sx, y: c.j * 3 * sy, w: (c.w || 1) * 3 * sx, h: (c.h || 1) * 3 * sy }; };
-    var outdoors = map && compound && map.compound && map.compound.outdoors ? map.compound.outdoors.map(cellRect) : null;
-    var breaches = map && compound && map.compound && map.compound.breaches ? map.compound.breaches.map(function (b) { return { x: b.i * 3 * sx, y: b.j * 3 * sy }; }) : null;
+    /* (a breach the battle leaves sealed, `sealed` on its entry: walled again, the ground outside
+       it Pell's solid, the hull whole over it with a hatch shut in it, the map's `hull.sealing`) */
+    var sealed = entrySet && entrySet.sealed && compoundPlan && compoundPlan.breaches ? entrySet.sealed : [];
+    sealed.forEach(function (bi) {
+      var b = compoundPlan.breaches[bi], cells = compoundPlan.cells.split('');
+      compoundPlan.doors = compoundPlan.doors.filter(function (k) { return k !== b.edge; });
+      compoundPlan.walls = compoundPlan.walls.concat([b.edge]);
+      b.yard.forEach(function (c) { cells[c.j * compoundPlan.cols + c.i] = '.'; });
+      compoundPlan.cells = cells.join('');
+      compoundPlan.outdoors = compoundPlan.outdoors.filter(function (o) { return !b.yard.some(function (c) { return c.i === o.i && c.j === o.j; }); });
+    });
+    if (compoundPlan && compoundPlan.breaches) compoundPlan.breaches = compoundPlan.breaches.filter(function (b, bi) { return sealed.indexOf(bi) < 0; });
+    var outdoors = compoundPlan && compoundPlan.outdoors ? compoundPlan.outdoors.map(cellRect) : null;
+    var breaches = compoundPlan && compoundPlan.breaches ? compoundPlan.breaches.map(function (b) { return { x: b.i * 3 * sx, y: b.j * 3 * sy }; }) : null;
     // (a ship's curved outer hull, and her hold's cargo: in inches, as the map lays them, to this table)
     var scaleRect = function (r) { return { x: r.x * sx, y: r.y * sy, w: r.w * sx, h: r.h * sy }; };
     var hull = map && compound && map.hull ? { shapes: map.hull.shapes.map(function (s) { return s.map(function (p) { return [p[0] * sx, p[1] * sy]; }); }),
-      gaps: (map.hull.gaps || []).map(scaleRect), hatches: (map.hull.hatches || []).map(scaleRect) } : null;
+      gaps: (map.hull.gaps || []).filter(function (g, gi) { return !sealed.some(function (bi) { return map.hull.sealing[bi].gap === gi; }); }).map(scaleRect),
+      hatches: (map.hull.hatches || []).concat(sealed.map(function (bi) { return map.hull.sealing[bi].hatch; })).map(scaleRect) } : null;
     var cargo = map && compound && map.cargo ? map.cargo.map(scaleRect) : null;
     var compoundEntries = entrySet ? { A: entrySet.A.map(function (c) { return { x: c.i * 3 * sx, y: c.j * 3 * sy, w: c.w * 3 * sx, h: c.h * 3 * sy }; }),
       B: entrySet.B.map(function (c) { return { x: c.i * 3 * sx, y: c.j * 3 * sy, w: c.w * 3 * sx, h: c.h * 3 * sy }; }) } : null;

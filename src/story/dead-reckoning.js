@@ -746,7 +746,7 @@
         place: { system: 'Pell', planet: 'Pell', kind: 'unstable', world: { atmosphere: 'toxic' } },
         brief: 'Morrow’s ship, where it came down, and Sable cutting in.',
         before: { id: 'wreck.hatch', who: 'agathe', title: 'The hatch', text: 'Sable is already cutting in.', options: [
-          // (in by the main hatch and the split both, or by Sable's hatch behind her; she is inside either way)
+          // (in by the split the company cuts, Sable at her main hatch; or by the split behind her, the main hatch sealed and her people all through the ship)
           { id: 'cut', text: 'Cut a second way in.', battle: { strikes: 'D3', variant: { entry: 'cut' } }, effects: [{ meter: 'alarm', add: 1 }] },
           { id: 'wait', text: 'Wait for Sable to open it.', battle: { readiness: -1, variant: { entry: 'follow' } }, effects: [{ meter: 'lead', add: -1 }] },
           // in with Sable, the ship is cleared of the salvage crew that beat everyone to it

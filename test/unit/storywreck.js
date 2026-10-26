@@ -76,22 +76,40 @@ console.log('\nThe ship');
   // her curved outer hull, round her rooms, and a sealed hatch opposite each breach
   const hull = s.terrain.find((t) => t.hull) && s.terrain.find((t) => t.hull).hull;
   ok('...a curved outer hull round her body and each nacelle', hull && hull.shapes.length === 3 && hull.shapes.every((p) => p.length > 12));
+  const mirror = (sh) => sh.map((p) => [p[0], 45 - p[1]]), near = (a, b) => a.every((p) => b.some((q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.05));
+  ok('...her hull the same either side: her body, and the one nacelle the other’s mirror, on pylons as long', MAP.hull && near(mirror(MAP.hull.shapes[0]), MAP.hull.shapes[0]) &&
+    near(mirror(MAP.hull.shapes[1]), MAP.hull.shapes[2]) && rows.filter((r) => /^\.\.c\.c\./.test(r)).length === 4);
   const mid = (b) => [b.i * 3, b.j * 3];
-  ok('...a sealed hatch opposite each breach, on her far side', hull && hull.hatches.length === MAP.compound.breaches.length &&
+  ok('...a sealed hatch opposite each breach, on her far side', hull && hull.hatches.length === 2 &&
     MAP.compound.breaches.every((b) => { const [bx, by] = mid(b); return hull.hatches.some((h) => Math.abs(h.x + h.w / 2 - bx) < 4 && Math.abs(h.y + h.h / 2 - by) > 12); }),
     JSON.stringify(hull && hull.hatches));
 }
 
 console.log('\nWho comes in where');
-for (const [opt, n, why] of [['cut', 2, 'cutting a second way in: the main hatch and the split'], ['wait', 1, 'following Sable in: her hatch only'], ['hire_sable', 1, 'in together, by the main hatch']]) {
-  const { cfg, s } = started(at(opt));
-  const A = s.sc.entry.A, B = s.sc.entry.B;
-  // (a box is outside her when its middle is on the ground by a breach)
-  const outside = (b) => s.terrain.some((t) => t.outdoors && b.x + b.w / 2 >= t.x && b.x + b.w / 2 <= t.x + t.w && b.y + b.h / 2 >= t.y && b.y + b.h / 2 <= t.y + t.h);
-  ok(why + ' (' + n + ' way' + (n > 1 ? 's' : '') + ' in): the company sets up outside her, by the breach, 6" deep', A.length === n && A.every((b) => outside(b) && Math.min(b.w, b.h) <= 6.01));
-  ok('...and the other side already inside her: its ground her rooms, not the ground outside', B.every((b) => !outside(b) && b.w * b.h >= 9) &&
-    // (any that has had its first activation already, the other side having the initiative, has moved off)
-    s.units.filter((u) => u.side === 'B' && u.x >= 0 && !u.activated).every((u) => inBox(u, B)), cfg.story.hired ? 'Brass Ledger' : 'Sable');
+const outsideOf = (s) => (b) => s.terrain.some((t) => t.outdoors && b.x + b.w / 2 >= t.x && b.x + b.w / 2 <= t.x + t.w && b.y + b.h / 2 >= t.y && b.y + b.h / 2 <= t.y + t.h);
+const nacelleYard = (b) => b.y >= 41.9 && b.x < 12.1;
+{
+  const { s } = started(at('cut'));
+  const A = s.sc.entry.A, B = s.sc.entry.B, outside = outsideOf(s);
+  ok('cutting a second way in: the company sets up outside the split it cut in the nacelle, 6" deep, and nowhere else', A.length === 1 && A.every((b) => outside(b) && nacelleYard(b) && Math.min(b.w, b.h) <= 6.01), JSON.stringify(A));
+  ok('...Sable at the main hatch she cut, forward: on the ground outside it and in the rooms inside it', B.some(outside) && B.every((b) => b.y + b.h <= 21.01 && b.x >= 20.9));
+  ok('...both breaches open', s.terrain.filter((t) => t.kind === 'breached').length === 2);
+}
+{
+  const { s, cfg } = started(at('wait'));
+  const A = s.sc.entry.A, B = s.sc.entry.B, outside = outsideOf(s);
+  ok('following Sable in: the company sets up outside the split behind her, 6" deep', A.length === 1 && A.every((b) => outside(b) && nacelleYard(b) && Math.min(b.w, b.h) <= 6.01), JSON.stringify(A));
+  ok('...the main hatch never cut: one breach, no ground outside it, a hatch shut in the hull there', s.terrain.filter((t) => t.kind === 'breached').length === 1 &&
+    !s.terrain.some((t) => t.outdoors && t.y < 15) && cfg.story.hull.hatches.length === 3 && !cfg.story.hull.gaps.some((g) => g.x === 30 && g.y === 13));
+  ok('...and Sable’s people anywhere aboard, her rooms fore and aft', B.every((b) => !outside(b)) && B.some((b) => b.x < 9) && B.some((b) => b.x >= 36) &&
+    s.units.filter((u) => u.side === 'B' && u.x >= 0 && !u.activated).every((u) => inBox(u, B)));
+}
+{
+  const { s } = started(at('hire_sable'));
+  const A = s.sc.entry.A, B = s.sc.entry.B, outside = outsideOf(s);
+  ok('in together, by the main hatch: the company sets up outside it, 6" deep', A.length === 1 && A.every((b) => outside(b) && b.y < 15 && Math.min(b.w, b.h) <= 6.01));
+  ok('...and Brass Ledger already inside, by the split it came in by', B.every((b) => !outside(b) && b.w * b.h >= 9) &&
+    s.units.filter((u) => u.side === 'B' && u.x >= 0 && !u.activated).every((u) => inBox(u, B)));
 }
 
 console.log('\nSable inside her');
