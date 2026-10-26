@@ -382,13 +382,15 @@
         { id: 'c1.bidding', type: 'event', who: 'reader', title: 'The bidding', text: 'Half the room is bidding for somebody else.', options: [
           // (the backer's money, not the company's: the company has none yet)
           { id: 'outbid', text: 'Stand with Halloran.', battle: { readiness: 1 }, effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: 1 }] },
-          { id: 'watch', text: 'Stay in the background and observe.', battle: { intel: 1 }, effects: [{ meter: 'intel', add: 1 }] },
+          { id: 'watch', text: 'Stay in the background and observe.', effects: [{ meter: 'intel', add: 1 }, { flag: 'room_watched', local: true }] },
           { id: 'follow', text: 'Focus on Kettering, and mark his men.', battle: { role: 'choose' }, effects: [{ flag: 'kettle_marked', local: true }] }
         ], next: 'c1.battle' },
         // Halloran across the market square to the landing field, with the log, and Brass Ledger in the way
         { id: 'c1.battle', type: 'battle', scenario: 'escort', variant: { escort: 'Halloran' }, map: 'vesk', tier: 1, pl: 1, planet: 'dense',
           enemy: rival('kettle', { drop: ['kestrel_filmed', 'beat_kettle', 'agent_jailed'], core: [{ key: 'recruits', name: 'Kettering’s Own' }], optional: { meter: 'kettle', per: 3, units: ['irregulars', 'recruits'] }, fill: { to: 0.6, from: ['recruits', 'irregulars'], meter: 'kettle', step: 0.05 },
             changes: [{ if: { flag: 'kettle_marked' }, readiness: -1 }] }),
+          // the room watched: the company saw who was interested, and where they might wait
+          adjust: [{ if: { flag: 'room_watched' }, levers: { intel: 1 } }],
           // lost, Brass Ledger have the log, and what the company does next is about getting it back, or following it
           on: { success: [{ effects: [{ meter: 'kettle', add: -1 }, { meter: 'lead', add: 1 }] }], failure: [{ effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: -1 }, { flag: 'log_lost' }] }] }, next: 'c1.debrief' },
         { id: 'c1.debrief', type: 'debrief', text: '{if success}The log is safe.{/if}{if failure}Brass Ledger have the log.{/if}', events: ['c1.agent'], next: 'c1.route' },
