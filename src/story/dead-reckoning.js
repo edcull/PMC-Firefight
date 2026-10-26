@@ -381,9 +381,9 @@
         { id: 'c1.brief', type: 'brief', text: 'Vesk Free Port. Lot 47 is on the block tonight.', next: 'c1.bidding' },
         { id: 'c1.bidding', type: 'event', who: 'reader', title: 'The bidding', text: 'Half the room is bidding for somebody else.', options: [
           // (the backer's money, not the company's: the company has none yet)
-          { id: 'outbid', text: 'Outbid them in the open.', battle: { readiness: 1 }, effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: 1 }] },
-          { id: 'watch', text: 'Let Halloran bid while the company watches the room.', battle: { intel: 1 }, effects: [{ meter: 'intel', add: 1 }] },
-          { id: 'follow', text: 'Have Brass Ledger’s agent followed out of the room.', battle: { role: 'choose' }, effects: [{ flag: 'kettle_marked', local: true }] }
+          { id: 'outbid', text: 'Stand with Halloran.', battle: { readiness: 1 }, effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: 1 }] },
+          { id: 'watch', text: 'Stay in the background and observe.', battle: { intel: 1 }, effects: [{ meter: 'intel', add: 1 }] },
+          { id: 'follow', text: 'Focus on Kettering, and mark his men.', battle: { role: 'choose' }, effects: [{ flag: 'kettle_marked', local: true }] }
         ], next: 'c1.battle' },
         // Halloran across the market square to the landing field, with the log, and Brass Ledger in the way
         { id: 'c1.battle', type: 'battle', scenario: 'escort', variant: { escort: 'Halloran' }, map: 'vesk', tier: 1, pl: 1, planet: 'dense',
