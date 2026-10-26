@@ -963,7 +963,7 @@
       { about: 'vane', text: 'Lucan Vane has another lot in the catalogue, bought by telephone, from nowhere.' },
       { about: 'rivals', if: { flag: 'kettle_partner' }, text: 'Brass Ledger are partners in the claim, and remind everyone of it.' },
       { about: 'rivals', text: 'The rivals went back to the work they had before the log.' },
-      { about: 'company', if: { meter: 'fatigue', lte: 1 }, text: '{name} came back with {commander}, fewer than it took, and every one of them signed on again.' },
+      { about: 'company', if: { meter: 'fatigue', lte: 3 }, text: '{name} came back with {commander}, fewer than it took, and every one of them signed on again.' },
       { about: 'company', if: { meter: 'fatigue', gte: 4 }, text: 'Half of {name} signed on somewhere else before the next contract. The ones who stayed with {commander} don’t talk about the trail.' },
       { about: 'company', text: '{name} came back with {commander}, and fewer than it took.' }
     ]
