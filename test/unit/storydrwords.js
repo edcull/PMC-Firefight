@@ -64,10 +64,17 @@ ok('...and the words are laid over the working', dr._chapters.c1.intro === TEXT.
 ok('no words for a page or option the story does not have', Object.keys(TEXT).every((k) => {
   const id = k.split(/[/#]/)[0], n = dr._nodes[id];
   if (dr._chapters[k]) return true;
+  // a second-half job's pitch, for its chapter
+  if (/\.pitch$/.test(k) && dr._chapters[k.slice(0, -6)]) return true;
   if (!n) return false;
   const o = k.indexOf('/') > 0 ? k.split('/')[1].replace('.why', '') : null;
   return !o || (n.options || []).some((x) => x.id === o);
 }), Object.keys(TEXT).filter((k) => !dr._chapters[k] && !dr._nodes[k.split(/[/#]/)[0]]).join(', '));
+{
+  const jobs = dr.chapters.filter((ch) => ch.half === 2 && ch.thread && !ch.finale);
+  ok('every second-half job is put to the company as a story, not as its thread', jobs.length >= 12 && jobs.every((ch) => ch.pitch && TEXT[ch.id + '.pitch'] === ch.pitch && !/thread|the race|first contact/i.test(ch.pitch)),
+    jobs.filter((ch) => !ch.pitch).map((ch) => ch.id).join(', '));
+}
 {
   const c = { companies: { A: { name: 'T', kUC: 0, tier: 1, roster: [] } } };
   S.begin(c, 'dead-reckoning', { commander: 'Ines Okoro' });

@@ -225,6 +225,20 @@
     'fault': 'Halloran sat up three nights with the last pages of the log, the ones Morrow wrote with the stones all pointing the same way, and on the fourth morning he read them out to the company. Morrow had a name for the ones who keep the stones after all. He wrote it once, near the end, underlined twice: Xenotripods. The three-legged ones, who step out of the air. By the next jump every newsfeed in the sector has the word, and the footage from the beacon, and nobody is calling it a treasure hunt any more.',
     'fault.brief': 'The log gives no more easy headings. From here the stones point, and the company chooses which way to follow them, knowing now who else is out there. The rivals have heard the same newsfeeds. So have their clients.{if vane_cut_off} And Vane has stopped paying.{/if}',
 
+    /* ---- the second half's jobs, as they are put to the company at the pool ---- */
+    'claim.pitch': 'The stones point at the Hollin Shelf, where Morrow left something behind before he went on. Kestrel’s cameras are already up there.',
+    'wreck.pitch': 'A wreck in a gully on Pell matches nothing on any register. Halloran is sure it is Morrow’s ship. So is Colonel Sable, and she is already cutting in.',
+    'bounty.pitch': 'Somebody has put a price on the company, and Wraith Section has taken the contract. There is fuel on Ilya, and a tip that they are waiting there.',
+    'watchers.pitch': 'The stones point through the Brannock pass, and something has shut the pass with walls of light that watch whoever comes near.',
+    'storm.pitch': 'Nobody has slept well since the beacon. Make camp on Sedra II to refit, and be ready for whatever has been following the company there.',
+    'cold.pitch': 'The stones point under the ruins on Kasimir, where the sand moves when nothing is moving it.',
+    'mimics.pitch': 'A call from Hashamer I, in a voice that is not human and asks politely: somebody is taking its people away in cages.{if eshaven_graves} It gives two names the company has read on a cairn of glass.{/if}',
+    'speaker.pitch': 'On the shore of a still lake on Orlo, something has been waiting for the company to come and talk. It has been waiting patiently.',
+    'signal.pitch': 'Go back to the beacon on Tessaly IV, where it started. Light it, and hold it lit, and see who answers.',
+    'vault.pitch': 'Halcyon, and Vane’s banks, and under one of them the vault where he keeps everything he has bought and the receipts for everything he has sold.',
+    'escort.pitch': 'Vane wants a cargo moved across Umber, quietly, and he is paying as if it matters a great deal.',
+    'debts.pitch': 'Vane’s lawyers say the company owes him, and the Ninth Lance has been sent to collect. They will find the company whichever way it goes.',
+
     /* ---- the Race: Claim Jumpers ---- */
     'claim': 'The stones point at the Hollin Shelf, a high plateau on Corvin where Morrow made a cache before he went on. Kestrel Air Cavalry got the heading the same day the company did, and Kestrel is never second anywhere.',
     'claim.brief': 'Kestrel’s dropships are already on the shelf, and so is a convoy of ground cars carrying whatever Morrow cached, crawling for Kestrel’s landing zone in the thin air. Rook Kestrel is filming the whole thing for somebody’s newsfeed.',

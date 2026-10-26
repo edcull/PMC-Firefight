@@ -405,7 +405,7 @@
     if (node.type === 'event') out.options = optionsOf(ctx, node);
     if (node.type === 'pool') out.options = st.pool ? st.pool.offers.map(function (o) {
       var ch = def._chapters[o.chapter];
-      return { id: o.chapter, text: ch.title, thread: o.thread, ok: true };
+      return { id: o.chapter, text: ch.title, pitch: ch.pitch || null, thread: o.thread, ok: true };
     }) : [];
     if (node.type === 'battle') out.battle = battleSpec(campaign);
     if (node.type === 'interlude') out.side = sideOffers(campaign, node);

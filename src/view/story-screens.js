@@ -270,10 +270,12 @@
     }
 
     function poolView(v) {
-      var d = def(), h = '<div class="story-event"><h3>The next job</h3><p class="story-text">Two jobs, and only time for one. The one you leave will not wait.</p><div class="story-opts">';
+      var d = def(), h = '<div class="story-event"><h3>The next job</h3><p class="story-text">Two leads, and only time for one. The one you leave will not wait.</p><div class="story-opts">';
       v.options.forEach(function (o) {
+        // the job as the story puts it (its pitch), or else the thread it belongs to
         var ch = d._chapters[o.id], t = d.threads[o.thread];
-        h += '<button class="story-opt" data-go="storyopt" data-o="' + esc(o.id) + '"><b>' + esc(ch.title) + '</b><small>' + esc(t ? t.name : '') + '</small></button>';
+        var under = o.pitch ? S().render(E.camp, o.pitch) : (t ? t.name : '');
+        h += '<button class="story-opt" data-go="storyopt" data-o="' + esc(o.id) + '"><b>' + esc(ch.title) + '</b><small>' + esc(under) + '</small></button>';
       });
       return h + '</div></div>';
     }

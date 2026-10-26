@@ -27,6 +27,8 @@
   function withProse(def) {
     (def.chapters || []).forEach(function (ch) {
       if (TEXT[ch.id]) ch.intro = TEXT[ch.id];
+      // how the job is put to the company when it is offered at the pool: the story, not the thread
+      if (TEXT[ch.id + '.pitch']) ch.pitch = TEXT[ch.id + '.pitch'];
       (ch.nodes || []).forEach(function (n) {
         if (TEXT[n.id]) n.text = TEXT[n.id];
         if (TEXT[n.id + '#name']) n.name = TEXT[n.id + '#name'];
