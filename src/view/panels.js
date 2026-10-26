@@ -992,7 +992,10 @@
     }
     function allyOrderCard() {
       var o = B.state.allyOrder, locked = !!(o && o.turn === B.state.turn && o.acted), pick = ui.allyOrderPick;
-      var h = '<div class="card allyorders"><h2>Allies\u2019 orders</h2>';
+      // (an Escort's VIP alone: his own name on the card)
+      var al = B.state.units.filter(function (u) { return u.side === B.state.allies.side && u.ally && u.alive; });
+      var who = al.length && al.every(function (u) { return u.escort; }) ? al[0].name + '\u2019s' : 'Allies\u2019';
+      var h = '<div class="card allyorders"><h2>' + esc(who) + ' orders</h2>';
       if (pick && ORDER_WORDS[pick]) {
         h += '<p class="sub">Tap the table where they should <b>' + esc(ORDER_WORDS[pick][0].toLowerCase()) + '</b>.</p>' +
           '<div class="orderbtns"><button class="lnk" data-act="allyordercancel">Cancel</button></div>';

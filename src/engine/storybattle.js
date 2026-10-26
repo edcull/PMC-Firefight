@@ -41,6 +41,8 @@
         if (u.side === 'A' && sty.allyFrom != null && u.pickIdx != null && u.pickIdx >= sty.allyFrom) {
           u.ally = true; u.paint = 'C'; allies = true;
         }
+        // (and a scenario's own ally: an Escort's VIP, in side A's colours)
+        if (u.side === 'A' && u.ally) allies = true;
       });
       if (allies) state.allies = { side: 'A' };
     }

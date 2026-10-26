@@ -43,7 +43,7 @@ console.log('\nLot 47: an Escort');
 const { cfg, st } = started();
 ok('Lot 47 is fought as an Escort, Halloran the one to be got across', cfg.scenario === 'escort' && cfg.story.variant.escort === 'Halloran' && /across/.test(SC.SCENARIOS.escort.win + ' ' + dr._nodes['c1.battle'].text));
 const vane = st.units.find((u) => u.escort);
-ok('...he is on the table with side A, its own to move: named, a Command Unit’s statline, no special rules', vane && vane.side === 'A' && vane.name === 'Halloran' && !vane.ally &&
+ok('...he is on the table with side A, an ally, not the player’s to move: named, a Command Unit’s statline, no special rules', vane && vane.side === 'A' && vane.name === 'Halloran' && vane.ally && st.allies && st.allies.side === 'A' &&
   vane.rules.length === 0 && vane.models >= 1, vane && JSON.stringify({ name: vane.name, side: vane.side, models: vane.models, rules: vane.rules }));
 ok('...and he comes on in turn 1 with the rest of side A', vane.x >= 0 && !vane.reserve, vane.x + ',' + vane.y);
 ok('Vesk’s market on the table: every barricade a railing and every crater field the market’s clutter, and the roads paved', cfg.story.skin === 'market' &&
@@ -189,6 +189,28 @@ console.log('\nLot 47 lost: Brass Ledger have the log');
   S.choose(c, 'take');
   S.resolveBattle(c, 'victory');
   ok('...only the warehouse taken by force brings it back with the heading', !c.story.flags.ledger_has_log && c.story.meters.theirs === t1 - 1);
+}
+
+console.log('\nHalloran, an ally');
+{
+  // the player's own units spent, side A to act: what is left is Halloran's, and the AI runs him
+  const fresh = () => {
+    const r = started('ai'), t = r.st;
+    t.activeSide = 'A';
+    t.units.forEach((u) => { if (u.side === 'A') { u.activated = !u.ally; u.reserve = false; u.aboard = false; } });
+    return Object.assign(r, { h: t.units.find((u) => u.escort) });
+  };
+  let { e, st: s, h } = fresh();
+  ok('the player cannot pick him: his activations are his own', !e.intent('A', { k: 'select', id: h.id }).ok || (e.sel && e.sel() && e.sel().id) !== h.id);
+  const x0 = h.x;
+  for (let i = 0; i < 20 && !h.activated; i++) e.sim.steps(1);
+  ok('...left alone, he makes his own way towards the far edge', h.activated && h.x > x0 + 1, 'x ' + x0.toFixed(1) + ' \u2192 ' + h.x.toFixed(1));
+  ({ e, st: s, h } = fresh());
+  const to = { x: h.x, y: h.y < 24 ? h.y + 10 : h.y - 10 };
+  e.intent('A', { k: 'allyorder', kind: 'move', x: to.x, y: to.y });
+  const d0 = R.inches(h.x, h.y, to.x, to.y);
+  for (let i = 0; i < 20 && !h.activated; i++) e.sim.steps(1);
+  ok('...and goes where the company tells him: Move here', s.allyOrder && R.inches(h.x, h.y, to.x, to.y) < d0 - 1, d0.toFixed(1) + ' \u2192 ' + R.inches(h.x, h.y, to.x, to.y).toFixed(1));
 }
 
 console.log('\nOne battle, AI against AI');

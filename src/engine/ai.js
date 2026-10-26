@@ -1408,7 +1408,7 @@
       /* Story mode: an ally under the player's orders (storybattle.js allyOrder).
          The marker is the goal; on the way there nobody stops to fight over
          ground, and once there each order is carried out its own way. */
-      var ord = E.orderActed(u), ordFar = !!ord && R.inches(u.x, u.y, ord.x, ord.y) > E.orderReach();
+      var ord = E.orderActed(u) || ownWay(u), ordFar = !!ord && R.inches(u.x, u.y, ord.x, ord.y) > E.orderReach();
       if (ord) behaviour = orderBehaviour(u, ord, ordFar, behaviour);
       // Defensive and Neutral OpFor engage the biggest threat; everyone else the best shot (SOL-6)
       var shot = soloI && (behaviour === 'defensive' || behaviour === 'neutral') ? threatTarget(u, 'fire') : bestTarget(u, 'fire');
@@ -1968,12 +1968,20 @@
        Attack press on and Hold goes carefully, cover to cover; there, Move
        fights from where it stands, Attack takes the fight to the enemy, and Hold
        digs in. Only a unit running for its life (the roll) forgets the order there. */
+    /* An Escort's VIP with no orders (scenarios-story.js escort): no soldier, he
+       makes for the far edge at the double, as if told Move here, and never stops
+       to shoot. */
+    function ownWay(u) {
+      if (!u.escort || !E.state.scen.goals) return null;
+      var g = E.state.scen.goals(E.state, u)[0];
+      return g ? { kind: 'move', x: g.x, y: g.y, own: true } : null;
+    }
     function orderBehaviour(u, ord, far, rolled) {
       var b;
       if (ord.kind === 'move') b = far ? 'offensive' : rolled === 'flee' ? 'flee' : 'neutral';
       else if (ord.kind === 'attack') b = rolled === 'assault' ? 'assault' : far ? 'offensive' : rolled === 'flee' ? 'defensive' : rolled === 'defensive' ? 'neutral' : rolled;
       else b = far ? 'defensive' : rolled === 'flee' ? 'flee' : 'defensive';
-      logLine('ai', u.label + ' \u2014 under orders: ' + E.orderWord(ord.kind).toLowerCase() + (far ? ', on its way' : ', there') + ': ' + b + '.');
+      logLine('ai', u.label + (ord.own ? ' \u2014 makes for the far edge' : ' \u2014 under orders: ' + E.orderWord(ord.kind).toLowerCase()) + (far ? ', on its way' : ', there') + ': ' + b + '.');
       return b;
     }
     // where an ally under orders makes for: the marker, or attacking there, the enemy nearest it
