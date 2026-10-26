@@ -346,6 +346,13 @@
     side: {
       offers: { base: 1, behind: 2, cutOff: 2 }, cutOffPay: 1.5, cutOff: ['vane_cut_off'],
       curve: { 1: 1, 2: 1, 3: 2, 4: 2, 5: 2, 6: 3, 7: 3, 8: 3 },
+      /* how a job's pay and its cost in time are told on the page, as story
+         (the pay by how much: the first band it is at or under) */
+      words: {
+        pay: [[2, 'It pays a little.'], [3, 'It pays fairly.'], [4, 'It pays well.'], [99, 'It pays handsomely.']],
+        catchUp: 'The company is behind, and this one is on its way: it costs no time.',
+        late: 'Every day spent off the trail now is a day the rivals gain on it.'
+      },
       jobs: [
         { id: 'escort', title: 'Escort to the Yards', pay: 3, text: 'A freighter through claim-jumper space.',
           ask: 'A freighter captain on the dock has a hold full of reactor parts, a route through claim-jumper space, and nobody to ride with her. She will pay well for company.', take: 'Ride shotgun to the yards.',
@@ -367,6 +374,7 @@
           cost: [LATE_TIME], passed: [{ meter: 'understanding', add: -1 }],
           on: { success: [{ effects: [{ meter: 'understanding', add: 1 }] }], failure: [{ effects: [{ meter: 'understanding', add: -1 }] }] } },
         { id: 'survey', title: 'Survey Cover', pay: 3, if: { chapter: { gte: 5 } }, text: 'A survey team on a quiet world, and the ground moving under them.',
+          takeText: 'Whatever is in that ground will know the company has been there.',
           ask: 'A survey team on a quiet world says the ground is moving under them, and something is moving in it. They have stopped sleeping, and they are paying for company.', take: 'Go and keep the surveyors company.',
           scenario: 'ce_clear', tier: 'max-1', enemy: tribe('mithdu', { fill: { to: 0.6, from: ['xeps1'] } }),
           cost: [LATE_TIME, { meter: 'alarm', add: 1 }], on: { success: [{}], failure: [{ effects: [{ meter: 'alarm', add: 1 }] }] } },

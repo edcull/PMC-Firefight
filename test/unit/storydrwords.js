@@ -70,7 +70,7 @@ ok('no words for a page or option the story does not have', Object.keys(TEXT).ev
   const o = k.indexOf('/') > 0 ? k.split('/')[1].replace('.why', '') : null;
   return !o || (n.options || []).some((x) => x.id === o);
 }), Object.keys(TEXT).filter((k) => !dr._chapters[k] && !dr._nodes[k.split(/[/#]/)[0]]).join(', '));
-ok('every side contract is asked of the company as a story, with its own way to say yes, and what passing it up means told as story', dr.side.jobs.every((j) => j.ask && j.take && j.take !== 'Take the job' && (!j.who || dr.people[j.who]) && (!j.passed || j.passedText)),
+ok('every side contract is asked of the company as a story, with its own way to say yes, and what passing it up means told as story', dr.side.jobs.every((j) => j.ask && j.take && j.take !== 'Take the job' && (!j.who || dr.people[j.who]) && (!j.passed || j.passedText) && (j.cost || []).every((e) => e === (j.cost || [])[0] || j.takeText)) && dr.side.words && dr.side.words.pay && dr.side.words.late,
   dr.side.jobs.filter((j) => !j.ask || !j.take).map((j) => j.id).join(', '));
 {
   const jobs = dr.chapters.filter((ch) => ch.half === 2 && ch.thread && !ch.finale);

@@ -182,9 +182,15 @@
       v.side.forEach(function (o) {
         var cost = words(o.cost), passed = words(o.passed), sides = def().sides || {};
         // the job as it is asked of the company (its `ask`, by whoever asks), or else its line
-        h += '<div class="story-job">' + (o.who ? personView(o.who) : '') + '<b>' + esc(o.title) + '</b><small>' + esc(o.pay + ' kUC') +
+        /* a story that words its jobs (side.words) tells the pay and the time as
+           story; any other shows the sums */
+        var W = (d.side && d.side.words) || null, payBand = W && W.pay ? W.pay.filter(function (b) { return o.pay <= b[0]; })[0] : null;
+        var late = cost && /time:/.test(cost);
+        h += '<div class="story-job">' + (o.who ? personView(o.who) : '') + '<b>' + esc(o.title) + '</b><small>' + esc(payBand ? payBand[1] : o.pay + ' kUC') +
           (o.against && sides[o.against] ? ' \u00b7 against ' + esc(sides[o.against].name) : '') + '</small>' + para(o.ask || o.text) +
-          (o.catchUp ? '<small class="good">Offered to help the company catch up: it costs no time.</small>' : cost ? '<small>Taking it: ' + esc(cost) + '</small>' : '') +
+          (o.catchUp ? '<small class="good">' + esc(W && W.catchUp || 'Offered to help the company catch up: it costs no time.') + '</small>'
+            : W ? [o.takeText, late ? W.late : null].filter(Boolean).map(function (t) { return '<small>' + esc(t) + '</small>'; }).join('')
+            : cost ? '<small>Taking it: ' + esc(cost) + '</small>' : '') +
           // passing it up, as the story tells it (its passedText), or else what it does
           (o.passedText ? '<small class="warn">' + esc(o.passedText) + '</small>' : passed ? '<small class="warn">Passed up: ' + esc(passed) + '</small>' : '') +
           '<button class="lnk" data-go="storyside" data-j="' + esc(o.id) + '">' + esc(o.take || 'Take the job') + '</button></div>';
