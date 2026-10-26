@@ -34,6 +34,9 @@
         var x = sty.units && sty.units[u.side] && sty.units[u.side][u.pickIdx];
         if (x) {
           if (x.name) { u.name = x.name; u.label = x.name + ' [' + u.side + ']'; }
+          // a story's variant of a unit: rules it goes without (`lose`, by their start), and its numbers changed (`mod`)
+          if (x.lose) u.rules = u.rules.filter(function (r) { return !x.lose.some(function (l) { return r.indexOf(l) === 0; }); });
+          if (x.mod) Object.keys(x.mod).forEach(function (k) { if (typeof u[k] === 'number') u[k] += x.mod[k]; });
           if (x.rules) x.rules.forEach(function (r) { if (u.rules.indexOf(r) < 0) u.rules.push(r); });
           if (x.target) u.storyTarget = true;
           if (x.skin) skin(u, x);

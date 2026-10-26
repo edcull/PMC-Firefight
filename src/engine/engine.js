@@ -396,6 +396,10 @@
        space, drawn black, the floors walled by the station's hull.
        The rules read it as the solid it always was. */
     if (scenDef.compound && cfg.story && cfg.story.skin === 'station') built.terrain.forEach(function (t) { if (t.kind === 'bulkhead' && !t.thin) t.space = true; });
+    /* A wreck on a world's surface (a story map's 'wreck' skin): its solid is
+       the ground outside her hull, drawn as the world's, the floors walled by
+       the hull where they meet it. The rules read it as solid all the same. */
+    if (scenDef.compound && cfg.story && cfg.story.skin === 'wreck') built.terrain.forEach(function (t) { if (t.kind === 'bulkhead' && !t.thin) t.outside = true; });
     /* The Warren (a story map's 'warren' skin): tunnels cut in the rock of a
        world nobody has charted. Its solid is rock and its floors worked stone;
        nothing in it is fitted out as a base is (the machinery goes, the crates

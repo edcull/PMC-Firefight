@@ -17,6 +17,33 @@
   'use strict';
   root.PMCStoryMaps = root.PMCStoryMaps || {};
 
+  /* A ship laid as a compound plan, a lettered grid: each letter a room, `c`
+     a passage, `.` outside her hull. Walls go between rooms, and between a room
+     and a passage, but for the doors given and the openings cut through (each
+     [i, j, i2, j2], the cells either side); the rooms are named by letter. */
+  function shipPlan(rows, doors, open, names) {
+    var cols = rows[0].length, n = rows.length;
+    function at(i, j) { return rows[j].charAt(i); }
+    function idx(i, j) { return j * cols + i; }
+    function ek(a, b) { return a < b ? a + '|' + b : b + '|' + a; }
+    var dset = {}, oset = {}, walls = [], named = {};
+    doors.forEach(function (d) { dset[ek(idx(d[0], d[1]), idx(d[2], d[3]))] = true; });
+    open.forEach(function (d) { oset[ek(idx(d[0], d[1]), idx(d[2], d[3]))] = true; });
+    for (var j = 0; j < n; j++) for (var i = 0; i < cols; i++) {
+      var A = at(i, j);
+      if (A === '.') continue;
+      if (names[A] && named[A] == null) named[A] = idx(i, j);
+      [[1, 0], [0, 1]].forEach(function (d) {
+        if (i + d[0] >= cols || j + d[1] >= n) return;
+        var B = at(i + d[0], j + d[1]), k = ek(idx(i, j), idx(i + d[0], j + d[1]));
+        if (B === '.' || A === B || dset[k] || oset[k]) return;
+        walls.push(k);
+      });
+    }
+    var out = {};
+    Object.keys(named).forEach(function (L) { out[named[L]] = names[L]; });
+    return { cols: cols, rows: n, cells: rows.join('').replace(/[^.c]/g, 'r'), walls: walls, doors: Object.keys(dset), danger: [], names: out };
+  }
   function B(x, y, w, h, plan) { return { kind: 'building', x: x, y: y, w: w, h: h, plan: plan || 'block' }; }
   function N(kind, x, y, w, h, shape) { return { kind: kind, x: x, y: y, w: w, h: h, shape: shape || 'blob' }; }
   function R(kind, x, y, w, h) { return { kind: kind, x: x, y: y, w: w, h: h }; }
@@ -220,6 +247,49 @@
         doors: ['86|102',  '89|105',  '150|166',  '153|169',  '101|102',  '105|106',  '149|150',  '153|154',  '38|54',  '41|57',  '198|214',  '201|217',  '115|116',  '123|124',  '131|132',  '139|140'],
         // the rooms by name, a cell inside each: the three control rooms and the two labs
         names: { 22: 'North module', 102: 'Hub', 214: 'South module', 113: 'West lab', 125: 'East lab' }
+      }
+    },
+
+    /* The Wreck of the Morrow, on her side in a gully on Pell: a compound laid
+       by hand in the shape of the ship, stern to the company's edge and her bow
+       stepped down to a forward hatch on the far one, every cell inside her hull
+       a room or a passage. Its skin is the wreck's (`wreck`, engine.js): the
+       solid round her is Pell's ground, outside, the floors walled in by her
+       hull where they meet it. Two ways in at the stern, the main hatch Sable cut
+       and the split in the hull, and who comes in where (`entries`, a battle's
+       `variant.entry`): cutting a second way in, the company has both; following
+       Sable in, only her hatch; either way Sable's people are already inside,
+       through the hold and the rooms forward. Gone in together, Brass Ledger's
+       salvage crew are in the hold and the stores. */
+    wreck: {
+      name: 'The wreck of Morrow’s ship, Pell', skin: 'wreck',
+      compound: shipPlan([
+        '................',
+        '................',
+        '................',
+        '.ccccccccccc....',
+        '.EEEcQQRRGGc....',
+        'cEEEcHHHHGGc....',
+        '.EEEcHHHHGGcFF..',
+        '.EEEcHHHHccccccc',
+        '.EEEcHHHHMMcBB..',
+        '.EEEcHHHHMMcBB..',
+        'cEEEcHHHHMMc....',
+        '.EEEcSSTTMMc....',
+        '.ccccccccccc....',
+        '................',
+        '................',
+        '................'
+      ], [[2, 3, 2, 4], [3, 7, 4, 7], [2, 11, 2, 12], [5, 3, 5, 4], [8, 3, 8, 4], [10, 3, 10, 4], [9, 6, 9, 7], [4, 6, 5, 6], [4, 9, 5, 9], [8, 7, 9, 7],
+        [9, 8, 9, 7], [10, 10, 11, 10], [5, 12, 5, 11], [8, 12, 8, 11], [12, 6, 12, 7], [12, 8, 12, 7], [11, 9, 12, 9]],
+      // (the main hatch and the split: cut through, no door left in either)
+      [[0, 5, 1, 5], [0, 10, 1, 10]],
+      { E: 'Engine room', H: 'Cargo hold', B: 'Bridge', M: 'Infirmary', G: 'Galley', Q: 'Crew quarters', R: 'Crew quarters', S: 'Stores', T: 'Stores', F: 'Forward store' }),
+      // who comes in where, in cells (a 3" grid): the main hatch, the split, and the rooms a side already holds
+      entries: {
+        cut: { A: [{ i: 0, j: 5, w: 1, h: 1 }, { i: 0, j: 10, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 6 }, { i: 9, j: 4, w: 2, h: 3 }, { i: 9, j: 8, w: 2, h: 4 }, { i: 12, j: 8, w: 2, h: 2 }] },
+        follow: { A: [{ i: 0, j: 5, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 6 }, { i: 9, j: 4, w: 2, h: 3 }, { i: 9, j: 8, w: 2, h: 4 }, { i: 12, j: 8, w: 2, h: 2 }] },
+        together: { A: [{ i: 0, j: 5, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 6 }, { i: 5, j: 11, w: 4, h: 1 }, { i: 9, j: 8, w: 2, h: 4 }] }
       }
     },
 

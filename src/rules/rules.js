@@ -1013,6 +1013,7 @@
     if (kind === 'road' && piece && piece.deck) return 'Deck';
     if (kind === 'wall' && piece && piece.hull) return 'Hull';
     if (kind === 'bulkhead' && piece && piece.space) return 'Open space';
+    if (kind === 'bulkhead' && piece && piece.outside) return 'Outside the hull';
     if (kind === 'barricade' && piece && piece.blast) return 'Blast barrier';
     if (kind === 'road' && piece && piece.slab) return 'Concrete';
     // a map's pipeline: a low wall by the rules

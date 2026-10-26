@@ -1058,6 +1058,13 @@
   // "Before the battle, players randomize opposite table edges" (pp. 161-162): the compound's two long edges
   function compoundEntries(state) {
     var ent = state.compound ? state.compound.entries : { L: [], R: [] };
+    var sty = state.cfg && state.cfg.story;
+    // a story map that says who comes in where (levers.js): its doorways, or the rooms a side already holds
+    if (sty && sty.entries && sty.entries.A && sty.entries.A.length && sty.entries.B && sty.entries.B.length) {
+      state.sc.entry = { A: sty.entries.A.slice(), B: sty.entries.B.slice() };
+      state.sc.boxes = { A: state.sc.entry.A, B: state.sc.entry.B };
+      return;
+    }
     var swap = Math.random() < 0.5;
     state.sc.entry = { A: (swap ? ent.R : ent.L).slice(), B: (swap ? ent.L : ent.R).slice() };
     /* The ground each side comes on through, as boxes (the corridor at each entry

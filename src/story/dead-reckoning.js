@@ -82,10 +82,18 @@
   /* A rival PMC: its archetype's own kind of force, scaled by its strength.
      (The units here are the archetype's; phase 1 draws the optional units and
      the filler from the archetype's weights.) */
+  /* Sable's battle armour in variants of its own, for inside a ship or a station: the
+     Economy-class suit with its anti-tank weapon swapped out, for las-cutters (a Gauss
+     Weapon, as the rebels' miners carry), a machine gun, or close-assault kit. */
+  var BA_CUT = { key: 'ecobats', name: 'Sable cutting team', variant: true, lose: ['Anti-tank'], rules: ['Gauss Weapon (las-cutters)'] };
+  var BA_MG = { key: 'ecobats', name: 'Sable machine-gun team', variant: true, lose: ['Anti-tank'], mod: { fp: 2, range: 12 } };
+  var BA_ASSAULT = { key: 'ecobats', name: 'Sable assault team', variant: true, lose: ['Anti-tank'], mod: { assault: 3 } };
   var RIVAL = {
     kettle: { archetype: 'swarm', core: [{ key: 'lmgsection', name: 'Kettering’s Own' }], units: ['recruits', 'irregulars', 'rookie', 'mortarsection', 'unarmoured'], fill: ['recruits', 'irregulars', 'rookie'] },
     wraith: { archetype: 'marksmen', core: [{ key: 'observers', name: 'Nine’s Section' }], units: ['observers', 'nomads', 'lpv', 'recon', 'ew'], fill: ['irregulars', 'observers', 'nomads'] },
-    sable: { archetype: 'armour', core: [{ key: 'ecobats', name: 'Sable’s Guard' }], units: ['ecobats', 'bats', 'lhunter', 'protectors', 'hunter'], fill: ['enforcers', 'ecobats', 'recruits'] },
+    sable: { archetype: 'armour', core: [{ key: 'ecobats', name: 'Sable’s Guard' }], units: ['ecobats', 'bats', 'lhunter', 'protectors', 'hunter'], fill: ['enforcers', 'ecobats', 'recruits'],
+      // (inside a wreck or a station, where no vehicle goes: her battle armour, and Enforcers where the Tier allows none)
+      inside: { core: [{ key: 'ecobats', name: 'Sable’s Guard' }, BA_CUT], units: [BA_MG, BA_ASSAULT, 'bats', BA_CUT, 'protectors'], fill: ['enforcers', 'ecobats', 'bats'], down: 'enforcers' } },
     kestrel: { archetype: 'aircav', core: [{ key: 'lighteng', name: 'Kestrel Lead' }], units: ['lapc', 'recruits', 'lifv', 'rookie', 'lpv'], fill: ['recruits', 'irregulars', 'rookie'] },
     reavers: { archetype: 'shock', core: [{ key: 'enforcers', name: 'Big Hal’s Boarders' }], units: ['irregulars', 'lighteng', 'chem', 'lpv', 'commandos'], fill: ['irregulars', 'enforcers'] },
     lance: { archetype: 'elite', core: [{ key: 'veterans', name: 'Commander Daw' }], units: ['rookie', 'veterans', 'snipers', 'rangers', 'medics'], fill: ['recruits', 'rookie', 'enforcers'] }
@@ -107,7 +115,10 @@
         { if: { flag: 'kestrel_filmed' }, readiness: 1 },          // they have seen how the company fights
         { if: { meter: 'lead', lte: -3 }, readiness: 1 },          // dug in before the company got there
         { if: { flag: 'beat_' + id }, readiness: 1 }               // beaten once, and waiting for the company since (a grudge)
-      ].concat(id === 'kettle' ? [{ if: { flag: 'agent_jailed' }, readiness: 1 }] : []).filter(keep)   // their man handed to the port: they come for the company
+      ].concat(id === 'kettle' ? [{ if: { flag: 'agent_jailed' }, readiness: 1 }] : []).filter(keep),   // their man handed to the port: they come for the company
+      // its force inside a compound, where the rival has one of its own (levers.js buildForce)
+      inside: r.inside ? { core: r.inside.core.slice(), down: r.inside.down || null, optional: { meter: id, per: 2, units: r.inside.units },
+        fill: { to: 0.85, from: r.inside.fill, meter: id, step: 0.05 } } : undefined
     }, extra);
   }
   // a Xenotripod tribe: its archetype's force, scaled by Alarm
@@ -735,13 +746,14 @@
         place: { system: 'Pell', planet: 'Pell', kind: 'unstable', world: { atmosphere: 'toxic' } },
         brief: 'Morrow’s ship, where it came down, and Sable cutting in.',
         before: { id: 'wreck.hatch', who: 'agathe', title: 'The hatch', text: 'Sable is already cutting in.', options: [
-          { id: 'cut', text: 'Cut a second way in.', battle: { strikes: 'D3', role: 'attacker' }, effects: [{ meter: 'alarm', add: 1 }] },
-          { id: 'wait', text: 'Wait for Sable to open it.', battle: { readiness: -1, edge: 'choose' }, effects: [{ meter: 'lead', add: -1 }] },
+          // (in by the main hatch and the split both, or by Sable's hatch behind her; she is inside either way)
+          { id: 'cut', text: 'Cut a second way in.', battle: { strikes: 'D3', variant: { entry: 'cut' } }, effects: [{ meter: 'alarm', add: 1 }] },
+          { id: 'wait', text: 'Wait for Sable to open it.', battle: { readiness: -1, variant: { entry: 'follow' } }, effects: [{ meter: 'lead', add: -1 }] },
           // in with Sable, the ship is cleared of the salvage crew that beat everyone to it
-          Object.assign(hireOption('sable', 'Call in what Sable owes you.'), { battle: { allies: HIRE.sable, enemy: rival('kettle') },
+          Object.assign(hireOption('sable', 'Call in what Sable owes you.'), { battle: { allies: HIRE.sable, enemy: rival('kettle'), variant: { entry: 'together' } },
             effects: hireOption('sable').effects.concat([{ flag: 'wreck_together', local: true }]) })
         ] },
-        battle: { scenario: 'ce_clear', planet: 'unstable', enemy: rival('sable'),
+        battle: { scenario: 'ce_clear', map: 'wreck', planet: 'unstable', enemy: rival('sable'),
           on: {
             success: [{ if: { flag: 'wreck_together' }, effects: [{ meter: 'kettle', add: -1 }, { meter: 'sable_trust', add: 1 }, { meter: 'theirs', add: -1 }, { meter: 'lead', add: 1 }] },
               { effects: [{ meter: 'sable', add: -1 }, { meter: 'theirs', add: -1 }, { meter: 'lead', add: 1 }] }],

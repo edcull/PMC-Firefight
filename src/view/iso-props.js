@@ -169,7 +169,7 @@
           for (var j = j0; j < j1; j++) for (var i = i0; i < i1; i++) m[j * NX + i] = v;
         }
         walls.forEach(function (q) {
-          if (!q.space) { mark(drawnRect(q), 1); return; }
+          if (!q.space && !q.outside) { mark(drawnRect(q), 1); return; }
           /* open space round a station: only its hull is drawn, a wall's
              thickness about each stretch that meets a floor, run on at the
              ends so two stretches meet in a corner */

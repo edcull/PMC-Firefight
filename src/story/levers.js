@@ -72,12 +72,18 @@
 
   /* A unit above the battle's Tier comes down to the best of its kind that fits:
      a Tier I battle against the Front is the Front at Tier I. */
-  function fit(key, tier, faction) {
+  function fit(key, tier, faction, down) {
     var p = profileOf(key);
     if (!p || p.tier <= tier) return key;
     var same = R().listFor(faction || p.faction).filter(function (q) {
       return q.tier <= tier && (q.cls || 'infantry') === (p.cls || 'infantry') && !q.mustDrone && !/^r?(cmd|instigators|secondary|leaders|influential|rebellion)/.test(q.key);
     }).sort(function (a, b) { return b.tier - a.tier; });
+    /* A force that names a stand-in (`down`) keeps to the unit's own kind where the
+       Tier has one (battle armour for battle armour), and takes the stand-in where not. */
+    if (down) {
+      var kin = same.filter(function (q) { return q.group === p.group; });
+      return kin.length ? kin[0].key : fit(down, tier, faction);
+    }
     return same.length ? same[0].key : null;
   }
 
@@ -99,6 +105,8 @@
      target }), the tactic, and the Readiness its changes added. */
   function buildForce(f, ctx) {
     if (!f) return { picks: [], tactics: null, readiness: 0 };
+    // a force with its own for inside a compound (a rival's `inside`): that, with everything else as it was
+    if (ctx.compound && f.inside) f = Object.assign({}, f, f.inside, { inside: null });
     var tier = ctx.tier, pl = ctx.pl, st = ctx.campaign.story, test = function (c) { return S.test(S.ctxOf(ctx.campaign), c); };
     var faction = f.faction || 'rebel';
     var picks = [], readiness = 0, tactics = f.tactics || null;
@@ -114,8 +122,11 @@
     function allowed(k) { var p = profileOf(k); return !p || (without.indexOf(p.group) < 0 && (!ctx.compound || fitsIn(p))); }
     function add(u) {
       var o = typeof u === 'string' ? { key: u } : Object.assign({}, u);
-      var k = fit(o.key, tier, faction);
+      // (a unit beyond the battle's Tier gives way to its own stand-in, where it names one: `down`)
+      var k = fit(o.key, tier, faction, o.down || f.down);
       if (!k || !allowed(k)) return;
+      // (a story's own variant of a unit, `variant`, is that unit's: given way to a stand-in, it is the stand-in plain)
+      if (o.variant && k !== o.key) o = { key: o.key };
       o.key = k;
       if (f.skin) o.skin = f.skin;
       picks.push(o);
@@ -182,7 +193,7 @@
         from = army.filter(function (k) { var p = profileOf(k); return p && !p.command && !p.alpha && !C().isLeaderKey(baseKey(k)) && allowed(k); });
         rolled = from.length > 0;
       }
-      if (!rolled) from = arr(f.fill.from).map(function (k) { return fit(k, tier, faction); }).filter(function (k) { return k && allowed(k); });
+      if (!rolled) from = arr(f.fill.from).map(function (k) { return fit(k, tier, faction, f.down); }).filter(function (k) { return k && allowed(k); });
       for (var i = 0, guard = 0; from.length && have < want && guard < 60; guard++, i++) {
         var k = from[i % from.length], cost = tierOf(k);
         if (have + cost > want + 0.5) { if (cost <= 1 && !rolled) break; from = from.filter(function (x) { return tierOf(x) < cost; }); continue; }
@@ -302,6 +313,9 @@
       var x = {};
       if (p.name) x.name = p.name;
       if (p.rules) x.rules = p.rules;
+      // (and a variant's rules taken away, and its numbers changed)
+      if (p.lose) x.lose = p.lose;
+      if (p.mod) x.mod = p.mod;
       if (variant && variant.target && p.name === variant.target) x.target = true;
       if (p.skin) x.skin = p.skin;
       if (Object.keys(x).length) units.B[i] = x;
@@ -348,6 +362,11 @@
     var ambushZones = ground ? { A: ground.A.map(fitPiece), B: ground.B.map(fitPiece) } : null;
     // a compound mission's own layout, where its map lays one by hand (on a table it fits; the generator's otherwise)
     var compoundPlan = map && compound && map.compound ? JSON.parse(JSON.stringify(map.compound)) : null;
+    /* who comes in where, on a compound map that says (its `entries`, picked by the battle's
+       `variant.entry`): rectangles of its 3" cells, the doorways or the rooms a side already holds */
+    var entrySet = map && compound && map.entries ? map.entries[(spec.variant && spec.variant.entry) || 'cut'] || null : null;
+    var compoundEntries = entrySet ? { A: entrySet.A.map(function (c) { return { x: c.i * 3 * sx, y: c.j * 3 * sy, w: c.w * 3 * sx, h: c.h * 3 * sy }; }),
+      B: entrySet.B.map(function (c) { return { x: c.i * 3 * sx, y: c.j * 3 * sy, w: c.w * 3 * sx, h: c.h * 3 * sy }; }) } : null;
     var mapObjectives = map && !compound && map.objectives ? map.objectives.map(function (o) { return { x: (east ? 48 - o.x : o.x) * sx, y: o.y * sy, name: o.name }; }) : null;
     // the map's own possible locations, for Find and secure: where, and what they are
     var mapSites = map && !compound && map.sites ? { kind: map.sites.kind || 'searchsite', skin: map.sites.skin || undefined,
@@ -404,6 +423,7 @@
         // (an ambush the side caught out saw coming: set up as one, but nobody pinned, and the first turn rolled for)
         ambushExpected: !!(ambush && variant.expected),
         ambushZones: ambushZones,
+        entries: compoundEntries,
         readiness: rd,
         barricades: rd >= 1 ? { B: 2 * pl } : null,
         intel: S.intel(campaign, spec),
