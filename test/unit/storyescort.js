@@ -63,9 +63,9 @@ ok('the bidding’s first answer no longer asks the company for money it has not
   };
   const a = chosen('outbid'), b = chosen('watch'), f = chosen('follow');
   ok('standing with Halloran: an Escort still, walked into Brass Ledger’s ambush', a.c.story.node === 'c1.battle' && a.cf.scenario === 'escort' && a.cf.story.ambush === 'B' && !a.cf.story.ambushExpected && !a.cf.story.strikes &&
-    /walking into it\./.test(a.text) && !/knows where it is/.test(a.text), JSON.stringify({ am: a.cf.story.ambush, ex: a.cf.story.ambushExpected }));
+    /Ambush!/.test(a.text) && !/knows where it is/.test(a.text), JSON.stringify({ am: a.cf.story.ambush, ex: a.cf.story.ambushExpected }));
   ok('...watching the room: the same ambush, seen laid (nobody pinned, the first turn rolled for), and their force seen', b.cf.story.ambush === 'B' && b.cf.story.ambushExpected === true &&
-    JSON.stringify(b.cf.story.intel) !== JSON.stringify(a.cf.story.intel) && /knows where it is/.test(b.text) && !/walking into it\./.test(b.text));
+    JSON.stringify(b.cf.story.intel) !== JSON.stringify(a.cf.story.intel) && /knows where it is/.test(b.text) && !/Ambush!/.test(b.text));
   ok('...marking Kettering’s men: no ambush, the company strikes first as they come on', !f.cf.story.ambush && f.cf.story.strikes === 'D3' && /opens fire/.test(f.text));
   // and the ambushed crossing starts: Halloran with the company on its edge, Brass Ledger lying in wait
   const e = Engine.create(); const cf = Object.assign({}, a.cf, { mode: 'ai' }); e.start(cf);
