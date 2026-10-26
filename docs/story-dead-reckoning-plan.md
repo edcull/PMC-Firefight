@@ -68,10 +68,13 @@ and the stones are a lock as much as a map. He sold one on Kerrigan for fuel
 the race: through proxies he funds Brass Ledger (the Orrin Mercantile Bank's
 shell companies), Sable Armour Group (the Halvorsen Mining Combine) and Kestrel
 Air Cavalry (the Meridian newsfeed, bought last year), and seeds them stones
-so many hands dig up the rest. **The company is hired by Halloran**, a reader of
-old logs, for a client neither of them has met: a voice on a scrambled line
-(`client`, Vane's face in shadow) whose money clears through a bank on
-Halcyon. So every company on the trail, the player's included, works for a
+so many hands dig up the rest. **The company is hired by Halloran** himself: as
+far as the company knows at first, he is the client. He has a line open in
+his ear to a **backer** he will not name (`client`, "The backer", Vane's face
+in shadow), whose money clears through a bank on Halcyon. The backer only
+listens in the opening brief; he is first heard when things go wrong (Lot
+47's losses, Kettering's ship) or when the trail begins (chapter 2, where he
+is sure Morrow is dead: his first tell). The meter is the backer's Trust. So every company on the trail, the player's included, works for a
 client it cannot name, and when it comes out that most of them are the same
 man, each has reason to question its own contract and, perhaps, to trust the
 others. The first half only hints: Brass Ledger's, Sable's and Kestrel's
