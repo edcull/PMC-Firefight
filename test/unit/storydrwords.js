@@ -144,10 +144,10 @@ ok('the patron is a man nobody sees: Lucan Vane, on the line, half his face in s
     sp.steps.stones.say.some((l) => !/^\[/.test(l.text)) && reach(sp).has('deal') && reach(sp).has('fight') && sp.steps.deal.end === 'agreed');
   ok('...and Vane’s last terms, in person: the stones home is one of them', cl && cl.them === 'vane' && reach(cl).has('deal') && reach(cl).has('fight') &&
     Object.values(cl.steps).some((st) => st.options.some((o) => o.terms.indexOf('relics_returned') >= 0)));
-  c.story.flags.beat_kestrel = true;
+  c.story.flags.kestrel_deal = true;
   c.story.chapter = 'claim'; c.story.node = 'claim.brief';
   const claim = S.view(c).talk || [];
-  ok('...a rival beaten before opens on it: Kestrel, made to look slow', claim.some((l) => /look slow/.test(l.text)) && !claim.some((l) => /great pictures/.test(l.text)));
+  ok('...a rival met before opens on it: Kestrel, who bought the company’s pictures', claim.some((l) => /sold me pictures/.test(l.text)) && !claim.some((l) => /great pictures/.test(l.text)));
 }
 ok('the hired companies have their voices: reporting in, and an answer to each order', ['kettle', 'kestrel', 'reavers', 'sable'].every((k) => {
   const v = TALK.allies[k]; return v && people[v.who] && ['report', 'move', 'attack', 'hold', 'clear'].every((o) => v[o] && v[o].length);

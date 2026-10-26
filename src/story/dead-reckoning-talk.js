@@ -73,6 +73,7 @@
       ],
       'c2f.dig': [
         { who: 'ops', text: 'Tents by the dig. A mast. No sentries I can see, which means they’re there and I can’t see them.' },
+        { who: 'reader', text: 'The cairn by the posts, {commander:rank}. Morrow built it. He wrote: “Buried Holds-the-Lamp and First-Over-the-Water by the posts, where the glass will keep them. They carried the stone for me, and the ship that follows me killed them for it.” I took those for the names of his crew. They aren’t human names. They aren’t human.' },
         { who: 'nine', text: 'Company on the flats. This is Nine, Wraith Section. We’ve read Morrow’s log too; copies get around. We were here first, and we have the high ground and every approach covered.' },
         { who: 'commander', text: 'The dig is ours, Nine. Pack up and go home.' },
         { who: 'nine', text: 'Your client doesn’t pay us. Ours does, and our client wants what’s in that ground. Turn your dropships round and nobody on your side gets shot. Come any closer and we start with your officers.' }
@@ -127,8 +128,8 @@
       'claim.brief': [
         { who: 'rook', text: 'Company, this is Rook Kestrel. You’re on my shelf, you’re in my shot, and you’re about to be in tonight’s feed. Smile.' },
         { who: 'commander', text: 'That cache was Morrow’s, Kestrel. It isn’t yours to film or to fly off with.' },
-        { who: 'rook', if: { not: { flag: 'beat_kestrel' } }, text: 'It’s whoever’s who gets it to a ship first. That’s not a threat, it’s the rules of the race. My client wants pictures, and you on the wrong end of my guns makes great pictures.' },
-        { who: 'rook', if: { flag: 'beat_kestrel' }, text: 'Last time you made me look slow on a live feed. Do you know what that costs a cavalry outfit? Everything. So this time I’m not filming. This time I’m just winning.' }
+        { who: 'rook', if: { not: { flag: 'kestrel_deal' } }, text: 'It’s whoever’s who gets it to a ship first. That’s not a threat, it’s the rules of the race. My client wants pictures, and you on the wrong end of my guns makes great pictures.' },
+        { who: 'rook', if: { flag: 'kestrel_deal' }, text: 'You sold me pictures off the trail, and they ran well. So you know how this works: whoever gets it to a ship first, on camera. I’d love it to be a fair fight. I’d love it more to be a quick one.' }
       ],
       'wreck.brief': [
         { who: 'ops', text: 'That’s her. Morrow’s ship. Sable has a ring of armour round the gully, and cutting gear on the main hatch.' },

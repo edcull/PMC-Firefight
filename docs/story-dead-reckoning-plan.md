@@ -131,6 +131,24 @@ beside the company only as a side taken:
 
 Neither is offered in the first half; the Glass Flats' dead drop is the seed.
 
+**The Esh-Aven and Morrow** (settled in the last first-half pass). Two
+Hashamer Esh-Aven, Holds-the-Lamp and First-Over-the-Water, went with Morrow
+to carry the stones away from the Quiet, and were killed by the ship hunting
+him. He buried them in a glass cairn at his dig on the Glass Flats (seen if
+the company goes there, `eshaven_graves`) and thanks them by name in his
+Thule records. Seven-Holds-the-Staff remembers them. Either sight opens *The
+Mimics* without Understanding.
+
+**More than one road to the Esh-Aven** (for the second-half pass). Today they
+are met only in *The Mimics* (about one walk in seven). To build:
+- *Teleport Storm* or *Cold Sites* (the Tribes): Hashamer runaways the other
+  tribes have come to take back, to shelter or hand over.
+- *Claim Jumpers* or *Bounty* (the Race): Brass Ledger's cages on a rival's
+  ground, Esh-Aven inside.
+- *The Wreck of the Morrow*: a third Esh-Aven's bones in the hold, and a word
+  for the Hashamer in Morrow's last entry.
+- *Recall*: the Quiet's call names them, met or not.
+
 **Business until somebody loses** (settled after the rework). The rival
 companies are confrontational, and they make it business: clients, invoices,
 contracts, prices. The first time the company beats one (`grudges`; the flag
@@ -451,7 +469,7 @@ Checked in order; the first that holds is the story's. The last has no condition
 | **Claim Jumped** | *The Landing* was lost, or the rivals hold more lodestones than the company at the end (`theirs` above `stones`). Another company's name is on the claim. |
 | **Repossessed** | *The Collector* was lost, or Vane cut you off and the finale was lost. Vane has the Quiet, and the company has nothing. |
 | **First Contact** | `contact` or `relics_returned`, the finale won, Alarm under 8, and neither `child_taken` nor `promise_broken`. The company is the first to speak with the Amt and walks away with no salvage at all, and every newsfeed in the sector wants the story. |
-| **Finder's Fee** | Stayed with Vane (no `contact`, not cut off, not `vane_exposed`), the finale won, Vane's Trust 2 or more (shared with Brass Ledger with `kettle_partner`). The claim is filed in Vane's name. The company is rich, and the Quiet will be stripped. |
+| **Finder's Fee** | Stayed with Vane (no `contact`, not cut off, not `vane_exposed`), the finale won (not the Collector), the client's Trust 1 or more (shared with Brass Ledger with `kettle_partner`). The claim is filed in Vane's name. The company is rich, and the Quiet will be stripped. |
 | **Dead Reckoning** | Anything else: the company reaches the end of the log, and what it does with it decides nothing. |
 
 Each has an epilogue, as in *Deep Contract*: the Quiet, the tribes, each rival
