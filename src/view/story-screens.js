@@ -111,6 +111,18 @@
       if (root.SFX && root.SFX[name]) root.SFX[name]();
     }
 
+    /* What the company has just found out (a client named, the log rebuilt):
+       the journal's lines from the choice or battle that brought it to this
+       page, shown on the page once, as well as kept in the journal. */
+    var told = { camp: null, node: null, from: 0, to: 0 };
+    function foundOut(st, id) {
+      if (told.camp !== E.camp) told = { camp: E.camp, node: id, from: st.journal.length, to: st.journal.length };
+      else if (told.node !== id) { told.from = told.to; told.to = st.journal.length; told.node = id; }
+      var lines = [];
+      st.journal.slice(told.from, told.to).forEach(function (j) { (j.effects || []).forEach(function (e) { if (e.journal) lines.push(e.journal); }); });
+      return lines.length ? '<div class="story-found"><b>Found out</b><ul>' + lines.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' : '';
+    }
+
     function storyView() {
       var d = def(), st = E.camp.story;
       if (!d) return '<h2>Story</h2><p>This story is not in this version of the game.</p>' + foot();
@@ -118,7 +130,7 @@
       var v = S().view(E.camp), ch = chapterOf();
       if (!v) return '<h2>' + esc(d.name) + '</h2><p>The story has lost its place.</p>' + foot();
       var h = '<h2>' + esc(d.name) + (ch && ch.counts !== false ? ' — ' + esc(ch.title) : '') + '</h2>';
-      h += badgeLine(st) + meterBar();
+      h += badgeLine(st) + meterBar() + foundOut(st, v.id);
       // a chapter's card, on its first page
       var node = d._nodes[v.id];
       if (node && node._first && ch && !ch.shared) {

@@ -2497,6 +2497,9 @@ html.ae-open, html.ae-open body { overflow: hidden; }
 .story-rules small.win { color: var(--ink-faint); margin-top: 2px; }
 .story-grade.good { color: var(--good); }
 .story-grade.bad { color: var(--bad); }
+.story-found { border-left: 2px solid var(--alpha); padding: 4px 0 4px 10px; margin: 0 0 12px; }
+.story-found b { display: block; font-family: var(--display); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--alpha); }
+.story-found ul { margin: 4px 0 0; padding-left: 18px; }
 .story-notes { margin: 0 0 10px; padding-left: 18px; color: var(--ink-dim); }
 .story-enemy small { color: var(--ink-dim); }
 .story-enemy ul { margin: 4px 0 10px; padding-left: 18px; }

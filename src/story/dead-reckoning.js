@@ -534,7 +534,7 @@
         { id: 'c4.brief', type: 'brief', text: 'Kerrigan. The broker’s auction.', next: 'c4.lot' },
         { id: 'c4.lot', type: 'event', who: 'agathe', title: 'Lot 47, again', text: 'Sable has bought the warehouse the heading sits in.', options: [
           // (the heading can be bought; the log cannot: it comes back only with the warehouse taken)
-          { id: 'buy', text: 'Buy it.', cost: { kUC: 3 }, why: 'You can’t afford it.', battle: { skip: true }, effects: [{ meter: 'vane', add: 1 }] },
+          { id: 'buy', text: 'Buy it.', cost: { kUC: 6 }, why: 'You can’t afford it.', battle: { skip: true }, effects: [{ meter: 'vane', add: 1 }] },
           { id: 'take', text: 'Take it.', battle: { role: 'attacker', tier: 'max' } },
           { id: 'follow', text: 'Let Sable have it, and follow Sable.', battle: { skip: true, intel: 2 }, effects: [{ flag: 'c4_followed', local: true }, { meter: 'lead', add: -1 }, { meter: 'intel', add: 2 }, { meter: 'vane', add: -1 }, { meter: 'sable', add: 1 }, { flag: 'sable_owed' }, { reveal: 'client_sable', journal: 'Sable Armour Group belongs to the Halvorsen Mining Combine, bought and paid for, its accounts kept on Halcyon.' }] },
           Object.assign(hireOption('kettle', 'Hire Brass Ledger for the takeover.'), { if: { all: [HIRE_IF.kettle, { not: { flag: 'ledger_has_log' } }] }, why: 'Brass Ledger won’t fight for you while they hold the log.' })

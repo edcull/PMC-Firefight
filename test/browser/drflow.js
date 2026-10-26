@@ -56,7 +56,7 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   await p.evaluate(() => { const s = document.getElementById('story-pick'); s.value = 'dead-reckoning'; s.dispatchEvent(new Event('change', { bubbles: true })); });
   await p.waitForTimeout(250);
   let txt = await body(p);
-  check('...picked: its own blurb, Morrow’s log and Lucan Vane, whom nobody sees', /surveyor/.test(txt) && /Lucan Vane/.test(txt) && /seen by almost nobody/.test(txt), txt.slice(0, 200));
+  check('...picked: its own blurb, Morrow’s log and Halloran, with a backer he will not name', /surveyor/.test(txt) && /Halloran/.test(txt) && /backer he will not name/.test(txt) && !/Lucan Vane/.test(txt), txt.slice(0, 200));
   await go(p, '[data-go="storynew"]');
   await p.evaluate(() => { document.getElementById('found-name').value = 'Morrow’s Own'; document.getElementById('found-commander').value = 'Ines Okoro'; });
   for (const k of ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng']) await go(p, `#camp-body button[data-add="${k}"]`);
@@ -68,18 +68,19 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   check('the story begins: Dead Reckoning, Lot 47, the first half The Chart', /Dead Reckoning/.test(txt) && /Lot 47/.test(txt) && /Chapter 1 · The Chart/i.test(txt), txt.slice(0, 200));
   check('...the chapter’s prose: Morrow, the auction, Vesk', /Elias Morrow/.test(txt) && /Vesk Free Port/.test(txt));
   const talk = await talkOf(p);
-  check('...and Vane’s conversation: Vane on the line, his reader and the commander, each with a face', talk.length >= 6 && talk.every((l) => l.face) && /Vane/.test(talk[0].who) &&
-    talk.some((l) => /Halloran/.test(l.who)) && talk.some((l) => l.mine), JSON.stringify(talk.map((l) => l.who)));
-  check('...the commander named in it', /Second Lieutenant Okoro\. This is Lucan Vane/.test(txt), txt.slice(txt.indexOf('Lucan Vane.') - 60, txt.indexOf('Lucan Vane.') + 40));
-  check('...and the meters the company can see: Vane’s Trust, Lead, Lodestones (not Alarm)', /Vane’s Trust/.test(txt) && /Lead/.test(txt) && /Lodestones/.test(txt) && !/Alarm/.test(txt));
+  check('...and Halloran’s conversation: Halloran and the commander, each with a face, his backer only on his line', talk.length >= 6 && talk.every((l) => l.face) && /Halloran/.test(talk[0].who) &&
+    talk.some((l) => l.mine) && !talk.some((l) => /backer/i.test(l.who)) && /My backer/.test(txt), JSON.stringify(talk.map((l) => l.who)));
+  check('...the commander named in it', /Second Lieutenant Okoro\. Halloran\. Thank you for coming/.test(txt), txt.slice(0, 300));
+  check('...and the meters the company can see: the backer’s Trust, Lead, Lodestones (not Alarm)', /The backer’s Trust/.test(txt) && /Lead/.test(txt) && /Lodestones/.test(txt) && !/Alarm/.test(txt));
   await p.screenshot({ path: path.join(SHOTS, 'dr-chapter.png') });
   await go(p, '[data-go="storyon"]');
   txt = await body(p);
-  check('the brief leads to the bidding: three ways to play the room, with Vane’s face', /bidding/i.test(txt) && /Moss Kettering/.test(txt) &&
+  check('the brief leads to the bidding: three ways to play the room, with Halloran’s face', /bidding/i.test(txt) && /Moss Kettering/.test(txt) &&
     await p.evaluate(() => document.querySelectorAll('#camp-body .story-opt').length === 3 && !!document.querySelector('#camp-body .story-who svg.story-portrait')), txt.slice(0, 200));
   await go(p, '[data-go="storyopt"][data-o="watch"]');
   txt = await body(p);
   check('watching the room: the mission’s briefing, Lot 47 in the market square, an Escort: Halloran to the landing field', /Lot 47/.test(txt) && /market square/.test(txt) && /landing field/.test(txt) && /Escort/.test(txt), txt.slice(0, 300));
+  check('...Halloran’s “get me out of here”, and what watching the room showed: places for an ambush', /Now get me out of here/.test(txt) && /places for an ambush/.test(txt) && !/Expect an ambush/.test(txt), txt.slice(0, 600));
   await go(p, '[data-go="storymuster"]');
   await go(p, '[data-go="storyfight"]');
   await p.waitForTimeout(1200);
@@ -111,9 +112,10 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   const call = await talkOf(p);
   check('Kettering calls about his man, and the agent’s three fates are offered', call.some((l) => /Kettering/.test(l.who)) && /hands tied/.test(txt) &&
     await p.evaluate(() => document.querySelectorAll('#camp-body .story-opt').length === 3), JSON.stringify(call.map((l) => l.who)));
-  await go(p, '[data-go="storyopt"][data-o="message"]');
+  await go(p, '[data-go="storyopt"][data-o="interrogate"]');
   txt = await body(p);
-  check('...and on to the jump: Vane’s first heading on the board', /first heading/.test(txt), txt.slice(0, 200));
+  check('...and on to the jump: Morrow’s first heading on the board', /first heading/.test(txt), txt.slice(0, 200));
+  check('...told at once what the man gave up: Brass Ledger’s client, found out', await p.evaluate(() => { const f = document.querySelector('#camp-body .story-found'); return !!f && /Found out/i.test(f.innerText) && /Orrin Mercantile Bank/.test(f.innerText); }), txt.slice(0, 300));
   const chart = await p.evaluate(() => { const c = document.querySelector('#camp-body .story-chart'); return c ? { map: !!c.querySelector('svg.story-chart-map rect'), text: c.innerText } : null; });
   check('...with the star chart: Vesk the first stop, Brass Ledger met there, the next heading still to come, the lodestones held',
     chart && chart.map && /Vesk/.test(chart.text) && /met Brass Ledger/.test(chart.text) && /next heading/.test(chart.text) && /0 held/.test(chart.text), chart && chart.text.slice(0, 200));
@@ -130,7 +132,7 @@ const talkOf = (p) => p.evaluate(() => [...document.querySelectorAll('#camp-body
   txt = await body(p);
   check('the jump to chapter 2: two readings of Morrow’s first heading', /The First Lodestone/.test(txt) && /Glass under me/.test(txt), txt.slice(0, 200));
   check('...on a picture of the Glass Flats', await p.evaluate(() => { const i = document.querySelector('#camp-body .story-card img.story-scene'); return !!i && /^data:image\/png/.test(i.src); }));
-  check('...talked over with Vane’s reader', (await talkOf(p)).some((l) => /Halloran/.test(l.who)));
+  check('...talked over with Halloran, and his backer heard for the first time', (await talkOf(p)).some((l) => /Halloran/.test(l.who)) && (await talkOf(p)).some((l) => /backer/i.test(l.who)));
   await go(p, '[data-go="storyon"]');
   await go(p, '[data-go="storyopt"][data-o="flats"]');
   txt = await body(p);
