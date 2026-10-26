@@ -577,6 +577,7 @@
         if (x.side === 'A') { u.owner = x.owner || 1; if (u.owner === 2) u.paint = 'C'; }
         if (x.vip) u.vip = true;
         if (x.escort) u.escort = true;
+        if (x.convoy) u.convoyCar = true;
         if (x.objective) u.soloObjective = true;
         if (x.civ) u.soloCiv = true;
         if (x.militia) u.soloMilitia = true;

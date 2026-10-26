@@ -435,6 +435,16 @@
         u.activated = true; endActivation(u); return;
       }
 
+      /* A convoy's hull (a story's Convoy or Intercept) keeps to its column: on to
+         where the scenario sends it, and there it shoots from where it is, or waits.
+         It never goes looking for a fight. */
+      if (E.state.sc && (E.state.sc.convoy || []).indexOf(u.id) >= 0 && !R.isFlying(u) && !E.orderActed(u)) {
+        var cgo = nearestObjective(u);
+        if (cgo && R.inches(u.x, u.y, cgo.x, cgo.y) > 1.5) return aiRoll(u, cgo, false);
+        if (shot.t && shot.score > 0) { fire(u, shot.t, 'fire'); return; }
+        u.activated = true; endActivation(u); return;
+      }
+
       /* A transport's job is to get its squads forward and put them down, not to fight
          (transportPlan). The solitaire OpFor keeps the book's plainer orders below. */
       if (!opFor && (u.transport || carrying) && !R.has(u, 'Lifter') && transportPlan(u, carrying, shot)) return;

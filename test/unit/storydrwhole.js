@@ -20,9 +20,11 @@ function ok(name, cond, note) {
 }
 const FOUNDING = ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'];
 const dc = S.get('dead-reckoning');
-const N = +process.env.STORY_WALKS || 60;
-/* The walks are random, but the same each run (STORY_SEED for others): thirty
-   walks are a small sample, and the shares below are measured against it. */
+/* (120: the Double-Cross comes up in about one played walk in thirty, winning
+   raising the client's Trust, so sixty walks could miss it altogether) */
+const N = +process.env.STORY_WALKS || 120;
+/* The walks are random, but the same each run (STORY_SEED for others): a
+   small sample, and the shares below are measured against it. */
 {
   let h = (+process.env.STORY_SEED || 2670) >>> 0;
   Math.random = function () {

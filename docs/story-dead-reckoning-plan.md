@@ -54,6 +54,101 @@ beside its name. Something in the story reveals each one
 | The Red Reavers | nobody: claim jumpers | Hal says so at the beacon |
 | The Ninth Lance | Lucan Vane | Daw says so (*The Double-Cross*) |
 
+**Morrow, his backer, and the proxies** (settled after the dialogue pass).
+Morrow flew his first voyage on a backer's money and came home with a hold
+of stones, which the backer took. Together, the stones warmed, turned the same
+way and began to call: Morrow understood he had been carrying them home, and
+that enough of them in one place would wake whatever they belong to. He stole
+them back, went out again alone, and put them down one at a time along the
+route ("never two in one hold"), each stone pointing to the next, so the log
+and the stones are a lock as much as a map. He sold one on Kerrigan for fuel
+(*The Broker*'s lot), and died on Pell with one in his hand.
+
+**The backer was Lucan Vane**, and Vane is the **true client** behind most of
+the race: through proxies he funds Brass Ledger (the Orrin Mercantile Bank's
+shell companies), Sable Armour Group (the Halvorsen Mining Combine) and Kestrel
+Air Cavalry (the Meridian newsfeed, bought last year), and seeds them stones
+so many hands dig up the rest. **The company is hired by Halloran**, a reader of
+old logs, for a client neither of them has met: a voice on a scrambled line
+(`client`, Vane's face in shadow) whose money clears through a bank on
+Halcyon. So every company on the trail, the player's included, works for a
+client it cannot name, and when it comes out that most of them are the same
+man, each has reason to question its own contract and, perhaps, to trust the
+others. The first half only hints: Brass Ledger's, Sable's and Kestrel's
+clients' money also runs through **Halcyon**, and the voice waves off the
+question of who paid for Morrow's first trip. The company learns its client's
+name when the second half opens (Halloran follows the money), or earlier from
+Daw, if the Double-Cross comes. Wraith Section (the Navy)
+and the Red Reavers are the only rivals he does not own. The second half
+reveals it (*The Vault*'s receipts, *The Wreck*'s last entry).
+
+**Vane's intent, and Morrow's end** (settled after the dialogue pass). Vane
+is the only one alive who has seen the stones together: in his vault, forty
+years ago, they warmed, turned and began to call. He took the wrong lesson.
+To him they are a **key**: whoever brings enough of them to the Quiet opens it
+and owns what answers to it, the network, the shields, the towers and the
+tribes. Morrow understood they are a **summons**: brought together they wake
+the Quiet, and it calls all that serves it home, the Esh-Aven included, and
+nobody commands that. Recall proves Morrow right. Only the Navy (Wraith
+Section's client) suspects as much.
+
+Vane **hunted Morrow** when he stole the stones back: the Ninth Lance was
+founded for it, forty years ago (Daw is too young to have been there). Morrow
+ran, scattering the stones, sold one on Kerrigan for fuel, and, damaged and
+still followed, came down on Pell and sealed himself in his cabin, where he
+died with a stone in his fist that the hunters never got. His last entry
+says who was behind him. The first half seeds it: the opening (the backer's
+people a jump or two behind), Thule's records ("the same ship, two jumps
+behind me now"), and the Lance's founding date.
+
+**The contract, and Morrow's fate** (settled in the last first-half pass).
+The contract is open from the start: see Halloran out of the auction alive
+with the log, then follow Morrow's road to the end and file the first claim.
+The company is following the route, not hunting the man. Morrow is presumed
+dead (forty years silent, declared so by a court); only the client is
+certain, because his people waited over Pell while Morrow died, and he says
+so ("I am"), the first of his tells. The wreck finds him.
+
+**Halloran** is an archaeologist of the library kind (archives, catalogues,
+dead men's handwriting; the research half of an adventurer and none of the
+action), who has spent years on the scraps of Morrow's writing that have
+surfaced and proved better at reading the man than anyone alive. "Reader" is
+what people call him for it, not a trade.
+
+**The two companies that are never for hire** (settled after the dialogue
+pass). The Ninth Lance and Wraith Section are not hired guns; each fights
+beside the company only as a side taken:
+
+- **The Ninth Lance**, only with the company fully Vane's: the client's Trust
+  high (3 or more), never suspected, cut off or exposed. Vane sends it to see
+  his claim filed (*The Landing*, *The Escort*), and its help seals the claim
+  in his name (*Finder's Fee*).
+- **Wraith Section**, only with the company against Vane: cut off or his
+  receipts published, and the door to Nine opened (a message left in the
+  Glass Flats dead drop, `wraith_warned`, or their paymaster turned). The Navy
+  wants the Quiet shut, not sold, and sends Nine against the Lance (*The
+  Collector*) or to the Spire.
+
+Neither is offered in the first half; the Glass Flats' dead drop is the seed.
+
+**The Esh-Aven and Morrow** (settled in the last first-half pass). Two
+Hashamer Esh-Aven, Holds-the-Lamp and First-Over-the-Water, went with Morrow
+to carry the stones away from the Quiet, and were killed by the ship hunting
+him. He buried them in a glass cairn at his dig on the Glass Flats (seen if
+the company goes there, `eshaven_graves`) and thanks them by name in his
+Thule records. Seven-Holds-the-Staff remembers them. Either sight opens *The
+Mimics* without Understanding.
+
+**More than one road to the Esh-Aven** (for the second-half pass). Today they
+are met only in *The Mimics* (about one walk in seven). To build:
+- *Teleport Storm* or *Cold Sites* (the Tribes): Hashamer runaways the other
+  tribes have come to take back, to shelter or hand over.
+- *Claim Jumpers* or *Bounty* (the Race): Brass Ledger's cages on a rival's
+  ground, Esh-Aven inside.
+- *The Wreck of the Morrow*: a third Esh-Aven's bones in the hold, and a word
+  for the Hashamer in Morrow's last entry.
+- *Recall*: the Quiet's call names them, met or not.
+
 **Business until somebody loses** (settled after the rework). The rival
 companies are confrontational, and they make it business: clients, invoices,
 contracts, prices. The first time the company beats one (`grudges`; the flag
@@ -374,7 +469,7 @@ Checked in order; the first that holds is the story's. The last has no condition
 | **Claim Jumped** | *The Landing* was lost, or the rivals hold more lodestones than the company at the end (`theirs` above `stones`). Another company's name is on the claim. |
 | **Repossessed** | *The Collector* was lost, or Vane cut you off and the finale was lost. Vane has the Quiet, and the company has nothing. |
 | **First Contact** | `contact` or `relics_returned`, the finale won, Alarm under 8, and neither `child_taken` nor `promise_broken`. The company is the first to speak with the Amt and walks away with no salvage at all, and every newsfeed in the sector wants the story. |
-| **Finder's Fee** | Stayed with Vane (no `contact`, not cut off, not `vane_exposed`), the finale won, Vane's Trust 2 or more (shared with Brass Ledger with `kettle_partner`). The claim is filed in Vane's name. The company is rich, and the Quiet will be stripped. |
+| **Finder's Fee** | Stayed with Vane (no `contact`, not cut off, not `vane_exposed`), the finale won (not the Collector), the client's Trust 1 or more (shared with Brass Ledger with `kettle_partner`). The claim is filed in Vane's name. The company is rich, and the Quiet will be stripped. |
 | **Dead Reckoning** | Anything else: the company reaches the end of the log, and what it does with it decides nothing. |
 
 Each has an epilogue, as in *Deep Contract*: the Quiet, the tribes, each rival

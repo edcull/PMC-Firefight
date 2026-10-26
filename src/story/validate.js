@@ -22,7 +22,7 @@
   var EFFECT_PARAMS = { add: 1, set: 1, local: 1, to: 1, free: 1, name: 1, pass: 1, fail: 1, else: 1, is: 1 };
   var FAILURE_GRADES = ['draw', 'defeat', 'rout'];
   var LEVERS = ['intel', 'role', 'edge', 'strikes', 'suppressOwn', 'readiness', 'scenario', 'variant', 'tier', 'pl',
-    'allies', 'turns', 'terrain', 'planet', 'world', 'skip', 'tactics', 'name', 'map'];
+    'allies', 'turns', 'terrain', 'planet', 'world', 'skip', 'tactics', 'name', 'map', 'enemy'];
 
   function check(def, opts) {
     opts = opts || {};
@@ -314,8 +314,11 @@
     });
 
     function textReads(text, at, chapter) {
-      String(text || '').replace(/\{if (?:not )?([a-z0-9_]+)\}/g, function (m, f) {
-        if (f !== 'success' && f !== 'failure' && f !== 'relic') F(f).read.push({ at: at, kind: 'text', chapter: chapter });
+      String(text || '').replace(/\{if (?:not )?([a-z0-9_+!]+)\}/g, function (m, fs) {
+        fs.split('+').forEach(function (f) {
+          f = f.replace(/^!/, '');
+          if (f !== 'success' && f !== 'failure' && f !== 'relic' && f !== 'skip') F(f).read.push({ at: at, kind: 'text', chapter: chapter });
+        });
         return m;
       });
     }

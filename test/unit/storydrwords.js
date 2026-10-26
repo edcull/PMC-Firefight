@@ -90,8 +90,19 @@ const MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 
 ok('every battle line is said at a moment the battle has', said.every((x) => !/\//.test(x.at) || MOMENTS.indexOf(x.at.split('/').pop()) >= 0 || TALK.conversations[x.at]));
 ok('...every battle of the first half has its own, and every enemy side its own', battles.every((n) => TALK.battles[n.id]) &&
   battles.every((n) => TALK.sides[n.enemy.side]), battles.filter((n) => !TALK.battles[n.id] || !TALK.sides[n.enemy.side]).map((n) => n.id).join(', '));
-ok('the patron is a man nobody sees: Lucan Vane, on the line, half his face in shadow', people.vane.name === 'Lucan Vane' && people.vane.face.shadow === true &&
-  /seen by almost nobody/.test(dr.blurb) && /nobody does/.test(TALK.conversations['c1.brief'][0].text));
+ok('the patron is a man nobody sees: Lucan Vane, on the line, half his face in shadow', people.vane.name === 'Lucan Vane' && people.vane.face.shadow === true);
+{
+  /* Halloran hires the company; the client behind him is a voice with no name until the second half opens (or the Lance says it). */
+  const firstHalf = ['c1', 'c2', 'c3', 'c4', 'warren'].map((id) => dr._chapters[id]).reduce((a, ch) => a.concat(ch.nodes), []);
+  const c1talk = ['c1.brief', 'c1.lost', 'c2.brief', 'c2f.dig', 'c2t.airlock', 'c3.brief', 'c3.contact', 'c3.sale', 'c4.brief', 'warren.brief'].map((k) => TALK.conversations[k] || []).reduce((a, x) => a.concat(x), []);
+  const words = firstHalf.map((n) => [TEXT[n.id] || ''].concat(Object.keys(TEXT).filter((k) => k.indexOf(n.id + '/') === 0).map((k) => TEXT[k])).join(' ')).join(' ') + ' ' + TEXT.c1 + TEXT.c2 + TEXT.c3 + TEXT.c4 + TEXT.warren;
+  ok('the client behind Halloran has no name in the first half: the same face as Vane, and no Vane in its words or its talk',
+    people.client && people.client.face.shadow === true && JSON.stringify(people.client.face) === JSON.stringify(people.vane.face) &&
+    !/Vane/.test(words) && !/Vane/.test(dr.blurb) && !c1talk.some((l) => l.who === 'vane' || /Vane/.test(l.text)) && /Halloran/.test(dr.blurb) && /Halcyon/.test(TEXT.c1));
+  ok('...named when the second half opens, by Halloran following the money, unless the Lance said it first',
+    TALK.conversations['fault.brief'].some((l) => l.who === 'reader' && /Lucan Vane/.test(l.text) && l.if && l.if.not && l.if.not.revealed === 'client_lance') &&
+    /work for Lucan Vane/.test(TALK.conversations['dx.brief'][0].text));
+}
 {
   /* First contact: in the first half nobody knows what the Xenotripods are. No
      word names them or a tribe, no tribe speaks, and no battle is fought
@@ -133,10 +144,10 @@ ok('the patron is a man nobody sees: Lucan Vane, on the line, half his face in s
     sp.steps.stones.say.some((l) => !/^\[/.test(l.text)) && reach(sp).has('deal') && reach(sp).has('fight') && sp.steps.deal.end === 'agreed');
   ok('...and Vane’s last terms, in person: the stones home is one of them', cl && cl.them === 'vane' && reach(cl).has('deal') && reach(cl).has('fight') &&
     Object.values(cl.steps).some((st) => st.options.some((o) => o.terms.indexOf('relics_returned') >= 0)));
-  c.story.flags.beat_kestrel = true;
+  c.story.flags.kestrel_deal = true;
   c.story.chapter = 'claim'; c.story.node = 'claim.brief';
   const claim = S.view(c).talk || [];
-  ok('...a rival beaten before opens on it: Kestrel, made to look slow', claim.some((l) => /look slow/.test(l.text)) && !claim.some((l) => /great pictures/.test(l.text)));
+  ok('...a rival met before opens on it: Kestrel, who bought the company’s pictures', claim.some((l) => /sold me pictures/.test(l.text)) && !claim.some((l) => /great pictures/.test(l.text)));
 }
 ok('the hired companies have their voices: reporting in, and an answer to each order', ['kettle', 'kestrel', 'reavers', 'sable'].every((k) => {
   const v = TALK.allies[k]; return v && people[v.who] && ['report', 'move', 'attack', 'hold', 'clear'].every((o) => v[o] && v[o].length);
@@ -293,6 +304,90 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
     // a tank of reaction mass by each docking collar's door, in the outer ring
     ps.filter((p) => p.kind === 'fueltanks' && p.y < 12).length === 2 &&
     ps.filter((p) => p.hub).length === 5 && ps.some((p) => p.hub && p.kind === 'bunker' && p.tower) && ps.filter((p) => p.hub && p.kind === 'building').length === 4);
+}
+{
+  /* Claim Jumpers as its briefing has it: Kestrel's convoy caught halfway over the Hollin Shelf, and the company out to stop it. */
+  const ps = MAPS.hollin.pieces, road = ps.find((p) => p.kind === 'road' && p.poly);
+  ok('Claim Jumpers: an Intercept, Kestrel’s cars the convoy, making for the company’s own edge',
+    used('hollin').every((n) => n.scenario === 'intercept') && SC.SCENARIOS.intercept.story);
+  ok('...a dirt track winding over the shelf from edge to edge, between a boulder field and a ravine, and no cache shelter or landing pad at either end',
+    !!road && !road.paved && R.inPoly(1, 28, road.poly) && R.inPoly(47, 20.5, road.poly) && R.inPoly(24, 20.5, road.poly) &&
+    ps.some((p) => p.kind === 'ravine' && p.x < 32 && p.x + p.w > 30 && p.y > 24 && p.y < 28) && ps.some((p) => p.kind === 'rocks' && p.x < 32 && p.x + p.w > 30 && p.y + p.h > 18 && p.y + p.h < 21) &&
+    !ps.some((p) => p.kind === 'ruins' || p.kind === 'building' || p.pad));
+}
+{
+  /* Hiring the rival a battle is fought against changes who is fought, not just who stands beside the company. */
+  const opt = (ev, id) => dr._nodes[ev].options.find((o) => o.id === id);
+  const k = opt('claim.scoop', 'hire_kestrel'), sb = opt('wreck.hatch', 'hire_sable');
+  ok('Claim Jumpers, Kestrel hired: the company rides shotgun on Kestrel’s cars (a Convoy), and the Red Reavers jump the claim',
+    k.hire === 'kestrel' && k.battle.allies.side === 'kestrel' && k.battle.scenario === 'convoy' && k.battle.enemy.side === 'reavers' &&
+    k.effects.some((e) => e.flag === 'claim_escort' && e.local) && k.effects.some((e) => e.flag === 'kestrel_hired'));
+  ok('The Wreck, Sable called in: in together, against a Brass Ledger salvage crew already inside',
+    sb.hire === 'sable' && sb.battle.allies.side === 'sable' && sb.battle.enemy.side === 'kettle' && sb.effects.some((e) => e.flag === 'wreck_together' && e.local));
+  const c = { companies: { A: { name: 'T', kUC: 9, tier: 1, roster: [] } } };
+  S.begin(c, 'dead-reckoning', {});
+  c.story.chapter = 'claim'; c.story.node = 'claim.battle'; c.story.pending = JSON.parse(JSON.stringify(k.battle)); c.story.flags.claim_escort = 'local';
+  const spec = S.battleSpec(c);
+  ok('...the battle is set as chosen: a Convoy against the Reavers, Kestrel’s ground cars the convoy', spec.scenario === 'convoy' && spec.enemy.side === 'reavers' && spec.variant.cars === 'Kestrel ground car');
+  const orders = S.render(c, TEXT['claim.battle']), talk = S.talkFor(c, spec);
+  ok('...its orders and its talk are the escort’s: get Kestrel’s cars across, the Reavers waiting, no Kestrel dusting off',
+    /Get Kestrel’s cars across/.test(orders) && !/Stop the convoy/.test(orders) && talk.some((l) => l.who === 'hal') && !talk.some((l) => /dust off/.test(l.text)));
+  c.story.lastGrade = 'victory';
+  const won = S.render(c, TEXT['claim.debrief']);
+  c.story.lastGrade = 'defeat';
+  const lost = S.render(c, TEXT['claim.debrief']);
+  delete c.story.flags.claim_escort;
+  const plain = S.render(c, TEXT['claim.debrief']);
+  ok('...and the debrief says what came of it, one way or the other',
+    /Rook keeps her side of the deal/.test(won) && !/Rook waves|Reavers have/.test(won) && /Reavers have the cache/.test(lost) && !/Rook waves|side of the deal/.test(lost) &&
+    /Rook waves/.test(plain) && !/Reavers/.test(plain));
+  c.story.flags.claim_escort = 'local';
+  {
+    const g = { companies: { A: { name: 'G', kUC: 9, tier: 1, roster: [] } } };
+    S.begin(g, 'dead-reckoning', {});
+    g.story.chapter = 'claim'; g.story.node = 'claim.battle'; g.story.pending = JSON.parse(JSON.stringify(k.battle)); g.story.flags.claim_escort = 'local';
+    S.resolveBattle(g, 'victory');
+    ok('...and winning it bears the Reavers a grudge, not Kestrel, who fought beside the company', g.story.flags.beat_reavers && !g.story.flags.beat_kestrel);
+  }
+  c.story.chapter = 'wreck'; c.story.node = 'wreck.battle'; c.story.pending = JSON.parse(JSON.stringify(sb.battle)); c.story.flags.wreck_together = 'local';
+  const ws = S.battleSpec(c);
+  ok('...the Wreck likewise: Brass Ledger the enemy, its orders and talk of going in with Sable',
+    ws.enemy.side === 'kettle' && /Brass Ledger already inside/.test(S.render(c, TEXT['wreck.battle'])) && S.talkFor(c, ws).some((l) => /port holds/.test(l.text)) && !S.talkFor(c, ws).some((l) => /Sable holds the ship/.test(l.text)));
+}
+{
+  /* The audit's fixes: a battle not fought, the Landing's hires, allies kept, the c4 follow, Vane's cut-off. */
+  const fresh = (kUC) => { const c = { companies: { A: { name: 'F', kUC: kUC || 20, tier: 1, roster: [] } } }; S.begin(c, 'dead-reckoning', {}); return c; };
+  let c = fresh();
+  c.story.chapter = 'c2'; c.story.node = 'c2t.airlock'; c.story.lastGrade = 'defeat';
+  S.choose(c, 'pay');
+  let v = S.view(c);
+  ok('a battle bought off is not the last battle lost: Thule paid off, the archive is whole, nothing burned',
+    c.story.lastGrade === 'skip' && v.type === 'debrief' && /count the money twice/.test(S.render(c, v.text)) && !/fired the archive/.test(S.render(c, v.text)));
+  c = fresh();
+  c.story.chapter = 'c4'; c.story.node = 'c4.lot';
+  const stones = c.story.meters.stones;
+  S.choose(c, 'follow');
+  v = S.view(c);
+  ok('...letting Sable keep the heading at Kerrigan gives no lodestone, and says so', c.story.meters.stones === stones && /Sable takes the stone/.test(S.render(c, v.text)));
+  const land = dr._nodes['landing.field'].options;
+  c = fresh(); c.story.flags.kettle_contact = true; c.story.flags.reavers_spared = true; c.story.chapter = 'landing'; c.story.node = 'landing.field';
+  c.story.leading = 'kettle';
+  const open = (id) => S.test(S.ctxOf(c), land.find((o) => o.id === id).if);
+  ok('the Landing never offers to hire the company holding the field', !open('hire_kettle') && open('hire_reavers'));
+  c.story.leading = 'reavers';
+  ok('...either of them', open('hire_kettle') && !open('hire_reavers'));
+  c = fresh(); c.story.flags.kettle_partner = true;
+  ok('...and a partner is out of the race: Brass Ledger never lead it while partners in the claim', (c.story.meters.kettle = 10, S.leadingRival(c) !== 'kettle'));
+  c.story.chapter = 'landing'; c.story.node = 'landing.battle'; c.story.leading = 'sable';
+  c.story.pending = JSON.parse(JSON.stringify(land.find((o) => o.id === 'hire_reavers').battle));
+  ok('...allies hired and paid for are not sent home for a partner', S.battleSpec(c).levers.allies.side === 'reavers');
+  ok('the endings no longer contradict a won finale: claim jumped needs the Landing lost or no finale won, repossessed only the Collector lost',
+    JSON.stringify(dr.endings.find((e) => e.id === 'claimjumped').if).indexOf('finale_won') >= 0 && JSON.stringify(dr.endings.find((e) => e.id === 'repossessed').if) === '{"flag":"collector_lost"}');
+  ok('Vane cut off: no Escort for him, and nothing more to sell him',
+    JSON.stringify(dr._chapters.escort.when).indexOf('vane_cut_off') >= 0 &&
+    ['bounty.paymaster/hand', 'cold.child/vane'].every((k) => { const [ev, id] = k.split('/'); return JSON.stringify(dr._nodes[ev].options.find((o) => o.id === id).if).indexOf('vane_cut_off') >= 0; }));
+  ok('the log handed back: no terms to pay for it, and the company jumps on without it',
+    JSON.stringify(dr._nodes['dx.terms'].if).indexOf('log_handed') >= 0 && /without the log/.test(TEXT['dx.interlude']));
 }
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {
