@@ -457,14 +457,14 @@
           { id: 'cut', text: 'Cut through a docking arm’s seal.', battle: { role: 'attacker' } },
           { id: 'hatch', text: 'Find Morrow’s maintenance hatch in the log.', effects: [{ roll: { d6: 4, meter: 'intel' },
             pass: [{ next: { battle: 'c2t.battle', levers: { role: 'choose' } } }], fail: [{ next: { battle: 'c2t.battle', levers: { readiness: 1 } } }] }] },
-          { id: 'pay', text: 'Pay them to leave.', cost: { kUC: 2 }, why: 'You can’t pay them.', battle: { skip: true }, effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: 1 }] }
+          { id: 'pay', text: 'Pay for access.', cost: { kUC: 2 }, why: 'You can’t pay them.', battle: { skip: true }, effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: 1 }] }
         ], next: 'c2t.battle' },
         { id: 'c2t.battle', type: 'battle', scenario: 'ce_control', map: 'thule', tier: 'max', pl: 1, planet: 'arctic',
           place: { system: 'Okoro', planet: 'Okoro II', kind: 'arctic', world: { atmosphere: 'none' }, site: 'Station Thule' },
           // (the scavengers aboard: militia and salvage crews on foot, nothing that cannot fight in a corridor)
           enemy: { side: 'scavengers', faction: 'rebel', archetype: 'freespace', core: ['rmilitia', 'rminers'], optional: { meter: 'kettle', per: 3, units: ['rmilitia', 'rlmg'] }, fill: { to: 0.8, from: ['rmilitia', 'rminers', 'rciv', 'rlmg'] } },
           on: { success: [{ effects: [{ meter: 'stones', add: 1 }] }], skip: [{ effects: [{ meter: 'stones', add: 1 }] }], failure: [{}] }, next: 'c2t.debrief' },
-        { id: 'c2t.debrief', type: 'debrief', text: '{if success}The station is yours.{/if}{if skip}The scavengers take the money and go.{/if}{if failure}The scavengers fired the archive.{/if}', events: ['c2t.records', 'c2t.burned'], next: 'c2.interlude' },
+        { id: 'c2t.debrief', type: 'debrief', text: '{if success}The station is yours.{/if}{if skip}The scavengers take the money and open the lock.{/if}{if failure}The scavengers fired the archive.{/if}', events: ['c2t.records', 'c2t.burned'], next: 'c2.interlude' },
         { id: 'c2t.records', type: 'event', if: { grade: ['decisive', 'victory', 'skip'] }, title: 'Morrow’s records', text: 'The relay kept his log entries, his voice and his fear.', options: [
           { id: 'listen', text: 'Listen to all of it.', effects: [{ meter: 'understanding', add: 1 }, { flag: 'thule_records' }].concat(rebuilt('Morrow’s own records at Thule')) },
           { id: 'send', text: 'Send the records to the backer.', effects: [{ meter: 'vane', add: 1 }].concat(rebuilt('Morrow’s own records at Thule, with his client’s readers')) },
