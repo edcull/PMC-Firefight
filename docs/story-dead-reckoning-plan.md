@@ -68,10 +68,13 @@ and the stones are a lock as much as a map. He sold one on Kerrigan for fuel
 the race: through proxies he funds Brass Ledger (the Orrin Mercantile Bank's
 shell companies), Sable Armour Group (the Halvorsen Mining Combine) and Kestrel
 Air Cavalry (the Meridian newsfeed, bought last year), and seeds them stones
-so many hands dig up the rest. **The company is hired by Halloran**, a reader of
-old logs, for a client neither of them has met: a voice on a scrambled line
-(`client`, Vane's face in shadow) whose money clears through a bank on
-Halcyon. So every company on the trail, the player's included, works for a
+so many hands dig up the rest. **The company is hired by Halloran** himself: as
+far as the company knows at first, he is the client. He has a line open in
+his ear to a **backer** he will not name (`client`, "The backer", Vane's face
+in shadow), whose money clears through a bank on Halcyon. The backer only
+listens in the opening brief; he is first heard when things go wrong (Lot
+47's losses, Kettering's ship) or when the trail begins (chapter 2, where he
+is sure Morrow is dead: his first tell). The meter is the backer's Trust. So every company on the trail, the player's included, works for a
 client it cannot name, and when it comes out that most of them are the same
 man, each has reason to question its own contract and, perhaps, to trust the
 others. The first half only hints: Brass Ledger's, Sable's and Kestrel's
@@ -395,8 +398,8 @@ world.
   outside. A Tier I *Secure and control* or *Meeting engagement* in the port's
   market square; it teaches the story screens and cannot be lost outright (a
   defeat: the log is held, at a cost, Lead −1). Events: how to handle the
-  auction (outbid in the open, let Vane bid while the company watches the room,
-  or have Brass Ledger's agent followed); what to do with the agent taken.
+  auction (stand with Halloran, stay in the background and observe, or focus on
+  Kettering and mark his men); what to do with the agent taken.
 - **2. The First Lodestone.** Morrow's first stop could be read two ways. The
   player picks one; the rival who takes the other gets a lodestone (Lead −1,
   that rival +1):
@@ -542,7 +545,7 @@ the systems in the order the company reaches them.
 
 | Chapter | The event | Options (and the levers under them) |
 |---|---|---|
-| 1. Lot 47 | *The bidding.* Lot 47 comes up, and half the room is bidding for somebody else. | Outbid in the open (kUC −1, Vane's Trust +1, every rival sees who has it: their Readiness +1). Let Vane bid while the company watches the room (Intel +1: an outline of the enemy). Have Brass Ledger's agent followed out of the room (the company chooses its role; `kettle_marked`). |
+| 1. Lot 47 | *The bidding.* Lot 47 comes up, and half the room is bidding for somebody else. | Stand with Halloran, in plain sight (the backer's Trust +1, Brass Ledger +1, their Readiness +1). Stay in the background and observe (Intel +1). Focus on Moss Kettering and mark his men (the company chooses its role; `kettle_marked`, their Readiness −1). |
 | 2. (the choice) | *Two readings.* Morrow's first heading could mean the Glass Flats or Station Thule. | The Glass Flats (Find and secure + relic, vs Wraith Section). Station Thule (Critical control, vs scavengers). The other site goes to a rival: `theirs` +1, Lead −1, and that rival's strength +1. |
 | 2. The Glass Flats | *The dig.* Wraith Section's camp is already on the flats. | Dig at night (one Battle Tier down, enemy Readiness 0). Jam their comms first (`cost: { intel: 1 }`: Wraith's drones start Suppressed). Go straight for the dig (you attack; `glassflats_rushed`: the lodestone is easier to find, one search site fewer). |
 | 2. Station Thule | *The airlock.* The scavengers have welded the station shut. | Cut through the main lock (you attack, the role is set). Find Morrow's maintenance hatch in the log (a roll on Intel: success, you choose where to come in; failure, enemy Readiness +1). Pay them to leave (kUC −2, no battle: Lead −1, and the records are half burned: no Intel). |

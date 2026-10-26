@@ -34,19 +34,18 @@
     conversations: {
       // ---- 1. Lot 47 ----
       'c1.brief': [
-        { who: 'client', text: '{commander:rank}. You won’t see me, and you won’t have my name; Halloran doesn’t have it either, and I find that keeps things simple. I’ve read your company’s file, and I don’t mind it. That’s rarer than you’d think.' },
-        { who: 'reader', text: 'The money is real, {commander:rank}. It clears through a bank on Halcyon before I’ve finished asking for it. I stopped asking whose it was some time ago.' },
+        { who: 'reader', text: '{commander:rank}. Halloran. Thank you for coming. I’ll be plain: I need your company, and I need it tonight.' },
         { who: 'commander', text: 'You said an auction. You didn’t say why an auction needs a company.' },
-        { who: 'client', text: 'Because everyone else in that room has brought one. Lot 47 is a dead man’s log, {commander:rank}, and the dead man found something nobody else ever has. I have waited a long time for it to come up.' },
-        { who: 'commander', text: 'Dead? You’re sure?' },
-        { who: 'reader', text: 'Presumed. Forty years without a word, and a court declared him so. I’ve never been entirely sure.' },
-        { who: 'client', text: 'I am.' },
-        { who: 'reader', text: 'Elias Morrow. Surveyor. He wrote in dead reckoning: headings and burn times, no fixes. Without his stones it’s gibberish. With them, it’s a road.' },
+        { who: 'reader', text: 'Because everyone else in that room has brought one. Lot 47 is Elias Morrow’s log. Surveyor. Forty years without a word; a court declared him dead a long time ago. I’ve never been entirely sure.' },
+        { who: 'reader', text: 'He wrote in dead reckoning: headings and burn times, no fixes. Without his stones it’s gibberish. With them, it’s a road.' },
         { who: 'commander', text: 'And the stones? Whose are they?' },
         { who: 'reader', text: 'Nobody’s, now. He stole them back from whoever paid for his first trip, took them out again, and put them down along the way, one at a time. Each one points to the next. The log says where to start.' },
         { who: 'commander', text: 'Who paid for his first trip?' },
-        { who: 'client', text: 'Ancient history, {commander:rank}. The catalogue doesn’t say, and the dead don’t sue.' },
-        { who: 'client', text: 'A road to a world he called the Quiet. I want Halloran out of that room with the log, and alive. After that you follow the road, and whoever files the first claim at the end owns everything there. Shall we begin?' }
+        { who: 'reader', text: 'The catalogue doesn’t say. Whoever it was, Morrow robbed him and ran.' },
+        { who: 'reader', text: '[he touches his earpiece, and listens] Yes. Yes, I understand. [to you] Forgive me.' },
+        { who: 'commander', text: 'Who’s on the line?' },
+        { who: 'reader', text: 'My backer. They prefer not to be introduced. The money is real; it clears through a bank on Halcyon before I’ve finished asking for it, and I stopped asking whose it was some time ago.' },
+        { who: 'reader', text: 'Get me out of that room with the log, and alive. After that we follow the road to a world he called the Quiet, and whoever files the first claim at the end owns everything there. Shall we?' }
       ],
       'c1.agent': [
         { who: 'kettering', text: 'You’ve got one of mine. Let’s be clear about what happens now, {commander:rank}: he walks, or the next time we meet I bring three times the men and no reason to be polite.' },
@@ -68,7 +67,9 @@
         { who: 'client', text: 'Somebody will be at whichever one you don’t choose. Somebody may be at both. I pay for results, {commander:rank}, not for reasons.' },
         { who: 'commander', text: 'What’s at Thule?' },
         { who: 'reader', text: 'A survey relay. Morrow stopped there for three days. Nobody stops at a relay for three days unless something is wrong, or something is right.' },
-        { who: 'reader', text: 'And the Flats is where he dug. Whatever he buried, it’s still in the ground.' },
+        { who: 'reader', text: 'And the Flats is where he dug. Whatever he buried, it’s still in the ground, unless he came back for it.' },
+        { who: 'client', text: 'He didn’t. He’s dead.' },
+        { who: 'commander', text: 'You sound very sure.' },
         { who: 'client', text: 'Your choice, {commander:rank}. You’re the one who has to dig.' }
       ],
       'c2f.dig': [
@@ -79,10 +80,10 @@
         { who: 'nine', text: 'Your client doesn’t pay us. Ours does, and our client wants what’s in that ground. Turn your dropships round and nobody on your side gets shot. Come any closer and we start with your officers.' }
       ],
       'c2t.airlock': [
-        { who: 'ops', text: 'Every docking arm is welded. Somebody’s aboard, and they’ve been aboard a while: there’s a heat plume off the north module.' },
-        { who: 'scav', text: 'You’re on our docking arm, ship. Thule’s taken. Cast off now, or we open up on your hull.' },
-        { who: 'commander', text: 'We want three days of a dead man’s records. Then we leave.' },
-        { who: 'scav', text: 'Everything in this station is salvage, and salvage is ours. You want it, you pay for it, or you come through that lock and earn it. We’ve done this before.' }
+        { who: 'ops', text: 'Every docking arm is welded. Somebody’s aboard, and they’ve been aboard a while: there’s a heat plume off the north module. The survey office still lists Thule as theirs, unmanned. Nobody’s filed a salvage claim on it.' },
+        { who: 'scav', text: 'You’re on our docking arm, ship. Thule’s ours now. Cast off, or we open up on your hull.' },
+        { who: 'commander', text: 'Thule belongs to the survey office, and you know it. We don’t want your salvage: we just need access to the relay’s archive. Let us in, we copy what we need, and we leave. No need for anyone to get hurt.' },
+        { who: 'scav', text: 'The survey office isn’t here. We are. Everything in this station is salvage, and salvage is ours, archive and all. You want it, you pay for it, or you come through that lock and earn it. We’ve done this before.' }
       ],
 
       // ---- 3. The Drowned Beacon ----
@@ -219,7 +220,7 @@
         { who: 'reader', text: 'It’s here, {commander:rank}. The last pages. He names them. Once, underlined twice: Xenotripods. The three-legged ones, who step out of the air.' },
         { who: 'commander', text: 'He knew. Forty years ago, he knew, and he never told anyone.' },
         { who: 'reader', text: 'He told the log. “They let me take the stones because the stones were going home anyway. I was only carrying them.”' },
-        { who: 'reader', if: { not: { revealed: 'client_lance' } }, text: 'And something else, {commander:rank}. I followed the money back through Halcyon, the way you follow a heading. Our client has a name. It’s Lucan Vane.' },
+        { who: 'reader', if: { not: { revealed: 'client_lance' } }, text: 'And something else, {commander:rank}. I followed the money back through Halcyon, the way you follow a heading. Our backer has a name. It’s Lucan Vane.' },
         { who: 'vane', if: { not: { flag: 'vane_cut_off' } }, text: 'Well. Now you know my name. Keep going, {commander:rank}. Nothing about our arrangement has changed, except that it is now worth a great deal more.' },
         { who: 'ops', text: 'Every newsfeed in the sector has it already. They’re calling them the Xenotripods. And every company on the trail is watching the same pictures we are.' }
       ],
@@ -505,14 +506,14 @@
       'c1.battle': {
         start: [
           { who: 'kettering', text: 'Nothing personal, {commander:rank}. Hand over the reader and the slate and everyone goes home. Otherwise my lads go through you, and I don’t care how much it costs.' },
-          { who: 'kettering', if: { flag: 'kettle_marked' }, text: 'You had my lad followed? Clever. Not clever enough.' }
+          { who: 'kettering', if: { flag: 'kettle_marked' }, text: 'You marked my lads in the room? Clever. Not clever enough.' }
         ],
         kill: [{ who: 'kettering', text: 'You’re costing me money, {commander:rank}. I don’t forgive that. I invoice it.' }],
-        turn3: [{ who: 'reader', text: 'I’m in the arcade, {commander:rank}. My client is asking, rather calmly, whether I mean to reach the end of it.' }],
+        turn3: [{ who: 'reader', text: 'I’m in the arcade, {commander:rank}. My backer is asking, rather calmly, whether I mean to reach the end of it.' }],
         loss: [{ who: 'client', text: 'You’re losing people, {commander:rank}. Don’t lose Halloran. He can read that log, and nobody else I pay can.' }],
         // Halloran brought down (hit, not killed: he gets away later, with his notes), or broken and running
         vipdown: [{ who: 'reader', text: 'I’m hit, {commander:rank}. The leg. I can’t — they’re taking the slate. They’ve got the slate.' }],
-        vipfled: [{ who: 'reader', text: 'I am not a soldier, {commander:rank}, and I am not staying here to be shot at. I’m going back the way I came. Tell my client what you like.' }]
+        vipfled: [{ who: 'reader', text: 'I am not a soldier, {commander:rank}, and I am not staying here to be shot at. I’m going back the way I came. Tell my backer what you like.' }]
       },
       'c1r.battle': {
         start: [{ who: 'kettering', text: 'They’re coming for the ship! Load what you can, and hold the ramp until we’re up!' }],

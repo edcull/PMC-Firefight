@@ -99,6 +99,10 @@ ok('the patron is a man nobody sees: Lucan Vane, on the line, half his face in s
   ok('the client behind Halloran has no name in the first half: the same face as Vane, and no Vane in its words or its talk',
     people.client && people.client.face.shadow === true && JSON.stringify(people.client.face) === JSON.stringify(people.vane.face) &&
     !/Vane/.test(words) && !/Vane/.test(dr.blurb) && !c1talk.some((l) => l.who === 'vane' || /Vane/.test(l.text)) && /Halloran/.test(dr.blurb) && /Halcyon/.test(TEXT.c1));
+  ok('the opening is Halloran’s: he makes the deal and the backer only listens, first heard when things go wrong or the trail begins',
+    TALK.conversations['c1.brief'].every((l) => l.who !== 'client') && TALK.conversations['c1.brief'].some((l) => l.who === 'reader' && /My backer/.test(l.text)) &&
+    TALK.conversations['c1.lost'].some((l) => l.who === 'client') && TALK.conversations['c2.brief'].some((l) => l.who === 'client' && /He’s dead/.test(l.text)) &&
+    people.client.name === 'The backer');
   ok('...named when the second half opens, by Halloran following the money, unless the Lance said it first',
     TALK.conversations['fault.brief'].some((l) => l.who === 'reader' && /Lucan Vane/.test(l.text) && l.if && l.if.not && l.if.not.revealed === 'client_lance') &&
     /work for Lucan Vane/.test(TALK.conversations['dx.brief'][0].text));
