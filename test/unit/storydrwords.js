@@ -510,6 +510,29 @@ console.log('\nThe star chart');
     ok('...and says "client unknown" while it is not', /Kestrel Air Cavalry \(leading\) <small class="secret">client unknown/.test(global.PMCStoryChart.html(S.chart(c2), 'dead-reckoning')));
   }
   {
+    // Fatigue: a company pushed too hard starts its battles with squads pinned, won't take everything on, and asks for rest
+    const c6 = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+    S.begin(c6, 'dead-reckoning', {});
+    const at = (node, f) => { c6.story.chapter = dr._nodes[node]._chapter; c6.story.node = node; c6.story.meters.fatigue = f; return S.battleSpec(c6); };
+    ok('Fatigue starts at nothing, and the company can see it', c6.story.meters.fatigue === 0 && dr._meters.fatigue.shown && !dr._meters.loyalty);
+    const f3 = at('c1.battle', 3), f4 = at('c1.battle', 4), f6 = at('c1.battle', 6);
+    ok('...at 3, nobody starts pinned', !f3.levers.suppressOwn && !(f3.levers.notes || []).length);
+    ok('...at 4, one squad starts pinned, and the briefing says why', f4.levers.suppressOwn === 1 && /worn out/.test(f4.levers.notes[0]));
+    ok('...at 5 or more, D3 of them', f6.levers.suppressOwn === 'D3');
+    c6.story.chapter = 'warren'; c6.story.node = 'warren.other'; c6.story.meters.fatigue = 4;
+    S.choose(c6, 'close');
+    const w = S.battleSpec(c6);
+    ok('...on top of what the battle itself brings', w.levers.suppressOwn === 'D3+1', w.levers.suppressOwn);
+    const opt = (node, id, f) => { c6.story.chapter = dr._nodes[node]._chapter; c6.story.node = node; c6.story.meters.fatigue = f; return S.view(c6).options.find((o) => o.id === id); };
+    ok('...a worn-out company won’t follow the voices, take Sable’s warehouse, or fire first on the Ninth Lance',
+      opt('warren.other', 'voices', 3).ok === false && opt('warren.other', 'voices', 2).ok && opt('c4.lot', 'take', 3).ok === false && opt('dx.repo', 'fire', 2).ok === false && opt('dx.repo', 'fire', 1).ok);
+    ok('...asks for a rest between chapters, and rest, a bonus or the death benefits bring it down',
+      dr._nodes['i.tired'].if.meter === 'fatigue' && dr._nodes['i.tired'].options.find((o) => o.id === 'rest').effects.some((e) => e.meter === 'fatigue' && e.add < 0) &&
+      dr._nodes['i.wake'].options.find((o) => o.id === 'pay').effects.some((e) => e.meter === 'fatigue' && e.add < 0));
+    ok('...a lost battle wears it down', dr.everyBattle.some((e) => e.if && e.if.grade === 'failure' && e.meter === 'fatigue' && e.add > 0));
+    ok('...and the epilogue remembers', dr.epilogue.filter((l) => l.about === 'company' && l.if && l.if.meter === 'fatigue').length === 2);
+  }
+  {
     // a client found out is said aloud, not only written in the journal
     const words = (id) => JSON.stringify([TALK.conversations[id] || [], TEXT[id] || '']);
     const aloud = { kettle: ['c1.agent/interrogate', 'i.catalogue/buy'], wraith: ['c2f.drop/read'], reavers: ['c3.contact'], sable: ['c4.debrief'], kestrel: ['i.newsfeed'], lance: ['dx.brief'] };

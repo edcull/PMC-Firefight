@@ -582,6 +582,15 @@
       if (lv && lv.allies && spec.levers.allies) { lv = clone(lv); delete lv.allies; }
       spec.levers = mergeLevers(spec.levers, lv);
     });
+    /* What the company brings into every battle (a story's `beforeBattle`: { if,
+       levers, note }): a company whose heart is not in it starts with squads
+       pinned, on top of whatever the battle itself brings. */
+    arr(def.beforeBattle).forEach(function (a) {
+      if (!test(ctx, a.if)) return;
+      var lv = a.levers || {};
+      if (lv.suppressOwn) spec.levers.suppressOwn = spec.levers.suppressOwn ? spec.levers.suppressOwn + '+' + lv.suppressOwn : lv.suppressOwn;
+      if (a.note) spec.levers.notes = arr(spec.levers.notes).concat(render(campaign, a.note));
+    });
     // (a choice that changes who is fought: a hired rival's enemy in its place)
     if (spec.levers.enemy) spec.enemy = clone(spec.levers.enemy);
     if (spec.levers.scenario) spec.scenario = spec.levers.scenario;

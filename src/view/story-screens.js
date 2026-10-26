@@ -265,7 +265,9 @@
         (side.name ? ' \u00b7 against ' + esc(side.name) : '') + '</small>' + (win ? '<small class="win">' + esc(win) + '</small>' : '') + '</div>';
       var notes = [];
       if (spec.levers.strikes) notes.push('Strikes before the first turn (' + spec.levers.strikes + ').');
-      if (spec.levers.suppressOwn) notes.push('Some of your squads start the battle pinned.');
+      // (the story's own word for why, where it gives one: the company's Loyalty)
+      if (spec.levers.notes && spec.levers.notes.length) spec.levers.notes.forEach(function (n) { notes.push(n); });
+      else if (spec.levers.suppressOwn) notes.push('Some of your squads start the battle pinned.');
       if (spec.levers.allies) notes.push('Allies fight beside you.');
       if (spec.variant && spec.variant.target) notes.push('The target: ' + spec.variant.target + (spec.variant.capture ? ', to be taken alive.' : '.'));
       if (spec.variant && spec.variant.ambush) notes.push(spec.variant.ambush === 'player' ? 'You spring the ambush.' : 'You are walking into an ambush.');

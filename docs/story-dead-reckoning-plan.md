@@ -562,7 +562,7 @@ the systems in the order the company reaches them.
 |---|---|---|
 | 1. Lot 47 | *The agent.* Brass Ledger's man is in the company's hands. | Let him go with a message (`kettle_contact`: Brass Ledger can be hired from chapter 4). Pay him for what he knows (kUC −1, Intel +1, `kettle_contact`). Hand him to the port police (Vane's Trust +1, Brass Ledger strength −1, `kettle_burned`: they won't deal with you). |
 | 2. The Glass Flats, won | *Wraith's dead drop.* Their camp holds a copy of their own orders. | Read it (Intel +2, `wraith_orders`: Wraith's patron is a navy, and the navy wants the teleports). Leave a message in it (Wraith strength −1, `wraith_warned`). Take their stolen copy of the log back (Lead +1, `wraith_robbed`: Wraith will come for it). |
-| 2. The Glass Flats, lost | *Second best.* Wraith carried the lodestone off. | Follow their dropship (Lead +1, Loyalty −1: a forced march). Let it go and dig on (the dig's notes: Intel +1; `theirs` stays +1). |
+| 2. The Glass Flats, lost | *Second best.* Wraith carried the lodestone off. | Follow their dropship (Lead +1, Fatigue +1: a forced march). Let it go and dig on (the dig's notes: Intel +1; `theirs` stays +1). |
 | 2. Station Thule, won | *Morrow's records.* The relay kept his log entries, his voice and his fear. | Listen to all of it (Understanding +1, `thule_records`: he heard them talk). Send the records to Vane (Vane's Trust +1). Sell a copy to a newsfeed (kUC +2, `kestrel_deal`: Kestrel's patron, and Kestrel can be hired). |
 | 2. Station Thule, lost | *Burned.* The scavengers fired the archive. | Sift the ashes (Lead −1, a roll on Intel: success, the lodestone after all). Take what's left and go (nothing). |
 | 3. The Drowned Beacon | *What the Sh'kar left.* A wounded Alpha, and the lodestone still in its socket. | Take the lodestone (`stones` +1, Alarm +1). Leave it, and the Alpha, where they are (Understanding +2, Lead −1, `relics_returned`: the tribes remember). Take both (`stones` +1, Alarm +3, Vane's Trust +2, `alpha_taken`: Vane wants it alive). After a storming or a signal failure only: *the gate stays open*: **extreme**, step through after them (`warren_entered`, Alarm +2: Into the Warren). |
@@ -575,7 +575,7 @@ the systems in the order the company reaches them.
 | Chapter (thread) | Before the battle | After the battle | Passed up |
 |---|---|---|---|
 | *Claim Jumpers* (Race) | *The scoop.* Kestrel's dropships are already down. Race them in (you attack, Readiness 0). Offer them the pictures (`kestrel_scooped`, no allies yet; Lead −1, Kestrel can be hired). With `kestrel_deal`: hire them against whoever else is there. | *The footage.* Let Kestrel run it (Vane's Trust −1, `kestrel_filmed`: every rival knows where the company is). Buy it from them (kUC −2). | `theirs` +1 |
-| *The Wreck of the Morrow* (Race) | *The hatch.* Sable is already cutting in. Cut a second way in (strikes, Alarm +1: the wreck's own systems wake). Wait for Sable to open it (enemy Readiness −1, Lead −1). With `sable_owed`: hire Sable for free. | *Morrow.* His body, his last entry, and a lodestone in his fist. Take it (`stones` +1, `morrow_found`). Bury him with it (Understanding +1, Loyalty +1, `relics_returned`: the last stone is given back). | Sable strength +1, `theirs` +1 |
+| *The Wreck of the Morrow* (Race) | *The hatch.* Sable is already cutting in. Cut a second way in (strikes, Alarm +1: the wreck's own systems wake). Wait for Sable to open it (enemy Readiness −1, Lead −1). With `sable_owed`: hire Sable for free. | *Morrow.* His body, his last entry, and a lodestone in his fist. Take it (`stones` +1, `morrow_found`). Bury him with it (Understanding +1, Fatigue −1, `relics_returned`: the last stone is given back). | Sable strength +1, `theirs` +1 |
 | *Bounty* (Race, fallback) | *The tip.* Wraith Section has been paid to stop the company. Lay a trap for the trap (the ambush variant, yours). Run (Lead −1, Readiness 0). With `wraith_warned`: Wraith's commander offers to call it off for a lodestone (`stones` −1, no battle). | *The bounty hunters' paymaster.* Hand them in (Vane's Trust +1). Turn them (Intel +2, `wraith_turned`: an outline of every rival force). | Wraith strength +1 |
 | **The Landing** (Race finale) | *The field.* The leading rival holds the only landing field on the Quiet. With `wraith_turned`: their full list. With `kettle_partner`: Brass Ledger beside you, at their price. | The ending. | — |
 | *The Watchers* (Tribes) | *The shieldwall.* The Ulvar's domes cover the only pass. Strike the shield turrets (the Strike scenario). Go round (Lead −2, no battle, Alarm +1). With `mithdu_marked`: under it (one Battle Tier down, you choose the role). | *The dome falls.* Its keepers ask for their dead. Give them back (Understanding +1, Alarm −1). Keep the turret cores (kUC +3, Alarm +2, Vane's Trust +1). | Alarm +1 |
@@ -645,7 +645,7 @@ each time, they want a share, and they cannot be trusted with the prize.
   |---|---|---|
   | **Brass Ledger** | *The agent* (after *Lot 47*): let go with a message, or paid (`kettle_contact`). From then on they are always for sale. | Money, and more of it each time. |
   | **Kestrel Air Cavalry** | *Morrow's records* sold to the newsfeed, or *The scoop* (`kestrel_deal`, `kestrel_scooped`). | Pictures, not money: first access to a site (Lead −1), and they want the story told their way. |
-  | **The Red Reavers** | *Claim jumpers* (a side contract): their captain spared or bought off (`reavers_spared`). | Cheap, and they leave a mess (Alarm +1 at a Xenotripod battle, Loyalty −1 for what the company watches them do). |
+  | **The Red Reavers** | *Claim jumpers* (a side contract): their captain spared or bought off (`reavers_spared`). | Cheap, and they leave a mess (Alarm +1 at a Xenotripod battle, Fatigue +1 for what the company watches them do). |
   | **Sable Armour Group** | *Lot 47, again*: left the warehouse (`sable_owed`). | Once, for free. After that, ordinary terms. |
 
   The earliest hire is at *The Broker* (chapter 4), and only Brass Ledger,
@@ -684,7 +684,7 @@ Their events (one each, after a battle they fought in):
 |---|---|---|
 | *The invoice* | Brass Ledger | Pay the extra (kUC −2, Trust +1). Dispute it (Trust −1, Price +1). Offer them a share of the claim instead (`kettle_partner`, Trust +2: *Finder's Fee* is split; *The Landing* brings them as allies). |
 | *The edit* | Kestrel | Let them cut the footage their way (Vane's Trust −1, Trust +1). Demand the raw footage (Trust −1, Intel +1). Give them an interview (Lead −1, Trust +2, `kestrel_filmed`). |
-| *The mess* | The Red Reavers | Pay them off and walk away (kUC −1). Make them clean it up (Trust −2, Loyalty +1). Look the other way (Trust +1, Loyalty −1, Alarm +1 if it was near the tribes). |
+| *The mess* | The Red Reavers | Pay them off and walk away (kUC −1). Make them clean it up (Trust −2, Fatigue −1). Look the other way (Trust +1, Fatigue +1, Alarm +1 if it was near the tribes). |
 | *Favour returned* | Sable | (the free hire) Thank them (Sable's Price back to its start). Ask for another (Price +1: no longer free). |
 | *A better offer* | any hired company, Trust −3 or lower | They have been offered more. Match it (kUC − their Price ×2, Trust 0). Let them go (`<company>_turned`: they will be in the next battle against their new paymaster, or the Turn). |
 
@@ -695,8 +695,8 @@ One before each hub, the first that applies:
 | Event | When | Options |
 |---|---|---|
 | *The jump* | Every interlude in the second half, unless something else applies | The drive is failing. Pay for the yard (kUC −1). Jump anyway (a roll: on a 1, Lead −1 and a unit takes a Trauma roll). |
-| *The wake* | A unit was wiped out in the last battle | As in *Deep Contract*: pay the death benefits (kUC −, Loyalty +1) or don't (Loyalty −1). |
-| *Voices* | Understanding 2 or more, after the beacon | {soldier:veteran} has started hearing them. Listen with them (Understanding +1, Loyalty −1: the company is uneasy). Send them home (the unit leaves, Loyalty +1). |
+| *The wake* | A unit was wiped out in the last battle | As in *Deep Contract*: pay the death benefits (kUC −, Fatigue −1) or don't (Fatigue +1). |
+| *Voices* | Understanding 2 or more, after the beacon | {soldier:veteran} has started hearing them. Listen with them (Understanding +1, Fatigue +1: the company is uneasy). Send them home (the unit leaves, Fatigue −1). |
 | *Send one ahead* | Vane's Trust 1 or more, and `stones` 2 or more | Vane wants a lodestone sent to her now. Send it (`stones` −1, Vane's Trust +2). Refuse (Vane's Trust −1, `vane_suspects` if she already suspects). |
 | *A warm stone* | `stones` 3 or more | The lodestones are warm, and pointing the same way. Follow them (Lead +1, Alarm +1). Shield them (kUC −1). |
 | *The newsfeed* | Kestrel is in the race, and `kestrel_deal` isn't set | A newsfeed wants pictures. Sell them (kUC +2, `kestrel_deal`, Lead −1). Refuse (nothing). |
@@ -728,7 +728,8 @@ validator checks both, as for *Deep Contract*.
 | Meter | Raised by | Lowered by |
 |---|---|---|
 | Vane's Trust | *The bidding* (outbid), *The agent* (police), *Morrow's records* (send), *What the Sh'kar left* (take both), *Lot 47, again* (buy), *The Watchers* (keep cores), *Cold Sites* (take the child), *The Speaker* (bring her people), *Bounty* (hand in), *The Escort* (deliver), *Send one ahead*, a decisive win | *The repossession*, *Vane's terms*, *The footage*, *The edit*, *The Escort* (keep a stone), *The receipts*, *Send one ahead* (refuse), questions in conversations that read `vane_suspects` |
-| Loyalty | *Morrow* (bury him), *The mess* (clean up), *Voices* (send home), *The wake* (pay), winning | *Second best* (follow), *The mess* (look away), *Voices* (listen), *The wake* (don't), *The jump* (a bad roll), Red Reavers hired |
+| Fatigue (down) | *Morrow* (bury him), *The mess* (clean up), *Voices* (send home), *The wake* (pay), *The jump* (the yard), *Tired* (rest, a bonus), *Station Thule* (pay for access), *The road* (the long way), shooting the flag down, winning |
+| Fatigue (up) | *Second best* (follow), *The mess* (look away), *Voices* (listen), *The wake* (don't), *The jump* (a bad roll), *Tired* (push on), the Red Reavers hired, losing |
 | Intel | *The bidding* (watch), *Wraith's dead drop*, *Second best* (dig on), *Station Thule*'s records, *Lot 47, again* (follow Sable), *The edit*, *Bounty* (turn), *Brass Ledger's catalogue* | Spent on options (`cost: { intel: 1 }`), *The repossession* (hand back) |
 | Lead | *Wraith's dead drop* (take it back), *Second best* (follow), *The broker's copies* (burn), *The Mithdu's hoard*, *Cold Sites* (seal), *A warm stone* | *Two readings* (the other site), *Station Thule* (pay), *First contact* (watch), *Lot 47, again* (buy, follow), *Burned*, *What the Sh'kar left* (leave it), *The repossession*, *The scoop*, *The hatch* (wait), *Bounty* (run), *The Watchers* (go round), *Teleport Storm* (move the stones), *The Escort* (long road), *The edit*, *The newsfeed*, *The jump*, side contracts in the second half |
 | `stones` | The relic carried off, *What the Sh'kar left* (take), *The Mithdu's hoard*, *Morrow*, *The Esh-Aven's thanks* (ask), *The Escort* (keep one), *Burned* (a roll) | *Bounty* (Wraith's price), *Teleport Storm* (return one), *Send one ahead*, a relic lost in a defeat |
@@ -793,7 +794,7 @@ the briefings; hidden ones only in the writing until an event reveals them, as i
 | Meter | Start | Shown | On the table | In the story |
 |---|---|---|---|---|
 | **Vane's Trust** | 1 | yes | At 2 or more, Vane's supply drop each half (a free unit or upgrade). At −3 or lower, the Ninth Lance's forces get her best kit (an honour on each core unit). | Pay (×0.5 to ×1.5, as HTX Standing). Jumps free while 1 or more. The Double-Cross at −3 by chapter 3. The Patron's pressure. *Finder's Fee* at 2 or more. |
-| **Loyalty** | 1 | yes | As in *Deep Contract*: a Morale re-roll at 2, Suppression at −2. | *The wake*, *Voices*; who stays in the epilogue. |
+| **Fatigue** | 0 (0 to 8) | yes | How hard the company has been pushed, morale and weariness both. At 3, *Tired* comes up between chapters (rest, pay a bonus, or push on and maybe lose a squad), and the company won't storm Sable's warehouse or follow the voices in the Warren; at 2, it won't fire first on the Ninth Lance. In every battle: at 4 one squad starts pinned, at 5 or more D3 (the story's `beforeBattle`). | *The wake*, *Voices*, *Tired*; who stays in the epilogue. |
 | **Intel** (0 to 6) | 1 | yes | What is known of each enemy (as before); spent on options. | Rolls (*The airlock*); options that need it. |
 | **Lead** | 0 | yes | At −3 or lower, the leading rival is already dug in wherever the company arrives: their Readiness +1. At 3 or more, the company chooses its role in every Race battle. | The Race's pressure (low Lead raises it). *The Landing*'s force (the rival's optional units by −Lead). |
 | **`stones`** (0 to 7) | 0 | yes, as a count | Each stone short of five: the finale's enemy Readiness +1. | *A warm stone*, *Send one ahead*; the endings. |
