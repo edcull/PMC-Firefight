@@ -18,16 +18,19 @@
   root.PMCStoryMaps = root.PMCStoryMaps || {};
 
   /* A ship's outer hull, in inches: a rounded rectangle (`r` its corners'
-     radius), or one ending in a curved nose (`nose`: the half-ellipse's reach
-     past `x1`); a closed outline, as points, for the plating and the hull. */
+     radius), or one ending in a pointed bow (`nose`: the points along its upper
+     side from where it leaves the straight to the tip, mirrored for the lower);
+     a closed outline, as points, for the plating and the hull. */
   function hullOutline(x0, y0, x1, y1, r, nose) {
     var pts = [], arc = function (cx, cy, rad, ry, a0, a1) {
       for (var k = 0; k <= 8; k++) { var t = a0 + (a1 - a0) * k / 8; pts.push([cx + Math.cos(t) * rad, cy + Math.sin(t) * ry]); }
     };
-    var H = Math.PI / 2;
+    var H = Math.PI / 2, my = (y0 + y1) / 2;
     arc(x0 + r, y0 + r, r, r, Math.PI, Math.PI + H);
-    if (nose) arc(x1, (y0 + y1) / 2, nose, (y1 - y0) / 2, -H, H);
-    else { arc(x1 - r, y0 + r, r, r, -H, 0); arc(x1 - r, y1 - r, r, r, 0, H); }
+    if (nose) {
+      nose.forEach(function (p) { pts.push(p); });
+      nose.slice(0, -1).reverse().forEach(function (p) { pts.push([p[0], 2 * my - p[1]]); });
+    } else { arc(x1 - r, y0 + r, r, r, -H, 0); arc(x1 - r, y1 - r, r, r, 0, H); }
     arc(x0 + r, y1 - r, r, r, H, Math.PI);
     return pts.map(function (p) { return [Math.round(p[0] * 100) / 100, Math.round(p[1] * 100) / 100]; });
   }
@@ -271,20 +274,25 @@
     },
 
     /* The Wreck of the Morrow, on her side in a gully on Pell: a compound laid
-       by hand in the shape of the ship, stern to the company's edge and her bow
-       stepped down to a forward hatch on the far one, a slim hull with an engine
-       nacelle out on a pylon to either side of her stern, every cell inside her
-       a room or a passage. Its skin is the wreck's (`wreck`, engine.js): the
-       solid round her is Pell's ground, outside, the floors walled in by her
-       hull where they meet it. Two breaches: the main hatch Sable cut, through the top
-       of her hull near the bow, and the split, through the starboard nacelle's
-       outer side. Who comes in where (`entries`, a battle's `variant.entry`): the
-       company sets up on the ground outside a breach, 6" deep, and nowhere else;
-       cutting a second way in, it has both, following Sable in only her hatch,
-       and either way Sable's people are already inside, in the hold, the engine
-       room and the infirmary. Gone in together, by the hatch, Brass Ledger's
-       salvage crew came in by the split: the starboard nacelle, the engine room
-       and the hold. */
+       by hand in the shape of the ship, stern to the company's edge and her
+       pointed bow to the far one, a gangway down from the bridge at its tip; an
+       engine nacelle out on a pylon to either side of her stern. Her after
+       section the engine room and the cargo hold, the biggest room on her,
+       stacked with crates; her forward section a long corridor down her middle
+       to the bridge, the crew quarters, forward store and comms room off one
+       side of it, the mess, infirmary and life support off the other, her rooms narrowing to the bow.
+       Every cell inside her is a room or a passage. Its skin is the wreck's
+       (`wreck`, engine.js): the solid round her is Pell's ground, outside, the
+       floors walled in by her hull where they meet it. Two breaches: the main
+       hatch Sable cut, through the top of her hull forward into the forward
+       store, and the split, through the starboard nacelle's outer side. Who
+       comes in where (`entries`, a battle's `variant.entry`): the company sets
+       up on the ground outside a breach, 6" deep, and nowhere else; cutting a
+       second way in, it has both, following Sable in only her hatch, and
+       either way Sable's people are already inside, in the hold, the infirmary
+       and on the bridge. Gone in together, by the hatch, Brass Ledger's salvage
+       crew came in by the split: the starboard nacelle, the engine room and
+       the hold. */
     wreck: {
       name: 'The wreck of Morrow’s ship, Pell', skin: 'wreck',
       compound: shipPlan([
@@ -292,41 +300,43 @@
         '.NNNN...........',
         '.NNNN....ooo....',
         '...c.....ooo....',
-        '.EEQQQHHHHHH....',
-        '.EEQQQHHHHHHBB..',
-        '.EEcccHHHHHHcccc',
-        '.EEMMMHHHHHHFF..',
-        '.EEMMMHHHHHH....',
-        '.EEcccHHHHHH....',
+        '.EEHHHHQQQSS....',
+        '.EEHHHHQQQSSV...',
+        '.EEHHHHQQQSSVBB.',
+        '.EEHHHHccccccBBc',
+        '.EEHHHHMMMIIWBB.',
+        '.EEHHHHMMMIIW...',
+        '.EEHHHHMMMII....',
         '...c............',
         '.nnnn...........',
         '.nnnn...........',
         'oooo............',
-        'oooo............',
-        '................'
-      ], [[2, 6, 3, 6], [2, 9, 3, 9], [4, 5, 4, 6], [4, 7, 4, 6], [4, 8, 4, 9], [5, 6, 6, 6], [5, 9, 6, 9], [11, 6, 12, 6], [12, 5, 12, 6], [12, 7, 12, 6],
-        [3, 2, 3, 3], [3, 3, 3, 4], [3, 10, 3, 11]],
-      // the breaches: the main hatch, through the top of her hull into the hold, and the split, through the starboard nacelle's outer side
-      [[10, 3, 10, 4], [2, 12, 2, 13]],
-      { E: 'Engine room', Q: 'Crew quarters', M: 'Mess', H: 'Cargo hold', B: 'Bridge', F: 'Forward store', N: 'Port nacelle', n: 'Starboard nacelle' }),
+        'oooo............'
+      ], [[2, 5, 3, 5], [2, 9, 3, 9], [6, 7, 7, 7], [8, 6, 8, 7], [11, 6, 11, 7], [8, 8, 8, 7], [11, 8, 11, 7], [12, 7, 13, 7], [14, 7, 15, 7], [9, 5, 10, 5], [12, 6, 12, 7], [12, 8, 12, 7],
+        [3, 2, 3, 3], [3, 3, 3, 4], [3, 10, 3, 11], [3, 11, 3, 12]],
+      // the breaches: the main hatch, through the top of her hull into the forward store, and the split, through the starboard nacelle's outer side
+      [[10, 3, 10, 4], [2, 13, 2, 14]],
+      { E: 'Engine room', H: 'Cargo hold', Q: 'Crew quarters', S: 'Forward store', M: 'Mess', I: 'Infirmary', V: 'Comms room', W: 'Life support', B: 'Bridge', N: 'Port nacelle', n: 'Starboard nacelle' }),
       /* Her outer hull, curved about the rooms (in inches): her body, its stern rounded and
-         its nose an ogive, and each nacelle; the plating between the hull and the rooms is
-         her deck, not walked on. No hull where her breaches are, where a pylon or the
-         gangway at her bow runs through it; a sealed hatch opposite each breach. */
+         its bow drawn to a point, and each nacelle; the plating between the hull and the
+         rooms is her deck, not walked on. No hull where her breaches are, where a pylon or
+         the gangway at her bow runs through it; a sealed hatch opposite each breach. */
       hull: {
-        shapes: [hullOutline(2, 11.5, 36, 30.5, 4, 10), hullOutline(1.25, 2.7, 17.75, 9.5, 3), hullOutline(1.25, 32.5, 17.75, 39.3, 3)],
-        gaps: [{ x: 30, y: 10, w: 3, h: 3 }, { x: 6, y: 38, w: 3, h: 3 }, { x: 9, y: 8.5, w: 3, h: 4 }, { x: 9, y: 29.5, w: 3, h: 4 }, { x: 44, y: 17.6, w: 4.5, h: 3.8 }],
-        hatches: [{ x: 30, y: 29.5, w: 3, h: 2 }, { x: 6, y: 1.7, w: 3, h: 2 }]
+        shapes: [hullOutline(2, 11.5, 33, 33.5, 4, [[33, 11.5], [37.5, 12.3], [41, 14.3], [44.6, 16.9], [46.7, 19.7], [47.6, 22.5]]),
+          hullOutline(1.25, 2.7, 17.75, 9.5, 3), hullOutline(1.25, 35.5, 17.75, 42.3, 3)],
+        gaps: [{ x: 30, y: 10, w: 3, h: 3 }, { x: 6, y: 41, w: 3, h: 3 }, { x: 9, y: 8.5, w: 3, h: 4 }, { x: 9, y: 32.5, w: 3, h: 4 }, { x: 44, y: 20.5, w: 4.5, h: 4 }],
+        hatches: [{ x: 30, y: 32.5, w: 3, h: 2 }, { x: 6, y: 1.7, w: 3, h: 2 }]
       },
-      // the hold's cargo, stacked with aisles between (in inches): the way in from the main hatch, and the corridor's line through it, kept clear
-      cargo: [[19.6, 13], [22.8, 13], [26, 13], [19.6, 15.4], [22.8, 15.4], [26, 15.4],
-        [20.4, 23], [23.6, 23], [26.8, 23], [30, 23], [33.2, 23], [20.4, 25.8], [23.6, 25.8], [26.8, 25.8], [30, 25.8], [33.2, 25.8]].map(function (p) { return { x: p[0], y: p[1], w: 2.4, h: 1.6 }; }),
+      // the hold's cargo, stacked with aisles between (in inches): the way across from the engine room to the corridor, and from each pylon, kept clear
+      cargo: [12.6, 15.5, 18.4].reduce(function (a, x) {
+        return a.concat([13.6, 16, 18.4, 25, 27.4, 29.8].map(function (y) { return { x: x, y: y, w: 2.4, h: 1.6 }; }));
+      }, []),
       /* who comes in where, in cells (a 3" grid): the company on the ground outside a breach,
          6" deep, and nowhere else; the other side already in the rooms it holds */
       entries: {
-        cut: { A: [{ i: 9, j: 2, w: 3, h: 2 }, { i: 0, j: 13, w: 4, h: 2 }], B: [{ i: 7, j: 6, w: 5, h: 4 }, { i: 12, j: 5, w: 2, h: 1 }, { i: 12, j: 7, w: 2, h: 1 }, { i: 3, j: 7, w: 3, h: 2 }] },
-        follow: { A: [{ i: 9, j: 2, w: 3, h: 2 }], B: [{ i: 7, j: 6, w: 5, h: 4 }, { i: 12, j: 5, w: 2, h: 1 }, { i: 12, j: 7, w: 2, h: 1 }, { i: 3, j: 7, w: 3, h: 2 }] },
-        together: { A: [{ i: 9, j: 2, w: 3, h: 2 }], B: [{ i: 1, j: 11, w: 4, h: 2 }, { i: 1, j: 4, w: 2, h: 6 }, { i: 3, j: 7, w: 3, h: 2 }] }
+        cut: { A: [{ i: 9, j: 2, w: 3, h: 2 }, { i: 0, j: 14, w: 4, h: 2 }], B: [{ i: 3, j: 5, w: 4, h: 5 }, { i: 10, j: 8, w: 2, h: 2 }, { i: 13, j: 6, w: 2, h: 3 }] },
+        follow: { A: [{ i: 9, j: 2, w: 3, h: 2 }], B: [{ i: 3, j: 5, w: 4, h: 5 }, { i: 10, j: 8, w: 2, h: 2 }, { i: 13, j: 6, w: 2, h: 3 }] },
+        together: { A: [{ i: 9, j: 2, w: 3, h: 2 }], B: [{ i: 1, j: 12, w: 4, h: 2 }, { i: 1, j: 4, w: 2, h: 7 }, { i: 3, j: 5, w: 4, h: 5 }] }
       }
     },
 
