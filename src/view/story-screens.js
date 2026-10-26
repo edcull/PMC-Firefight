@@ -185,7 +185,8 @@
         h += '<div class="story-job">' + (o.who ? personView(o.who) : '') + '<b>' + esc(o.title) + '</b><small>' + esc(o.pay + ' kUC') +
           (o.against && sides[o.against] ? ' \u00b7 against ' + esc(sides[o.against].name) : '') + '</small>' + para(o.ask || o.text) +
           (o.catchUp ? '<small class="good">Offered to help the company catch up: it costs no time.</small>' : cost ? '<small>Taking it: ' + esc(cost) + '</small>' : '') +
-          (passed ? '<small class="warn">Passed up: ' + esc(passed) + '</small>' : '') +
+          // passing it up, as the story tells it (its passedText), or else what it does
+          (o.passedText ? '<small class="warn">' + esc(o.passedText) + '</small>' : passed ? '<small class="warn">Passed up: ' + esc(passed) + '</small>' : '') +
           '<button class="lnk" data-go="storyside" data-j="' + esc(o.id) + '">' + esc(o.take || 'Take the job') + '</button></div>';
       });
       return h + '</div>';

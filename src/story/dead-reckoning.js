@@ -362,7 +362,7 @@
           cost: [LATE_TIME], on: { success: [{ effects: [{ meter: 'kettle', add: -1 }] }], failure: [{}] } },
         { id: 'village', title: 'The Village', pay: 2, if: { played: 'mimics' },
           text: 'A Hashamer village, and Brass Ledger’s slavers on the ridge.', who: 'seven',
-          ask: 'Seven-Holds-the-Staff sends word, carefully, in your own language: Brass Ledger’s trucks are on the ridge above another village, and the cages are empty.', take: 'Go to the village.',
+          ask: 'Seven-Holds-the-Staff sends word, carefully, in your own language: Brass Ledger’s trucks are on the ridge above another village, and the cages are empty.', take: 'Go to the village.', passedText: 'If nobody comes, the Hashamer will know who did not.',
           scenario: 'meeting', tier: 'max-1', enemy: rival('kettle', { fill: { to: 0.6, from: ['recruits', 'irregulars'] } }),
           cost: [LATE_TIME], passed: [{ meter: 'understanding', add: -1 }],
           on: { success: [{ effects: [{ meter: 'understanding', add: 1 }] }], failure: [{ effects: [{ meter: 'understanding', add: -1 }] }] } },

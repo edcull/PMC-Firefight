@@ -945,7 +945,7 @@
     if (!st.side || st.side.node !== node.id || st.side.taken) return [];
     return st.side.offers.map(function (o) {
       var j = jobOf(def, o.job) || {};
-      return { id: o.job, title: j.title, text: j.text || '', ask: j.ask || null, take: j.take || null, who: j.who || null, against: j.enemy && j.enemy.side, pay: o.pay, catchUp: o.catchUp,
+      return { id: o.job, title: j.title, text: j.text || '', ask: j.ask || null, take: j.take || null, who: j.who || null, passedText: j.passedText || null, against: j.enemy && j.enemy.side, pay: o.pay, catchUp: o.catchUp,
         cost: o.catchUp ? null : j.cost || null, passed: j.passed || null };
     });
   }
