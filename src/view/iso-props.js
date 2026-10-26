@@ -50,6 +50,21 @@
         });
         if (spawn.length) terrain = terrain.concat(spawn);
       }
+      /* A wreck's breaches (a story's 'wreck' skin): outside each, on the ground the
+         company comes in over, the hatch that was cut out of her, fallen flat and
+         askew, and the cutting rig that did it standing off to one side. */
+      var yards = terrain.filter(function (q) { return q.outdoors; });
+      if (yards.length) terrain.forEach(function (r, ri) {
+        if (r.kind !== 'breached') return;
+        var horiz = r.w >= r.h, cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+        var onYard = function (x, y) { return yards.some(function (q) { return x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h; }); };
+        var out = (horiz ? [[0, -1], [0, 1]] : [[-1, 0], [1, 0]]).filter(function (d) { return onYard(cx + d[0] * 1.5, cy + d[1] * 1.5); })[0];
+        if (!out) return;
+        var br = rng(seed + ri * 313), side = br() < 0.5 ? -1 : 1, px = horiz ? 1 : 0, py = horiz ? 0 : 1;
+        props.push({ kind: 'hatchslab', x: cx + out[0] * 1.7 - px * side * 0.3, y: cy + out[1] * 1.7 - py * side * 0.3, w: 2.4, h: 1.7,
+          ang: (horiz ? 0 : Math.PI / 2) + (br() - 0.5) * 0.7, seed: (br() * 9999) | 0 });
+        props.push({ kind: 'cutrig', x: cx + out[0] * 2.4 + px * side * 2.1, y: cy + out[1] * 2.4 + py * side * 2.1, seed: (br() * 9999) | 0 });
+      });
       /* A station's solar arrays: out in the open space round it, one off each
          corner of the table wherever the dark is wide enough to hold one (drawn
          only: nothing stands out there). */

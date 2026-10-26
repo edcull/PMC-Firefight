@@ -946,6 +946,79 @@
           }
           break;
         }
+        /* A wreck's hatch, cut out of her hull and fallen flat (iso-props.js): a slab
+           of plating as thick as her hull, lying askew, a hazard band along the edge
+           that was its sill, its cut rim charred, slag still glowing on it. */
+        case 'hatchslab': {
+          var hs = rng(pr.seed), hl = lift || 0, th = a(0.45), ca = Math.cos(pr.ang), sa = Math.sin(pr.ang);
+          var hc = function (u, v) {
+            var q = toScreen(pr.x + ca * u * pr.w / 2 - sa * v * pr.h / 2, pr.y + sa * u * pr.w / 2 + ca * v * pr.h / 2);
+            return [q.x, q.y - hl];
+          };
+          var hb = [hc(-1, -1), hc(1, -1), hc(1, 1), hc(-1, 1)], ht = hb.map(function (c) { return [c[0], c[1] - th]; });
+          shadowBlob(g, { x: p.x + a(0.4), y: p.y - hl + a(0.3) }, a(2.0), a(0.8));
+          // its edges, the two that face the camera (the lower two on the screen)
+          for (var he = 0; he < 4; he++) {
+            var e0 = he, e1 = (he + 1) % 4;
+            if (hb[e0][1] + hb[e1][1] < hb[(he + 2) % 4][1] + hb[(he + 3) % 4][1]) continue;
+            poly(g, [hb[e0], hb[e1], ht[e1], ht[e0]], he % 2 ? BULK[1] : BULK[0]);
+          }
+          poly(g, ht, BULK[3]);
+          // the hull's ribs across it, and the sill's hazard band along one edge
+          for (var hr2 = 1; hr2 < 4; hr2++) {
+            var f = hr2 / 4, r0 = [ht[0][0] + (ht[3][0] - ht[0][0]) * f, ht[0][1] + (ht[3][1] - ht[0][1]) * f], r1 = [ht[1][0] + (ht[2][0] - ht[1][0]) * f, ht[1][1] + (ht[2][1] - ht[1][1]) * f];
+            edgeLine(g, r0, r1, BULK[2], 1);
+          }
+          for (var hz = 0; hz < 6; hz++) {
+            var t0 = hz / 6, t1 = (hz + 1) / 6, lo = 0.16;
+            var p0 = [ht[0][0] + (ht[1][0] - ht[0][0]) * t0, ht[0][1] + (ht[1][1] - ht[0][1]) * t0], p1 = [ht[0][0] + (ht[1][0] - ht[0][0]) * t1, ht[0][1] + (ht[1][1] - ht[0][1]) * t1];
+            var q0 = [p0[0] + (ht[3][0] - ht[0][0]) * lo, p0[1] + (ht[3][1] - ht[0][1]) * lo], q1 = [p1[0] + (ht[3][0] - ht[0][0]) * lo, p1[1] + (ht[3][1] - ht[0][1]) * lo];
+            poly(g, [p0, p1, q1, q0], hz % 2 ? '#1a1a16' : '#d9b13a');
+          }
+          // the cut: a charred rim all round, slag glowing here and there along it
+          for (var hk = 0; hk < 4; hk++) edgeLine(g, ht[hk], ht[(hk + 1) % 4], '#24160e', 2);
+          for (var hg = 0; hg < 7; hg++) {
+            var hkk = (hs() * 4) | 0, ht0 = ht[hkk], ht1 = ht[(hkk + 1) % 4], tt = hs();
+            dot(g, ht0[0] + (ht1[0] - ht0[0]) * tt, ht0[1] + (ht1[1] - ht0[1]) * tt, hs() < 0.5 ? '#e0862e' : '#ffb24a', 2);
+          }
+          break;
+        }
+        /* The cutting rig that opened her (iso-props.js): two gas bottles chained to
+           a low trolley, oxygen and fuel, their hoses run out to a torch left lying on
+           the ground with its tip still hot, a coil of spare hose, a toolbox. */
+        case 'cutrig': {
+          var cr = rng(pr.seed), cl = lift || 0;
+          shadowBlob(g, { x: p.x + a(0.5), y: p.y - cl + a(0.3) }, a(2.2), a(0.8));
+          box(g, { x: pr.x - 0.5, y: pr.y - 0.28, w: 1.0, h: 0.56, height: a(0.3), seed: pr.seed }, MACH, { roof: MACH[3], roofEdge: MACH[4], windows: null, lift: cl });
+          [['#3c6a50', '#5f9474', -0.28], ['#7a2a22', '#a8443a', 0.28]].forEach(function (b) {
+            var bq = toScreen(pr.x + b[2], pr.y), bx = bq.x, by = bq.y - cl - a(0.3), brw = a(0.4), bh = a(2.9);
+            rect(g, bx - brw, by - bh, brw * 2, bh, b[0]);
+            rect(g, bx - brw, by - bh, Math.max(1, brw * 0.6), bh, b[1]);
+            ellipse(g, bx, by - bh, brw, brw * 0.5, b[1]);
+            rect(g, bx - a(0.1), by - bh - a(0.35), a(0.2), a(0.35), '#9aa2a8');
+            rect(g, bx - brw, by - bh * 0.55, brw * 2, Math.max(1, a(0.1)), '#2a2a26');   // the chain
+          });
+          // the hoses, out over the ground to the torch
+          var tq = toScreen(pr.x + 1.4 + cr() * 0.4, pr.y + 0.6 + cr() * 0.3), t0 = [tq.x, tq.y - cl];
+          var hq0 = toScreen(pr.x - 0.28, pr.y), hq1 = toScreen(pr.x + 0.28, pr.y), mid = toScreen(pr.x + 0.8, pr.y + 0.9);
+          [[hq0, '#2e4a3a'], [hq1, '#5a1e18']].forEach(function (h) {
+            var s0 = [h[0].x, h[0].y - cl - a(3.2)], m0 = [mid.x, mid.y - cl];
+            edgeLine(g, s0, [h[0].x, h[0].y - cl - a(0.2)], h[1], 1);
+            edgeLine(g, [h[0].x, h[0].y - cl - a(0.2)], m0, h[1], 1);
+            edgeLine(g, m0, t0, h[1], 1);
+          });
+          // the torch, lying, its tip hot
+          edgeLine(g, t0, [t0[0] + a(1.0), t0[1] - a(0.25)], '#8a9298', 2);
+          dot(g, t0[0] + a(1.0), t0[1] - a(0.3), '#ffb24a', 2);
+          dot(g, t0[0] + a(1.1), t0[1] - a(0.35), '#fff0b8', 1);
+          // a coil of spare hose, and the toolbox
+          var cq = toScreen(pr.x - 1.1, pr.y + 0.7);
+          ellipseRing(g, cq.x, cq.y - cl, a(0.6), a(0.3), '#1e1e1a');
+          ellipseRing(g, cq.x, cq.y - cl - 1, a(0.48), a(0.24), '#4a4a40');
+          ellipseRing(g, cq.x, cq.y - cl - 2, a(0.36), a(0.18), '#5a5a4e');
+          box(g, { x: pr.x + 0.55, y: pr.y - 0.9, w: 0.55, h: 0.32, height: a(0.45), seed: pr.seed + 7 }, DOOR_RED, { roof: DOOR_RED[4], roofEdge: DOOR_RED[5], windows: null, lift: cl });
+          break;
+        }
         case 'drums': {
           var dr6 = rng(pr.seed), dl6 = lift || 0;
           shadowBlob(g, { x: p.x + a(0.6), y: p.y - dl6 + a(0.3) }, a(2.2), a(0.9));
