@@ -181,7 +181,7 @@
     'i.warm/follow': 'Follow where they point.',
     'i.warm/shield': 'Shield the case, and stop them calling to whatever they’re calling.',
     'i.warm/shield.why': 'The company can’t afford the shielding.',
-    'i.newsfeed': 'Rook Kestrel calls in person, from a ship full of cameras. Her newsfeed, the Meridian, wants pictures from the trail, and pays for them better than Halloran’s backer pays for anything.',
+    'i.newsfeed': 'Rook Kestrel calls in person, from a ship full of cameras. She wants pictures from the trail, and pays for them better than Halloran’s backer pays for anything.',
     'i.newsfeed/sell': 'Sell them pictures. Leave out anything that matters.',
     'i.newsfeed/refuse': 'Refuse. Nobody on the trail needs to see where the company has been.',
     'i.catalogue': 'Moss Kettering has not dropped out of the race; he is hedging it. Brass Ledger make money either way, and they are selling everything they have learned about the trail and the companies on it, in a neat catalogue, to anyone who pays. There is a page about {name} in it, and Kettering would like to buy a few more.',

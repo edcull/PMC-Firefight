@@ -53,6 +53,12 @@
         { who: 'kettering', text: 'They were paid to. It’s a job, not a grudge. You did yours, we did ours, and the client who lost is the one who’ll be unhappy. Hand him back and the account’s square. Keep him and it isn’t.' }
       ],
 
+      // (said straight after the choice: Brass Ledger's client, out of the man they left behind)
+      'c1.agent/interrogate': [
+        { who: 'kettleman', name: 'Kettering’s man', text: 'I watch doors! That’s all I do. The money? It comes through three companies nobody’s ever heard of, and all three bank with the Orrin Mercantile, on Kerrigan. Everyone in the crew knows it. Nobody’s meant to say it.' },
+        { who: 'reader', text: 'A bank on Kerrigan, paying to take Morrow’s log off me in the street. Don’t read anything into it, {commander:rank}. Brass Ledger don’t stay bought. Next time it will be whoever pays.' }
+      ],
+
       'c1.lost': [
         { who: 'kettering', text: 'No hard feelings, {commander:rank}. Your employer’s log is in my hold, and my hold lifts in an hour. That’s how auctions go, sometimes.' },
         { who: 'client', text: 'Kettering. Name a figure.' },
@@ -79,6 +85,13 @@
         { who: 'commander', text: 'The dig is ours, Nine. Pack up and go home.' },
         { who: 'nine', text: 'Your client doesn’t pay us. Ours does, and our client wants what’s in that ground. Turn your dropships round and nobody on your side gets shot. Come any closer and we start with your officers.' }
       ],
+      // (said straight after reading Wraith Section's orders)
+      'c2f.drop/read': [
+        { who: 'reader', text: 'These aren’t a company’s orders, {commander:rank}. Look at the header: the Admiralty, Office of Naval Intelligence. Wraith Section is the Navy with the badges taken off.' },
+        { who: 'commander', text: 'And the Navy wants the Quiet too.' },
+        { who: 'reader', text: 'The Navy wants whatever Morrow found before anybody else gets it. I would very much like to know how they heard of it.' }
+      ],
+
       'c2t.airlock': [
         { who: 'ops', text: 'Every docking arm is welded. Somebody’s aboard, and they’ve been aboard a while: there’s a heat plume off the north module. The survey office still lists Thule as theirs, unmanned. Nobody’s filed a salvage claim on it.' },
         { who: 'scav', text: 'You’re on our docking arm, ship. Thule’s ours now. Cast off, or we open up on your hull.' },
@@ -98,7 +111,7 @@
       'c3.contact': [
         { who: 'hal', text: 'Company! First come, first served, and we came first. The beacon’s our claim. You land one more boat on this island and I sink it.' },
         { who: 'commander', text: 'You’re cutting into something you don’t understand, Hal.' },
-        { who: 'hal', text: 'Don’t need to understand it to sell it. Nothing against you, it’s a buyer’s market. But my crew don’t get paid if you get the stone, so you come in, we kill you. Simple as that.' }
+        { who: 'hal', text: 'Don’t need to understand it to sell it. Nobody hired us, nobody tells us where to dig. We jump claims, and we sell to whoever buys. Nothing against you, it’s a buyer’s market. But my crew don’t get paid if you get the stone, so you come in, we kill you. Simple as that.' }
       ],
 
       'c3.sale': [
@@ -225,7 +238,20 @@
         { who: 'ops', text: 'Every newsfeed in the sector has it already. They’re calling them the Xenotripods. And every company on the trail is watching the same pictures we are.' }
       ],
 
-      // ---- The Double-Cross ----      // ---- The Double-Cross ----
+      // ---- between chapters ----
+      'i.newsfeed': [
+        { who: 'rook', text: 'Kestrel Air Cavalry flies for the Meridian, {commander:rank}, and the Meridian wants the first pictures of whatever is at the end of this. It pays very well for them.' },
+        { who: 'commander', text: 'Since when does a newsfeed hire gunships?' },
+        { who: 'rook', text: 'Since it changed hands last year. New owner, on Halcyon. Never comes to the office, and never asks what the pictures cost.' }
+      ],
+      // (said straight after buying Brass Ledger's catalogue: page one is their own client)
+      'i.catalogue/buy': [
+        { who: 'kettering', text: 'Page one, free with every copy: who’s paying us. The Orrin Mercantile Bank, on Kerrigan, behind three shell companies. They paid for this trip.' },
+        { who: 'commander', text: 'You’re selling out your own client?' },
+        { who: 'kettering', text: 'I’m selling a catalogue. The bank bought this trip, not the next one. Next time it will be whoever pays.' }
+      ],
+
+      // ---- The Double-Cross ----
       'dx.brief': [
         { who: 'daw', text: 'Commander Iselin Daw, the Ninth Lance. You’ll have heard of us. You won’t have heard that we work for Lucan Vane. Neither, it seems, have you: he is the money behind your Mr Halloran, and he doesn’t tell people anything.' },
         { who: 'commander', text: 'Nobody told me.' },

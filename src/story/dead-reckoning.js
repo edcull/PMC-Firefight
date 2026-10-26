@@ -61,8 +61,14 @@
     if (!talk) return def;
     def.talk = { sides: talk.sides || {}, battles: talk.battles || {}, allies: talk.allies || {}, parleys: talk.parleys || {} };
     Object.keys(talk.people || {}).forEach(function (k) { if (!def.people[k]) def.people[k] = talk.people[k]; });
-    Object.keys(talk.conversations || {}).forEach(function (id) {
-      (def.chapters || []).forEach(function (ch) { (ch.nodes || []).forEach(function (n) { if (n.id === id) n.talk = talk.conversations[id]; }); });
+    // (a conversation keyed `node/option` is what is said straight after that choice)
+    Object.keys(talk.conversations || {}).forEach(function (key) {
+      var id = key.split('/')[0], opt = key.split('/')[1];
+      (def.chapters || []).forEach(function (ch) { (ch.nodes || []).forEach(function (n) {
+        if (n.id !== id) return;
+        if (!opt) n.talk = talk.conversations[key];
+        else (n.options || []).forEach(function (o) { if (o.id === opt) o.said = talk.conversations[key]; });
+      }); });
     });
     return def;
   }

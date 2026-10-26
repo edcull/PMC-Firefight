@@ -130,7 +130,7 @@
       var v = S().view(E.camp), ch = chapterOf();
       if (!v) return '<h2>' + esc(d.name) + '</h2><p>The story has lost its place.</p>' + foot();
       var h = '<h2>' + esc(d.name) + (ch && ch.counts !== false ? ' — ' + esc(ch.title) : '') + '</h2>';
-      h += badgeLine(st) + meterBar() + foundOut(st, v.id);
+      h += badgeLine(st) + meterBar() + (v.said && v.said.length ? talkView(v.said) : '') + foundOut(st, v.id);
       // a chapter's card, on its first page
       var node = d._nodes[v.id];
       if (node && node._first && ch && !ch.shared) {

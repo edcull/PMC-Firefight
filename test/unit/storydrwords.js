@@ -93,7 +93,10 @@ Object.keys(TALK.conversations).forEach((id) => TALK.conversations[id].forEach((
 Object.keys(TALK.battles).forEach((id) => Object.keys(TALK.battles[id]).forEach((m) => TALK.battles[id][m].forEach((l) => said.push({ at: id + '/' + m, who: l.who }))));
 Object.keys(TALK.sides).forEach((id) => Object.keys(TALK.sides[id]).forEach((m) => TALK.sides[id][m].forEach((l) => said.push({ at: 'side ' + id + '/' + m, who: l.who }))));
 ok('everyone who speaks is one of the story’s people, with a face', said.every((x) => people[x.who] && people[x.who].face), said.filter((x) => !people[x.who]).map((x) => x.at + ':' + x.who).join(', '));
-ok('every conversation opens a page the story has', Object.keys(TALK.conversations).every((id) => dr._nodes[id] && dr._nodes[id].talk));
+ok('every conversation opens a page the story has, or follows a choice it has', Object.keys(TALK.conversations).every((id) => {
+  const [node, opt] = id.split('/');
+  return dr._nodes[node] && (opt ? (dr._nodes[node].options || []).some((o) => o.id === opt && o.said) : dr._nodes[node].talk);
+}));
 ok('every chapter of the first half opens on one', chapters.every((c) => c.nodes[0].talk && c.nodes[0].talk.length >= 3), chapters.filter((c) => !c.nodes[0].talk).map((c) => c.id).join(', '));
 const MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard', 'contact', 'vipdown', 'vipfled'];
 ok('every battle line is said at a moment the battle has', said.every((x) => !/\//.test(x.at) || MOMENTS.indexOf(x.at.split('/').pop()) >= 0 || TALK.conversations[x.at]));
@@ -505,6 +508,22 @@ console.log('\nThe star chart');
     ok('...the chart names Wraith Section’s once it is known', /Wraith Section.*for the Admiralty/.test(h2), h2.slice(h2.indexOf('chart-rivals'), h2.indexOf('chart-rivals') + 300));
     c2.story.revealed.client_wraith = false; c2.story.leading = 'kestrel';
     ok('...and says "client unknown" while it is not', /Kestrel Air Cavalry \(leading\) <small class="secret">client unknown/.test(global.PMCStoryChart.html(S.chart(c2), 'dead-reckoning')));
+  }
+  {
+    // a client found out is said aloud, not only written in the journal
+    const words = (id) => JSON.stringify([TALK.conversations[id] || [], TEXT[id] || '']);
+    const aloud = { kettle: ['c1.agent/interrogate', 'i.catalogue/buy'], wraith: ['c2f.drop/read'], reavers: ['c3.contact'], sable: ['c4.debrief'], kestrel: ['i.newsfeed'], lance: ['dx.brief'] };
+    const names = { kettle: /Orrin Mercantile/, wraith: /Naval Intelligence/, reavers: /Nobody hired us/, sable: /Halvorsen Mining Combine/, kestrel: /Meridian.*Halcyon/, lance: /work for Lucan Vane/ };
+    ok('every rival’s client is said aloud where it is found out', Object.keys(dr.clients).every((id) => aloud[id] && aloud[id].every((k) => names[id].test(words(k)))),
+      Object.keys(dr.clients).filter((id) => !aloud[id] || !aloud[id].every((k) => names[id].test(words(k)))).join(' '));
+    const c5 = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+    S.begin(c5, 'dead-reckoning', {});
+    c5.story.chapter = 'c1'; c5.story.node = 'c1.agent'; c5.story.queue = [{ after: 'c1.interlude' }];
+    S.choose(c5, 'interrogate');
+    const v5 = S.view(c5);
+    ok('...straight after the choice, on the next page', v5.said && v5.said.some((l) => l.who === 'kettleman' && /Orrin Mercantile/.test(l.text)) && v5.id !== 'c1.agent', JSON.stringify(v5.said));
+    S.proceed(c5);
+    ok('...and only there', !S.view(c5).said);
   }
   {
     // business until somebody loses: a rival beaten bears a grudge, in its words and at the table

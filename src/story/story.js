@@ -344,6 +344,8 @@
     var st = campaign.story, def = storyOf(campaign);
     depth = depth || 0;
     if (depth > 200) throw new Error('Story loop at ' + (node && node.id));
+    // (the page after a choice is the only one that hears what was said after it)
+    st.said = null;
     if (!node) { st.node = null; return; }
     st.node = node.id;
     // (a shared chapter only holds events used from elsewhere, the interludes': it is never started)
@@ -412,6 +414,10 @@
     if (node.side) out.sideJob = st.detour ? st.detour.job : null;
     if (node.type === 'ending') out.ending = st.ended;
     if (node.talk) out.talk = conversation(campaign, node.talk);
+    // what was said straight after the choice that brought the story here (an option's `said`)
+    var from = st.said && st.said.at === node.id && def._nodes[st.said.node];
+    var made = from && arr(from.options).filter(function (o) { return o.id === st.said.choice; })[0];
+    if (made && made.said) out.said = conversation(campaign, made.said);
     return out;
   }
 
@@ -443,7 +449,10 @@
     arr(node.options).forEach(function (x) { if (x !== o && x.passed && test(ctx, x.if)) apply(ctx, x.passed, lines); });
     if (o.battle) st.pending = mergeLevers(st.pending, o.battle);
     note(campaign, { node: node.id, choice: o.id, effects: lines });
-    return advance(campaign, o.next || node.next);
+    advance(campaign, o.next || node.next);
+    // (what is said straight after it, kept for the page it leads to)
+    if (o.said) st.said = { node: node.id, choice: o.id, at: st.node };
+    return view(campaign);
   }
 
   function mergeLevers(a, b) {
