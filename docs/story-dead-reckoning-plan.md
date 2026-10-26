@@ -65,9 +65,9 @@ and the stones are a lock as much as a map. He sold one on Kerrigan for fuel
 (*The Broker*'s lot), and died on Pell with one in his hand.
 
 **The backer was Lucan Vane**, and Vane is the **true client** behind most of
-the race: through proxies he funds Brass Ledger (the Orrin Mercantile Bank's
-shell companies), Sable Armour Group (the Halvorsen Mining Combine) and Kestrel
-Air Cavalry (the Meridian newsfeed, bought last year), and seeds them stones
+the race: through proxies he funds Sable Armour Group (the Halvorsen Mining
+Combine) and Kestrel Air Cavalry (the Meridian newsfeed, bought last year), and
+seeds them stones
 so many hands dig up the rest. **The company is hired by Halloran** himself: as
 far as the company knows at first, he is the client. He has a line open in
 his ear to a **backer** he will not name (`client`, "The backer", Vane's face
@@ -77,12 +77,14 @@ listens in the opening brief; he is first heard when things go wrong (Lot
 is sure Morrow is dead: his first tell). The meter is the backer's Trust. So every company on the trail, the player's included, works for a
 client it cannot name, and when it comes out that most of them are the same
 man, each has reason to question its own contract and, perhaps, to trust the
-others. The first half only hints: Brass Ledger's, Sable's and Kestrel's
-clients' money also runs through **Halcyon**, and the voice waves off the
+others. The first half only hints: Sable's and Kestrel's clients' money also
+runs through **Halcyon**, and the voice waves off the
 question of who paid for Morrow's first trip. The company learns its client's
 name when the second half opens (Halloran follows the money), or earlier from
-Daw, if the Double-Cross comes. Wraith Section (the Navy)
-and the Red Reavers are the only rivals he does not own. The second half
+Daw, if the Double-Cross comes. Brass Ledger (working for
+whoever pays, the Orrin Mercantile Bank of Kerrigan this time, and selling Vane
+what it learns like everyone else), Wraith Section (the Navy) and the Red
+Reavers are the rivals he does not own. The second half
 reveals it (*The Vault*'s receipts, *The Wreck*'s last entry).
 
 **Vane's intent, and Morrow's end** (settled after the dialogue pass). Vane

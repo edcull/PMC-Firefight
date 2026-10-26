@@ -414,7 +414,7 @@
         { id: 'c1r.debrief', type: 'debrief', text: '{if relic}The log is back.{/if}{if not relic}Brass Ledger lift off with the log.{/if}', events: [], next: 'c1.interlude' },
         { id: 'c1.agent', type: 'event', who: 'kettering', title: 'The agent', text: 'Brass Ledger’s man is in the company’s hands.', options: [
           { id: 'message', text: 'Let him go, with a message for his employer.', effects: [{ flag: 'kettle_contact' }, { meter: 'vane', add: -1 }] },
-          { id: 'interrogate', text: 'Interrogate him.', effects: [{ meter: 'intel', add: 1 }, { meter: 'kettle_trust', add: -1 }, { flag: 'kettle_contact' }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank, behind three shell companies, all registered on Halcyon.' }] },
+          { id: 'interrogate', text: 'Interrogate him.', effects: [{ meter: 'intel', add: 1 }, { meter: 'kettle_trust', add: -1 }, { flag: 'kettle_contact' }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank of Kerrigan, behind three shell companies. Next time it will be whoever pays.' }] },
           { id: 'authorities', text: 'Hand him to the port authorities.', effects: [{ meter: 'vane', add: 1 }, { meter: 'kettle', add: -1 }, { meter: 'kettle_trust', add: -2 }, { flag: 'kettle_burned' }, { flag: 'agent_jailed' }] }
         ] },
         interlude('c1.interlude', 'c2', 'The company lifts off Vesk with the log, and Morrow’s first heading.')
@@ -615,8 +615,10 @@
           { id: 'refuse', text: 'Refuse.', effects: [{ meter: 'lead', add: 1 }, { reveal: 'client_kestrel', journal: 'Kestrel Air Cavalry flies for the Meridian newsfeed, which wants the first pictures of whatever is at the end. The Meridian changed hands last year, to a buyer on Halcyon.' }] }
         ] },
         { id: 'i.catalogue', type: 'event', once: true, who: 'kettering', if: { all: [{ flag: 'kettle_contact' }, { not: { flag: 'kettle_burned' } }] }, title: 'Brass Ledger’s catalogue', text: 'They are selling what they know.', options: [
-          { id: 'buy', text: 'Buy.', cost: { kUC: 2 }, why: 'You can’t afford it.', effects: [{ meter: 'intel', add: 1 }, { meter: 'kettle_trust', add: 1 }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank, behind three shell companies, all registered on Halcyon.' }] },
-          { id: 'sell', text: 'Sell them yours.', effects: [{ kUC: 2 }, { meter: 'lead', add: -1 }, { meter: 'vane', add: -1 }] }
+          { id: 'buy', text: 'Buy.', cost: { kUC: 2 }, why: 'You can’t afford it.', effects: [{ meter: 'intel', add: 1 }, { meter: 'kettle_trust', add: 1 }, { reveal: 'client_kettle', journal: 'Brass Ledger’s client this time: the Orrin Mercantile Bank of Kerrigan, behind three shell companies. Next time it will be whoever pays.' }] },
+          { id: 'sell', text: 'Sell them yours.', effects: [{ kUC: 2 }, { meter: 'lead', add: -1 }, { meter: 'vane', add: -1 }] },
+          // (left alone, it sells to everyone else instead)
+          { id: 'ignore', text: 'Ignore it.', effects: [{ meter: 'theirs', add: 1 }] }
         ] },
         { id: 'i.jump', type: 'event', title: 'The jump', text: 'The drive is failing.', options: [
           { id: 'yard', text: 'Pay for the yard.', cost: { kUC: 1 }, why: 'You can’t afford it.', effects: [{ meter: 'loyalty', add: 1 }] },
