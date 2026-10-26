@@ -1974,20 +1974,22 @@
        far edge; with nobody left to keep with, he runs for it. */
     var KEEP_UP = 2;
     function ownWay(u) {
+      // hired guns on their own terms, unpaid: they hold where they stand (storybattle.js hiredHolds)
+      if (E.hiredHolds && E.hiredHolds(u)) return { kind: 'hold', x: u.x, y: u.y, own: 'holds its ground, unpaid' };
       if (!u.escort || !E.state.scen.goals) return null;
       var g = E.state.scen.goals(E.state, u)[0];
       if (!g) return null;
       var mine = E.state.units.filter(function (f) { return f.side === u.side && f !== u && !f.ally && f.alive && f.x >= 0 && !f.aboard && R.status(f) !== 'broken'; });
-      if (!mine.length) return { kind: 'move', x: g.x, y: g.y, own: true };
+      if (!mine.length) return { kind: 'move', x: g.x, y: g.y, own: 'makes for the far edge' };
       var lead = Math.max.apply(null, mine.map(function (f) { return f.x; }));
-      return { kind: 'move', x: Math.min(g.x, Math.max(u.x, lead + KEEP_UP)), y: g.y, own: true };
+      return { kind: 'move', x: Math.min(g.x, Math.max(u.x, lead + KEEP_UP)), y: g.y, own: 'makes for the far edge' };
     }
     function orderBehaviour(u, ord, far, rolled) {
       var b;
       if (ord.kind === 'move') b = far ? 'offensive' : rolled === 'flee' ? 'flee' : 'neutral';
       else if (ord.kind === 'attack') b = rolled === 'assault' ? 'assault' : far ? 'offensive' : rolled === 'flee' ? 'defensive' : rolled === 'defensive' ? 'neutral' : rolled;
       else b = far ? 'defensive' : rolled === 'flee' ? 'flee' : 'defensive';
-      logLine('ai', u.label + (ord.own ? ' \u2014 makes for the far edge' : ' \u2014 under orders: ' + E.orderWord(ord.kind).toLowerCase()) + (far ? ', on its way' : ', there') + ': ' + b + '.');
+      logLine('ai', u.label + (ord.own ? ' \u2014 ' + ord.own : ' \u2014 under orders: ' + E.orderWord(ord.kind).toLowerCase()) + (far ? ', on its way' : ', there') + ': ' + b + '.');
       return b;
     }
     // where an ally under orders makes for: the marker, or attacking there, the enemy nearest it

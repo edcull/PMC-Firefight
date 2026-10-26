@@ -664,6 +664,13 @@ each time, they want a share, and they cannot be trusted with the prize.
   (kUC, from the allies' order card). Once they have lost half their units, or
   with Trust at −2 or lower from the start, they **walk**: at the next End phase
   they leave the table, and the battle goes on without them.
+- **Brass Ledger's own terms.** Brass Ledger take no order on Trust: every order
+  costs 1 kUC on the spot, good for the turn it is paid in. Unpaid, they hold
+  their ground and shoot from there. Three turns with no paid order and, at the
+  End phase, they **turn**: their units are the enemy's from then on, in their
+  own colours (`allyTurned`), and after the battle `kettle_turned`: never hired
+  again. (Kestrel's Price starts at 1 kUC, the Reavers' at 1, Brass Ledger's at
+  2; Sable, who owes the company, at nothing.)
 - **They sell you out.** With Trust at −3 or lower and a rival bidding more,
   the company they were working for becomes their next job. The next battle
   against that rival has them in it (Readiness +1, the company's Intel −1: they

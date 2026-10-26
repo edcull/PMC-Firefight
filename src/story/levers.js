@@ -422,7 +422,9 @@
            walks off the table (storybattle.js hired). */
         hired: lv.allies && campaign.story.meters[lv.allies.side + '_trust'] != null ? {
           side: lv.allies.side, name: ((def.sides || {})[lv.allies.side] || {}).name || lv.allies.side,
-          trust: campaign.story.meters[lv.allies.side + '_trust']
+          trust: campaign.story.meters[lv.allies.side + '_trust'],
+          // (its terms, where it has its own: every order paid for, and how long it waits unpaid before it turns)
+          terms: lv.allies.terms || null
         } : null,
         units: units
       }

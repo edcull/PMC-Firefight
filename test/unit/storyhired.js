@@ -18,7 +18,9 @@ function ok(name, cond, note) {
 }
 const FOUNDING = ['recruits', 'enforcers', 'irregulars', 'mortarsection', 'lpv', 'unarmoured', 'rookie', 'lighteng'];
 // The Broker, with Brass Ledger hired for the takeover, at a Trust
-function hiredAt(trust) {
+/* (the Trust rules are the Reavers', Kestrel's and Sable's: Brass Ledger's own terms are struck out here
+   for them, and tested on their own below) */
+function hiredAt(trust, own) {
   const c = C.newCampaign({ mode: 'solo' });
   C.found(c.companies.A, FOUNDING, 'S2');
   S.begin(c, 'dead-reckoning', {});
@@ -29,6 +31,7 @@ function hiredAt(trust) {
   c.story.meters.kettle_trust = trust;
   const cfg = L.toCfg(c, { picks: C.pickForce(c.companies.A, 1, 1, null, { scenario: 'takeover' }), role: 'A' });
   cfg.mode = 'ai';
+  if (!own) cfg.story.hired.terms = null;
   const e = Engine.create();
   e.start(cfg);
   for (let i = 0; i < 8 && e.state().phase !== 'battle'; i++) {
@@ -109,6 +112,50 @@ console.log('\nThe bill');
   a.companies.A.kUC = b.companies.A.kUC = 20;
   S.resolveBattle(a, res(0)); S.resolveBattle(b, res(2));
   ok('what was paid on the spot comes out of the company’s money after the battle', a.companies.A.kUC - b.companies.A.kUC === 2, a.companies.A.kUC + ' / ' + b.companies.A.kUC);
+}
+
+console.log('\nBrass Ledger’s own terms');
+/* Every order paid for, 1 kUC, good for the turn it is paid in; unpaid, they
+   hold their ground; three turns with no paid order and, at the End phase, they
+   turn on the company: their units the enemy's, and never hired again. */
+{
+  const { cfg, e, s } = hiredAt(0, true);
+  const mine = s.units.filter((u) => u.ally && u.alive);
+  ok('the hire carries their terms: pay for every order, turn after three turns unpaid', cfg.story.hired.terms && cfg.story.hired.terms.payEach && cfg.story.hired.terms.turnAfter === 3);
+  e.intent('A', order);
+  ok('...even at Trust 0, an order is a demand', !s.allyOrder && s.allyDemand && s.allyDemand.kUC === 1);
+  e.intent('A', Object.assign({ pay: true }, order));
+  ok('...paid, it stands, and is billed', s.allyOrder && s.allyOrder.paid === s.turn && s.storyOutcome.allyPaid === 1 && s.hiredPaid === s.turn);
+  const K = global.PMCEngineStory({ R, get state() { return s; }, logLine() {}, pushRes() {}, isAI: () => false });
+  ok('...for this turn only: the next, it has lapsed, and unpaid they hold', K.allyOrder(mine[0]) && (s.turn++, !K.allyOrder(mine[0])) && K.hiredHolds(mine[0]));
+  s.turn--;
+}
+{
+  const { e, s } = hiredAt(0, true);
+  const mine = s.units.filter((u) => u.ally && u.alive);
+  const lines = [];
+  const K = global.PMCEngineStory({ R, get state() { return s; }, logLine(k, t) { lines.push(t); }, pushRes() {}, isAI: () => false, say() {} });
+  s.turn = 2; K.storyEndPhase();
+  ok('two turns unpaid: still on the company’s side', mine.every((u) => u.side === 'A' && u.ally));
+  s.turn = 3; K.storyEndPhase();
+  ok('three turns unpaid: at the End phase they turn, the enemy’s now, in their own colours', mine.filter((u) => u.alive).every((u) => u.side === 'B' && !u.ally && u.turned && u.paint === 'C') &&
+    s.storyOutcome.allyTurned === 'kettle' && lines.some((t) => /turn their guns on the company/.test(t)), lines.join(' / '));
+}
+{
+  const { e, s } = hiredAt(0, true);
+  const mine = s.units.filter((u) => u.ally && u.alive);
+  e.intent('A', Object.assign({ pay: true }, order));
+  const K = global.PMCEngineStory({ R, get state() { return s; }, logLine() {}, pushRes() {}, isAI: () => false, say() {} });
+  s.turn = 3; K.storyEndPhase();
+  ok('paid in turn 1: at the end of turn 3 they are still yours (two turns since)', mine.every((u) => u.side === 'A'));
+  s.turn = 4; K.storyEndPhase();
+  ok('...at the end of turn 4, three turns unpaid, they turn', mine.filter((u) => u.alive).every((u) => u.side === 'B'));
+}
+{
+  // after the battle: turned, and never on offer again
+  const { c } = hiredAt(0, true);
+  S.resolveBattle(c, { winner: 'B', units: [], story: { allyTurned: 'kettle' } });
+  ok('turned in a battle: Brass Ledger never hired again', c.story.flags.kettle_turned === true && !c.story.flags.kettle_hired);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed.');

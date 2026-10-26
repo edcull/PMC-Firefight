@@ -268,7 +268,9 @@
       // (the story's own word for why, where it gives one: the company's Loyalty)
       if (spec.levers.notes && spec.levers.notes.length) spec.levers.notes.forEach(function (n) { notes.push(n); });
       else if (spec.levers.suppressOwn) notes.push('Some of your squads start the battle pinned.');
-      if (spec.levers.allies) notes.push('Allies fight beside you.');
+      if (spec.levers.allies) notes.push(spec.levers.allies.terms && spec.levers.allies.terms.payEach
+        ? 'Allies fight beside you, on their own terms: every order costs 1 kUC, unpaid they hold their ground, and ' + (spec.levers.allies.terms.turnAfter || 3) + ' turns unpaid they turn on you.'
+        : 'Allies fight beside you.');
       if (spec.variant && spec.variant.target) notes.push('The target: ' + spec.variant.target + (spec.variant.capture ? ', to be taken alive.' : '.'));
       if (spec.variant && spec.variant.ambush) notes.push(spec.variant.ambush === 'player' ? 'You spring the ambush.' : 'You are walking into an ambush.');
       if (notes.length) h += '<ul class="story-notes">' + notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';

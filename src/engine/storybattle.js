@@ -542,6 +542,7 @@
       relicEndPhase(state, lines);
       contacts(state, lines);
       hiredWalk(state, lines);
+      hiredTurn(state, lines);
       waves(state, lines);
       if (lines.length) {
         lines.forEach(function (l) { E.logLine('note', l.text); });
@@ -693,6 +694,8 @@
     var ORDER_KINDS = { move: 'Move here', attack: 'Attack here', hold: 'Hold here' }, ORDER_REACH = 4;
     function allyOrder(u) {
       var o = E.state && E.state.allyOrder;
+      // (an order paid for by the turn lapses with it)
+      if (o && o.paid != null && o.paid !== E.state.turn) return null;
       return o && ORDER_KINDS[o.kind] && (!u || u.ally) ? o : null;
     }
     function orderReach() { return ORDER_REACH; }
@@ -709,8 +712,35 @@
        units, they walk: at the next End phase they leave the table. */
     var HIRED_PAY = 1;
     function hired() { var sty = story(); return sty && sty.hired || null; }
+    /* A hired company on its own terms (Brass Ledger): every order paid for on
+       the spot, good for the turn it is paid in; unpaid, it holds its ground; and
+       `turnAfter` turns with no paid order, at the End phase it turns on the
+       company, its units the enemy's from then on. */
+    function payEach() { var h = hired(); return !!(h && h.terms && h.terms.payEach); }
+    function hiredHolds(u) {
+      return !!(u && u.ally && !u.escort && payEach() && !allyOrder(u));
+    }
+    function hiredTurn(state, lines) {
+      var h = hired();
+      if (!h || !h.terms || !h.terms.turnAfter || state.hiredTurned) return;
+      if (state.turn - (state.hiredPaid || 0) < h.terms.turnAfter) return;
+      var mine = state.units.filter(function (u) { return u.side === 'A' && u.ally && !u.escort && u.alive && !u.walked; });
+      if (!mine.length) return;
+      state.hiredTurned = state.turn;
+      mine.forEach(function (u) {
+        // (in their own colours still, the enemy's from now)
+        u.side = 'B'; u.ally = false; u.turned = true;
+        u.label = u.name + ' [B]';
+      });
+      state.allyOrder = null; state.allyDemand = null;
+      if (!state.units.some(function (u) { return u.side === 'A' && u.ally && u.alive; })) state.allies = null;
+      lines.push({ side: 'B', text: h.name + ' have not been paid for ' + h.terms.turnAfter + ' turns. They turn their guns on the company.' });
+      state.storyOutcome = Object.assign({}, state.storyOutcome || {}, { allyTurned: h.side });
+      allyAnswer('turn');
+    }
     function demands(state) {
       var h = hired();
+      if (payEach()) return true;
       if (!h || h.trust > -1) return false;
       if (h.trust <= -3) return true;
       var d = state.hiredRoll;
@@ -760,9 +790,10 @@
         }
         state.storyOutcome = Object.assign({}, state.storyOutcome || {}, { allyPaid: ((state.storyOutcome || {}).allyPaid || 0) + HIRED_PAY });
         E.logLine('note', 'Paid ' + HIRED_PAY + ' kUC on the spot.');
+        state.hiredPaid = state.turn;
       }
       state.allyDemand = null;
-      state.allyOrder = { kind: it.kind, x: x, y: y, turn: state.turn, acted: false };
+      state.allyOrder = { kind: it.kind, x: x, y: y, turn: state.turn, acted: false, paid: payEach() ? state.turn : null };
       E.logLine('note', 'The allies’ orders: ' + ORDER_KINDS[it.kind].toLowerCase() + '.');
       allyAnswer(it.kind);
       return null;
@@ -775,7 +806,7 @@
     }
 
     return {
-      marketSkin: marketSkin, ambushWaits: ambushWaits, allyOrder: allyOrder, orderReach: orderReach, orderLocked: orderLocked, giveAllyOrder: giveAllyOrder, orderActed: orderActed,
+      marketSkin: marketSkin, ambushWaits: ambushWaits, allyOrder: allyOrder, hiredHolds: hiredHolds, payEach: payEach, orderReach: orderReach, orderLocked: orderLocked, giveAllyOrder: giveAllyOrder, orderActed: orderActed,
       orderWord: function (k) { return ORDER_KINDS[k] || ''; },
       storySeeded: storySeeded, storyTerrain: storyTerrain, storyFixed: storyFixed,
       storyUnits: storyUnits, storyPrelude: storyPrelude, storyFirstTurn: storyFirstTurn, allyActs: allyActs, targetCheck: targetCheck,

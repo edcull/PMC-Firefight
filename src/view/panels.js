@@ -1011,8 +1011,15 @@
           '<button class="lnk" data-act="allyorderclear">Never mind</button></div>';
         return h + '</div>';
       }
-      h += '<p class="sub">' + (o ? '<b>' + esc(ORDER_WORDS[o.kind][0]) + '</b> \u2014 ' + esc(ORDER_WORDS[o.kind][1])
-        : 'No orders: they use their own judgement.') + '</p>';
+      // hired on their own terms (Brass Ledger): every order paid for, unpaid they hold, and in time they turn
+      var hd = B.state.cfg.story && B.state.cfg.story.hired, terms = hd && hd.terms;
+      var live = o && !(o.paid != null && o.paid !== B.state.turn);
+      h += '<p class="sub">' + (live ? '<b>' + esc(ORDER_WORDS[o.kind][0]) + '</b> \u2014 ' + esc(ORDER_WORDS[o.kind][1])
+        : terms && terms.payEach ? 'No paid orders: they hold where they are.' : 'No orders: they use their own judgement.') + '</p>';
+      if (terms && terms.payEach) {
+        var left = terms.turnAfter ? terms.turnAfter - (B.state.turn - (B.state.hiredPaid || 0)) : null;
+        h += '<p class="hint">Every order costs ' + 1 + ' kUC, for this turn only.' + (left != null ? (left <= 0 ? ' Pay this turn, or they turn on you at the End phase.' : ' Unpaid for ' + (terms.turnAfter - left) + ' turn' + (terms.turnAfter - left === 1 ? '' : 's') + ': they turn on you after ' + terms.turnAfter + '.') : '') + '</p>';
+      }
       if (locked) h += '<p class="hint">They are acting on it. It can be changed next turn.</p>';
       else {
         h += '<div class="orderbtns">' + Object.keys(ORDER_WORDS).map(function (k) {

@@ -134,7 +134,8 @@
 
   /* ---------- the hired guns: allies at a price ---------- */
   var HIRE = {
-    kettle: { side: 'kettle', faction: 'pmc', archetype: 'swarm', core: ['recruits', 'irregulars'] },
+    // (Brass Ledger's terms: every order paid for; unpaid they hold their ground; three turns unpaid and they turn)
+    kettle: { side: 'kettle', faction: 'pmc', archetype: 'swarm', core: ['recruits', 'irregulars'], terms: { payEach: true, turnAfter: 3 } },
     kestrel: { side: 'kestrel', faction: 'pmc', archetype: 'aircav', core: ['lapc', 'recruits'] },
     reavers: { side: 'reavers', faction: 'pmc', archetype: 'shock', core: ['enforcers', 'irregulars'] },
     sable: { side: 'sable', faction: 'pmc', archetype: 'armour', core: ['ecobats', 'enforcers'] }
@@ -271,7 +272,7 @@
       lance: { start: 2, min: 0, max: 10, name: 'The Ninth Lance', uses: ['force'], twoWay: [] },
       // the hired guns: what each costs, and how far each can be trusted
       kettle_price: { start: 2, min: 0, max: 10, name: 'Brass Ledger’s price', twoWay: [] },
-      kestrel_price: { start: 0, min: 0, max: 10, name: 'Kestrel’s price', twoWay: [] },
+      kestrel_price: { start: 1, min: 0, max: 10, name: 'Kestrel’s price', twoWay: [] },
       reavers_price: { start: 1, min: 0, max: 10, name: 'The Reavers’ price', twoWay: [] },
       sable_price: { start: 0, min: 0, max: 10, name: 'Sable’s price', twoWay: [] },
       kettle_trust: { start: 0, name: 'Brass Ledger’s trust', twoWay: [] },

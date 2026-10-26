@@ -428,7 +428,9 @@
       var ok = test(ctx, o.if) && canPay(ctx, o.cost);
       // (a cost read from a meter is shown as what it is now)
       var cost = o.cost ? {} : null;
-      Object.keys(o.cost || {}).forEach(function (k) { cost[k] = amountOf(ctx, o.cost[k]); });
+      Object.keys(o.cost || {}).forEach(function (k) { var n = amountOf(ctx, o.cost[k]); if (n) cost[k] = n; });
+      // (and one that comes to nothing is no cost at all)
+      if (cost && !Object.keys(cost).length) cost = null;
       return { id: o.id, text: o.text, ok: ok, why: ok ? null : (o.why || 'Not open to you now.'), extreme: !!o.extreme, cost: cost };
     });
   }
@@ -658,7 +660,7 @@
     if (!v) return null;
     var who = (def.people || {})[v.who] || {}, out = { who: v.who, name: who.name || v.who, role: who.role || '' };
     // (and, for a hired company, what it says asking to be paid for an order, and walking off the table)
-    ['report', 'move', 'attack', 'hold', 'clear', 'demand', 'walk'].forEach(function (k) { out[k] = arr(v[k]).map(function (t) { return render(campaign, t); }); });
+    ['report', 'move', 'attack', 'hold', 'clear', 'demand', 'walk', 'turn'].forEach(function (k) { out[k] = arr(v[k]).map(function (t) { return render(campaign, t); }); });
     return out;
   }
 
@@ -820,6 +822,9 @@
       var paid = result.story && result.story.allyPaid;
       var coA = campaign.companies && campaign.companies.A;
       if (paid && coA) coA.kUC = Math.max(0, (coA.kUC || 0) - paid);
+      // hired guns who turned on the company in the battle: never hired again
+      var turned = result.story && result.story.allyTurned;
+      if (turned) { st.flags[turned + '_turned'] = true; st.flags[turned + '_hired'] = false; }
       // a parley agreed: the terms it was agreed on, as the story's flags
       arr(result.story && result.story.terms).forEach(function (t) { st.flags[t] = true; });
       keepRoll(campaign, result);
