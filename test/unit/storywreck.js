@@ -78,7 +78,7 @@ console.log('\nThe ship');
   ok('...a curved outer hull round her body and each nacelle', hull && hull.shapes.length === 3 && hull.shapes.every((p) => p.length > 12));
   const mirror = (sh) => sh.map((p) => [p[0], 45 - p[1]]), near = (a, b) => a.every((p) => b.some((q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.05));
   ok('...her hull the same either side: her body, and the one nacelle the other’s mirror, on pylons as long', MAP.hull && near(mirror(MAP.hull.shapes[0]), MAP.hull.shapes[0]) &&
-    near(mirror(MAP.hull.shapes[1]), MAP.hull.shapes[2]) && rows.filter((r) => /^\.\.c\.c\./.test(r)).length === 4);
+    near(mirror(MAP.hull.shapes[1]), MAP.hull.shapes[2]) && rows.filter((r) => /^\.\.c\.c\./.test(r)).length === 2);
   const mid = (b) => [b.i * 3, b.j * 3];
   ok('...a sealed hatch opposite each breach, on her far side', hull && hull.hatches.length === 2 &&
     MAP.compound.breaches.every((b) => { const [bx, by] = mid(b); return hull.hatches.some((h) => Math.abs(h.x + h.w / 2 - bx) < 4 && Math.abs(h.y + h.h / 2 - by) > 12); }),
@@ -87,7 +87,7 @@ console.log('\nThe ship');
 
 console.log('\nWho comes in where');
 const outsideOf = (s) => (b) => s.terrain.some((t) => t.outdoors && b.x + b.w / 2 >= t.x && b.x + b.w / 2 <= t.x + t.w && b.y + b.h / 2 >= t.y && b.y + b.h / 2 <= t.y + t.h);
-const nacelleYard = (b) => b.y >= 41.9 && b.x < 12.1;
+const nacelleYard = (b) => b.y >= 38.9 && b.x < 12.1;
 {
   const { s } = started(at('cut'));
   const A = s.sc.entry.A, B = s.sc.entry.B, outside = outsideOf(s);

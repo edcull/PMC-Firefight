@@ -309,9 +309,9 @@
       name: 'The wreck of Morrow’s ship, Pell', skin: 'wreck',
       compound: shipPlan([
         '................',
+        '................',
         '.NNNN...........',
-        '.NNNN...........',
-        '..c.c....ooo....',
+        '.NNNN....ooo....',
         '..c.c....ooo....',
         '.EEHHHHQQQSS....',
         '.EEHHHHQQQSSBBB.',
@@ -319,15 +319,15 @@
         '.RRGGGGMMMIIBBB.',
         '.RRGGGGMMMII....',
         '..c.c...........',
-        '..c.c...........',
         '.nnnn...........',
         '.nnnn...........',
         'oooo............',
-        'oooo............'
+        'oooo............',
+        '................'
       ], [[1, 7, 2, 7], [1, 6, 1, 7], [1, 8, 1, 7], [4, 6, 4, 7], [4, 8, 4, 7], [6, 8, 6, 7], [6, 7, 7, 7], [7, 7, 8, 7], [9, 9, 10, 9], [8, 6, 8, 7], [11, 6, 11, 7], [8, 8, 8, 7], [11, 8, 11, 7], [11, 7, 12, 7], [14, 7, 15, 7], [9, 5, 10, 5],
-        [2, 2, 2, 3], [4, 2, 4, 3], [2, 4, 2, 5], [4, 4, 4, 5], [2, 9, 2, 10], [4, 9, 4, 10], [2, 11, 2, 12], [4, 11, 4, 12]],
+        [2, 3, 2, 4], [4, 3, 4, 4], [2, 4, 2, 5], [4, 4, 4, 5], [2, 9, 2, 10], [4, 9, 4, 10], [2, 10, 2, 11], [4, 10, 4, 11]],
       // the breaches: the main hatch, through the top of her hull into the forward store, and the split, through the starboard nacelle's outer side
-      [[10, 4, 10, 5], [2, 13, 2, 14]],
+      [[10, 4, 10, 5], [2, 12, 2, 13]],
       { E: 'Port engine room', R: 'Starboard engine room', K: 'Engine control', L: 'Bulkhead lock', H: 'Port hold', G: 'Starboard hold', Q: 'Crew quarters', S: 'Forward store', M: 'Mess', I: 'Infirmary', B: 'Bridge', N: 'Port nacelle', n: 'Starboard nacelle' }),
       /* Her outer hull, curved about the rooms (in inches): her body, its stern rounded and
          its bow drawn out to a long point, and each nacelle; the plating between the hull and
@@ -335,12 +335,12 @@
          pylons or the gangway at her bow run through it; a sealed hatch opposite each breach. */
       hull: {
         shapes: [hullOutline(1, 14.5, 33, 30.5, 4, [[33, 14.5], [39, 15.3], [42, 16.2], [44.5, 17.3], [46.7, 19.6], [47.6, 22.5]]),
-          hullOutline(1.25, 2.7, 17.75, 9.5, 3), hullOutline(1.25, 35.5, 17.75, 42.3, 3)],
-        gaps: [{ x: 30, y: 13, w: 3, h: 3 }, { x: 6, y: 41, w: 3, h: 3 }, { x: 6, y: 8.5, w: 3, h: 7 }, { x: 12, y: 8.5, w: 3, h: 7 },
-          { x: 6, y: 29.5, w: 3, h: 7 }, { x: 12, y: 29.5, w: 3, h: 7 }, { x: 44, y: 20.5, w: 4.5, h: 4 }],
-        hatches: [{ x: 30, y: 29.5, w: 3, h: 2 }, { x: 6, y: 1.7, w: 3, h: 2 }],
+          hullOutline(1.25, 5.7, 17.75, 12.5, 3), hullOutline(1.25, 32.5, 17.75, 39.3, 3)],
+        gaps: [{ x: 30, y: 13, w: 3, h: 3 }, { x: 6, y: 38, w: 3, h: 3 }, { x: 6, y: 11.5, w: 3, h: 4 }, { x: 12, y: 11.5, w: 3, h: 4 },
+          { x: 6, y: 29.5, w: 3, h: 4 }, { x: 12, y: 29.5, w: 3, h: 4 }, { x: 44, y: 20.5, w: 4.5, h: 4 }],
+        hatches: [{ x: 30, y: 29.5, w: 3, h: 2 }, { x: 6, y: 4.7, w: 3, h: 2 }],
         // (each breach, where a battle leaves it sealed: the gap closed, and a hatch shut in the hull there)
-        sealing: [{ gap: 0, hatch: { x: 30, y: 13.5, w: 3, h: 2 } }, { gap: 1, hatch: { x: 6, y: 41.3, w: 3, h: 2 } }]
+        sealing: [{ gap: 0, hatch: { x: 30, y: 13.5, w: 3, h: 2 } }, { gap: 1, hatch: { x: 6, y: 38.3, w: 3, h: 2 } }]
       },
       // the hold's cargo, stacked with aisles between (in inches): the way across from the engine room to the corridor, and in from the pylons, kept clear
       cargo: [9.5, 15.4, 18.3].reduce(function (a, x) {
@@ -350,10 +350,10 @@
          6" deep, and nowhere else; the other side already in the rooms it holds */
       entries: {
         // cutting a second way in: the company by the split it cut, Sable at the main hatch she cut, forward
-        cut: { A: [{ i: 0, j: 14, w: 4, h: 2 }], B: [{ i: 9, j: 3, w: 3, h: 2 }, { i: 7, j: 5, w: 5, h: 2 }] },
+        cut: { A: [{ i: 0, j: 13, w: 4, h: 2 }], B: [{ i: 9, j: 3, w: 3, h: 2 }, { i: 7, j: 5, w: 5, h: 2 }] },
         // following Sable in by the split: the main hatch never cut through, and her people anywhere aboard
-        follow: { A: [{ i: 0, j: 14, w: 4, h: 2 }], B: [{ i: 1, j: 5, w: 11, h: 2 }, { i: 1, j: 8, w: 11, h: 2 }, { i: 12, j: 6, w: 3, h: 3 }], sealed: [0] },
-        together: { A: [{ i: 9, j: 3, w: 3, h: 2 }], B: [{ i: 1, j: 12, w: 4, h: 2 }, { i: 1, j: 8, w: 2, h: 2 }, { i: 3, j: 8, w: 4, h: 2 }] }
+        follow: { A: [{ i: 0, j: 13, w: 4, h: 2 }], B: [{ i: 1, j: 5, w: 11, h: 2 }, { i: 1, j: 8, w: 11, h: 2 }, { i: 12, j: 6, w: 3, h: 3 }], sealed: [0] },
+        together: { A: [{ i: 9, j: 3, w: 3, h: 2 }], B: [{ i: 1, j: 11, w: 4, h: 2 }, { i: 1, j: 8, w: 2, h: 2 }, { i: 3, j: 8, w: 4, h: 2 }] }
       }
     },
 
