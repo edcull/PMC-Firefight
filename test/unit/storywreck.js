@@ -68,7 +68,8 @@ for (const [opt, n, why] of [['cut', 2, 'cutting a second way in: the main hatch
   const A = s.sc.entry.A, B = s.sc.entry.B;
   ok(why + ' (' + n + ' way' + (n > 1 ? 's' : '') + ' in)', A.length === n && A.every((b) => b.x === 0));
   ok('...and the other side already inside her: its ground her rooms, not a doorway', B.every((b) => b.x >= 15 && b.w * b.h >= 9) &&
-    s.units.filter((u) => u.side === 'B' && u.x >= 0).every((u) => inBox(u, B)), cfg.story.hired ? 'Brass Ledger' : 'Sable');
+    // (any that has had its first activation already, the other side having the initiative, has moved off)
+    s.units.filter((u) => u.side === 'B' && u.x >= 0 && !u.activated).every((u) => inBox(u, B)), cfg.story.hired ? 'Brass Ledger' : 'Sable');
 }
 
 console.log('\nSable inside her');

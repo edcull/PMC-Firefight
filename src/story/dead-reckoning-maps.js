@@ -252,7 +252,8 @@
 
     /* The Wreck of the Morrow, on her side in a gully on Pell: a compound laid
        by hand in the shape of the ship, stern to the company's edge and her bow
-       stepped down to a forward hatch on the far one, every cell inside her hull
+       stepped down to a forward hatch on the far one, a slim hull with an engine
+       nacelle out on a pylon to either side of her stern, every cell inside her
        a room or a passage. Its skin is the wreck's (`wreck`, engine.js): the
        solid round her is Pell's ground, outside, the floors walled in by her
        hull where they meet it. Two ways in at the stern, the main hatch Sable cut
@@ -265,31 +266,31 @@
       name: 'The wreck of Morrow’s ship, Pell', skin: 'wreck',
       compound: shipPlan([
         '................',
-        '................',
-        '................',
-        '.ccccccccccc....',
-        '.EEEcQQRRGGc....',
-        'cEEEcHHHHGGc....',
-        '.EEEcHHHHGGcFF..',
-        '.EEEcHHHHccccccc',
+        '.NNNN...........',
+        '.NNNN...........',
+        '...c............',
+        '.cccccccccccc...',
+        'cEEEcHHHHGGcFF..',
+        '.EEEcHHHHGGccccc',
         '.EEEcHHHHMMcBB..',
-        '.EEEcHHHHMMcBB..',
-        'cEEEcHHHHMMc....',
-        '.EEEcSSTTMMc....',
-        '.ccccccccccc....',
+        'cEEEcHHHHMMcBB..',
+        '.cccccccccccc...',
+        '...c............',
+        '.nnnn...........',
+        '.nnnn...........',
         '................',
         '................',
         '................'
-      ], [[2, 3, 2, 4], [3, 7, 4, 7], [2, 11, 2, 12], [5, 3, 5, 4], [8, 3, 8, 4], [10, 3, 10, 4], [9, 6, 9, 7], [4, 6, 5, 6], [4, 9, 5, 9], [8, 7, 9, 7],
-        [9, 8, 9, 7], [10, 10, 11, 10], [5, 12, 5, 11], [8, 12, 8, 11], [12, 6, 12, 7], [12, 8, 12, 7], [11, 9, 12, 9]],
+      ], [[2, 4, 2, 5], [2, 8, 2, 9], [3, 6, 4, 6], [4, 7, 5, 7], [6, 8, 6, 9], [10, 4, 10, 5], [11, 6, 10, 6], [11, 7, 10, 7], [9, 9, 9, 8],
+        [12, 4, 12, 5], [13, 5, 13, 6], [12, 6, 12, 7], [11, 8, 12, 8], [3, 2, 3, 3], [3, 10, 3, 11]],
       // (the main hatch and the split: cut through, no door left in either)
-      [[0, 5, 1, 5], [0, 10, 1, 10]],
-      { E: 'Engine room', H: 'Cargo hold', B: 'Bridge', M: 'Infirmary', G: 'Galley', Q: 'Crew quarters', R: 'Crew quarters', S: 'Stores', T: 'Stores', F: 'Forward store' }),
+      [[0, 5, 1, 5], [0, 8, 1, 8]],
+      { E: 'Engine room', H: 'Cargo hold', G: 'Galley', M: 'Infirmary', F: 'Forward store', B: 'Bridge', N: 'Port nacelle', n: 'Starboard nacelle' }),
       // who comes in where, in cells (a 3" grid): the main hatch, the split, and the rooms a side already holds
       entries: {
-        cut: { A: [{ i: 0, j: 5, w: 1, h: 1 }, { i: 0, j: 10, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 6 }, { i: 9, j: 4, w: 2, h: 3 }, { i: 9, j: 8, w: 2, h: 4 }, { i: 12, j: 8, w: 2, h: 2 }] },
-        follow: { A: [{ i: 0, j: 5, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 6 }, { i: 9, j: 4, w: 2, h: 3 }, { i: 9, j: 8, w: 2, h: 4 }, { i: 12, j: 8, w: 2, h: 2 }] },
-        together: { A: [{ i: 0, j: 5, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 6 }, { i: 5, j: 11, w: 4, h: 1 }, { i: 9, j: 8, w: 2, h: 4 }] }
+        cut: { A: [{ i: 0, j: 5, w: 1, h: 1 }, { i: 0, j: 8, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 4 }, { i: 9, j: 5, w: 2, h: 2 }, { i: 9, j: 7, w: 2, h: 2 }, { i: 12, j: 7, w: 2, h: 2 }] },
+        follow: { A: [{ i: 0, j: 5, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 4 }, { i: 9, j: 5, w: 2, h: 2 }, { i: 9, j: 7, w: 2, h: 2 }, { i: 12, j: 7, w: 2, h: 2 }] },
+        together: { A: [{ i: 0, j: 5, w: 1, h: 1 }], B: [{ i: 5, j: 5, w: 4, h: 4 }, { i: 9, j: 5, w: 2, h: 2 }, { i: 9, j: 7, w: 2, h: 2 }] }
       }
     },
 
