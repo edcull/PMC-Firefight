@@ -557,12 +557,10 @@
 
     /* The Hollin Shelf on Corvin: a high plateau in thin air, and Kestrel's
        convoy caught halfway over it (Intercept: Claim Jumpers). A dirt track
-       winds across from the east edge to the west, between the outcrops, to
-       Kestrel's landing pad at its western end; at its middle it squeezes
-       between a boulder field and a ravine, a ridge stands over its western
-       end, scree and boulders lie along it for cover, and the shelf's southern
-       lip is an ice crevasse. Hired to see Kestrel's cars across (Convoy), the
-       battle lays it the other way about, so the pad is where they are going. */
+       winds across from the east edge to the west, between the outcrops; at
+       its middle it squeezes between a boulder field and a ravine, a ridge
+       stands over its western end, low hills and boulders lie along it for
+       cover, and the shelf's southern lip is an ice crevasse. */
     hollin: {
       name: 'The Hollin Shelf, Corvin', planet: 'mountain',
       pieces: [
@@ -574,9 +572,9 @@
         N('hill', 4, 16, 9, 6, 'long'), N('rocks', 17, 9, 5, 5, 'blob'), N('rocks', 37, 9, 6, 5, 'blob'),
         N('hill', 8, 36, 9, 7, 'lobed'), N('crater', 18, 31, 5, 4, 'blob'), N('rocks', 38, 31, 6, 6, 'lobed'),
         N('rocks', 26, 39, 5, 5, 'blob'),
-        // Kestrel's landing pad at the track's western end, where the convoy is making for
-        Object.assign(P(0, 22.5, 7, 11), { pad: true }),
-        // scree and boulders along the track, cover for whoever lies in wait by it
+        // low hills and boulders along the track, cover for whoever lies in wait by it
+        N('hill', 9, 30, 6, 4, 'long'), N('hill', 22.5, 13, 5, 4, 'long'), N('hill', 24, 31, 5, 4, 'lobed'),
+        N('hill', 37.5, 15.5, 4.5, 4, 'blob'), N('hill', 38, 27, 4, 3, 'long'),
         N('rocks', 14, 18, 3, 2.5, 'blob'), N('rocks', 20, 26.5, 4, 3, 'lobed'), N('rocks', 33, 30, 3.5, 2.5, 'blob'),
         N('rocks', 34, 17, 3, 2.5, 'blob'), N('rocks', 30, 4, 4, 3, 'lobed'), N('rocks', 19, 40, 3.5, 2.5, 'blob'),
         // the shelf's southern lip: a crevasse in the ice

@@ -727,8 +727,8 @@
         before: { id: 'claim.scoop', who: 'rook', title: 'The scoop', text: 'Kestrel got there first.', options: [
           { id: 'race', text: 'Race them in.', battle: { role: 'attacker', readiness: -1 } },
           { id: 'pictures', text: 'Offer them the pictures.', battle: { intel: 1 }, effects: [{ flag: 'kestrel_deal' }, { meter: 'lead', add: -1 }] },
-          // hired, Kestrel's cars are the company's to get across, to her pad (the map laid the other way about), and the Reavers are the ones jumping the claim
-          Object.assign(hireOption('kestrel', 'Ride shotgun for Kestrel, for a share.'), { battle: { allies: HIRE.kestrel, scenario: 'convoy', edge: 'east', enemy: rival('reavers') },
+          // hired, Kestrel's cars are the company's to get across, and the Reavers are the ones jumping the claim
+          Object.assign(hireOption('kestrel', 'Ride shotgun for Kestrel, for a share.'), { battle: { allies: HIRE.kestrel, scenario: 'convoy', enemy: rival('reavers') },
             effects: hireOption('kestrel').effects.concat([{ flag: 'claim_escort', local: true }]) })
         ] },
         battle: { scenario: 'intercept', map: 'hollin', planet: 'mountain', variant: { cars: 'Kestrel ground car' }, enemy: rival('kestrel', { drop: ['beat_kestrel'] }),

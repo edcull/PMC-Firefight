@@ -326,17 +326,17 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
   const ps = MAPS.hollin.pieces, road = ps.find((p) => p.kind === 'road' && p.poly);
   ok('Claim Jumpers: an Intercept, Kestrel’s cars the convoy, making for the company’s own edge',
     used('hollin').every((n) => n.scenario === 'intercept') && SC.SCENARIOS.intercept.story);
-  ok('...a dirt track winding over the shelf from edge to edge, between a boulder field and a ravine, to Kestrel’s landing pad at its western end (the company’s own edge), and no cache shelter',
+  ok('...a dirt track winding over the shelf from edge to edge, between a boulder field and a ravine, hills and boulders along it for cover, and no cache shelter or landing pad at either end',
     !!road && !road.paved && R.inPoly(1, 28, road.poly) && R.inPoly(47, 20.5, road.poly) && R.inPoly(24, 20.5, road.poly) &&
     ps.some((p) => p.kind === 'ravine' && p.x < 32 && p.x + p.w > 30 && p.y > 24 && p.y < 28) && ps.some((p) => p.kind === 'rocks' && p.x < 32 && p.x + p.w > 30 && p.y + p.h > 18 && p.y + p.h < 21) &&
-    !ps.some((p) => p.kind === 'ruins' || p.kind === 'building') && ps.filter((p) => p.pad).length === 1 && ps.some((p) => p.pad && p.x === 0 && R.inPoly(3, 28, road.poly)));
+    !ps.some((p) => p.kind === 'ruins' || p.kind === 'building' || p.pad) && ps.filter((p) => p.kind === 'hill').length >= 5 && ps.filter((p) => p.kind === 'rocks').length >= 10);
 }
 {
   /* Hiring the rival a battle is fought against changes who is fought, not just who stands beside the company. */
   const opt = (ev, id) => dr._nodes[ev].options.find((o) => o.id === id);
   const k = opt('claim.scoop', 'hire_kestrel'), sb = opt('wreck.hatch', 'hire_sable');
-  ok('Claim Jumpers, Kestrel hired: the company rides shotgun on Kestrel’s cars (a Convoy) towards her pad, the shelf laid the other way about, and the Red Reavers jump the claim',
-    k.hire === 'kestrel' && k.battle.allies.side === 'kestrel' && k.battle.scenario === 'convoy' && k.battle.edge === 'east' && k.battle.enemy.side === 'reavers' &&
+  ok('Claim Jumpers, Kestrel hired: the company rides shotgun on Kestrel’s cars (a Convoy), and the Red Reavers jump the claim',
+    k.hire === 'kestrel' && k.battle.allies.side === 'kestrel' && k.battle.scenario === 'convoy' && k.battle.enemy.side === 'reavers' &&
     k.effects.some((e) => e.flag === 'claim_escort' && e.local) && k.effects.some((e) => e.flag === 'kestrel_hired'));
   ok('The Wreck, Sable called in: in together, against a Brass Ledger salvage crew already inside',
     sb.hire === 'sable' && sb.battle.allies.side === 'sable' && sb.battle.enemy.side === 'kettle' && sb.effects.some((e) => e.flag === 'wreck_together' && e.local));
