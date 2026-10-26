@@ -1969,12 +1969,18 @@
        fights from where it stands, Attack takes the fight to the enemy, and Hold
        digs in. Only a unit running for its life (the roll) forgets the order there. */
     /* An Escort's VIP with no orders (scenarios-story.js escort): no soldier, he
-       makes for the far edge at the double, as if told Move here, and never stops
-       to shoot. */
+       keeps with his escort, at the double and never stopping to shoot, no more
+       than a couple of inches past the company's leading unit on the way to the
+       far edge; with nobody left to keep with, he runs for it. */
+    var KEEP_UP = 2;
     function ownWay(u) {
       if (!u.escort || !E.state.scen.goals) return null;
       var g = E.state.scen.goals(E.state, u)[0];
-      return g ? { kind: 'move', x: g.x, y: g.y, own: true } : null;
+      if (!g) return null;
+      var mine = E.state.units.filter(function (f) { return f.side === u.side && f !== u && !f.ally && f.alive && f.x >= 0 && !f.aboard && R.status(f) !== 'broken'; });
+      if (!mine.length) return { kind: 'move', x: g.x, y: g.y, own: true };
+      var lead = Math.max.apply(null, mine.map(function (f) { return f.x; }));
+      return { kind: 'move', x: Math.min(g.x, Math.max(u.x, lead + KEEP_UP)), y: g.y, own: true };
     }
     function orderBehaviour(u, ord, far, rolled) {
       var b;

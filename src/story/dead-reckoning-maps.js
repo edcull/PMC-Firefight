@@ -137,7 +137,19 @@
         R('barricade', 21, 10, 1, 6), R('barricade', 26, 10, 1, 6), R('barricade', 21, 32, 1, 6), R('barricade', 26, 32, 1, 6),
         // the market's clutter: cargo cases, drums and vending terminals where the market overflows
         N('crater', 11, 12, 4, 4, 'blob'), N('crater', 11, 31, 4, 4, 'blob'), N('crater', 38, 31, 4, 4, 'blob')
-      ]
+      ],
+      /* Where each side sets up when the battle is laid out by the story (a
+         battle's `variant.ground`): caught out, the company strung out along the
+         west road from its own edge to the auction house, Brass Ledger anywhere
+         in the far half of the square and the south side of it; the ambush
+         expected, the company holding the west side, Brass Ledger the east, past
+         the south road and the fountain; striking first, Brass Ledger caught still
+         gathering in the far corner. */
+      grounds: {
+        caught: { A: [{ x: 0, y: 21, w: 20, h: 6 }], B: [{ x: 27, y: 0, w: 21, h: 48 }, { x: 0, y: 30, w: 27, h: 18 }] },
+        expected: { A: [{ x: 0, y: 0, w: 14, h: 48 }], B: [{ x: 26, y: 0, w: 22, h: 15 }, { x: 31, y: 15, w: 17, h: 17 }, { x: 25, y: 32, w: 23, h: 16 }] },
+        strike: { A: [{ x: 0, y: 0, w: 14, h: 48 }], B: [{ x: 39, y: 0, w: 9, h: 10 }, { x: 35, y: 10, w: 13, h: 24 }, { x: 40, y: 34, w: 8, h: 14 }] }
+      }
     },
 
     /* Vesk's landing field, after Lot 47 was lost: Brass Ledger's shuttle on

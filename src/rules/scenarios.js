@@ -1259,11 +1259,24 @@
     named.entersTurn1 = false;
     named.attackerEnters = false;
     named.ambushBy = by;
+    /* A map that lays out the ambush itself (cfg.story.ambushZones: the story's
+       map, levers.js): each side sets up in its own ground, and nowhere else. */
     named.boxes = function (state, side, u) {
+      var z = state.cfg && state.cfg.story && state.cfg.story.ambushZones;
+      if (z && z[side]) return z[side];
       if (side === by) return [{ x: R.UNIT_R, y: R.UNIT_R, w: R.BOARD.w - 2 * R.UNIT_R, h: R.BOARD.h - 2 * R.UNIT_R }];
       return s.boxes ? s.boxes.call(this, state, side, u) : (state.sc && state.sc.boxes && state.sc.boxes[side]) || null;
     };
+    // (nobody marches on, whatever the scenario's own words say)
+    named.deployText = function (state, side) {
+      var z = state.cfg && state.cfg.story && state.cfg.story.ambushZones, expected = state.cfg && state.cfg.story && state.cfg.story.ambushExpected;
+      if (side === by) return 'An ambush: you set up after the enemy, ' + (z ? 'in your shaded ground' : 'anywhere more than 12\u2033 from every unit of theirs') + ', and have the first turn.';
+      return 'An ambush: nobody marches on. Set up first, ' + (z ? 'in your shaded ground' : 'on your own edge') + '; the enemy then sets up ' +
+        (z ? 'in theirs' : 'anywhere more than 12\u2033 from you') + (expected ? '. You saw it coming: nobody starts pinned, and the first turn is rolled for as usual.' : ', and has the first turn, with your squads pinned.');
+    };
     named.deployOK = function (state, side, x, y, u) {
+      var z = state.cfg && state.cfg.story && state.cfg.story.ambushZones;
+      if (z && z[side]) return inBoxes(z[side], x, y);
       if (side !== by) return s.deployOK ? s.deployOK.call(this, state, side, x, y, u) : null;
       return state.units.every(function (e) {
         return e.side === side || !e.alive || e.x < 0 || e.aboard || dist(x, y, e.x, e.y) > AMBUSH_GAP;

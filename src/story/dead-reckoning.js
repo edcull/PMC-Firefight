@@ -416,9 +416,9 @@
           /* (the backer's money, not the company's: the company has none yet)
              Three ways out across the square: seen at Halloran's side all evening, the company walks into Brass Ledger's
              ambush; watching the room, it sees the ambush laid and walks into it ready; marking Kettering's men, it hits them first. */
-          { id: 'outbid', text: 'Stand with Halloran.', battle: { variant: { ambush: 'enemy' } }, effects: [{ meter: 'vane', add: 1 }] },
-          { id: 'watch', text: 'Stay in the background and observe.', battle: { variant: { ambush: 'enemy', expected: true } }, effects: [{ meter: 'intel', add: 1 }, { flag: 'room_watched', local: true }] },
-          { id: 'follow', text: 'Focus on Kettering, and mark his men.', battle: { strikes: 'D3' }, effects: [{ flag: 'kettle_marked', local: true }] }
+          { id: 'outbid', text: 'Stand with Halloran.', battle: { variant: { ambush: 'enemy', ground: 'caught' } }, effects: [{ meter: 'vane', add: 1 }, { flag: 'caught_out', local: true }] },
+          { id: 'watch', text: 'Stay in the background and observe.', battle: { variant: { ambush: 'enemy', expected: true, ground: 'expected' } }, effects: [{ meter: 'intel', add: 1 }, { flag: 'room_watched', local: true }] },
+          { id: 'follow', text: 'Focus on Kettering, and mark his men.', battle: { variant: { ambush: 'player', ground: 'strike' } }, effects: [{ flag: 'kettle_marked', local: true }] }
         ], next: 'c1.battle' },
         // Halloran across the market square to the landing field, with the log, and Brass Ledger in the way
         { id: 'c1.battle', type: 'battle', scenario: 'escort', variant: { escort: 'Halloran' }, map: 'vesk', tier: 1, pl: 1, planet: 'dense',
@@ -427,7 +427,8 @@
           // the room watched: the company saw who was interested, and where they might wait
           adjust: [{ if: { flag: 'room_watched' }, levers: { intel: 1 } }],
           // lost, Brass Ledger have the log, and what the company does next is about getting it back, or following it
-          on: { success: [{ effects: [{ meter: 'kettle', add: -1 }, { meter: 'lead', add: 1 }] }], failure: [{ effects: [{ meter: 'lead', add: -1 }, { flag: 'log_lost' }] }] }, next: 'c1.debrief' },
+          // (caught out and still won through: the backer pays extra for it)
+          on: { success: [{ effects: [{ meter: 'kettle', add: -1 }, { meter: 'lead', add: 1 }, { if: { flag: 'caught_out' }, kUC: 2, journal: 'Halloran’s backer pays the company 2 kUC extra for the way it dealt with the ambush in the square.' }] }], failure: [{ effects: [{ meter: 'lead', add: -1 }, { flag: 'log_lost' }] }] }, next: 'c1.debrief' },
         { id: 'c1.debrief', type: 'debrief', text: '{if success}The log is safe.{/if}{if failure}Brass Ledger have the log.{/if}', events: ['c1.agent'], next: 'c1.route' },
         { id: 'c1.route', type: 'branch', when: [{ if: { flag: 'log_lost' }, next: 'c1.lost' }, { next: 'c1.interlude' }] },
         /* The log lost: Brass Ledger's ship is on the landing field, and the company
