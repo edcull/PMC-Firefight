@@ -287,12 +287,12 @@
       commander: { name: 'The commander', role: 'Your company', face: { bg: '#8a7a5a', skin: '#c99a76', hair: '#2b2622', hairStyle: 'short', hat: 'cap', hatColour: '#3d4a38', clothes: '#4a5240', clothesStyle: 'uniform', accent: '#e0c25a', extras: ['stubble'] } }
     },
     sides: {
-      kettle: { faction: 'pmc', archetype: 'swarm', name: 'Brass Ledger' },
-      wraith: { faction: 'pmc', archetype: 'marksmen', name: 'Wraith Section' },
-      sable: { faction: 'pmc', archetype: 'armour', name: 'Sable Armour Group' },
-      kestrel: { faction: 'pmc', archetype: 'aircav', name: 'Kestrel Air Cavalry' },
-      reavers: { faction: 'pmc', archetype: 'shock', name: 'The Red Reavers' },
-      lance: { faction: 'pmc', archetype: 'elite', name: 'The Ninth Lance' },
+      kettle: { faction: 'pmc', archetype: 'swarm', name: 'Brass Ledger', colour: ['ochre', 'rust'] },
+      wraith: { faction: 'pmc', archetype: 'marksmen', name: 'Wraith Section', colour: ['arctic', 'sand'] },
+      sable: { faction: 'pmc', archetype: 'armour', name: 'Sable Armour Group', colour: ['charcoal', 'slate'] },
+      kestrel: { faction: 'pmc', archetype: 'aircav', name: 'Kestrel Air Cavalry', colour: ['sky', 'steel'] },
+      reavers: { faction: 'pmc', archetype: 'shock', name: 'The Red Reavers', colour: ['crimson', 'maroon'] },
+      lance: { faction: 'pmc', archetype: 'elite', name: 'The Ninth Lance', colour: ['plum', 'violet'] },
       scavengers: { faction: 'rebel', archetype: 'freespace', name: 'The Thule scavengers' },
       shkar: { faction: 'xeno', archetype: 'shkar', name: 'The Sh’kar' },
       mithdu: { faction: 'xeno', archetype: 'mithdu', name: 'The Mithdu' },

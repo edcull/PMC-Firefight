@@ -317,6 +317,7 @@
       var co = E.camp.companies.A, picks = picked();
       var cfg = L().toCfg(E.camp, { picks: picks, role: muster.role, edge: muster.edge || 'west', tier: muster.tier, pl: muster.pl, options: E.camp.options || {} });
       cfg.colourA = E.colourOf(co);
+      L().wornColours(cfg);
       cfg.campLid = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.lid ? root.PMC_CAMPAIGN.lid() : null;
       cfg.track = !!E.camp.debugTrack;
       E.camp.pending = {

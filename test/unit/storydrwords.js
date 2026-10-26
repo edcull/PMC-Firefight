@@ -393,6 +393,16 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
   ok('the log handed back: no terms to pay for it, and the company jumps on without it',
     JSON.stringify(dr._nodes['dx.terms'].if).indexOf('log_handed') >= 0 && /without the log/.test(TEXT['dx.interlude']));
 }
+{
+  /* The rival companies in their own colours: the first, or the second where the company already wears it. */
+  const L = require('../../src/story/levers.js');
+  const want = { kettle: 'ochre', wraith: 'arctic', sable: 'charcoal', kestrel: 'sky', reavers: 'crimson', lance: 'plum' };
+  ok('each rival company has its colours: Brass Ledger amber, Wraith white, Sable black, Kestrel light blue, the Reavers red, the Lance plum',
+    Object.keys(want).every((k) => [].concat(dr.sides[k].colour)[0] === want[k] && [].concat(dr.sides[k].colour).length === 2));
+  const cfg = { colourA: 'ochre', colourB: 'ochre', colourC: 'ochre', colourSides: { B: ['ochre', 'rust'], C: ['ochre', 'rust'] } };
+  L.wornColours(cfg);
+  ok('...a rival in the company’s own colour wears its second; allies with both taken are left for the engine to repaint', cfg.colourB === 'rust' && cfg.colourC === 'ochre' && !('colourSides' in cfg), JSON.stringify(cfg));
+}
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {
   /* The docks as the briefing has them: Sable's warehouse walked into in the middle of the table,
