@@ -331,6 +331,8 @@
       /* A Rapid insertion platform "does not count towards victory conditions"
          (p. 79), so it is in neither the tally nor the losses. */
       if (!R.countsForVictory(u)) return;
+      // (a convoy's cars are cargo, with a win of their own: not in the tally)
+      if (u.convoyCar) return;
       /* A force replaced in the middle of a battle (a story's unknown contacts,
          storybattle.js) is no longer the side's: the tally is of what took its place. */
       if (u.superseded) return;

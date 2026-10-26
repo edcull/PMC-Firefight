@@ -132,6 +132,27 @@
   function convoyOf(state, side) {
     return state.units.filter(function (u) { return u.side === side && u.convoyCar; });
   }
+  /* Where the road runs, at a point along the table: the middle of a road
+     crossing the table east to west at x (the one nearest `near`, at a
+     crossroads), from its outline when it is laid as one; null without one. */
+  function roadMid(state, x, near) {
+    var best = null;
+    (state.terrain || []).forEach(function (t) {
+      if (t.kind !== 'road' || t.pad || t.slab || x < t.x || x > t.x + t.w) return;
+      var ys = [];
+      if (t.poly && t.poly.length > 2) {
+        for (var i = 0; i < t.poly.length; i++) {
+          var a = t.poly[i], b = t.poly[(i + 1) % t.poly.length];
+          if ((a[0] <= x && b[0] >= x) || (b[0] <= x && a[0] >= x)) ys.push(a[0] === b[0] ? a[1] : a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]));
+        }
+      } else if (t.w >= t.h) ys = [t.y, t.y + t.h];
+      if (ys.length < 2) return;
+      var y = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
+      if (best == null || Math.abs(y - near) < Math.abs(best - near)) best = y;
+    });
+    return best;
+  }
+  var ROAD_BAND = 4;
   /* Convoy, and Intercept the other way round: side B's column crossing for
      side A's edge, and side A (the player in a story) out to stop it. */
   function convoyScenario(side, o) {
@@ -148,12 +169,45 @@
       deploy: function (state) {
         K.entryEdges(state);
         state.sc.convoy = convoyOf(state, side).map(function (u) { return u.id; });
+        /* Hunting a convoy (Intercept: the player's side): only half the force is on
+           the road in time; the rest comes on as reinforcements, as Find and secure
+           brings its reserves (p. 52) */
+        if (o.huntersWait) {
+          var all = K.mine(state, foe).filter(function (u) { return !u.reserve && !u.convoyCar; });
+          var split = K.halve(all);
+          split.second.forEach(function (u) { u.reserve = true; u.wave = 2; u.x = -1; u.y = -1; });
+          K.noteSplit(state, foe, 'hold', all, Math.floor(all.length / 2), Math.ceil(all.length / 2),
+            'Half the force is on the road in time; the rest comes on as reinforcements.');
+        }
         state.sc.extract = side === 'A' ? { side: 'A', rectX: R.BOARD.w - 3, from: 2, only: state.sc.convoy }
           : { side: 'B', rectX: 3, west: true, from: 2, only: state.sc.convoy };
       },
-      reserves: function (state, s) { return K.entering(state, s); },
-      deployText: function () { return K.ENTRY_TEXT; },
+      reserves: function (state, s) {
+        if (state.turn === 1) return K.entering(state, s);
+        if (!o.huntersWait || s !== foe || state.turn < 3 || state.turn % 2 === 0) return [];
+        return state.units.filter(function (u) { return u.side === s && u.alive && u.reserve && u.wave === 2; });
+      },
+      // the hunters' reinforcements: from turn 3, every second turn, up to the Priority Level in units, the player's choice
+      reservePick: o.huntersWait ? function (state, s) {
+        if (s !== foe || state.turn < 3 || state.turn % 2 === 0) return null;
+        var pool = state.units.filter(function (u) { return u.side === s && u.alive && u.reserve && u.wave === 2; });
+        var n = Math.min(state.cfg.pl, pool.length);
+        return pool.length ? { pool: pool, min: 0, max: n,
+          text: 'Up to ' + n + ' unit' + (n === 1 ? '' : 's') + ' (the Priority Level) may come on as reinforcements this turn. You choose which, or none.' } : null;
+      } : undefined,
+      deployText: function (state, s) {
+        return o.huntersWait && s === foe ? K.ENTRY_TEXT.replace('your units enter', 'the first half of your force enters') +
+          ' The rest come on as reinforcements: from turn 3, every second turn, up to the Priority Level in units.' : K.ENTRY_TEXT;
+      },
       zoneFor: function (state, s) { return state.sc.zones[s]; },
+      // (the cars come on where the road meets their edge, within a few inches of it)
+      entryFor: function (state, u, entry) {
+        if (!u.convoyCar) return entry;
+        return entry.map(function (b) {
+          var y = roadMid(state, b.x + b.w / 2, R.BOARD.h / 2);
+          return y == null ? b : { x: b.x, y: Math.max(0, y - ROAD_BAND), w: b.w, h: 2 * ROAD_BAND };
+        });
+      },
       // the hunters go for the convoy; the convoy, and its escort, for the far edge
       goals: function (state, u) {
         if (!u) return [];          // (asked for no unit in particular: there are no places to hold)
@@ -165,44 +219,55 @@
         var esc = all.filter(function (c) { return !c.reserve && c.x >= 0; });
         // (its escort not on the table yet: it waits at its own edge for them)
         if (all.length && !esc.length) return [{ x: u.x, y: u.y }];
+        var x = edgeX();
         if (esc.length) {
           var xs = esc.map(function (c) { return c.x; });
-          var x = side === 'A' ? Math.min(Math.max.apply(null, xs) - 2, edgeX()) : Math.max(Math.min.apply(null, xs) + 2, edgeX());
-          return [{ x: x, y: u.y }];
+          x = side === 'A' ? Math.min(Math.max.apply(null, xs) - 2, edgeX()) : Math.max(Math.min.apply(null, xs) + 2, edgeX());
         }
-        return [{ x: edgeX(), y: u.y }];
+        /* a car keeps to the road, where there is one: a waypoint no more than 8"
+           on, on the road's line, so it takes the bends rather than cutting them */
+        if (ids.indexOf(u.id) >= 0) {
+          var wx = side === 'A' ? Math.min(x, u.x + 8) : Math.max(x, u.x - 8);
+          var ry = roadMid(state, wx, u.y);
+          if (ry != null) return [{ x: wx, y: ry }];
+        }
+        return [{ x: x, y: u.y }];
       },
       groundTaking: true,
+      /* Stopping a convoy means every car in it: one through, and it got through.
+         Over once every car is through or burning, or at the end of turn 12. */
       check: function (state) {
-        var ids = state.sc.convoy || [], pts = 0, out = 0, lost = 0;
+        var ids = state.sc.convoy || [], n = 0, out = 0, lost = 0;
         state.units.forEach(function (u) {
           if (ids.indexOf(u.id) < 0) return;
-          pts += u.tier || 1;
-          if (u.extracted) out += u.tier || 1;
-          else if (!u.alive) lost += u.tier || 1;
+          n++;
+          if (u.extracted) out++;
+          else if (!u.alive) lost++;
         });
-        if (out * 2 >= pts) return { winner: side, text: o.through };
-        if (lost * 2 > pts) return { winner: foe, text: o.burning, routed: [side] };
-        if (state.turn >= 12) return { winner: foe, text: o.late, timeout: true };
+        if (!n) return null;
+        if (lost === n) return { winner: foe, text: o.burning, routed: [side] };
+        if (out && out + lost === n) return { winner: side, text: o.through };
+        if (state.turn >= 12) return out ? { winner: side, text: o.through } : { winner: foe, text: o.late, timeout: true };
       }
     };
   }
   SCENARIOS.convoy = convoyScenario('A', {
     id: 'convoy', name: 'Convoy',
     blurb: 'A column has to cross the table. The other side has to stop it.',
-    win: 'A wins with half the convoy’s cars through to the far edge by the end of turn 12. B wins by destroying more than half of them, or if they are not through in time.',
-    hint: 'The convoy is a column of cargo cars, three of them (four from Battle Tier III), and your force is its escort. Get the cars to the far edge; a car within 3″ of it at the End phase is through.',
-    through: 'Half the convoy is through.', burning: 'More than half the convoy is burning on the road.', late: 'The convoy is still on the road at the end of turn 12.'
+    win: 'A wins with any of the convoy’s cars through to the far edge by the end of turn 12. B wins only by destroying every one of them, or if none is through in time.',
+    hint: 'The convoy is a column of cargo cars, three of them (four from Battle Tier III), and your force is its escort. Get the cars to the far edge, along the road; a car within 3″ of it at the End phase is through, and one through is enough.',
+    through: 'The convoy is through.', burning: 'Every car in the convoy is burning on the road.', late: 'The convoy is still on the road at the end of turn 12.'
   });
   /* The enemy's convoy is a column of cargo cars for side B, its force their
      escort, crossing for side A's own edge; within 3" of it at the End phase, a
      car is through. */
   SCENARIOS.intercept = convoyScenario('B', {
+    huntersWait: true,
     id: 'intercept', name: 'Intercept',
     blurb: 'The enemy’s column is crossing the table. Stop it before it gets across.',
-    win: 'A wins by destroying more than half of B’s convoy cars, or if they are not through by the end of turn 12. B wins with half of them through to A’s edge.',
-    hint: 'The enemy’s convoy is a column of cargo cars, three of them (four from Battle Tier III), with its force as escort. It is making for your own edge; a car within 3″ of that edge at the End phase is through. Stop it.',
-    through: 'Half the enemy’s convoy is through.', burning: 'More than half the enemy’s convoy is burning on the road.', late: 'The enemy’s convoy is still on the road at the end of turn 12.'
+    win: 'A wins only by destroying every one of B’s convoy cars, or if none is through by the end of turn 12. B wins with any of them through to A’s edge.',
+    hint: 'The enemy’s convoy is a column of cargo cars, three of them (four from Battle Tier III), with its force as escort. It is making for your own edge along the road; a car within 3″ of that edge at the End phase is through. Stop every one of them.',
+    through: 'The enemy’s convoy is through.', burning: 'Every car in the enemy’s convoy is burning on the road.', late: 'The enemy’s convoy is still on the road at the end of turn 12.'
   });
 
   /* ------------------------------------------------ Breakout */
