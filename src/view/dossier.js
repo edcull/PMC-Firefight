@@ -837,7 +837,12 @@
     }));
   }
   function beginOwn(side, faction) { return (KIT_FOUND || kitFound()).beginOwn(side, faction); }
-  function beginFounding(name, mode, faction) { return (KIT_FOUND || kitFound()).beginFounding(name, mode, faction); }
+  function beginFounding(name, mode, faction) {
+    var r = (KIT_FOUND || kitFound()).beginFounding(name, mode, faction);
+    // the account's start forces, for Load a start force (drawn again when they come)
+    if (root.PMCForces) root.PMCForces.refresh(function () { if (view === 'found' && draft) render(); });
+    return r;
+  }
   function needsSecond() { return (KIT_FOUND || kitFound()).needsSecond(); }
   function beginSecond(faction) { return (KIT_FOUND || kitFound()).beginSecond(faction); }
   function startingColour(faction) { return (KIT_FOUND || kitFound()).startingColour(faction); }
