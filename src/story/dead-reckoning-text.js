@@ -67,7 +67,7 @@
     'c2f.second/chase': 'Follow their dropship’s trail while it’s fresh. The company can rest later.',
     'c2f.second/dig': 'Let it go, and dig on. Morrow may have left more than one thing here.',
 
-    'c2t.airlock': 'Station Thule hangs in orbit over Okoro II, a cross of modules and docking arms turning slowly in the dark, its solar wings catching the sun. Every docking arm has been welded shut from inside, and something has been living aboard: scavengers, by the junk drifting round the arms, and enough of them to have opinions about visitors.',
+    'c2t.airlock': 'Station Thule hangs in orbit over Okoro II, a cross of modules and docking arms turning slowly in the dark, its solar wings catching the sun. It still belongs to the survey office, on paper. Every docking arm has been welded shut from inside, and somebody has taken it anyway: scavengers, by the junk drifting round the arms, squatting on a station that was never theirs to claim, and enough of them to have opinions about visitors.',
     'c2t.airlock/cut': 'Cut through a docking arm’s seal and go in hard.',
     'c2t.airlock/hatch': 'Find Morrow’s maintenance hatch. His log mentions it, twice.',
     'c2t.airlock/pay': 'Pay them to leave. Nobody needs to die for a relay.',

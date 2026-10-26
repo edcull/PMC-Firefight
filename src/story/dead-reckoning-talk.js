@@ -80,10 +80,10 @@
         { who: 'nine', text: 'Your client doesn’t pay us. Ours does, and our client wants what’s in that ground. Turn your dropships round and nobody on your side gets shot. Come any closer and we start with your officers.' }
       ],
       'c2t.airlock': [
-        { who: 'ops', text: 'Every docking arm is welded. Somebody’s aboard, and they’ve been aboard a while: there’s a heat plume off the north module.' },
-        { who: 'scav', text: 'You’re on our docking arm, ship. Thule’s taken. Cast off now, or we open up on your hull.' },
-        { who: 'commander', text: 'We want three days of a dead man’s records. Then we leave.' },
-        { who: 'scav', text: 'Everything in this station is salvage, and salvage is ours. You want it, you pay for it, or you come through that lock and earn it. We’ve done this before.' }
+        { who: 'ops', text: 'Every docking arm is welded. Somebody’s aboard, and they’ve been aboard a while: there’s a heat plume off the north module. The survey office still lists Thule as theirs, unmanned. Nobody’s filed a salvage claim on it.' },
+        { who: 'scav', text: 'You’re on our docking arm, ship. Thule’s ours now. Cast off, or we open up on your hull.' },
+        { who: 'commander', text: 'Thule belongs to the survey office, and you know it. We don’t want your salvage: we just need access to the relay’s archive. Let us in, we copy what we need, and we leave. No need for anyone to get hurt.' },
+        { who: 'scav', text: 'The survey office isn’t here. We are. Everything in this station is salvage, and salvage is ours, archive and all. You want it, you pay for it, or you come through that lock and earn it. We’ve done this before.' }
       ],
 
       // ---- 3. The Drowned Beacon ----
