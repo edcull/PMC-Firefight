@@ -372,6 +372,15 @@
       }
       }
 
+      /* A wreck's curved outer hull (a story's 'wreck' skin, carried on its solid):
+         the plating inside it, under her rooms, painted first so the rooms paint over
+         it, the ground outside it left as it is. */
+      var hullOf = terrain.filter(function (q) { return q.hull; })[0];
+      if (hullOf) terrain = hullOf.hull.shapes.map(function (pts) {
+        var xs = pts.map(function (p) { return p[0]; }), ys = pts.map(function (p) { return p[1]; });
+        var x0 = Math.min.apply(null, xs), y0 = Math.min.apply(null, ys);
+        return { kind: 'plating', plating: true, x: x0, y: y0, w: Math.max.apply(null, xs) - x0, h: Math.max.apply(null, ys) - y0, poly: pts };
+      }).concat(terrain);
       // one piece's floor (the plateau of a hill is painted after the slopes)
       var floorsDone = false;
       /* A settlement's paved roads are one surface: where one piece meets
@@ -392,6 +401,8 @@
         if (r.space) { paintFloor(d, r, STARS, seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         // ...and a wreck's is the ground outside her hull: the world's own, as the table lies under it
         if (r.outside || r.outdoors) return;
+        // (her plating, between her curved hull and her rooms: the deck's own steel)
+        if (r.plating) { paintFloor(d, r, floorOf('corridor'), seed + ri * 131, lat, fN, fD, 0, null, null, rows); return; }
         var spec = roomTheme(r) || skinFloor(r) || floorOf(r.kind);
         if (r.kind === 'road' && r.paved && paved.length > 1) spec = Object.assign({}, spec, { joins: paved.filter(function (q) { return q !== r; }) });
         // ...and the Warren's tunnels and chambers are one floor of rock: no lip where one section meets the next
@@ -415,7 +426,7 @@
       for (var ly = gy0; ly < gy1; ly += 24) steps.push(latRows.bind(null, ly, Math.min(gy1, ly + 24)));
       for (var sy = cy0; sy < cy1; sy += 48) steps.push(soilRows.bind(null, sy, Math.min(cy1, sy + 48)));
       terrain.forEach(function (r, ri) {
-        if (r.kind === 'hill' || (!FLOOR[r.kind] && !r.space && !r.docked)) return;
+        if (r.kind === 'hill' || (!FLOOR[r.kind] && !r.space && !r.docked && !r.plating)) return;
         // cargo stacked on open ground (not on an apron), a camp's tents and a pipeline have no floor of their own
         if ((r.cargo && r.cargo !== 'apron') || r.camp || r.pipe || r.blast) return;
         floorBands(r).forEach(function (rows) { steps.push(function () { floorOf1(r, ri, rows); }); });

@@ -17,6 +17,20 @@
   'use strict';
   root.PMCStoryMaps = root.PMCStoryMaps || {};
 
+  /* A ship's outer hull, in inches: a rounded rectangle (`r` its corners'
+     radius), or one ending in a curved nose (`nose`: the half-ellipse's reach
+     past `x1`); a closed outline, as points, for the plating and the hull. */
+  function hullOutline(x0, y0, x1, y1, r, nose) {
+    var pts = [], arc = function (cx, cy, rad, ry, a0, a1) {
+      for (var k = 0; k <= 8; k++) { var t = a0 + (a1 - a0) * k / 8; pts.push([cx + Math.cos(t) * rad, cy + Math.sin(t) * ry]); }
+    };
+    var H = Math.PI / 2;
+    arc(x0 + r, y0 + r, r, r, Math.PI, Math.PI + H);
+    if (nose) arc(x1, (y0 + y1) / 2, nose, (y1 - y0) / 2, -H, H);
+    else { arc(x1 - r, y0 + r, r, r, -H, 0); arc(x1 - r, y1 - r, r, r, 0, H); }
+    arc(x0 + r, y1 - r, r, r, H, Math.PI);
+    return pts.map(function (p) { return [Math.round(p[0] * 100) / 100, Math.round(p[1] * 100) / 100]; });
+  }
   /* A ship laid as a compound plan, a lettered grid: each letter a room, `c`
      a passage, `o` the ground just outside a breach (walkable, outside her),
      `.` outside her hull. Walls go between rooms, and between a room and a
@@ -278,29 +292,41 @@
         '.NNNN...........',
         '.NNNN....ooo....',
         '...c.....ooo....',
-        '.cccccccccccc...',
-        '.EEEcHHHHGGcFF..',
-        '.EEEcHHHHGGccccc',
-        '.EEEcHHHHMMcBB..',
-        '.EEEcHHHHMMcBB..',
-        '.cccccccccccc...',
+        '.EEQQQHHHHHH....',
+        '.EEQQQHHHHHHBB..',
+        '.EEcccHHHHHHcccc',
+        '.EEMMMHHHHHHFF..',
+        '.EEMMMHHHHHH....',
+        '.EEcccHHHHHH....',
         '...c............',
         '.nnnn...........',
         '.nnnn...........',
         'oooo............',
         'oooo............',
         '................'
-      ], [[2, 4, 2, 5], [2, 8, 2, 9], [3, 6, 4, 6], [4, 7, 5, 7], [6, 8, 6, 9], [10, 4, 10, 5], [11, 6, 10, 6], [11, 7, 10, 7], [9, 9, 9, 8],
-        [12, 4, 12, 5], [13, 5, 13, 6], [12, 6, 12, 7], [11, 8, 12, 8], [3, 2, 3, 3], [3, 10, 3, 11]],
-      // the breaches: the main hatch, through the top of her hull near the bow, and the split, through the starboard nacelle's outer side
+      ], [[2, 6, 3, 6], [2, 9, 3, 9], [4, 5, 4, 6], [4, 7, 4, 6], [4, 8, 4, 9], [5, 6, 6, 6], [5, 9, 6, 9], [11, 6, 12, 6], [12, 5, 12, 6], [12, 7, 12, 6],
+        [3, 2, 3, 3], [3, 3, 3, 4], [3, 10, 3, 11]],
+      // the breaches: the main hatch, through the top of her hull into the hold, and the split, through the starboard nacelle's outer side
       [[10, 3, 10, 4], [2, 12, 2, 13]],
-      { E: 'Engine room', H: 'Cargo hold', G: 'Galley', M: 'Infirmary', F: 'Forward store', B: 'Bridge', N: 'Port nacelle', n: 'Starboard nacelle' }),
+      { E: 'Engine room', Q: 'Crew quarters', M: 'Mess', H: 'Cargo hold', B: 'Bridge', F: 'Forward store', N: 'Port nacelle', n: 'Starboard nacelle' }),
+      /* Her outer hull, curved about the rooms (in inches): her body, its stern rounded and
+         its nose an ogive, and each nacelle; the plating between the hull and the rooms is
+         her deck, not walked on. No hull where her breaches are, where a pylon or the
+         gangway at her bow runs through it; a sealed hatch opposite each breach. */
+      hull: {
+        shapes: [hullOutline(2, 11.5, 36, 30.5, 4, 10), hullOutline(1.25, 2.7, 17.75, 9.5, 3), hullOutline(1.25, 32.5, 17.75, 39.3, 3)],
+        gaps: [{ x: 30, y: 10, w: 3, h: 3 }, { x: 6, y: 38, w: 3, h: 3 }, { x: 9, y: 8.5, w: 3, h: 4 }, { x: 9, y: 29.5, w: 3, h: 4 }, { x: 44, y: 17.6, w: 4.5, h: 3.8 }],
+        hatches: [{ x: 30, y: 29.5, w: 3, h: 2 }, { x: 6, y: 1.7, w: 3, h: 2 }]
+      },
+      // the hold's cargo, stacked with aisles between (in inches): the way in from the main hatch, and the corridor's line through it, kept clear
+      cargo: [[19.6, 13], [22.8, 13], [26, 13], [19.6, 15.4], [22.8, 15.4], [26, 15.4],
+        [20.4, 23], [23.6, 23], [26.8, 23], [30, 23], [33.2, 23], [20.4, 25.8], [23.6, 25.8], [26.8, 25.8], [30, 25.8], [33.2, 25.8]].map(function (p) { return { x: p[0], y: p[1], w: 2.4, h: 1.6 }; }),
       /* who comes in where, in cells (a 3" grid): the company on the ground outside a breach,
          6" deep, and nowhere else; the other side already in the rooms it holds */
       entries: {
-        cut: { A: [{ i: 9, j: 2, w: 3, h: 2 }, { i: 0, j: 13, w: 4, h: 2 }], B: [{ i: 5, j: 5, w: 4, h: 4 }, { i: 1, j: 5, w: 3, h: 4 }, { i: 9, j: 7, w: 2, h: 2 }] },
-        follow: { A: [{ i: 9, j: 2, w: 3, h: 2 }], B: [{ i: 5, j: 5, w: 4, h: 4 }, { i: 1, j: 5, w: 3, h: 4 }, { i: 9, j: 7, w: 2, h: 2 }] },
-        together: { A: [{ i: 9, j: 2, w: 3, h: 2 }], B: [{ i: 1, j: 11, w: 4, h: 2 }, { i: 1, j: 5, w: 3, h: 4 }, { i: 5, j: 5, w: 4, h: 4 }] }
+        cut: { A: [{ i: 9, j: 2, w: 3, h: 2 }, { i: 0, j: 13, w: 4, h: 2 }], B: [{ i: 7, j: 6, w: 5, h: 4 }, { i: 12, j: 5, w: 2, h: 1 }, { i: 12, j: 7, w: 2, h: 1 }, { i: 3, j: 7, w: 3, h: 2 }] },
+        follow: { A: [{ i: 9, j: 2, w: 3, h: 2 }], B: [{ i: 7, j: 6, w: 5, h: 4 }, { i: 12, j: 5, w: 2, h: 1 }, { i: 12, j: 7, w: 2, h: 1 }, { i: 3, j: 7, w: 3, h: 2 }] },
+        together: { A: [{ i: 9, j: 2, w: 3, h: 2 }], B: [{ i: 1, j: 11, w: 4, h: 2 }, { i: 1, j: 4, w: 2, h: 6 }, { i: 3, j: 7, w: 3, h: 2 }] }
       }
     },
 

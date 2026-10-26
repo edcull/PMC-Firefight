@@ -53,6 +53,37 @@
       /* A wreck's breaches (a story's 'wreck' skin): outside each, on the ground the
          company comes in over, the hatch that was cut out of her, fallen flat and
          askew, and the cutting rig that did it standing off to one side. */
+      /* A wreck's curved outer hull: a wall's height, laid in short runs round each
+         outline, but for where her breaches, her pylons and her gangway run through it;
+         a sealed hatch on the runs opposite each breach. */
+      var hullOf = terrain.filter(function (q) { return q.hull; })[0];
+      if (hullOf) {
+        var inR = function (rs, x, y) { return rs.some(function (q) { return x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h; }); };
+        hullOf.hull.shapes.forEach(function (pts, si) {
+          var mx = 0, my = 0;
+          pts.forEach(function (p) { mx += p[0] / pts.length; my += p[1] / pts.length; });
+          pts.forEach(function (p0, pi) {
+            var p1 = pts[(pi + 1) % pts.length], len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+            if (len < 0.01) return;
+            var n = Math.max(1, Math.round(len / 1.0)), ang = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+            // (its normal towards her inside)
+            var nx = -Math.sin(ang), ny = Math.cos(ang);
+            if ((mx - p0[0]) * nx + (my - p0[1]) * ny < 0) { nx = -nx; ny = -ny; }
+            for (var k = 0; k < n; k++) {
+              var cx = p0[0] + (p1[0] - p0[0]) * (k + 0.5) / n, cy = p0[1] + (p1[1] - p0[1]) * (k + 0.5) / n;
+              if (inR(hullOf.hull.gaps, cx, cy)) continue;
+              props.push({ kind: 'hullseg', x: cx, y: cy, ang: ang, len: len / n + 0.04, nx: nx, ny: ny, height: a(BULK_H), plain: true,
+                hatch: inR(hullOf.hull.hatches, cx, cy), seed: si * 997 + pi * 31 + k });
+            }
+          });
+        });
+        // (one lamp to a hatch, over its middle run)
+        (hullOf.hull.hatches || []).forEach(function (h) {
+          var best = null, bd = 1e9, hx = h.x + h.w / 2, hy = h.y + h.h / 2;
+          props.forEach(function (q) { if (q.kind === 'hullseg' && q.hatch) { var d = Math.hypot(q.x - hx, q.y - hy); if (d < bd && inR([h], q.x, q.y)) { bd = d; best = q; } } });
+          if (best) best.lamp = true;
+        });
+      }
       var yards = terrain.filter(function (q) { return q.outdoors; });
       if (yards.length) terrain.forEach(function (r, ri) {
         if (r.kind !== 'breached') return;

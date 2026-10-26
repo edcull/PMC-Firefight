@@ -2015,6 +2015,18 @@
           poly(g, [GQ(-GL, -GT, GH), GQ(GL, -GT, GH), GQ(GL, GT, GH), GQ(-GL, GT, GH)], BULK[4]);
           edgeLine(g, GQ(-GL, GT, GH), GQ(GL, GT, GH), BULK[5], 1);
           edgeLine(g, GQ(-GL, inSeen ? GT : -GT, 1), GQ(-GL, inSeen ? GT : -GT, GH - 1), BULK[1], 1);
+          // a wreck's sealed hatch, never opened: a darker panel inset in the hull, a hazard band across its head, a red lamp
+          if (pr.hatch) {
+            var hv = inSeen ? GT + 0.02 : -GT - 0.02;
+            poly(g, [GQ(-GL, hv, GH * 0.04), GQ(GL, hv, GH * 0.04), GQ(GL, hv, GH * 0.72), GQ(-GL, hv, GH * 0.72)], BULK[1]);
+            edgeLine(g, GQ(-GL, hv, GH * 0.72), GQ(GL, hv, GH * 0.72), BULK[0], 1);
+            for (var hk8 = 0; hk8 < 2; hk8++) {
+              var hka = -GL + GL * hk8, hkb = hka + GL;
+              poly(g, [GQ(hka, hv, GH * 0.62), GQ(hkb, hv, GH * 0.62), GQ(hkb, hv, GH * 0.72), GQ(hka, hv, GH * 0.72)], hk8 % 2 ? '#1b1a17' : '#c9a23c');
+            }
+            if (pr.lamp) { var lh8 = GQ(0, hv, GH * 0.84); dot(g, lh8[0] - 1, lh8[1] - 1, '#e0402e', 3); }
+            break;
+          }
           if (rng(pr.seed)() < 0.35) { var lp8 = GQ(0, inSeen ? GT : -GT, GH * 0.8); dot(g, lp8[0] - 1, lp8[1] - 1, '#ffb02e', 3); }
           break;
         }

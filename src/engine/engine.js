@@ -410,6 +410,16 @@
           return b.x >= t.x - 0.6 && b.x <= t.x + t.w + 0.6 && b.y >= t.y - 0.6 && b.y <= t.y + t.h + 0.6;
         })) t.kind = 'breached';
       });
+      /* her hold's cargo, where the map stacks it: crates in rows with aisles, in place of
+         what the compound would have put there */
+      if (cfg.story.cargo && cfg.story.cargo.length) {
+        var held = function (t) { return inRects(cfg.story.cargo.map(function (c) { return { x: c.x - 1, y: c.y - 1, w: c.w + 2, h: c.h + 2 }; }), t.x + t.w / 2, t.y + t.h / 2); };
+        built.terrain = built.terrain.filter(function (t) { return !((t.kind === 'crates' || t.kind === 'machinery' || t.kind === 'pillar') && held(t)); });
+        cfg.story.cargo.forEach(function (c) { built.terrain.push({ kind: 'crates', x: c.x, y: c.y, w: c.w, h: c.h, cargo: 'hold' }); });
+      }
+      // her curved outer hull, for the drawing: carried on the solid outside her (iso-ground.js, iso-props.js)
+      var hullOn = built.terrain.filter(function (t) { return t.outside; })[0];
+      if (hullOn && cfg.story.hull) hullOn.hull = cfg.story.hull;
     }
     /* The Warren (a story map's 'warren' skin): tunnels cut in the rock of a
        world nobody has charted. Its solid is rock and its floors worked stone;

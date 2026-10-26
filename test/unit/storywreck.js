@@ -65,6 +65,20 @@ console.log('\nThe ship');
   ok('...two breaches in her hull, blown open: the main hatch near the bow, and the split in the starboard nacelle', s.terrain.filter((t) => t.kind === 'breached').length === 2 &&
     MAP.compound.breaches.length === 2);
   ok('...and the ground just outside each breach walkable, open ground, not her floor', s.terrain.filter((t) => t.outdoors).length >= 2 && s.terrain.filter((t) => t.outdoors).every((t) => t.kind === 'corridor' && !t.dangerous));
+  // her spine: one corridor running stern to bow through her middle, the hold the biggest room on her, stacked with crates
+  const rows = MAP.compound.cells.match(/.{16}/g), spine = rows.findIndex((r) => /c{4}$/.test(r));
+  ok('...a central corridor down her length, from the engine room to the bow', spine > 0 && rows[spine].slice(3, 6) === 'ccc', 'row ' + spine);
+  const hold = s.terrain.filter((t) => t.cargo === 'hold');
+  ok('...and a big cargo hold amidships, stacked with crates in rows', hold.length >= 12 && hold.every((t) => t.kind === 'crates'), hold.length + ' stacks');
+  ok('...no other clutter in among the hold’s crates', s.cfg.story.cargo.every((c) => !s.terrain.some((t) => t.cargo !== 'hold' &&
+    ['crates', 'machinery', 'pillar'].indexOf(t.kind) >= 0 && t.x < c.x + c.w && t.x + t.w > c.x && t.y < c.y + c.h && t.y + t.h > c.y)));
+  // her curved outer hull, round her rooms, and a sealed hatch opposite each breach
+  const hull = s.terrain.find((t) => t.hull) && s.terrain.find((t) => t.hull).hull;
+  ok('...a curved outer hull round her body and each nacelle', hull && hull.shapes.length === 3 && hull.shapes.every((p) => p.length > 12));
+  const mid = (b) => [b.i * 3, b.j * 3];
+  ok('...a sealed hatch opposite each breach, on her far side', hull && hull.hatches.length === MAP.compound.breaches.length &&
+    MAP.compound.breaches.every((b) => { const [bx, by] = mid(b); return hull.hatches.some((h) => Math.abs(h.x + h.w / 2 - bx) < 4 && Math.abs(h.y + h.h / 2 - by) > 15); }),
+    JSON.stringify(hull && hull.hatches));
 }
 
 console.log('\nWho comes in where');
