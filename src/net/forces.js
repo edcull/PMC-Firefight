@@ -14,13 +14,19 @@
    Each entry in a list is { where: 'local' | 'account', ref, force }: `ref`
    names it for find and remove ('l:<index>' or 's:<id>'). The account's
    forces are fetched in the background (refresh) and kept here, so a list is
-   always to hand; whoever draws one asks to be told when they arrive. */
+   always to hand; whoever draws one asks to be told when they arrive.
+
+   Signed in, this browser's forces are moved to the account as the account's
+   are fetched: each one the account has no force of that name for is saved
+   there, and once the server has it, dropped from this browser. One whose
+   name the account already uses stays here, so nothing is overwritten. */
 (function (root) {
   'use strict';
 
   var LOCAL = { skirmish: 'pmc-forces', start: 'pmc-startforces' };
   var account = { skirmish: [], start: [] };        // the signed-in player's, as last fetched
   var waiting = [];                                  // told when the account's forces arrive
+  var fetching = false;                              // a refresh on its way
 
   function who() {
     var A = root.PMCAccount, w = A && A.who && A.who();
@@ -54,9 +60,17 @@
   // the account's forces fetched again; `done` (and anyone waiting) told when they are in
   function refresh(done) {
     if (done) waiting.push(done);
-    function tell() { var w = waiting; waiting = []; w.forEach(function (f) { try { f(); } catch (e) { } }); }
+    function tell() { fetching = false; var w = waiting; waiting = []; w.forEach(function (f) { try { f(); } catch (e) { } }); }
     if (!signedIn()) { account = { skirmish: [], start: [] }; tell(); return; }
-    call('GET', 'api/forces').then(function (r) {
+    if (fetching) return;
+    fetching = true;
+    fetchAccount().then(function (next) {
+      account = next;
+      return moveLocal().then(function (moved) { return moved ? fetchAccount().then(function (n) { account = n; }) : null; });
+    }).then(tell, tell);
+  }
+  function fetchAccount() {
+    return call('GET', 'api/forces').then(function (r) {
       var next = { skirmish: [], start: [] };
       if (r.ok && r.j && Array.isArray(r.j.forces)) {
         r.j.forces.forEach(function (f) {
@@ -65,10 +79,32 @@
           if (isForce(force)) next[f.kind].push({ id: f.id, force: force });
         });
       }
-      account = next;
-      tell();
+      return next;
     });
   }
+  /* This browser's forces onto the account, one at a time: those whose names
+     the account does not have yet, each dropped from here once it is kept
+     there. Resolves to how many moved. */
+  function moveLocal() {
+    var jobs = [];
+    Object.keys(LOCAL).forEach(function (kind) {
+      var taken = (account[kind] || []).map(function (a) { return a.force.name.toLowerCase(); });
+      local(kind).forEach(function (f) { if (taken.indexOf(f.name.toLowerCase()) < 0) jobs.push({ kind: kind, force: f }); });
+    });
+    var moved = 0;
+    return jobs.reduce(function (p, job) {
+      return p.then(function () {
+        var data = Object.assign({}, job.force); delete data.name;
+        return call('POST', 'api/forces', { kind: job.kind, name: job.force.name, data: data }).then(function (r) {
+          if (!r.ok) return;
+          moved++;
+          setLocal(job.kind, local(job.kind).filter(function (x) { return x.name.toLowerCase() !== job.force.name.toLowerCase(); }));
+        });
+      });
+    }, Promise.resolve()).then(function () { return moved; });
+  }
+  // the account's forces still on their way
+  function pending() { return fetching; }
 
   function list(kind) {
     var out = local(kind).map(function (f, i) { return { where: 'local', ref: 'l:' + i, force: f }; });
@@ -122,6 +158,6 @@
   // where a save goes now, in words for the screens
   function whereWords() { return signedIn() ? 'to your account' : 'in this browser'; }
 
-  root.PMCForces = { list: list, find: find, save: save, remove: remove, refresh: refresh,
+  root.PMCForces = { list: list, find: find, save: save, remove: remove, refresh: refresh, pending: pending,
     signedIn: signedIn, local: local, setLocal: setLocal, whereWords: whereWords, KEYS: LOCAL };
 })(typeof window !== 'undefined' ? window : this);

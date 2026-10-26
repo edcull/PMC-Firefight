@@ -111,6 +111,18 @@
       if (root.SFX && root.SFX[name]) root.SFX[name]();
     }
 
+    /* What the company has just found out (a client named, the log rebuilt):
+       the journal's lines from the choice or battle that brought it to this
+       page, shown on the page once, as well as kept in the journal. */
+    var told = { camp: null, node: null, from: 0, to: 0 };
+    function foundOut(st, id) {
+      if (told.camp !== E.camp) told = { camp: E.camp, node: id, from: st.journal.length, to: st.journal.length };
+      else if (told.node !== id) { told.from = told.to; told.to = st.journal.length; told.node = id; }
+      var lines = [];
+      st.journal.slice(told.from, told.to).forEach(function (j) { (j.effects || []).forEach(function (e) { if (e.journal) lines.push(e.journal); }); });
+      return lines.length ? '<div class="story-found"><b>Found out</b><ul>' + lines.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' : '';
+    }
+
     function storyView() {
       var d = def(), st = E.camp.story;
       if (!d) return '<h2>Story</h2><p>This story is not in this version of the game.</p>' + foot();
@@ -118,7 +130,7 @@
       var v = S().view(E.camp), ch = chapterOf();
       if (!v) return '<h2>' + esc(d.name) + '</h2><p>The story has lost its place.</p>' + foot();
       var h = '<h2>' + esc(d.name) + (ch && ch.counts !== false ? ' — ' + esc(ch.title) : '') + '</h2>';
-      h += badgeLine(st) + meterBar();
+      h += badgeLine(st) + meterBar() + (v.said && v.said.length ? talkView(v.said) : '') + foundOut(st, v.id);
       // a chapter's card, on its first page
       var node = d._nodes[v.id];
       if (node && node._first && ch && !ch.shared) {
@@ -169,11 +181,19 @@
       var h = '<div class="story-side"><h3>Side contracts</h3><p class="hint">' + (v.side.length > 1 ? 'Work on offer between chapters. You can take one.' : 'Work on offer between chapters.') + '</p>';
       v.side.forEach(function (o) {
         var cost = words(o.cost), passed = words(o.passed), sides = def().sides || {};
-        h += '<div class="story-job"><b>' + esc(o.title) + '</b><small>' + esc(o.pay + ' kUC') +
-          (o.against && sides[o.against] ? ' \u00b7 against ' + esc(sides[o.against].name) : '') + '</small>' + para(o.text) +
-          (o.catchUp ? '<small class="good">Offered to help the company catch up: it costs no time.</small>' : cost ? '<small>Taking it: ' + esc(cost) + '</small>' : '') +
-          (passed ? '<small class="warn">Passed up: ' + esc(passed) + '</small>' : '') +
-          '<button class="lnk" data-go="storyside" data-j="' + esc(o.id) + '">Take the job</button></div>';
+        // the job as it is asked of the company (its `ask`, by whoever asks), or else its line
+        /* a story that words its jobs (side.words) tells the pay and the time as
+           story; any other shows the sums */
+        var W = (d.side && d.side.words) || null, payBand = W && W.pay ? W.pay.filter(function (b) { return o.pay <= b[0]; })[0] : null;
+        var late = cost && /time:/.test(cost);
+        h += '<div class="story-job">' + (o.who ? personView(o.who) : '') + '<b>' + esc(o.title) + '</b><small>' + esc(payBand ? payBand[1] : o.pay + ' kUC') +
+          (o.against && sides[o.against] ? ' \u00b7 against ' + esc(sides[o.against].name) : '') + '</small>' + para(o.ask || o.text) +
+          (o.catchUp ? '<small class="good">' + esc(W && W.catchUp || 'Offered to help the company catch up: it costs no time.') + '</small>'
+            : W ? [o.takeText, late ? W.late : null].filter(Boolean).map(function (t) { return '<small>' + esc(t) + '</small>'; }).join('')
+            : cost ? '<small>Taking it: ' + esc(cost) + '</small>' : '') +
+          // passing it up, as the story tells it (its passedText), or else what it does
+          (o.passedText ? '<small class="warn">' + esc(o.passedText) + '</small>' : passed ? '<small class="warn">Passed up: ' + esc(passed) + '</small>' : '') +
+          '<button class="lnk" data-go="storyside" data-j="' + esc(o.id) + '">' + esc(o.take || 'Take the job') + '</button></div>';
       });
       return h + '</div>';
     }
@@ -186,7 +206,12 @@
 
     // who an event is about: their face, name and what they are (story-portraits.js)
     function whoView(id) {
-      var n = def()._nodes[id], who = n && n.who && (def().people || {})[n.who], PF = root.PMCStoryPortraits;
+      var n = def()._nodes[id];
+      return n && n.who ? personView(n.who) : '';
+    }
+    // one of the story's people: their face, name and what they are
+    function personView(key) {
+      var who = (def().people || {})[key], PF = root.PMCStoryPortraits;
       if (!who || !PF) return '';
       return '<div class="story-who">' + PF.svg(who.face, 64) + '<span><b>' + esc(who.name) + '</b><small>' + esc(who.role || '') + '</small></span></div>';
     }
@@ -240,7 +265,9 @@
         (side.name ? ' \u00b7 against ' + esc(side.name) : '') + '</small>' + (win ? '<small class="win">' + esc(win) + '</small>' : '') + '</div>';
       var notes = [];
       if (spec.levers.strikes) notes.push('Strikes before the first turn (' + spec.levers.strikes + ').');
-      if (spec.levers.suppressOwn) notes.push('Some of your squads start the battle pinned.');
+      // (the story's own word for why, where it gives one: the company's Loyalty)
+      if (spec.levers.notes && spec.levers.notes.length) spec.levers.notes.forEach(function (n) { notes.push(n); });
+      else if (spec.levers.suppressOwn) notes.push('Some of your squads start the battle pinned.');
       if (spec.levers.allies) notes.push('Allies fight beside you.');
       if (spec.variant && spec.variant.target) notes.push('The target: ' + spec.variant.target + (spec.variant.capture ? ', to be taken alive.' : '.'));
       if (spec.variant && spec.variant.ambush) notes.push(spec.variant.ambush === 'player' ? 'You spring the ambush.' : 'You are walking into an ambush.');
@@ -258,10 +285,12 @@
     }
 
     function poolView(v) {
-      var d = def(), h = '<div class="story-event"><h3>The next job</h3><p class="story-text">Two jobs, and only time for one. The one you leave will not wait.</p><div class="story-opts">';
+      var d = def(), h = '<div class="story-event"><h3>The next job</h3><p class="story-text">Two leads, and only time for one. The one you leave will not wait.</p><div class="story-opts">';
       v.options.forEach(function (o) {
+        // the job as the story puts it (its pitch), or else the thread it belongs to
         var ch = d._chapters[o.id], t = d.threads[o.thread];
-        h += '<button class="story-opt" data-go="storyopt" data-o="' + esc(o.id) + '"><b>' + esc(ch.title) + '</b><small>' + esc(t ? t.name : '') + '</small></button>';
+        var under = o.pitch ? S().render(E.camp, o.pitch) : (t ? t.name : '');
+        h += '<button class="story-opt" data-go="storyopt" data-o="' + esc(o.id) + '"><b>' + esc(ch.title) + '</b><small>' + esc(under) + '</small></button>';
       });
       return h + '</div></div>';
     }
@@ -317,6 +346,7 @@
       var co = E.camp.companies.A, picks = picked();
       var cfg = L().toCfg(E.camp, { picks: picks, role: muster.role, edge: muster.edge || 'west', tier: muster.tier, pl: muster.pl, options: E.camp.options || {} });
       cfg.colourA = E.colourOf(co);
+      L().wornColours(cfg);
       cfg.campLid = root.PMC_CAMPAIGN && root.PMC_CAMPAIGN.lid ? root.PMC_CAMPAIGN.lid() : null;
       cfg.track = !!E.camp.debugTrack;
       E.camp.pending = {

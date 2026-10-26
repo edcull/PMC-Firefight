@@ -169,6 +169,31 @@ e = started(cfgAm('A')); st = e.state();
 const myA = st.units.filter((u) => u.side === 'A' && u.alive && u.x >= 0);
 ok('your ambush: the enemy is on its own edge, and you set up more than 12" from it, anywhere', myA.length > 0 && gapOf(st, 'A') > 12 && st.initiative === 'A', 'nearest ' + gapOf(st, 'A').toFixed(1) + '"');
 
+/* An Escort walked into an ambush (Lot 47): Halloran and the company set up on
+   their own edge, Brass Ledger anywhere more than 12" off; seen coming, nobody
+   is pinned and the first turn is rolled for. */
+const escortAm = (expected) => {
+  const en = Engine.create(), cb = cfgAm('B');
+  cb.scenario = 'escort'; cb.mode = 'ai'; cb.story.variant = { escort: 'Halloran' }; cb.story.ambushExpected = !!expected;
+  en.start(cb);
+  for (let i = 0; i < 6 && en.state().phase !== 'battle'; i++) { en.intent('A', { k: 'autodeploy' }); en.intent('A', { k: 'start' }); }
+  return en.state();
+};
+const pinnedA = (s2) => s2.log.filter((l) => /\[A\] starts the battle with 1 SP/.test(l.text || '') || /starts the battle with 1 SP/.test(l.text || '') && s2.units.some((u) => u.side === 'A' && l.text.indexOf(u.label) === 0)).length;
+let sx = escortAm(false);
+const vip = sx.units.find((u) => u.escort);
+ok('an Escort ambushed: Halloran on the table with the company, on its own edge', sx.phase === 'battle' && vip && vip.x >= 0 && vip.x <= 6.5, vip && vip.x);
+ok('...Brass Ledger lying in wait out in the square, not marching on', sx.log.some((l) => /lying in wait/.test(l.text || '')) && sx.units.some((u) => u.side === 'B' && u.alive && u.x >= 0 && u.x < R.BOARD.w - 8));
+ok('...the company caught out: pinned, and Brass Ledger go first', sx.initiative === 'B' && pinnedA(sx) > 0, sx.initiative + ' ' + pinnedA(sx));
+let firsts = 0;
+for (let i = 0; i < 12; i++) {
+  sx = escortAm(true);
+  if (/initiative to .*\(D10/.test(sx.log.map((l) => l.text || '').join('|'))) firsts++;
+  if (pinnedA(sx)) break;
+}
+ok('...seen coming: set up the same, but nobody pinned', sx.phase === 'battle' && sx.log.some((l) => /lying in wait/.test(l.text || '')) && pinnedA(sx) === 0, pinnedA(sx));
+ok('...and the first turn rolled for, not handed to them', firsts === 12, firsts + ' of 12');
+
 console.log('\nThe edge, chosen on the muster');
 /* Retake the Refinery, with the night shift freed: the player picks the edge to
    come in from, and from the east the refinery is laid the other way about. */

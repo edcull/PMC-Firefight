@@ -274,6 +274,11 @@
       { if: { meter: 'intel', gte: 4 }, reveal: 'rebels' },
       { if: { meter: 'intel', gte: 6 }, reveal: 'lantern' }
     ],
+    // a company whose heart is not in it: squads pinned before the first shot, in every battle
+    beforeBattle: [
+      { if: { meter: 'loyalty', eq: -2 }, levers: { suppressOwn: 1 }, note: 'The company’s heart isn’t in this fight (Loyalty −2): one of your squads starts the battle pinned.' },
+      { if: { meter: 'loyalty', lte: -3 }, levers: { suppressOwn: 'D3' }, note: 'The company’s heart isn’t in this fight (Loyalty −3 or less): D3 of your squads start the battle pinned.' }
+    ],
     everyBattle: [
       { if: { grade: 'decisive' }, meter: 'htx', add: 1 },
       // winning keeps the company together

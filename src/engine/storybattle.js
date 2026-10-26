@@ -41,6 +41,8 @@
         if (u.side === 'A' && sty.allyFrom != null && u.pickIdx != null && u.pickIdx >= sty.allyFrom) {
           u.ally = true; u.paint = 'C'; allies = true;
         }
+        // (and a scenario's own ally: an Escort's VIP, in side A's colours)
+        if (u.side === 'A' && u.ally) allies = true;
       });
       if (allies) state.allies = { side: 'A' };
     }
@@ -128,8 +130,8 @@
       }
       if (sty.strikes) when('strikes', 'B', function () { strike('B', count(sty.strikes), lines); });
       if (sty.suppressOwn) when('own', 'A', function () { suppress('A', count(sty.suppressOwn), lines); });
-      // an ambush: the side caught out has every squad on the table pinned at the start
-      if (sty.ambush) {
+      // an ambush: the side caught out has every squad on the table pinned at the start (unless it saw it coming)
+      if (sty.ambush && !sty.ambushExpected) {
         var caught = sty.ambush === 'A' ? 'B' : 'A';
         when('ambush', caught, function () { suppress(caught, onTable(caught).length, lines); });
       }
@@ -146,10 +148,10 @@
         state.units.some(function (u) { return u.side === side && u.alive && u.x < 0 && !u.reserve && !u.aboard; }));
     }
 
-    /* Turn 1's initiative, where an ambush has settled it. */
+    /* Turn 1's initiative, where an ambush has settled it (one expected is rolled for as usual). */
     function storyFirstTurn() {
       var sty = story();
-      return sty && sty.ambush && E.state.turn === 1 ? sty.ambush : null;
+      return sty && sty.ambush && !sty.ambushExpected && E.state.turn === 1 ? sty.ambush : null;
     }
 
     /* Whether side A's activation now is the allies': they take their share of

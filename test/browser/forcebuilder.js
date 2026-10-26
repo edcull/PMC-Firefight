@@ -175,6 +175,26 @@ async function foundingLoadList(p) {
   const offered2 = await foundingLoadList(d2.p);
   ok('a new campaign there offers the account’s start force to load', offered2.some((t) => /Account Hills/.test(t) && /on your account/.test(t)), offered2.join(' | '));
 
+  /* A third device, straight to a new campaign without the force builder or the
+     skirmish screen first, with forces saved in that browser before signing in:
+     the founding sheet fetches the account's, and this browser's move onto it
+     (one whose name the account already uses stays here). */
+  const d3 = await device('login');
+  await d3.p.evaluate(() => {
+    localStorage.setItem('pmc-startforces', JSON.stringify([{ name: 'Browser Hills', faction: 'rebel', doctrine: 'H1', keys: ['recruits'], saved: '2026-01-01' }]));
+    localStorage.setItem('pmc-forces', JSON.stringify([{ name: 'Account Line', faction: 'pmc', tier: 2, pl: 1, keys: ['recruits'], saved: '2026-01-01' }]));
+  });
+  await d3.p.reload(); await d3.p.waitForTimeout(800);
+  await foundingLoadList(d3.p);
+  await d3.p.waitForTimeout(1200);
+  const offered3 = await d3.p.evaluate(() => [...document.querySelectorAll('[data-fload]')].map((x) => x.textContent));
+  ok('founding a campaign straight from the menu, the account’s start forces are offered', offered3.some((t) => /Account Hills/.test(t) && /on your account/.test(t)), offered3.join(' | '));
+  const moved = await d3.p.evaluate(() => fetch('api/forces').then((r) => r.json()).then((j) => ({ server: j.forces.map((f) => f.kind + ':' + f.name),
+    starts: JSON.parse(localStorage.getItem('pmc-startforces') || '[]').map((f) => f.name), skirm: JSON.parse(localStorage.getItem('pmc-forces') || '[]').map((f) => f.name) })));
+  ok('...and a start force saved in that browser before signing in has moved to the account', moved.server.indexOf('start:Browser Hills') >= 0 && !moved.starts.length &&
+    offered3.some((t) => /Browser Hills/.test(t) && /on your account/.test(t)), JSON.stringify(moved));
+  ok('...while one whose name the account already has stays in the browser, not overwriting it', moved.skirm.indexOf('Account Line') >= 0 && moved.server.filter((x) => x === 'skirmish:Account Line').length === 1, JSON.stringify(moved));
+
   await b.close();
   srv.kill();
   ok('no page errors', !errs.length, errs.join(' | '));

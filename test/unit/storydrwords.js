@@ -64,10 +64,19 @@ ok('...and the words are laid over the working', dr._chapters.c1.intro === TEXT.
 ok('no words for a page or option the story does not have', Object.keys(TEXT).every((k) => {
   const id = k.split(/[/#]/)[0], n = dr._nodes[id];
   if (dr._chapters[k]) return true;
+  // a second-half job's pitch, for its chapter
+  if (/\.pitch$/.test(k) && dr._chapters[k.slice(0, -6)]) return true;
   if (!n) return false;
   const o = k.indexOf('/') > 0 ? k.split('/')[1].replace('.why', '') : null;
   return !o || (n.options || []).some((x) => x.id === o);
 }), Object.keys(TEXT).filter((k) => !dr._chapters[k] && !dr._nodes[k.split(/[/#]/)[0]]).join(', '));
+ok('every side contract is asked of the company as a story, with its own way to say yes, and what passing it up means told as story', dr.side.jobs.every((j) => j.ask && j.take && j.take !== 'Take the job' && (!j.who || dr.people[j.who]) && (!j.passed || j.passedText) && (j.cost || []).every((e) => e === (j.cost || [])[0] || j.takeText)) && dr.side.words && dr.side.words.pay && dr.side.words.late,
+  dr.side.jobs.filter((j) => !j.ask || !j.take).map((j) => j.id).join(', '));
+{
+  const jobs = dr.chapters.filter((ch) => ch.half === 2 && ch.thread && !ch.finale);
+  ok('every second-half job is put to the company as a story, not as its thread', jobs.length >= 12 && jobs.every((ch) => ch.pitch && TEXT[ch.id + '.pitch'] === ch.pitch && !/thread|the race|first contact/i.test(ch.pitch)),
+    jobs.filter((ch) => !ch.pitch).map((ch) => ch.id).join(', '));
+}
 {
   const c = { companies: { A: { name: 'T', kUC: 0, tier: 1, roster: [] } } };
   S.begin(c, 'dead-reckoning', { commander: 'Ines Okoro' });
@@ -84,7 +93,10 @@ Object.keys(TALK.conversations).forEach((id) => TALK.conversations[id].forEach((
 Object.keys(TALK.battles).forEach((id) => Object.keys(TALK.battles[id]).forEach((m) => TALK.battles[id][m].forEach((l) => said.push({ at: id + '/' + m, who: l.who }))));
 Object.keys(TALK.sides).forEach((id) => Object.keys(TALK.sides[id]).forEach((m) => TALK.sides[id][m].forEach((l) => said.push({ at: 'side ' + id + '/' + m, who: l.who }))));
 ok('everyone who speaks is one of the story’s people, with a face', said.every((x) => people[x.who] && people[x.who].face), said.filter((x) => !people[x.who]).map((x) => x.at + ':' + x.who).join(', '));
-ok('every conversation opens a page the story has', Object.keys(TALK.conversations).every((id) => dr._nodes[id] && dr._nodes[id].talk));
+ok('every conversation opens a page the story has, or follows a choice it has', Object.keys(TALK.conversations).every((id) => {
+  const [node, opt] = id.split('/');
+  return dr._nodes[node] && (opt ? (dr._nodes[node].options || []).some((o) => o.id === opt && o.said) : dr._nodes[node].talk);
+}));
 ok('every chapter of the first half opens on one', chapters.every((c) => c.nodes[0].talk && c.nodes[0].talk.length >= 3), chapters.filter((c) => !c.nodes[0].talk).map((c) => c.id).join(', '));
 const MOMENTS = ['start', 'sighted', 'turn3', 'kill', 'loss', 'bhalf', 'ahalf', 'wave', 'parley', 'target', 'searched', 'found', 'guard', 'contact', 'vipdown', 'vipfled'];
 ok('every battle line is said at a moment the battle has', said.every((x) => !/\//.test(x.at) || MOMENTS.indexOf(x.at.split('/').pop()) >= 0 || TALK.conversations[x.at]));
@@ -393,6 +405,16 @@ ok('...its skin the market’s: railings for barricades, the market’s clutter 
   ok('the log handed back: no terms to pay for it, and the company jumps on without it',
     JSON.stringify(dr._nodes['dx.terms'].if).indexOf('log_handed') >= 0 && /without the log/.test(TEXT['dx.interlude']));
 }
+{
+  /* The rival companies in their own colours: the first, or the second where the company already wears it. */
+  const L = require('../../src/story/levers.js');
+  const want = { kettle: 'ochre', wraith: 'arctic', sable: 'charcoal', kestrel: 'sky', reavers: 'crimson', lance: 'plum' };
+  ok('each rival company has its colours: Brass Ledger amber, Wraith white, Sable black, Kestrel light blue, the Reavers red, the Lance plum',
+    Object.keys(want).every((k) => [].concat(dr.sides[k].colour)[0] === want[k] && [].concat(dr.sides[k].colour).length === 2));
+  const cfg = { colourA: 'ochre', colourB: 'ochre', colourC: 'ochre', colourSides: { B: ['ochre', 'rust'], C: ['ochre', 'rust'] } };
+  L.wornColours(cfg);
+  ok('...a rival in the company’s own colour wears its second; allies with both taken are left for the engine to repaint', cfg.colourB === 'rust' && cfg.colourC === 'ochre' && !('colourSides' in cfg), JSON.stringify(cfg));
+}
 ok('Vesk’s square is crossed, for the Escort: Halloran, to the landing field', !MAPS.vesk.objectives && used('vesk').every((n) => n.scenario === 'escort' && n.variant.escort === 'Halloran'));
 {
   /* The docks as the briefing has them: Sable's warehouse walked into in the middle of the table,
@@ -486,6 +508,45 @@ console.log('\nThe star chart');
     ok('...the chart names Wraith Section’s once it is known', /Wraith Section.*for the Admiralty/.test(h2), h2.slice(h2.indexOf('chart-rivals'), h2.indexOf('chart-rivals') + 300));
     c2.story.revealed.client_wraith = false; c2.story.leading = 'kestrel';
     ok('...and says "client unknown" while it is not', /Kestrel Air Cavalry \(leading\) <small class="secret">client unknown/.test(global.PMCStoryChart.html(S.chart(c2), 'dead-reckoning')));
+  }
+  {
+    // Fatigue: a company pushed too hard starts its battles with squads pinned, won't take everything on, and asks for rest
+    const c6 = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+    S.begin(c6, 'dead-reckoning', {});
+    const at = (node, f) => { c6.story.chapter = dr._nodes[node]._chapter; c6.story.node = node; c6.story.meters.fatigue = f; return S.battleSpec(c6); };
+    ok('Fatigue starts at nothing, and the company can see it', c6.story.meters.fatigue === 0 && dr._meters.fatigue.shown && !dr._meters.loyalty);
+    const f3 = at('c1.battle', 3), f4 = at('c1.battle', 4), f6 = at('c1.battle', 6);
+    ok('...at 3, nobody starts pinned', !f3.levers.suppressOwn && !(f3.levers.notes || []).length);
+    ok('...at 4, one squad starts pinned, and the briefing says why', f4.levers.suppressOwn === 1 && /worn out/.test(f4.levers.notes[0]));
+    ok('...at 5 or more, D3 of them', f6.levers.suppressOwn === 'D3');
+    c6.story.chapter = 'warren'; c6.story.node = 'warren.other'; c6.story.meters.fatigue = 4;
+    S.choose(c6, 'close');
+    const w = S.battleSpec(c6);
+    ok('...on top of what the battle itself brings', w.levers.suppressOwn === 'D3+1', w.levers.suppressOwn);
+    const opt = (node, id, f) => { c6.story.chapter = dr._nodes[node]._chapter; c6.story.node = node; c6.story.meters.fatigue = f; return S.view(c6).options.find((o) => o.id === id); };
+    ok('...a worn-out company won’t follow the voices, take Sable’s warehouse, or fire first on the Ninth Lance',
+      opt('warren.other', 'voices', 3).ok === false && opt('warren.other', 'voices', 2).ok && opt('c4.lot', 'take', 3).ok === false && opt('dx.repo', 'fire', 2).ok === false && opt('dx.repo', 'fire', 1).ok);
+    ok('...asks for a rest between chapters, and rest, a bonus or the death benefits bring it down',
+      dr._nodes['i.tired'].if.meter === 'fatigue' && dr._nodes['i.tired'].options.find((o) => o.id === 'rest').effects.some((e) => e.meter === 'fatigue' && e.add < 0) &&
+      dr._nodes['i.wake'].options.find((o) => o.id === 'pay').effects.some((e) => e.meter === 'fatigue' && e.add < 0));
+    ok('...a lost battle wears it down', dr.everyBattle.some((e) => e.if && e.if.grade === 'failure' && e.meter === 'fatigue' && e.add > 0));
+    ok('...and the epilogue remembers', dr.epilogue.filter((l) => l.about === 'company' && l.if && l.if.meter === 'fatigue').length === 2);
+  }
+  {
+    // a client found out is said aloud, not only written in the journal
+    const words = (id) => JSON.stringify([TALK.conversations[id] || [], TEXT[id] || '']);
+    const aloud = { kettle: ['c1.agent/interrogate', 'i.catalogue/buy'], wraith: ['c2f.drop/read'], reavers: ['c3.contact'], sable: ['c4.debrief'], kestrel: ['i.newsfeed'], lance: ['dx.brief'] };
+    const names = { kettle: /Orrin Mercantile/, wraith: /Naval Intelligence/, reavers: /Nobody hired us/, sable: /Halvorsen Mining Combine/, kestrel: /Meridian.*Halcyon/, lance: /work for Lucan Vane/ };
+    ok('every rival’s client is said aloud where it is found out', Object.keys(dr.clients).every((id) => aloud[id] && aloud[id].every((k) => names[id].test(words(k)))),
+      Object.keys(dr.clients).filter((id) => !aloud[id] || !aloud[id].every((k) => names[id].test(words(k)))).join(' '));
+    const c5 = { companies: { A: { name: 'T', kUC: 20, tier: 1, roster: [] } } };
+    S.begin(c5, 'dead-reckoning', {});
+    c5.story.chapter = 'c1'; c5.story.node = 'c1.agent'; c5.story.queue = [{ after: 'c1.interlude' }];
+    S.choose(c5, 'interrogate');
+    const v5 = S.view(c5);
+    ok('...straight after the choice, on the next page', v5.said && v5.said.some((l) => l.who === 'kettleman' && /Orrin Mercantile/.test(l.text)) && v5.id !== 'c1.agent', JSON.stringify(v5.said));
+    S.proceed(c5);
+    ok('...and only there', !S.view(c5).said);
   }
   {
     // business until somebody loses: a rival beaten bears a grudge, in its words and at the table

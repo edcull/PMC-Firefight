@@ -43,13 +43,40 @@ console.log('\nLot 47: an Escort');
 const { cfg, st } = started();
 ok('Lot 47 is fought as an Escort, Halloran the one to be got across', cfg.scenario === 'escort' && cfg.story.variant.escort === 'Halloran' && /across/.test(SC.SCENARIOS.escort.win + ' ' + dr._nodes['c1.battle'].text));
 const vane = st.units.find((u) => u.escort);
-ok('...he is on the table with side A, its own to move: named, a Command Unit’s statline, no special rules', vane && vane.side === 'A' && vane.name === 'Halloran' && !vane.ally &&
+ok('...he is on the table with side A, an ally, not the player’s to move: named, a Command Unit’s statline, no special rules', vane && vane.side === 'A' && vane.name === 'Halloran' && vane.ally && st.allies && st.allies.side === 'A' &&
   vane.rules.length === 0 && vane.models >= 1, vane && JSON.stringify({ name: vane.name, side: vane.side, models: vane.models, rules: vane.rules }));
 ok('...and he comes on in turn 1 with the rest of side A', vane.x >= 0 && !vane.reserve, vane.x + ',' + vane.y);
 ok('Vesk’s market on the table: every barricade a railing and every crater field the market’s clutter, and the roads paved', cfg.story.skin === 'market' &&
   st.terrain.filter((t) => t.kind === 'barricade' || t.kind === 'crater').every((t) => t.market) && st.terrain.some((t) => t.kind === 'barricade') &&
   st.terrain.filter((t) => t.kind === 'road').every((t) => t.paved) && R.terrainName(st, 'barricade') === 'Railings and planters');
 ok('the bidding’s first answer no longer asks the company for money it has not got', !dr._nodes['c1.bidding'].options[0].cost);
+{
+  // the bidding sets the crossing: walked into an ambush, an ambush seen laid, or Brass Ledger hit first
+  const chosen = (opt) => {
+    const c = C.newCampaign({ mode: 'solo' });
+    C.found(c.companies.A, FOUNDING, 'S2');
+    S.begin(c, 'dead-reckoning', {});
+    c.story.chapter = 'c1'; c.story.node = 'c1.bidding';
+    S.choose(c, opt);
+    const cf = L.toCfg(c, { picks: C.pickForce(c.companies.A, 1, 1, null, { scenario: 'escort' }), role: 'A' });
+    return { c, cf, text: S.render(c, cf.story.blurb || '') };
+  };
+  const a = chosen('outbid'), b = chosen('watch'), f = chosen('follow');
+  ok('standing with Halloran: an Escort still, walked into Brass Ledger’s ambush', a.c.story.node === 'c1.battle' && a.cf.scenario === 'escort' && a.cf.story.ambush === 'B' && !a.cf.story.ambushExpected && !a.cf.story.strikes &&
+    /Ambush!/.test(a.text) && !/knows where it is/.test(a.text), JSON.stringify({ am: a.cf.story.ambush, ex: a.cf.story.ambushExpected }));
+  ok('...watching the room: the same ambush, seen laid (nobody pinned, the first turn rolled for), and their force seen', b.cf.story.ambush === 'B' && b.cf.story.ambushExpected === true &&
+    JSON.stringify(b.cf.story.intel) !== JSON.stringify(a.cf.story.intel) && /knows where it is/.test(b.text) && !/Ambush!/.test(b.text));
+  ok('...marking Kettering’s men: no ambush, the company strikes first as they come on', !f.cf.story.ambush && f.cf.story.strikes === 'D3' && /opens fire/.test(f.text));
+  // and the ambushed crossing starts: Halloran with the company on its edge, Brass Ledger lying in wait
+  const e = Engine.create(); const cf = Object.assign({}, a.cf, { mode: 'ai' }); e.start(cf);
+  for (let i = 0; i < 8 && e.state().phase !== 'battle'; i++) {
+    const s2 = e.state();
+    if (s2.swapAsk) e.intent(s2.swapAsk.side, { k: 'swapdone' });
+    e.intent('A', { k: 'autosplit' }); e.intent('A', { k: 'autodeploy' }); e.intent('A', { k: 'start' });
+  }
+  const s3 = e.state(), h = s3.units.find((u) => u.escort);
+  ok('...and the ambushed crossing begins: Halloran on the company’s edge, Brass Ledger lying in wait', s3.phase === 'battle' && h && h.x >= 0 && h.x <= 6.5 && s3.log.some((l) => /lying in wait/.test(l.text || '')), h && h.x);
+}
 {
   const s = st, g = SC.SCENARIOS.escort.goals;
   const b = s.units.find((u) => u.side === 'B' && u.alive);
@@ -162,6 +189,28 @@ console.log('\nLot 47 lost: Brass Ledger have the log');
   S.choose(c, 'take');
   S.resolveBattle(c, 'victory');
   ok('...only the warehouse taken by force brings it back with the heading', !c.story.flags.ledger_has_log && c.story.meters.theirs === t1 - 1);
+}
+
+console.log('\nHalloran, an ally');
+{
+  // the player's own units spent, side A to act: what is left is Halloran's, and the AI runs him
+  const fresh = () => {
+    const r = started('ai'), t = r.st;
+    t.activeSide = 'A';
+    t.units.forEach((u) => { if (u.side === 'A') { u.activated = !u.ally; u.reserve = false; u.aboard = false; } });
+    return Object.assign(r, { h: t.units.find((u) => u.escort) });
+  };
+  let { e, st: s, h } = fresh();
+  ok('the player cannot pick him: his activations are his own', !e.intent('A', { k: 'select', id: h.id }).ok || (e.sel && e.sel() && e.sel().id) !== h.id);
+  const x0 = h.x;
+  for (let i = 0; i < 20 && !h.activated; i++) e.sim.steps(1);
+  ok('...left alone, he makes his own way towards the far edge', h.activated && h.x > x0 + 1, 'x ' + x0.toFixed(1) + ' \u2192 ' + h.x.toFixed(1));
+  ({ e, st: s, h } = fresh());
+  const to = { x: h.x, y: h.y < 24 ? h.y + 10 : h.y - 10 };
+  e.intent('A', { k: 'allyorder', kind: 'move', x: to.x, y: to.y });
+  const d0 = R.inches(h.x, h.y, to.x, to.y);
+  for (let i = 0; i < 20 && !h.activated; i++) e.sim.steps(1);
+  ok('...and goes where the company tells him: Move here', s.allyOrder && R.inches(h.x, h.y, to.x, to.y) < d0 - 1, d0.toFixed(1) + ' \u2192 ' + R.inches(h.x, h.y, to.x, to.y).toFixed(1));
 }
 
 console.log('\nOne battle, AI against AI');

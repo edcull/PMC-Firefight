@@ -266,6 +266,18 @@
      picks from the muster (dossier entries), the side they chose where the
      event left the role to them (`role: 'A'|'B'`), and the campaign's
      options. */
+  /* The rivals in their own colours, once the company's is known: each side
+     its first colour, or its second where the company (or the other side)
+     already wears the first. */
+  function wornColours(cfg) {
+    var sides = cfg.colourSides || {};
+    var pick = function (list, taken) { return list.filter(function (c) { return taken.indexOf(c) < 0; })[0] || null; };
+    if (sides.B && sides.B.length) cfg.colourB = pick(sides.B, [cfg.colourA]) || cfg.colourB;
+    if (sides.C && sides.C.length) cfg.colourC = pick(sides.C, [cfg.colourA, cfg.colourB]) || cfg.colourC;
+    delete cfg.colourSides;
+    return cfg;
+  }
+
   function toCfg(campaign, opts) {
     opts = opts || {};
     var spec = S.battleSpec(campaign);
@@ -354,7 +366,11 @@
       attacker: attacker,
       armyA: keysA, armyB: enemy.picks.map(function (p) { return p.key; }),
       nameA: co.name, nameB: side.name || 'The enemy',
-      colourA: opts.colourA || null, colourB: opts.colourB || null,
+      /* a side's own colours, where the story gives some: the first it wears, the
+         second if the company already wears that (worn: wornColours) */
+      colourA: opts.colourA || null, colourB: opts.colourB || [].concat(side.colour || [])[0] || null,
+      colourC: [].concat(lv.allies && def.sides && def.sides[lv.allies.side] && def.sides[lv.allies.side].colour || [])[0] || null,
+      colourSides: { B: [].concat(side.colour || []), C: [].concat(lv.allies && def.sides && def.sides[lv.allies.side] && def.sides[lv.allies.side].colour || []) },
       dossier: { A: picksA.concat(allies ? allies.picks.map(function () { return null; }) : []), B: null },
       doctrines: { A: (co.doctrines || []).slice(), B: docsB },
       tactics: { A: null, B: (spec.enemy && spec.enemy.faction === 'rebel') ? (spec.tactics || enemy.tactics) : null },
@@ -382,6 +398,8 @@
         strikes: lv.strikes || null,
         suppressOwn: lv.suppressOwn || null,
         ambush: ambush,
+        // (an ambush the side caught out saw coming: set up as one, but nobody pinned, and the first turn rolled for)
+        ambushExpected: !!(ambush && variant.expected),
         readiness: rd,
         barricades: rd >= 1 ? { B: 2 * pl } : null,
         intel: S.intel(campaign, spec),
@@ -409,7 +427,7 @@
 
   root.PMCStoryLevers = {
     levelsFor: levelsFor, maxTier: maxTier, tierFor: tierFor, plFor: plFor,
-    buildForce: buildForce, describeForce: describeForce, kindOf: kindOf, allowance: allowance, fit: fit, toCfg: toCfg
+    buildForce: buildForce, describeForce: describeForce, kindOf: kindOf, allowance: allowance, fit: fit, toCfg: toCfg, wornColours: wornColours
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PMCStoryLevers;
 })(typeof window !== 'undefined' ? window : global);

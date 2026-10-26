@@ -110,6 +110,7 @@
        which can change kind, the others as well. */
     function loadList(co, build) {
       var all = root.PMCForces ? root.PMCForces.list('start') : [];
+      if (!all.length && root.PMCForces && root.PMCForces.pending()) return '<p class="dnote">Fetching the start forces on your account\u2026</p>';
       if (!all.length) return '<p class="dnote">No start forces saved yet. Build one from the main menu: Force builder, Campaign start force.</p>';
       var FN = R.FACTIONS || {};
       return '<div class="cmodal-scroll"><div class="docpick">' + all.map(function (e) {

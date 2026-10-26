@@ -344,6 +344,8 @@
     var st = campaign.story, def = storyOf(campaign);
     depth = depth || 0;
     if (depth > 200) throw new Error('Story loop at ' + (node && node.id));
+    // (the page after a choice is the only one that hears what was said after it)
+    st.said = null;
     if (!node) { st.node = null; return; }
     st.node = node.id;
     // (a shared chapter only holds events used from elsewhere, the interludes': it is never started)
@@ -405,13 +407,17 @@
     if (node.type === 'event') out.options = optionsOf(ctx, node);
     if (node.type === 'pool') out.options = st.pool ? st.pool.offers.map(function (o) {
       var ch = def._chapters[o.chapter];
-      return { id: o.chapter, text: ch.title, thread: o.thread, ok: true };
+      return { id: o.chapter, text: ch.title, pitch: ch.pitch || null, thread: o.thread, ok: true };
     }) : [];
     if (node.type === 'battle') out.battle = battleSpec(campaign);
     if (node.type === 'interlude') out.side = sideOffers(campaign, node);
     if (node.side) out.sideJob = st.detour ? st.detour.job : null;
     if (node.type === 'ending') out.ending = st.ended;
     if (node.talk) out.talk = conversation(campaign, node.talk);
+    // what was said straight after the choice that brought the story here (an option's `said`)
+    var from = st.said && st.said.at === node.id && def._nodes[st.said.node];
+    var made = from && arr(from.options).filter(function (o) { return o.id === st.said.choice; })[0];
+    if (made && made.said) out.said = conversation(campaign, made.said);
     return out;
   }
 
@@ -443,7 +449,10 @@
     arr(node.options).forEach(function (x) { if (x !== o && x.passed && test(ctx, x.if)) apply(ctx, x.passed, lines); });
     if (o.battle) st.pending = mergeLevers(st.pending, o.battle);
     note(campaign, { node: node.id, choice: o.id, effects: lines });
-    return advance(campaign, o.next || node.next);
+    advance(campaign, o.next || node.next);
+    // (what is said straight after it, kept for the page it leads to)
+    if (o.said) st.said = { node: node.id, choice: o.id, at: st.node };
+    return view(campaign);
   }
 
   function mergeLevers(a, b) {
@@ -572,6 +581,15 @@
       var lv = a.levers;
       if (lv && lv.allies && spec.levers.allies) { lv = clone(lv); delete lv.allies; }
       spec.levers = mergeLevers(spec.levers, lv);
+    });
+    /* What the company brings into every battle (a story's `beforeBattle`: { if,
+       levers, note }): a company whose heart is not in it starts with squads
+       pinned, on top of whatever the battle itself brings. */
+    arr(def.beforeBattle).forEach(function (a) {
+      if (!test(ctx, a.if)) return;
+      var lv = a.levers || {};
+      if (lv.suppressOwn) spec.levers.suppressOwn = spec.levers.suppressOwn ? spec.levers.suppressOwn + '+' + lv.suppressOwn : lv.suppressOwn;
+      if (a.note) spec.levers.notes = arr(spec.levers.notes).concat(render(campaign, a.note));
     });
     // (a choice that changes who is fought: a hired rival's enemy in its place)
     if (spec.levers.enemy) spec.enemy = clone(spec.levers.enemy);
@@ -945,7 +963,7 @@
     if (!st.side || st.side.node !== node.id || st.side.taken) return [];
     return st.side.offers.map(function (o) {
       var j = jobOf(def, o.job) || {};
-      return { id: o.job, title: j.title, text: j.text || '', against: j.enemy && j.enemy.side, pay: o.pay, catchUp: o.catchUp,
+      return { id: o.job, title: j.title, text: j.text || '', ask: j.ask || null, take: j.take || null, who: j.who || null, passedText: j.passedText || null, takeText: j.takeText || null, against: j.enemy && j.enemy.side, pay: o.pay, catchUp: o.catchUp,
         cost: o.catchUp ? null : j.cost || null, passed: j.passed || null };
     });
   }

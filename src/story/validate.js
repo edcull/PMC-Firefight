@@ -352,6 +352,12 @@
     /* ---- the story's own rules ---- */
     arr(def.everyChapter).forEach(function (e, i) { readEffects(e, 'everyChapter[' + i + ']', { half: 0, time: true }); });
     arr(def.everyBattle).forEach(function (e, i) { readEffects(e, 'everyBattle[' + i + ']', { half: 0, time: true }); });
+    // what the company brings into every battle: { if, levers, note }
+    arr(def.beforeBattle).forEach(function (a, i) {
+      var at = 'beforeBattle[' + i + ']';
+      readCond(a.if, at, 'outcome');
+      Object.keys(a.levers || {}).forEach(function (k) { if (k !== 'suppressOwn') err(at + ': only suppressOwn is brought into every battle, not ' + k); });
+    });
     /* ---- the epilogue: { about, ending, if, text }; its reads are text, and count for nothing ---- */
     arr(def.epilogue).forEach(function (e, i) {
       var at = 'epilogue[' + i + ']';

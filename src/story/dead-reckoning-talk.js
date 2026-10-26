@@ -36,29 +36,35 @@
       'c1.brief': [
         { who: 'reader', text: '{commander:rank}. Halloran. Thank you for coming. I’ll be plain: I need your company, and I need it tonight.' },
         { who: 'commander', text: 'You said an auction. You didn’t say why an auction needs a company.' },
-        { who: 'reader', text: 'Because everyone else in that room has brought one. Lot 47 is Elias Morrow’s log. Surveyor. Forty years without a word; a court declared him dead a long time ago. I’ve never been entirely sure.' },
-        { who: 'reader', text: 'He wrote in dead reckoning: headings and burn times, no fixes. Without his stones it’s gibberish. With them, it’s a road.' },
+        { who: 'reader', text: 'Because everyone else in that room has brought one. Lot 47 is Elias Morrow’s log. Surveyor. Forty years without a word; a court declared him dead a long time ago. I’m not so sure.' },
+        { who: 'reader', text: 'He never wrote down where he was, only which way he went and for how long. On its own the log is useless. You need his stones to know where each leg starts.' },
         { who: 'commander', text: 'And the stones? Whose are they?' },
         { who: 'reader', text: 'Nobody’s, now. He stole them back from whoever paid for his first trip, took them out again, and put them down along the way, one at a time. Each one points to the next. The log says where to start.' },
         { who: 'commander', text: 'Who paid for his first trip?' },
         { who: 'reader', text: 'The catalogue doesn’t say. Whoever it was, Morrow robbed him and ran.' },
         { who: 'reader', text: '[he touches his earpiece, and listens] Yes. Yes, I understand. [to you] Forgive me.' },
         { who: 'commander', text: 'Who’s on the line?' },
-        { who: 'reader', text: 'My backer. They prefer not to be introduced. The money is real; it clears through a bank on Halcyon before I’ve finished asking for it, and I stopped asking whose it was some time ago.' },
-        { who: 'reader', text: 'Get me out of that room with the log, and alive. After that we follow the road to a world he called the Quiet, and whoever files the first claim at the end owns everything there. Shall we?' }
+        { who: 'reader', text: 'My backer. They don’t want to be introduced. The money is real: it comes through a bank on Halcyon, and it’s there whenever I need it. I don’t ask whose it is.' },
+        { who: 'reader', text: 'Get me out of there alive, with the log. Then we follow it to a world he called the Quiet. Whoever files the first claim there owns it. Ready?' }
       ],
       'c1.agent': [
-        { who: 'kettering', text: 'You’ve got one of mine. Let’s be clear about what happens now, {commander:rank}: he walks, or the next time we meet I bring three times the men and no reason to be polite.' },
+        { who: 'kettering', text: 'You’ve got one of my lads, {commander:rank}. Send him back, or next time I bring three times as many.' },
         { who: 'commander', text: 'Your men tried to take the log off my employer in the street.' },
-        { who: 'kettering', text: 'They were paid to. It’s a job, not a grudge. You did yours, we did ours, and the client who lost is the one who’ll be unhappy. Hand him back and the account’s square. Keep him and it isn’t.' }
+        { who: 'kettering', text: 'They were paid to. It’s a job, nothing personal. Send him back and we’re even. Keep him and we’re not.' }
+      ],
+
+      // (said straight after the choice: Brass Ledger's client, out of the man they left behind)
+      'c1.agent/interrogate': [
+        { who: 'kettleman', name: 'Kettering’s man', text: 'I watch doors! That’s all I do. The money? It comes through three companies nobody’s ever heard of, and all three bank with the Orrin Mercantile, on Kerrigan. Everyone in the crew knows it. Nobody’s meant to say it.' },
+        { who: 'reader', text: 'A bank on Kerrigan. So somebody there wants the log too. It won’t last, {commander:rank}. Brass Ledger work for whoever pays. Next time it will be someone else.' }
       ],
 
       'c1.lost': [
-        { who: 'kettering', text: 'No hard feelings, {commander:rank}. Your employer’s log is in my hold, and my hold lifts in an hour. That’s how auctions go, sometimes.' },
+        { who: 'kettering', text: 'No hard feelings, {commander:rank}. The log’s in my hold, and we lift in an hour.' },
         { who: 'client', text: 'Kettering. Name a figure.' },
-        { who: 'kettering', text: 'And who’s this? Halloran’s money? An honour, whoever you are. And no. Not after reading the first page of it, not for any figure you could name. Your hired help can come and try the field, if they like. I’d rather they didn’t; it’s bad for the paintwork.' },
-        { who: 'reader', text: 'I have the first eleven pages, {commander:rank}. Photographed. If they run, they’ll run where the log points, and we can follow.' },
-        { who: 'kettering', text: 'Or here’s a thought, {commander:rank}, between professionals. No money. A share, at the end of the road, and the log goes back in your reader’s bag tonight. Think it over. Quickly.' }
+        { who: 'kettering', text: 'Halloran’s money, is it? No. I’ve read the first page. It’s not for sale, not at any price. Your people can come and try to take it back if they like. I’d rather they didn’t.' },
+        { who: 'reader', text: 'I photographed the first eleven pages, {commander:rank}. Wherever they go, the log will take them, and we can follow.' },
+        { who: 'kettering', text: 'Or we do a deal, {commander:rank}. No money. Cut us in on whatever’s at the end, and you get the log back tonight. Don’t take long deciding.' }
       ],
 
       // ---- 2. The First Lodestone ----
@@ -79,6 +85,13 @@
         { who: 'commander', text: 'The dig is ours, Nine. Pack up and go home.' },
         { who: 'nine', text: 'Your client doesn’t pay us. Ours does, and our client wants what’s in that ground. Turn your dropships round and nobody on your side gets shot. Come any closer and we start with your officers.' }
       ],
+      // (said straight after reading Wraith Section's orders)
+      'c2f.drop/read': [
+        { who: 'reader', text: 'These aren’t a company’s orders, {commander:rank}. Look at the header: the Admiralty, Office of Naval Intelligence. Wraith Section is the Navy with the badges taken off.' },
+        { who: 'commander', text: 'And the Navy wants the Quiet too.' },
+        { who: 'reader', text: 'The Navy wants whatever Morrow found before anybody else gets it. I would very much like to know how they heard of it.' }
+      ],
+
       'c2t.airlock': [
         { who: 'ops', text: 'Every docking arm is welded. Somebody’s aboard, and they’ve been aboard a while: there’s a heat plume off the north module. The survey office still lists Thule as theirs, unmanned. Nobody’s filed a salvage claim on it.' },
         { who: 'scav', text: 'You’re on our docking arm, ship. Thule’s ours now. Cast off, or we open up on your hull.' },
@@ -98,7 +111,7 @@
       'c3.contact': [
         { who: 'hal', text: 'Company! First come, first served, and we came first. The beacon’s our claim. You land one more boat on this island and I sink it.' },
         { who: 'commander', text: 'You’re cutting into something you don’t understand, Hal.' },
-        { who: 'hal', text: 'Don’t need to understand it to sell it. Nothing against you, it’s a buyer’s market. But my crew don’t get paid if you get the stone, so you come in, we kill you. Simple as that.' }
+        { who: 'hal', text: 'Don’t need to understand it to sell it. Nobody hired us, nobody tells us where to dig. We jump claims, and we sell to whoever buys. Nothing against you, it’s a buyer’s market. But my crew don’t get paid if you get the stone, so you come in, we kill you. Simple as that.' }
       ],
 
       'c3.sale': [
@@ -225,7 +238,20 @@
         { who: 'ops', text: 'Every newsfeed in the sector has it already. They’re calling them the Xenotripods. And every company on the trail is watching the same pictures we are.' }
       ],
 
-      // ---- The Double-Cross ----      // ---- The Double-Cross ----
+      // ---- between chapters ----
+      'i.newsfeed': [
+        { who: 'rook', text: 'Kestrel Air Cavalry flies for the Meridian, {commander:rank}, and the Meridian wants the first pictures of whatever is at the end of this. It pays very well for them.' },
+        { who: 'commander', text: 'Since when does a newsfeed hire gunships?' },
+        { who: 'rook', text: 'Since it changed hands last year. New owner, on Halcyon. Never comes to the office, and never asks what the pictures cost.' }
+      ],
+      // (said straight after buying Brass Ledger's catalogue: page one is their own client)
+      'i.catalogue/buy': [
+        { who: 'kettering', text: 'Page one, free with every copy: who’s paying us. The Orrin Mercantile Bank, on Kerrigan, behind three shell companies. They paid for this trip.' },
+        { who: 'commander', text: 'You’re selling out your own client?' },
+        { who: 'kettering', text: 'I’m selling a catalogue. The bank bought this trip, not the next one. Next time it will be whoever pays.' }
+      ],
+
+      // ---- The Double-Cross ----
       'dx.brief': [
         { who: 'daw', text: 'Commander Iselin Daw, the Ninth Lance. You’ll have heard of us. You won’t have heard that we work for Lucan Vane. Neither, it seems, have you: he is the money behind your Mr Halloran, and he doesn’t tell people anything.' },
         { who: 'commander', text: 'Nobody told me.' },
@@ -505,15 +531,17 @@
     battles: {
       'c1.battle': {
         start: [
-          { who: 'kettering', text: 'Nothing personal, {commander:rank}. Hand over the reader and the slate and everyone goes home. Otherwise my lads go through you, and I don’t care how much it costs.' },
-          { who: 'kettering', if: { flag: 'kettle_marked' }, text: 'You marked my lads in the room? Clever. Not clever enough.' }
+          { who: 'kettering', text: 'Hand over the slate, {commander:rank}, and everyone goes home. Otherwise we take it.' },
+          { who: 'kettering', if: { flag: 'kettle_marked' }, text: 'So you spotted my lads. Doesn’t matter. Get the slate!' },
+          { who: 'kettering', if: { flag: 'room_watched' }, text: 'You knew we were here and you came out anyway? Fine. Get the slate!' },
+          { who: 'kettering', if: { all: [{ not: { flag: 'room_watched' } }, { not: { flag: 'kettle_marked' } }] }, text: 'There he is! Get the slate, lads!' }
         ],
-        kill: [{ who: 'kettering', text: 'You’re costing me money, {commander:rank}. I don’t forgive that. I invoice it.' }],
-        turn3: [{ who: 'reader', text: 'I’m in the arcade, {commander:rank}. My backer is asking, rather calmly, whether I mean to reach the end of it.' }],
-        loss: [{ who: 'client', text: 'You’re losing people, {commander:rank}. Don’t lose Halloran. He can read that log, and nobody else I pay can.' }],
+        kill: [{ who: 'kettering', text: 'That’s another one down. This job is costing me a fortune.' }],
+        turn3: [{ who: 'reader', text: 'I’m in the arcade, {commander:rank}! Which way? Tell me which way!' }],
+        loss: [{ who: 'client', text: 'Don’t lose Halloran, {commander:rank}. Nobody else can read that log.' }],
         // Halloran brought down (hit, not killed: he gets away later, with his notes), or broken and running
         vipdown: [{ who: 'reader', text: 'I’m hit, {commander:rank}. The leg. I can’t — they’re taking the slate. They’ve got the slate.' }],
-        vipfled: [{ who: 'reader', text: 'I am not a soldier, {commander:rank}, and I am not staying here to be shot at. I’m going back the way I came. Tell my backer what you like.' }]
+        vipfled: [{ who: 'reader', text: 'I’m not staying out here to be shot! I’m going back inside!' }]
       },
       'c1r.battle': {
         start: [{ who: 'kettering', text: 'They’re coming for the ship! Load what you can, and hold the ramp until we’re up!' }],

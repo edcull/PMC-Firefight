@@ -332,8 +332,9 @@
   /* ------------------------------------------------ Escort */
   /* Someone who matters (the story's `variant.escort`: their name) crosses the
      table with side A, from its own edge to the far one, and the other side
-     wants them. They come on with side A as a unit of their own, side A's to
-     move: a Command Unit's statline of the Battle Tier, and no special rules,
+     wants them. They come on with side A as a unit of their own, an ally: they
+     make their own way across, and take the allies' orders (storybattle.js),
+     but the player does not move them: a Command Unit's statline of the Battle Tier, and no special rules,
      as the solitaire VIP is (p. 151). Through to within 3" of the far edge at
      an End phase, they are out, and A has won; killed, B has. */
   function escortOf(state) { return state.units.filter(function (u) { return u.escort; })[0] || null; }
@@ -352,7 +353,8 @@
       p.key = 'escortvip'; p.code = 'VIP'; p.name = who; p.rules = []; p.command = false;
       // a civilian, not an officer: drawn in a town coat with a slate, an aide at their side (iso-troops 'vip')
       p.art = 'vip';
-      return [{ profile: p, side: 'A', escort: true }];
+      // (side A's, but not the player's to move: an ally, who makes his own way across, and takes the allies' orders)
+      return [{ profile: p, side: 'A', escort: true, ally: true }];
     },
     entersTurn1: true,
     deploy: function (state) {
@@ -364,7 +366,7 @@
     reserves: function (state, side) { return K.entering(state, side); },
     deployText: function () { return K.ENTRY_TEXT; },
     zoneFor: function (state, side) { return state.sc.zones[side]; },
-    hint: 'Get the escorted unit to the far edge: within 3″ of it at an End phase, it is through. The enemy will go for it, and nothing else matters to them.',
+    hint: 'Get the escorted unit to the far edge: within 3″ of it at an End phase, it is through. It makes its own way, but takes your orders: Move here, Attack here, Hold here. The enemy will go for it, and nothing else matters to them.',
     // the enemy goes for whoever is escorted; side A's own (the AI's) for the far edge
     goals: function (state, u) {
       var vip = escortOf(state);
