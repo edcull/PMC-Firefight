@@ -34,7 +34,7 @@
     conversations: {
       // ---- 1. Lot 47 ----
       'c1.brief': [
-        { who: 'reader', text: '{commander:rank}. Halloran. Thank you for coming. I’ve read your company’s file, and I don’t mind it, which I’m told is rarer than you’d think.' },
+        { who: 'reader', text: '{commander:rank}. Halloran. Thank you for coming. I’ll be plain: I need your company, and I need it tonight.' },
         { who: 'commander', text: 'You said an auction. You didn’t say why an auction needs a company.' },
         { who: 'reader', text: 'Because everyone else in that room has brought one. Lot 47 is Elias Morrow’s log. Surveyor. Forty years without a word; a court declared him dead a long time ago. I’ve never been entirely sure.' },
         { who: 'reader', text: 'He wrote in dead reckoning: headings and burn times, no fixes. Without his stones it’s gibberish. With them, it’s a road.' },
