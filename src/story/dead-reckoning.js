@@ -841,8 +841,9 @@
           { id: 'fast', text: 'The fast road.', battle: { role: 'attacker', tier: 'max' } },
           { id: 'long', text: 'The long road.', battle: { readiness: 0, turns: 8 }, effects: [{ meter: 'lead', add: -1 }, { meter: 'loyalty', add: 1 }] }
         ] },
-        battle: { scenario: 'convoy', map: 'umber', variant: { cars: 'Relic truck' }, planet: 'industrial', enemy: rival('lance'),
-          on: { success: [{ effects: [{ meter: 'lance', add: -1 }] }], failure: [{ effects: [{ meter: 'vane', add: -1 }] }] } },
+        // (the Navy's warrant: Wraith Section impounds what comes off the trail; the Lance is Vane's, and never against his cargo)
+        battle: { scenario: 'convoy', map: 'umber', variant: { cars: 'Relic truck' }, planet: 'industrial', enemy: rival('wraith'),
+          on: { success: [{ effects: [{ meter: 'wraith', add: -1 }] }], failure: [{ effects: [{ meter: 'vane', add: -1 }, { meter: 'wraith', add: 1 }] }] } },
         after: { id: 'escort.cargo', if: { grade: 'success' }, title: 'The cargo', text: 'Vane’s relics, safe.', options: [
           { id: 'deliver', text: 'Deliver it.', effects: [{ meter: 'vane', add: 2 }] },
           { id: 'keep', text: 'Keep a stone.', effects: [{ meter: 'stones', add: 1 }, { meter: 'vane', add: -2 }] }

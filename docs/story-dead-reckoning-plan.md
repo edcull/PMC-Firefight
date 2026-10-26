@@ -101,6 +101,14 @@ says who was behind him. The first half seeds it: the opening (the backer's
 people a jump or two behind), Thule's records ("the same ship, two jumps
 behind me now"), and the Lance's founding date.
 
+**The contract, and Morrow's fate** (settled in the last first-half pass).
+The contract is open from the start: see Halloran out of the auction alive
+with the log, then follow Morrow's road to the end and file the first claim.
+The company is following the route, not hunting the man. Morrow is presumed
+dead (forty years silent, declared so by a court); only the client is
+certain, because his people waited over Pell while Morrow died, and he says
+so ("I am"), the first of his tells. The wreck finds him.
+
 **Halloran** is an archaeologist of the library kind (archives, catalogues,
 dead men's handwriting; the research half of an adventurer and none of the
 action), who has spent years on the scraps of Morrow's writing that have

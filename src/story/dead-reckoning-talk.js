@@ -38,6 +38,9 @@
         { who: 'reader', text: 'The money is real, {commander:rank}. It clears through a bank on Halcyon before I’ve finished asking for it. I stopped asking whose it was some time ago.' },
         { who: 'commander', text: 'You said an auction. You didn’t say why an auction needs a company.' },
         { who: 'client', text: 'Because everyone else in that room has brought one. Lot 47 is a dead man’s log, {commander:rank}, and the dead man found something nobody else ever has. I have waited a long time for it to come up.' },
+        { who: 'commander', text: 'Dead? You’re sure?' },
+        { who: 'reader', text: 'Presumed. Forty years without a word, and a court declared him so. I’ve never been entirely sure.' },
+        { who: 'client', text: 'I am.' },
         { who: 'reader', text: 'Elias Morrow. Surveyor. He wrote in dead reckoning: headings and burn times, no fixes. Without his stones it’s gibberish. With them, it’s a road.' },
         { who: 'commander', text: 'And the stones? Whose are they?' },
         { who: 'reader', text: 'Nobody’s, now. He stole them back from whoever paid for his first trip, took them out again, and put them down along the way, one at a time. Each one points to the next. The log says where to start.' },
@@ -191,11 +194,11 @@
       ],
       'escort.brief': [
         { who: 'vane', text: 'Three trucks, {commander:rank}, and a ship on the far side of Umber. Do not open the containers. Do not stop for anyone. Do not lose them.' },
-        { who: 'daw', text: 'Lance, the convoy is moving. Mr Vane has changed his mind about who should be carrying it. Take it.' },
-        { who: 'commander', text: 'He’s hedging his bets. Convoy, move out.' }
+        { who: 'nine', text: 'Wraith to the convoy on the Umber road. Those containers are impounded by order of the Admiralty. Stop the trucks and nobody on your side gets shot.' },
+        { who: 'commander', text: 'We’re paid to deliver them. Convoy, move out.' }
       ],
       'debts.brief': [
-        { who: 'daw', if: { not: { flag: 'beat_lance' } }, text: 'Commander Iselin Daw, the Ninth Lance, acting for Mr Vane’s creditors. Your company owes. I collect. Nothing more to it than that.' },
+        { who: 'daw', if: { not: { flag: 'beat_lance' } }, text: 'Commander Iselin Daw, the Ninth Lance, acting for Mr Vane. He says your company owes him. I collect. Nothing more to it than that.' },
         { who: 'daw', if: { flag: 'beat_lance' }, text: 'We have met before, {commander:rank}. Mr Vane says you owe him. I would have taken this one for free.' },
         { who: 'commander', text: 'We owe Vane nothing.' }
       ],
@@ -616,7 +619,7 @@
         turn3: [{ who: 'ops', text: 'Strongrooms ahead. There are stones in there, {commander:rank}. Dozens.' }]
       },
       'escort.battle': {
-        start: [{ who: 'daw', text: 'Lance, the trucks. Leave the escort if you can, go through them if you can’t.' }],
+        start: [{ who: 'nine', text: 'Wraith, the trucks. Drivers first, escort if they get in the way.' }],
         turn3: [{ who: 'vane', text: 'My cargo, {commander:rank}. I’m watching it, every metre of the way.' }]
       },
       'debts.battle': {
