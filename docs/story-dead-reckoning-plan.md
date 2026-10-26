@@ -561,7 +561,7 @@ the systems in the order the company reaches them.
 | After | The event | Options |
 |---|---|---|
 | 1. Lot 47 | *The agent.* Brass Ledger's man is in the company's hands. | Let him go with a message (`kettle_contact`: Brass Ledger can be hired from chapter 4). Pay him for what he knows (kUC −1, Intel +1, `kettle_contact`). Hand him to the port police (Vane's Trust +1, Brass Ledger strength −1, `kettle_burned`: they won't deal with you). |
-| 2. The Glass Flats, won | *Wraith's dead drop.* Their camp holds a copy of their own orders. | Read it (Intel +2, `wraith_orders`: Wraith's patron is a navy, and the navy wants the teleports). Leave a message in it (Wraith strength −1, `wraith_warned`). Take their stolen copy of the log back (Lead +1, `wraith_robbed`: Wraith will come for it). |
+| 2. The Glass Flats, won | *Wraith's dead drop.* A sealed case: their orders, and their copy of the log. One choice, how far in: | Read and reseal (Intel +2, `wraith_orders`: Wraith's patron is the Navy; Wraith never know). Leave it sealed, and a message (Wraith strength −1, `wraith_warned`). Break it open and take everything (Lead +1, Intel +1, the client revealed, the log rebuilt if Brass Ledger hold it; `wraith_robbed`: Wraith know, and will come for it). |
 | 2. The Glass Flats, lost | *Second best.* Wraith carried the lodestone off. | Follow their dropship (Lead +1, Fatigue +1: a forced march). Let it go and dig on (the dig's notes: Intel +1; `theirs` stays +1). |
 | 2. Station Thule, won | *Morrow's records.* The relay kept his log entries, his voice and his fear. | Listen to all of it (Understanding +1, `thule_records`: he heard them talk). Send the records to Vane (Vane's Trust +1). Sell a copy to a newsfeed (kUC +2, `kestrel_deal`: Kestrel's patron, and Kestrel can be hired). |
 | 2. Station Thule, lost | *Burned.* The scavengers fired the archive. | Sift the ashes (Lead −1, a roll on Intel: success, the lodestone after all). Take what's left and go (nothing). |
@@ -748,9 +748,9 @@ validator checks both, as for *Deep Contract*.
 | `kettle_burned` | *The agent* (police) | Brass Ledger never hire out; their forces Readiness +1 |
 | `kettle_partner` | *The invoice* (a share) | *The Landing* (allies), *Finder's Fee* (split) |
 | `glassflats_rushed` | *The dig* | The Glass Flats battle (one search site fewer) |
-| `wraith_orders` | *Wraith's dead drop* (read) | *Bounty* (Wraith's commander can be reasoned with), *The Speaker* (the navy's interest: Vane's people are not the only threat; a roll +1) |
+| `wraith_orders` | *Wraith's dead drop* (read and reseal) | *Bounty* (Wraith's commander can be reasoned with), *The Speaker* (the navy's interest: Vane's people are not the only threat; a roll +1) |
 | `wraith_warned` | *Wraith's dead drop* (message) | *Bounty* (the offer to call it off) |
-| `wraith_robbed` | *Wraith's dead drop* (take it back) | The Race's pressure; *Bounty* (Readiness +1) |
+| `wraith_robbed` | *Wraith's dead drop* (break it open) | The Race's pressure; *Bounty* (Readiness +1) |
 | `wraith_turned` | *Bounty* (turn) | *The Landing* (the full list); an outline of every rival force |
 | `thule_records` | *Morrow's records* (listen) | *First contact* (signal roll +1) |
 | `kestrel_deal`, `kestrel_scooped` | *Morrow's records* (sell), *The newsfeed*, *The scoop* | Hiring Kestrel |

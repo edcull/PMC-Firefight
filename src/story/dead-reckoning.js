@@ -480,9 +480,11 @@
           }, next: 'c2f.debrief' },
         { id: 'c2f.debrief', type: 'debrief', text: '{if relic}The lodestone is yours.{/if}{if not relic}You come away without the lodestone.{/if}', events: ['c2f.drop', 'c2f.second'], next: 'c2.interlude' },
         { id: 'c2f.drop', type: 'event', who: 'nine', if: { grade: 'success' }, title: 'Wraith’s dead drop', text: 'Their camp holds a copy of their own orders.', options: [
-          { id: 'read', text: 'Read them.', effects: [{ meter: 'intel', add: 2 }, { flag: 'wraith_orders' }, { reveal: 'client_wraith', journal: 'Wraith Section’s orders come from the Admiralty’s Office of Naval Intelligence. The Navy wants the Quiet too.' }] },
-          { id: 'warn', text: 'Leave a message in it.', effects: [{ meter: 'wraith', add: -1 }, { flag: 'wraith_warned' }] },
-          { id: 'take', text: 'Take back their stolen copy of the log.', effects: [{ meter: 'lead', add: 1 }, { flag: 'wraith_robbed' }].concat(rebuilt('Wraith Section’s copy')) }
+          /* (how far the company goes into it: read and reseal, and Wraith never know; break it open and take
+             everything, and they do; or leave it sealed, and talk instead) */
+          { id: 'read', text: 'Read and reseal.', effects: [{ meter: 'intel', add: 2 }, { flag: 'wraith_orders' }, { reveal: 'client_wraith', journal: 'Wraith Section’s orders come from the Admiralty’s Office of Naval Intelligence. The Navy wants the Quiet too.' }] },
+          { id: 'warn', text: 'Leave it sealed, and a message.', effects: [{ meter: 'wraith', add: -1 }, { flag: 'wraith_warned' }] },
+          { id: 'take', text: 'Break it open and take everything.', effects: [{ meter: 'lead', add: 1 }, { meter: 'intel', add: 1 }, { flag: 'wraith_robbed' }, { reveal: 'client_wraith', journal: 'Wraith Section’s orders come from the Admiralty’s Office of Naval Intelligence. The Navy wants the Quiet too.' }].concat(rebuilt('Wraith Section’s copy')) }
         ] },
         { id: 'c2f.second', type: 'event', if: { not: { relic: 'A' } }, title: 'Second best', text: 'The lodestone got away from you.', options: [
           { id: 'chase', text: 'Follow their dropship.', effects: [{ meter: 'lead', add: 1 }, { meter: 'fatigue', add: 1 }] },

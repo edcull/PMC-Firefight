@@ -91,6 +91,12 @@
         { who: 'commander', text: 'And the Navy wants the Quiet too.' },
         { who: 'reader', text: 'The Navy wants whatever Morrow found before anybody else gets it. I would very much like to know how they heard of it.' }
       ],
+      // (said straight after breaking it open)
+      'c2f.drop/take': [
+        { who: 'reader', text: 'The log, and their orders with it. Look at the header, {commander:rank}: the Admiralty, Office of Naval Intelligence. Wraith Section is the Navy with the badges taken off.' },
+        { who: 'commander', text: 'And now the Navy knows we’ve been through their case.' },
+        { who: 'reader', text: 'They’ll want it back. I’d rather they didn’t get it.' }
+      ],
 
       'c2t.airlock': [
         { who: 'ops', text: 'Every docking arm is welded. Somebody’s aboard, and they’ve been aboard a while: there’s a heat plume off the north module. The survey office still lists Thule as theirs, unmanned. Nobody’s filed a salvage claim on it.' },
