@@ -70,6 +70,8 @@ ok('no words for a page or option the story does not have', Object.keys(TEXT).ev
   const o = k.indexOf('/') > 0 ? k.split('/')[1].replace('.why', '') : null;
   return !o || (n.options || []).some((x) => x.id === o);
 }), Object.keys(TEXT).filter((k) => !dr._chapters[k] && !dr._nodes[k.split(/[/#]/)[0]]).join(', '));
+ok('every side contract is asked of the company as a story, with its own way to say yes', dr.side.jobs.every((j) => j.ask && j.take && j.take !== 'Take the job' && (!j.who || dr.people[j.who])),
+  dr.side.jobs.filter((j) => !j.ask || !j.take).map((j) => j.id).join(', '));
 {
   const jobs = dr.chapters.filter((ch) => ch.half === 2 && ch.thread && !ch.finale);
   ok('every second-half job is put to the company as a story, not as its thread', jobs.length >= 12 && jobs.every((ch) => ch.pitch && TEXT[ch.id + '.pitch'] === ch.pitch && !/thread|the race|first contact/i.test(ch.pitch)),

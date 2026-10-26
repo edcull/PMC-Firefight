@@ -181,11 +181,12 @@
       var h = '<div class="story-side"><h3>Side contracts</h3><p class="hint">' + (v.side.length > 1 ? 'Work on offer between chapters. You can take one.' : 'Work on offer between chapters.') + '</p>';
       v.side.forEach(function (o) {
         var cost = words(o.cost), passed = words(o.passed), sides = def().sides || {};
-        h += '<div class="story-job"><b>' + esc(o.title) + '</b><small>' + esc(o.pay + ' kUC') +
-          (o.against && sides[o.against] ? ' \u00b7 against ' + esc(sides[o.against].name) : '') + '</small>' + para(o.text) +
+        // the job as it is asked of the company (its `ask`, by whoever asks), or else its line
+        h += '<div class="story-job">' + (o.who ? personView(o.who) : '') + '<b>' + esc(o.title) + '</b><small>' + esc(o.pay + ' kUC') +
+          (o.against && sides[o.against] ? ' \u00b7 against ' + esc(sides[o.against].name) : '') + '</small>' + para(o.ask || o.text) +
           (o.catchUp ? '<small class="good">Offered to help the company catch up: it costs no time.</small>' : cost ? '<small>Taking it: ' + esc(cost) + '</small>' : '') +
           (passed ? '<small class="warn">Passed up: ' + esc(passed) + '</small>' : '') +
-          '<button class="lnk" data-go="storyside" data-j="' + esc(o.id) + '">Take the job</button></div>';
+          '<button class="lnk" data-go="storyside" data-j="' + esc(o.id) + '">' + esc(o.take || 'Take the job') + '</button></div>';
       });
       return h + '</div>';
     }
@@ -198,7 +199,12 @@
 
     // who an event is about: their face, name and what they are (story-portraits.js)
     function whoView(id) {
-      var n = def()._nodes[id], who = n && n.who && (def().people || {})[n.who], PF = root.PMCStoryPortraits;
+      var n = def()._nodes[id];
+      return n && n.who ? personView(n.who) : '';
+    }
+    // one of the story's people: their face, name and what they are
+    function personView(key) {
+      var who = (def().people || {})[key], PF = root.PMCStoryPortraits;
       if (!who || !PF) return '';
       return '<div class="story-who">' + PF.svg(who.face, 64) + '<span><b>' + esc(who.name) + '</b><small>' + esc(who.role || '') + '</small></span></div>';
     }
