@@ -560,7 +560,7 @@
        winds across from the east edge to the west, between the outcrops; at
        its middle it squeezes between a boulder field and a ravine, a ridge
        stands over its western end, low hills and boulders lie along it for
-       cover, and the shelf's southern lip is an ice crevasse. */
+       cover, and the plateau rising along its southern side. */
     hollin: {
       name: 'The Hollin Shelf, Corvin', planet: 'mountain',
       pieces: [
@@ -577,8 +577,8 @@
         N('hill', 37.5, 15.5, 4.5, 4, 'blob'), N('hill', 38, 27, 4, 3, 'long'),
         N('rocks', 14, 18, 3, 2.5, 'blob'), N('rocks', 20, 26.5, 4, 3, 'lobed'), N('rocks', 33, 30, 3.5, 2.5, 'blob'),
         N('rocks', 34, 17, 3, 2.5, 'blob'), N('rocks', 30, 4, 4, 3, 'lobed'), N('rocks', 19, 40, 3.5, 2.5, 'blob'),
-        // the shelf's southern lip: a crevasse in the ice
-        N('ravine', 14, 45, 24, 2, 'rift')
+        // the plateau rising along the shelf's southern side
+        N('hill', 11, 43.5, 12, 4, 'long'), N('hill', 32.5, 42.5, 9, 4.5, 'lobed')
       ]
     },
 
