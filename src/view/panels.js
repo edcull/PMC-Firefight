@@ -603,9 +603,11 @@
       // each side's units, brought on for it when its turn to enter comes — or placed one by one
       mine.forEach(function (sd) {
         // (one side at this screen: the same button, and the same act, as Auto-deploy the rest)
-        h += '<div class="acts"><button class="act' + (auto[sd] ? ' on' : '') + '" data-act="' + (mine.length > 1 ? 'autoenter' : 'autodeploy') + '" data-side="' + sd + '"' + (auto[sd] ? ' disabled' : '') + '><span>' +
+        // (and pressed again, taken back: the units placed by hand after all)
+        h += '<div class="acts"><button class="act' + (auto[sd] ? ' on' : '') + '" data-act="' + (auto[sd] ? 'autoenteroff' : mine.length > 1 ? 'autoenter' : 'autodeploy') + '" data-side="' + sd + '"' +
+          (auto[sd] ? ' aria-pressed="true"' : '') + '><span>' +
           (auto[sd] ? 'Brought on for you' : 'Bring my units on for me') + (mine.length > 1 ? ' \u2014 ' + esc(sideName(sd)) : '') + '</span><small>' +
-          (auto[sd] ? 'Each unit is placed along your edge as its turn comes' : 'Or place each one yourself, in turn 1') + '</small></button></div>';
+          (auto[sd] ? 'Each unit is placed along your edge as its turn comes. Tap to cancel, and place them yourself' : 'Or place each one yourself, in turn 1') + '</small></button></div>';
       });
       var sah = B.swapAskHere();
       if (sah && (mine.indexOf(sah.side) >= 0 || B.state.swapStage)) h += swapCard();
@@ -1599,6 +1601,7 @@
           else if (a === 'start') { ui.startAsk = false; ui.startWhy = false; startBattle(); }
           else if (a === 'relocdone') send({ k: 'relocdone' });
           else if (a === 'autoenter') send({ k: 'autodeploy', side: b.getAttribute('data-side') });
+          else if (a === 'autoenteroff') send({ k: 'autoenteroff', side: b.getAttribute('data-side') });
           // greyed until the reserves are chosen: say so, for a few seconds
           else if (a === 'startwhy') { ui.startWhy = true; render(); clearTimeout(ui.startWhyT); ui.startWhyT = setTimeout(function () { ui.startWhy = false; render(); }, 5000); }
           else if (a === 'startask') { ui.startAsk = true; render(); }

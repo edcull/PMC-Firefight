@@ -149,6 +149,8 @@ console.log('\nMeeting engagement: nobody is placed before the battle; both ente
   ok('nobody has anything to place before the battle', e.query.placingSide() === null && down(e, 'A') + down(e, 'B') === 0);
   ok('...so Begin the battle is open at once', e.query.deploymentDone());
   ok('Auto-deploy now means "bring my units on for me" (Player 2 asks)', e.intent('B', { k: 'autodeploy' }).ok && down(e, 'B') === 0 && e.state().autoEnter.B);
+  ok('...and can be taken back: Player 2 places its own after all', e.intent('B', { k: 'autoenteroff' }).ok && !e.state().autoEnter.B && !e.intent('B', { k: 'autoenteroff' }).ok);
+  ok('...and asked for again', e.intent('B', { k: 'autodeploy' }).ok && e.state().autoEnter.B);
   e.intent('A', { k: 'start' });
   const st = e.state();
   ok('turn 1 begins with the initiative roll', st.phase === 'battle' && st.turn === 1 && !!st.initiative);

@@ -1955,7 +1955,7 @@
       deploy: function (side) { return mayDeploy(side) ? null : 'not your turn to place'; }
     };
     // what changes a side's deployment once it has said it is ready to begin
-    var UNREADY = { deploy: 1, autodeploy: 1, holdback: 1, insertion: 1, load: 1, unload: 1, garrison: 1,
+    var UNREADY = { deploy: 1, autodeploy: 1, autoenteroff: 1, holdback: 1, insertion: 1, load: 1, unload: 1, garrison: 1,
       vface: 1, vfaceall: 1, digface: 1, holdinsert: 1, insert: 1, mine: 1 };
     function on(names, guard, run) {
       names.split(' ').forEach(function (n) { INTENTS[n] = { guard: guard && GUARD[guard], run: run }; });
@@ -2105,6 +2105,14 @@
       K.autoDeploy(side);
       // placed for the player, but which way each hull faces is still theirs to say
       if (!K.askFacing(side, hand.filter(function (u) { return u.x >= 0; }), null, true)) render();
+      return yes;
+    });
+    // changing its mind: its units are placed by hand after all, each as its turn to enter comes
+    on('autoenteroff', null, function (side, it) {
+      if (state.phase !== 'deploy') return no('not deploying');
+      if (!state.autoEnter || !state.autoEnter[side]) return no('not being brought on for you');
+      delete state.autoEnter[side];
+      render();
       return yes;
     });
     on('load', null, function (side, it) {
