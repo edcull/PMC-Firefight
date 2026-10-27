@@ -6,7 +6,7 @@
    strips 4" in from the west and east edges kept clear, and the middle clear
    where a scenario puts its own piece there. Find and secure's three places
    are where the map says (`sites`, levers.js). The compounds (Station Thule,
-   the Warren, the Wreck of the Morrow, Cold Sites, the Vault, the Spire) have
+   the Warren, Morrow’s Wreck, Cold Sites, the Vault, the Spire) have
    no map: their seed lays them (the Warren's map gives only its skin).
 
    The second half's ground (phase 5): each map keeps clear what its scenario
@@ -283,7 +283,7 @@
       }
     },
 
-    /* The Wreck of the Morrow, on her side in a gully on Pell: a compound laid
+    /* Morrow’s Wreck, on her side in a gully on Pell: a compound laid
        by hand in the shape of the ship, stern to the company's edge and her
        pointed bow to the far one, a gangway down from the bridge at its tip; an
        engine nacelle out on a pair of pylons to either side of her stern, her

@@ -150,7 +150,7 @@ are met only in *The Mimics* (about one walk in seven). To build:
   tribes have come to take back, to shelter or hand over.
 - *Claim Jumpers* or *Bounty* (the Race): Brass Ledger's cages on a rival's
   ground, Esh-Aven inside.
-- *The Wreck of the Morrow*: a third Esh-Aven's bones in the hold, and a word
+- *Morrow’s Wreck*: a third Esh-Aven's bones in the hold, and a word
   for the Hashamer in Morrow's last entry.
 - *Recall*: the Quiet's call names them, met or not.
 
@@ -448,7 +448,7 @@ pressure that has had a chapter played.
 
 | Thread | Rises with | Chapters (first release) | Finale |
 |---|---|---|---|
-| **The Race** (the rivals) | Low Lead, the rivals' lodestones, a rival wronged (`kestrel_burned`, `wraith_robbed`…) | *Claim Jumpers* (Kestrel reaches a site first: *Convoy* or *Meeting*), *The Wreck of the Morrow* (Morrow's ship, found and fought over with Sable: *Clearing out*), fallback *Bounty* (Wraith Section has been paid to stop you: the *ambush* variant) | **The Landing**: at the Quiet, the leading rival is dug in on the only landing field. *Hostile takeover* with the target variant (their commander). |
+| **The Race** (the rivals) | Low Lead, the rivals' lodestones, a rival wronged (`kestrel_burned`, `wraith_robbed`…) | *Claim Jumpers* (Kestrel reaches a site first: *Convoy* or *Meeting*), *Morrow’s Wreck* (Morrow's ship, found and fought over with Sable: *Clearing out*), fallback *Bounty* (Wraith Section has been paid to stop you: the *ambush* variant) | **The Landing**: at the Quiet, the leading rival is dug in on the only landing field. *Hostile takeover* with the target variant (their commander). |
 | **The Tribes** (hostile) | Alarm, the Warren entered, relics taken by force | *The Watchers* (the Ulvar shieldwall: *Strike* on its shield turrets), *Teleport Storm* (the Sh'kar raid the company's camp: *Invasion*, defending), fallback *Cold Sites* (the Mithdu in old ruins: *Clearing out*) | **The Spire**: into an Amt tower, Close Encounters, shield generators as chambers to burn out (*Hive Heart*'s machinery, with turrets for brood chambers). |
 | **First Contact** (allies, no finale) | Understanding, relics returned, the Esh-Aven helped | *The Mimics* (the Hashamer Esh-Aven ask for help against Brass Ledger's slavers, and fight beside you: **Xenotripod allies**), *The Speaker* (a *Parley* with an Alpha, through Mental Projection), fallback *Signal Fires* | none: it changes the finales instead, as the truce does |
 | **The Patron** (Vane and the Ninth Lance) | Low Vane's Trust, `vane_suspects`, `vane_cut_off`, the Lance's strength | *The Vault* (Vane's store of relics, and what she has been selling: *Strike*), *The Escort* (Vane's relics across a contested world: *Convoy*), fallback *Debts* (Vane's creditors come for the company: *Meeting*) | **The Collector**: the Ninth Lance at the Quiet's landing. *Hostile takeover* with the target variant (the Lance's commander). |
@@ -527,7 +527,7 @@ there.
 | Into the Warren | Under a world nobody has charted | (no fix) | Unstable | radiation | The Mithdu's tunnels; nothing about it is safe |
 | The Double-Cross | Kerrigan's orbital dock | Marrick | Industrial | high gravity | The Ninth Lance's heavy kit, and nowhere to run |
 | *Claim Jumpers* | The Hollin Shelf | Corvin | Mountain | low gravity | Kestrel's drops come in fast |
-| *The Wreck of the Morrow* | Morrow's ship, where it came down | Pell | Unstable | toxic | Close Encounters inside the wreck |
+| *Morrow’s Wreck* | Morrow's ship, where it came down | Pell | Unstable | toxic | Close Encounters inside the wreck |
 | *Bounty* | A refuelling stop | Ilya | Temperate (`sparse`) | standard | Wherever the company is when Wraith catches up |
 | *The Watchers* | The shieldwall | Brannock VI | Mountain | foggy | The Ulvar behind their domes |
 | *Teleport Storm* | The company's camp | Sedra II | Temperate | time anomaly | The Sh'kar step out of the air |
@@ -575,7 +575,7 @@ the systems in the order the company reaches them.
 | Chapter (thread) | Before the battle | After the battle | Passed up |
 |---|---|---|---|
 | *Claim Jumpers* (Race) | *The scoop.* Kestrel's dropships are already down. Race them in (you attack, Readiness 0). Offer them the pictures (`kestrel_scooped`, no allies yet; Lead −1, Kestrel can be hired). With `kestrel_deal`: hire them against whoever else is there. | *The footage.* Let Kestrel run it (Vane's Trust −1, `kestrel_filmed`: every rival knows where the company is). Buy it from them (kUC −2). | `theirs` +1 |
-| *The Wreck of the Morrow* (Race) | *The hatch.* Sable is already cutting in. Cut a second way in (strikes, Alarm +1: the wreck's own systems wake). Wait for Sable to open it (enemy Readiness −1, Lead −1). With `sable_owed`: hire Sable for free. | *Morrow.* His body, his last entry, and a lodestone in his fist. Take it (`stones` +1, `morrow_found`). Bury him with it (Understanding +1, Fatigue −1, `relics_returned`: the last stone is given back). | Sable strength +1, `theirs` +1 |
+| *Morrow’s Wreck* (Race) | *The hatch.* Sable is already cutting in. Cut a second way in (strikes, Alarm +1: the wreck's own systems wake). Wait for Sable to open it (enemy Readiness −1, Lead −1). With `sable_owed`: hire Sable for free. | *Morrow.* His body, his last entry, and a lodestone in his fist. Take it (`stones` +1, `morrow_found`). Bury him with it (Understanding +1, Fatigue −1, `relics_returned`: the last stone is given back). | Sable strength +1, `theirs` +1 |
 | *Bounty* (Race, fallback) | *The tip.* Wraith Section has been paid to stop the company. Lay a trap for the trap (the ambush variant, yours). Run (Lead −1, Readiness 0). With `wraith_warned`: Wraith's commander offers to call it off for a lodestone (`stones` −1, no battle). | *The bounty hunters' paymaster.* Hand them in (Vane's Trust +1). Turn them (Intel +2, `wraith_turned`: an outline of every rival force). | Wraith strength +1 |
 | **The Landing** (Race finale) | *The field.* The leading rival holds the only landing field on the Quiet. With `wraith_turned`: their full list. With `kettle_partner`: Brass Ledger beside you, at their price. | The ending. | — |
 | *The Watchers* (Tribes) | *The shieldwall.* The Ulvar's domes cover the only pass. Strike the shield turrets (the Strike scenario). Go round (Lead −2, no battle, Alarm +1). With `mithdu_marked`: under it (one Battle Tier down, you choose the role). | *The dome falls.* Its keepers ask for their dead. Give them back (Understanding +1, Alarm −1). Keep the turret cores (kUC +3, Alarm +2, Vane's Trust +1). | Alarm +1 |
@@ -926,7 +926,7 @@ up. Jumps cost kUC (a decision, section 8), which side contracts pay for.
 | **The Turn** | No side switches sides in the middle of a battle: the engine has no such thing, and it is not built. The betrayal comes before the battle, as the *ambush* variant sprung from inside the company's half (`variant: { ambush: 'inside' }`: side B sets up anywhere in side A's half, more than 6" from its units). | `scenarios.js` `ambushed` |
 | **A Xenotripod face** | `face: { tripod: true, … }`: a three-eyed head and a carapace, in the style of the bug face. Rival commanders are ordinary faces. | `story-portraits.js` |
 | **Voices for the tribes** | Their lines arrive through Mental Projection: written in brackets and italics, in every head at once ("*[you are carrying something that belongs to us]*"). | Writing only: `talk` lines, as the hive's |
-| **The trail's scenes** | New places for `story-scenes.js`: the auction house, the glass flats, Station Thule, the drowned beacon, the Warren, the broker's warehouse, the Ulvar shieldwall, the wreck of the Morrow, the Quiet's landing field, an Amt spire. | `story-scenes.js` |
+| **The trail's scenes** | New places for `story-scenes.js`: the auction house, the glass flats, Station Thule, the drowned beacon, the Warren, the broker's warehouse, the Ulvar shieldwall, Morrow’s wreck, the Quiet's landing field, an Amt spire. | `story-scenes.js` |
 | **More than one story** | The picker already lists stories. What needs checking: everything that reads `'deep-contract'` by name (the text, maps and talk files are keyed by story id already), the journal, the story's sounds, saves of two stories side by side. | An audit, phase 1 |
 
 ### Scenarios
@@ -951,7 +951,7 @@ secure* plays badly:
 - **The Dig.** A site is excavated over the battle: from turn 2 a D6 at each End
   phase per search site held decides whether the relic is found there. Hold the
   ground long enough to dig, then get the relic off the table. For the Glass
-  Flats and the Wreck of the Morrow.
+  Flats and Morrow’s Wreck.
 
 ### The story as data
 

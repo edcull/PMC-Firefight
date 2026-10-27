@@ -1,4 +1,4 @@
-/* The Wreck of the Morrow (Dead Reckoning): a compound laid by hand in the
+/* Morrow’s Wreck (Dead Reckoning): a compound laid by hand in the
    shape of the ship, Pell's ground outside her hull; who comes in where by
    the choice at the hatch; and Sable inside her in battle armour, in variants
    of its own (cutters, machine guns, assault), not her vehicles. */

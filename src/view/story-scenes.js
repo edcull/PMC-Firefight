@@ -540,7 +540,7 @@
       p.rect(40, 34, 42, 36, '#4a4450'); p.rect(80, 34, 82, 36, '#4a4450'); p.rect(42, 34, 80, 34, '#3a3440');
       p.people(66, 41, 5, '#2a2238', 3);
     } },
-    /* The wreck of the Morrow on Pell: a survey ship on her side in a gully
+    /* Morrow’s wreck on Pell: a survey ship on her side in a gully
        under a yellow sky, and Sable's armour round her. */
     wreck: { time: 'day', draw: function (p) {
       p.sky(28).ridge(26, 6, '#7a7040').ground(36);

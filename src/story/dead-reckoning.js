@@ -741,7 +741,7 @@
           { id: 'run', text: 'Let them run it.', effects: [{ meter: 'vane', add: -1 }, { flag: 'kestrel_filmed' }] },
           { id: 'buy', text: 'Buy it from them.', cost: { kUC: 2 }, why: 'You can’t afford it.', effects: [{ meter: 'kestrel_trust', add: 1 }] }
         ] } }),
-      poolChapter({ id: 'wreck', thread: 'race', title: 'The Wreck of the Morrow', when: { any: [{ flag: 'sable_owed' }, { meter: 'sable', gte: 3 }, { meter: 'stones', gte: 2 }] },
+      poolChapter({ id: 'wreck', thread: 'race', title: 'Morrow’s Wreck', when: { any: [{ flag: 'sable_owed' }, { meter: 'sable', gte: 3 }, { meter: 'stones', gte: 2 }] },
         passed: [{ meter: 'sable', add: 1 }],
         place: { system: 'Pell', planet: 'Pell', kind: 'unstable', world: { atmosphere: 'toxic' } },
         brief: 'Morrow’s ship, where it came down, and Sable cutting in.',
