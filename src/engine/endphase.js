@@ -137,6 +137,9 @@
       var start = 0, lost = 0;
       E.state.units.forEach(function (u) {
         if (u.side !== side || (u.free && !u.rid)) return;
+        /* (a force replaced in the middle of a battle, a story's unknown contacts
+           taking its place, is not the side's: its share is of what took over) */
+        if (u.superseded) return;
         var machine = R.isMachine(u), s0 = machine ? 1 : (u.startSize != null ? u.startSize : u.size) || 0;
         var now = machine ? (u.alive ? 1 : 0) : (u.alive ? u.models : 0);
         start += s0; lost += Math.max(0, s0 - now);

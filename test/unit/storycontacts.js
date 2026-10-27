@@ -69,6 +69,33 @@ console.log('\nThe Drowned Beacon');
   }
 }
 
+console.log('\nThe contacts give up only for their own losses');
+{
+  const { e, st } = started('c3', 'c3.battle', 'demo');
+  const step = (until) => {
+    for (let i = 0, stuck = 0; i < 40000 && !e.over() && !until(); i++) {
+      const t = e.state();
+      if (t.swapAsk) { e.intent(t.swapAsk.side, { k: 'swapdone' }); continue; }
+      if (t.faceAsk) { e.intent(t.faceAsk.side, { k: 'vfaceall' }); continue; }
+      if (e.intent(t.activeSide || 'A', { k: 'step' }).ok) { stuck = 0; continue; }
+      if (++stuck > 20) break;
+    }
+  };
+  step(() => !!st.sc.contacts);
+  const s = e.state();
+  if (s.sc.contacts && !e.over()) {
+    /* the Reavers who ran are gone from the table, every one of them (as if side B had lost the lot),
+       and the contacts fresh: at the next End phase, late enough for an AI to yield, they carry on */
+    s.units.filter((u) => u.side === 'B' && u.superseded).forEach((u) => { u.startSize = Math.max(u.startSize || u.models || 1, 8); });
+    s.units.filter((u) => u.unknown).forEach((u) => { u.alive = true; u.models = u.startSize; });
+    s.turn = Math.max(s.turn, 5);
+    const t0 = s.turn;
+    step(() => e.state().turn > t0);
+    ok('the Reavers who ran are not the contacts’ losses: no surrender while the contacts stand', !(e.state().log || []).some((l) => /Unknown contacts surrenders/.test(l.text || '')),
+      (e.state().over && e.state().over.text) || 'turn ' + e.state().turn);
+  } else ok('the contacts come, and carry on: no surrender for the Reavers who ran', false, s.over && s.over.text);
+}
+
 console.log('\nAI against AI, to the end');
 {
   const { e, st: s } = started('c3', 'c3.battle', 'demo');
